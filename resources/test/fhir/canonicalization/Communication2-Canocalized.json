@@ -1,0 +1,54 @@
+{
+    "contained": [
+        {
+            "amount": {
+                "denominator": {
+                    "value": 1
+                },
+                "numerator": {
+                    "code": "{tbl}",
+                    "system": "http://unitsofmeasure.org",
+                    "unit": "TAB",
+                    "value": 12
+                }
+            },
+            "code": {
+                "coding": [
+                    {
+                        "code": "06313728",
+                        "system": "https://fhir.kbv.de/NamingSystem/KBV_NS_ERP_PZN"
+                    }
+                ],
+                "text": "Sumatriptan-1a Pharma 100 mg Tabletten"
+            },
+            "extension": [
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category",
+                    "valueCoding": {
+                        "code": "00",
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"
+                    }
+                },
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine",
+                    "valueBoolean": false
+                },
+                {
+                    "url": "http://fhir.de/StructureDefinition/normgroesse",
+                    "valueCode": "N1"
+                }
+            ],
+            "form": {
+                "coding": [
+                    {
+                        "code": "TAB",
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"
+                    }
+                ]
+            },
+            "id": "5fe6e06c-8725-46d5-aecd-e65e041ca3de",
+            "resourceType": "Medication"
+        }
+    ],
+    "resourceType": "Communication"
+}

@@ -1,0 +1,241 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_PR_ERP_Medication_FreeText",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_PR_ERP_Medication_FreeText"
+    }
+  ],
+  "definitions": {
+    "KBV_PR_ERP_Medication_FreeText": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "Medication"
+          ]
+        },
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "#/definitions/Medication_FreeText_Meta"
+        },
+        "extension": {
+          "type": "array",
+          "items": [
+            {
+              "$ref": "KBV_EX_ERP_Medication_Category.json#/definitions/kategorie"
+            },
+            {
+              "$ref": "KBV_EX_ERP_Medication_Vaccine.json#/definitions/impfstoff"
+            }
+          ],
+          "additionalItems": false
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "code": {
+          "$ref": "#/definitions/Medication_FreeText_CodeableConcept"
+        },
+        "form": {
+          "$ref": "#/definitions/Form_CodeableConcept"
+        },
+        "batch": {
+          "$ref": "#/definitions/Medication_Batch"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "resourceType",
+        "id",
+        "meta",
+        "code"
+      ]
+    },
+    "Medication_Ingredient": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "itemCodeableConcept": {
+          "$ref": "../BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "itemReference": {
+          "$ref": "../BaseSchema.json#/definitions/Reference"
+        },
+        "isActive": {
+          "$ref": "../BaseSchema.json#/definitions/boolean"
+        },
+        "_isActive": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "strength": {
+          "$ref": "../BaseSchema.json#/definitions/Ratio"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Medication_Batch": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "lotNumber": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_lotNumber": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "expirationDate": {
+          "$ref": "../BaseSchema.json#/definitions/dateTime"
+        },
+        "_expirationDate": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Medication_FreeText_Meta": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "profile": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.1"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "profile"
+      ]
+    },
+    "Medication_FreeText_CodeableConcept": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "coding": {
+          "items": {
+            "$ref": "#/definitions/Medication_FreeText_Coding"
+          },
+          "type": "array"
+        },
+        "text": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_text": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "coding",
+        "text"
+      ]
+    },
+    "Medication_FreeText_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Type"
+          ]
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "freitext"
+          ]
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    },
+    "Form_CodeableConcept": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "text": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_text": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ]
+    }
+  }
+}

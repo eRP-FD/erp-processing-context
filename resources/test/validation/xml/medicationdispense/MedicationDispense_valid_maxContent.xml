@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MedicationDispense xmlns="http://hl7.org/fhir">
+  <meta>
+    <profile value="https://gematik.de/fhir/StructureDefinition/erxMedicationDispense"/>
+  </meta>
+  <contained>
+    <Medication>
+      <id value="5fe6e06c-8725-46d5-aecd-e65e041ca3de" />
+      <meta>
+        <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.0.1" />
+      </meta>
+      <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
+        <valueCoding>
+          <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category" />
+          <code value="00" />
+        </valueCoding>
+      </extension>
+      <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine">
+        <valueBoolean value="false" />
+      </extension>
+      <code>
+        <coding>
+          <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Type" />
+          <code value="rezeptur" />
+        </coding>
+      </code>
+      <form>
+        <text value="1 mal taeglich mittags einnehmen"/>
+      </form>
+      <amount>
+        <numerator>
+          <value value="12" />
+          <unit value="TAB" />
+        </numerator>
+        <denominator>
+          <value value="1" />
+        </denominator>
+      </amount>
+      <ingredient>
+        <itemCodeableConcept>
+          <coding>
+            <system value="http://fhir.de/CodeSystem/ifa/pzn"/>
+            <code value="PZN"/>
+          </coding>
+          <text value="text"/>
+        </itemCodeableConcept>
+        <strength>
+          <numerator>
+            <value value="12" />
+            <unit value="TAB" />
+          </numerator>
+          <denominator>
+            <value value="1" />
+          </denominator>
+        </strength>
+      </ingredient>
+    </Medication>
+  </contained>
+  <identifier>
+    <use value="official"/>
+    <type>
+      <coding>
+        <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+        <version value="1.0"/>
+        <code value="TAX" />
+        <display value="code display" />
+        <userSelected value="false"/>
+      </coding>
+      <text value="test"/>
+    </type>
+    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
+    <value value="160.123.456.789.123.58"/>
+    <period>
+      <start value="2020-03-02T08:25:05+00:00"/>
+      <end value="2020-03-02T08:25:06+00:00"/>
+    </period>
+    <assigner>
+      <reference value="reference"/>
+      <type value="type"/>
+      <identifier>
+        <value value="identifier" />
+      </identifier>
+      <display value="display"/>
+    </assigner>
+  </identifier>
+  <partOf>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </partOf>
+  <partOf>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </partOf>
+  <status value="completed"/>
+  <statusReasonReference>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </statusReasonReference>
+  <category>
+    <coding>
+      <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+      <version value="1.0"/>
+      <code value="TAX" />
+      <display value="code display" />
+      <userSelected value="false"/>
+    </coding>
+    <text value="test"/>
+  </category>
+  <medicationReference>
+    <reference value="Medication/1234"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </medicationReference>
+  <subject>
+    <reference value="Medication/1234"/>
+    <type value="type"/>
+    <identifier>
+      <use value="official"/>
+      <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
+      <value value="X234567890"/>
+      <period>
+        <start value="2020-03-02T08:25:05+00:00"/>
+        <end value="2020-03-02T08:25:06+00:00"/>
+      </period>
+      <assigner>
+        <reference value="reference"/>
+        <type value="type"/>
+        <identifier>
+          <value value="identifier" />
+        </identifier>
+        <display value="display"/>
+      </assigner>
+    </identifier>
+    <display value="display"/>
+  </subject>
+  <context>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </context>
+  <supportingInformation>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </supportingInformation>
+  <performer>
+    <actor>
+      <identifier>
+        <use value="secondary"/>
+        <system value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
+        <value value="606358757"/>
+        <period>
+          <start value="2020-03-02T08:25:05+00:00"/>
+          <end value="2020-03-02T08:25:06+00:00"/>
+        </period>
+        <assigner>
+          <reference value="reference"/>
+          <type value="type"/>
+          <identifier>
+            <value value="identifier" />
+          </identifier>
+          <display value="display"/>
+        </assigner>
+      </identifier>
+    </actor>
+  </performer>
+  <location>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </location>
+  <authorizingPrescription>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </authorizingPrescription>
+  <type>
+    <coding>
+      <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+      <version value="1.0"/>
+      <code value="TAX" />
+      <display value="code display" />
+      <userSelected value="false"/>
+    </coding>
+    <text value="test"/>
+  </type>
+  <quantity>
+    <value value="12.5"/>
+    <comparator value=">"/>
+    <unit value="ml"/>
+    <system value="uri"/>
+    <code value="code"/>
+  </quantity>
+  <daysSupply>
+    <value value="12.5"/>
+    <comparator value=">="/>
+    <unit value="ml"/>
+    <system value="uri"/>
+    <code value="code"/>
+  </daysSupply>
+  <whenPrepared value="2020-03-19T07:13:00+05:00"/>
+  <whenHandedOver value="2020-03-20T07:13:00+05:00"/>
+  <destination>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </destination>
+  <receiver>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </receiver>
+  <note>
+    <authorString value="author"/>
+    <time value="2020-03-02T08:25:05+00:00" />
+    <text value="markdown"/>
+  </note>
+  <dosageInstruction>
+    <sequence value="2"/>
+    <text value="1-0-1-0"/>
+    <patientInstruction value="oral einnehmen"/>
+    <asNeededBoolean value="true"/>
+  </dosageInstruction>
+  <substitution>
+    <wasSubstituted value="false"/>
+    <type>
+      <coding>
+        <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+        <version value="1.0"/>
+        <code value="TAX" />
+        <display value="code display" />
+        <userSelected value="false"/>
+      </coding>
+      <text value="test"/>
+    </type>
+    <reason>
+      <coding>
+        <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+        <version value="1.0"/>
+        <code value="TAX" />
+        <display value="code display" />
+        <userSelected value="false"/>
+      </coding>
+      <text value="test"/>
+    </reason>
+    <responsibleParty>
+      <reference value="reference"/>
+      <type value="type"/>
+      <identifier>
+        <value value="identifier" />
+      </identifier>
+      <display value="display"/>
+    </responsibleParty>
+  </substitution>
+  <detectedIssue>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </detectedIssue>
+  <eventHistory>
+    <reference value="reference"/>
+    <type value="type"/>
+    <identifier>
+      <value value="identifier" />
+    </identifier>
+    <display value="display"/>
+  </eventHistory>
+</MedicationDispense>

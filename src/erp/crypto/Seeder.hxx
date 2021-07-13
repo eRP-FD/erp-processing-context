@@ -1,0 +1,40 @@
+#ifndef ERP_PROCESSING_CONTEXT_SEEDER_HXX
+#define ERP_PROCESSING_CONTEXT_SEEDER_HXX
+
+#include "erp/crypto/RandomSource.hxx"
+#include "erp/hsm/ErpTypes.hxx"
+#include "erp/util/PeriodicTimer.hxx"
+#include "erp/util/SafeString.hxx"
+
+#include <atomic>
+#include <shared_mutex>
+
+class HsmPool;
+
+class Seeder
+{
+public:
+    static constexpr size_t seedBlockSize = MaxRndBytes;
+    static constexpr size_t seedBytes = 32;
+
+    explicit Seeder(HsmPool& randomSource);
+
+    [[nodiscard]]
+    SafeString getNextSeed();
+
+private:
+    [[nodiscard]]
+    SafeString getNextSeedInternal(size_t index);
+    void refreshSeeds();
+    void setSeeds(ErpVector&& newSeed);
+    bool haveSeed(size_t index) const;
+
+    HsmPool& mHsmPool;
+
+    std::shared_mutex mSeedsMutex;
+    ErpVector mSeeds;
+    std::atomic<size_t> mNextSeedIndex = 0;
+};
+
+
+#endif// ERP_PROCESSING_CONTEXT_SEEDER_HXX

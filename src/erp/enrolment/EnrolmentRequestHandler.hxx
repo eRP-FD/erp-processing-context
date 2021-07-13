@@ -1,0 +1,238 @@
+#ifndef ERP_PROCESSING_CONTEXT_ENROLMENTREQUESTHANDLER_HXX
+#define ERP_PROCESSING_CONTEXT_ENROLMENTREQUESTHANDLER_HXX
+
+#include "erp/enrolment/EnrolmentServiceContext.hxx"
+#include "erp/enrolment/EnrolmentModel.hxx"
+#include "erp/server/handler/RequestHandlerInterface.hxx"
+
+
+using EnrolmentSession = SessionContext<EnrolmentServiceContext>;
+
+
+class EnrolmentRequestHandlerBase
+    : public UnconstrainedRequestHandler<EnrolmentServiceContext>
+
+{
+public:
+    static constexpr std::string_view requestAkName = "/akName";
+    static constexpr std::string_view requestBlobData = "/blob/data";
+    static constexpr std::string_view requestBlobGeneration = "/blob/generation";
+    static constexpr std::string_view requestCredential = "/credential";
+    static constexpr std::string_view requestEndDateTime = "/metadata/endDateTime";
+    static constexpr std::string_view requestExpiryDateTime = "/metadata/expiryDateTime";
+    static constexpr std::string_view requestHashAlgorithm = "/hashAlgorithm";
+    static constexpr std::string_view requestId = "/id";
+    static constexpr std::string_view requestNonce = "/nonce";
+    static constexpr std::string_view requestPcrSet = "/pcrSet";
+    static constexpr std::string_view requestSecret = "/secret";
+    static constexpr std::string_view requestStartDateTime = "/metadata/startDateTime";
+
+    static constexpr std::string_view responseAkName = "/akName";
+    static constexpr std::string_view responseCertificate = "/certificate";
+    static constexpr std::string_view responseEkName = "/ekName";
+    static constexpr std::string_view responseEnclaveId = "/enclaveId";
+    static constexpr std::string_view responseEnclaveTime = "/enclaveTime";
+    static constexpr std::string_view responseEnrolmentStatus = "/enrolmentStatus";
+    static constexpr std::string_view responsePlainTextCredential = "/plainTextCredential";
+    static constexpr std::string_view responsePublicKey = "/publicKey";
+    static constexpr std::string_view responseQuoteSignature = "/quoteSignature";
+    static constexpr std::string_view responseQuotedData = "/quotedData";
+    static constexpr std::string_view responseVersionRelease = "/version/release";
+    static constexpr std::string_view responseVersionReleasedate = "/version/releasedate";
+    static constexpr std::string_view responseVersionBuild = "/version/build";
+    static constexpr std::string_view responseVersionBuildType = "/version/buildType";
+
+    /**
+     * Not used for the enrolment service. Always returns Operation::UNKNOWN.
+     */
+    virtual Operation getOperation (void) const override;
+
+    virtual void handleRequest (EnrolmentSession& session) override;
+
+    void handleBasicAuthentication(const EnrolmentSession& session);
+
+protected:
+    virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) = 0;
+};
+
+
+class PutBlobHandler : public EnrolmentRequestHandlerBase
+{
+protected:
+    PutBlobHandler (BlobType blobType, std::string&& endpointDisplayname);
+
+    virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+
+private:
+    const BlobType mBlobType;
+    const std::string mEndpointDisplayname;
+};
+
+
+class DeleteBlobHandler : public EnrolmentRequestHandlerBase
+{
+protected:
+    explicit DeleteBlobHandler (BlobType type, std::string&& endpointDisplayname);
+    virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+
+private:
+    const BlobType mBlobType;
+    const std::string mEndpointDisplayname;
+};
+
+
+/**
+ * Not all classes of the enrolment service should go into the enrolment namespace.
+ * It is used here only to keep the handler names down at a manageable length.
+ */
+namespace enrolment
+{
+    class GetEnclaveStatus : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    /**
+     * Get endorsement key from TPM.
+     */
+    class GetEndorsementKey : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    /**
+     * Get attestation key from TPM.
+     */
+    class GetAttestationKey : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class PostAuthenticationCredential : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class PostGetQuote : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class PutKnownEndorsementKey : public PutBlobHandler
+    {
+    public:
+        PutKnownEndorsementKey (void);
+    };
+
+
+    class DeleteKnownEndorsementKey : public DeleteBlobHandler
+    {
+    public:
+        DeleteKnownEndorsementKey (void);
+    };
+
+
+    class PutKnownAttestationKey : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class DeleteKnownAttestationKey : public DeleteBlobHandler
+    {
+    public:
+        DeleteKnownAttestationKey (void);
+    };
+
+
+    class PutKnownQuote : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class DeleteKnownQuote : public DeleteBlobHandler
+    {
+    public:
+        DeleteKnownQuote (void);
+    };
+
+
+    class PutEciesKeypair : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class DeleteEciesKeypair : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class PutDerivationKey : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+
+    class DeleteDerivationKey : public EnrolmentRequestHandlerBase
+    {
+    protected:
+        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    };
+
+    class PutKvnrHashKey : public PutBlobHandler
+    {
+    public:
+        PutKvnrHashKey (void);
+    };
+
+    class PutTelematikIdHashKey : public PutBlobHandler
+    {
+    public:
+        PutTelematikIdHashKey (void);
+    };
+
+    class DeleteKvnrHashKey : public DeleteBlobHandler
+    {
+    public:
+        DeleteKvnrHashKey (void);
+    };
+
+    class DeleteTelematikIdHashKey : public DeleteBlobHandler
+    {
+    public:
+        DeleteTelematikIdHashKey (void);
+    };
+
+    class PutVauSigPrivateKey : public PutBlobHandler
+    {
+    public:
+        PutVauSigPrivateKey (void);
+    };
+
+    class DeleteVauSigPrivateKey : public DeleteBlobHandler
+    {
+    public:
+        DeleteVauSigPrivateKey (void);
+    };
+}
+
+
+#endif

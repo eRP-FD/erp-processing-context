@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBVBundle",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_Bundle"
+    }
+  ],
+  "definitions": {
+    "KBV_Bundle": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "Bundle"
+          ]
+        },
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "#/definitions/KBV_Bundle_Meta"
+        },
+        "identifier": {
+          "$ref": "#/definitions/KBV_Bundle_Identifier"
+        },
+        "type": {
+          "enum": [
+            "document"
+          ]
+        },
+        "timestamp": {
+          "$ref": "../BaseSchema.json#/definitions/instant"
+        },
+        "entry": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/KBV_Bundle_Entry"
+          }
+        },
+        "signature": {
+          "$ref": "../Gem_erxSignature.json#/definitions/Signature"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "resourceType",
+        "meta",
+        "id",
+        "identifier",
+        "type",
+        "timestamp",
+        "entry"
+      ]
+    },
+    "KBV_Bundle_Meta": {
+      "properties": {
+        "lastUpdated": {
+          "$ref": "../BaseSchema.json#/definitions/instant"
+        },
+        "profile": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "profile"
+      ]
+    },
+    "KBV_Bundle_Identifier": {
+      "properties": {
+        "system": {
+          "enum": [
+            "https://gematik.de/fhir/NamingSystem/PrescriptionID"
+          ]
+        },
+        "value": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "value"
+      ]
+    },
+    "KBV_Bundle_Entry": {
+      "properties": {
+        "fullUrl": {
+          "$ref": "../BaseSchema.json#/definitions/uri"
+        },
+        "resource": {
+          "$ref": "#/definitions/KBV_Bundle_Entry_ResourceList"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "fullUrl",
+        "resource"
+      ]
+    },
+    "KBV_Bundle_Entry_ResourceList": {
+      "oneOf": [
+        {
+          "$ref": "KBV_PR_FOR_Coverage.json#/definitions/KBV_PR_FOR_Coverage"
+        },
+        {
+          "$ref": "KBV_PR_ERP_Composition.json#/definitions/KBV_PR_ERP_Composition"
+        },
+        {
+          "$ref": "KBV_PR_ERP_Medication_PZN.json#/definitions/KBV_PR_ERP_Medication_PZN"
+        },
+        {
+          "$ref": "KBV_PR_ERP_Medication_FreeText.json#/definitions/KBV_PR_ERP_Medication_FreeText"
+        },
+        {
+          "$ref": "KBV_PR_ERP_Medication_Ingredient.json#/definitions/KBV_PR_ERP_Medication_Ingredient"
+        },
+        {
+          "$ref": "KBV_PR_ERP_Medication_Compounding.json#/definitions/KBV_PR_ERP_Medication_Compounding"
+        },
+        {
+          "$ref": "KBV_PR_FOR_PractitionerRole.json#/definitions/KBV_PR_FOR_PractitionerRole"
+        },
+        {
+          "$ref": "KBV_PR_FOR_Organization.json#/definitions/KBV_PR_FOR_Organization"
+        },
+        {
+          "$ref": "KBV_PR_FOR_Patient.json#/definitions/KBV_PR_FOR_Patient"
+        },
+        {
+          "$ref": "KBV_PR_FOR_Practitioner.json#/definitions/KBV_PR_FOR_Practitioner"
+        },
+        {
+          "$ref": "KBV_PR_ERP_PracticeSupply.json#/definitions/KBV_PR_ERP_PracticeSupply"
+        },
+        {
+          "$ref": "KBV_PR_ERP_Prescription.json#/definitions/KBV_PR_ERP_Prescription"
+        }
+      ]
+    }
+  }
+}

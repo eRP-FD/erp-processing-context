@@ -1,0 +1,15 @@
+{
+    "contained": [
+        {
+            "resourceType": "Medication",
+            "text": {
+                "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">This narrative (Resource.text) is not omitted</div>",
+                "status": "generated"
+            }
+        }
+    ],
+    "id": "281a985c-f25b-4aae-91a6-41ad744080b0",
+    "implicitRules": [
+    ],
+    "resourceType": "Medication"
+}

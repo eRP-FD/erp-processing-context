@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Organization xmlns="http://hl7.org/fhir">
+  <id value="cf042e44-086a-4d51-9c77-172f9a972e3b"/>
+  <meta>
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.1"/>
+  </meta>
+  <identifier>
+    <system value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
+    <value value="031234567"/>
+  </identifier>
+  <type>
+    <coding>
+      <system value="https://gematik.de/fhir/ValueSet/Organizationtype"/>
+      <code value="urn:oid:1.2.276.0.76.4.54"/>
+    </coding>
+  </type>
+  <active value="true"/>
+  <name value="Hausarztpraxis Dr. Topp-Glücklich"/>
+  <address>
+    <use value="home"/>
+    <type value="both"/>
+    <city value="Berlin"/>
+    <postalCode value="10623"/>
+  </address>
+</Organization>

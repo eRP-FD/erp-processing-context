@@ -1,0 +1,13 @@
+#ifndef ERP_PROCESSING_CONTEXT_ERP_SERVERINFO
+#define ERP_PROCESSING_CONTEXT_ERP_SERVERINFO
+
+class ErpServerInfo
+{
+public:
+    static constexpr const char* BuildVersion = "@ERP_BUILD_VERSION@";
+    static constexpr const char* BuildType = "@CMAKE_BUILD_TYPE@";
+    static constexpr const char* ReleaseVersion = "@ERP_RELEASE_VERSION@";
+    static constexpr const char* ReleaseDate = "@ERP_RELEASE_DATE@";
+};
+
+#endif

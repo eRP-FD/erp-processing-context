@@ -1,0 +1,7 @@
+{
+    "resourceType": "Coverage",
+    "status": "active",
+    "beneficiary": {"reference": "uuid:a41f56f2-e5ef-4319-a4a0-60a38d8c759f"},
+    "payor": [{ "reference": "uuid:9e6ae97f-5035-4dea-b957-188529cc4352"}],
+    "order": 5
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_EX_ERP_Medication_Packaging",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/verpackung"
+    }
+  ],
+  "definitions": {
+    "verpackung": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Packaging"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_valueString": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueString"
+      ]
+    }
+  }
+}

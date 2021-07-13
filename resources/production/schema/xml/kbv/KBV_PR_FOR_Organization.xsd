@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="addresstypes/AddressType.Street.xsd"/>
+  <xs:element name="Organization" type="KBV_PR_FOR_Organization"/>
+  <xs:complexType name="KBV_PR_FOR_Organization">
+    <xs:sequence>
+      <xs:element name="id" type="id"/>
+      <xs:element name="meta" type="KBV_PR_FOR_Organization.Meta"/>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="identifier" minOccurs="0" type="Identifier"/>
+      <xs:element name="name" type="string" minOccurs="0"/>
+      <xs:element name="telecom" maxOccurs="3" type="KBV_PR_FOR_Organization.ContactPoint"/>
+      <xs:element name="address" minOccurs="0" type="KBV_PR_FOR_Organization.Address"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_Organization.Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="profile" type="KBV_PR_FOR_Organization.Meta.profile"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_Organization.Meta.profile">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.3"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_Organization.ContactPoint">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="KBV_PR_FOR_Organization.ContactPointSystem"/>
+          <xs:element name="value" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="KBV_PR_FOR_Organization.ContactPointSystem-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="phone"/>
+      <xs:enumeration value="fax"/>
+      <xs:enumeration value="email"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="KBV_PR_FOR_Organization.ContactPointSystem">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="KBV_PR_FOR_Organization.ContactPointSystem-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_Organization.Address">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="type" type="KBV_PR_FOR_Organization.AddressType"/>
+          <xs:element name="line" type="KBV_PR_FOR.Address.street" maxOccurs="2"/>
+          <xs:element name="city" type="string" minOccurs="0" />
+          <xs:element name="postalCode" type="string" minOccurs="0" />
+          <xs:element name="country" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_Organization.AddressType">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="both"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

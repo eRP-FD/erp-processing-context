@@ -1,0 +1,6 @@
+#pragma once
+
+// @GENERATED_NOTE@
+
+static constexpr std::string_view MOCK_DATA_DIR = "@TEST_DATA_DIR@";
+

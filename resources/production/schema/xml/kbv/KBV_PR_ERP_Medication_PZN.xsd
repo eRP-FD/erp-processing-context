@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
+  <xs:element name="Medication" type="KBV_PR_ERP_Medication_PZN"/>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN">
+    <xs:sequence>
+      <xs:element name="id" type="id"/>
+      <xs:element name="meta" type="KBV_PR_ERP_Medication_PZN.Meta"/>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="code" type="KBV_PR_ERP_Medication_PZN.Code"/>
+      <xs:element name="form" type="KBV_PR_ERP_Medication_PZN.Form"/>
+      <xs:element name="amount" type="KBV_PR_ERP_Medication_Generics.Amount" minOccurs="0"/>
+      <xs:element name="batch" type="Medication.Batch" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="profile" type="KBV_PR_ERP_Medication_PZN.Meta.profile"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Meta.profile">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.1"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="KBV_PR_ERP_Medication_PZN.Code.Coding"/>
+          <xs:element name="text" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Code.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="KBV_PR_ERP_Medication_PZN.Code.Coding.system"/>
+          <xs:element name="code" type="code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Code.Coding.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/CodeSystem/ifa/pzn"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Form">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="KBV_PR_ERP_Medication_PZN.Form.Coding"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Form.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="KBV_PR_ERP_Medication_PZN.Form.Coding.system"/>
+          <xs:element name="code" type="KBV_PR_ERP_Medication_PZN.Form.Coding.code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Form.Coding.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Form.Coding.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="KBV_PR_ERP_Medication_PZN.Form.Coding.code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="KBV_PR_ERP_Medication_PZN.Form.Coding.code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="AEO"/>
+      <xs:enumeration value="AMP"/>
+      <xs:enumeration value="APA"/>
+      <xs:enumeration value="ASN"/>
+      <xs:enumeration value="ASO"/>
+      <xs:enumeration value="ATO"/>
+      <xs:enumeration value="ATR"/>
+      <xs:enumeration value="AUB"/>
+      <xs:enumeration value="AUC"/>
+      <xs:enumeration value="AUG"/>
+      <xs:enumeration value="AUS"/>
+      <xs:enumeration value="BAD"/>
+      <xs:enumeration value="BAL"/>
+      <xs:enumeration value="BAN"/>
+      <xs:enumeration value="BEU"/>
+      <xs:enumeration value="BIN"/>
+      <xs:enumeration value="BON"/>
+      <xs:enumeration value="BPL"/>
+      <xs:enumeration value="BRE"/>
+      <xs:enumeration value="BTA"/>
+      <xs:enumeration value="CRE"/>
+      <xs:enumeration value="DFL"/>
+      <xs:enumeration value="DIL"/>
+      <xs:enumeration value="DIS"/>
+      <xs:enumeration value="DKA"/>
+      <xs:enumeration value="DOS"/>
+      <xs:enumeration value="DRA"/>
+      <xs:enumeration value="DRM"/>
+      <xs:enumeration value="DSC"/>
+      <xs:enumeration value="DSS"/>
+      <xs:enumeration value="EDP"/>
+      <xs:enumeration value="EIN"/>
+      <xs:enumeration value="ELE"/>
+      <xs:enumeration value="ELI"/>
+      <xs:enumeration value="EMU"/>
+      <xs:enumeration value="ESS"/>
+      <xs:enumeration value="ESU"/>
+      <xs:enumeration value="EXT"/>
+      <xs:enumeration value="FBE"/>
+      <xs:enumeration value="FBW"/>
+      <xs:enumeration value="FDA"/>
+      <xs:enumeration value="FER"/>
+      <xs:enumeration value="FET"/>
+      <xs:enumeration value="FLA"/>
+      <xs:enumeration value="FLE"/>
+      <xs:enumeration value="FLU"/>
+      <xs:enumeration value="FMR"/>
+      <xs:enumeration value="FOL"/>
+      <xs:enumeration value="FRB"/>
+      <xs:enumeration value="FSE"/>
+      <xs:enumeration value="FTA"/>
+      <xs:enumeration value="GEK"/>
+      <xs:enumeration value="GEL"/>
+      <xs:enumeration value="GLI"/>
+      <xs:enumeration value="GLO"/>
+      <xs:enumeration value="GMR"/>
+      <xs:enumeration value="GPA"/>
+      <xs:enumeration value="GRA"/>
+      <xs:enumeration value="GSE"/>
+      <xs:enumeration value="GUL"/>
+      <xs:enumeration value="HAS"/>
+      <xs:enumeration value="HKM"/>
+      <xs:enumeration value="HKP"/>
+      <xs:enumeration value="HPI"/>
+      <xs:enumeration value="HVW"/>
+      <xs:enumeration value="IFA"/>
+      <xs:enumeration value="IFB"/>
+      <xs:enumeration value="IFD"/>
+      <xs:enumeration value="IFE"/>
+      <xs:enumeration value="IFF"/>
+      <xs:enumeration value="IFK"/>
+      <xs:enumeration value="IFL"/>
+      <xs:enumeration value="IFS"/>
+      <xs:enumeration value="IHA"/>
+      <xs:enumeration value="IHP"/>
+      <xs:enumeration value="IIE"/>
+      <xs:enumeration value="IIL"/>
+      <xs:enumeration value="IIM"/>
+      <xs:enumeration value="IKA"/>
+      <xs:enumeration value="ILO"/>
+      <xs:enumeration value="IMP"/>
+      <xs:enumeration value="INF"/>
+      <xs:enumeration value="INH"/>
+      <xs:enumeration value="INI"/>
+      <xs:enumeration value="INL"/>
+      <xs:enumeration value="INS"/>
+      <xs:enumeration value="IST"/>
+      <xs:enumeration value="ISU"/>
+      <xs:enumeration value="IUP"/>
+      <xs:enumeration value="KAN"/>
+      <xs:enumeration value="KAP"/>
+      <xs:enumeration value="KAT"/>
+      <xs:enumeration value="KDA"/>
+      <xs:enumeration value="KEG"/>
+      <xs:enumeration value="KER"/>
+      <xs:enumeration value="KGU"/>
+      <xs:enumeration value="KID"/>
+      <xs:enumeration value="KII"/>
+      <xs:enumeration value="KKS"/>
+      <xs:enumeration value="KLI"/>
+      <xs:enumeration value="KLT"/>
+      <xs:enumeration value="KMP"/>
+      <xs:enumeration value="KMR"/>
+      <xs:enumeration value="KOD"/>
+      <xs:enumeration value="KOM"/>
+      <xs:enumeration value="KON"/>
+      <xs:enumeration value="KPG"/>
+      <xs:enumeration value="KRI"/>
+      <xs:enumeration value="KSS"/>
+      <xs:enumeration value="KSU"/>
+      <xs:enumeration value="KTA"/>
+      <xs:enumeration value="LAN"/>
+      <xs:enumeration value="LII"/>
+      <xs:enumeration value="LIQ"/>
+      <xs:enumeration value="LOE"/>
+      <xs:enumeration value="LOT"/>
+      <xs:enumeration value="LOV"/>
+      <xs:enumeration value="LSE"/>
+      <xs:enumeration value="LTA"/>
+      <xs:enumeration value="LUP"/>
+      <xs:enumeration value="LUT"/>
+      <xs:enumeration value="MIL"/>
+      <xs:enumeration value="MIS"/>
+      <xs:enumeration value="MIX"/>
+      <xs:enumeration value="MRG"/>
+      <xs:enumeration value="MRP"/>
+      <xs:enumeration value="MTA"/>
+      <xs:enumeration value="MUW"/>
+      <xs:enumeration value="NAG"/>
+      <xs:enumeration value="NAO"/>
+      <xs:enumeration value="NAS"/>
+      <xs:enumeration value="NAW"/>
+      <xs:enumeration value="NDS"/>
+      <xs:enumeration value="NSA"/>
+      <xs:enumeration value="NTR"/>
+      <xs:enumeration value="OCU"/>
+      <xs:enumeration value="OEL"/>
+      <xs:enumeration value="OHT"/>
+      <xs:enumeration value="OVU"/>
+      <xs:enumeration value="PAM"/>
+      <xs:enumeration value="PAS"/>
+      <xs:enumeration value="PEL"/>
+      <xs:enumeration value="PEN"/>
+      <xs:enumeration value="PER"/>
+      <xs:enumeration value="PFL"/>
+      <xs:enumeration value="PFT"/>
+      <xs:enumeration value="PHI"/>
+      <xs:enumeration value="PHV"/>
+      <xs:enumeration value="PIE"/>
+      <xs:enumeration value="PIF"/>
+      <xs:enumeration value="PII"/>
+      <xs:enumeration value="PIJ"/>
+      <xs:enumeration value="PIK"/>
+      <xs:enumeration value="PIS"/>
+      <xs:enumeration value="PIV"/>
+      <xs:enumeration value="PKI"/>
+      <xs:enumeration value="PLE"/>
+      <xs:enumeration value="PLF"/>
+      <xs:enumeration value="PLG"/>
+      <xs:enumeration value="PLH"/>
+      <xs:enumeration value="PLI"/>
+      <xs:enumeration value="PLK"/>
+      <xs:enumeration value="PLS"/>
+      <xs:enumeration value="PLV"/>
+      <xs:enumeration value="PPL"/>
+      <xs:enumeration value="PRS"/>
+      <xs:enumeration value="PSE"/>
+      <xs:enumeration value="PST"/>
+      <xs:enumeration value="PUD"/>
+      <xs:enumeration value="PUL"/>
+      <xs:enumeration value="RED"/>
+      <xs:enumeration value="REK"/>
+      <xs:enumeration value="RET"/>
+      <xs:enumeration value="RGR"/>
+      <xs:enumeration value="RKA"/>
+      <xs:enumeration value="RMS"/>
+      <xs:enumeration value="RSC"/>
+      <xs:enumeration value="RSU"/>
+      <xs:enumeration value="RUT"/>
+      <xs:enumeration value="SAF"/>
+      <xs:enumeration value="SAL"/>
+      <xs:enumeration value="SAM"/>
+      <xs:enumeration value="SCH"/>
+      <xs:enumeration value="SEI"/>
+      <xs:enumeration value="SHA"/>
+      <xs:enumeration value="SIR"/>
+      <xs:enumeration value="SLZ"/>
+      <xs:enumeration value="SMF"/>
+      <xs:enumeration value="SMT"/>
+      <xs:enumeration value="SMU"/>
+      <xs:enumeration value="SPA"/>
+      <xs:enumeration value="SPF"/>
+      <xs:enumeration value="SPL"/>
+      <xs:enumeration value="SPR"/>
+      <xs:enumeration value="SPT"/>
+      <xs:enumeration value="SRI"/>
+      <xs:enumeration value="SSU"/>
+      <xs:enumeration value="STA"/>
+      <xs:enumeration value="STB"/>
+      <xs:enumeration value="STI"/>
+      <xs:enumeration value="STR"/>
+      <xs:enumeration value="SUB"/>
+      <xs:enumeration value="SUE"/>
+      <xs:enumeration value="SUL"/>
+      <xs:enumeration value="SUP"/>
+      <xs:enumeration value="SUS"/>
+      <xs:enumeration value="SUT"/>
+      <xs:enumeration value="SUV"/>
+      <xs:enumeration value="SWA"/>
+      <xs:enumeration value="TAB"/>
+      <xs:enumeration value="TAE"/>
+      <xs:enumeration value="TAM"/>
+      <xs:enumeration value="TEE"/>
+      <xs:enumeration value="TEI"/>
+      <xs:enumeration value="TES"/>
+      <xs:enumeration value="TIN"/>
+      <xs:enumeration value="TKA"/>
+      <xs:enumeration value="TLE"/>
+      <xs:enumeration value="TMR"/>
+      <xs:enumeration value="TON"/>
+      <xs:enumeration value="TPN"/>
+      <xs:enumeration value="TPO"/>
+      <xs:enumeration value="TRA"/>
+      <xs:enumeration value="TRI"/>
+      <xs:enumeration value="TRO"/>
+      <xs:enumeration value="TRS"/>
+      <xs:enumeration value="TRT"/>
+      <xs:enumeration value="TSA"/>
+      <xs:enumeration value="TSD"/>
+      <xs:enumeration value="TSE"/>
+      <xs:enumeration value="TSS"/>
+      <xs:enumeration value="TST"/>
+      <xs:enumeration value="TSY"/>
+      <xs:enumeration value="TTR"/>
+      <xs:enumeration value="TUB"/>
+      <xs:enumeration value="TUE"/>
+      <xs:enumeration value="TUP"/>
+      <xs:enumeration value="TVW"/>
+      <xs:enumeration value="UTA"/>
+      <xs:enumeration value="VAL"/>
+      <xs:enumeration value="VAR"/>
+      <xs:enumeration value="VCR"/>
+      <xs:enumeration value="VER"/>
+      <xs:enumeration value="VGE"/>
+      <xs:enumeration value="VKA"/>
+      <xs:enumeration value="VLI"/>
+      <xs:enumeration value="VOV"/>
+      <xs:enumeration value="VST"/>
+      <xs:enumeration value="VSU"/>
+      <xs:enumeration value="VTA"/>
+      <xs:enumeration value="WAT"/>
+      <xs:enumeration value="WGA"/>
+      <xs:enumeration value="WKA"/>
+      <xs:enumeration value="WKM"/>
+      <xs:enumeration value="WUE"/>
+      <xs:enumeration value="XDG"/>
+      <xs:enumeration value="XDS"/>
+      <xs:enumeration value="XFE"/>
+      <xs:enumeration value="XGM"/>
+      <xs:enumeration value="XHA"/>
+      <xs:enumeration value="XHS"/>
+      <xs:enumeration value="XNC"/>
+      <xs:enumeration value="XPK"/>
+      <xs:enumeration value="XTC"/>
+      <xs:enumeration value="ZAM"/>
+      <xs:enumeration value="ZBU"/>
+      <xs:enumeration value="ZCR"/>
+      <xs:enumeration value="ZGE"/>
+      <xs:enumeration value="ZKA"/>
+      <xs:enumeration value="ZPA"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

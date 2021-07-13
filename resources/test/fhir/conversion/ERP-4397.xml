@@ -1,0 +1,25 @@
+<Device xmlns="http://hl7.org/fhir">
+    <id value="ErxService"/>
+    <meta>
+        <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice1">
+            <extension url="http://some.host.de/path">
+                <valueString value="some-value1"/>
+            </extension>
+            <extension url="http://some.host.de/path">
+                <valueString value="some-value2"/>
+            </extension>
+        </profile>
+        <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice2"/>
+        <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice3">
+            <extension url="http://some.host.de/path">
+                <valueString value="some-value3"/>
+            </extension>
+        </profile>
+        <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice4"/>
+    </meta>
+    <status value="active" id="0815">
+        <extension url="http://some.host.de/path">
+            <valueString value="some-value4"/>
+        </extension>
+    </status>
+</Device>

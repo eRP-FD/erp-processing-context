@@ -1,0 +1,23 @@
+<Coverage xmlns="http://hl7.org/fhir">
+  <id value="1b1ffb6e-eb05-43d7-87eb-e7818fe9661a" />
+  <meta>
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3" />
+  </meta>
+  <status value="active" />
+  <type>
+    <coding>
+      <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis" />
+      <code value="GKV" />
+    </coding>
+  </type>
+  <beneficiary>
+    <reference value="Patient/9774f67f-a238-4daf-b4e6-679deeef3811" />
+  </beneficiary>
+  <payor>
+    <identifier>
+      <system value="http://fhir.de/NamingSystem/arge-ik/iknr" />
+      <value value="104212059" />
+    </identifier>
+    <display value="AOK Rheinland/Hamburg" />
+  </payor>
+</Coverage>

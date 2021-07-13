@@ -1,0 +1,13 @@
+{
+    "resourceType": "Medication",
+    "meta": {
+        "profile": [
+            "https://gematik.de/fhir/StructureDefinition/Medication"
+        ]
+    },
+    "contained": [
+        {
+            "resourceType": "Medication"
+        }
+    ]
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_EX_ERP_Medication_Category",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/kategorie"
+    }
+  ],
+  "definitions": {
+    "kategorie": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueCoding": {
+          "$ref": "#/definitions/Medication_Category_Coding"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "valueCoding"
+      ]
+    },
+    "Medication_Category_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "$ref": "../BaseSchema.json#/definitions/uri"
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "00",
+            "01",
+            "02"
+          ]
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    }
+  }
+}

@@ -1,0 +1,38 @@
+#include "erp/hsm/production/HsmProductionClient.hxx"
+#include "erp/hsm/production/HsmRawSession.hxx"
+
+
+HsmRawSession::HsmRawSession (void)
+    : rawSession{0, 0, 0, hsmclient::HSMSessionStatus::HSMUninitialised, 0, 0, 0},
+      identity(HsmIdentity::Identity::Work)
+{
+}
+
+
+HsmRawSession::HsmRawSession (HsmRawSession&& other)
+    : rawSession(other.rawSession),
+      identity(other.identity)
+{
+    other.rawSession = hsmclient::HSMSession{0, 0, 0, hsmclient::HSMSessionStatus::HSMUninitialised, 0, 0, 0};
+}
+
+
+HsmRawSession::~HsmRawSession (void)
+{
+    HsmProductionClient::disconnect(*this);
+}
+
+
+HsmRawSession& HsmRawSession::operator= (HsmRawSession&& other)
+{
+    if (this != &other)
+    {
+        HsmProductionClient::disconnect(*this);
+
+        rawSession = other.rawSession;
+
+        other.rawSession = hsmclient::HSMSession{0, 0, 0, hsmclient::HSMSessionStatus::HSMUninitialised, 0, 0, 0};
+    }
+    return *this;
+}
+

@@ -1,0 +1,19 @@
+<Device xmlns="http://hl7.org/fhir">
+    <status value="active">
+        <extension url="http://integer.only">
+            <valueInteger value="123"/>
+        </extension>
+        <extension url="http://decimal.no/fraction">
+            <valueDecimal value="123"/>
+        </extension>
+        <extension url="http://decimal.no/trailing/zero">
+            <valueDecimal value="123.456"/>
+        </extension>
+        <extension url="http://decimal.trailing/zero">
+            <valueDecimal value="123.4560"/>
+        </extension>
+        <extension url="http://decimal.only/zeros/after/dot">
+            <valueDecimal value="123.0000"/>
+        </extension>
+    </status>
+</Device>

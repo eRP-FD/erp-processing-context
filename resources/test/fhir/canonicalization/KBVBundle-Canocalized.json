@@ -1,0 +1,538 @@
+{
+  "entry": [
+    {
+      "fullUrl": "https://e-rezept.de/Composition/c504ae01-3c05-4210-a865-97c8dd38bd39",
+      "resource": {
+        "author": [
+          {
+            "reference": "Practitioner/4ffde3c1-dc01-4cb5-aa7d-769ef1c9daca",
+            "type": "Practitioner"
+          },
+          {
+            "identifier": {
+              "system": "https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer",
+              "value": "Y/400/1910/36/346"
+            },
+            "type": "Device"
+          }
+        ],
+        "custodian": {
+          "reference": "Organization/d003b037-e264-49b7-a83d-e998877d5b66"
+        },
+        "date": "2021-06-01T16:49:33+02:00",
+        "extension": [
+          {
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis",
+            "valueCoding": {
+              "code": "00",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"
+            }
+          }
+        ],
+        "id": "c504ae01-3c05-4210-a865-97c8dd38bd39",
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.1"
+          ]
+        },
+        "resourceType": "Composition",
+        "section": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "code": "Prescription",
+                  "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type"
+                }
+              ]
+            },
+            "entry": [
+              {
+                "reference": "MedicationRequest/a6d12b38-7eae-40b2-a523-8d2f4820d99f"
+              }
+            ]
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "code": "Coverage",
+                  "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type"
+                }
+              ]
+            },
+            "entry": [
+              {
+                "reference": "Coverage/ede178d8-d0de-40a7-9781-de2a1927b434"
+              }
+            ]
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "code": "FOR_PractitionerRole",
+                  "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type"
+                }
+              ]
+            },
+            "entry": [
+              {
+                "reference": "PractitionerRole/6e7d04be-4015-4b6e-a533-1f50536e7f91"
+              }
+            ]
+          }
+        ],
+        "status": "final",
+        "subject": {
+          "reference": "Patient/2de90026-3075-44d8-9659-074ff597b915"
+        },
+        "title": "elektronische Arzneimittelverordnung",
+        "type": {
+          "coding": [
+            {
+              "code": "e16A",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fullUrl": "https://e-rezept.de/MedicationRequest/a6d12b38-7eae-40b2-a523-8d2f4820d99f",
+      "resource": {
+        "authoredOn": "2000-01-01",
+        "dispenseRequest": {
+          "quantity": {
+            "code": "{Package}",
+            "system": "http://unitsofmeasure.org",
+            "value": 1
+          },
+          "validityPeriod": {
+            "end": "2021-06-01T16:49:33+02:00",
+            "start": "2021-06-01T16:49:33+02:00"
+          }
+        },
+        "dosageInstruction": [
+          {
+            "extension": [
+              {
+                "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag",
+                "valueBoolean": true
+              }
+            ],
+            "text": "1-0-1-0"
+          }
+        ],
+        "extension": [
+          {
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment",
+            "valueCoding": {
+              "code": "0",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_StatusCoPayment"
+            }
+          },
+          {
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee",
+            "valueBoolean": false
+          },
+          {
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG",
+            "valueBoolean": false
+          },
+          {
+            "extension": [
+              {
+                "url": "unfallkennzeichen",
+                "valueCoding": {
+                  "code": "2",
+                  "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"
+                }
+              },
+              {
+                "url": "unfallbetrieb",
+                "valueString": "Dummy-Betrieb"
+              },
+              {
+                "url": "unfalltag",
+                "valueDate": "2021-06-01"
+              }
+            ],
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Accident"
+          },
+          {
+            "extension": [
+              {
+                "url": "Kennzeichen",
+                "valueBoolean": false
+              },
+              {
+                "url": "Nummerierung",
+                "valueRatio": {
+                  "denominator": {
+                    "value": 0
+                  },
+                  "numerator": {
+                    "value": 0
+                  }
+                }
+              },
+              {
+                "url": "Zeitraum",
+                "valuePeriod": {
+                  "end": "2021-06-01T16:49:34+02:00",
+                  "start": "2021-06-01T16:49:34+02:00"
+                }
+              }
+            ],
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription"
+          }
+        ],
+        "id": "a6d12b38-7eae-40b2-a523-8d2f4820d99f",
+        "insurance": [
+          {
+            "reference": "Coverage/ede178d8-d0de-40a7-9781-de2a1927b434"
+          }
+        ],
+        "intent": "order",
+        "medicationReference": {
+          "reference": "Medication/e13a135a-4db5-4dc7-8ab3-b61dab9887c0"
+        },
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1"
+          ]
+        },
+        "requester": {
+          "reference": "Practitioner/4ffde3c1-dc01-4cb5-aa7d-769ef1c9daca"
+        },
+        "resourceType": "MedicationRequest",
+        "status": "active",
+        "subject": {
+          "reference": "Patient/2de90026-3075-44d8-9659-074ff597b915"
+        },
+        "substitution": {
+          "allowedBoolean": true
+        }
+      }
+    },
+    {
+      "fullUrl": "https://e-rezept.de/Medication/e13a135a-4db5-4dc7-8ab3-b61dab9887c0",
+      "resource": {
+        "amount": {
+          "denominator": {
+            "value": 1
+          },
+          "numerator": {
+            "code": "{tbl}",
+            "system": "http://unitsofmeasure.org",
+            "unit": "TAB",
+            "value": 12
+          }
+        },
+        "code": {
+          "coding": [
+            {
+              "code": "06313728",
+              "system": "http://fhir.de/CodeSystem/ifa/pzn"
+            }
+          ],
+          "text": "gesund"
+        },
+        "extension": [
+          {
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category",
+            "valueCoding": {
+              "code": "00",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"
+            }
+          },
+          {
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine",
+            "valueBoolean": false
+          }
+        ],
+        "form": {
+          "coding": [
+            {
+              "code": "TAB",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"
+            }
+          ]
+        },
+        "id": "e13a135a-4db5-4dc7-8ab3-b61dab9887c0",
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.1"
+          ]
+        },
+        "resourceType": "Medication"
+      }
+    },
+    {
+      "fullUrl": "https://e-rezept.de/Coverage/ede178d8-d0de-40a7-9781-de2a1927b434",
+      "resource": {
+        "beneficiary": {
+          "reference": "Patient/2de90026-3075-44d8-9659-074ff597b915"
+        },
+        "extension": [
+          {
+            "url": "http://fhir.de/StructureDefinition/gkv/besondere-personengruppe",
+            "valueCoding": {
+              "code": "00",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"
+            }
+          },
+          {
+            "url": "http://fhir.de/StructureDefinition/gkv/dmp-kennzeichen",
+            "valueCoding": {
+              "code": "00",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"
+            }
+          },
+          {
+            "url": "http://fhir.de/StructureDefinition/gkv/wop",
+            "valueCoding": {
+              "code": "03",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"
+            }
+          },
+          {
+            "url": "http://fhir.de/StructureDefinition/gkv/versichertenart",
+            "valueCoding": {
+              "code": "1",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"
+            }
+          }
+        ],
+        "id": "ede178d8-d0de-40a7-9781-de2a1927b434",
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3"
+          ]
+        },
+        "payor": [
+          {
+            "display": "test",
+            "identifier": {
+              "system": "http://fhir.de/NamingSystem/arge-ik/iknr",
+              "value": "0"
+            }
+          }
+        ],
+        "period": {
+          "end": "2021-06-01"
+        },
+        "resourceType": "Coverage",
+        "status": "active",
+        "type": {
+          "coding": [
+            {
+              "code": "GKV",
+              "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "fullUrl": "https://e-rezept.de/Organization/d003b037-e264-49b7-a83d-e998877d5b66",
+      "resource": {
+        "id": "d003b037-e264-49b7-a83d-e998877d5b66",
+        "identifier": [
+          {
+            "system": "http://fhir.de/NamingSystem/arge-ik/iknr",
+            "type": {
+              "coding": [
+                {
+                  "code": "XX",
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203"
+                }
+              ]
+            },
+            "value": "123456"
+          }
+        ],
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.3"
+          ]
+        },
+        "resourceType": "Organization",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "0301234567"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "https://e-rezept.de/Patient/2de90026-3075-44d8-9659-074ff597b915",
+      "resource": {
+        "address": [
+          {
+            "_line": [
+              {
+                "extension": [
+                  {
+                    "url": "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName",
+                    "valueString": "Musterstr. 1"
+                  }
+                ]
+              }
+            ],
+            "city": "Berlin",
+            "line": [
+              "Musterstr. 1"
+            ],
+            "postalCode": "10623",
+            "type": "both"
+          }
+        ],
+        "birthDate": "2021-06-01",
+        "id": "2de90026-3075-44d8-9659-074ff597b915",
+        "identifier": [
+          {
+            "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
+            "type": {
+              "coding": [
+                {
+                  "code": "GKV",
+                  "system": "http://fhir.de/CodeSystem/identifier-type-de-basis"
+                }
+              ]
+            },
+            "use": "official",
+            "value": "X110506918"
+          }
+        ],
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3"
+          ]
+        },
+        "name": [
+          {
+            "_family": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/humanname-own-name",
+                  "valueString": "Meier"
+                }
+              ]
+            },
+            "family": "Meier",
+            "given": [
+              "Max"
+            ],
+            "use": "official"
+          }
+        ],
+        "resourceType": "Patient"
+      }
+    },
+    {
+      "fullUrl": "https://e-rezept.de/Practitioner/4ffde3c1-dc01-4cb5-aa7d-769ef1c9daca",
+      "resource": {
+        "id": "4ffde3c1-dc01-4cb5-aa7d-769ef1c9daca",
+        "identifier": [
+          {
+            "system": "https://fhir.kbv.de/NamingSystem/KBV_NS_Base_ANR",
+            "type": {
+              "coding": [
+                {
+                  "code": "LANR",
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203"
+                }
+              ]
+            },
+            "value": "838382202"
+          }
+        ],
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Practitioner|1.0.3"
+          ]
+        },
+        "name": [
+          {
+            "_family": {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/humanname-own-name",
+                  "valueString": "Topp-Glücklich"
+                }
+              ]
+            },
+            "_prefix": [
+              {
+                "extension": [
+                  {
+                    "url": "http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier",
+                    "valueCode": "AC"
+                  }
+                ]
+              }
+            ],
+            "family": "Topp-Glücklich",
+            "given": [
+              "Hans"
+            ],
+            "prefix": [
+              "Dr. med."
+            ],
+            "use": "official"
+          }
+        ],
+        "qualification": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "code": "00",
+                  "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"
+                }
+              ]
+            }
+          },
+          {
+            "code": {
+              "text": "Hausarzt"
+            }
+          }
+        ],
+        "resourceType": "Practitioner"
+      }
+    },
+    {
+      "fullUrl": "https://e-rezept.de/PractitionerRole/6e7d04be-4015-4b6e-a533-1f50536e7f91",
+      "resource": {
+        "id": "6e7d04be-4015-4b6e-a533-1f50536e7f91",
+        "meta": {
+          "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_PractitionerRole|1.0.3"
+          ]
+        },
+        "organization": {
+          "identifier": {
+            "system": "http://fhir.de/NamingSystem/asv/teamnummer",
+            "value": "003456789"
+          }
+        },
+        "practitioner": {
+          "reference": "Practitioner/4ffde3c1-dc01-4cb5-aa7d-769ef1c9daca"
+        },
+        "resourceType": "PractitionerRole"
+      }
+    }
+  ],
+  "id": "a0470300-0000-0000-0002-000000000000",
+  "identifier": {
+    "system": "https://gematik.de/fhir/NamingSystem/PrescriptionID",
+    "value": "160.000.000.000.838.65"
+  },
+  "resourceType": "Bundle",
+  "timestamp": "2021-06-01T16:49:33.470+02:00",
+  "type": "document"
+}

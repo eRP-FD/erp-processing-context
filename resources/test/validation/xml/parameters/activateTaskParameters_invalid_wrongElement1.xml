@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Parameters xmlns="http://hl7.org/fhir">
+  <parameter>
+    <name value="ePrescription"/>
+    <valueCoding>
+      <system value="https://gematik.de/fhir/CodeSystem/Flowtype"/>
+      <code value="160"/>
+      <display value="Muster 16 (Apothekenpflichtige Arzneimittel)"/>
+    </valueCoding>
+  </parameter>
+</Parameters>

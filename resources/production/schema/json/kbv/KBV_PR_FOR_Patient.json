@@ -1,0 +1,748 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_PR_FOR_Patient",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_PR_FOR_Patient"
+    }
+  ],
+  "definitions": {
+    "KBV_PR_FOR_Patient": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "Patient"
+          ]
+        },
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "#/definitions/MetaForPatient"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "identifier": {
+          "items": [
+            {
+              "$ref": "#/definitions/versichertenId_GKV"
+            },
+            {
+              "$ref": "#/definitions/versichertennummer_pkv"
+            },
+            {
+              "$ref": "#/definitions/versichertennummer_kvk"
+            }
+          ],
+          "additionalItems": false
+        },
+        "name": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Practitioner_HumanName"
+          }
+        },
+        "birthDate": {
+          "$ref": "../BaseSchema.json#/definitions/date"
+        },
+        "_birthDate": {
+          "$ref": "#/definitions/birthDateExtension"
+        },
+        "address": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": [
+            {
+              "$ref": "#/definitions/Strassenanschrift"
+            },
+            {
+              "$ref": "#/definitions/Postfach"
+            }
+          ],
+          "additionalItems": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "meta",
+        "name",
+        "birthDate",
+        "address",
+        "resourceType"
+      ]
+    },
+    "MetaForPatient": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "profile": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "profile"
+      ]
+    },
+    "birthDateExtension": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/data-absent-reason"
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "versichertenId_GKV": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "use": {
+          "enum": [
+            "official"
+          ]
+        },
+        "_use": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "#/definitions/GKV_Type"
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "system": {
+          "type": "string",
+          "enum": [
+            "http://fhir.de/NamingSystem/gkv/kvid-10"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Z][0-9]{9}$"
+        },
+        "_value": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "system",
+        "value"
+      ]
+    },
+    "versichertennummer_pkv": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "use": {
+          "enum": [
+            "secondary"
+          ]
+        },
+        "_use": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "#/definitions/pkvType"
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "system": {
+          "$ref": "../BaseSchema.json#/definitions/uri"
+        },
+        "value": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_value": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "assigner": {
+          "$ref": "#/definitions/ReferenceAssignerOrganization"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "assigner"
+      ]
+    },
+    "versichertennummer_kvk": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "use": {
+          "enum": [
+            "official"
+          ]
+        },
+        "_use": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "#/definitions/kvkType"
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "system": {
+          "type": "string",
+          "enum": [
+            "http://fhir.de/NamingSystem/gkv/kvk-versichertennummer"
+          ]
+        },
+        "value": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_value": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "system",
+        "value"
+      ]
+    },
+    "GKV_Type": {
+      "properties": {
+        "coding": {
+          "properties": {
+            "id": {
+              "$ref": "../BaseSchema.json#/definitions/string"
+            },
+            "extension": {
+              "items": {
+                "$ref": "../BaseSchema.json#/definitions/Extension"
+              },
+              "type": "array"
+            },
+            "system": {
+              "enum": [
+                "http://fhir.de/CodeSystem/identifier-type-de-basis"
+              ]
+            },
+            "_system": {
+              "$ref": "../BaseSchema.json#/definitions/Element"
+            },
+            "code": {
+              "enum": [
+                "GKV"
+              ]
+            },
+            "_code": {
+              "$ref": "../BaseSchema.json#/definitions/Element"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "system",
+            "code"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "coding"
+      ]
+    },
+    "pkvType": {
+      "properties": {
+        "coding": {
+          "properties": {
+            "id": {
+              "$ref": "../BaseSchema.json#/definitions/string"
+            },
+            "extension": {
+              "items": {
+                "$ref": "../BaseSchema.json#/definitions/Extension"
+              },
+              "type": "array"
+            },
+            "system": {
+              "enum": [
+                "http://fhir.de/CodeSystem/identifier-type-de-basis"
+              ]
+            },
+            "_system": {
+              "$ref": "../BaseSchema.json#/definitions/Element"
+            },
+            "code": {
+              "enum": [
+                "GKV"
+              ]
+            },
+            "_code": {
+              "$ref": "../BaseSchema.json#/definitions/Element"
+            }
+          },
+          "required": [
+            "system",
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "coding"
+      ],
+      "additionalProperties": false
+    },
+    "kvkType": {
+      "properties": {
+        "coding": {
+          "properties": {
+            "id": {
+              "$ref": "../BaseSchema.json#/definitions/string"
+            },
+            "extension": {
+              "items": {
+                "$ref": "../BaseSchema.json#/definitions/Extension"
+              },
+              "type": "array"
+            },
+            "system": {
+              "enum": [
+                "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_identifier_type"
+              ]
+            },
+            "_system": {
+              "$ref": "../BaseSchema.json#/definitions/Element"
+            },
+            "code": {
+              "enum": [
+                "kvk"
+              ]
+            },
+            "_code": {
+              "$ref": "../BaseSchema.json#/definitions/Element"
+            }
+          },
+          "required": [
+            "system",
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "coding"
+      ],
+      "additionalProperties": false
+    },
+    "ReferenceAssignerOrganization": {
+      "Reference": {
+        "properties": {
+          "id": {
+            "$ref": "../BaseSchema.json#/definitions/string"
+          },
+          "extension": {
+            "items": {
+              "$ref": "../BaseSchema.json#/definitions/Extension"
+            },
+            "type": "array"
+          },
+          "reference": {
+            "$ref": "../BaseSchema.json#/definitions/string"
+          },
+          "_reference": {
+            "$ref": "../BaseSchema.json#/definitions/Element"
+          },
+          "type": {
+            "$ref": "../BaseSchema.json#/definitions/uri"
+          },
+          "_type": {
+            "$ref": "../BaseSchema.json#/definitions/Element"
+          },
+          "identifier": {
+            "$ref": "../IKNR.json#/definitions/IKNR_Identifier"
+          },
+          "display": {
+            "$ref": "../BaseSchema.json#/definitions/string"
+          },
+          "_display": {
+            "$ref": "../BaseSchema.json#/definitions/Element"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "display"
+        ]
+      }
+    },
+    "data-absent-reason": {
+      "Extension": {
+        "properties": {
+          "id": {
+            "$ref": "../BaseSchema.json#/definitions/string"
+          },
+          "extension": {
+            "items": {
+              "$ref": "../BaseSchema.json#/definitions/Extension"
+            },
+            "type": "array"
+          },
+          "url": {
+            "enum": [
+              "http://hl7.org/fhir/StructureDefinition/data-absent-reason"
+            ]
+          },
+          "_url": {
+            "$ref": "../BaseSchema.json#/definitions/Element"
+          },
+          "valueCode": {
+            "enum": [
+              "unknown"
+            ]
+          },
+          "_valueCode": {
+            "$ref": "../BaseSchema.json#/definitions/Element"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "Strassenanschrift": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "both"
+          ]
+        },
+        "_type": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "line": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/string"
+          },
+          "type": "array"
+        },
+        "_line": {
+          "items": {
+            "$ref": "#/definitions/LineExtension"
+          },
+          "type": "array"
+        },
+        "city": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_city": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "postalCode": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_postalCode": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "country": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "line"
+      ]
+    },
+    "Postfach": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "postal"
+          ]
+        },
+        "_type": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "line": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/string"
+          },
+          "type": "array"
+        },
+        "_line": {
+          "items": {
+            "$ref": "#/definitions/PostfachLineExtension"
+          },
+          "type": "array"
+        },
+        "city": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_city": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "postalCode": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_postalCode": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "country": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "line"
+      ]
+    },
+    "LineExtension": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Strasse"
+              },
+              {
+                "$ref": "#/definitions/Hausnummer"
+              },
+              {
+                "$ref": "#/definitions/Adresszusatz"
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "PostfachLineExtension": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/PostfachExtension"
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Strasse": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_valueString": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueString"
+      ]
+    },
+    "Hausnummer": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_valueString": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueString"
+      ]
+    },
+    "Adresszusatz": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_valueString": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueString"
+      ]
+    },
+    "PostfachExtension": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-postBox"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_valueString": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "line"
+      ]
+    }
+  }
+}

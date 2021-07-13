@@ -1,0 +1,495 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_PR_ERP_Medication_PZN",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_PR_ERP_Medication_PZN"
+    }
+  ],
+  "definitions": {
+    "KBV_PR_ERP_Medication_PZN": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "Medication"
+          ]
+        },
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "#/definitions/MedicationPZNMeta"
+        },
+        "extension": {
+          "type": "array",
+          "items": [
+            {
+              "$ref": "KBV_EX_ERP_Medication_Category.json#/definitions/kategorie"
+            },
+            {
+              "$ref": "KBV_EX_ERP_Medication_Vaccine.json#/definitions/impfstoff"
+            },
+            {
+              "$ref": "KBV_EX_ERP_Medication_normgroesse.json#/definitions/normgroesse"
+            }
+          ],
+          "additionalItems": false,
+          "required": [
+            "kategorie",
+            "impfstoff"
+          ]
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "code": {
+          "$ref": "#/definitions/MedicationPZNCodeCodeableConcept"
+        },
+        "form": {
+          "$ref": "#/definitions/MedicationPZNFormCodeableConcept"
+        },
+        "amount": {
+          "$ref": "../BaseSchema.json#/definitions/MedicationRatio"
+        },
+        "batch": {
+          "$ref": "#/definitions/Medication_Batch"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "meta",
+        "code",
+        "form",
+        "resourceType"
+      ]
+    },
+    "Medication_Batch": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "lotNumber": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_lotNumber": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "expirationDate": {
+          "$ref": "../BaseSchema.json#/definitions/dateTime"
+        },
+        "_expirationDate": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MedicationPZNMeta": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "profile": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.1"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "profile"
+      ]
+    },
+    "MedicationPZNFormCodeableConcept": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "coding": {
+          "items": {
+            "$ref": "#/definitions/MedicationPZNFormCoding"
+          },
+          "type": "array"
+        },
+        "text": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_text": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "coding"
+      ]
+    },
+    "MedicationPZNFormCoding": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"
+          ]
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "$ref": "#/definitions/CodeEnums"
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    },
+    "CodeEnums": {
+      "enum": [
+        "AEO",
+        "AMP",
+        "APA",
+        "ASN",
+        "ASO",
+        "ATO",
+        "ATR",
+        "AUB",
+        "AUC",
+        "AUG",
+        "AUS",
+        "BAD",
+        "BAL",
+        "BAN",
+        "BEU",
+        "BIN",
+        "BON",
+        "BPL",
+        "BRE",
+        "BTA",
+        "CRE",
+        "DFL",
+        "DIL",
+        "DIS",
+        "DKA",
+        "DOS",
+        "DRA",
+        "DRM",
+        "DSC",
+        "DSS",
+        "EDP",
+        "EIN",
+        "ELE",
+        "ELI",
+        "EMU",
+        "ESS",
+        "ESU",
+        "EXT",
+        "FBE",
+        "FBW",
+        "FDA",
+        "FER",
+        "FET",
+        "FLA",
+        "FLE",
+        "FLU",
+        "FMR",
+        "FOL",
+        "FRB",
+        "FSE",
+        "FTA",
+        "GEK",
+        "GEL",
+        "GLI",
+        "GLO",
+        "GMR",
+        "GPA",
+        "GRA",
+        "GSE",
+        "GUL",
+        "HAS",
+        "HKM",
+        "HKP",
+        "HPI",
+        "HVW",
+        "IFA",
+        "IFB",
+        "IFD",
+        "IFE",
+        "IFF",
+        "IFK",
+        "IFL",
+        "IFS",
+        "IHA",
+        "IHP",
+        "IIE",
+        "IIL",
+        "IIM",
+        "IKA",
+        "ILO",
+        "IMP",
+        "INF",
+        "INH",
+        "INI",
+        "INL",
+        "INS",
+        "IST",
+        "ISU",
+        "IUP",
+        "KAN",
+        "KAP",
+        "KAT",
+        "KDA",
+        "KEG",
+        "KER",
+        "KGU",
+        "KID",
+        "KII",
+        "KKS",
+        "KLI",
+        "KLT",
+        "KMP",
+        "KMR",
+        "KOD",
+        "KOM",
+        "KON",
+        "KPG",
+        "KRI",
+        "KSS",
+        "KSU",
+        "KTA",
+        "LAN",
+        "LII",
+        "LIQ",
+        "LOE",
+        "LOT",
+        "LOV",
+        "LSE",
+        "LTA",
+        "LUP",
+        "LUT",
+        "MIL",
+        "MIS",
+        "MIX",
+        "MRG",
+        "MRP",
+        "MTA",
+        "MUW",
+        "NAG",
+        "NAO",
+        "NAS",
+        "NAW",
+        "NDS",
+        "NSA",
+        "NTR",
+        "OCU",
+        "OEL",
+        "OHT",
+        "OVU",
+        "PAM",
+        "PAS",
+        "PEL",
+        "PEN",
+        "PER",
+        "PFL",
+        "PFT",
+        "PHI",
+        "PHV",
+        "PIE",
+        "PIF",
+        "PII",
+        "PIJ",
+        "PIK",
+        "PIS",
+        "PIV",
+        "PKI",
+        "PLE",
+        "PLF",
+        "PLG",
+        "PLH",
+        "PLI",
+        "PLK",
+        "PLS",
+        "PLV",
+        "PPL",
+        "PRS",
+        "PSE",
+        "PST",
+        "PUD",
+        "PUL",
+        "RED",
+        "REK",
+        "RET",
+        "RGR",
+        "RKA",
+        "RMS",
+        "RSC",
+        "RSU",
+        "RUT",
+        "SAF",
+        "SAL",
+        "SAM",
+        "SCH",
+        "SEI",
+        "SHA",
+        "SIR",
+        "SLZ",
+        "SMF",
+        "SMT",
+        "SMU",
+        "SPA",
+        "SPF",
+        "SPL",
+        "SPR",
+        "SPT",
+        "SRI",
+        "SSU",
+        "STA",
+        "STB",
+        "STI",
+        "STR",
+        "SUB",
+        "SUE",
+        "SUL",
+        "SUP",
+        "SUS",
+        "SUT",
+        "SUV",
+        "SWA",
+        "TAB",
+        "TAE",
+        "TAM",
+        "TEE",
+        "TEI",
+        "TES",
+        "TIN",
+        "TKA",
+        "TLE",
+        "TMR",
+        "TON",
+        "TPN",
+        "TPO",
+        "TRA",
+        "TRI",
+        "TRO",
+        "TRS",
+        "TRT",
+        "TSA",
+        "TSD",
+        "TSE",
+        "TSS",
+        "TST",
+        "TSY",
+        "TTR",
+        "TUB",
+        "TUE",
+        "TUP",
+        "TVW",
+        "UTA",
+        "VAL",
+        "VAR",
+        "VCR",
+        "VER",
+        "VGE",
+        "VKA",
+        "VLI",
+        "VOV",
+        "VST",
+        "VSU",
+        "VTA",
+        "WAT",
+        "WGA",
+        "WKA",
+        "WKM",
+        "WUE",
+        "XDG",
+        "XDS",
+        "XFE",
+        "XGM",
+        "XHA",
+        "XHS",
+        "XNC",
+        "XPK",
+        "XTC",
+        "ZAM",
+        "ZBU",
+        "ZCR",
+        "ZGE",
+        "ZKA",
+        "ZPA"
+      ]
+    },
+    "MedicationPZNCodeCodeableConcept": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "coding": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/MedicationCodeCoding"
+          },
+          "type": "array"
+        },
+        "text": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_text": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "coding",
+        "text"
+      ]
+    }
+  }
+}

@@ -1,0 +1,431 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_PR_ERP_Prescription",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_PR_ERP_Prescription"
+    }
+  ],
+  "definitions": {
+    "KBV_PR_ERP_Prescription": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "MedicationRequest"
+          ]
+        },
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "#/definitions/Prescription_Meta"
+        },
+        "extension": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "KBV_EX_ERP_EmergencyServicesFee.json#/definitions/KBV_EX_ERP_EmergencyServicesFee"
+              },
+              {
+                "$ref": "KBV_EX_ERP_BVG.json#/definitions/KBV_EX_ERP_BVG"
+              },
+              {
+                "$ref": "KBV_EX_ERP_Multiple_Prescription.json#/definitions/KBV_EX_ERP_Multiple_Prescription"
+              },
+              {
+                "$ref": "KBV_EX_ERP_StatusCoPayment.json#/definitions/KBV_EX_ERP_StatusCoPayment"
+              },
+              {
+                "$ref": "KBV_EX_ERP_Accident.json#/definitions/KBV_EX_ERP_Accident"
+              }
+            ]
+          },
+          "additionalItems": false
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "active"
+          ]
+        },
+        "_status": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "intent": {
+          "enum": [
+            "order"
+          ]
+        },
+        "_intent": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "medicationReference": {
+          "$ref": "#/definitions/Medication_Reference"
+        },
+        "subject": {
+          "$ref": "#/definitions/Subject_Reference"
+        },
+        "authoredOn": {
+          "$ref": "../BaseSchema.json#/definitions/dateTime"
+        },
+        "_authoredOn": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "requester": {
+          "$ref": "#/definitions/Requester_Reference"
+        },
+        "insurance": {
+          "items": {
+            "$ref": "#/definitions/Insurance_Reference"
+          },
+          "type": "array"
+        },
+        "note": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/Note_Annotation"
+          }
+        },
+        "dosageInstruction": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/Dosage_Instruction"
+          }
+        },
+        "dispenseRequest": {
+          "$ref": "#/definitions/MedicationRequest_DispenseRequest"
+        },
+        "substitution": {
+          "$ref": "#/definitions/MedicationRequest_Substitution"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "resourceType",
+        "id",
+        "meta",
+        "status",
+        "intent",
+        "medicationReference",
+        "subject",
+        "authoredOn",
+        "requester",
+        "insurance",
+        "dispenseRequest",
+        "substitution"
+      ]
+    },
+    "MedicationRequest_DispenseRequest": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "validityPeriod": {
+          "$ref": "#/definitions/validityPeriod"
+        },
+        "quantity": {
+          "$ref": "#/definitions/DispenseRequest_Quantity"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "quantity"
+      ]
+    },
+    "MedicationRequest_Substitution": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "allowedBoolean": {
+          "pattern": "^true|false$",
+          "type": "boolean"
+        },
+        "_allowedBoolean": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "allowedBoolean"
+      ]
+    },
+    "Prescription_Meta": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "profile": {
+          "items": {
+            "enum": [
+              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1"
+            ]
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "profile"
+      ]
+    },
+    "Medication_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    },
+    "Subject_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    },
+    "Requester_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    },
+    "Insurance_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    },
+    "Note_Annotation": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "text": {
+          "$ref": "../BaseSchema.json#/definitions/markdown"
+        },
+        "_text": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ]
+    },
+    "Dosage_Instruction": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "$ref": "KBV_EX_ERP_DosageFlag.json#/definitions/KBV_EX_ERP_DosageFlag"
+          }
+        },
+        "modifierExtension": {
+          "type": "array",
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          }
+        },
+        "text": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_text": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "patientInstruction": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_patientInstruction": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "validityPeriod": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "start": {
+          "$ref": "../BaseSchema.json#/definitions/dateTime"
+        },
+        "_start": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "end": {
+          "$ref": "../BaseSchema.json#/definitions/dateTime"
+        },
+        "_end": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start"
+      ]
+    },
+    "DispenseRequest_Quantity": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "value": {
+          "$ref": "../BaseSchema.json#/definitions/decimal"
+        },
+        "_value": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "system": {
+          "enum": [
+            "http://unitsofmeasure.org"
+          ]
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "{Package}"
+          ]
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "system",
+        "code"
+      ]
+    }
+  }
+}

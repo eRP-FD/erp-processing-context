@@ -1,0 +1,11 @@
+{
+    "amount": {
+        "denominator": {
+            "value": 1
+        },
+        "numerator": {
+            "value": 12
+        }
+    },
+    "resourceType": "Medication"
+}

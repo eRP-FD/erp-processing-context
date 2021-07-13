@@ -1,0 +1,67 @@
+{
+   <pthread_cond_{signal,broadcast}: dubious: associated lock is not held by any thread>
+   Helgrind:Misc
+   ...
+   fun:_ZN5boost4asio6detail11posix_event27maybe_unlock_and_signal_one*
+   ...
+}
+{
+   <pthread_cond_{signal,broadcast}: dubious: associated lock is not held by any thread>
+   Helgrind:Misc
+   ...
+   fun:_ZN5boost4asio6detail11posix_event13wait_for_usec*
+   ...
+}
+{
+   <pthread_cond_{signal,broadcast}: dubious: associated lock is not held by any threade>
+   Helgrind:Misc
+   ...
+   fun:maybe_unlock_and_signal_one<boost::asio::detail::conditionally_enabled_mutex::scoped_lock>
+   ...
+}
+{
+   <pthread_cond_{signal,broadcast}: dubious: associated lock is not held by any thread>
+   Helgrind:Misc
+   ...
+   fun:wait_for_usec<boost::asio::detail::conditionally_enabled_mutex::scoped_lock>
+   ...
+}
+{
+   <pthread_cond_{signal,broadcast}: dubious: associated lock is not held by any thread>
+   Helgrind:Misc
+   ...
+   fun:async_receive<boost::beast::buffers_prefix_view<boost::asio::mutable_buffers_1>, boost::beast::basic_stream<boost::asio::ip::tcp, boost::asio::execution::any_executor<boost::asio::execution::context_as_t<boost::asio::execution_context&>, boost::asio::execution::detail::blocking::never_t<0>, boost::asio::execution::prefer_only<boost::asio::execution::detail::blocking::possibly_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::outstanding_work::tracked_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::outstanding_work::untracked_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::relationship::fork_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::relationship::continuation_t<0> > >, boost::beast::unlimited_rate_policy>::ops::transfer_op<true, boost::asio::mutable_buffers_1, boost::asio::ssl::detail::io_op<boost::beast::basic_stream<boost::asio::ip::tcp, boost::asio::execution::any_executor<boost::asio::execution::context_as_t<boost::asio::execution_context&>, boost::asio::execution::detail::blocking::never_t<0>, boost::asio::execution::prefer_only<boost::asio::execution::detail::blocking::possibly_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::outstanding_work::tracked_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::outstanding_work::untracked_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::relationship::fork_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::relationship::continuation_t<0> > >, boost::beast::unlimited_rate_policy>, boost::asio::ssl::detail::handshake_op, boost::beast::detail::bind_front_wrapper<void (ServerSession::*)(boost::system::error_code), std::shared_ptr<ServerSession> > > >, boost::asio::execution::any_executor<boost::asio::execution::context_as_t<boost::asio::execution_context&>, boost::asio::execution::detail::blocking::never_t<0>, boost::asio::execution::prefer_only<boost::asio::execution::detail::blocking::possibly_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::outstanding_work::tracked_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::outstanding_work::untracked_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::relationship::fork_t<0> >, boost::asio::execution::prefer_only<boost::asio::execution::detail::relationship::continuation_t<0> > > >
+   ...
+}
+{
+   <https://www.postgresql.org/message-id/20171113112719.1468.57626%40wrigleys.postgresql.org>
+   Helgrind:Race
+   fun:pqSaveParameterStatus
+   ...
+}
+{
+   <static local variable>
+   Helgrind:Race
+   fun:_Z16encryptionCipherILm256EEPK13evp_cipher_stv
+   ...
+}
+{
+   <static local variable>
+   Helgrind:Race
+   ...
+   fun:_ZN22FhirJsonToXmlConverter15convertResourceEP8_xmlNodeRKN9rapidjson12GenericValueINS2_4UTF8IcEENS2_19MemoryPoolAllocatorINS2_12CrtAllocatorEEEEE
+   ...
+}
+{
+   <static local variable>
+   Helgrind:Race
+   ...
+   fun:_ZN17FhirCanonicalizer32doubleWhitespacesHaveToBeRemovedERK23FhirStructureDefinition
+   ...
+}
+{
+   <stderr>
+   Helgrind:Race
+   fun:_ZSt16__ostream_insertIcSt11char_traitsIcEERSt13basic_ostreamIT_T0_ES6_PKS3_l
+   ...
+}

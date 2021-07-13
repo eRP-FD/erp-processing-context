@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_PR_ERP_PracticeSupply_Payor",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/Kostentraeger"
+    }
+  ],
+  "definitions": {
+    "Kostentraeger": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/ik"
+              },
+              {
+                "$ref": "#/definitions/name"
+              },
+              {
+                "$ref": "#/definitions/kostentraegertyp"
+              }
+            ]
+          },
+          "additionalItems": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          }
+        },
+        "url": {
+          "enum": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_PracticeSupply_Payor"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    },
+    "ik": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "ik"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueIdentifier": {
+          "$ref": "../IKNR.json#/definitions/IKNR_Identifier"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueIdentifier"
+      ]
+    },
+    "name": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "name"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_valueString": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueString"
+      ]
+    },
+    "kostentraegertyp": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "kostentraegertyp"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueCoding": {
+          "$ref": "#/definitions/kostentraegertyp_Coding"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueCoding"
+      ]
+    },
+    "kostentraegertyp_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "$ref": "../BaseSchema.json#/definitions/uri"
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "GKV",
+            "PKV",
+            "BG",
+            "SEL"
+          ]
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    }
+  }
+}

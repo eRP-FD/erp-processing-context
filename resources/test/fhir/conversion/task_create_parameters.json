@@ -1,0 +1,11 @@
+{
+    "resourceType":"Parameters",
+    "parameter":[{
+        "name":"workflowType",
+        "valueCoding":{
+            "system":"https://gematik.de/fhir/CodeSystem/Flowtype",
+            "code":"160",
+            "display":"Muster 16 (Apothekenpflichtige Arzneimittel)"
+        }
+    }]
+}

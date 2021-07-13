@@ -1,0 +1,15 @@
+{
+    "id": "281a985c-f25b-4aae-91a6-41ad744080b0",
+    "identifier": [
+        {
+            "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN",
+            "type": {
+                "text": "No whitespace other than single spaces in property values"
+            },
+            "use": "usual",
+            "value": "00"
+        }
+    ],
+    "language": "de - AT",
+    "resourceType": "Medication"
+}

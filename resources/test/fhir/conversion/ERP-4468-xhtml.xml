@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<Group xmlns="http://hl7.org/fhir">
+  <text>
+      <div xmlns="http://www.w3.org/1999/xhtml"><span xmlns:x2="http://www.w3.org/1999/xhtml2" class="bold"> Some Text&lt;"</span></div>
+  </text>
+  <type value="device"/>
+  <actual value="false"/>
+</Group>

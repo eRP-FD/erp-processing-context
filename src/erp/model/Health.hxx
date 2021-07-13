@@ -1,0 +1,46 @@
+#ifndef ERP_PROCESSING_CONTEXT_HEALTH_HXX
+#define ERP_PROCESSING_CONTEXT_HEALTH_HXX
+
+#include "erp/model/Resource.hxx"
+#include <map>
+
+namespace model
+{
+
+class Health : public ResourceBase
+{
+public:
+    static constexpr std::string_view down = "DOWN";
+    static constexpr std::string_view up = "UP";
+
+    static constexpr std::string_view postgres = "postgres";
+    static constexpr std::string_view redis = "redis";
+    static constexpr std::string_view hsm = "hsm";
+    static constexpr std::string_view tsl = "TSL.xml";
+    static constexpr std::string_view bna = "BNetzA.xml";
+    static constexpr std::string_view idp = "IdpUpdater";
+    static constexpr std::string_view seedTimer = "SeedTimer";
+    static constexpr std::string_view teeTokenUpdater = "TeeTokenUpdater";
+
+    explicit Health();
+
+    void setOverallStatus(const std::string_view& status);
+    void setPostgresStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setHsmStatus(const std::string_view& status, const std::string_view& device,
+                      std::optional<std::string_view> message = std::nullopt);
+    void setRedisStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setTslStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setBnaStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setIdpStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setSeedTimerStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setTeeTokenUpdaterStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+
+private:
+    void setStatusInChecksArray(const std::string_view& name, const std::string_view& status, const rapidjson::Pointer& messagePointer, std::optional<std::string_view> message);
+    void setStatusInChecksArray(const std::string_view& name, const std::string_view& status,
+                                const std::map<rapidjson::Pointer, std::string_view>& data);
+};
+
+}
+
+#endif//ERP_PROCESSING_CONTEXT_HEALTH_HXX

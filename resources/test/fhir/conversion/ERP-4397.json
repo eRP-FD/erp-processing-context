@@ -1,0 +1,47 @@
+{
+    "resourceType":"Device",
+    "id":"ErxService",
+    "meta":{
+        "profile":[
+            "https://gematik.de/fhir/StructureDefinition/ErxDevice1",
+            "https://gematik.de/fhir/StructureDefinition/ErxDevice2",
+            "https://gematik.de/fhir/StructureDefinition/ErxDevice3",
+            "https://gematik.de/fhir/StructureDefinition/ErxDevice4"
+        ],
+        "_profile": [
+            {
+                "extension": [
+                    {
+                        "url":"http://some.host.de/path",
+                        "valueString": "some-value1"
+                    },
+                    {
+                        "url":"http://some.host.de/path",
+                        "valueString": "some-value2"
+                    }
+                ]
+            },
+            null,
+            {
+                "extension": [
+                    {
+                        "url":"http://some.host.de/path",
+                        "valueString": "some-value3"
+                    }
+                ]
+            },
+            null
+        ]
+    },
+
+    "status":"active",
+    "_status": {
+        "id": "0815",
+        "extension": [
+            {
+                "url":"http://some.host.de/path",
+                "valueString": "some-value4"
+            }
+        ]
+    }
+}

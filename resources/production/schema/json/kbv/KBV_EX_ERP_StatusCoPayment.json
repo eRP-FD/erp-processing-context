@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_EX_ERP_StatusCoPayment",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_EX_ERP_StatusCoPayment"
+    }
+  ],
+  "definitions": {
+    "KBV_EX_ERP_StatusCoPayment": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueCoding": {
+          "$ref": "#/definitions/StatusCoPayment_Coding"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueCoding"
+      ]
+    },
+    "StatusCoPayment_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_StatusCoPayment"
+          ]
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "0",
+            "1",
+            "2"
+          ]
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+#line 2 "@CMAKE_CURRENT_SOURCE_DIR@/tool_config.hxx.in"
+#ifndef ERP_TOOLS_TOOL_CONFIG_HXX
+#define ERP_TOOLS_TOOL_CONFIG_HXX
+
+
+class ToolConfig
+{
+public:
+    static constexpr std::string_view RESOURCE_SOURCE_DIR = "@RESOURCE_SOURCE_DIR@";
+    static constexpr std::string_view RESOURCE_BINARY_DIR = "@RESOURCE_BINARY_DIR@";
+};
+
+#endif // ERP_TOOLS_TOOL_CONFIG_HXX

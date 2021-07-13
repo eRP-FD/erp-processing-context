@@ -1,0 +1,19 @@
+{
+    "sub": "bOmGGU6xhXrccYv_IpWDR8_IyH8uS8U2gE8tMrosZHA",
+    "professionOID": "1.2.276.0.76.4.54",
+    "organizationName": "3-SMC-B-Testkarte-883110000129070",
+    "idNummer": "3-SMC-B-Testkarte-883110000129070",
+    "amr": "[mfa, sc, pin]",
+    "iss": "https://idp-ref.zentral.idp.splitdns.ti-dienste.de/.well-known/openid-configuration/",
+    "given_name": "Hillbert",
+    "client_id": "erp-testsuite-fd",
+    "acr": "gematik-ehealth-loa-high",
+    "aud": "https://erp.lu.erezepttest.net/",
+    "azp": "erp-testsuite-fd",
+    "scope": "openid e-rezept",
+    "auth_time": "1622354997",
+    "exp": "1622355297",
+    "family_name": "Düsterbehn-Hardenbergshausen",
+    "iat": "1622354877",
+    "jti": "0fc6bb4e27622a5c"
+}

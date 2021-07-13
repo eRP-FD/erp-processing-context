@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_EX_ERP_Medication_normgroesse",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/normgroesse"
+    }
+  ],
+  "definitions": {
+    "normgroesse": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "http://fhir.de/StructureDefinition/normgroesse"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueCode": {
+          "enum": [
+            "KA",
+            "KTP",
+            "N1",
+            "N2",
+            "N3",
+            "NB",
+            "Sonstiges"
+          ],
+          "pattern": "^[^\\s]+(\\s[^\\s]+)*$",
+          "type": "string"
+        },
+        "_valueCode": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

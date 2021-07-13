@@ -1,0 +1,9 @@
+{
+  "common" : {
+    "erp" : {
+      "fhir": {
+        "structure-files": [ "value1", "value2" ]
+      }
+    }
+  }
+}

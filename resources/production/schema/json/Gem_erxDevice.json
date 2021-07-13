@@ -1,0 +1,407 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "Gem_erxDevice",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/Gem_erxDevice"
+    }
+  ],
+  "definitions": {
+    "Gem_erxDevice": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "Device"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "BaseSchema.json#/definitions/Meta"
+        },
+        "implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "language": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_language": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "text": {
+          "$ref": "BaseSchema.json#/definitions/Narrative"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "identifier": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Identifier"
+          },
+          "type": "array"
+        },
+        "definition": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "udiCarrier": {
+          "items": {
+            "$ref": "#/definitions/Device_UdiCarrier"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "inactive",
+            "entered-in-error",
+            "unknown"
+          ]
+        },
+        "_status": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "statusReason": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "distinctIdentifier": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_distinctIdentifier": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "manufacturer": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_manufacturer": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "manufactureDate": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_manufactureDate": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "expirationDate": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_expirationDate": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "lotNumber": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_lotNumber": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "serialNumber": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_serialNumber": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "deviceName": {
+          "items": {
+            "$ref": "#/definitions/Device_DeviceName"
+          },
+          "type": "array"
+        },
+        "modelNumber": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_modelNumber": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "partNumber": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_partNumber": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "specialization": {
+          "items": {
+            "$ref": "#/definitions/Device_Specialization"
+          },
+          "type": "array"
+        },
+        "version": {
+          "items": {
+            "$ref": "#/definitions/Device_Version"
+          },
+          "type": "array"
+        },
+        "property": {
+          "items": {
+            "$ref": "#/definitions/Device_Property"
+          },
+          "type": "array"
+        },
+        "patient": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "owner": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "contact": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/ContactPoint"
+          },
+          "type": "array"
+        },
+        "location": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "url": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_url": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "note": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Annotation"
+          },
+          "type": "array"
+        },
+        "safety": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "parent": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "resourceType",
+        "status",
+        "deviceName",
+        "version"
+      ]
+    },
+    "Device_UdiCarrier": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "deviceIdentifier": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_deviceIdentifier": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "issuer": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_issuer": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "jurisdiction": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_jurisdiction": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "carrierAIDC": {
+          "$ref": "BaseSchema.json#/definitions/base64Binary"
+        },
+        "_carrierAIDC": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "carrierHRF": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_carrierHRF": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "entryType": {
+          "enum": [
+            "barcode",
+            "rfid",
+            "manual",
+            "card",
+            "self-reported",
+            "unknown"
+          ]
+        },
+        "_entryType": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Device_DeviceName": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "name": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_name": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "enum": [
+            "udi-label-name",
+            "user-friendly-name",
+            "patient-reported-name",
+            "manufacturer-name",
+            "model-name",
+            "other"
+          ]
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Device_Specialization": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "systemType": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "version": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_version": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "systemType"
+      ]
+    },
+    "Device_Version": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "component": {
+          "$ref": "BaseSchema.json#/definitions/Identifier"
+        },
+        "value": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_value": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Device_Property": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "valueQuantity": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Quantity"
+          },
+          "type": "array"
+        },
+        "valueCode": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ]
+    }
+  }
+}

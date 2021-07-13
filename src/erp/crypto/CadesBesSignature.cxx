@@ -1,0 +1,345 @@
+#include "erp/crypto/CadesBesSignature.hxx"
+
+#include "erp/crypto/Certificate.hxx"
+#include "erp/crypto/EssCertificateHelper.hxx"
+#include "erp/pc/ProfessionOid.hxx"
+#include "erp/tsl/TslManager.hxx"
+#include "erp/util/Base64.hxx"
+#include "erp/util/Gsl.hxx"
+#include "erp/ErpRequirements.hxx"
+
+
+namespace
+{
+    bool hasSignerInfosWithoutCertificate(const STACK_OF(CMS_SignerInfo)& signerInfos)
+    {
+        const int signerInfosCount = sk_CMS_SignerInfo_num(&signerInfos);
+        OpenSslExpect(signerInfosCount > 0, "No signer infos provided.");
+
+        for (int ind = 0; ind < signerInfosCount; ind++)
+        {
+            auto* signerInfo = sk_CMS_SignerInfo_value(&signerInfos, ind);
+            OpenSslExpect(signerInfo != nullptr, "Signer info must be provided.");
+            X509* signer = nullptr;
+            CMS_SignerInfo_get0_algs(signerInfo, nullptr, &signer, nullptr, nullptr);
+            if (!signer)
+                return true;
+        }
+
+        return false;
+    }
+
+
+    void setSignerInfoOnDemand(
+        CMS_ContentInfo& cmsContentInfo,
+        const STACK_OF(CMS_SignerInfo)& signerInfos,
+        STACK_OF(X509)* certificates)
+    {
+        if (hasSignerInfosWithoutCertificate(signerInfos))
+        {
+            CMS_set1_signers_certs(&cmsContentInfo, certificates, 0);
+        }
+    }
+
+
+    void verifySignerInfo(CMS_SignerInfo& signerInfo)
+    {
+        Expect3(CMS_signed_get_attr_by_NID(&signerInfo, NID_pkcs9_contentType, -1) >= 0,
+                "No content type in signed info.",
+                CadesBesSignature::VerificationException);
+        Expect3(CMS_signed_get_attr_by_NID(&signerInfo, NID_pkcs9_signingTime, -1) >= 0,
+                "No signing time in signed info.",
+                CadesBesSignature::VerificationException);
+        Expect3(CMS_signed_get_attr_by_NID(&signerInfo, NID_pkcs9_messageDigest, -1) >= 0,
+                "No message digest in signed info.",
+                CadesBesSignature::VerificationException);
+
+        Expect3(CMS_signed_get_attr_by_NID(&signerInfo, NID_id_smime_aa_signingCertificate, -1) >= 0
+                  || CMS_signed_get_attr_by_NID(&signerInfo, NID_id_smime_aa_signingCertificateV2, -1) >= 0,
+                "No certificate in signed info.",
+                CadesBesSignature::VerificationException);
+    }
+
+
+    std::vector<X509*> getSignerCertificates(CMS_ContentInfo& cmsContentInfo, STACK_OF(X509)* certificates)
+    {
+        auto* signerInfos = CMS_get0_SignerInfos(&cmsContentInfo);
+        OpenSslExpect(signerInfos != nullptr, "No signer infos is provided.");
+
+        const int signerInfosCount = sk_CMS_SignerInfo_num(signerInfos);
+        OpenSslExpect(signerInfosCount > 0, "No signer infos provided.");
+
+        setSignerInfoOnDemand(cmsContentInfo, *signerInfos, certificates);
+
+        std::vector<X509*> signerCertificates;
+        for (int ind = 0; ind < signerInfosCount; ind++)
+        {
+            auto* signerInfo = sk_CMS_SignerInfo_value(signerInfos, ind);
+            OpenSslExpect(signerInfo != nullptr, "Signer info must be provided.");
+
+            verifySignerInfo(*signerInfo);
+
+            X509* signerCertificate = nullptr;
+            CMS_SignerInfo_get0_algs(signerInfo, nullptr, &signerCertificate, nullptr, nullptr);
+            OpenSslExpect(signerCertificate != nullptr, "No signer certificate.");
+
+            EssCertificateHelper::verifySigningCertificateFromSignedData(*signerInfo, *signerCertificate);
+
+            signerCertificates.emplace_back(signerCertificate);
+        }
+
+        return signerCertificates;
+    }
+
+
+    void addCertificateToSignerInfo(
+        CMS_ContentInfo& cmsContentInfo, BIO& data,  const Certificate& certificate, unsigned int flags)
+    {
+        auto* signerInfos = CMS_get0_SignerInfos(&cmsContentInfo);
+        OpenSslExpect(signerInfos != nullptr, "No signer infos is provided.");
+
+        const int signerInfosCount = sk_CMS_SignerInfo_num(signerInfos);
+        OpenSslExpect(signerInfosCount > 0, "No signer infos provided.");
+
+        for (int ind = 0; ind < signerInfosCount; ind++)
+        {
+            auto* signerInfo = sk_CMS_SignerInfo_value(signerInfos, ind);
+            OpenSslExpect(signerInfo != nullptr, "Signer info must be provided.");
+
+            if (CMS_signed_get_attr_by_NID(signerInfo, NID_id_smime_aa_signingCertificate, -1) < 0 &&
+                CMS_signed_get_attr_by_NID(signerInfo, NID_id_smime_aa_signingCertificateV2, -1) < 0)
+            {
+                // add signing certificate to the signerInfo
+                EssCertificateHelper::setSigningCertificateInSignedData(*signerInfo, *certificate.toX509().removeConst());
+            }
+        }
+
+        OpenSslExpect(1 == CMS_final(&cmsContentInfo, &data, nullptr, flags),
+                      "Can not finalise CMS signature");
+    }
+
+
+    void checkProfessionOids(X509Certificate& certificate)
+    {
+        A_19225.start("Check ProfessionOIDs in QES certificate.");
+        Expect3(certificate.checkRoles({
+                      std::string(profession_oid::oid_arzt),
+                      std::string(profession_oid::oid_zahnarzt),
+                      std::string(profession_oid::oid_arztekammern)}),
+                "The QES-Certificate does not have expected ProfessionOID.",
+                CadesBesSignature::UnexpectedProfessionOidException);
+        A_19225.finish();
+    }
+
+
+    void verifySignerCertificates(
+        CMS_ContentInfo& cmsContentInfo,
+        TslManager& tslManager)
+    {
+        auto certificates = std::unique_ptr<STACK_OF(X509), decltype(&sk_X509_free)>(
+            CMS_get1_certs(&cmsContentInfo), sk_X509_free);
+        const std::vector<X509*> signerCertificates = getSignerCertificates(
+            cmsContentInfo, certificates.get());
+
+        for (X509* signerCertificate : signerCertificates)
+        {
+            X509Certificate certificate = X509Certificate::createFromX509Pointer(signerCertificate);
+            tslManager.verifyCertificate(
+                TslMode::BNA,
+                certificate,
+                {CertificateType::C_HP_QES, CertificateType::C_HP_ENC});
+            checkProfessionOids(certificate);
+        }
+    }
+
+
+    int cmsVerify(
+        TslManager* tslManager,
+        CMS_ContentInfo& cmsContentInfo,
+        BIO& out)
+    {
+        if (tslManager != nullptr)
+        {
+            // CMS_verify does not allow to let the signer certificate be verified
+            // and accept trusted intermediate anchors.
+            // To workaround it we have to verify signer certificate explicitly
+            // and run CMS_verify in CMS_NO_SIGNER_CERT_VERIFY mode.
+            verifySignerCertificates(cmsContentInfo, *tslManager);
+
+            return CMS_verify(&cmsContentInfo,
+                              nullptr,
+                              nullptr,
+                              nullptr,
+                              &out,
+                              CMS_NO_SIGNER_CERT_VERIFY | CMS_BINARY);
+        }
+        else
+        {
+            return CMS_verify(&cmsContentInfo, nullptr, nullptr, nullptr, &out, CMS_NOVERIFY);
+        }
+    }
+
+
+    void handleExceptionByVerification(
+        std::exception_ptr exception,
+        const FileNameAndLineNumber& fileNameAndLineNumber)
+    {
+        try
+        {
+            std::rethrow_exception(exception);
+        }
+        catch(const TslError&)
+        {
+            throw;
+        }
+        catch(const CadesBesSignature::VerificationException&)
+        {
+            throw;
+        }
+        catch(const std::runtime_error& e)
+        {
+            local::logAndThrow<CadesBesSignature::VerificationException>(
+                std::string("CAdES-BES signature verification has failed: ") + e.what(),
+                fileNameAndLineNumber);
+        }
+    }
+}
+
+
+#define HANDLE_EXCEPTION_BY_VERIFICATION \
+    handleExceptionByVerification(std::current_exception(), fileAndLine)
+
+
+void CadesBesSignature::internalInitialization(const std::string& base64Data,
+                                               const std::function<int(CMS_ContentInfo&, BIO&)>& cmsVerifyFunction)
+{
+    const auto plain = Base64::decode(Base64::cleanupForDecoding(base64Data));
+    auto bioIndata = shared_BIO::make();
+    OpenSslExpect(plain.size() <= static_cast<size_t>(std::numeric_limits<int>::max()), "Incoming data is too large");
+    OpenSslExpect(BIO_write(bioIndata.get(), plain.data(), static_cast<int>(plain.size())) ==
+                  static_cast<int>(plain.size()),
+                  "BIO_write function failed.");
+
+    mCmsHandle = shared_CMS_ContentInfo ::make(d2i_CMS_bio(bioIndata.get(), nullptr));
+    OpenSslExpect(mCmsHandle, "d2i_CMS_bio failed.");
+    auto bioOutdata = shared_BIO::make();
+
+    const int cmsVerifyResult = cmsVerifyFunction(*mCmsHandle, *bioOutdata);
+    OpenSslExpect(cmsVerifyResult == 1, "CMS_verify failed.");
+
+    // it is safe to assume that the payload will be less than the whole pkcs7 file.
+    mPayload.resize(plain.size());
+    const auto bytesRead = BIO_read(bioOutdata.get(), mPayload.data(), gsl::narrow<int>(mPayload.size()));
+    OpenSslExpect(bytesRead > 0, "BIO_read failed");
+    OpenSslExpect(BIO_eof(bioOutdata.get()) == 1, "Did not read all data from signature");
+    mPayload.resize(bytesRead);
+}
+
+
+CadesBesSignature::CadesBesSignature(const std::string& base64Data, TslManager* tslManager)
+{
+    try
+    {
+        internalInitialization(
+            base64Data,
+            [tslManager] (CMS_ContentInfo& cmsHandle, BIO& out) -> int
+            {
+              return cmsVerify(tslManager, cmsHandle, out);
+            });
+    }
+    catch(...)
+    {
+        HANDLE_EXCEPTION_BY_VERIFICATION;
+    }
+}
+
+
+CadesBesSignature::CadesBesSignature(const std::initializer_list<Certificate>& trustedCertificates,
+                                     const std::string& base64Data)
+{
+    try
+    {
+        internalInitialization(
+            base64Data,
+            [&trustedCertificates] (CMS_ContentInfo& cmsHandle, BIO& out) -> int
+            {
+                shared_X509_Store certStore = shared_X509_Store::make();
+                for (const auto& cert : trustedCertificates)
+                {
+                    OpenSslExpect(X509_STORE_add_cert(certStore, cert.toX509().removeConst()) == 1,
+                                  "Error adding certificate to certificate store");
+                }
+
+                return CMS_verify(&cmsHandle, nullptr, certStore.get(), nullptr, &out, CMS_BINARY);
+            });
+    }
+    catch(...)
+    {
+        HANDLE_EXCEPTION_BY_VERIFICATION;
+    }
+
+}
+
+
+CadesBesSignature::CadesBesSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey,
+                                     const std::string& payload)
+    : mPayload(payload)
+{
+    auto bio = shared_BIO::make();
+    auto written = BIO_write(bio.get(), payload.data(), gsl::narrow<int>(payload.size()));
+    OpenSslExpect(written == gsl::narrow<int>(payload.size()), "BIO_write failed." + std::to_string(written));
+    mCmsHandle = shared_CMS_ContentInfo::make(
+        CMS_sign(cert.toX509().removeConst(), privateKey.removeConst(), nullptr, bio.get(), CMS_BINARY | CMS_STREAM | CMS_PARTIAL));
+    OpenSslExpect(mCmsHandle.isSet(), "Failed to sign with CMS");
+    addCertificateToSignerInfo(*mCmsHandle, *bio.get(), cert, EVP_PKEY_base_id(privateKey.removeConst()));
+}
+
+
+std::string CadesBesSignature::get()
+{
+    std::ostringstream outStream(std::ios::binary);
+    auto outBio = shared_BIO::make();
+    i2d_CMS_bio(outBio.get(), mCmsHandle.get());
+    while (!BIO_eof(outBio.get()))
+    {
+        std::array<char, 4096> buffer; //NOLINT[cppcoreguidelines-pro-type-member-init,hicpp-member-init]
+        auto bytesRead = BIO_read(outBio.get(), buffer.data(), gsl::narrow_cast<int>(buffer.size()));
+        OpenSslExpect(bytesRead > 0, "Failed reading CMS Data");
+        outStream.write(buffer.data(), bytesRead);
+    }
+    return outStream.str();
+}
+
+
+const std::string& CadesBesSignature::payload() const
+{
+    return mPayload;
+}
+
+
+std::optional<model::Timestamp> CadesBesSignature::getSigningTime() const
+{
+    const auto* signerInfos = CMS_get0_SignerInfos(mCmsHandle.removeConst().get());
+    OpenSslExpect(signerInfos != nullptr, "Error getting signer info from CMS structure");
+    const auto signerInfosCount = sk_CMS_SignerInfo_num(signerInfos);
+    OpenSslExpect(signerInfosCount > 0, "Error getting signer info from CMS structure");
+
+    for (int ind = 0; ind < signerInfosCount; ++ind)
+    {
+        auto* signerInfo = sk_CMS_SignerInfo_value(signerInfos, ind);
+        OpenSslExpect(signerInfo != nullptr, "got nullptr from sk_CMS_SignerInfo_value");
+        const int attributeIndex = CMS_signed_get_attr_by_NID(signerInfo, NID_pkcs9_signingTime, -1);
+        auto* x509Attributes = CMS_signed_get_attr(signerInfo, attributeIndex);
+        ASN1_TYPE *asn1Type = X509_ATTRIBUTE_get0_type(x509Attributes, 0);
+        if (asn1Type != nullptr)
+        {
+            OpenSslExpect(asn1Type->type == V_ASN1_UTCTIME && asn1Type->value.utctime != nullptr,
+                          "Unexpected type of signingTime.");
+            tm tm{};
+            OpenSslExpect(ASN1_TIME_to_tm(asn1Type->value.utctime, &tm) == 1,
+                          "Failed to convert ASN1_UTCTIME to struct tm");
+            return model::Timestamp::fromTmInUtc(tm);
+        }
+    }
+    return {};
+}

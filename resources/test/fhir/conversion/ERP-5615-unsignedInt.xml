@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<Group xmlns="http://hl7.org/fhir">
+  <type value="device"/>
+  <actual value="false"/>
+  <quantity value="10"/>
+</Group>

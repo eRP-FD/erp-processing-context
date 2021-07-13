@@ -1,0 +1,49 @@
+#ifndef ERP_PROCESSING_CONTEXT_UTIL_GLOGCONFIGURATION_HXX
+#define ERP_PROCESSING_CONTEXT_UTIL_GLOGCONFIGURATION_HXX
+
+#include "erp/util/GLog.hxx"
+
+class GLogConfiguration {
+public:
+    /**
+     * Initialized the glog with specified app name, the configuration is read from environment variables
+     * The enfironment variables used to configure the logging
+     * ERP_LOG_TO_STDERR - ignore log files, log to stderr
+     * ERP_STDERR_THRESHOLD - duplicate log at and above level to stderr
+     * ERP_MIN_LOG_LEVEL - minimal log level: INFO, WARNING, ERROR, FATAL
+     * ERP_LOG_DIR - log directory
+     * ERP_VLOG_MAX_VALUE - show the logs for the v-value and below
+     * ERP_VLOG_CONFIG - (not yet activated)
+     *                   Per-module verbose level. The argument has to contain a comma-separated
+     *                   list of <module name>=<log level>. <module name> is a glob pattern
+     *                   (e.g., gfs* for all modules whose name starts with "gfs"),
+     *                   matched against the filename base (that is, name ignoring .cc/.h./-inl.h).
+     *                   <log level> overrides any value given by ERP_VLOG_MAX_VALUE
+     * @param appName - the name of the application
+     */
+    static void init_logging(const std::string_view& appName);
+
+    /**
+     * Initializes the glog with specified configuration
+     * @param appName - the name of the application
+     * @param logToStderr - ignore log files, log to stderr
+     * @param stderrThreshold - duplicate log at and above level to stderr
+     * @param minLogLevel - minimal log level INFO == 0
+     * @param logDir - log directory
+     * @param vLogMaxValue - show the logs for the v-value and below
+     */
+    static void init_logging(
+        const std::string_view& appName,
+        bool logToStderr,
+        bool stderrThreshold,
+        int minLogLevel,
+        const std::string& logDir,
+        int vLogMaxValue);
+
+    static std::string getProcessUuid();
+
+private:
+    static int getLogLevelInt(const std::string& logLevelString);
+};
+
+#endif

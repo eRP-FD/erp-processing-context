@@ -1,0 +1,255 @@
+#include "erp/model/MetaData.hxx"
+
+#include "erp/erp-serverinfo.hxx"
+#include "erp/util/RapidjsonDocument.hxx"
+#include "erp/util/Expect.hxx"
+
+#include <mutex> // for call_once
+
+
+namespace model
+{
+
+namespace
+{
+
+constexpr std::string_view metadata_template = R"--(
+{
+  "resourceType": "CapabilityStatement",
+  "name": "Gem_erxCapabilityStatement",
+  "title": "E-Rezept Workflow CapabilityStatement",
+  "status": "draft",
+  "date": "",
+  "kind": "instance",
+  "software": {
+    "name": "DEIBM-ERP-FD",
+    "version": "",
+    "releaseDate": ""
+  },
+  "implementation": {
+    "description": "E-Rezept Fachdienst Server"
+  },
+  "fhirVersion": "4.0.1",
+  "format": [
+    "xml",
+    "json"
+  ],
+  "rest": [
+    {
+      "mode": "server",
+      "resource": [
+        {
+          "type": "Task",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxTask",
+          "interaction": [
+            {
+              "code": "create"
+            },
+            {
+              "code": "read"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "status",
+              "type": "token"
+            },
+            {
+              "name": "authored-on",
+              "type": "date"
+            },
+            {
+              "name": "modified",
+              "type": "date"
+            }
+          ],
+          "operation": [
+            {
+              "name": "create",
+              "definition": "http://gematik.de/fhir/OperationDefinition/CreateOperationDefinition"
+            },
+            {
+              "name": "activate",
+              "definition": "http://gematik.de/fhir/OperationDefinition/ActivateOperationDefinition"
+            },
+            {
+              "name": "accept",
+              "definition": "http://gematik.de/fhir/OperationDefinition/AcceptOperationDefinition"
+            },
+            {
+              "name": "reject",
+              "definition": "http://gematik.de/fhir/OperationDefinition/RejectOperationDefinition"
+            },
+            {
+              "name": "close",
+              "definition": "http://gematik.de/fhir/OperationDefinition/CloseOperationDefinition"
+            },
+            {
+              "name": "abort",
+              "definition": "http://gematik.de/fhir/OperationDefinition/AbortOperationDefinition"
+            }
+          ]
+        },
+        {
+          "type": "Communication",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Communication",
+          "supportedProfile": [
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"
+          ],
+          "interaction": [
+            {
+              "code": "create"
+            },
+            {
+              "code": "read"
+            },
+            {
+              "code": "delete"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "sent",
+              "type": "date"
+            },
+            {
+              "name": "received",
+              "type": "date"
+            },
+            {
+              "name": "sender",
+              "type": "string"
+            },
+            {
+              "name": "recipient",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "MedicationDispense",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense",
+          "interaction": [
+            {
+              "code": "read"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "whenhandedover",
+              "type": "date"
+            },
+            {
+              "name": "whenprepared",
+              "type": "date"
+            },
+            {
+              "name": "performer",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "AuditEvent",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent",
+          "interaction": [
+            {
+              "code": "read"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "date",
+              "type": "date"
+            },
+            {
+              "name": "subtype",
+              "type": "token"
+            }
+          ]
+        },
+        {
+          "type": "Device",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxDevice",
+          "interaction": [
+            {
+              "code": "read"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+)--";
+
+std::once_flag onceFlag;
+struct MetaDataTemplateMark;
+RapidjsonNumberAsStringParserDocument<MetaDataTemplateMark> metaDataTemplate;
+
+void initTemplates ()
+{
+    rapidjson::StringStream strm(metadata_template.data());
+    metaDataTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(strm);
+    ModelExpect(!metaDataTemplate->HasParseError(), "can not parse json template string");
+}
+
+// definition of JSON pointers:
+const rapidjson::Pointer datePointer ("/date");
+const rapidjson::Pointer versionPointer ("/software/version");
+const rapidjson::Pointer releaseDatePointer ("/software/releaseDate");
+
+}  // anonymous namespace
+
+
+MetaData::MetaData()
+    : Resource<MetaData>()
+{
+    std::call_once(onceFlag, initTemplates);
+    initFromTemplate(*metaDataTemplate);
+    setVersion(ErpServerInfo::ReleaseVersion);
+    Timestamp releaseDate = Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
+    setDate(releaseDate);
+    setReleaseDate(releaseDate);
+}
+
+MetaData::MetaData(NumberAsStringParserDocument&& jsonTree)
+    : Resource<MetaData>(std::move(jsonTree))
+{
+    std::call_once(onceFlag, initTemplates);
+}
+
+Timestamp MetaData::date() const
+{
+    return Timestamp::fromXsDateTime(std::string(getStringValue(datePointer)));
+}
+
+std::string_view MetaData::version() const
+{
+    return getStringValue(versionPointer);
+}
+
+Timestamp MetaData::releaseDate() const
+{
+    return Timestamp::fromXsDateTime(std::string(getStringValue(releaseDatePointer)));
+}
+
+void MetaData::setDate(const Timestamp& date)
+{
+    setValue(datePointer, date.toXsDateTime());
+}
+
+void MetaData::setVersion(const std::string_view& version)
+{
+    setValue(versionPointer, version);
+}
+
+void MetaData::setReleaseDate(const Timestamp& releaseDate)
+{
+    setValue(releaseDatePointer, releaseDate.toXsDateTime());
+}
+
+}  // namespace model

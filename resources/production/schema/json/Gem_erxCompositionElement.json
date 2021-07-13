@@ -1,0 +1,548 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "Composition",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/Composition"
+    }
+  ],
+  "definitions": {
+    "Composition": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "Composition"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "BaseSchema.json#/definitions/Meta"
+        },
+        "implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "language": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_language": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "text": {
+          "$ref": "BaseSchema.json#/definitions/Narrative"
+        },
+        "extension": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/Beneficiary"
+          }
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "identifier": {
+          "$ref": "BaseSchema.json#/definitions/Identifier"
+        },
+        "status": {
+          "enum": [
+            "final"
+          ]
+        },
+        "_status": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "#/definitions/Type_CodeableConcept"
+        },
+        "category": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "subject": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "encounter": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "date": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_date": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "author": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "title": {
+          "enum": [
+            "Quittung"
+          ]
+        },
+        "_title": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "confidentiality": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_confidentiality": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "attester": {
+          "items": {
+            "$ref": "#/definitions/Composition_Attester"
+          },
+          "type": "array"
+        },
+        "custodian": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "relatesTo": {
+          "items": {
+            "$ref": "#/definitions/Composition_RelatesTo"
+          },
+          "type": "array"
+        },
+        "event": {
+          "$ref": "#/definitions/Composition_Event"
+        },
+        "section": {
+          "items": {
+            "$ref": "#/definitions/Composition_Section"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "resourceType",
+        "status",
+        "type",
+        "date",
+        "author",
+        "title",
+        "event"
+      ]
+    },
+    "Beneficiary": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://gematik.de/fhir/StructureDefinition/BeneficiaryExtension"
+          ]
+        },
+        "_url": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "valueIdentifier": {
+          "$ref": "#/definitions/Beneficiary_Identifier"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    },
+    "Beneficiary_Identifier": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "use": {
+          "enum": [
+            "usual",
+            "official",
+            "temp",
+            "secondary",
+            "old"
+          ]
+        },
+        "_use": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "system": {
+          "enum": [
+            "https://gematik.de/fhir/NamingSystem/TelematikID"
+          ]
+        },
+        "_system": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "value": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_value": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "period": {
+          "$ref": "BaseSchema.json#/definitions/Period"
+        },
+        "assigner": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "value"
+      ]
+    },
+    "Type_CodeableConcept": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "coding": {
+          "items": {
+            "$ref": "#/definitions/Type_Coding"
+          },
+          "type": "array"
+        },
+        "text": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_text": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "coding"
+      ]
+    },
+    "Type_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "https://gematik.de/fhir/CodeSystem/Documenttype"
+          ]
+        },
+        "_system": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "version": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_version": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "3"
+          ]
+        },
+        "_code": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "display": {
+          "enum": [
+            "Receipt"
+          ]
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "userSelected": {
+          "$ref": "BaseSchema.json#/definitions/boolean"
+        },
+        "_userSelected": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    },
+    "Composition_Event": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "code": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "period": {
+          "$ref": "#/definitions/Composition_Event_Period"
+        },
+        "detail": {
+          "items": {
+            "$ref": "#/definitions/Composition_Event_Reference"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "period"
+      ]
+    },
+    "Composition_Event_Period": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "start": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_start": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "end": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_end": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ]
+    },
+    "Composition_Event_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "BaseSchema.json#/definitions/Identifier"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    },
+    "Composition_Attester": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "personal",
+            "professional",
+            "legal",
+            "official"
+          ]
+        },
+        "_mode": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "time": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_time": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "party": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Composition_RelatesTo": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "code": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_code": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "targetIdentifier": {
+          "$ref": "BaseSchema.json#/definitions/Identifier"
+        },
+        "targetReference": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Composition_Section": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "title": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_title": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "author": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "focus": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "text": {
+          "$ref": "BaseSchema.json#/definitions/Narrative"
+        },
+        "mode": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_mode": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "orderedBy": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "entry": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "emptyReason": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "section": {
+          "items": {
+            "$ref": "#/definitions/Composition_Section"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

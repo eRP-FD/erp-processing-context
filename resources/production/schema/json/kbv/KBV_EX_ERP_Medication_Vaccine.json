@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_EX_ERP_Medication_Vaccine",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/impfstoff"
+    }
+  ],
+  "definitions": {
+    "impfstoff": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueBoolean": {
+          "pattern": "^true|false$",
+          "type": "boolean"
+        },
+        "_valueBoolean": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueBoolean"
+      ]
+    }
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "resourceType": "CapabilityStatement",
+  "name": "Gem_erxCapabilityStatement",
+  "title": "E-Rezept Workflow CapabilityStatement",
+  "status": "draft",
+  "date": "2021-04-16T14:17:21.000+00:00",
+  "kind": "instance",
+  "software": {
+    "name": "DEIBM-ERP-FD",
+    "version": "0.3.1",
+    "releaseDate": "2021-04-16T14:17:21.000+00:00"
+  },
+  "implementation": {
+    "description": "E-Rezept Fachdienst Server"
+  },
+  "fhirVersion": "4.0.1",
+  "format": [
+    "xml",
+    "json"
+  ],
+  "rest": [
+    {
+      "mode": "server",
+      "resource": [
+        {
+          "type": "Task",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxTask",
+          "interaction": [
+            {
+              "code": "create"
+            },
+            {
+              "code": "read"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "status",
+              "type": "token"
+            },
+            {
+              "name": "authored-on",
+              "type": "date"
+            },
+            {
+              "name": "modified",
+              "type": "date"
+            }
+          ],
+          "operation": [
+            {
+              "name": "create",
+              "definition": "http://gematik.de/fhir/OperationDefinition/CreateOperationDefinition"
+            },
+            {
+              "name": "activate",
+              "definition": "http://gematik.de/fhir/OperationDefinition/ActivateOperationDefinition"
+            },
+            {
+              "name": "accept",
+              "definition": "http://gematik.de/fhir/OperationDefinition/AcceptOperationDefinition"
+            },
+            {
+              "name": "reject",
+              "definition": "http://gematik.de/fhir/OperationDefinition/RejectOperationDefinition"
+            },
+            {
+              "name": "close",
+              "definition": "http://gematik.de/fhir/OperationDefinition/CloseOperationDefinition"
+            },
+            {
+              "name": "abort",
+              "definition": "http://gematik.de/fhir/OperationDefinition/AbortOperationDefinition"
+            }
+          ]
+        },
+        {
+          "type": "Communication",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Communication",
+          "supportedProfile": [
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"
+          ],
+          "interaction": [
+            {
+              "code": "create"
+            },
+            {
+              "code": "read"
+            },
+            {
+              "code": "delete"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "sent",
+              "type": "date"
+            },
+            {
+              "name": "received",
+              "type": "date"
+            },
+            {
+              "name": "sender",
+              "type": "string"
+            },
+            {
+              "name": "recipient",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "MedicationDispense",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense",
+          "interaction": [
+            {
+              "code": "read"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "whenhandedover",
+              "type": "date"
+            },
+            {
+              "name": "whenprepared",
+              "type": "date"
+            },
+            {
+              "name": "performer",
+              "type": "string"
+            }
+          ]
+        },
+        {
+          "type": "AuditEvent",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent",
+          "interaction": [
+            {
+              "code": "read"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "date",
+              "type": "date"
+            },
+            {
+              "name": "subtype",
+              "type": "token"
+            }
+          ]
+        },
+        {
+          "type": "Device",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxDevice",
+          "interaction": [
+            {
+              "code": "read"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

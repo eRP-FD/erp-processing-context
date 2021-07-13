@@ -1,0 +1,8 @@
+{
+    "contained": [
+        {
+            "resourceType": "Medication"
+        }
+    ],
+    "resourceType": "Medication"
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<Coverage xmlns="http://hl7.org/fhir">
+  <status value="active"/>
+  <beneficiary>
+    <reference value="uuid:a41f56f2-e5ef-4319-a4a0-60a38d8c759f"/>
+  </beneficiary>
+  <payor>
+    <reference value="uuid:9e6ae97f-5035-4dea-b957-188529cc4352"/>
+  </payor>
+  <order value="5"/>
+</Coverage>
+

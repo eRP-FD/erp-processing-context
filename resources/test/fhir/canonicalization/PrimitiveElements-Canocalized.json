@@ -1,0 +1,80 @@
+{
+    "entry": [
+        {
+            "fullUrl": "http://pvs.praxis-topp-gluecklich.local/fhir/Patient/9774f67f-a238-4daf-b4e6-679deeef3811",
+            "resource": {
+                "address": [
+                    {
+                        "_line": [
+                            {
+                                "extension": [
+                                    {
+                                        "url": "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName",
+                                        "valueString": "Musterstr."
+                                    },
+                                    {
+                                        "url": "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber",
+                                        "valueString": "1"
+                                    }
+                                ]
+                            }
+                        ],
+                        "city": "Berlin",
+                        "line": [
+                            "Musterstr. 1"
+                        ],
+                        "postalCode": "10623",
+                        "type": "both"
+                    }
+                ],
+                "birthDate": "1935-06-22",
+                "id": "9774f67f-a238-4daf-b4e6-679deeef3811",
+                "identifier": [
+                    {
+                        "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
+                        "type": {
+                            "coding": [
+                                {
+                                    "code": "GKV",
+                                    "system": "http://fhir.de/CodeSystem/identifier-type-de-basis"
+                                }
+                            ]
+                        },
+                        "value": "X234567890"
+                    }
+                ],
+                "meta": {
+                    "profile": [
+                        "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3"
+                    ]
+                },
+                "name": [
+                    {
+                        "_family": {
+                            "extension": [
+                                {
+                                    "url": "http://hl7.org/fhir/StructureDefinition/humanname-own-name",
+                                    "valueString": "Königsstein"
+                                }
+                            ]
+                        },
+                        "family": "Ludger Königsstein",
+                        "given": [
+                            "Ludger"
+                        ],
+                        "use": "official"
+                    }
+                ],
+                "resourceType": "Patient"
+            }
+        }
+    ],
+    "id": "281a985c-f25b-4aae-91a6-41ad744080b0",
+    "identifier": {
+        "system": "https://gematik.de/fhir/NamingSystem/PrescriptionID",
+        "value": "160.123.456.789.123.58"
+    },
+    "resourceType": "Bundle",
+    "timestamp": "2020-06-23T08:30:00+00:00",
+    "type": "document"
+}

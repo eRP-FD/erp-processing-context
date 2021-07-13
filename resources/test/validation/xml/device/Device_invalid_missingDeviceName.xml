@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Device xmlns="http://hl7.org/fhir">
+  <id value="eRxService"/>
+  <meta>
+    <profile value="https://gematik.de/fhir/StructureDefinition/erxDevice"/>
+  </meta>
+  <status value="active"/>
+  <serialNumber value="R4.0.0.287342834"/>
+  <version>
+    <value value="1.0.0"/>
+  </version>
+</Device>

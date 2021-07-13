@@ -1,0 +1,535 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "AuditEvent",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/AuditEvent"
+    }
+  ],
+  "definitions": {
+    "AuditEvent": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "AuditEvent"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "BaseSchema.json#/definitions/Meta"
+        },
+        "implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "language": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_language": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "text": {
+          "$ref": "BaseSchema.json#/definitions/Narrative"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "type": {
+          "$ref": "#/definitions/AuditEvent_Coding"
+        },
+        "subtype": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Coding"
+          }
+        },
+        "action": {
+          "enum": [
+            "C",
+            "R",
+            "U",
+            "D",
+            "E"
+          ]
+        },
+        "_action": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "period": {
+          "$ref": "BaseSchema.json#/definitions/Period"
+        },
+        "recorded": {
+          "$ref": "BaseSchema.json#/definitions/instant"
+        },
+        "_recorded": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "outcome": {
+          "enum": [
+            "0",
+            "4",
+            "8",
+            "12"
+          ]
+        },
+        "_outcome": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "outcomeDesc": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_outcomeDesc": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "purposeOfEvent": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "agent": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/AuditEvent_Agent"
+          }
+        },
+        "source": {
+          "$ref": "#/definitions/AuditEvent_Source"
+        },
+        "entity": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/AuditEvent_Entity"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "agent",
+        "source",
+        "type",
+        "resourceType",
+        "subtype",
+        "action",
+        "recorded",
+        "outcome",
+        "entity"
+      ]
+    },
+    "AuditEvent_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "http://terminology.hl7.org/CodeSystem/audit-event-type"
+          ]
+        },
+        "_system": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "version": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_version": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "rest"
+          ]
+        },
+        "_code": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "userSelected": {
+          "$ref": "BaseSchema.json#/definitions/boolean"
+        },
+        "_userSelected": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    },
+    "AuditEvent_Agent": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "role": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "who": {
+          "$ref": "#/definitions/AuditEvent_Agent_Reference"
+        },
+        "altId": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_altId": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "name": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_name": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "requestor": {
+          "$ref": "BaseSchema.json#/definitions/boolean"
+        },
+        "_requestor": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "location": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "policy": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/uri"
+          },
+          "type": "array"
+        },
+        "_policy": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Element"
+          },
+          "type": "array"
+        },
+        "media": {
+          "$ref": "BaseSchema.json#/definitions/Coding"
+        },
+        "network": {
+          "$ref": "#/definitions/AuditEvent_Network"
+        },
+        "purposeOfUse": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "name"
+      ]
+    },
+    "AuditEvent_Network": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "address": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_address": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "enum": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AuditEvent_Source": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "site": {
+          "enum": [
+            "E-Rezept Fachdienst"
+          ]
+        },
+        "_site": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "observer": {
+          "$ref": "#/definitions/AuditEvent_Source_Reference"
+        },
+        "type": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Coding"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "observer",
+        "site"
+      ]
+    },
+    "AuditEvent_Entity": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "what": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/Coding"
+        },
+        "role": {
+          "$ref": "BaseSchema.json#/definitions/Coding"
+        },
+        "lifecycle": {
+          "$ref": "BaseSchema.json#/definitions/Coding"
+        },
+        "securityLabel": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Coding"
+          },
+          "type": "array"
+        },
+        "name": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_name": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "description": {
+          "description": "Text that describes the entity in more detail.",
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_description": {
+          "description": "Extensions for description",
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "query": {
+          "$ref": "BaseSchema.json#/definitions/base64Binary"
+        },
+        "_query": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "detail": {
+          "items": {
+            "$ref": "#/definitions/AuditEvent_Detail"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "what",
+        "name",
+        "description"
+      ]
+    },
+    "AuditEvent_Detail": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "valueString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_valueString": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "valueBase64Binary": {
+          "pattern": "^(\\s*([0-9a-zA-Z\\+/\u003d]){4}\\s*)+$",
+          "type": "string"
+        },
+        "_valueBase64Binary": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "AuditEvent_Agent_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "Gem_baseTelematikID.json#/definitions/TelematikID"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "BaseSchema.json#/definitions/Identifier"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "identifier"
+      ]
+    },
+    "AuditEvent_Source_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "Gem_baseTelematikID.json#/definitions/TelematikID"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "BaseSchema.json#/definitions/Identifier"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    }
+  }
+}

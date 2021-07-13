@@ -1,0 +1,34 @@
+#ifndef ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX
+#define ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX
+
+#include "erp/client/HttpsClient.hxx"
+#include "erp/hsm/HsmPool.hxx"
+#include "erp/server/HttpsServer.hxx"
+#include "erp/pc/PcServiceContext.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/workflow-test/TestClient.hxx"
+
+class EndpointTestClient final : public TestClient
+{
+public:
+    static constexpr uint16_t mPort = 9999u;
+    static constexpr char mLocalHost[] = "127.0.0.1";
+
+    EndpointTestClient();
+
+    ClientResponse send(const ClientRequest & clientRequest) override;
+
+    std::string getHostHttpHeader() const override;
+    std::string getHostAddress() const override;
+    uint16_t getPort() const override;
+    ~EndpointTestClient() override;
+
+private:
+    std::unique_ptr<MockDatabase> mMockDatabase;
+    std::unique_ptr<HttpsServer<PcServiceContext>> mServer;
+    std::unique_ptr<HttpsClient> mHttpsClient;
+};
+
+
+
+#endif // ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX

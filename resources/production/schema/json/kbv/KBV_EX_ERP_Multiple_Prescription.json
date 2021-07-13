@@ -1,0 +1,211 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_EX_ERP_Multiple_Prescription",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_EX_ERP_Multiple_Prescription"
+    }
+  ],
+  "definitions": {
+    "KBV_EX_ERP_Multiple_Prescription": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": [
+            {
+              "$ref": "#/definitions/Kennzeichen"
+            }
+          ],
+          "additionalItems": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/Nummerierung"
+              },
+              {
+                "$ref": "#/definitions/Zeitraum"
+              }
+            ]
+          }
+        },
+        "url": {
+          "enum": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    },
+    "Kennzeichen": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "Kennzeichen"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueBoolean": {
+          "pattern": "^true|false$",
+          "type": "boolean"
+        },
+        "_valueBoolean": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueBoolean"
+      ]
+    },
+    "Nummerierung": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "Nummerierung"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueRatio": {
+          "$ref": "#/definitions/Nummerierung_Ratio"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueRatio"
+      ]
+    },
+    "Nummerierung_Ratio": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "numerator": {
+          "$ref": "#/definitions/numerator_Quantity"
+        },
+        "denominator": {
+          "$ref": "#/definitions/denominator_Quantity"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "numerator",
+        "denominator"
+      ]
+    },
+    "numerator_Quantity": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "value": {
+          "$ref": "../BaseSchema.json#/definitions/decimal"
+        },
+        "_value": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ]
+    },
+    "denominator_Quantity": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "value": {
+          "$ref": "../BaseSchema.json#/definitions/decimal"
+        },
+        "_value": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ]
+    },
+    "Zeitraum": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "Zeitraum"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valuePeriod": {
+          "$ref": "../BaseSchema.json#/definitions/Period"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valuePeriod"
+      ]
+    }
+  }
+}

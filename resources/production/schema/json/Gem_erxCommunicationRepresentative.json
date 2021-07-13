@@ -1,0 +1,350 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "Gem_erxCommunicationRepresentative",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/Gem_erxCommunicationRepresentative"
+    }
+  ],
+  "definitions": {
+    "Gem_erxCommunicationRepresentative": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "Communication"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "BaseSchema.json#/definitions/Meta"
+        },
+        "implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "language": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_language": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "text": {
+          "$ref": "BaseSchema.json#/definitions/Narrative"
+        },
+        "contained": {
+          "items": {
+            "$ref": "#/definitions/CommunicationRepresentative_ResourceList"
+          },
+          "type": "array"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "identifier": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Identifier"
+          },
+          "type": "array"
+        },
+        "instantiatesCanonical": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/canonical"
+          },
+          "type": "array"
+        },
+        "instantiatesUri": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/uri"
+          },
+          "type": "array"
+        },
+        "_instantiatesUri": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Element"
+          },
+          "type": "array"
+        },
+        "basedOn": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/BasedOn_Reference"
+          }
+        },
+        "partOf": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "inResponseTo": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "unknown"
+          ]
+        },
+        "_status": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "statusReason": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "category": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "priority": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_priority": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "medium": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "subject": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "topic": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "about": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "encounter": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "sent": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_sent": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "received": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_received": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "recipient": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/Recipient_Reference"
+          }
+        },
+        "sender": {
+          "$ref": "#/definitions/Sender_Reference"
+        },
+        "reasonCode": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "reasonReference": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "payload": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/Communication_Payload"
+          }
+        },
+        "note": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Annotation"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "resourceType",
+        "basedOn",
+        "status",
+        "recipient",
+        "payload"
+      ]
+    },
+    "BasedOn_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "BaseSchema.json#/definitions/Identifier"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reference"
+      ]
+    },
+    "Recipient_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "KVID.json#/definitions/Identifier_KVID"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "identifier"
+      ]
+    },
+    "Sender_Reference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "KVID.json#/definitions/Identifier_KVID"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "identifier"
+      ]
+    },
+    "Communication_Payload": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          }
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "contentString": {
+          "pattern": "^[ \\r\\n\\t\\S]+$",
+          "type": "string"
+        },
+        "_contentString": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "CommunicationRepresentative_ResourceList": {
+      "oneOf": [
+        {}
+      ]
+    }
+  }
+}

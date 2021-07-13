@@ -1,0 +1,58 @@
+{
+    "resourceType": "Bundle",
+    "id": "281a985c-f25b-4aae-91a6-41ad744080b0",
+    "meta": {
+        "profile": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.00.000"
+        ]
+    },
+    "entry": [
+        {
+            "fullUrl": "http://pvs.praxis-topp-gluecklich.local/fhir/Composition/ed52c1e3-b700-4497-ae19-b23744e29876",
+            "resource": {
+                "resourceType": "Composition",
+                "id": "ed52c1e3-b700-4497-ae19-b23744e29876",
+                "meta": {
+                    "profile": [
+                        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.0"
+                    ]
+                },
+                "subject": {
+                    "reference": "Patient/9774f67f-a238-4daf-b4e6-679deeef3811"
+                },
+                "section": [
+                    {
+                        "code": {
+                            "coding": [
+                                {
+                                    "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Section_Type",
+                                    "code": "Prescription"
+                                }
+                            ]
+                        },
+                        "entry": [
+                            {
+                                "reference": "MedicationRequest/e930cdee-9eb5-4b44-88b5-2a18b69f3b9a"
+                            }
+                        ]
+                    },
+                    {
+                        "code": {
+                            "coding": [
+                                {
+                                    "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Section_Type",
+                                    "code": "Coverage"
+                                }
+                            ]
+                        },
+                        "entry": [
+                            {
+                                "reference": "Coverage/1b1ffb6e-eb05-43d7-87eb-e7818fe9661a"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

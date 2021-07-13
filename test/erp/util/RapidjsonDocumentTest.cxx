@@ -1,0 +1,25 @@
+#include "erp/util/RapidjsonDocument.hxx"
+
+#include <gtest/gtest.h>
+
+
+class RapidjsonDocumentTest : public testing::Test
+{
+};
+
+
+
+
+TEST_F(RapidjsonDocumentTest, distinctInstances)
+{
+    struct A;
+    struct B;
+    RapidjsonDocument<A> a;
+    RapidjsonDocument<B> b;
+
+    ASSERT_EQ(&*a, &*a);
+    ASSERT_EQ(&*b, &*b);
+
+    // Verify that two distinct instances of RapidjsonDocument return two distinct instance of rapidjson::Document
+    ASSERT_NE(&*a, &*b);
+}

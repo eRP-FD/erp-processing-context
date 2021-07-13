@@ -1,0 +1,9 @@
+{
+  "resourceType": "Group",
+  "text": {
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span xmlns:x2=\"http://www.w3.org/1999/xhtml2\" class=\"bold\"> Some Text&lt;\"</span></div>"
+  },
+  "type": "device",
+  "actual": false
+}
+

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <entry>
+    <fullUrl value="http://hl7.org/fhir/StructureDefinition/string"/>
+    <resource>
+      <StructureDefinition>
+        <type value="string"/>
+        <url value="http://hl7.org/fhir/StructureDefinition/string"/>
+        <kind value="primitive-type"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <derivation value="specialization"/>
+        <snapshot>
+          <element id="string">
+            <base>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="string.value">
+            <representation value="xmlAttr"/>
+            <base>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://hl7.org/fhir/StructureDefinition/integer"/>
+    <resource>
+      <StructureDefinition>
+        <url value="http://hl7.org/fhir/StructureDefinition/integer"/>
+        <kind value="primitive-type"/>
+        <type value="integer"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <derivation value="specialization"/>
+        <snapshot>
+          <element id="integer">
+            <base>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="integer.value">
+            <representation value="xmlAttr"/>
+            <base>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.Integer"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

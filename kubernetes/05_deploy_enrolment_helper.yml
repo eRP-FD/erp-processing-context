@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-enrolment-helper
+  namespace: erp-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: erp-enrolment-helper
+      serverpod: erp-enrolment-helper
+  template:
+    metadata:
+      labels:
+        app: erp-enrolment-helper
+        serverpod: erp-enrolment-helper
+    spec:
+      containers:
+        - env:
+            - name: ERP_MIN_LOG_LEVEL
+              value: INFO
+            - name: ERP_VLOG_MAX_VALUE
+              value: "2"
+            - name: ERP_SERVER_HOST
+              value: erp-processing-context-1.erp-system.svc.cluster.local
+            - name: ERP_SERVER_PORT
+              value: "9085"
+            - name: ERP_ENROLMENT_ACTIVATE_FOR_PORT
+              value: "9085"
+            - name: DEBUG_DISABLE_ENROLMENT_API_AUTH
+              value: "false"
+            - name: ERP_SERVER_THREAD_COUNT
+              value: "10"
+            - name: ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC
+              value: "20"
+            - name: ERP_REDIS_CERTIFICATE_PATH
+              value: /erp/redis/REDIS_CERT
+            - name: ERP_TSL_FRAMEWORK_SSL_ROOT_CA_PATH
+              value: /erp/tsl/tsl-ssl-root-ca.pem
+            - name: ERP_TSL_INITIAL_DOWNLOAD_URL
+              value: https://download-test.tsl.telematik-test/ECC/ECC-RSA_TSL-test.xml
+            - name: ERP_TSL_INITIAL_CA_DER_PATH
+              value: /erp/tsl/tsl-ca.der
+            - name: ERP_TSL_DOWNLOAD_CIPHERS
+              value: DHE-RSA-AES256-SHA:DHE-RSA-AES128-GCM-SHA256
+            - name: DEBUG_ENABLE_HSM_MOCK
+              value: "false"
+            - name: MOCK_USE_MOCK_TPM
+              value: "false"
+            - name: TPM_INTERFACE_TYPE
+              value: socsim
+            - name: TPM_COMMAND_PORT
+              value: "2321"
+            - name: TPM_PLATFORM_PORT
+              value: "2322"
+            - name: TPM_SERVER_TYPE
+              value: mssim
+            - name: TPM_SERVER_NAME
+              value: tpm-simulator-1.erp-system.svc.cluster.local
+          envFrom:
+            - prefix: ERP_
+              secretRef:
+                name: secret-erp-pc-srv
+                optional: false
+            - prefix: ERP_
+              secretRef:
+                name: secret-redis-erp-pc
+                optional: false
+          image: %ICR_INSTANCE%/%ICR_NAMESPACE%/blob-db-initialization:%VERSION%
+          imagePullPolicy: Always
+          name: erp-enrolment-helper
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              memory: 1Gi
+          volumeMounts:
+            - mountPath: /erp/config
+              name: erp-config
+              readOnly: true
+            - mountPath: /erp/redis
+              name: erp-redis
+              readOnly: true
+            - mountPath: /erp/tsl
+              name: erp-tsl
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: %IMAGE_PULL_SECRET%
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: erp-config
+          secret:
+            defaultMode: 420
+            secretName: secret-erp-pc-srv
+        - name: erp-redis
+          secret:
+            defaultMode: 420
+            secretName: secret-redis-erp-pc
+        - name: erp-tsl
+          secret:
+            defaultMode: 420
+            secretName: erp-initial-tsl

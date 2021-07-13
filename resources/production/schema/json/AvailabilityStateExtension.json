@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "AvailabilityStateExtension",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/AvailabilityStateExtension"
+    }
+  ],
+  "definitions": {
+    "AvailabilityStateExtension": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "AvailabilityStateExtension"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://gematik.de/fhir/StructureDefinition/AvailabilityStateExtension"
+          ]
+        },
+        "_url": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "valueCoding": {
+          "$ref": "#/definitions/AvailabilityStateExtension_Coding"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    },
+    "AvailabilityStateExtension_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "https://gematik.de/fhir/CodeSystem/AvailabilityStatus"
+          ]
+        },
+        "_system": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "version": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_version": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "10",
+            "20",
+            "30",
+            "40",
+            "50",
+            "90"
+          ]
+        },
+        "_code": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "display": {
+          "enum": [
+            "sofort verfügbar",
+            "noch Heute verfügbar",
+            "am nächsten Werktag - vormittags",
+            "am nächsten Werktag- nachmittags",
+            "nicht verfügbar",
+            "unbekannt"
+          ]
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "userSelected": {
+          "$ref": "BaseSchema.json#/definitions/boolean"
+        },
+        "_userSelected": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    }
+  }
+}

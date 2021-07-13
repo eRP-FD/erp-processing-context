@@ -1,0 +1,25 @@
+{
+    "resourceType": "Communication",
+    "contained" : [
+        {
+            "resourceType": "Medication",
+            "extension": [
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category",
+                    "valueCoding": {
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category",
+                        "code": "00"
+                    }
+                },
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine",
+                    "valueBoolean": false
+                },
+                {
+                    "url": "http://fhir.de/StructureDefinition/normgroesse",
+                    "valueCode": "N1"
+                }
+            ]
+        }
+    ]
+}

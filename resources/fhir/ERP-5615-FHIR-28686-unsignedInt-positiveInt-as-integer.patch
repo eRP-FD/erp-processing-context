@@ -1,0 +1,46 @@
+diff -r -u a/hl7.org/profiles-types.xml b/hl7.org/profiles-types.xml
+--- a/hl7.org/profiles-types.xml	2021-05-18 13:51:47.777335618 +0200
++++ b/hl7.org/profiles-types.xml	2021-05-18 13:53:17.009171037 +0200
+@@ -2866,7 +2866,7 @@
+               <extension url="http://hl7.org/fhir/StructureDefinition/regex">
+                 <valueString value="[1-9][0-9]*"/>
+               </extension>
+-              <code value="http://hl7.org/fhirpath/System.String"/>
++              <code value="http://hl7.org/fhirpath/System.Integer"/>
+             </type>
+             <isModifier value="false"/>
+             <isSummary value="false"/>
+@@ -2895,7 +2895,7 @@
+               <extension url="http://hl7.org/fhir/StructureDefinition/regex">
+                 <valueString value="[1-9][0-9]*"/>
+               </extension>
+-              <code value="http://hl7.org/fhirpath/System.String"/>
++              <code value="http://hl7.org/fhirpath/System.Integer"/>
+             </type>
+           </element>
+         </differential>
+@@ -3392,7 +3392,7 @@
+               <extension url="http://hl7.org/fhir/StructureDefinition/regex">
+                 <valueString value="[0]|([1-9][0-9]*)"/>
+               </extension>
+-              <code value="http://hl7.org/fhirpath/System.String"/>
++              <code value="http://hl7.org/fhirpath/System.Integer"/>
+             </type>
+             <isModifier value="false"/>
+             <isSummary value="false"/>
+@@ -3421,7 +3421,7 @@
+               <extension url="http://hl7.org/fhir/StructureDefinition/regex">
+                 <valueString value="[0]|([1-9][0-9]*)"/>
+               </extension>
+-              <code value="http://hl7.org/fhirpath/System.String"/>
++              <code value="http://hl7.org/fhirpath/System.Integer"/>
+             </type>
+           </element>
+         </differential>
+@@ -38186,4 +38186,4 @@
+       </StructureDefinition>
+     </resource>
+   </entry>
+-</Bundle>
+\ No newline at end of file
++</Bundle>

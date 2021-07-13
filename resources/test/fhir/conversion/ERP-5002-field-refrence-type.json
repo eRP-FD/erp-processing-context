@@ -1,0 +1,43 @@
+{
+    "resourceType":"Composition",
+    "id":"ed52c1e3-b700-4497-ae19-b23744e29876",
+    "status":"final",
+    "type":{
+        "coding":[
+            {
+                "system":"https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART",
+                "code":"e16A"
+            }
+        ]
+    },
+    "date":"2020-05-04T08:00:00+00:00",
+    "author":[
+        {
+            "reference":"Practitioner/20597e0e-cb2a-45b3-95f0-dc3dbdb617c3",
+            "type":"Practitioner"
+        }
+    ],
+    "title":"elektronische Arzneimittelverordnung",
+    "section":[
+        {
+            "section":[
+                {
+                    "code":{
+                        "coding":[
+                            {
+                                "system":"https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type",
+                                "code":"Coverage"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "title": "another nested section"
+                }
+            ]
+        },
+        {
+            "title": "another section"
+        }
+    ]
+}

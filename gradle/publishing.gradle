@@ -1,0 +1,27 @@
+def eRpArchive = file('erp-processing-context.tar.gz')
+def eRpDebugArchive = file('erp-processing-context-debug.tar.gz')
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId = project.name
+            groupId = project.group
+            version = project.version
+            artifact (eRpArchive) {
+                extension 'tar.gz'
+            }
+            artifact (eRpDebugArchive) {
+                extension 'tar.gz'
+                classifier 'debug'
+            }
+        }
+    }
+    repositories {
+        maven {
+            url 'https://nexus.epa-dev.net/repository/erp-raw-releases/'
+            credentials {
+                username nexusUsername
+                password nexusPassword
+            }
+        }
+    }
+}

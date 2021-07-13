@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Task xmlns="http://hl7.org/fhir" >
+  <extension url="https://gematik.de/fhir/StructureDefinition/PrescriptionType">
+    <valueCoding>
+      <system value="https://gematik.de/fhir/CodeSystem/Flowtype" />
+      <code value="160" />
+    </valueCoding>
+  </extension>
+  <identifier>
+    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+    <value value="160.123.456.789.123.58" />
+  </identifier>
+  <status value="in-progress" />
+  <intent value="order" />
+  <authoredOn value="2020-03-02T08:25:05+00:00" />
+  <lastModified value="2020-03-02T08:45:05+00:00" />
+  <performerType>
+    <coding/>
+  </performerType>
+</Task>

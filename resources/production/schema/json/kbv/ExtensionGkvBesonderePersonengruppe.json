@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "ExtensionGkvBesonderePersonengruppe",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/ExtensionGkvBesonderePersonengruppe"
+    }
+  ],
+  "definitions": {
+    "ExtensionGkvBesonderePersonengruppe": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "http://fhir.de/StructureDefinition/gkv/besondere-personengruppe"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueCoding": {
+          "$ref": "#/definitions/ExtensionGkvBesonderePersonengruppe_Coding"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ExtensionGkvBesonderePersonengruppe_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"
+          ]
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "version": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_version": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "00",
+            "04",
+            "06",
+            "07",
+            "08",
+            "09"
+          ]
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "display": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "userSelected": {
+          "$ref": "../BaseSchema.json#/definitions/boolean"
+        },
+        "_userSelected": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    }
+  }
+}

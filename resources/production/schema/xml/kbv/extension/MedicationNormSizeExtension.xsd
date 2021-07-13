@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../GenericTypes.xsd"/>
+  <xs:element name="extension" type="MedicationNormSize.Extension"/>
+  <xs:complexType name="MedicationNormSize.Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueCode" type="MedicationNormSize.Code"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="uri-primitive" fixed="http://fhir.de/StructureDefinition/normgroesse" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="MedicationNormSize.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="MedicationNormSize.Code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="MedicationNormSize.Code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="KA"/>
+      <xs:enumeration value="KTP"/>
+      <xs:enumeration value="N1"/>
+      <xs:enumeration value="N2"/>
+      <xs:enumeration value="N3"/>
+      <xs:enumeration value="N1B"/>
+      <xs:enumeration value="Sonstiges"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

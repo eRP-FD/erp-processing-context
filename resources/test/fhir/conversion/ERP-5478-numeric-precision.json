@@ -1,0 +1,28 @@
+{
+    "resourceType":"Device",
+    "status":"active",
+    "_status": {
+        "extension": [
+            {
+                "url": "http://integer.only",
+                "valueInteger": 123
+            },
+            {
+                "url": "http://decimal.no/fraction",
+                "valueDecimal": 123
+            },
+            {
+                "url": "http://decimal.no/trailing/zero",
+                "valueDecimal": 123.456
+            },
+            {
+                "url": "http://decimal.trailing/zero",
+                "valueDecimal": 123.4560
+            },
+            {
+                "url": "http://decimal.only/zeros/after/dot",
+                "valueDecimal": 123.0000
+            }
+        ]
+    }
+}

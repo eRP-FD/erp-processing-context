@@ -1,0 +1,28 @@
+{
+    "contained": [
+        {
+            "resourceType": "Medication"
+        }
+    ],
+    "id": "281a985c-f25b-4aae-91a6-41ad744080b0",
+    "identifier": [
+        {
+            "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN",
+            "type": {
+                "coding": [
+                    {
+                        "code": "06313728",
+                        "system": "https://fhir.kbv.de/NamingSystem/KBV_NS_ERP_PZN"
+                    }
+                ],
+                "text": "Sumatriptan-1a Pharma 100 mg Tabletten"
+            },
+            "use": "usual",
+            "value": "00"
+        }
+    ],
+    "implicitRules": [
+    ],
+    "language": "de-AT",
+    "resourceType": "Medication"
+}

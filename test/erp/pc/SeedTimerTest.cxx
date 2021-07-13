@@ -1,0 +1,41 @@
+#include "erp/pc/SeedTimer.hxx"
+
+#include "erp/hsm/HsmPool.hxx"
+#include "mock/hsm/HsmMockFactory.hxx"
+#include "test/util/TestUtils.hxx"
+
+#include <gtest/gtest.h>
+
+TEST(SeedTimerTest, distribute)
+{
+
+    #ifndef _WIN32
+    static constexpr size_t threads = 20;
+    #else
+    // On windows machines starting more than 1 thread may result in a memory overwrite
+    // (starting more than 10 threads always results in a crash)
+    // (see https://dth01.ibmgcloud.net/jira/browse/ERP-5838).
+    static constexpr size_t threads = 1;
+    #endif
+    static constexpr std::chrono::milliseconds interval{200};
+    ThreadPool pool;
+    // There is no HTTPS server whose socket connection would keep the io_context busy and the threads alive.
+    // Therefore we have to assign a work object to achieve the same effect.
+    boost::asio::io_context::work keepThreadsAlive(pool.ioContext());
+    pool.setUp(threads);
+    ASSERT_NO_FATAL_FAILURE(waitFor([&]{return pool.getWorkerCount() >= threads; }));
+    std::atomic_size_t callCount = 0;
+    HsmPool mockHsmPool{
+        std::make_unique<HsmMockFactory>(),
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
+    SeedTimer seedTimer(pool, mockHsmPool, threads, interval,
+                        [&](const SafeString& seed){
+                            ++callCount;
+                            ASSERT_EQ(seed.size(), Seeder::seedBytes);
+                        });
+    seedTimer.start(pool.ioContext());
+    EXPECT_EQ(callCount, 0);
+    ASSERT_NO_FATAL_FAILURE(waitFor([&]{return callCount >= threads;}));
+    pool.shutDown();
+    EXPECT_EQ(callCount, threads);
+}

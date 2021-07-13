@@ -1,0 +1,19 @@
+{
+    "sub": "IXDd-3rQZKKFXUdxGGj4PDDoV6M0Q8Zj-qw1vr1u_58",
+    "professionOID": "1.2.276.0.76.4.49",
+    "organizationName": "gematik Musterkasse1GKVNOT-VALID",
+    "idNummer": "X110502414",
+    "amr": "[mfa, sc, pin]",
+    "iss": "https://idp-ref.zentral.idp.splitdns.ti-dienste.de/.well-known/openid-configuration/",
+    "given_name": "Robin Graf",
+    "client_id": "erp-testsuite-fd",
+    "acr": "gematik-ehealth-loa-high",
+    "aud": "https://erp.lu.erezepttest.net/",
+    "azp": "erp-testsuite-fd",
+    "scope": "openid e-rezept",
+    "auth_time": "1622354308",
+    "exp": "1622354608",
+    "family_name": "Vórmwinkel",
+    "iat": "1622354188",
+    "jti": "08465cb508b4704f"
+}

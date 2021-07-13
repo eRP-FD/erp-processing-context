@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../GenericTypes.xsd"/>
+  <xs:element name="line" type="KBV_PR_FOR.Address.postbox"/>
+  <xs:complexType name="KBV_PR_FOR.Address.postbox">
+    <xs:sequence>
+      <xs:element name="extension" type="KBV_PR_FOR.Address.postbox.extension" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="string-primitive"/>
+    <xs:attribute name="value" type="string-primitive"/>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR.Address.postbox.extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueString" type="string"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="uri-primitive" use="required" fixed="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-postBox"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

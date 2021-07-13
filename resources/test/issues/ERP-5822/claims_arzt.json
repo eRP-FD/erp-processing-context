@@ -1,0 +1,19 @@
+{
+    "sub": "-5DCSdKx8xxMFpoh9LGUKBGoO3sYdPgTgpD0d1CRWEM",
+    "professionOID": "1.2.276.0.76.4.50",
+    "organizationName": "Praxis Prof. Dr. Ubbo SänderNOT-VALID",
+    "idNummer": "1-SMC-B-Testkarte-883110000129079",
+    "amr": "[mfa, sc, pin]",
+    "iss": "https://idp-ref.zentral.idp.splitdns.ti-dienste.de/.well-known/openid-configuration/",
+    "given_name": "Ubbo",
+    "client_id": "erp-testsuite-fd",
+    "acr": "gematik-ehealth-loa-high",
+    "aud": "https://erp.lu.erezepttest.net/",
+    "azp": "erp-testsuite-fd",
+    "scope": "openid e-rezept",
+    "auth_time": "1622354998",
+    "exp": "1622355298",
+    "family_name": "Sänder",
+    "iat": "1622354878",
+    "jti": "75656f5d47d46e83"
+}

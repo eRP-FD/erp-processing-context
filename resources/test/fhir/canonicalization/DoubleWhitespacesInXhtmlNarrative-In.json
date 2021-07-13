@@ -1,0 +1,12 @@
+{
+    "resourceType": "Medication",
+    "id": "281a985c-f25b-4aae-91a6-41ad744080b0",
+    "identifier": [
+        {
+            "use": "usual",
+            "type": {
+                "text": "This is a     simple example with only plain    text"
+            }
+        }
+    ]
+}

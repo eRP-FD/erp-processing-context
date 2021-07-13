@@ -1,0 +1,131 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../GenericTypes.xsd"/>
+  <xs:complexType name="KBV_PR_ERP_Medication_Generics.Form">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="text" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Generics.Amount">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="numerator" type="KBV_PR_ERP_Medication_Generics.Ratio.Numerator"/>
+          <xs:element name="denominator" type="KBV_PR_ERP_Medication_Generics.Ratio.Denominator"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Generics.Ratio.Numerator">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="value" type="decimal"/>
+          <xs:element name="unit" type="string"/>
+          <xs:element name="system" type="KBV_PR_ERP_Medication_Generics.Ratio.Numerator.System" minOccurs="0"/>
+          <xs:element name="code" type="code" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Generics.Ratio.Numerator.System">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://unitsofmeasure.org"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Generics.Ratio.Denominator">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="value" type="KBV_PR_ERP_Medication_Generics.Ratio.Denominator.Value"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Generics.Ratio.Denominator.Value">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="decimal-primitive" fixed="1"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Generics.SimpleReference">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="PayorType.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="PayorType.System"/>
+          <xs:element name="code" type="PayorType.Code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="PayorType.System-list">
+    <xs:restriction base="uri-primitive">
+      <xs:enumeration value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV"/>
+      <xs:enumeration value="http://fhir.de/CodeSystem/versicherungsart-de-basis"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="PayorType.System">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="PayorType.System-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="PayorType.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="PayorType.Code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="PayorType.Code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="GKV"/>
+      <xs:enumeration value="PKV"/>
+      <xs:enumeration value="BG"/>
+      <xs:enumeration value="SEL"/>
+      <xs:enumeration value="SKT"/>
+      <xs:enumeration value="UK"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="KBV_PR_ERP_Generics.Quantity">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="value" type="decimal"/>
+          <xs:element name="system" type="KBV_PR_ERP_PracticeSupply.Quantity.system"/>
+          <xs:element name="code" type="KBV_PR_ERP_PracticeSupply.Quantity.code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_PracticeSupply.Quantity.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://unitsofmeasure.org"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_PracticeSupply.Quantity.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="{Package}"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

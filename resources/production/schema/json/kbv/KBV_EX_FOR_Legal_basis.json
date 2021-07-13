@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "KBV_EX_FOR_Legal_basis",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/KBV_EX_FOR_Legal_basis"
+    }
+  ],
+  "definitions": {
+    "KBV_EX_FOR_Legal_basis": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis"
+          ]
+        },
+        "_url": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "valueCoding": {
+          "$ref": "#/definitions/Legal_basis_Coding"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url",
+        "valueCoding"
+      ]
+    },
+    "Legal_basis_Coding": {
+      "properties": {
+        "id": {
+          "$ref": "../BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "../BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "$ref": "../BaseSchema.json#/definitions/uri"
+        },
+        "_system": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "00",
+            "01",
+            "04",
+            "07",
+            "10",
+            "11",
+            "14",
+            "17"
+          ]
+        },
+        "_code": {
+          "$ref": "../BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    }
+  }
+}

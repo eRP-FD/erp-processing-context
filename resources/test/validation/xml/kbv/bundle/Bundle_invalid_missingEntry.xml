@@ -1,0 +1,15 @@
+<Bundle xmlns="http://hl7.org/fhir">
+  <!--  Beispiel-Bundle PZN-Verordnung  -->
+  <id value="281a985c-f25b-4aae-91a6-41ad744080b0" />
+  <meta>
+    <lastUpdated value="2020-05-04T08:30:00Z" />
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1" />
+  </meta>
+  <identifier>
+    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+    <value value="1234567890" />
+  </identifier>
+  <type value="document" />
+  <timestamp value="2020-06-23T08:30:00Z" />
+  <entry/>
+</Bundle>

@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "InsuranceProvider",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/InsuranceProvider"
+    }
+  ],
+  "definitions": {
+    "InsuranceProvider": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "InsuranceProvider"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "url": {
+          "enum": [
+            "https://gematik.de/fhir/StructureDefinition/InsuranceProvider"
+          ]
+        },
+        "_url": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "valueIdentifier": {
+          "$ref": "IKNR.json#/definitions/IKNR_Identifier"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ]
+    }
+  }
+}

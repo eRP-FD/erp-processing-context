@@ -1,0 +1,403 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "MedicationDispense",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/MedicationDispense"
+    }
+  ],
+  "definitions": {
+    "MedicationDispense": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "MedicationDispense"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/id"
+        },
+        "meta": {
+          "$ref": "BaseSchema.json#/definitions/Meta"
+        },
+        "implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_implicitRules": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "language": {
+          "$ref": "BaseSchema.json#/definitions/code"
+        },
+        "_language": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "contained": {
+          "items": {
+            "$ref": "#/definitions/MedicationDispense_ResourceList"
+          },
+          "type": "array"
+        },
+        "text": {
+          "$ref": "BaseSchema.json#/definitions/Narrative"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "identifier": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "Gem_erxPrescriptionID.json#/definitions/PrescriptionID"
+          }
+        },
+        "partOf": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed"
+          ]
+        },
+        "_status": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "statusReasonCodeableConcept": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "statusReasonReference": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "category": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "medicationCodeableConcept": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "medicationReference": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "subject": {
+          "$ref": "#/definitions/SubjectReference"
+        },
+        "context": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "supportingInformation": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "performer": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "$ref": "#/definitions/MedicationDispense_Performer"
+          }
+        },
+        "location": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "authorizingPrescription": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "quantity": {
+          "$ref": "BaseSchema.json#/definitions/Quantity"
+        },
+        "daysSupply": {
+          "$ref": "BaseSchema.json#/definitions/Quantity"
+        },
+        "whenPrepared": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_whenPrepared": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "whenHandedOver": {
+          "$ref": "BaseSchema.json#/definitions/dateTime"
+        },
+        "_whenHandedOver": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "destination": {
+          "$ref": "BaseSchema.json#/definitions/Reference"
+        },
+        "receiver": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "note": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Annotation"
+          },
+          "type": "array"
+        },
+        "dosageInstruction": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Dosage"
+          },
+          "type": "array"
+        },
+        "substitution": {
+          "$ref": "#/definitions/MedicationDispense_Substitution"
+        },
+        "detectedIssue": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        },
+        "eventHistory": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "identifier",
+        "status",
+        "medicationReference",
+        "subject",
+        "performer",
+        "whenHandedOver"
+      ]
+    },
+    "MedicationDispense_Substitution": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "wasSubstituted": {
+          "$ref": "BaseSchema.json#/definitions/boolean"
+        },
+        "_wasSubstituted": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "reason": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "type": "array"
+        },
+        "responsibleParty": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MedicationDispense_Performer": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "modifierExtension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "function": {
+          "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+        },
+        "actor": {
+          "$ref": "#/definitions/ActorReference"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "actor"
+      ]
+    },
+    "SubjectReference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "KVID.json#/definitions/Identifier_KVID"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "identifier"
+      ]
+    },
+    "ActorReference": {
+      "properties": {
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "reference": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_reference": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "type": {
+          "$ref": "BaseSchema.json#/definitions/uri"
+        },
+        "_type": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "identifier": {
+          "$ref": "Gem_baseTelematikID.json#/definitions/TelematikID"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false
+    },
+    "IdentifierKVID": {
+      "Identifier": {
+        "properties": {
+          "id": {
+            "$ref": "BaseSchema.json#/definitions/string"
+          },
+          "extension": {
+            "items": {
+              "$ref": "BaseSchema.json#/definitions/Extension"
+            },
+            "type": "array"
+          },
+          "use": {
+            "enum": [
+              "official"
+            ]
+          },
+          "_use": {
+            "$ref": "BaseSchema.json#/definitions/Element"
+          },
+          "type": {
+            "$ref": "BaseSchema.json#/definitions/CodeableConcept"
+          },
+          "system": {
+            "type": "string",
+            "enum": [
+              "http://fhir.de/NamingSystem/gkv/kvid-10"
+            ]
+          },
+          "_system": {
+            "$ref": "BaseSchema.json#/definitions/Element"
+          },
+          "value": {
+            "$ref": "BaseSchema.json#/definitions/string"
+          },
+          "_value": {
+            "$ref": "BaseSchema.json#/definitions/Element"
+          },
+          "period": {
+            "$ref": "BaseSchema.json#/definitions/Period"
+          },
+          "assigner": {
+            "$ref": "BaseSchema.json#/definitions/Reference"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "system",
+          "value"
+        ]
+      }
+    },
+    "MedicationDispense_ResourceList": {
+      "oneOf": [
+        {
+          "$ref": "kbv/KBV_PR_ERP_Medication_Compounding.json#/definitions/KBV_PR_ERP_Medication_Compounding"
+        },
+        {
+          "$ref": "kbv/KBV_PR_ERP_Medication_FreeText.json#/definitions/KBV_PR_ERP_Medication_FreeText"
+        },
+        {
+          "$ref": "kbv/KBV_PR_ERP_Medication_Ingredient.json#/definitions/KBV_PR_ERP_Medication_Ingredient"
+        },
+        {
+          "$ref": "kbv/KBV_PR_ERP_Medication_PZN.json#/definitions/KBV_PR_ERP_Medication_PZN"
+        }
+      ]
+    }
+  }
+}

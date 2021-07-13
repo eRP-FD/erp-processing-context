@@ -1,0 +1,261 @@
+#include "mock/hsm/MockBlobCache.hxx"
+
+#include "erp/database/PostgresBackend.hxx"
+#include "erp/hsm/BlobCache.hxx"
+#include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "erp/util/Base64.hxx"
+#include "erp/util/Configuration.hxx"
+#include "erp/util/TLog.hxx"
+
+#include "mock/crypto/MockCryptography.hxx"
+#if ! defined(__APPLE__) && ! defined(_WIN32)
+#include "mock/enrolment/MockEnrolmentManager.hxx"
+#endif
+#include "mock/hsm/MockBlobDatabase.hxx"
+#include "mock/tpm/TpmTestData.hxx"
+#include "mock/util/MockConfiguration.hxx"
+
+#include "mock_config.h"
+
+
+namespace
+{
+    bool isBlobTypeAlreadyInitialized (BlobCache& cache, const BlobType type)
+    {
+        const auto flags = cache.hasValidBlobsOfType({type});
+        return flags.size() == 1 && flags[0];
+    }
+}
+
+
+std::shared_ptr<BlobCache> MockBlobCache::createAndSetup (
+    const MockTarget target,
+    std::unique_ptr<BlobDatabase>&& blobDatabase)
+{
+    auto blobCache = std::make_shared<BlobCache>(std::move(blobDatabase));
+    setupBlobCache(target, *blobCache);
+    return blobCache;
+}
+
+std::shared_ptr<BlobCache> MockBlobCache::createBlobCache (
+    const MockTarget target)
+{
+    if (MockConfiguration::instance().getOptionalBoolValue(MockConfigurationKey::MOCK_USE_BLOB_DATABASE_MOCK, true))
+        return createAndSetup(target, std::make_unique<MockBlobDatabase>());
+    else
+        return createAndSetup(target, std::make_unique<ProductionBlobDatabase>());
+}
+
+
+void MockBlobCache::setupBlobCache (
+    MockTarget target,
+    BlobCache& blobCache)
+{
+    if ( ! MockConfiguration::instance().getOptionalBoolValue(MockConfigurationKey::MOCK_USE_BLOB_DATABASE_MOCK, true))
+    {
+        auto connection = pqxx::connection(PostgresBackend::defaultConnectString());
+        pqxx::work transaction (connection);
+        transaction.exec("DELETE FROM erp.blob WHERE true");
+        transaction.commit();
+    }
+
+    setupBlobCacheForAllTargets(blobCache);
+
+    switch(target)
+    {
+        case MockTarget::SimulatedHsm:
+            TVLOG(1) << "setting up blob cache with values for simulated HSM";
+            setupBlobCacheForSimulatedHsm(blobCache);
+            break;
+        case MockTarget::MockedHsm:
+            TVLOG(1) << "setting up blob cache with values for mocked HSM";
+            setupBlobCacheForMockedHsm(blobCache);
+            break;
+    }
+}
+
+
+void MockBlobCache::setupBlobCacheForAllTargets (BlobCache& blobCache)
+{
+    // For key derivation. Two blobs per resource type. Due to the limited static data set we use the same key but with
+    // different names.
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::TaskKeyDerivation))
+    {
+        auto blob = ErpBlob::fromCDump(tpm::task_derivation_key_blob_base64);
+        {
+            BlobDatabase::Entry entry;
+            entry.type = BlobType::TaskKeyDerivation;
+            entry.name = ErpVector::create("task-1");
+            entry.blob = ErpBlob(blob);
+            blobCache.storeBlob(std::move(entry));
+        }
+        ++blob.generation; // Simulate another generation.
+        {
+            BlobDatabase::Entry entry;
+            entry.type = BlobType::TaskKeyDerivation;
+            entry.name = ErpVector::create("task-2");
+            entry.blob = std::move(blob);
+            blobCache.storeBlob(std::move(entry));
+        }
+    }
+
+    // TODO: create static data blobs for the other two derivation key types.
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::CommunicationKeyDerivation))
+    {
+        auto blob = ErpBlob::fromCDump(tpm::task_derivation_key_blob_base64);
+        {
+            BlobDatabase::Entry entry;
+            entry.type = BlobType::CommunicationKeyDerivation;
+            entry.name = ErpVector::create("communication-3");
+            entry.blob = ErpBlob(blob);
+            blobCache.storeBlob(std::move(entry));
+        }
+        ++blob.generation; // Simulate another generation.
+        {
+            BlobDatabase::Entry entry;
+            entry.type = BlobType::CommunicationKeyDerivation;
+            entry.name = ErpVector::create("communication-4");
+            entry.blob = std::move(blob);
+            blobCache.storeBlob(std::move(entry));
+        }
+    }
+
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::AuditLogKeyDerivation))
+    {
+        auto blob = ErpBlob::fromCDump(tpm::task_derivation_key_blob_base64);
+        {
+            BlobDatabase::Entry entry;
+            entry.type = BlobType::AuditLogKeyDerivation;
+            entry.name = ErpVector::create("audit-log-7");
+            entry.blob = ErpBlob(blob);
+            blobCache.storeBlob(std::move(entry));
+        }
+        ++blob.generation; // Simulate another generation.
+        {
+            BlobDatabase::Entry entry;
+            entry.type = BlobType::AuditLogKeyDerivation;
+            entry.name = ErpVector::create("audit-log-8");
+            entry.blob = std::move(blob);
+            blobCache.storeBlob(std::move(entry));
+        }
+    }
+}
+
+
+void MockBlobCache::setupBlobCacheForSimulatedHsm (BlobCache& blobCache)
+{
+#if ! defined(__APPLE__) && ! defined(_WIN32)
+    TpmProxyDirect tpm (blobCache);
+    MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob(
+        tpm,
+        blobCache,
+        std::string(MOCK_DATA_DIR) + "/enrolment/cacertecc.crt",
+        1);
+#endif
+
+    // Ecies key.
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::EciesKeypair))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::EciesKeypair;
+        entry.name = ErpVector::create("ecies");
+        entry.blob = ErpBlob::fromCDump(tpm::eciesKeyPair_blob_base64);
+        blobCache.storeBlob(std::move(entry));
+    }
+
+    // Hash key, a 256 Bit Salt.
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::KvnrHashKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::KvnrHashKey;
+        entry.name = ErpVector::create("kvnr-hash-key");
+        entry.blob = ErpBlob::fromCDump(tpm::hashKey_blob_base64);
+        blobCache.storeBlob(std::move(entry));
+    }
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::TelematikIdHashKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::TelematikIdHashKey;
+        entry.name = ErpVector::create("tid-hash-key");
+        entry.blob = ErpBlob::fromCDump(tpm::hashKey_blob_base64);
+        blobCache.storeBlob(std::move(entry));
+    }
+
+    // VAU SIG aka ID.FD.SIG
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauSigPrivateKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::VauSigPrivateKey;
+        entry.name = ErpVector::create("vau-sig");
+        entry.blob = ErpBlob::fromCDump(tpm::vauSigKeupair_blob_base64);
+        blobCache.storeBlob(std::move(entry));
+    }
+}
+
+
+void MockBlobCache::setupBlobCacheForMockedHsm (BlobCache& blobCache)
+{
+    // For a simulated enrolment
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::EndorsementKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::EndorsementKey;
+        entry.name = ErpVector::create("ek-1");
+        entry.blob = ErpBlob("endorsement key", 1);
+        blobCache.storeBlob(std::move(entry));
+    }
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::AttestationPublicKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::AttestationPublicKey;
+        entry.name = ErpVector::create(Base64::decodeToString(tpm::attestationKeyName_base64));
+        entry.blob = ErpBlob::fromCDump(tpm::TrustedAk_blob_base64);
+        blobCache.storeBlob(std::move(entry));
+    }
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::Quote))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::Quote;
+        entry.name = ErpVector::create("quote");
+        entry.blob = ErpBlob::fromCDump(tpm::TrustedQuote_blob_base64);
+        blobCache.storeBlob(std::move(entry));
+    }
+
+    // Ecies key.
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::EciesKeypair))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::EciesKeypair;
+        entry.name = ErpVector::create("ecies");
+        entry.blob = ErpBlob(MockCryptography::getEciesPrivateKeyPem(), 1);
+        blobCache.storeBlob(std::move(entry));
+    }
+
+    // Hash key, a 256 Bit Salts.
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::KvnrHashKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::KvnrHashKey;
+        entry.name = ErpVector::create("kvnr-hash-key");
+        entry.blob = ErpBlob("< a 32 byte/256 bit KVNR salt  >", 11);
+        blobCache.storeBlob(std::move(entry));
+    }
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::TelematikIdHashKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::TelematikIdHashKey;
+        entry.name = ErpVector::create("tid-hash-key");
+        entry.blob = ErpBlob("< a 32 byte/256bit TID salt    >", 11);
+        blobCache.storeBlob(std::move(entry));
+    }
+
+    // VAU SIG aka ID.FD.SIG
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauSigPrivateKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::VauSigPrivateKey;
+        entry.name = ErpVector::create("vau-sig");
+        entry.blob = ErpBlob(std::string_view(MockCryptography::getIdFdSigPrivateKeyPkcs8()), 11);
+        blobCache.storeBlob(std::move(entry));
+    }
+}

@@ -1,0 +1,16 @@
+#ifndef ERP_PROCESSING_CONTEXT_HSM_HSMEXCEPTION_HXX
+#define ERP_PROCESSING_CONTEXT_HSM_HSMEXCEPTION_HXX
+
+#include <stdexcept>
+
+
+class HsmException : public std::runtime_error
+{
+public:
+    const int errorCode;
+
+    HsmException (const std::string& what, int errorCode);
+};
+
+
+#endif

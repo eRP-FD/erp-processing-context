@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "$id": "XX-Type",
+  "oneOf": [
+    {
+      "$ref": "#/definitions/XX-Type"
+    }
+  ],
+  "definitions": {
+    "XX-Type": {
+      "properties": {
+        "resourceType": {
+          "enum": [
+            "XX-Type"
+          ]
+        },
+        "id": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "extension": {
+          "items": {
+            "$ref": "BaseSchema.json#/definitions/Extension"
+          },
+          "type": "array"
+        },
+        "system": {
+          "enum": [
+            "http://terminology.hl7.org/CodeSystem/v2-0203"
+          ]
+        },
+        "_system": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "version": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_version": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "code": {
+          "enum": [
+            "XX"
+          ]
+        },
+        "_code": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "display": {
+          "$ref": "BaseSchema.json#/definitions/string"
+        },
+        "_display": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        },
+        "userSelected": {
+          "$ref": "BaseSchema.json#/definitions/boolean"
+        },
+        "_userSelected": {
+          "$ref": "BaseSchema.json#/definitions/Element"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "code"
+      ]
+    }
+  }
+}

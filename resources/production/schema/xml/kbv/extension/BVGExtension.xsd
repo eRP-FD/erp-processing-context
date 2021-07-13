@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../GenericTypes.xsd"/>
+  <xs:element name="extension" type="BVG.Extension"/>
+  <xs:complexType name="BVG.Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueBoolean" type="boolean"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="uri-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

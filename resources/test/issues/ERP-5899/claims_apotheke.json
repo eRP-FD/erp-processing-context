@@ -1,0 +1,19 @@
+{
+    "sub": "eap_9LG0CFMz8bgwXkvwVDEzbxHlEgO_49xy69thBh0",
+    "professionOID": "1.2.276.0.76.4.54",
+    "organizationName": "3-SMC-B-Testkarte-883110000129068",
+    "idNummer": "3-SMC-B-Testkarte-883110000129068",
+    "amr": "[mfa, sc, pin]",
+    "iss": "https://idp-ref.zentral.idp.splitdns.ti-dienste.de/.well-known/openid-configuration/",
+    "given_name": "Dominik-Peter",
+    "client_id": "erp-testsuite-fd",
+    "acr": "gematik-ehealth-loa-high",
+    "aud": "https://erp.lu.erezepttest.net/",
+    "azp": "erp-testsuite-fd",
+    "scope": "openid e-rezept",
+    "auth_time": "1622354308",
+    "exp": "1622354608",
+    "family_name": "Blankenberg",
+    "iat": "1622354188",
+    "jti": "79d3eba2bdb788b9"
+}
