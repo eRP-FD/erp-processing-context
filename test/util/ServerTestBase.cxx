@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/util/ServerTestBase.hxx"
 
 #include "mock/hsm/MockBlobCache.hxx"
@@ -53,10 +58,10 @@ template<> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(cons
     return { Header::Authorization, AuthorizationBearerPrefix + jwt1 };
 }
 
-std::unique_ptr<DosHandler> createRedisInstance (void)
+std::unique_ptr<RedisInterface> createRedisInstance (void)
 {
     // Check if a switch between redis interfaces is required (mock vs real client.)
-    return std::make_unique<DosHandler>( std::make_unique<MockRedisStore>() );
+    return std::make_unique<MockRedisStore>();
 }
 
 ServerTestBase::ServerTestBase(const bool forceMockDatabase)
@@ -85,6 +90,7 @@ void ServerTestBase::startServer (void)
 
     RequestHandlerManager<PcServiceContext> handlers;
     RequestHandlerManager<PcServiceContext> secondaryHandlers;
+    addAdditionalPrimaryHandlers(handlers);
     addAdditionalSecondaryHandlers(secondaryHandlers); // Allow derived test classes to add additional handlers.
     ErpProcessingContext::addPrimaryEndpoints(handlers, std::move(secondaryHandlers));
 
@@ -109,7 +115,7 @@ void ServerTestBase::startServer (void)
         static_cast<uint16_t>(9999),
         std::move(handlers),
         std::move(serviceContext));
-    mServer->serve(2);
+    mServer->serve(serverThreadCount);
 }
 
 
@@ -175,8 +181,7 @@ Header ServerTestBase::createPostHeader (const std::string& path, const std::opt
         std::string(path),
         Header::Version_1_1,
         { {Header::Authorization, "Bearer " + std::string(jwtToken.has_value() ? jwtToken->serialize() : mJwt->serialize())}},
-        HttpStatus::Unknown,
-        false);
+        HttpStatus::Unknown);
 }
 
 
@@ -187,8 +192,7 @@ Header ServerTestBase::createGetHeader (const std::string& path, const std::opti
         std::string(path),
         Header::Version_1_1,
         { {Header::Authorization, "Bearer " + std::string(jwtToken.has_value() ? jwtToken->serialize() : mJwt->serialize())} },
-        HttpStatus::Unknown,
-        false);
+        HttpStatus::Unknown);
 }
 
 
@@ -199,8 +203,7 @@ Header ServerTestBase::createDeleteHeader(const std::string& path, const std::op
         std::string(path),
         Header::Version_1_1,
         { {Header::Authorization, "Bearer " + std::string(jwtToken.has_value() ? jwtToken->serialize() : mJwt->serialize())} },
-        HttpStatus::Unknown,
-        false);
+        HttpStatus::Unknown);
     return header;
 }
 
@@ -212,8 +215,7 @@ ClientRequest ServerTestBase::encryptRequest (const ClientRequest& innerRequest,
             "/VAU/0",
             Header::Version_1_1,
             {{Header::XRequestId, "the-request-id"}},
-            HttpStatus::Unknown,
-            false),
+            HttpStatus::Unknown),
         mTeeProtocol.createRequest(
             MockCryptography::getEciesPublicKeyCertificate(),
             innerRequest,

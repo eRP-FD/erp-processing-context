@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/AuditEventHandler.hxx"
 
 #include "erp/ErpRequirements.hxx"
@@ -38,7 +43,7 @@ model::Bundle GetAllAuditEventsHandler::createBundle (
     model::Bundle bundle(model::Bundle::Type::searchset);
     for (const auto& data : auditData)
     {
-        model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(
+        const model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(
             data, language, serviceContext.auditEventTextTemplates(), request.getAccessToken());
         bundle.addResource(
             linkBase + "/" + std::string(auditEvent.id()),

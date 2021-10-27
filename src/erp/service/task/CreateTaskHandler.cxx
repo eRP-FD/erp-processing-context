@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/task/CreateTaskHandler.hxx"
 
 #include "erp/ErpRequirements.hxx"
@@ -40,6 +45,8 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     // because we want to avoid a second database access for only storing this redundant information.
     // The prescriptionId will be persisted during $activate inside the task bundle.
     task.setPrescriptionId(prescriptionId);
+
+    session.accessLog.prescriptionId(prescriptionId.toString());
 
     A_19114.start("return the created Task");
     makeResponse(session, HttpStatus::Created, &task);

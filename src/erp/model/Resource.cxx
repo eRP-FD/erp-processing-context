@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/Resource.hxx"
 
 
@@ -14,6 +19,7 @@
 #include "erp/model/NumberAsStringParserWriter.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MetaData.hxx"
+#include "erp/model/OperationOutcome.hxx"
 #include "erp/model/Parameters.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Signature.hxx"
@@ -188,6 +194,16 @@ std::size_t ResourceBase::addToArray(const rj::Pointer& pointerToArray, rapidjso
     return mJsonDocument.addToArray(pointerToArray, std::move(object));
 }
 
+std::size_t ResourceBase::addToArray (rapidjson::Value& array, rapidjson::Value&& object)
+{
+    return mJsonDocument.addToArray(array, std::move(object));
+}
+
+std::size_t ResourceBase::addStringToArray (rapidjson::Value& array, std::string_view str)
+{
+    return addToArray(array, mJsonDocument.makeString(str));
+}
+
 void ResourceBase::removeFromArray(const rj::Pointer& pointerToArray, std::size_t index)
 {
     return mJsonDocument.removeFromArray(pointerToArray, index);
@@ -209,6 +225,19 @@ std::optional<std::string_view>
 ResourceBase::getOptionalStringValue(const rapidjson::Pointer& pointerToEntry) const
 {
     return mJsonDocument.getOptionalStringValue(pointerToEntry);
+}
+
+std::string_view ResourceBase::getStringValue(const rj::Value& object, const rj::Pointer& key) const
+{
+    const auto str = getOptionalStringValue(object, key);
+    ModelExpect(str.has_value(), pointerToString(key) + ": entry not present or not a string");
+    return str.value();
+}
+
+std::optional<std::string_view>
+ResourceBase::getOptionalStringValue(const rj::Value& object, const rj::Pointer& key) const
+{
+    return mJsonDocument.getOptionalStringValue(object, key);
 }
 
 int ResourceBase::getIntValue(const rapidjson::Pointer& pointerToEntry) const
@@ -321,7 +350,7 @@ rapidjson::Value* ResourceBase::findMemberInArray(
     return mJsonDocument.findMemberInArray(arrayPointer, searchKey, searchValue);
 }
 
-rapidjson::Value* ResourceBase::getMemberInArray(const rapidjson::Pointer& pointerToArray, size_t index)
+const rapidjson::Value* ResourceBase::getMemberInArray(const rapidjson::Pointer& pointerToArray, size_t index) const
 {
     return mJsonDocument.getMemberInArray(pointerToArray, index);
 }
@@ -405,6 +434,7 @@ template class Resource<class Composition>;
 template class Resource<class Device>;
 template class Resource<class MedicationDispense>;
 template class Resource<class MetaData>;
+template class Resource<class OperationOutcome>;
 template class Resource<class Parameters>;
 template class Resource<class Patient>;
 template class Resource<class Signature>;

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_TEST_HTTPSTESTCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_HTTPSTESTCLIENT_HXX
 
@@ -12,11 +17,17 @@ class HttpsTestClient
 {
 public:
     static std::unique_ptr<TestClient> Factory();
+
+    ~HttpsTestClient() override;
+
     std::string getHostHttpHeader() const override;
 
     std::string getHostAddress() const override;
 
     uint16_t getPort() const override;
+
+    Certificate getEciesCertificate() override;
+
 protected:
     HttpsTestClient(
         const std::string& host,
@@ -28,9 +39,12 @@ protected:
         const SafeString& clientPrivateKey = SafeString());
     ClientResponse send(const ClientRequest & clientRequest) override;
 private:
+    std::unique_ptr<Certificate> retrieveEciesRemoteCertificate();
+
     HttpsClient mHttpsClient;
     std::string const mServerAddress;
     uint16_t mPort;
+    std::unique_ptr<Certificate> mRemoteCertificate;
 };
 
 

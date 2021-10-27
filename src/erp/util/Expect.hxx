@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_UTIL_EXPECT_HXX
 #define ERP_UTIL_EXPECT_HXX
 
@@ -114,8 +119,12 @@ namespace local
 
 #define ErpFail(errorStatus, message) \
     local::logAndThrow<ErpException>(message, fileAndLine, errorStatus)
+#define ErpFailWithDiagnostics(errorStatus, message, diagnostics) \
+    local::logAndThrow<ErpException>(message, fileAndLine, errorStatus, diagnostics)
 #define VauFail(errorStatus, vauError, message) \
     local::logAndThrow<ErpException>(message, fileAndLine, errorStatus, vauError)
+#define VauFailWithDiagnostics(errorStatus, vauError, message, diagnostics) \
+    local::logAndThrow<ErpException>(message, fileAndLine, errorStatus, diganostics, vauError)
 
 /**
  * Variant of the Expect macro that should be used for errors originating in model classes.

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_TEETOKENUPDATER_HXX
 #define ERP_PROCESSING_CONTEXT_TEETOKENUPDATER_HXX
 
@@ -65,7 +70,7 @@ private:
     size_t mUpdateFailureCount;
     std::chrono::system_clock::duration mUpdateInterval;
     std::chrono::system_clock::duration mRetryInterval;
-    std::chrono::system_clock::time_point mLastUpdate;
+    std::atomic<std::chrono::system_clock::time_point> mLastUpdate;
 };
 
 

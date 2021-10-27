@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/server/HttpsServer.hxx"
 #include "erp/server/handler/RequestHandlerInterface.hxx"

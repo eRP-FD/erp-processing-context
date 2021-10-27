@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/ErpRequestHandler.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
@@ -24,7 +29,7 @@ public:
           serviceContext(
               Configuration::instance(),
               &MockDatabase::createMockDatabase,
-              std::make_unique<DosHandler>(std::make_unique<MockRedisStore>()),
+              std::make_unique<MockRedisStore>(),
               std::make_unique<HsmPool>(
                   std::make_unique<HsmMockFactory>(),
                   TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
@@ -37,11 +42,12 @@ public:
     template <typename TModel>
     void testParseAndValidateRequestBody(std::string body, const std::string& contentMimeType, SchemaType schemaType, bool expectFail)
     {
-        Header header(HttpMethod::POST, "", Header::Version_1_1, {{Header::ContentType, contentMimeType}}, HttpStatus::Unknown, true);
+        Header header(HttpMethod::POST, "", Header::Version_1_1, {{Header::ContentType, contentMimeType}}, HttpStatus::Unknown);
         ServerRequest serverRequest(std::move(header));
         serverRequest.setBody(std::move(body));
         ServerResponse serverResponse;
-        SessionContext<PcServiceContext> sessionContext(serviceContext, serverRequest, serverResponse);
+        AccessLog accessLog;
+        SessionContext<PcServiceContext> sessionContext(serviceContext, serverRequest, serverResponse, accessLog);
         if (expectFail)
         {
             ASSERT_ANY_THROW((void)parseAndValidateRequestBody<TModel>(sessionContext, schemaType))

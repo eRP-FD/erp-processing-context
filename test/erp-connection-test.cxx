@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/Environment.hxx"

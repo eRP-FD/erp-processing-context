@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SEARCHARGUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_SEARCHARGUMENT_HXX
 
@@ -77,6 +82,7 @@ private:
     void checkValueIndex(size_t idx) const;
     std::string dateValuesAsString() const;
     std::string dateValueAsString(size_t idx) const;
+    std::string taskStatusAsString() const;
     static std::optional<Prefix> prefixFromString (const std::string& prefixString);
 };
 

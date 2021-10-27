@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "TaskHandler.hxx"
 
 #include "erp/ErpRequirements.hxx"
@@ -84,14 +89,16 @@ model::Bundle TaskHandlerBase::convertToPatientConfirmation(const model::Binary&
 }
 
 
-model::PrescriptionId TaskHandlerBase::parseId(const ServerRequest& request)
+model::PrescriptionId TaskHandlerBase::parseId(const ServerRequest& request, AccessLog& accessLog)
 {
     const auto prescriptionIdValue = request.getPathParameter("id");
     ErpExpect(prescriptionIdValue.has_value(), HttpStatus::BadRequest, "id path parameter is missing");
 
     try
     {
-        return model::PrescriptionId::fromString(prescriptionIdValue.value());
+        auto prescriptionId = model::PrescriptionId::fromString(prescriptionIdValue.value());
+        accessLog.prescriptionId(prescriptionIdValue.value());
+        return prescriptionId;
     }
     catch (const model::ModelException&)
     {
@@ -146,12 +153,16 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
     A_19115.finish();
 
     model::Bundle responseBundle(model::Bundle::Type::searchset);
-    responseBundle.setLink(model::Link::Type::Self, makeFullUrl("/Task"));
+    const auto links = arguments->getBundleLinks(getLinkBase(), "/Task");
+    for (const auto& link : links)
+    {
+        responseBundle.setLink(link.first, link.second);
+    }
     if (! resultSet.empty())
     {
         A_19129_01.start("create response bundle for patient");
 
-        for (auto& task : resultSet)
+        for (const auto& task : resultSet)
         {
             Expect(task.status() != model::Task::Status::cancelled, "should already be filtered by SQL query.");
             // in C_10499 the response bundle has changed to only contain tasks, no patient confirmation
@@ -187,7 +198,7 @@ void GetTaskHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
-    const auto prescriptionId = parseId(session.request);
+    const auto prescriptionId = parseId(session.request, session.accessLog);
 
     const auto& accessToken = session.request.getAccessToken();
 
@@ -266,8 +277,8 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         const auto auditDatas = databaseHandle->retrieveAuditEventData(std::string(*kvnr), {}, prescriptionId, {});
         for (const auto& auditData : auditDatas)
         {
-            auto language = getLanguageFromHeader(session.request.header());
-            auto auditEvent = AuditEventCreator::fromAuditData(
+            const auto language = getLanguageFromHeader(session.request.header());
+            const auto auditEvent = AuditEventCreator::fromAuditData(
                 auditData, language, session.serviceContext.auditEventTextTemplates(),
                 session.request.getAccessToken());
 

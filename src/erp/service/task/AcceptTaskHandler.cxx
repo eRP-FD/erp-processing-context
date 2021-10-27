@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/task/AcceptTaskHandler.hxx"
 
 #include "erp/ErpRequirements.hxx"
@@ -23,7 +28,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
-    const auto prescriptionId = parseId(session.request);
+    const auto prescriptionId = parseId(session.request, session.accessLog);
 
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
@@ -62,7 +67,8 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
        taskStatus == model::Task::Status::inprogress ||
        taskStatus == model::Task::Status::draft)
     {
-        ErpFail(HttpStatus::Conflict, "Task has invalid status");
+        ErpFail(HttpStatus::Conflict,
+                "Task has invalid status " + std::string(model::Task::StatusNames.at(taskStatus)));
     }
     A_19168.finish();
 

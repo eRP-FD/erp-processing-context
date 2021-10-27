@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_TEST_TESTCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_TESTCLIENT_HXX
 
@@ -7,6 +12,7 @@
 #include <memory>
 
 class ClientRequest;
+class Certificate;
 
 /// @brief Implements backend for workflow tests
 ///
@@ -37,6 +43,9 @@ public:
     virtual std::string getHostHttpHeader() const = 0;
     virtual std::string getHostAddress() const = 0;
     virtual uint16_t getPort() const = 0;
+
+    virtual Certificate getEciesCertificate();
+
 
 private:
     static Factory mFactory;

@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 macro(install_libs_for target install_component)
     message(STATUS "Will install libs for ${target} with component ${install_component}")
     install(CODE "set(CMAKE_INSTALL_FULL_LIBDIR ${CMAKE_INSTALL_FULL_LIBDIR})" COMPONENT "${install_component}")

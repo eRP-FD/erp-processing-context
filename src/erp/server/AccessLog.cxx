@@ -1,8 +1,15 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/AccessLog.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/server/request/ServerRequest.hxx"
 
 #include "erp/model/Timestamp.hxx"
+#include "erp/server/request/ServerRequest.hxx"
+#include "erp/server/response/ServerResponse.hxx"
+#include "erp/util/ExceptionHelper.hxx"
+
 
 AccessLog::AccessLog (void)
     : mStartTime(std::chrono::system_clock::now()),
@@ -82,7 +89,7 @@ void AccessLog::setInnerRequestOperation (const std::string_view& operation)
 
 void AccessLog::updateFromOuterRequest (const ServerRequest& request)
 {
-    const auto optionalRequestId = request.header().header("X-Request-Id");
+    const auto optionalRequestId = request.header().header(Header::XRequestId);
     mLog.keyValue(
         "x-request-id",
         optionalRequestId.value_or("<not-set>"));
@@ -125,7 +132,26 @@ void AccessLog::error (const std::string_view message)
 }
 
 
+void AccessLog::error (const std::string_view message, std::exception_ptr exception)
+{
+    ExceptionHelper::extractInformation(
+        [this, message]
+        (const std::string& details, const std::string& location)
+        {
+            keyValue("location", location);
+            error(std::string(message) + ": " + details);
+        },
+        exception);
+}
+
+
 void AccessLog::discard (void)
 {
     mLog.discard();
+}
+
+
+void AccessLog::prescriptionId(const std::string_view id)
+{
+    keyValue("prescription-id", id);
 }

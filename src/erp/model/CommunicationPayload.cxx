@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/CommunicationPayloadItem.hxx"
 #include "erp/model/ResourceNames.hxx"

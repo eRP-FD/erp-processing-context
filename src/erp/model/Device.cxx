@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/Device.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"

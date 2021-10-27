@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/UrlRequestSender.hxx"
 
 #include "erp/client/request/ClientRequest.hxx"
@@ -109,7 +114,7 @@ ClientResponse UrlRequestSender::doSend(
 
     const ClientRequest request(
         Header(method, std::string(url.mPath + url.mRest),
-               Header::Version_1_1, std::move(httpHeaders), HttpStatus::Unknown, false),
+               Header::Version_1_1, std::move(httpHeaders), HttpStatus::Unknown),
         body);
 
     const std::string lowerProtocol = String::toLower(url.mProtocol);

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef E_LIBRARY_CRYPTO_OPENSSLHELPER_HXX
 #define E_LIBRARY_CRYPTO_OPENSSLHELPER_HXX
 

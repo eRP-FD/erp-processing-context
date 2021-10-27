@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/ThreadPool.hxx"
 
 #include "erp/server/Worker.hxx"
@@ -69,14 +74,9 @@ void ThreadPool::shutDown (void)
 
 void ThreadPool::joinAllThreads (void)
 {
-    TVLOG(1) << "joining " << mThreads.size() << " server threads";
-
     for (auto& thread : mThreads)
     {
-        const auto id = thread.get_id();
-        TVLOG(1) << "joining thread " << ThreadNames::instance().getThreadName(id);
         thread.join();
-        TVLOG(1) << "joined thread " << ThreadNames::instance().getThreadName(id);
     }
     mThreads.clear();
 

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTIL_SERVERTESTBASE_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_UTIL_SERVERTESTBASE_HXX
 
@@ -47,6 +52,7 @@ public:
         "Hallo, kannst Du das Medikament fuer mich holen?";
     const std::string RepresentativeMessageByRepresentative =
         "Ja, mache ich gerne.";
+    constexpr static size_t serverThreadCount = 2;
 
     explicit ServerTestBase (bool forceMockDatabase = false);
     virtual ~ServerTestBase();
@@ -158,6 +164,7 @@ protected:
 
     Database::Factory createDatabaseFactory (void);
     std::unique_ptr<Database> createDatabase (void);
+    virtual void addAdditionalPrimaryHandlers (RequestHandlerManager<PcServiceContext>&) {}
     virtual void addAdditionalSecondaryHandlers (RequestHandlerManager<PcServiceContext>&) {}
 
     /**

@@ -1,10 +1,14 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/idp/IdpUpdater.hxx"
 
 #include "erp/common/Constants.hxx"
 #include "erp/crypto/Jwt.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/JsonLog.hxx"
 #include "erp/util/TLog.hxx"
@@ -21,7 +25,7 @@ namespace
     }
 
 
-    Certificate readIdpCertificate(const std::string derBase64String)
+    Certificate readIdpCertificate(const std::string& derBase64String)
     {
         try
         {
@@ -41,8 +45,20 @@ namespace
  */
 std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::UrlParts& url)
 {
-    const auto response = requestSender.send(url, HttpMethod::GET, "");
-
+    ClientResponse response;
+    constexpr size_t tryCount = 3;
+    for (size_t index=1; index<=tryCount; ++index)
+    {
+        response = requestSender.send(url, HttpMethod::GET, "");
+        if (response.getHeader().status() == HttpStatus::OK)
+        {
+            break;
+        }
+        else
+        {
+            TLOG(WARNING) << "Connecting " << url.toString() << " failed, retry count " << index;
+        }
+    }
     VLOG(3) << "GET:" << url.toString() << " status=" << toString(response.getHeader().status()) << " body=" << response.getBody();
     Expect(response.getHeader().status() == HttpStatus::OK, "call failed");
 
@@ -304,15 +320,17 @@ void IdpUpdater::reportUpdateStatus (const UpdateStatus status, std::string_view
     else
     {
         ++mUpdateFailureCount;
-        JsonLog(LogId::IDP_UPDATE_FAILED)
+        JsonLog(LogId::IDP_UPDATE_FAILED, JsonLog::makeWarningLogReceiver(), true)
             .message(getMessageText(status))
             .details(details)
             .keyValue("failedRetries", std::to_string(mUpdateFailureCount));
 
         if (std::chrono::system_clock::now() - mLastSuccessfulUpdate >= mCertificateMaxAge)
         {
-            JsonLog(LogId::IDP_UPDATE_FAILED)
-                .message("disabled IDP signer certificate because last successful update is older than 24 hours");
+            JsonLog(LogId::IDP_UPDATE_FAILED, JsonLog::makeErrorLogReceiver(), false)
+                .message("disabled IDP signer certificate because last successful update is older than " +
+                         std::to_string(std::chrono::duration_cast<std::chrono::hours>(mCertificateMaxAge).count()) +
+                         " hours (or no update at all)");
             mCertificateHolder.resetCertificate();
         }
     }

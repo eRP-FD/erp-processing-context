@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef EPA_LIBRARY_COMMON_CONTENTTYPE_HXX
 #define EPA_LIBRARY_COMMON_CONTENTTYPE_HXX
 

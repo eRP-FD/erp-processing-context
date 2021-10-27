@@ -1,17 +1,19 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/CommunicationGetHandler.hxx"
 
 #include "erp/crypto/Certificate.hxx"
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/util/FileHelper.hxx"
-#include "erp/util/TLog.hxx"
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ServerTestBaseAutoCleanup.hxx"
 #include "test/util/StaticData.hxx"
-
-#include "test_config.h"
 
 #include <pqxx/connection>
 #include <pqxx/pqxx>
@@ -1336,9 +1338,9 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_failForMissingObject)
     // Verify and decrypt the outer response. Also the generic part of the inner response.
     auto innerResponse = verifyOuterResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
-    ASSERT_FALSE(innerResponse.getHeader().header(Header::ContentType).has_value());
+    ASSERT_TRUE(innerResponse.getHeader().header(Header::ContentType).has_value());  // error response
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentLength));
-    ASSERT_EQ(innerResponse.getHeader().contentLength(), 0);
+    ASSERT_GT(innerResponse.getHeader().contentLength(), 0);
 }
 
 
@@ -1369,9 +1371,9 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_failForObjectDirectedAt
     // Verify and decrypt the outer response. Also the generic part of the inner response.
     auto innerResponse = verifyOuterResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
-    ASSERT_FALSE(innerResponse.getHeader().header(Header::ContentType).has_value());
+    ASSERT_TRUE(innerResponse.getHeader().header(Header::ContentType).has_value()); // error response
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentLength));
-    ASSERT_EQ(innerResponse.getHeader().contentLength(), 0);
+    ASSERT_GT(innerResponse.getHeader().contentLength(), 0);
 }
 
 TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)

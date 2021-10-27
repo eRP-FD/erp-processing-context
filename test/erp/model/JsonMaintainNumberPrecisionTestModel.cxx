@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #define _USE_CUSTOM_READER
 
 #include "test/erp/model/JsonMaintainNumberPrecisionTestModel.hxx"

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/beast/BoostBeastHeader.hxx"
 
 #include "erp/client/response/ClientResponseReader.hxx"
@@ -9,7 +14,6 @@
 
 class ServerResponseWriterTest : public testing::Test
 {
-public:
 };
 
 
@@ -25,10 +29,10 @@ TEST_F(ServerResponseWriterTest, toString)
     ClientResponseReader reader;
     auto clientResponse = reader.read(request);
 
-    const ServerResponse serverResponse{
+    ServerResponse serverResponse{
         clientResponse.getHeader(),
         clientResponse.getBody()};
-    const std::string serializedResponse = ServerResponseWriter(ValidatedServerResponse(serverResponse)).toString();
+    const std::string serializedResponse = ServerResponseWriter().toString(ValidatedServerResponse(std::move(serverResponse)));
 
     // The header fields are an unordered map. The order in which the header fields are
     // serialized cannot be accurately predicted except that the field containing the HTTP version

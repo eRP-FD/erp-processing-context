@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/VauRequestHandler.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/crypto/AesGcm.hxx"
@@ -5,6 +10,7 @@
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Device.hxx"
+#include "erp/model/OperationOutcome.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonym.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
@@ -12,8 +18,9 @@
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ResponseBuilder.hxx"
 #include "erp/server/response/ResponseValidator.hxx"
-#include "erp/server/session/ServerSession.hxx"
+#include "erp/server/session/SynchronousServerSession.hxx"
 #include "erp/service/DosHandler.hxx"
+#include "erp/service/ErpRequestHandler.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
 #include "erp/util/Expect.hxx"
@@ -58,14 +65,14 @@ void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
     }
     catch(const MissingAuditDataException& exc)
     {
-        LOG(WARNING) << "Missing Audit relevant data, unable to create Audit data record";
+        TLOG(WARNING) << "Missing Audit relevant data, unable to create Audit data record";
         sessionContext.accessLog.locationFromException(exc);
         sessionContext.accessLog.error("Missing Audit relevant data, unable to create Audit data record");
         throw;
     }
     catch(const std::exception& exc)
     {
-        LOG(WARNING) << "Error while storing Audit data";
+        TLOG(WARNING) << "Error while storing Audit data";
         TVLOG(1) << "Error reason:  " << exc.what();
         sessionContext.accessLog.locationFromException(exc);
         sessionContext.accessLog.error("Error while storing Audit data");
@@ -73,7 +80,7 @@ void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
     }
     catch(...)
     {
-        LOG(WARNING) << "Unknown error while storing Audit data";
+        TLOG(WARNING) << "Unknown error while storing Audit data";
         sessionContext.accessLog.error("Unknown error while storing Audit data");
         throw;
     }
@@ -85,25 +92,90 @@ JWT getJwtFromAuthorizationHeader(const std::string& authorizationHeaderValue)
     return JWT(authorizationHeaderValue.substr(7));
 }
 
+// This fixed mapping from HTTP code to issue code might be to unexact.
+// It is a first approach for an easy creation of an error response.
+model::OperationOutcome::Issue::Type httpCodeToOutcomeIssueType(HttpStatus httpCode)
+{
+    switch(httpCode)
+    {
+        case HttpStatus::BadRequest:
+            return model::OperationOutcome::Issue::Type::invalid;
+        case HttpStatus::Unauthorized:
+            return model::OperationOutcome::Issue::Type::unknown;
+        case HttpStatus::Forbidden:
+            return model::OperationOutcome::Issue::Type::forbidden;
+        case HttpStatus::NotFound:
+            return model::OperationOutcome::Issue::Type::not_found;
+        case HttpStatus::MethodNotAllowed:
+            return model::OperationOutcome::Issue::Type::not_supported;
+        case HttpStatus::Conflict:
+            return model::OperationOutcome::Issue::Type::conflict;
+        case HttpStatus::Gone:
+            return model::OperationOutcome::Issue::Type::processing;
+        case HttpStatus::UnsupportedMediaType:
+            return model::OperationOutcome::Issue::Type::value;
+        case HttpStatus::TooManyRequests:
+            return model::OperationOutcome::Issue::Type::transient;
+        default:
+            return model::OperationOutcome::Issue::Type::processing;
+    }
+}
+
+void fillErrorResponse(ServerResponse& innerResponse,
+                       const HttpStatus httpStatus,
+                       const std::unique_ptr<ServerRequest>& innerRequest,
+                       const std::string& detailsText,
+                       const std::optional<std::string>& diagnostics)
+{
+    ResponseBuilder(innerResponse).status(httpStatus).clearBody().keepAlive(false);
+    if(innerRequest.get())
+    {
+        // By now issue type, error text and diagnostics (if available) are filled.
+        bool callerWantsJson = false;
+        try
+        {
+            callerWantsJson = ErpRequestHandler::callerWantsJson(*innerRequest);
+        }
+        catch(...)
+        {   // use default:
+            const auto professionOIDClaim = innerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim);
+            callerWantsJson = professionOIDClaim.has_value() && professionOIDClaim == profession_oid::oid_versicherter;
+        }
+        const model::OperationOutcome operationOutcome({
+            model::OperationOutcome::Issue::Severity::error,
+            httpCodeToOutcomeIssueType(httpStatus),
+            detailsText, diagnostics, {} /*expression*/ });
+        ResponseBuilder(innerResponse).body(callerWantsJson, operationOutcome);
+    }
+}
+
 } // anonymous namespace
 
 
 namespace exception_handlers
 {
-void runErpExceptionHandler(const ErpException& exception, ServerResponse& innerResponse, PcSessionContext& outerSession)
+void runErpExceptionHandler(const ErpException& exception,
+                            const std::unique_ptr<ServerRequest>& innerRequest,
+                            ServerResponse& innerResponse, PcSessionContext& outerSession)
 {
     using namespace std::string_literals;
     TVLOG(1) << "caught ErpException " << exception.what();
     outerSession.accessLog.locationFromException(exception);
+    std::string detailsText = exception.what();
+    std::optional<std::string> diagnostics = exception.diagnostics();
     switch (exception.status())
     {
         case HttpStatus::BadRequest:
-            outerSession.accessLog.error("ErpException: "s + exception.what());
+            outerSession.accessLog.error("ErpException: " + detailsText);
             break;
+        case HttpStatus::InternalServerError: // fixed text and no diagnostics for internal errors to avoid leaking of personal information;
+            detailsText = "Internal server error.";
+            diagnostics = {};
+            [[fallthrough]];
         default:
             outerSession.accessLog.error("ErpException"s);
     }
-    ResponseBuilder(innerResponse).status(exception.status()).clearBody().keepAlive(false);
+    fillErrorResponse(innerResponse, exception.status(), innerRequest, detailsText, diagnostics);
     if (exception.vauErrorCode().has_value())
     {
         A_20703.start("Set VAU-Error-Code header field to brute_force whenever AccessCode or Secret mismatches");
@@ -116,7 +188,12 @@ void runErpExceptionHandler(const ErpException& exception, ServerResponse& inner
 }
 
 
-void runJwtExceptionHandler(const JwtException& exception, ServerResponse& innerResponse, HttpStatus httpStatus,
+void runJwtExceptionHandler(const JwtException& exception,
+                            const std::unique_ptr<ServerRequest>& innerRequest,
+                            ServerResponse& innerResponse,
+                            PcSessionContext& outerSession,
+                            const std::string& errorText,
+                            HttpStatus httpStatus,
                             const std::string& headerField, const std::string& headerValue)
 {
     TVLOG(1) << exception.what();
@@ -124,32 +201,30 @@ void runJwtExceptionHandler(const JwtException& exception, ServerResponse& inner
     {
         innerResponse.setHeader(headerField, headerValue);
     }
-    ResponseBuilder(innerResponse).status(httpStatus).clearBody().keepAlive(false);
+    outerSession.accessLog.locationFromException(exception);
+    outerSession.accessLog.error(errorText);
+    fillErrorResponse(innerResponse, httpStatus, innerRequest, errorText, {}/*diagnostics*/);
 }
 
 
-void runJwtInvalidFormatExceptionHandler(const JwtException& exception, ServerResponse& innerResponse, HttpStatus httpStatus,
-                                         const std::string& headerField, const std::string& headerValue)
+void runJwtInvalidRfcFormatExceptionHandler(const JwtInvalidRfcFormatException& exception,
+                                            const std::unique_ptr<ServerRequest>& innerRequest,
+                                            ServerResponse& innerResponse,
+                                            PcSessionContext& outerSession)
 {
     TVLOG(1) << exception.what();
-    if (!headerField.empty() && !headerValue.empty())
+    std::string errorText("JWT has invalid RFC format");
+    std::optional<std::string> externalInterface;
+    if (innerRequest->header().hasHeader(Header::ExternalInterface))
     {
-        innerResponse.setHeader(headerField, headerValue);
+        externalInterface = innerRequest->header().header(Header::ExternalInterface);
     }
-    ResponseBuilder(innerResponse).status(httpStatus).clearBody().keepAlive(false);
-}
-
-
-void runJwtInvalidRfcFormatExceptionHandler(const JwtInvalidRfcFormatException& exception, ServerResponse& innerResponse,
-                                              const std::optional<std::string>& externalInterface)
-{
-    TVLOG(1) << exception.what();
     if (externalInterface.has_value() && externalInterface.value() == Header::ExternalInterface_TI)
     {
         A_19130.start("Invalid format from a 'lei' request");
         innerResponse.setHeader(Header::WWWAuthenticate,
                                 std::string{VauRequestHandler::wwwAuthenticateErrorTiRequest()});
-        ResponseBuilder(innerResponse).status(HttpStatus::Unauthorized).clearBody().keepAlive(false);
+        errorText += " ('lei' request)";
         A_19130.finish();
     }
     else if (externalInterface.has_value() && externalInterface.value() == Header::ExternalInterface_INTERNET)
@@ -157,17 +232,20 @@ void runJwtInvalidRfcFormatExceptionHandler(const JwtInvalidRfcFormatException& 
         A_19389.start("Invalid format from a 'vers' request");
         innerResponse.setHeader(Header::WWWAuthenticate,
                                 std::string{VauRequestHandler::wwwAuthenticateErrorInternetRequest()});
-        ResponseBuilder(innerResponse).status(HttpStatus::Unauthorized).clearBody().keepAlive(false);
+        errorText += " ('vers' request)";
         A_19389.finish();
     }
     else
     {
         innerResponse.setHeader(Header::WWWAuthenticate,
                                 std::string{VauRequestHandler::wwwAuthenticateErrorInvalidToken()});
-        ResponseBuilder(innerResponse).status(HttpStatus::Unauthorized).clearBody().keepAlive(false);
     }
+
+    outerSession.accessLog.error(errorText);
+    fillErrorResponse(innerResponse, HttpStatus::Unauthorized, innerRequest, errorText, {}/*diagnostics*/);
 }
-}
+
+} // namespace exception_handlers
 
 
 VauRequestHandler::VauRequestHandler(RequestHandlerManager<PcServiceContext>&& handlers)
@@ -192,11 +270,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
                 .keyValue("duration-ms", gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::milliseconds>(duration).count()));
         });
 
-    // Set X-Request-Id as soon as possible
-    session.accessLog.updateFromOuterRequest(session.request);
-
-    auto upParam = session.request.getPathParameter("UP");
-    Expect(upParam.has_value(), "Missing Pre-User-Pseudonym in Path.");
+    session.accessLog.keyValue("health", session.serviceContext.applicationHealth().isUp() ? "UP" : "DOWN");
 
     std::unique_ptr<InnerTeeRequest> innerTeeRequest;
     std::unique_ptr<ServerRequest> innerServerRequest;
@@ -204,10 +278,12 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
     // Remove when all endpoints are implemented (or update missing endpoint return values.)
     innerServerResponse.setStatus(HttpStatus::OK);
     Operation innerOperation = Operation::UNKNOWN;
-    std::optional<std::string> externalInterface{""};
 
     try
     {
+        auto upParam = session.request.getPathParameter("UP");
+        ErpExpect(upParam.has_value(), HttpStatus::BadRequest, "Missing Pre-User-Pseudonym in Path.");
+
         // Decrypt
         innerTeeRequest = decryptRequest(session);
         if (nullptr == innerTeeRequest)
@@ -225,17 +301,11 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
         const JWT vauJwt = innerTeeRequest->releaseAuthenticationToken();
         JWT authorizationJwt = getJwtFromAuthorizationHeader(innerServerRequest->header().header(Header::Authorization).value()) ;
         ErpExpect(authorizationJwt == vauJwt,
-                  HttpStatus::BadRequest, "Authorization header is missing");
+                  HttpStatus::BadRequest, "Authorization header is invalid");
         innerServerRequest->setAccessToken(std::move(authorizationJwt));
 
-        if (innerServerRequest->header().hasHeader(Header::ExternalInterface))
-        {
-            externalInterface = innerServerRequest->header().header(Header::ExternalInterface);
-        }
-
         // Create an inner session that contains the unencrypted request and a, yet to be filled, unencrypted response.
-        PcSessionContext innerSession(session.serviceContext, *innerServerRequest, innerServerResponse);
-        innerSession.accessLog.discard();
+        PcSessionContext innerSession(session.serviceContext, *innerServerRequest, innerServerResponse, session.accessLog);
 
         // Look up the secondary request handler. Required for determining the inner operation.
         const std::string& target = innerServerRequest->header().target();
@@ -281,7 +351,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
             "10. Die E-Rezept-VAU MUSS c' und das PNP an die Webschnittstelle als Antwort übergeben.");
         session.response.setHeader(std::string{PreUserPseudonymManager::PNPHeader},
                                    preUserPseudonym.hex());
-        VLOG(1) << "adding PNP: " << preUserPseudonym.hex();
+        TVLOG(2) << "adding PNP: " << preUserPseudonym.hex();
         A_20163.finish();
 
         ErpExpect(matchingHandler.pathParameters.size() == matchingHandler.handlerContext->pathParameterNames.size(),
@@ -291,7 +361,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
         innerSession.request.setFragment(std::move(matchingHandler.fragment));
         innerSession.request.setQueryParameters(std::move(matchingHandler.queryParameters));
 
-        if (checkProfessionOID(innerServerRequest->getAccessToken(),
+        if (checkProfessionOID(innerServerRequest,
                                matchingHandler.handlerContext->handler.get(), innerSession.response, session.accessLog))
         {
             matchingHandler.handlerContext->handler->preHandleRequestHook(innerSession);
@@ -319,13 +389,15 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
     }
     catch(...)
     {
-        processException(std::current_exception(), externalInterface, innerServerResponse, session);
+        processException(std::current_exception(), innerServerRequest, innerServerResponse, session);
     }
 
     try
     {
         ResponseValidator::validate(innerServerResponse, innerOperation);
         handleKeepAlive(session, innerServerRequest.get(), innerServerResponse);
+
+        // TODO The next step causes a crash if exception because of missing Pre-User-Pseudonym before was thrown (i.e. no inner request existent):
         // Encrypt the response.
         OuterTeeResponse outerTeeResponse =
             ErpTeeProtocol::encrypt(innerServerResponse, innerTeeRequest->aesKey(), innerTeeRequest->requestId());
@@ -415,7 +487,7 @@ std::unique_ptr<InnerTeeRequest> VauRequestHandler::decryptRequest(PcSessionCont
 
 
 bool VauRequestHandler::checkProfessionOID(
-    const JWT& accessToken,
+    const std::unique_ptr<ServerRequest>& innerRequest,
     const RequestHandlerInterface* handler,
     ServerResponse& response,
     AccessLog& log)
@@ -424,7 +496,7 @@ bool VauRequestHandler::checkProfessionOID(
     A_19390.start("Determine professionOID from ACCESS_TOKEN");
     // we don't require the professionOID claim here, because it is not needed for all endpoints.
     const auto professionOIDClaim =
-        accessToken.stringForClaim(JWT::professionOIDClaim).value_or("");
+        innerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim).value_or("");
     A_19390.finish();
 
     A_19018.start("Check if professionOID claim is allowed for this endpoint");
@@ -441,8 +513,9 @@ bool VauRequestHandler::checkProfessionOID(
     A_19446_01.start("Check if professionOID claim is allowed for this endpoint");
     if (! handler->allowedForProfessionOID(professionOIDClaim))
     {
-        VLOG(1) << "endpoint is forbidden for professionOID: " << professionOIDClaim;
-        response.setStatus(HttpStatus::Forbidden);
+        TVLOG(1) << "endpoint is forbidden for professionOID: " << professionOIDClaim;
+        fillErrorResponse(response, HttpStatus::Forbidden, innerRequest,
+                          "endpoint is forbidden for professionOID " + professionOIDClaim, {}/*diagnostics*/);
         A_19018.finish();
         A_19022.finish();
         A_19026.finish();
@@ -464,7 +537,7 @@ bool VauRequestHandler::checkProfessionOID(
 
 
 void VauRequestHandler::processException(const std::exception_ptr& exception,
-                                         const std::optional<std::string>& externalInterface,
+                                         const std::unique_ptr<ServerRequest>& innerRequest,
                                          ServerResponse& innerResponse, PcSessionContext& outerSession)
 {
     try
@@ -475,58 +548,51 @@ void VauRequestHandler::processException(const std::exception_ptr& exception,
     }
     catch (const ErpException &e)
     {
-        exception_handlers::runErpExceptionHandler(e, innerResponse, outerSession);
+        exception_handlers::runErpExceptionHandler(e, innerRequest, innerResponse, outerSession);
     }
     catch (const JwtExpiredException& exception)
     {
         A_19902.start("Handle authentication expired");
         exception_handlers::runJwtExceptionHandler(
-            exception, innerResponse, HttpStatus::Unauthorized, Header::WWWAuthenticate,
-            R"(Bearer realm='prescriptionserver.telematik', error='invalACCESS_TOKEN'")");
+            exception, innerRequest, innerResponse, outerSession, "JWT expired",
+            HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_19902.finish();
-        outerSession.accessLog.locationFromException(exception);
-        outerSession.accessLog.error("JWT expired");
     }
     catch (const JwtRequiredClaimException& exception)
     {
         A_20368.start("Handle missing required claims.");
-        exception_handlers::runJwtExceptionHandler(exception, innerResponse, HttpStatus::Unauthorized,
-                                                   Header::WWWAuthenticate,
-                                                   std::string{wwwAuthenticateErrorInvalidToken()});
+        exception_handlers::runJwtExceptionHandler(
+            exception, innerRequest, innerResponse, outerSession, "JWT misses required claims",
+            HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_20368.finish();
-        outerSession.accessLog.locationFromException(exception);
-        outerSession.accessLog.error("JWT misses required claims");
     }
     catch (const JwtInvalidSignatureException& exception)
     {
         A_19131.start("Handle invalid signature");
-        exception_handlers::runJwtExceptionHandler(exception, innerResponse, HttpStatus::Unauthorized,
-                                                  Header::WWWAuthenticate,
-                                                  std::string{wwwAuthenticateErrorInvalidToken()});
+        exception_handlers::runJwtExceptionHandler(
+            exception, innerRequest, innerResponse, outerSession, "JWT has invalid signature",
+            HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_19131.finish();
-        outerSession.accessLog.locationFromException(exception);
-        outerSession.accessLog.error("JWT has invalid signature");
+        outerSession.accessLog.message(exception.what());
     }
     catch (const JwtInvalidRfcFormatException& exception)
     {
-        exception_handlers::runJwtInvalidRfcFormatExceptionHandler(exception, innerResponse, externalInterface);
-        outerSession.accessLog.error("JWT has invalid RFC format");
+        exception_handlers::runJwtInvalidRfcFormatExceptionHandler(
+            exception, innerRequest, innerResponse, outerSession);
     }
     catch (const JwtInvalidFormatException& exception)
     {
-        exception_handlers::runJwtInvalidFormatExceptionHandler(exception, innerResponse, HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
-        outerSession.accessLog.locationFromException(exception);
-        outerSession.accessLog.error("JWT has invalid format");
+        exception_handlers::runJwtExceptionHandler(
+            exception, innerRequest, innerResponse, outerSession, "JWT has invalid format",
+            HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
     }
     catch (const JwtInvalidAudClaimException& exception)
     {
         A_21520.start("Handle invalid aud claim");
-        exception_handlers::runJwtExceptionHandler(exception, innerResponse, HttpStatus::Unauthorized,
-                                                   Header::WWWAuthenticate,
-                                                   std::string{wwwAuthenticateErrorInvalidToken()});
+        exception_handlers::runJwtExceptionHandler(
+            exception, innerRequest, innerResponse, outerSession, "JWT has invalid aud claim",
+            HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_21520.finish();
-        outerSession.accessLog.locationFromException(exception);
-        outerSession.accessLog.error("JWT has invalid aud claim");
     }
     catch (const std::exception &e)
     {
@@ -586,7 +652,6 @@ void VauRequestHandler::handleKeepAlive (
     {
         // As this is the default for HTTPS/1.1 setting keep-alive to true will do nothing.
         session.response.setKeepAlive(true);
-        TVLOG(1) << "keep-alive is active";
     }
 }
 
@@ -606,7 +671,7 @@ CmacSignature VauRequestHandler::getPreUserPseudonym(
         auto [verified, preUserPseudonym] = PnPVerifier.verifyAndResign(pup.getSignature(), sub);
         if (! verified)
         {
-            VLOG(1) << "PNP verification failed";
+            TVLOG(1) << "PNP verification failed";
             session.accessLog.location(fileAndLine);
             session.accessLog.error("PNP verification failed");
         }

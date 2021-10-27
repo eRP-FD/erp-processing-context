@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 pipeline {
     agent {
         node {
@@ -22,10 +27,11 @@ pipeline {
             when {
                 anyOf {
                     branch 'master'
+                    branch 'release/*'
                 }
             }
             steps {
-                gradleCreateRelease()
+                gradleCreateReleaseEpa()
             }
         }
 
@@ -95,6 +101,7 @@ pipeline {
                     when {
                         anyOf {
                             branch 'master'
+                            branch 'release/*'
                         }
                     }
                     steps {
@@ -163,6 +170,7 @@ pipeline {
                     when {
                         anyOf {
                             branch 'master'
+                            branch 'release/*'
                         }
                     }
                     steps {
@@ -197,6 +205,7 @@ pipeline {
             when {
                 anyOf {
                     branch 'master'
+                    branch 'release/*'
                 }
             }
             steps {
@@ -207,20 +216,19 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def name = sh(returnStdout: true, script: "git describe").trim()
                                 def release_version = "1.0.0"
                                 def image = docker.build(
-                                    "de.icr.io/erp_dev/erp-processing-context:${name}",
+                                    "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
                                     "--build-arg CONAN_PASSWORD=\"${env.NEXUS_PASSWORD}\" " +
                                     "--build-arg GITHUB_USERNAME=\"${env.GITHUB_USERNAME}\" " +
                                     "--build-arg GITHUB_OAUTH_TOKEN=\"${env.GITHUB_OAUTH_TOKEN}\" " +
-                                    "--build-arg ERP_BUILD_VERSION=\"${name}\" " +
+                                    "--build-arg ERP_BUILD_VERSION=\"${currentBuild.displayName}\" " +
                                     "--build-arg ERP_RELEASE_VERSION=\"${release_version}\" " +
                                     ".")
 
-                                sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-processing-context:${name}):/erp/erp-processing-context.tar.gz ./erp-processing-context.tar.gz"
-                                sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-processing-context:${name}):/debug/erp/erp-processing-context-debug.tar.gz ./erp-processing-context-debug.tar.gz"
+                                sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}):/erp/erp-processing-context.tar.gz ./erp-processing-context.tar.gz"
+                                sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}):/debug/erp/erp-processing-context-debug.tar.gz ./erp-processing-context-debug.tar.gz"
                                 image.push()
                             }
                         }
@@ -233,6 +241,7 @@ pipeline {
             when {
                 anyOf {
                     branch 'master'
+                    branch 'release/*'
                 }
             }
             steps {
@@ -243,15 +252,14 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def name = sh(returnStdout: true, script: "git describe").trim()
                                 def release_version = "1.0.0"
                                 def image = docker.build(
-                                    "de.icr.io/erp_dev/blob-db-initialization:${name}",
+                                    "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
                                     "--build-arg CONAN_PASSWORD=\"${env.NEXUS_PASSWORD}\" " +
                                     "--build-arg GITHUB_USERNAME=\"${env.GITHUB_USERNAME}\" " +
                                     "--build-arg GITHUB_OAUTH_TOKEN=\"${env.GITHUB_OAUTH_TOKEN}\" " +
-                                    "--build-arg ERP_BUILD_VERSION=\"${name}\" " +
+                                    "--build-arg ERP_BUILD_VERSION=\"${currentBuild.displayName}\" " +
                                     "--build-arg ERP_RELEASE_VERSION=\"${release_version}\" " +
                                     ".")
 
@@ -267,6 +275,7 @@ pipeline {
             when {
                 anyOf {
                     branch 'master'
+                    branch 'release/*'
                 }
             }
             steps {
@@ -278,6 +287,7 @@ pipeline {
             when {
                 anyOf {
                     branch 'master'
+                    branch 'release/*'
                 }
             }
             steps {
@@ -289,10 +299,17 @@ pipeline {
             when {
                 anyOf {
                     branch 'master'
+                    branch 'release/*'
                 }
             }
             steps {
-                triggerDeployment('dev')
+                script {
+                    if (env.BRANCH_NAME == 'master') {
+                        triggerDeployment('targetEnvironment': 'dev2')
+                    } else if (env.BRANCH_NAME.startsWith('release/1.0.')) {
+                        triggerDeployment('targetEnvironment': 'dev')
+                    }
+                }
             }
         }
     }
@@ -302,6 +319,8 @@ pipeline {
             script {
                 if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME.startsWith("release/")) {
                     slackSend (channel: '#erp-cpp',
+                               teamDomain: 'ibm-m9wx',
+                               tokenCredentialId: 'jenkins-erp-slack-token',
                                message: "Build ${env.BUILD_DISPLAY_NAME} failed for branch `${env.BRANCH_NAME}`:rotating_light: \nFor more details visit <${env.BUILD_URL}|the build page>")
                 }
             }
@@ -310,6 +329,8 @@ pipeline {
             script {
                 if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME.startsWith("release/")) {
                     slackSend (channel: '#erp-cpp',
+                               teamDomain: 'ibm-m9wx',
+                               tokenCredentialId: 'jenkins-erp-slack-token',
                                message: "Build is now successful again on branch `${env.BRANCH_NAME}`:green_heart:")
                 }
             }

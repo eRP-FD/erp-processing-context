@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_ERPREQUESTHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_ERPREQUESTHANDLER_HXX
 
@@ -39,6 +44,8 @@ public:
 
     static bool isVerificationIdentityKvnr(const std::string_view& kvnr);
 
+    static bool callerWantsJson (const ServerRequest& request);
+
 protected:
     void makeResponse(SessionContext<PcServiceContext>& session, HttpStatus status, const model::ResourceBase* body);
     static std::string makeFullUrl(std::string_view tail);
@@ -55,7 +62,6 @@ protected:
 
 private:
 
-    static bool callerWantsJson (const ServerRequest& request);
     const Operation mOperation;
     std::unordered_set<std::string_view> mAllowedProfessionOIDs;
 };
@@ -77,7 +83,11 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext<PcSer
     const auto& mimeType = contentMimeType.getMimeType();
     const auto& encoding = contentMimeType.getEncoding();
 
-    if (! encoding || encoding->empty() || encoding.value() == Encoding::utf8)
+    bool validEncoding = !encoding || encoding->empty() || encoding.value() == Encoding::utf8;
+    ErpExpect(validEncoding, HttpStatus::UnsupportedMediaType,
+              "Invalid content type encoding received: " + header.contentType().value());;
+
+    try
     {
         try
         {
@@ -86,7 +96,7 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext<PcSer
                 auto resource = TModel::fromJson(body);
                 resource.validate();
                 auto resourceForJsonValidation =
-                    model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(resource.jsonDocument());
+                        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(resource.jsonDocument());
                 context.serviceContext.getJsonValidator().validate(resourceForJsonValidation, schemaType);
                 return resource;
             }
@@ -97,13 +107,21 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext<PcSer
                 return resource;
             }
         }
-        catch (const std::runtime_error& ex)
+        catch (const std::nested_exception& ex)
         {
-            TVLOG(1) << "runtime_error: " << ex.what();
-            ErpFail(HttpStatus::BadRequest, "runtime_error");
+            ex.rethrow_nested();
         }
     }
-    ErpFail(HttpStatus::UnsupportedMediaType, "Invalid content type received: " + header.contentType().value());
+    catch (const ErpException& )
+    {
+        throw; // should contain diagnostics data, simply rethrow;
+    }
+    catch (const std::runtime_error& ex)
+    {
+        TVLOG(1) << "runtime_error: " << ex.what();
+        ErpFail(HttpStatus::BadRequest, "parsing / validation error");
+    }
+    ErpFail(HttpStatus::UnsupportedMediaType, "Invalid content type (mime type) received: " + header.contentType().value());
 }
 
 

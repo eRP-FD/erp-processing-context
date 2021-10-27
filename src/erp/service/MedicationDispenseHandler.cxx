@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/MedicationDispenseHandler.hxx"
 
 #include "erp/database/Database.hxx"
@@ -112,6 +117,8 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     const std::optional<std::string> pathId = session.request.getPathParameter("id");
     ErpExpect(pathId.has_value(), HttpStatus::BadRequest, "id path parameter is missing");
     PrescriptionId prescriptionId = PrescriptionId::fromString(pathId.value());
+
+    session.accessLog.prescriptionId(pathId.value());
 
     A_19406.start("Filter MedicationDispense on KVNR of the insured");
     // No additional search parameters for GetMedicationDispenseById

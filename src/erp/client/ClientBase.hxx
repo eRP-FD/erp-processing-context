@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_CLIENT_CLIENTBASE_HXX
 #define ERP_PROCESSING_CONTEXT_CLIENT_CLIENTBASE_HXX
 
@@ -27,6 +32,8 @@ public:
     bool hasLastTlsSessionBeenResumed () const;
 
     void inheritTlsSessionTicketFrom (const ClientBase<StreamClass>& client);
+
+    void close (void);
 
 protected:
     ClientBase (

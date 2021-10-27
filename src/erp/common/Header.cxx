@@ -1,8 +1,14 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/common/Header.hxx"
 
 #include "erp/util/Expect.hxx"
 #include "erp/util/UrlHelper.hxx"
 
+#include <boost/algorithm/string.hpp>
 #include <sstream>
 
 
@@ -16,6 +22,7 @@ const std::string Header::ContentType = "Content-Type";
 const std::string Header::ContextStatus = "IBM-EPA-ContextStatus";
 const std::string Header::ExternalInterface = "External-Interface";
 const std::string Header::Host = "Host";
+const std::string Header::KeepAlive = "Keep-Alive";
 const std::string Header::InnerRequestOperation = "Inner-Request-Operation";
 const std::string Header::InnerRequestRole = "Inner-Request-Role";
 const std::string Header::InnerResponseCode = "Inner-Response-Code";
@@ -57,7 +64,7 @@ Header::Header (void)
 
 
 Header::Header (HttpStatus statusCode)
-    : Header({}, {}, Header::Version_1_1, {}, statusCode, false)
+    : Header({}, {}, Header::Version_1_1, {}, statusCode)
 {
 }
 
@@ -67,14 +74,12 @@ Header::Header(
     std::string&& target,
     int version,
     keyValueMap_t&& header,
-    HttpStatus statusCode,
-    bool keepAlive)
+    HttpStatus statusCode)
     : mMethod(method),
       mTarget(std::move(target)),
       mVersion(version),
       mHeader(std::move(header)),
-      mStatusCode(statusCode),
-      mKeepAlive(keepAlive)
+      mStatusCode(statusCode)
 {
     auto acceptHeader = this->header(Accept);
     if (acceptHeader)
@@ -164,7 +169,29 @@ void Header::setStatus (HttpStatus status)
 
 bool Header::keepAlive (void) const
 {
-    return mKeepAlive;
+    auto connectionHeader{header(Connection)};
+    if (connectionHeader)
+    {
+        return boost::iequals(*connectionHeader, KeepAlive);
+    }
+    return  version() >= Version_1_1;
+}
+
+void Header::setKeepAlive(bool keepAlive)
+{
+    auto connectionHeader = mHeader.find(Header::Connection);
+    if (connectionHeader != mHeader.end())
+    {
+        connectionHeader->second = keepAlive?KeepAlive:ConnectionClose;
+    }
+    else if (keepAlive && version() <= Version_1_0)
+    {
+        mHeader[Header::Connection] = Header::KeepAlive;
+    }
+    else if (!keepAlive && version() >= Version_1_1)
+    {
+        mHeader[Header::Connection] = Header::ConnectionClose;
+    }
 }
 
 
@@ -193,9 +220,6 @@ std::string Header::serializeFields (void) const
         s << header.first << ": " << header.second << headerFieldDelimiter;
     return s.str();
 }
-
-
-
 
 
 void Header::addHeaderFields (const std::unordered_map<std::string, std::string>& fields)

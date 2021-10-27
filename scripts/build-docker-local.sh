@@ -1,26 +1,38 @@
 #!/usr/bin/env bash
 
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 COMMAND="$(basename "$0")"
 
 LOCAL_VERSION=latest
 VERSION=d-0.0.1
 REGISTRY=de.icr.io/erp_dev
 IMAGE_REGISTRY=de.icr.io
-TAG=erp-processing-context
+IMAGE_NAME_PC=erp-processing-context
+IMAGE_NAME_ENROLMENTHELPER=blob-db-initialization
+TAG=$IMAGE_NAME_PC
+DOCKERFILE=docker/Dockerfile
 NAMESPACE=erp-system
 NEXUS_USERNAME="<nexus-user>"
 NEXUS_PASSWORD="<nexus-password>"
 GIT_USERNAME="<git-user>"
 GIT_OAUTH_TOKEN="<git-oauth-token>"
-RELEASE_VERSION=0.3.1
+RELEASE_VERSION=1.0.0
+BUILD_VERSION=v-0.0.1
 
-if [ $# -ne 2 ]; then
-    echo "usage: $COMMAND <version> <command>"
+if [ $# -ne 2 ] && [ $# -ne 3 ]; then
+    echo "usage: $COMMAND <version> <command> [<image>]"
     echo "Example: $COMMAND d-0.0.1 build"
     echo "Commands:"
     echo "  build:    build the service in a local Docker environment and prepare a Docker runtime image"
     echo "  tag:      tag the built docker image"
     echo "  push:     push the tagged Docker image to the ibmcloud registry"
+    echo "image types:"
+    echo "  pc:              build the erp-processing-context image"
+    echo "  enrolmenthelper: build the enrolment helper image"
     echo
     echo "these environment variables have to be set in order to checkout files from nexus and github"
     echo "    NEXUS_USERNAME"
@@ -62,7 +74,7 @@ function build_local_docker {
     local tmp_dir="$(mktemp -d -t erp-docker-XXXXXXXXXX)"
     cp -a                   \
        cmake                \
-       docker/Dockerfile    \
+       $DOCKERFILE          \
        docker               \
        CMakeLists.txt       \
        conanfile.txt        \
@@ -97,6 +109,26 @@ function push_to_cluster_registry {
     docker push ${REGISTRY}/${TAG}:${VERSION}
 }
 
+if [ $# -eq 3 ]
+then
+  case $3 in
+    pc)
+        TAG=$IMAGE_NAME_PC
+        DOCKERFILE=docker/Dockerfile
+        ;;
+    enrolmenthelper)
+        TAG=$IMAGE_NAME_ENROLMENTHELPER
+        DOCKERFILE=docker/enrolment/Dockerfile
+        ;;
+    *)
+        echo "ERROR: unknown image type $3"
+        exit 1
+        ;;
+  esac
+fi
+
+echo "Build local image $TAG:${VERSION} ..."
+
 case $2 in
     build)
         build_local_docker
@@ -108,7 +140,7 @@ case $2 in
         push_to_cluster_registry
         ;;
     *)
-        echo "unknown command $2"
+        echo "ERROR: unknown command $2"
         exit 1
         ;;
 esac

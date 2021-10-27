@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_RESPONSEBUILDER_HXX
 #define ERP_PROCESSING_CONTEXT_RESPONSEBUILDER_HXX
 
@@ -6,7 +11,7 @@
 #include "erp/service/Operation.hxx"
 
 
-namespace model {class Bundle;}
+namespace model {class ResourceBase;}
 
 
 class ResponseBuilder
@@ -24,7 +29,8 @@ public:
     ResponseBuilder& status (HttpStatus status);
     ResponseBuilder& jsonBody (const std::string& body);
     ResponseBuilder& xmlBody (const std::string& body);
-    ResponseBuilder &body(bool useJson, const model::Bundle &bundle);
+
+    ResponseBuilder &body(bool useJson, const model::ResourceBase &resource);
 
     ResponseBuilder &clearBody(void);
 

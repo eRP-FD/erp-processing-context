@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_CLIENT_TCPSTREAM_HXX
 #define ERP_PROCESSING_CONTEXT_CLIENT_TCPSTREAM_HXX
 
@@ -56,6 +61,8 @@ public:
     std::size_t read_some(
         const boost::asio::mutable_buffer& buffer,
         boost::beast::error_code& ec);
+
+    void expiresAfter(const std::chrono::steady_clock::duration& duration);
 
 private:
     std::unique_ptr<boost::asio::io_context> mIoContext;

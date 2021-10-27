@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/AuditEvent.hxx"
 #include "test_config.h"
 #include "erp/util/FileHelper.hxx"

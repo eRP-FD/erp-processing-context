@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 set -e
 
 HERE="$(cd $(dirname $0); pwd -P)"

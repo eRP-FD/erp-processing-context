@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 libos.entrypoint                    = "file:_BINARY_"
 libos.check_invalid_pointers        = false
 
@@ -18,6 +23,10 @@ sys.insecure__allow_eventfd         = true
 
 # Mount host-OS directory to Graphene glibc/runtime libraries (in 'uri') into
 # in graphene visible directory /lib (in 'path').
+
+fs.mount.lib.type = "chroot"
+fs.mount.lib.path = "/lib"
+fs.mount.lib.uri = "file:/usr/local/lib64/graphene/runtime/glibc/"
 
 fs.mount.root_dir.type = "chroot"
 fs.mount.root_dir.path = "/erp"      # Enclave path
@@ -83,6 +92,13 @@ sgx.trusted_files.erp       = "file:_BINARY_"
 sgx.trusted_files.config    = "file:configuration.json"
 sgx.allowed_files.log_dir   = "file:/var/log/erp"
 
+# These files are generated during runtime
+
+sgx.allowed_files.tpm0001   = "file:h80fffffe.bin"
+sgx.allowed_files.tpm0002   = "file:h80ffffff.bin"
+sgx.allowed_files.tpm0003   = "file:hp80fffffe.bin"
+sgx.allowed_files.tpm0004   = "file:hp80ffffff.bin"
+
 sgx.allowed_files.ff04      = "file:/var/config/erp/tsl/tsl-ca.der"
 sgx.allowed_files.ff05      = "file:/var/config/erp/config/POSTGRES_CERTIFICATE"
 sgx.allowed_files.ff06      = "file:/var/config/erp/config/POSTGRES_SSL_CERTIFICATE"
@@ -100,5 +116,7 @@ sgx.trusted_files.lib0005   = "file:/erp/lib/libibmtssutils.so.1"
 sgx.trusted_files.lib0006   = "file:/erp/lib/libibmtssutils.so.1.6.0"
 sgx.trusted_files.lib0007   = "file:/erp/lib/libssl.so.1.1"
 sgx.trusted_files.lib0008   = "file:/erp/lib/libtpmclient.so"
+
+sgx.trusted_files.usr_libdir = "file:/usr/local/lib64/graphene"
 
 # ---

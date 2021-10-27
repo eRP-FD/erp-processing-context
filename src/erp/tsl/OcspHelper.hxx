@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef EPA_CLIENT_OCSP_OCSPHELPER_HXX
 #define EPA_CLIENT_OCSP_OCSPHELPER_HXX
 

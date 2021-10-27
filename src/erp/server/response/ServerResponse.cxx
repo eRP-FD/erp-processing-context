@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/response/ServerResponse.hxx"
 
 #include "erp/util/Expect.hxx"
@@ -25,6 +30,15 @@ ServerResponse::ServerResponse (Header header, std::string body)
 ServerResponse::ServerResponse (ServerResponse&& other) noexcept
     : mHeader(std::move(other.mHeader)),
       mBody(std::move(other.mBody)),
+      mIsKeepAliveActive(other.mIsKeepAliveActive)
+{
+    other.mHeader.setStatus(HttpStatus::Unknown);
+}
+
+
+ServerResponse::ServerResponse (const ServerResponse& other) noexcept
+    : mHeader(other.mHeader),
+      mBody(other.mBody),
       mIsKeepAliveActive(other.mIsKeepAliveActive)
 {
 }
@@ -66,20 +80,19 @@ const Header& ServerResponse::getHeader (void) const
 
 void ServerResponse::setKeepAlive (bool keepAlive)
 {
-    if (mIsKeepAliveActive.has_value())
+    if ( ! mIsKeepAliveActive.has_value() || mIsKeepAliveActive.value() != keepAlive)
     {
-        Expect(*mIsKeepAliveActive == keepAlive, "changing a previously set keep-alive value is not implemented");
-
-        // Nothing to be done.
-        return;
-    }
-
-    mIsKeepAliveActive = keepAlive;
-    if ( ! mIsKeepAliveActive)
-    {
-        // If keep-alive is not desired, then set "Connection: close",
-        // according to https://tools.ietf.org/html/rfc7230#section-6.3
-        mHeader.addHeaderField(Header::Connection, Header::ConnectionClose);
+        mIsKeepAliveActive = keepAlive;
+        if ( ! mIsKeepAliveActive.value())
+        {
+            // If keep-alive is not desired, then set "Connection: close",
+            // according to https://tools.ietf.org/html/rfc7230#section-6.3
+            mHeader.addHeaderField(Header::Connection, Header::ConnectionClose);
+        }
+        else
+        {
+            mHeader.removeHeaderField(Header::Connection);
+        }
     }
 }
 

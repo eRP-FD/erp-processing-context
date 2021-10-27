@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "UrlHelper.hxx"
 
 #include "erp/util/Expect.hxx"
@@ -174,7 +179,7 @@ UrlHelper::UrlParts UrlHelper::parseUrl(const std::string &url)
     const char* USER_REGEX     = "(([^@/:\\s]+)@)?";  // match anything other than @ / : or whitespace before the ending @
     const char* HOST_REGEX     = "([^@/:\\s]+)";      // mandatory. match anything other than @ / : or whitespace
     const char* PORT_REGEX     = "(:([0-9]{1,5}))?";  // after the : match 1 to 5 digits
-    const char* PATH_REGEX     = "(/[^:#?\\s]*)?";    // after the / match anything other than : # ? or whitespace
+    const char* PATH_REGEX     = "(/[^#?\\s]*)?";    // after the / match anything other than # ? or whitespace
     const char* QUERY_REGEX    = "(\\?(([^?;&#=]+=[^?;&#=]+)([;|&]([^?;&#=]+=[^?;&#=]+))*))?"; // after the ? match any number of x=y pairs, separated by ; or &
     const char* FRAGMENT_REGEX = "(#([^#\\s]*))?";    // after the # match anything other than # or whitespace
 

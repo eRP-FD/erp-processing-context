@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/erp/database/PostgresDatabaseMedicationDispenseTest.hxx"
 
 #include "erp/model/Patient.hxx"
@@ -8,6 +13,7 @@
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/StaticData.hxx"
+#include "tools/ResourceManager.hxx"
 
 #include <chrono>
 
@@ -296,8 +302,12 @@ void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
     task.setStatus(model::Task::Status::ready);
     task.updateLastUpdate();
 
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{ ErpWorkflowTest::privateKey });
-    auto cert = Certificate::fromPemString(ErpWorkflowTest::certificate);
+    const auto& pemFilename = TestConfiguration::instance().getOptionalStringValue(
+        TestConfigurationKey::TEST_QES_PEM_FILE_NAME ).value_or(std::string{TEST_DATA_DIR} + "/qes.pem");
+    auto pem_str = ResourceManager::instance().getStringResource(pemFilename);
+    auto cert = Certificate::fromPemString(pem_str);
+    SafeString pem{std::move(pem_str)};
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(pem);
     CadesBesSignature cadesBesSignature{ cert, privKey, prescriptionBundleXmlString };
     std::string encodedPrescriptionBundleXmlString = Base64::encode(cadesBesSignature.get());
     const Binary healthCareProviderPrescriptionBinary(*task.healthCarePrescriptionUuid(), encodedPrescriptionBundleXmlString);

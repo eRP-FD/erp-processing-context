@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/ErpRequirements.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
@@ -32,6 +37,7 @@
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
+#include "test/util/CertificateDirLoader.h"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/StaticData.hxx"
@@ -115,7 +121,7 @@ public:
                   md->fillWithStaticData();
                   return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
               },
-              std::make_unique<DosHandler>(std::make_unique<MockRedisStore>()),
+              std::make_unique<MockRedisStore>(),
               std::make_unique<HsmPool>(
                   std::make_unique<HsmMockFactory>(
                       std::make_unique<HsmMockClient>(),
@@ -159,14 +165,15 @@ public:
     {
         GetAllAuditEventsHandler handler({});
 
-        Header requestHeader{ HttpMethod::GET, "/AuditEvent/", 0, {}, HttpStatus::Unknown, false };
+        Header requestHeader{ HttpMethod::GET, "/AuditEvent/", 0, {}, HttpStatus::Unknown};
 
         auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
         ServerRequest serverRequest{ std::move(requestHeader) };
         serverRequest.setAccessToken(std::move(jwt));
 
         ServerResponse serverResponse;
-        SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
         ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -207,12 +214,13 @@ TEST_F(EndpointHandlerTest, GetTaskById)
 
     const auto idStr = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711).toString();
 
-    Header requestHeader{ HttpMethod::GET, "/Task/" + idStr, 0, {}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::GET, "/Task/" + idStr, 0, {}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X123456789"));
     serverRequest.setPathParameters({ "id" }, { idStr });
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog };
 
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
@@ -249,12 +257,13 @@ TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)
 
     const auto idStr = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714).toString();
 
-    Header requestHeader{ HttpMethod::GET, "/Task/" + idStr, 0, {}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::GET, "/Task/" + idStr, 0, {}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X234567890"));
     serverRequest.setPathParameters({ "id" }, { idStr });
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
@@ -315,12 +324,13 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)
     GetTaskHandler handler({});
 
     // Mock the necessary session information
-    Header requestHeader{ HttpMethod::GET, "/Task/160.000.000.004.711.86", 0, {}, HttpStatus::Unknown, true };
+    Header requestHeader{ HttpMethod::GET, "/Task/160.000.000.004.711.86", 0, {}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X123456789"));
     serverRequest.setPathParameters({ "id" }, { "160.000.000.004.711.86" });
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -349,13 +359,14 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)
     GetTaskHandler handler({});
 
     // Mock the necessary session information
-    Header requestHeader{ HttpMethod::GET, "/Task/160.000.000.004.711.86", 0, {}, HttpStatus::Unknown, true };
+    Header requestHeader{ HttpMethod::GET, "/Task/160.000.000.004.711.86", 0, {}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X987654321"));
     serverRequest.setPathParameters({ "id" }, { "160.000.000.004.711.86" });
     serverRequest.setQueryParameters({{{ "ac" }, { "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea" }}});
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -389,14 +400,14 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)
         "/Task/160.000.000.004.711.86",
         0,
         {{Header::XAccessCode, "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"}},
-        HttpStatus::Unknown,
-        true};
+        HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X987654321"));
     serverRequest.setPathParameters({ "id" }, { "160.000.000.004.711.86" });
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -429,14 +440,14 @@ TEST_F(EndpointHandlerTest, GetTaskByIdWrongAccessCodeHeader)
                          "/Task/160.000.000.004.711.86",
                          0,
                          {{Header::XAccessCode, "wrong_access_code"}},
-                         HttpStatus::Unknown,
-                         true};
+                         HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X987654321"));
     serverRequest.setPathParameters({ "id" }, { "160.000.000.004.711.86" });
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_ANY_THROW(handler.handleRequest(sessionContext));
     ASSERT_TRUE(serverResponse.getBody().empty());
@@ -457,14 +468,14 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMissingAccessCode)
                          "/Task/160.000.000.004.711.86",
                          0,
                          {},
-                         HttpStatus::Unknown,
-                         true};
+                         HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X987654321"));
     serverRequest.setPathParameters({ "id" }, { "160.000.000.004.711.86" });
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_ANY_THROW(handler.handleRequest(sessionContext));
     ASSERT_TRUE(serverResponse.getBody().empty());
@@ -476,10 +487,11 @@ TEST_F(EndpointHandlerTest, GetTaskById_A20753_ExclusionOfVerificationIdentity)
 
     A_20753.test("Exclusion of representative communication on or by means of verification identity");
     {
-        Header requestHeader{ HttpMethod::GET, {}, Header::Version_1_1, {}, HttpStatus::Unknown, false };
+        Header requestHeader{ HttpMethod::GET, {}, Header::Version_1_1, {}, HttpStatus::Unknown};
         ServerRequest serverRequest{ std::move(requestHeader) };
         ServerResponse serverResponse;
-        SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
         // Format of KVNRs of test cards:
         // "X0000nnnnP" with 1 <= nnnn <= 5000; P = Verification Digit
@@ -535,11 +547,12 @@ TEST_F(EndpointHandlerTest, GetAllTasks)
     jwtDocument.Parse(jwtClaims);
     auto jwt = JwtBuilder(MockCryptography::getIdpPrivateKey()).getJWT(jwtDocument);
 
-    Header requestHeader{ HttpMethod::GET, "/Task/", 0, {}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::GET, "/Task/", 0, {}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(std::move(jwt));
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -573,11 +586,144 @@ TEST_F(EndpointHandlerTest, GetAllTasks)
     }
 }
 
+// Regression Test for bugticket ERP-6560 (Task bundle doesn't contain paging links to next and prev)
+TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
+{
+    GetAllTasksHandler handler({});
+
+    rapidjson::Document jwtDocument;
+    std::string jwtClaims = R"({
+             "professionOID": "1.2.276.0.76.4.49",
+             "sub":           "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk",
+             "idNummer":      "X123456789"
+    })";
+
+    jwtDocument.Parse(jwtClaims);
+    auto jwt = JwtBuilder(MockCryptography::getIdpPrivateKey()).getJWT(jwtDocument);
+
+
+    // two Task is expected:
+    {
+        Header requestHeader{ HttpMethod::GET, "/Task/", 0, {}, HttpStatus::Unknown};
+        ServerRequest serverRequest{ std::move(requestHeader) };
+        serverRequest.setAccessToken(JWT(jwt));
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+        ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+        ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+        std::string bodyActual;
+        ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
+
+        rapidjson::Document document;
+        ASSERT_NO_THROW(document.Parse(bodyActual));
+        ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
+
+        ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
+
+        auto bundle =
+            model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
+        ASSERT_EQ(bundle.getResourceCount(), 2);
+        ASSERT_TRUE(bundle.getLink(model::Link::Self).has_value());
+        // Next ist set, even if there is no next page.
+        ASSERT_TRUE(bundle.getLink(model::Link::Next).has_value());
+        ASSERT_EQ(std::string(bundle.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
+        ASSERT_FALSE(bundle.getLink(model::Link::Prev).has_value());
+    }
+
+
+    // Fill in 60 Tasks, page 1 with 50 entries expected
+    {
+        Header requestHeader{ HttpMethod::GET, "/Task/", 0, {}, HttpStatus::Unknown};
+        ServerRequest serverRequest{ std::move(requestHeader) };
+        serverRequest.setAccessToken(JWT(jwt));
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+        for (int i = 0; i < 110; ++i)
+        {
+            addTaskToDatabase(sessionContext, model::Task::Status::ready, "access-code", "X123456789");
+        }
+
+        ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+        ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+        std::string bodyActual;
+        ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
+
+        rapidjson::Document document;
+        ASSERT_NO_THROW(document.Parse(bodyActual));
+        ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
+
+        ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
+
+        auto bundle =
+            model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
+        ASSERT_EQ(bundle.getResourceCount(), 50);
+        ASSERT_TRUE(bundle.getLink(model::Link::Self).has_value());
+        ASSERT_TRUE(bundle.getLink(model::Link::Next).has_value());
+        ASSERT_EQ(std::string(bundle.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
+        ASSERT_FALSE(bundle.getLink(model::Link::Prev).has_value());
+
+
+        // Page 2 with 50 entries expected
+        sessionContext.request.setQueryParameters({{"_count", "50"}, {"__offset", "50"}});
+
+        ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+        ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+        ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
+
+        ASSERT_NO_THROW(document.Parse(bodyActual));
+        ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
+
+        ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
+
+        auto bundle2 =
+            model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
+        ASSERT_EQ(bundle2.getResourceCount(), 50);
+        ASSERT_TRUE(bundle2.getLink(model::Link::Self).has_value());
+        ASSERT_TRUE(bundle2.getLink(model::Link::Next).has_value());
+        ASSERT_EQ(std::string(bundle2.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=100");
+        ASSERT_TRUE(bundle2.getLink(model::Link::Prev).has_value());
+        ASSERT_EQ(std::string(bundle2.getLink(model::Link::Prev).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=0");
+
+
+        // Page 3 with 12 entries expected
+        sessionContext.request.setQueryParameters({{"_count", "50"}, {"__offset", "100"}});
+
+        ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+        ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+        ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
+
+        ASSERT_NO_THROW(document.Parse(bodyActual));
+        ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
+
+        ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
+
+        auto bundle3 =
+            model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
+        ASSERT_EQ(bundle3.getResourceCount(), 12);
+        ASSERT_TRUE(bundle3.getLink(model::Link::Self).has_value());
+        ASSERT_TRUE(bundle3.getLink(model::Link::Next).has_value());
+        ASSERT_EQ(std::string(bundle3.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=150");
+        ASSERT_TRUE(bundle3.getLink(model::Link::Prev).has_value());
+        ASSERT_EQ(std::string(bundle3.getLink(model::Link::Prev).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
+    }
+}
+
 TEST_F(EndpointHandlerTest, CreateTask)
 {
     CreateTaskHandler handler({});
 
-    Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
 
     std::string parameters = R"--(<Parameters xmlns="http://hl7.org/fhir">
@@ -593,7 +739,8 @@ TEST_F(EndpointHandlerTest, CreateTask)
     serverRequest.setBody(std::move(parameters));
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -615,7 +762,7 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyJson)
 {
     CreateTaskHandler handler({});
 
-    Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirJsonUtf8}}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirJsonUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
 
     std::string parameters = R"--()--";
@@ -623,7 +770,8 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyJson)
     serverRequest.setBody(std::move(parameters));
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::BadRequest);
 }
@@ -632,7 +780,7 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyXml)
 {
     CreateTaskHandler handler({});
 
-    Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
 
     std::string parameters = R"--()--";
@@ -640,7 +788,8 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyXml)
     serverRequest.setBody(std::move(parameters));
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::BadRequest);
 }
@@ -652,7 +801,7 @@ TEST_F(EndpointHandlerTest, ActivateTask)
     const auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713).toString();
 
     ActivateTaskHandler handler({});
-    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$activate", 0, {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$activate", 0, {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     requestHeader.addHeaderField("X-AccessCode", "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
     ServerRequest serverRequest{ std::move(requestHeader) };
 
@@ -673,7 +822,8 @@ TEST_F(EndpointHandlerTest, ActivateTask)
     serverRequest.setPathParameters({"id"}, {id});
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -709,7 +859,7 @@ TEST_F(EndpointHandlerTest, ActivateTaskBrokenSignature)
     const auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713).toString();
 
     ActivateTaskHandler handler({});
-    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$activate", 0, {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$activate", 0, {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     requestHeader.addHeaderField("X-AccessCode", "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
     ServerRequest serverRequest{ std::move(requestHeader) };
 
@@ -730,7 +880,8 @@ TEST_F(EndpointHandlerTest, ActivateTaskBrokenSignature)
     serverRequest.setPathParameters({"id"}, {id});
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     try
@@ -747,6 +898,7 @@ TEST_F(EndpointHandlerTest, ActivateTaskBrokenSignature)
 
 TEST_F(EndpointHandlerTest, CloseTask)
 {
+    const auto& testConfig = TestConfiguration::instance();
     auto medicationDispenseXml =
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_input1.xml");
 
@@ -756,7 +908,7 @@ TEST_F(EndpointHandlerTest, CloseTask)
     const auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715).toString();
     medicationDispenseXml = String::replaceAll(medicationDispenseXml, "###PRESCRIPTIONID###", id);
     Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$close/", 0,
-                          {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown, false };
+                          {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
 
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setPathParameters({ "id" }, { id });
@@ -765,7 +917,8 @@ TEST_F(EndpointHandlerTest, CloseTask)
     serverRequest.setBody(std::move(medicationDispenseXml));
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -807,9 +960,9 @@ TEST_F(EndpointHandlerTest, CloseTask)
 
     std::string signatureData;
     ASSERT_NO_THROW(signatureData = signature->data().value().data());
-    std::initializer_list<Certificate> certs{
-        Certificate::fromPemString(TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_GEM_RCA3)),
-        Certificate::fromPemString(TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_GEM_KOMP_CA10))};
+    const auto& cadesBesTrustedCertDir =
+        testConfig.getOptionalStringValue(TestConfigurationKey::TEST_CADESBES_TRUSTED_CERT_DIR, "test/cadesBesSignature/certificates");
+    auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
     CadesBesSignature cms(certs, signatureData);
 
     model::ErxReceipt receiptFromSignature = model::ErxReceipt::fromXml(cms.payload());
@@ -838,13 +991,14 @@ TEST_F(EndpointHandlerTest, CloseTaskWrongMedicationDispenseErp5656)
     auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
     CloseTaskHandler handler({});
     Header requestHeader{ HttpMethod::POST, "/Task/" + correctId + "/$close/", 0,
-                          {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown, false };
+                          {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setPathParameters({ "id" }, { correctId });
     serverRequest.setAccessToken(std::move(jwtPharmacy));
     serverRequest.setQueryParameters({ { "secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" } });
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     { // wrong PrescriptionID
         auto medicationDispenseXml = FileHelper::readFileAsString(
@@ -882,6 +1036,37 @@ TEST_F(EndpointHandlerTest, CloseTaskWrongMedicationDispenseErp5656)
     }
 }
 
+// Regression Test for Bugticket ERP-6513 (CloseTaskHandler does not accept MedicationDispense::whenPrepared and whenHandedOver with only date)
+TEST_F(EndpointHandlerTest, CloseTaskPartialDateTimeErp6513)
+{
+    const auto correctId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715).toString();
+    auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
+    CloseTaskHandler handler({});
+    Header requestHeader{ HttpMethod::POST, "/Task/" + correctId + "/$close/", 0,
+                          {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
+    ServerRequest serverRequest{ std::move(requestHeader) };
+    serverRequest.setPathParameters({ "id" }, { correctId });
+    serverRequest.setAccessToken(std::move(jwtPharmacy));
+    serverRequest.setQueryParameters({ { "secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" } });
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    // placeholder:
+    //    <whenPrepared value="###WHENPREPARED###" />
+    //    <whenHandedOver value="###WHENHANDEDOVER###" />
+    {
+        auto medicationDispenseXml = FileHelper::readFileAsString(
+            std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_input_datetime_placeholder.xml");
+        medicationDispenseXml = String::replaceAll(medicationDispenseXml, "###PRESCRIPTIONID###", correctId);
+        medicationDispenseXml = String::replaceAll(medicationDispenseXml, "###WHENPREPARED###", "2020");
+        medicationDispenseXml = String::replaceAll(medicationDispenseXml, "###WHENHANDEDOVER###", "2020-12");
+        serverRequest.setBody(std::move(medicationDispenseXml));
+        EXPECT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+        EXPECT_NO_THROW(handler.handleRequest(sessionContext));
+    }
+}
+
 TEST_F(EndpointHandlerTest, GetAllAuditEvents)
 {
     ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446688", "audit_event.json"));
@@ -897,7 +1082,7 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)
     GetAuditEventHandler handler({});
 
     const std::string id = "01eb69a4-9029-d610-b1cf-ddb8c6c0bfbc";
-    Header requestHeader{ HttpMethod::GET, "/AuditEvent/" + id, 0, {}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::GET, "/AuditEvent/" + id, 0, {}, HttpStatus::Unknown};
 
     auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter("X122446688");
     ServerRequest serverRequest{ std::move(requestHeader) };
@@ -905,7 +1090,8 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)
     serverRequest.setAccessToken(std::move(jwt));
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -927,14 +1113,15 @@ TEST_F(EndpointHandlerTest, AcceptTaskSuccess)
 {
     AcceptTaskHandler handler({});
     const auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714).toString();
-    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
 
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setPathParameters({ "id" }, { id });
     serverRequest.setQueryParameters({ { "ac", "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea" } });
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -970,12 +1157,13 @@ TEST_F(EndpointHandlerTest, AcceptTaskFail)
         // Unknown Task;
         const auto id = model::PrescriptionId::fromDatabaseId(
             model::PrescriptionType::apothekenpflichigeArzneimittel, 999999).toString();
-        Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown, false };
+        Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
         ServerRequest serverRequest{ std::move(requestHeader) };
         serverRequest.setPathParameters({ "id" }, { id });
         serverRequest.setQueryParameters({ { "ac", validAccessCode} });
         ServerResponse serverResponse;
-        SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
 
         serverRequest.setPathParameters({ "id" }, { "9a27d600-5a50-4e2b-98d3-5e05d2e85aa0" });
@@ -984,13 +1172,14 @@ TEST_F(EndpointHandlerTest, AcceptTaskFail)
 
     const auto id = model::PrescriptionId::fromDatabaseId(
             model::PrescriptionType::apothekenpflichigeArzneimittel, 4714).toString();
-    const Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown, false };
+    const Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
     {
         // No Access Code;
         ServerRequest serverRequest{ Header(requestHeader) };
         serverRequest.setPathParameters({ "id" }, { id });
         ServerResponse serverResponse;
-        SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
     }
     {
@@ -999,7 +1188,8 @@ TEST_F(EndpointHandlerTest, AcceptTaskFail)
         serverRequest.setPathParameters({ "id" }, { id });
         serverRequest.setQueryParameters({ { "ac", "invalid_access_code"} });
         ServerResponse serverResponse;
-        SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
     }
     {
@@ -1007,7 +1197,8 @@ TEST_F(EndpointHandlerTest, AcceptTaskFail)
         ServerRequest serverRequest{ Header(requestHeader) };
         serverRequest.setQueryParameters({ { "ac", validAccessCode} });
         ServerResponse serverResponse;
-        SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
     }
 }
@@ -1043,7 +1234,7 @@ void checkTaskOperation(
 {
     AbortTaskHandler handler({});
     const auto id = getId(taskId);
-    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/" + operationName + "/", 0, std::move(headers), HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/" + operationName + "/", 0, std::move(headers), HttpStatus::Unknown};
 
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setPathParameters({ "id" }, { id });
@@ -1051,7 +1242,8 @@ void checkTaskOperation(
     serverRequest.setQueryParameters(std::move(queryParameters));
 
     ServerResponse serverResponse;
-    SessionContext sessionContext{ serviceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{serviceContext, serverRequest, serverResponse, accessLog};
 
     HttpStatus status = HttpStatus::Unknown;
     try
@@ -1158,10 +1350,11 @@ TEST_F(EndpointHandlerTest, MetaDataXml)
 {
     MetaDataHandler handler({});
 
-    Header requestHeader{ HttpMethod::GET, "/metadata", 0, {{Header::Accept, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::GET, "/metadata", 0, {{Header::Accept, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -1194,10 +1387,11 @@ TEST_F(EndpointHandlerTest, MetaDataJson)
 {
     MetaDataHandler handler({});
 
-    Header requestHeader{ HttpMethod::GET, "/metadata", 0, {{Header::Accept, ContentMimeType::fhirJsonUtf8}}, HttpStatus::Unknown, false };
+    Header requestHeader{ HttpMethod::GET, "/metadata", 0, {{Header::Accept, ContentMimeType::fhirJsonUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -1232,10 +1426,11 @@ TEST_F(EndpointHandlerTest, DeviceXml)
     Header requestHeader{
         HttpMethod::GET, "/Device", 0,
         {{Header::Accept, ContentMimeType::fhirXmlUtf8}},
-        HttpStatus::Unknown, false };
+        HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
@@ -1261,10 +1456,11 @@ TEST_F(EndpointHandlerTest, DeviceJson)
     Header requestHeader{
         HttpMethod::GET, "/Device", 0,
         {{Header::Accept, ContentMimeType::fhirJsonUtf8}},
-        HttpStatus::Unknown, false };
+        HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
     ServerResponse serverResponse;
-    SessionContext sessionContext{ mServiceContext, serverRequest, serverResponse };
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));

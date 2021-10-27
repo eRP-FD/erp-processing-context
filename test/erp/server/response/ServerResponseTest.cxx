@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/response/ValidatedServerResponse.hxx"
 
 #include <gtest/gtest.h>
@@ -7,14 +12,26 @@ namespace
 {
     void checkInvalidStatusErrors(ServerResponse&& response) // NOLINT
     {
-        response.setStatus(HttpStatus::Continue);
-        ASSERT_ANY_THROW(ValidatedServerResponse{response});
-        response.setStatus(HttpStatus::SwitchingProtocols);
-        ASSERT_ANY_THROW(ValidatedServerResponse{response});
-        response.setStatus(HttpStatus::Processing);
-        ASSERT_ANY_THROW(ValidatedServerResponse{response});
-        response.setStatus(HttpStatus::NoContent);
-        ASSERT_ANY_THROW(ValidatedServerResponse{response});
+        {
+            ServerResponse copy (response);
+            copy.setStatus(HttpStatus::Continue);
+            ASSERT_ANY_THROW(ValidatedServerResponse{std::move(copy)});
+        }
+        {
+            ServerResponse copy (response);
+            copy.setStatus(HttpStatus::SwitchingProtocols);
+            ASSERT_ANY_THROW(ValidatedServerResponse{std::move(copy)});
+        }
+        {
+            ServerResponse copy (response);
+            copy.setStatus(HttpStatus::Processing);
+            ASSERT_ANY_THROW(ValidatedServerResponse{std::move(copy)});
+        }
+        {
+            ServerResponse copy (response);
+            copy.setStatus(HttpStatus::NoContent);
+            ASSERT_ANY_THROW(ValidatedServerResponse{std::move(copy)});
+        }
     }
 }
 
@@ -27,15 +44,16 @@ TEST(ServerResponseTest, Construct) // NOLINT
         response.setBody(body);
         ASSERT_TRUE(response.getHeader().hasHeader(Header::ContentLength));
         ASSERT_EQ(response.getHeader().header(Header::ContentLength).value(), std::to_string(body.size()));
-        ASSERT_NO_THROW(ValidatedServerResponse{response});
+
+        ASSERT_NO_THROW(ValidatedServerResponse{ServerResponse(response)});
 
         response.setStatus(HttpStatus::Continue);
-        ASSERT_ANY_THROW(ValidatedServerResponse{response});
+        ASSERT_ANY_THROW(ValidatedServerResponse{ServerResponse(response)});
     }
     {
         ServerResponse response(Header(HttpStatus::OK), body);
         response.setHeader(Header::TransferEncoding, "compress");
-        ASSERT_ANY_THROW(ValidatedServerResponse{response});
+        ASSERT_ANY_THROW(ValidatedServerResponse{ServerResponse(response)});
     }
     {
         ServerResponse response;

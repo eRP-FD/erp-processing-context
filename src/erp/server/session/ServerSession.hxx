@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_SESSION_SERVERSESSION_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_SESSION_SERVERSESSION_HXX
 
@@ -6,18 +11,19 @@
 #include "erp/server/SslStream.hxx"
 
 
-template<class ServiceContextType>
-class RequestHandlerContext;
+template<class ServiceContextType> class RequestHandlerContext;
+template<class ServiceContextType> class RequestHandlerManager;
+class AccessLog;
 
-template<class ServiceContextType>
-class RequestHandlerManager;
 
 class AbstractRequestHandler
 {
 public:
     virtual ~AbstractRequestHandler (void) = default;
 
-    virtual std::tuple<bool,ServerResponse> handleRequest (SslStream& sslStream) = 0;
+    virtual std::tuple<bool,ServerResponse> handleRequest (
+        ServerRequest&& request,
+        AccessLog& log) = 0;
 };
 
 
@@ -25,7 +31,6 @@ public:
  * Each ServerSession instance processes requests on a single socket connection.
  */
 class ServerSession
-    : public std::enable_shared_from_this<ServerSession>
 {
 public:
     template<class ServiceContextType>
@@ -39,14 +44,15 @@ public:
         boost::asio::ip::tcp::socket&& socket,
         boost::asio::ssl::context& context,
         std::unique_ptr<AbstractRequestHandler>&& requestHandler);
+    virtual ~ServerSession (void) = default;
 
-    void run (void);
+    virtual void run (void) = 0;
 
     static ServerResponse getBadRequestResponse (void);
     static ServerResponse getNotFoundResponse (void);
     static ServerResponse getServerErrorResponse (void);
 
-private:
+protected:
     SslStream mSslStream;
     std::shared_ptr<void> mResponseKeepAlive;
     std::shared_ptr<void> mSerializerKeepAlive;
@@ -56,18 +62,8 @@ private:
 
     std::unique_ptr<AbstractRequestHandler> mRequestHandler;
 
-    void onTlsHandshakeComplete (boost::beast::error_code ec);
-    void do_read (void);
-    void on_write (
-        bool close,
-        boost::beast::error_code ec,
-        std::size_t bytes_transferred);
-    void do_close (void);
-    void on_shutdown (boost::beast::error_code ec);
-
-    void sendResponse (const ServerResponse& response);
-
     void logException(std::exception_ptr exception);
+    void sendResponse (ServerResponse&& response);
 };
 
 #endif

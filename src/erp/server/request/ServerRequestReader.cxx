@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/request/ServerRequestReader.hxx"
 
 #include "erp/beast/BoostBeastHeader.hxx"
@@ -51,6 +56,56 @@ ServerRequest ServerRequestReader::read (void)
     request.setBody(std::move(mParser.get().body()));
 
     return request;
+}
+
+void ServerRequestReader::readAsynchronously (RequestConsumer&& requestConsumer)
+{
+    mParser.body_limit(ErpConstants::MaxBodySize);
+
+    mStream.expiresAfter(std::chrono::seconds(ErpConstants::SocketTimeoutSeconds));
+
+    // Read the whole body synchronously.
+    boost::beast::http::async_read(
+        mStream,
+        mBuffer,
+        mParser,
+        [this, requestConsumer=std::move(requestConsumer)]
+        (const boost::beast::error_code& ec, const size_t count)
+        {
+            if (ec)
+            {
+                TLOG(WARNING) << "after reading " << count << " bytes: " << ec.message();
+            }
+            else
+            {
+                TVLOG(2) << "request bytes: " << count;
+            }
+
+            if (count == 0)
+            {   // stream closed:
+                markStreamAsClosed();
+                requestConsumer({}, {});
+                return;
+            }
+            try
+            {
+                ErrorHandler(ec).throwOnServerError("ServerRequestReader::readAsynchronously", fileAndLine);
+
+                // Parse the request.
+                ServerRequest request (BoostBeastHeader::fromBeastRequestParser(mParser));
+
+                // Transfer ownership of the body string to the request object.
+                request.setBody(std::move(mParser.get().body()));
+
+                // Note that the requestConsumer callback is expected to be (effectively) `noexcept` and therefore does
+                // not throw any exceptions.
+                requestConsumer(std::move(request), {});
+            }
+            catch(...)
+            {
+               requestConsumer(std::nullopt, std::current_exception());
+            }
+        });
 }
 
 

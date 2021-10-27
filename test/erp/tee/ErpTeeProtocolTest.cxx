@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/BlobCache.hxx"
@@ -127,7 +132,7 @@ TEST_P(ErpTeeProtocolTest, gematik_ref_key_config) // NOLINT
     EXPECT_TRUE(innerTeeRequest.header().hasHeader("Accept-Encoding"));
     EXPECT_EQ(innerTeeRequest.header().header("Accept-Encoding").value(), "gzip, deflate, br"sv);
     EXPECT_TRUE(innerTeeRequest.header().hasHeader("Connection"));
-    EXPECT_EQ(innerTeeRequest.header().header("Connection").value(), "keep-alive"sv);
+    EXPECT_EQ(innerTeeRequest.header().header("Connection").value(), Header::KeepAlive);
     EXPECT_TRUE(innerTeeRequest.header().hasHeader(Header::ContentLength));
     EXPECT_EQ(innerTeeRequest.header().header(Header::ContentLength).value(), "231"sv);
     EXPECT_TRUE(innerTeeRequest.header().hasHeader(Header::Authorization));

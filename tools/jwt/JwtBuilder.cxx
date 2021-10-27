@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "tools/jwt/JwtBuilder.hxx"
 
 #include "erp/util/Configuration.hxx"

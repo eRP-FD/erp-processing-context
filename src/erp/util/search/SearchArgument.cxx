@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/util/search/SearchArgument.hxx"
 #include "erp/model/Task.hxx"
 
@@ -53,8 +58,9 @@ std::string SearchArgument::valuesAsString() const
     case Type::HashedIdentity:
         return String::concatenateStrings(originalValues, ",");
     case Type::String:
-    case Type::TaskStatus:
         return String::concatenateStrings(std::get<std::vector<std::string>>(values), ",");
+    case Type::TaskStatus:
+        return taskStatusAsString();
     }
     ErpFail(HttpStatus::InternalServerError, "check the switch-case above for missing return statement");
 }
@@ -199,6 +205,21 @@ std::string SearchArgument::dateValueAsString(size_t idx) const
     }
     else
         return "NULL";
+}
+
+std::string SearchArgument::taskStatusAsString() const
+{
+    std::string valuesString;
+    const auto& statusValues = std::get<std::vector<model::Task::Status>>(values);
+    for (const auto& taskStatus : statusValues)
+    {
+        if (!valuesString.empty())
+        {
+            valuesString.append(",");
+        }
+        valuesString.append(model::Task::StatusNames.at(taskStatus));
+    }
+    return valuesString;
 }
 
 std::optional<SearchArgument::Prefix> SearchArgument::prefixFromString (const std::string& prefixString)

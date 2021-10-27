@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_PERIODICTIMER_HXX
 #define ERP_PROCESSING_CONTEXT_PERIODICTIMER_HXX
 
@@ -9,7 +14,7 @@ class PeriodicTimer
 {
 public:
     explicit PeriodicTimer(std::chrono::steady_clock::duration interval);
-    void start(boost::asio::io_context& context);
+    void start(boost::asio::io_context& context, std::chrono::steady_clock::duration initialInterval);
 
     virtual ~PeriodicTimer();
 

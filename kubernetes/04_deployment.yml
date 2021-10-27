@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -53,7 +58,7 @@ spec:
             - name: ERP_BUILD
               value: "release"
             - name: ERP_SERVER_HOST
-              value: erp-processing-context-2.erp-system.svc.cluster.local
+              value: erp-processing-context-2.%NAMESPACE%.svc.cluster.local
             - name: ERP_SERVER_PORT
               value: "9086"
             - name: ERP_ENROLMENT_ACTIVATE_FOR_PORT
@@ -87,7 +92,7 @@ spec:
             - name: TPM_SERVER_TYPE
               value: "mssim"
             - name: TPM_SERVER_NAME
-              value: "tpm-simulator-2.erp-system.svc.cluster.local"
+              value: tpm-simulator-2.%NAMESPACE%.svc.cluster.local
           envFrom:
             - prefix: ERP_
               secretRef:

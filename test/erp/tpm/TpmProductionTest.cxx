@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/tpm/Tpm.hxx"
 #include "erp/tpm/TpmProduction.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
@@ -103,7 +108,7 @@ TEST_F(TpmProductionTest, getAttestationKey_getAttestationKey_manyThreads)
     {
         threads.emplace_back([&]
         {
-            for (size_t innerIndex; innerIndex<callCount; ++innerIndex)
+            for (size_t innerIndex = 0; innerIndex<callCount; ++innerIndex)
             {
                 std::unique_ptr<Tpm> tpm = TpmProduction::createInstance(*blobCache, -1);
                 const auto innerAk = tpm->getAttestationKey(true);

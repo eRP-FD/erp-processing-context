@@ -1,7 +1,13 @@
-#include "ErpRequirements.hxx"
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/ErpMain.hxx"
-#include "erp/common/Constants.hxx"
+
+#include "ErpRequirements.hxx"
 #include "erp/ErpProcessingContext.hxx"
+#include "erp/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
@@ -15,20 +21,26 @@
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/tpm/Tpm.hxx"
+#include "erp/tsl/error/TslError.hxx"
+#include "erp/util/health/HealthCheck.hxx"
+#include "erp/util/Environment.hxx"
+#include "erp/util/FileHelper.hxx"
+#include "erp/util/Holidays.hxx"
+#include "erp/util/SignalHandler.hxx"
+#include "erp/util/TLog.hxx"
+#include "erp/util/TerminationHandler.hxx"
+#include "erp/validation/JsonValidator.hxx"
+#include "erp/validation/XmlValidator.hxx"
+#include "erp/server/context/SessionContext.hxx"
+#include "erp/server/request/ServerRequest.hxx"
+#include "erp/server/response/ServerResponse.hxx"
+
+
 #if !defined __APPLE__ && !defined _WIN32
 #include "erp/tpm/TpmProduction.hxx"
 #else
 #include "mock/tpm/TpmMock.hxx"
 #endif
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Holidays.hxx"
-#include "erp/util/SignalHandler.hxx"
-#include "erp/util/TerminationHandler.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/validation/JsonValidator.hxx"
-#include "erp/validation/XmlValidator.hxx"
 
 #include <chrono>
 #include <iostream>
@@ -90,7 +102,7 @@ std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
                                                  hsmPool,
                                                  threadCount,
                                                  entropyFetchInterval);
-    seedTimer->start(threadpool.ioContext());
+    seedTimer->start(threadpool.ioContext(), std::chrono::seconds(0));
 
     A_19021.finish();
 
@@ -103,7 +115,8 @@ std::unique_ptr<ErpProcessingContext> ErpMain::setupTeeServer (
     std::unique_ptr<HsmFactory> hsmFactory,
     Database::Factory&& databaseFactory,
     HsmPool::TeeTokenUpdaterFactory&& teeTokenUpdaterFactory,
-    TslManager::TslManagerFactory&& tslManagerFactory)
+    TslManager::TslManagerFactory&& tslManagerFactory,
+    std::unique_ptr<RedisInterface> redisClient)
 {
     const auto& configuration = Configuration::instance();
     auto jsonValidator = std::make_shared<JsonValidator>();
@@ -120,7 +133,7 @@ std::unique_ptr<ErpProcessingContext> ErpMain::setupTeeServer (
     auto serviceContext = std::make_unique<PcServiceContext>(
         configuration,
         std::move(databaseFactory),
-        std::make_unique<DosHandler>(std::make_unique<RedisClient>()),
+        std::move(redisClient),
         std::make_unique<HsmPool>(
             std::move(hsmFactory),
             std::move(teeTokenUpdaterFactory)),
@@ -180,19 +193,13 @@ std::unique_ptr<EnrolmentServer> ErpMain::setupEnrolmentServer (
 int ErpMain::runApplication (
     uint16_t defaultEnrolmentServerPort,
     Factories&& factories,
-    StateCondition& state)
+    StateCondition& state,
+    std::function<void(PcServiceContext&)> postInitializationCallback)
 {
 #define log LOG(WARNING) << "Initialization: "
 
     log << "setting up signal handler";
     state = State::Initializing;
-    TerminationHandler::instance().registerCallback(
-        [&state](bool){state = State::Terminating;});
-    SignalHandler::instance().registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGFPE, SIGINT, SIGTERM
-#ifdef SIGSYS
-        ,SIGSYS
-#endif
-    });
 
     // trigger construction of singleton, before starting any thread
     (void)Holidays::instance();
@@ -208,7 +215,8 @@ int ErpMain::runApplication (
         std::move(hsmFactory),
         std::move(factories.databaseFactory),
         std::move(factories.teeTokenUpdaterFactory),
-        std::move(factories.tslManagerFactory));
+        std::move(factories.tslManagerFactory),
+        factories.redisClientFactory());
 
     // Setup the IDP updater. As this triggers a first, synchronous update, the IDP updater has to be started
     // before the TEE server accepts connections.
@@ -223,9 +231,6 @@ int ErpMain::runApplication (
     const auto enrolmentPort = getEnrolementServerPort(pcPort, defaultEnrolmentServerPort);
     if (enrolmentPort.has_value())
         enrolmentServer = setupEnrolmentServer(enrolmentPort.value(), blobCache);
-
-    log << "setting up heartbeat sender";
-    auto heartbeatSender = setupHeartbeatSender(pcPort, std::move(factories.registrationFactory));
 
     // access the Fhir instance to load the structure definitions now.
     log << "initializing FHIR data processing";
@@ -244,18 +249,43 @@ int ErpMain::runApplication (
     auto prngSeeder = setupPrngSeeding(processingContext->getServer().getThreadPool(), threadCount, hsmPool);
     serviceContext.setPrngSeeder(std::move(prngSeeder));
 
-    log << "complete.";
+    if (postInitializationCallback)
+    {
+        log << "calling post initialization callback";
+        postInitializationCallback(serviceContext);
+    }
+
+    // At this point both servers, tee/VAU and enrolment are up and accepting requests.
+    // We wait and block the main thread until background configuration is complete and the health check
+    // has found all required services.
+    log << "waiting for health check to report all services as up";
+    waitForHealthUp(serviceContext);
+
+    SignalHandler signalHandler(processingContext->getServer().getThreadPool().ioContext());
+    signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
+
+
+    log << "complete";
     std::cout << "press CTRL-C to stop" << std::endl;
 
-    // The life time of all services with asynchronous execution is limited by the TerminationHandler, directly or
-    // indirectly.
-    // - processingContext terminates the HTTPS server and joins its server threads when its termination callback is called.
-    // - prngSeeder is tied to the ioContext of the processingContext.
-    // - heartbeat sender terminates its heartbeat loop when its termination callback is called. It also sends a final deregister.
-    // - soon a second HTTPS server will also register a termination callback.
+    // Advertise the tee server as available via redis at the vau proxy.
+    log << "setting up heartbeat sender";
+    auto heartbeatSender = setupHeartbeatSender(pcPort, std::move(factories.registrationFactory));
+
     state = State::WaitingForTermination;
-    TerminationHandler::instance().waitForTerminated();
+    processingContext->getServer().waitForShutdown();
+    if (enrolmentServer)
+    {
+        // Because the enrolment server runs in its own io context, it has to be terminated separately.
+        enrolmentServer->getServer().shutDown();
+    }
+
+    // According to glibc documentation SIGTERM "is the normal way to politely ask a program to terminate."
+    // Therefore it is not treated as error.
+    TerminationHandler::instance().notifyTerminationCallbacks(signalHandler.mSignal != SIGTERM);
+
     state = State::Terminated;
+
     if (TerminationHandler::instance().hasError())
         return EXIT_FAILURE;
     else
@@ -331,6 +361,12 @@ ErpMain::Factories ErpMain::createProductionFactories()
         factories.teeTokenUpdaterFactory = TeeTokenUpdater::createProductionTeeTokenUpdaterFactory();
     }
 
+    factories.redisClientFactory =
+        []{
+            // Note, that TestConfigurationKey::TEST_USE_REDIS_MOCK is ignored for production setup.
+            return std::make_unique<RedisClient>();
+        };
+
     return factories;
 }
 
@@ -382,12 +418,48 @@ std::optional<uint16_t> ErpMain::getEnrolementServerPort (
     const auto activeForPcPort = Configuration::instance().getOptionalIntValue(
         ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT,
         -1);
-    if (enrolmentPort != pcPort)
+    if (activeForPcPort != pcPort)
     {
-        LOG(WARNING) << "Enrolment-Server is disabled (ENROLMENT_SERVER_PORT = "<< enrolmentPort
+        LOG(WARNING) << "Enrolment-Server (on port=" << enrolmentPort << ") is disabled (ERP_SERVER_PORT = " << pcPort
                      <<") != (ENROLMENT_ACTIVATE_FOR_PORT = "<< activeForPcPort << ")";
     }
 
     return activeForPcPort == pcPort ? std::optional<uint16_t>(enrolmentPort) : std::nullopt;
 }
 
+
+void ErpMain::waitForHealthUp (PcServiceContext& serviceContext)
+{
+    constexpr size_t loopWaitSeconds = 1;
+    constexpr size_t loopMessageInterval = 2;
+    constexpr size_t loopHealthCheckInterval = 5;
+    size_t loopCount = 0;
+
+    auto request = ServerRequest(Header());
+    auto response = ServerResponse();
+    AccessLog accessLog;
+    accessLog.discard();  // This accessLog object is only used to satisfy the SessionContext constructor.
+    SessionContext<PcServiceContext> session (serviceContext, request, response, accessLog);
+
+    while (true)
+    {
+        if (loopCount % loopHealthCheckInterval == 0)
+        {
+            TVLOG(1) << "running health check";
+            HealthCheck::update(session);
+        }
+
+        if (session.serviceContext.applicationHealth().isUp())
+            break;
+
+        ++loopCount;
+        if (loopCount % loopMessageInterval == 1)
+            LOG(WARNING) << "health status is DOWN (" << session.serviceContext.applicationHealth().downServicesString()
+                         << "), waiting for it to go up";
+
+        std::this_thread::sleep_for(std::chrono::seconds(loopWaitSeconds));
+    }
+
+    if (loopCount > 0)
+        LOG(WARNING) << "health status is UP";
+}

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 -- schema permissions
 GRANT USAGE ON SCHEMA erp TO role_proc_user;
 GRANT ALL ON SCHEMA erp TO role_proc_maintenance;

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_CADESBESSIGNATURE_HXX
 #define ERP_PROCESSING_CONTEXT_CADESBESSIGNATURE_HXX
 
@@ -6,6 +11,7 @@
 #include "erp/model/Timestamp.hxx"
 
 #include <functional>
+#include <list>
 
 class Certificate;
 class TslManager;
@@ -30,7 +36,7 @@ public:
     /// @throws std::runtime_error if the signature verification fails.
     /// The following constructor is currently intended only to be used by tests, where the trusted certificates
     /// are provided explicitly. The production implementation should use the constructor based on TslManager.
-    CadesBesSignature(const std::initializer_list<Certificate>& trustedCertificates, const std::string& base64Data);
+    CadesBesSignature(const std::list<Certificate>& trustedCertificates, const std::string& base64Data);
 
     /// @brief initialize from plain payload data, that shall be signed using cert and privateKey.
     CadesBesSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey, const std::string& payload);

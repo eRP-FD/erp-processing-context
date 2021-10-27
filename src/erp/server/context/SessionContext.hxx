@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_CONTEXT_SESSIONCONTEXT_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_CONTEXT_SESSIONCONTEXT_HXX
 
@@ -25,29 +30,30 @@ template<class ServiceContextType>
 class SessionContext : private boost::noncopyable
 {
 public:
-    SessionContext(ServiceContextType& serviceContext, ServerRequest& request, ServerResponse& response);
+    SessionContext(ServiceContextType& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& accessLog_);
 
     ServiceContextType& serviceContext;
     ServerRequest& request;
     ServerResponse& response;
-    AccessLog accessLog;
+    AccessLog& accessLog;
 };
 
 template <>
 class SessionContext<PcServiceContext>
 {
 public:
-    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response);
+    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& accessLog);
 
     PcServiceContext& serviceContext;
     ServerRequest& request;
     ServerResponse& response;
-    AccessLog accessLog;
+    AccessLog& accessLog;
     bool callerWantsJson;
 
     AuditDataCollector& auditDataCollector();
     Database* database();
     std::unique_ptr<Database> releaseDatabase();
+
 private:
     std::unique_ptr<AuditDataCollector> mAuditDataCollector;
     std::unique_ptr<Database> mDatabase;

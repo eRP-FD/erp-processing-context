@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/common/Header.hxx"
 
 #include <gtest/gtest.h>
@@ -25,10 +30,9 @@ TEST_F(HeaderTest, FilledHeaderFields)
     Header header(
             HttpMethod::GET,
             std::string(),
-            Header::Version_1_0,
+            Header::Version_1_1,
             std::move(headerFields),
-            HttpStatus::OK,
-            false);
+            HttpStatus::OK);
 
     ASSERT_FALSE(header.headers().empty());
     ASSERT_EQ(2u, header.headers().size());
@@ -50,8 +54,7 @@ TEST_F(HeaderTest, addRemoveHeaderField)
         std::string(),
         Header::Version_1_0,
         {},
-        HttpStatus::OK,
-        false);
+        HttpStatus::OK);
 
     ASSERT_FALSE(header.hasHeader("key"));
 
@@ -95,8 +98,7 @@ TEST_F(HeaderTest, CheckInvariants1)
             "/target/path/",
             Header::Version_1_1,
             { { Header::ContentLength, "15" } },
-            HttpStatus::OK,
-            false);
+            HttpStatus::OK);
 
     checkInvariantsCommon(header);
 
@@ -112,8 +114,7 @@ TEST_F(HeaderTest, CheckInvariants2)
             "/target/path/",
             Header::Version_1_1,
             { { Header::TransferEncoding, "chunked" } },
-            HttpStatus::OK,
-            false);
+            HttpStatus::OK);
 
     checkInvariantsCommon(header);
 
@@ -151,3 +152,86 @@ TEST_F(HeaderTest, acceptHeader)
     ASSERT_TRUE(header.getAcceptMimeType("*/*"));
     ASSERT_FLOAT_EQ(header.getAcceptMimeType("*/*")->getQFactorWeight(), 0.8f);
 }
+
+
+TEST_F(HeaderTest, moveConstructor)
+{
+    Header header;
+    header.addHeaderField("test", "value");
+    header.setStatus(HttpStatus::OK);
+
+    Header header2 (std::move(header));
+    EXPECT_FALSE(header.hasHeader("test"));
+
+    EXPECT_EQ(header2.status(), HttpStatus::OK);
+    ASSERT_TRUE(header2.hasHeader("test"));
+    EXPECT_EQ(header2.header("test"), "value");
+}
+
+TEST_F(HeaderTest, keepAlive1_0)
+{
+    Header header(HttpMethod::GET, "/", Header::Version_1_0, {}, HttpStatus::Unknown);
+
+    {
+        EXPECT_FALSE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_FALSE(connectionHeader.has_value());
+    }
+
+    header.setKeepAlive(false);
+    {
+        EXPECT_FALSE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_FALSE(connectionHeader.has_value());
+    }
+
+    header.setKeepAlive(true);
+    {
+        EXPECT_TRUE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_EQ(connectionHeader.value_or(""), Header::KeepAlive);
+    }
+
+    header.setKeepAlive(false);
+    {
+        EXPECT_FALSE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_EQ(connectionHeader.value_or(""), Header::ConnectionClose);
+    }
+}
+
+TEST_F(HeaderTest, keepAlive1_1)
+{
+    Header header(HttpMethod::GET, "/", Header::Version_1_1, {}, HttpStatus::Unknown);
+
+    {
+        EXPECT_TRUE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_FALSE(connectionHeader.has_value());
+    }
+
+    header.setKeepAlive(true);
+    {
+        EXPECT_TRUE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_FALSE(connectionHeader.has_value());
+    }
+
+    header.setKeepAlive(false);
+    {
+        EXPECT_FALSE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_EQ(connectionHeader.value_or(""), Header::ConnectionClose);
+    }
+
+    header.setKeepAlive(true);
+    {
+        EXPECT_TRUE(header.keepAlive());
+        auto connectionHeader = header.header(Header::Connection);
+        EXPECT_EQ(connectionHeader.value_or(""), Header::KeepAlive);
+    }
+}
+
+
+
+

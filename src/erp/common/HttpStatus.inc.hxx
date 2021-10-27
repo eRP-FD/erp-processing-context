@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 STATUS(unknown,                            Unknown,                            0)
 STATUS(continue_,                          Continue,                         100)
 STATUS(switching_protocols,                SwitchingProtocols,               101)

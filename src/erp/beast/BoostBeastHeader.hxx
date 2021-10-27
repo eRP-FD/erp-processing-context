@@ -1,8 +1,14 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_BOOSTBEASTHEADER_HXX
 #define ERP_PROCESSING_CONTEXT_BOOSTBEASTHEADER_HXX
 
 #include "erp/common/Header.hxx"
 #include "erp/common/BoostBeastMethod.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <boost/beast/http/fields.hpp>
 #include <boost/beast/http/message.hpp>
@@ -26,26 +32,30 @@ public:
 template<class Parser>
 Header BoostBeastHeader::fromBeastRequestParser (const Parser& parser)
 {
-    return Header(
+    ErpExpect(parser.is_header_done(), HttpStatus::BadRequest, "Incomplete Header.");
+    auto result = Header(
         fromBoostBeastVerb(parser.get().method()),
         std::string(parser.get().target()),
         parser.get().version(),
         convertHeaderFields(parser.get().base()),
-        HttpStatus::Unknown, // no status for request
-        parser.get().keep_alive());
+        HttpStatus::Unknown); // no status for request
+    result.setKeepAlive(parser.keep_alive());
+    return result;
 }
 
 
 template<class Parser>
 Header BoostBeastHeader::fromBeastResponseParser (const Parser& parser)
 {
-    return Header(
+    ErpExpect(parser.is_header_done(), HttpStatus::BadRequest, "Incomplete Header.");
+    auto result = Header(
         HttpMethod::UNKNOWN, // no method for response
         "", // no target for reponse
         parser.get().version(),
         convertHeaderFields(parser.get().base()),
-        fromBoostBeastStatus(static_cast<uint32_t>(parser.get().result())),
-        parser.get().keep_alive());
+        fromBoostBeastStatus(static_cast<uint32_t>(parser.get().result())));
+    result.setKeepAlive(parser.keep_alive());
+    return result;
 }
 
 

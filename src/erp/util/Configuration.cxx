@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/util/Configuration.hxx"
 
 #include "erp/ErpConstants.hxx"
@@ -185,6 +190,7 @@ std::map<ConfigurationKey,KeyNames> ConfigurationKeyNamesTemplate<ConfigurationK
     {ConfigurationKey::SERVER_REQUEST_PATH,                   {"ERP_SERVER_REQUEST_PATH",           "/erp/server/requestPath"}},
     {ConfigurationKey::DEBUG_DISABLE_PROXY_AUTHENTICATION,    {"DEBUG_DISABLE_PROXY_AUTHENTICATION", "/debug/disable-proxy-authentication"}},
     {ConfigurationKey::SERVER_PROXY_CERTIFICATE,              {"ERP_SERVER_PROXY_CERTIFICATE",      "/erp/server/proxy/certificate"}},
+    {ConfigurationKey::SERVER_KEEP_ALIVE,                     {"ERP_SERVER_KEEP_ALIVE",             "/erp/server/keep-alive"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD,{"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD","/erp/service/task/activate/entlassRezeptValidityInWorkDays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS,        {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS","/erp/service/task/activate/holidays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV,      {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV","/erp/service/task/activate/easterCsv"}},
@@ -209,6 +215,7 @@ std::map<ConfigurationKey,KeyNames> ConfigurationKeyNamesTemplate<ConfigurationK
     {ConfigurationKey::POSTGRES_KEEPALIVES_COUNT,             {"ERP_POSTGRES_KEEPALIVES_COUNT",         "/erp/postgres/keepalivesCount"}},
     {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL,     {"ERP_E_PRESCRIPTION_SERVICE_URL",    "/erp/publicEPrescriptionServiceUrl"}},
     {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC,   {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC", "/erp/registration/heartbeatIntervalSec"}},
+    {ConfigurationKey::TSL_TI_OCSP_PROXY_URL,                 {"ERP_TSL_TI_OCSP_PROXY_URL",         "/erp/tsl/tiOcspProxyUrl"}},
     {ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH,        {"ERP_TSL_FRAMEWORK_SSL_ROOT_CA_PATH","/erp/tsl/sslRootCaPath"}},
     {ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL,              {"ERP_TSL_INITIAL_DOWNLOAD_URL",      "/erp/tsl/initialDownloadUrl"}},
     {ConfigurationKey::TSL_INITIAL_CA_DER_PATH,               {"ERP_TSL_INITIAL_CA_DER_PATH",       "/erp/tsl/initialCaDerPath"}},
@@ -247,7 +254,6 @@ std::map<ConfigurationKey,KeyNames> ConfigurationKeyNamesTemplate<ConfigurationK
     {ConfigurationKey::DEPRECATED_HSM_PASSWORD,               {"ERP_HSM_PASWORD",                   "/erp/hsm/password"}},
     {ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS,              {"ERP_TEE_TOKEN_UPDATE_SECONDS",      "/erp/hsm/tee-token/update-seconds"}},
     {ConfigurationKey::TEE_TOKEN_RETRY_SECONDS,               {"ERP_TEE_TOKEN_RETRY_SECONDS",       "/erp/hsm/tee-token/retry-seconds"}},
-    {ConfigurationKey::TEE_TOKEN_BLOB,                        {"ERP_TEE_TOKEN_BLOB",                "/erp/hsm/tee-token/blob"}},
     {ConfigurationKey::ZSTD_DICTIONARY_DIR,                   {"ERP_ZSTD_DICTIONARY_DIR",           "/erp/compression/zstd/dictionary-dir"}},
     {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS,    {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS","/erp/httpClientConnectTimeoutSeconds"}}
 };

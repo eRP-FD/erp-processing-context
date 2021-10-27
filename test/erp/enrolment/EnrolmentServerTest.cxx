@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/enrolment/EnrolmentServer.hxx"
 #include "erp/client/HttpsClient.hxx"
 #include "erp/enrolment/EnrolmentModel.hxx"
@@ -104,8 +109,7 @@ public:
             std::move(target),
             Header::Version_1_1,
             {},
-            HttpStatus::Unknown,
-            false);
+            HttpStatus::Unknown);
     }
 
     void checkResponseHeader (const ClientResponse& response, const HttpStatus expectedStatus)

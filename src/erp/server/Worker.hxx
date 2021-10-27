@@ -1,6 +1,12 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_WORKER_HXX
 #define ERP_PROCESSING_CONTEXT_WORKER_HXX
 
+#include <atomic>
 #include <boost/asio/io_context.hpp>
 #include <functional>
 #include <list>
@@ -16,6 +22,9 @@ public:
 
     // run a function on _this_ workers thread
     void queueWork(std::function<void()>&& extraWork);
+
+    static thread_local std::atomic_size_t finishedTaskCount;
+    static thread_local std::optional<std::string> tlogContext;
 
 private:
     void runExtraWork();

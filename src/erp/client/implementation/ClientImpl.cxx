@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/implementation/ClientImpl.hxx"
 
 #include "erp/client/request/ValidatedClientRequest.hxx"
@@ -21,7 +26,8 @@ ClientImpl<SslStream>::ClientImpl (
     const SafeString& clientCertificate,
     const SafeString& clientPrivateKey,
     const std::optional<std::string>& forcedCiphers)
-    : mHostName(hostname),
+    : mConnectionTimeoutSeconds(connectionTimeoutSeconds),
+      mHostName(hostname),
       mSessionContainer(hostname, std::to_string(port), connectionTimeoutSeconds,
                       enforceServerAuthentication, caCertificates, clientCertificate, clientPrivateKey, forcedCiphers)
 {
@@ -38,7 +44,8 @@ ClientImpl<TcpStream>::ClientImpl (
     const SafeString&,
     const SafeString&,
     const std::optional<std::string>&)
-    : mHostName(hostname),
+    : mConnectionTimeoutSeconds(connectionTimeoutSeconds),
+      mHostName(hostname),
       mSessionContainer{hostname, std::to_string(port), connectionTimeoutSeconds}
 {
 }
@@ -57,13 +64,18 @@ ClientResponse ClientImpl<StreamClass>::send (const ClientRequest& clientRequest
     {
         mSessionContainer.establish(trustCn);
 
+        mSessionContainer.getStream().expiresAfter(std::chrono::seconds(mConnectionTimeoutSeconds));
         // Send the request.
         ClientRequestWriter writer(ValidatedClientRequest{clientRequest});
         writer.write(mSessionContainer.getStream());
 
         // Read and return the response.
         ClientResponseReader reader;
-        auto response = reader.read(mSessionContainer.getStream());
+        ClientResponse response = reader.read(mSessionContainer.getStream());
+
+        if (!response.getHeader().keepAlive())
+            mSessionContainer.teardown();
+
         return response;
     }
     catch(const boost::system::system_error& e)
@@ -90,6 +102,13 @@ template<class StreamClass>
 void ClientImpl<StreamClass>::inheritTlsSessionTicketFrom (const ClientImpl<StreamClass>& client)
 {
     mSessionContainer.inheritTicketFrom(client.mSessionContainer);
+}
+
+
+template<class StreamClass>
+void ClientImpl<StreamClass>::close (void)
+{
+    mSessionContainer.teardown();
 }
 
 

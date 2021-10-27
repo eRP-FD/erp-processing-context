@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/crypto/CadesBesSignature.hxx"
 
 #include "erp/crypto/Certificate.hxx"
@@ -136,8 +141,10 @@ namespace
         CMS_ContentInfo& cmsContentInfo,
         TslManager& tslManager)
     {
-        auto certificates = std::unique_ptr<STACK_OF(X509), decltype(&sk_X509_free)>(
-            CMS_get1_certs(&cmsContentInfo), sk_X509_free);
+        const auto releaseList = [] (STACK_OF(X509)* lst) {
+            sk_X509_pop_free(lst, X509_free);
+        };
+        auto certificates = std::unique_ptr<STACK_OF(X509), std::function<void(STACK_OF(X509)*)> >(CMS_get1_certs(&cmsContentInfo), releaseList);
         const std::vector<X509*> signerCertificates = getSignerCertificates(
             cmsContentInfo, certificates.get());
 
@@ -254,7 +261,7 @@ CadesBesSignature::CadesBesSignature(const std::string& base64Data, TslManager* 
 }
 
 
-CadesBesSignature::CadesBesSignature(const std::initializer_list<Certificate>& trustedCertificates,
+CadesBesSignature::CadesBesSignature(const std::list<Certificate>& trustedCertificates,
                                      const std::string& base64Data)
 {
     try

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/enrolment/EnrolmentServiceContext.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
@@ -38,7 +43,7 @@ TEST_F(ServiceContextTest, init)
     PcServiceContext serviceContext(
         Configuration::instance(),
         &MockDatabase::createMockDatabase,
-        std::make_unique<DosHandler>(std::make_unique<MockRedisStore>()),
+        std::make_unique<MockRedisStore>(),
         std::make_unique<HsmPool>(
             std::make_unique<HsmMockFactory>(),
             TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
@@ -53,7 +58,7 @@ TEST_F(ServiceContextTest, initWithTsl)
     PcServiceContext serviceContext(
         Configuration::instance(),
         &MockDatabase::createMockDatabase,
-        std::make_unique<DosHandler>(std::make_unique<MockRedisStore>()),
+        std::make_unique<MockRedisStore>(),
         std::make_unique<HsmPool>(
             std::make_unique<HsmMockFactory>(),
             TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),

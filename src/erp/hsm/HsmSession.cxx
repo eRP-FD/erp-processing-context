@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/hsm/HsmSession.hxx"
 
 #include "erp/crypto/EllipticCurveUtils.hxx"
@@ -29,7 +34,6 @@ namespace
         HsmSession& session,
         std::function<ResultType()>&& action)
     {
-        TVLOG(1) << "entering guarded run";
         size_t retryCount = 0; // 0 being the original run, i.e. a try, not a re-try.
         while(retryCount <= maxRetryCount)
         {

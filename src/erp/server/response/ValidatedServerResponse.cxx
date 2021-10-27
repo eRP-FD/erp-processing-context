@@ -1,20 +1,25 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/response/ValidatedServerResponse.hxx"
 
 
-ValidatedServerResponse::ValidatedServerResponse(const ServerResponse& aServerResponse)
-: serverResponse(aServerResponse)
+ValidatedServerResponse::ValidatedServerResponse (ServerResponse&& serverResponse)
+    : mServerResponse(std::move(serverResponse))
 {
-    serverResponse.getHeader().checkInvariants();
+    mServerResponse.getHeader().checkInvariants();
 }
 
 
 const Header& ValidatedServerResponse::getHeader() const
 {
-    return serverResponse.getHeader();
+    return mServerResponse.getHeader();
 }
 
 
 const std::string& ValidatedServerResponse::getBody() const
 {
-    return serverResponse.getBody();
+    return mServerResponse.getBody();
 }

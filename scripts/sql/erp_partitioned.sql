@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 -- You may call this SQL script from the command prompt by invoking:
 --   psql -U <UserName> -h <HostName> -d <DBName> -f <PathToScript>
 --   e.g.: psql -U erp_admin -h localhost -d erp -f scripts/sql/erp_partitioned.sql

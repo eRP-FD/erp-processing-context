@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "XmlMemory.hxx"
 
 template class std::unique_ptr<FreeXml<xmlFreeDoc>::Type, FreeXml<xmlFreeDoc>>;

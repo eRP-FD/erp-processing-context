@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_TASKHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_TASKHANDLER_HXX
 
@@ -34,7 +39,7 @@ protected:
                                                       const Uuid& uuid, PcServiceContext& serviceContext);
 
     /// @brief extract and validate ID from URL
-    static model::PrescriptionId parseId(const ServerRequest& request);
+    static model::PrescriptionId parseId(const ServerRequest& request, AccessLog& accessLog);
     static void checkAccessCodeMatches(const ServerRequest& request, const model::Task& task);
 };
 

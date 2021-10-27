@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/tee/InnerTeeResponse.hxx"
 
 #include "erp/beast/BoostBeastHeader.hxx"
@@ -9,7 +14,7 @@
 InnerTeeResponse::InnerTeeResponse (const std::string& requestId, const Header& header, const std::string& body)
     : mA("1 "
          + ByteHelper::toHex(requestId) + " "
-         + ServerResponseWriter(ValidatedServerResponse(ServerResponse(header, body))).toString())
+         + ServerResponseWriter().toString(ValidatedServerResponse(ServerResponse(header, body))))
 {
 }
 

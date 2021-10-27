@@ -130,13 +130,13 @@
           "$ref": "BaseSchema.json#/definitions/Quantity"
         },
         "whenPrepared": {
-          "$ref": "BaseSchema.json#/definitions/dateTime"
+          "$ref": "BaseSchema.json#/definitions/dateOrDateTime"
         },
         "_whenPrepared": {
           "$ref": "BaseSchema.json#/definitions/Element"
         },
         "whenHandedOver": {
-          "$ref": "BaseSchema.json#/definitions/dateTime"
+          "$ref": "BaseSchema.json#/definitions/dateOrDateTime"
         },
         "_whenHandedOver": {
           "$ref": "BaseSchema.json#/definitions/Element"

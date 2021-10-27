@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/ClientBase.hxx"
 
 #include "erp/ErpRequirements.hxx"
@@ -52,6 +57,13 @@ template<class StreamClass>
 void ClientBase<StreamClass>::inheritTlsSessionTicketFrom (const ClientBase& client)
 {
     mImplementation->inheritTlsSessionTicketFrom(*client.mImplementation);
+}
+
+
+template<class StreamClass>
+void ClientBase<StreamClass>::close (void)
+{
+    mImplementation->close();
 }
 
 

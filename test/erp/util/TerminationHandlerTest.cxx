@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/util/TerminationHandler.hxx"
 
 #include <gtest/gtest.h>
@@ -37,8 +42,7 @@ TEST_F(TerminationHandlerTest, callback)
     });
 
     // Initiate termination and wait for its completion.
-    handler.notifyTermination(false);
-    handler.waitForTerminated();
+    handler.notifyTerminationCallbacks(false);
 
     ASSERT_TRUE(callbackCalled);
     ASSERT_EQ(handler.getState(), TerminationHandler::State::Terminated);
@@ -51,8 +55,7 @@ TEST_F(TerminationHandlerTest, hasError)
 
     ASSERT_FALSE(handler.hasError());
 
-    handler.notifyTermination(true);
-    handler.waitForTerminated();
+    handler.notifyTerminationCallbacks(true);
 
     ASSERT_TRUE(handler.hasError());
 }

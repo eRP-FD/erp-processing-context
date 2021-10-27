@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_MOCKTERMINATIONHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKTERMINATIONHANDLER_HXX
 
@@ -17,10 +22,8 @@ public:
     static void setupForTesting (void);
     static void setupForProduction (void);
 
-    virtual std::optional<size_t> registerCallback (std::function<void(bool hasError)>&&) override;
-    virtual void waitForTerminated (void) override;
-    virtual State getState (void) const override;
-    virtual bool hasError (void) const override;
+    void terminate() override;
+    void waitForTerminated (void);
 };
 
 #endif

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <erp/crypto/AesGcm.hxx>
 #include <erp/tee/OuterTeeResponse.hxx>
 #include <gtest/gtest.h>

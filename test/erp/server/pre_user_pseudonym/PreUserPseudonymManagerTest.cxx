@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 
 #include "erp/database/DatabaseFrontend.hxx"
@@ -53,7 +58,7 @@ public:
                     return std::make_unique<DatabaseFrontend>(
                                 std::make_unique<PreUserPseudonymCmacTestDatabase>(hsmPool), hsmPool, keyDerivation);
                 },
-            std::make_unique<DosHandler>(std::make_unique<MockRedisStore>()),
+            std::make_unique<MockRedisStore>(),
             std::make_unique<HsmPool>(
                 std::make_unique<HsmMockFactory>(
                     std::make_unique<HsmMockClient>(),

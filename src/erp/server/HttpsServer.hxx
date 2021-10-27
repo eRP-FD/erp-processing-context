@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_HTTPSSERVER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_HTTPSSERVER_HXX
 
@@ -51,7 +56,6 @@ private:
     ThreadPool mThreadPool;
     boost::asio::ssl::context mSslContext;
     RequestHandlerManager<ServiceContextType> mRequestHandlers;
-    std::optional<size_t> mTerminationHandlerId;
     std::shared_ptr<ServiceContextType> mServiceContext;
 };
 

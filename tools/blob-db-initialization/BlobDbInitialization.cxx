@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "tools/blob-db-initialization/BlobDbInitialization.hxx"
 
 #include "erp/client/HttpsClient.hxx"
@@ -256,8 +261,7 @@ Header createHeader (
         {
             {Header::Authorization, "Basic " + Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS)}
         },
-        HttpStatus::Unknown,
-        false);
+        HttpStatus::Unknown);
 }
 
 
@@ -424,11 +428,13 @@ int main (const int argc, const char* argv[])
     {
         auto descriptor = getDescriptor(BlobType::Quote);
 
-        // Quote blobs are stored per version (including the build tyoe).
-        // To avoid name conflicts we append the build type to the name.
+        // Quote blobs are stored per version (including the build type).
+        // To avoid name conflicts we append an uuid to the name. The former solution with appending build type
+        // caused a problem with a second enrolment when a key with the same name already exists. Deletion is now not
+        // possible anymore but it not critical for this sepcial use case to enrol via this helper.
         // Alternative we could create a "real" name by calculating the SHA2 but that would make deletion of the blobs more difficult.
         if (descriptor.type == BlobType::Quote)
-            descriptor.shortName += "-" + std::string(ErpServerInfo::BuildType);
+            descriptor.shortName += "-" + Uuid().toString();
 
         if (arguments.deleteBeforeStore)
             deleteBlob(client, descriptor);

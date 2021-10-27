@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 if [ -z $ERP_BUILD ]; then
 	 ERP_BUILD="release"
 fi

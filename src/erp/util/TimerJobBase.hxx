@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_UTIL_TIMERJOBBASE_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_UTIL_TIMERJOBBASE_HXX
 
@@ -78,7 +83,6 @@ private:
     std::thread mJobThread;
     std::condition_variable mAbortCondition;
     bool mIsAborted;
-    bool mIsThreadExited;
 
 
     /**
@@ -90,12 +94,6 @@ private:
 
 
     void run ();
-
-
-    /**
-     * Wait until the cycle thread is exited.
-     */
-    void waitUntilThreadExit (void);
 };
 
 

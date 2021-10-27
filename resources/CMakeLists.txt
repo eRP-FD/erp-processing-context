@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 set(ERP_HL7_ORG_DEFINITIONS_FILES
     fhir/hl7.org/version.info
     fhir/hl7.org/profiles-types.xml

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/HttpsServer.ixx"
 #include "erp/server/ServerSocketHandler.ixx"

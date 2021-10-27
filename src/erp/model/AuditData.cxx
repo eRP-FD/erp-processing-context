@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/AuditData.hxx"
 
 #include <rapidjson/pointer.h>
@@ -25,8 +30,8 @@ bool isEventCausedByRepresentative(AuditEventId eventId)
 namespace
 {
 
-rapidjson::Pointer agentNamePointer("/an");
-rapidjson::Pointer agentWhoPointer("/aw");
+const rapidjson::Pointer agentNamePointer("/an");
+const rapidjson::Pointer agentWhoPointer("/aw");
 
 }
 
@@ -36,7 +41,6 @@ AuditMetaData::AuditMetaData(
     const std::optional<std::string_view>& agentWho)
     : Resource<AuditMetaData>()
 {
-    auto obj = createEmptyObject();
     if(agentName.has_value())
         setValue(agentNamePointer, agentName.value());
     if(agentWho.has_value())

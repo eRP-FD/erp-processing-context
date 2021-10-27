@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/AuditEventCreator.hxx"
 #include "erp/service/Operation.hxx"
 #include "erp/service/ErpRequestHandler.hxx"

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/util/ExceptionHelper.hxx"
 
 #include "erp/common/HttpStatus.hxx"
@@ -28,9 +33,17 @@ namespace
 void ExceptionHelper::extractInformationAndRethrow (
     std::function<void(std::string&& details, std::string&& location)>&& consumer)
 {
+    extractInformationAndRethrow(std::move(consumer), std::current_exception());
+}
+
+
+void ExceptionHelper::extractInformationAndRethrow (
+    std::function<void(std::string&& details, std::string&& location)>&& consumer,
+    std::exception_ptr exception)
+{
     try
     {
-        std::rethrow_exception(std::current_exception());
+        std::rethrow_exception(exception);
     }
     catch (const ErpException& e)
     {
@@ -106,5 +119,20 @@ void ExceptionHelper::extractInformationAndRethrow (
     {
         consumer("unknown exception", "unknown location");
         throw;
+    }
+}
+
+
+void ExceptionHelper::extractInformation (
+    std::function<void(std::string&& details, std::string&& location)>&& consumer,
+    std::exception_ptr exception)
+{
+    try
+    {
+        extractInformationAndRethrow(std::move(consumer), exception);
+    }
+    catch(...)
+    {
+        // Caller does not want the exception to be thrown beyond this function, so ignore it
     }
 }

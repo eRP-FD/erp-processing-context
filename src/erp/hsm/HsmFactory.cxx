@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/hsm/HsmFactory.hxx"
 
 #include "erp/hsm/HsmClient.hxx"

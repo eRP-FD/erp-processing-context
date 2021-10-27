@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 -- These roles are assigned to the users based on the requirements. In this context, admin refers to the ability to
 -- perform DDL statements, not superuser privileges.
 --

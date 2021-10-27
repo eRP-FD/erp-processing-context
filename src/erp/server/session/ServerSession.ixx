@@ -1,4 +1,11 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/ErpConstants.hxx"
+#include "erp/server/session/AsynchronousServerSession.hxx"
+#include "erp/server/session/SynchronousServerSession.hxx"
 #include "erp/server/request/ServerRequestReader.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
 
@@ -16,7 +23,7 @@ namespace
             || target[0] != '/'
             || target.find("..") != std::string::npos)
         {
-            LOG(ERROR) << "handleRequest has found an error in target '" << target << "'";
+            TLOG(ERROR) << "handleRequest has found an error in target '" << target << "'";
             return {};
         }
 
@@ -34,7 +41,9 @@ public:
 
     ConcreteRequestHandler (const RequestHandlerManager<ServiceContextType>& requestHandlers, ServiceContextType& serviceContext);
 
-    virtual std::tuple<bool,ServerResponse> handleRequest (SslStream& sslStream) override;
+    virtual std::tuple<bool,ServerResponse> handleRequest (
+        ServerRequest&& request,
+        AccessLog& accessLog);
 };
 
 
@@ -45,10 +54,18 @@ std::shared_ptr<ServerSession> ServerSession::createShared(
     const RequestHandlerManager<ServiceContextType>& requestHandlers,
     ServiceContextType& serviceContext)
 {
-    return std::make_shared<ServerSession>(
-        std::move(socket),
-        context,
-        std::make_unique<ConcreteRequestHandler<ServiceContextType>>(requestHandlers, serviceContext));
+    constexpr bool defaultToKeepAlive = false;
+
+    if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::SERVER_KEEP_ALIVE, defaultToKeepAlive))
+        return std::make_shared<AsynchronousServerSession>(
+            std::move(socket),
+            context,
+            std::make_unique<ConcreteRequestHandler<ServiceContextType>>(requestHandlers, serviceContext));
+    else
+        return std::make_shared<SynchronousServerSession>(
+            std::move(socket),
+            context,
+            std::make_unique<ConcreteRequestHandler<ServiceContextType>>(requestHandlers, serviceContext));
 }
 
 
@@ -64,17 +81,9 @@ ConcreteRequestHandler<ServiceContextType>::ConcreteRequestHandler (
 
 template<class ServiceContextType>
 std::tuple<bool,ServerResponse> ConcreteRequestHandler<ServiceContextType>::handleRequest (
-    SslStream& sslStream)
+    ServerRequest&& request,
+    AccessLog& accessLog)
 {
-    // Read the encrypted request body.
-    auto reader = ServerRequestReader(sslStream);
-    auto request = reader.read();
-
-    if (reader.isStreamClosed())
-    {
-        return {false, ServerResponse()};
-    }
-
     const Header& header (request.header());
     const std::string target = getValidatedTarget(header);
     if (target.empty())
@@ -102,7 +111,7 @@ std::tuple<bool,ServerResponse> ConcreteRequestHandler<ServiceContextType>::hand
     // request and then processes the inner HTTP request.
     // Other sources of incoming requests will be the HSM.
     ServerResponse response;
-    SessionContext session (mServiceContext, request, response);
+    SessionContext session (mServiceContext, request, response, accessLog);
     matchingHandler.handlerContext->handler->preHandleRequestHook(session);
     matchingHandler.handlerContext->handler->handleRequest(session);
     return {true, std::move(response)};

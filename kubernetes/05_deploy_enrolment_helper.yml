@@ -1,8 +1,13 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: erp-enrolment-helper
-  namespace: erp-system
+  namespace: %NAMESPACE%
 spec:
   replicas: 1
   selector:
@@ -22,7 +27,7 @@ spec:
             - name: ERP_VLOG_MAX_VALUE
               value: "2"
             - name: ERP_SERVER_HOST
-              value: erp-processing-context-1.erp-system.svc.cluster.local
+              value: erp-processing-context-1.%NAMESPACE%.svc.cluster.local
             - name: ERP_SERVER_PORT
               value: "9085"
             - name: ERP_ENROLMENT_ACTIVATE_FOR_PORT
@@ -56,7 +61,7 @@ spec:
             - name: TPM_SERVER_TYPE
               value: mssim
             - name: TPM_SERVER_NAME
-              value: tpm-simulator-1.erp-system.svc.cluster.local
+              value: tpm-simulator-1.%NAMESPACE%.svc.cluster.local
           envFrom:
             - prefix: ERP_
               secretRef:

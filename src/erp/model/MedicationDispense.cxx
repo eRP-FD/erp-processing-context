@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
@@ -83,14 +88,14 @@ std::string_view MedicationDispense::telematikId() const
 Timestamp MedicationDispense::whenHandedOver() const
 {
     std::string_view value = getStringValue(whenHandedOverPointer);
-    return Timestamp::fromXsDateTime(std::string(value));
+    return Timestamp::fromFhirDateTime(std::string(value));
 }
 
 std::optional<Timestamp> MedicationDispense::whenPrepared() const
 {
     std::optional<std::string_view> value = getOptionalStringValue(whenPreparedPointer);
     if (value.has_value())
-        return Timestamp::fromXsDateTime(std::string(value.value()));
+        return Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 

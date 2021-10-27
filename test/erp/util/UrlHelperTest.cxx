@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/util/UrlHelper.hxx"
 
 #include "erp/util/ErpException.hxx"
@@ -228,3 +233,26 @@ TEST(UrlHelperTest, parseAndDropUserPart)
     EXPECT_EQ(urlParts.mRest, "?andSome=params#andFragment");
     EXPECT_EQ(urlParts.mPort, 90);
 }
+
+TEST(UrlHelperTest, parse_ERP6501_1)
+{
+    UrlHelper::UrlParts urlParts = UrlHelper::parseUrl("http://ocsp.ocsp-proxy.telematik/ocsp/http://qocsp-eA.medisign.de:8080/ocsp?param=something");
+
+    EXPECT_EQ(urlParts.mProtocol, "http://");
+    EXPECT_EQ(urlParts.mHost, "ocsp.ocsp-proxy.telematik");
+    EXPECT_EQ(urlParts.mPath, "/ocsp/http://qocsp-eA.medisign.de:8080/ocsp");
+    EXPECT_EQ(urlParts.mRest, "?param=something");
+    EXPECT_EQ(urlParts.mPort, 80);
+}
+
+TEST(UrlHelperTest, parse_ERP6501_2)
+{
+    UrlHelper::UrlParts urlParts = UrlHelper::parseUrl("http://ocsp.ocsp-proxy.telematik/ocsp/http%3A%2F%2Fqocsp-eA.medisign.de%3A8080%2Focsp");
+
+    EXPECT_EQ(urlParts.mProtocol, "http://");
+    EXPECT_EQ(urlParts.mHost, "ocsp.ocsp-proxy.telematik");
+    EXPECT_EQ(urlParts.mPath, "/ocsp/http%3A%2F%2Fqocsp-eA.medisign.de%3A8080%2Focsp");
+    EXPECT_EQ(urlParts.mRest, "");
+    EXPECT_EQ(urlParts.mPort, 80);
+}
+

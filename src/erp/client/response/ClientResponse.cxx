@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/response/ClientResponse.hxx"
 #include "erp/common/Header.hxx"
 #include "erp/util/Expect.hxx"

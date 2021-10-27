@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/client/HttpClient.hxx"
@@ -46,8 +51,7 @@ public:
             static_cast<std::string>(endpoint),
             Header::Version_1_1,
             std::move(headerFields),
-            HttpStatus::Unknown,
-            false),
+            HttpStatus::Unknown),
             "");
 
         if (xAccessCode.has_value())
@@ -71,8 +75,7 @@ public:
             "/VAU/0",
             Header::Version_1_1,
             {},
-            HttpStatus::Unknown,
-            false),
+            HttpStatus::Unknown),
             teeRequest);
         encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
         return encryptedRequest;
@@ -134,9 +137,9 @@ TEST_F(VauRequestHandlerTest, success)
     // Verify the inner response;
     const ClientResponse decryptedResponse = mTeeProtocol.parseResponse(response);
     ASSERT_EQ(decryptedResponse.getHeader().status(), HttpStatus::NotFound);
-    ASSERT_FALSE(decryptedResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_TRUE(decryptedResponse.getHeader().hasHeader(Header::ContentType)); // error message (not found)
     ASSERT_TRUE(decryptedResponse.getHeader().hasHeader(Header::ContentLength));
-    ASSERT_EQ(decryptedResponse.getHeader().contentLength(), 0);
+    ASSERT_GT(decryptedResponse.getHeader().contentLength(), 0);
 }
 
 
@@ -152,8 +155,7 @@ TEST_F(VauRequestHandlerTest, failForMissingTeeWrapper)
             "/Task/$create",
             Header::Version_1_1,
             {},
-            HttpStatus::Unknown,
-            false),
+            HttpStatus::Unknown),
     "this is the request body");
 
     // Do not encrypt, and for this test more importantly, do not wrap the request, so that the original target /Task/$create is used as URL.
@@ -196,7 +198,7 @@ TEST_F(VauRequestHandlerTest, failForExpiredJwt)
     // Verify the outer response
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::WWWAuthenticate));
-    ASSERT_EQ(innerResponse.getHeader().header(Header::WWWAuthenticate).value(), R"(Bearer realm='prescriptionserver.telematik', error='invalACCESS_TOKEN'")");
+    ASSERT_EQ(innerResponse.getHeader().header(Header::WWWAuthenticate).value(), R"(Bearer realm='prescriptionserver.telematik', error='invalACCESS_TOKEN')");
 }
 
 TEST_F(VauRequestHandlerTest, MissingRequiredClaim)
@@ -253,12 +255,12 @@ TEST_F(VauRequestHandlerTest, ClaimTypeCheckFailure)
 
     auto client = createClient();
     ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(jwt) },
-                                 HttpStatus::Unknown, false), "");
+                                 HttpStatus::Unknown), "");
 
     // Encrypt with TEE protocol.
     ClientTeeProtocol teeProtocol;
     ClientRequest encryptedRequest(
-        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown, false),
+        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
         teeProtocol.createRequest(MockCryptography().getEciesPublicKeyCertificate(), request, jwt));
     encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
     // This header field will be present - we have to set it explicitly in the tests.
@@ -302,12 +304,12 @@ TEST_F(VauRequestHandlerTest, invalidSignatureJwt)
     auto client = createClient();
     // Create the inner request
     ClientRequest request(
-        Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(manipulatedJwt) }, HttpStatus::Unknown, false),
+        Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(manipulatedJwt) }, HttpStatus::Unknown),
         "");
     // Encrypt with TEE protocol.
     ClientTeeProtocol teeProtocol;
     ClientRequest encryptedRequest(
-        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown, false),
+        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
         teeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, manipulatedJwt));
     encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
 
@@ -754,8 +756,7 @@ TEST_F(VauRequestHandlerTest, InvalidAcceptHeaderERP4620)
         "/VAU/0",
         Header::Version_1_1,
         {},
-        HttpStatus::Unknown,
-        false),
+        HttpStatus::Unknown),
         mTeeProtocol.createRequest(
             MockCryptography::getEciesPublicKeyCertificate(),
             header + body,
@@ -783,8 +784,7 @@ TEST_F(VauRequestHandlerTest, EmptyAcceptHeaderERP4620)
         "/VAU/0",
         Header::Version_1_1,
         {},
-        HttpStatus::Unknown,
-        false),
+        HttpStatus::Unknown),
         mTeeProtocol.createRequest(
             MockCryptography::getEciesPublicKeyCertificate(),
             header + body,

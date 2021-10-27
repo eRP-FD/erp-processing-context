@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
   <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
   <xs:element name="Medication" type="KBV_PR_ERP_Medication_PZN"/>
@@ -35,11 +40,24 @@
       <xs:extension base="Element">
         <xs:sequence>
           <xs:element name="coding" type="KBV_PR_ERP_Medication_PZN.Code.Coding"/>
-          <xs:element name="text" type="string"/>
+          <xs:element name="text" type="KBV_PR_ERP_Medication_PZN.Code.Text"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_PZN.Code.Text">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="KBV_PR_ERP_Medication_PZN.Code.Text.string-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="KBV_PR_ERP_Medication_PZN.Code.Text.string-primitive">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="50"/>
+    </xs:restriction>
+  </xs:simpleType>
   <xs:complexType name="KBV_PR_ERP_Medication_PZN.Code.Coding">
     <xs:complexContent>
       <xs:extension base="Element">

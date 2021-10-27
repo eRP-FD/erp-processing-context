@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/hsm/HsmPool.hxx"
 
 #include "erp/util/Configuration.hxx"
@@ -59,6 +64,11 @@ HsmPool::HsmPool (
 
     TVLOG(1) << "initialized HSM pool that supports up to " << mMaxSessionCount << " sessions";
     TVLOG(1) << "created HSM pool at " << (void*)this;
+}
+
+HsmPool::~HsmPool()
+{
+    releasePool();
 }
 
 

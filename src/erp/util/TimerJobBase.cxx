@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <chrono>
 #include <functional>
 #include <iostream>
@@ -17,14 +22,12 @@ TimerJobBase::TimerJobBase (
     , mJobThread()
     , mAbortCondition()
     , mIsAborted(false)
-    , mIsThreadExited(true)
 {
 }
 
 
 void TimerJobBase::start (void)
 {
-    mIsThreadExited = false;
     mJobThread = std::thread(
         [this]
         {
@@ -35,10 +38,9 @@ void TimerJobBase::start (void)
         [this]
             (auto) mutable // Ignore the error flag
         {
-          // Not using TVLOG because the logging framework may have already been shut down.
-          std::cerr << "joining " << mJobName << " thread" << std::endl;
+          TVLOG(1) << "joining " << mJobName << " thread";
           shutdown();
-          std::cerr << "joined " << mJobName << " thread" << std::endl;
+          TVLOG(1) << "joined " << mJobName << " thread";
         });
 }
 
@@ -70,18 +72,8 @@ bool TimerJobBase::isAborted (void) const
 void TimerJobBase::shutdown()
 {
     abort();
-
-    // Wait for the thread to exit. Only then it is safe for us to lock the mutex again and continue with joining
-    // the thread.
-    waitUntilThreadExit();
-
-    // Note that we expect that the thread is joinable, i.e has not been joined before, but in order to avoid
-    // throwing an exception when possibly reacting to a signal, we don't treat that as error.
-    std::lock_guard lock (mMutex);
     if (mJobThread.joinable())
-    {
         mJobThread.join();
-    }
 }
 
 
@@ -106,21 +98,15 @@ void TimerJobBase::run (void)
     catch(const std::exception& e)
     {
         LOG(ERROR) << "caught an exception in the [" << mJobName << "] thread, terminating the application: " << e.what();
-        TerminationHandler::instance().notifyTermination(true);
+        TerminationHandler::instance().terminate();
     }
     catch(...)
     {
         // Any exception that is caught here means that the proxy client is not accessible and therefore the
         // processing client can not function correctly. => terminate
         LOG(ERROR) << "caught an non-standard exception in the [" << mJobName << "] thread, terminating the application";
-        TerminationHandler::instance().notifyTermination(true);
+        TerminationHandler::instance().terminate();
     }
-
-    {
-        std::lock_guard lock (mMutex);
-        mIsThreadExited = true;
-    }
-    mAbortCondition.notify_all();
 
     TVLOG(0) << "leaving the " << mJobName << " thread";
 }
@@ -136,11 +122,3 @@ void TimerJobBase::waitFor (const std::chrono::steady_clock::duration interval)
         [this]{return mIsAborted;});
 }
 
-
-void TimerJobBase::waitUntilThreadExit (void)
-{
-    std::unique_lock lock (mMutex);
-    mAbortCondition.wait(
-        lock,
-        [this]{return mIsThreadExited;});
-}

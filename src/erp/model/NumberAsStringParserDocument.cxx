@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/NumberAsStringParserWriter.hxx"
 #include "erp/util/Expect.hxx"
@@ -521,7 +526,7 @@ rj::Value* NumberAsStringParserDocument::findMemberInArray(
     return nullptr;
 }
 
-rj::Value* NumberAsStringParserDocument::getMemberInArray(const rj::Pointer& pointerToArray, size_t index)
+const rj::Value* NumberAsStringParserDocument::getMemberInArray(const rj::Pointer& pointerToArray, size_t index) const
 {
     auto* array = pointerToArray.Get(*this);
     if (array == nullptr || array->Size() <= index)
@@ -538,8 +543,16 @@ std::size_t NumberAsStringParserDocument::addToArray(const rj::Pointer& pointerT
     {
         array = &pointerToArray.Create(*this).SetArray();
     }
+    ModelExpect(array->IsArray(), pointerToString(pointerToArray) + " must be array");
     array->PushBack(std::move(object), GetAllocator());
     return array->Size() - 1;
+}
+
+std::size_t NumberAsStringParserDocument::addToArray(rj::Value& array, rj::Value&& object)
+{
+    ModelExpect(array.IsArray(), "Element must be array");
+    array.PushBack(std::move(object), GetAllocator());
+    return array.Size() - 1;
 }
 
 void NumberAsStringParserDocument::removeFromArray(const rj::Pointer& pointerToArray, std::size_t index)

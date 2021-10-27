@@ -1,9 +1,18 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
+#include "erp/fhir/Fhir.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
+
+#include "tools/ResourceManager.hxx"
 
 
 TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
@@ -718,4 +727,39 @@ TEST(MedicationDispenseTest, CorrectSchema)
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
         SchemaType::Gem_erxMedicationDispense));
+}
+
+TEST(MedicationDispenseTest, ERP_6610_optionalTime)
+{
+    static constexpr auto copyToOriginalFormat = &model::NumberAsStringParserDocumentConverter::copyToOriginalFormat;
+    using model::resource::ElementName;
+    namespace elements = model::resource::elements;
+
+    static const rapidjson::Pointer whenHandedOver(ElementName::path(elements::whenHandedOver));
+    static const rapidjson::Pointer whenPrepared(ElementName::path(elements::whenPrepared));
+
+    auto& resMan = ResourceManager::instance();
+    auto md = model::NumberAsStringParserDocument::fromJson(
+        resMan.getStringResource("test/fhir/conversion/medication_dispense.json"));
+
+    auto validate = [&] {
+        StaticData::getJsonValidator()->validate(copyToOriginalFormat(md), SchemaType::Gem_erxMedicationDispense);
+        auto xmlStr = Fhir::instance().converter().jsonToXmlString(md);
+        (void) model::MedicationDispense::fromXml(xmlStr, *StaticData::getXmlValidator(),
+                                                  SchemaType::Gem_erxMedicationDispense);
+    };
+
+
+    whenHandedOver.Set(md, md.makeString("2020-03-20T07:13:00+05:00"));
+    EXPECT_NO_THROW(validate());
+
+    whenHandedOver.Set(md, md.makeString("2020-03-20"));
+    EXPECT_NO_THROW(validate());
+
+
+    whenPrepared.Set(md, md.makeString("2020-03-20T07:13:00+05:00"));
+    EXPECT_NO_THROW(validate());
+
+    whenPrepared.Set(md, md.makeString("2020-03-20"));
+    EXPECT_NO_THROW(validate());
 }

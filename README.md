@@ -7,6 +7,10 @@ TEE = trusted execution environment or german VAU = vertrauenswürdige Ausführu
 
 See [here](doc/ProjectSetup.md)
 
+# Building project
+
+See [here](doc/Building.md) for details related to building the project and updating the necessary test resources including `TSL_valid.xml` and `BNA_valid.xml`.
+
 # The Outside World
 Communication with the outside world
 - incoming HTTP requests

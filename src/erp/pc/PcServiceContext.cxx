@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/pc/PcServiceContext.hxx"
 
 
@@ -35,14 +40,14 @@ namespace
 
 PcServiceContext::PcServiceContext(const Configuration& configuration,
                                    Database::Factory&& databaseFactory,
-                                   std::unique_ptr<DosHandler>&& dosHandler,
+                                   std::unique_ptr<RedisInterface>&& redisClient,
                                    std::unique_ptr<HsmPool>&& hsmPool,
                                    std::shared_ptr<JsonValidator> jsonValidator,
                                    std::shared_ptr<XmlValidator> xmlValidator,
                                    std::shared_ptr<TslManager> tslManager)
     : idp()
     , mDatabaseFactory(std::move(databaseFactory))
-    , mDosHandler(std::move(dosHandler))
+    , mDosHandler(std::make_unique<DosHandler>(std::move(redisClient)))
     , mHsmPool(std::move(hsmPool))
     , mKeyDerivation(*mHsmPool)
     , mJsonValidator(std::move(jsonValidator))
@@ -131,4 +136,10 @@ const SeedTimer* PcServiceContext::getPrngSeeder() const
 {
     Expect(mPrngSeeder, "mPrngSeeder must not be null");
     return mPrngSeeder.get();
+}
+
+
+ApplicationHealth& PcServiceContext::applicationHealth ()
+{
+    return mApplicationHealth;
 }

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef E_LIBRARY_UTIL_SIGNALHANDLER_HXX
 #define E_LIBRARY_UTIL_SIGNALHANDLER_HXX
 
@@ -17,18 +22,15 @@ class SignalHandler
 public:
     void registerSignalHandlers(const std::vector<int>& signals);
 
-    static SignalHandler& instance (void);
+    explicit SignalHandler (boost::asio::io_context& ioContext);
 
+    /// @brief trigger a process termination from anywhere
+    static void manualTermination();
+
+    int mSignal = 0;
 private:
-    std::shared_ptr<boost::asio::io_context> mIoContext;
-    boost::asio::io_service::work mWork;
+    boost::asio::io_context& mIoContext;
     boost::asio::signal_set mSignalSet;
-    std::thread mSignalThread;
-
-    SignalHandler (void);
-    ~SignalHandler (void);
-
-    static void run(std::shared_ptr<boost::asio::io_context> ioContext);
 };
 
 

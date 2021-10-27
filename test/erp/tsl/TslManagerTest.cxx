@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 #include "erp/tsl/TslManager.hxx"
@@ -58,13 +63,11 @@ namespace
         "/C=DE/O=arvato Systems GmbH NOT-VALID/CN=Komp-PKI OCSP-Signer7 TEST-ONLY",
         R"(/CN=DEMDS CA f\xC3\xBCr \xC3\x84rzte 4:PN/OU=Testumgebung/O=medisign GmbH/C=DE)",
         "/C=DE/O=IBM GmbH TEST-ONLY - NOT-VALID/CN=SGD1-IBM C.SGD-HSM.AUT TEST_ONLY",
-        "/C=DE/O=BITMARCK TECHNIK GMBH NOT-VALID/CN=BITMARCK OCSP SIGNER 3 TEST-ONLY",
         "/C=DE/O=ITSG GmbH TEST-ONLY - NOT-VALID/CN=SGD1-itsg.epa.telematik-test-Sig",
         "/C=DE/O=BITMARCK Technik GmbH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-RU-BITMARCK",
         "/C=DE/O=BITMARCK Technik GmbH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-TU-BITMARCK",
         R"(/C=DE/O=medisign GmbH/OU=Testumgebung/CN=DEMDS CA f\xC3\xBCr Zahn\xC3\xA4rzte2:PN)",
         "/C=DE/O=Pseudo Federal Network Agency/CN=Pseudo German Trusted List Signer 4",
-        "/C=DE/CN=Pseudo German Trusted List Signer 3/O=Pseudo Federal Network Agency",
         "/C=DE/O=dgnservice GmbH/OU=Testumgebung/CN=dgnservice OCSP 7 Type A:PN",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP1 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP2 TEST-ONLY",
@@ -226,7 +229,6 @@ namespace
         "/C=DE/O=BITMARCK TECHNIK GMBH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-QT-BITMARCK",
         "/C=DE/O=BITMARCK TECHNIK GMBH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-RT-BITMARCK",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=GEM.KOMP-CA50 TEST-ONLY",
-        "/C=DE/O=gematik GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=GEM.VPNK-CA50 TEST-ONLY",
         "/C=DE/O=achelos GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=ACHELOS.EGK-ALVI-CA20 TEST-ONLY",
         "/C=DE/O=achelos GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=ACHELOS.EGK-ALVI-CA21 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP19 TEST-ONLY",
@@ -238,7 +240,17 @@ namespace
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA204 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA205 TEST-ONLY",
         // The following certificate is explicitly inserted by test to allow to manipulate ocsp response validation
-        R"(/C=DE/O=gematik Musterkasse1GKVNOT-VALID/OU=999567890/OU=X110506918/SN=D\xC3\xA5mmer-Meningham/GN=Sam/title=Dr./CN=Dr. Sam D\xC3\xA5mmer-MeninghamTEST-ONLY)"
+        R"(/C=DE/O=gematik Musterkasse1GKVNOT-VALID/OU=999567890/OU=X110506918/SN=D\xC3\xA5mmer-Meningham/GN=Sam/title=Dr./CN=Dr. Sam D\xC3\xA5mmer-MeninghamTEST-ONLY)",
+        "/C=DE/CN=Pseudo German Trusted List Signer 5/O=Pseudo Federal Network Agency",
+        "/C=DE/CN=Pseudo German Trusted List Signer 6/O=Pseudo Federal Network Agency",
+        "/C=DE/O=medisign GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=MESIG.HBA-CA10 TEST-ONLY",
+        "/C=DE/O=medisign GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=MESIG.SMCB-CA10 TEST-ONLY",
+        "/C=DE/O=arvato Systems GmbH NOT-VALID/CN=GEM.CRL7 TEST-ONLY",
+        "/C=DE/O=BITMARCK TECHNIK GMBH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-TT-BITMARCK-01",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP21 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP22 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA21 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA22 TEST-ONLY"
     };
 }
 
@@ -335,11 +347,11 @@ public:
             }
         }
 
-        // the long life test BNetzA-VL contains exactly 856 certificates,
+        // the long life test BNetzA-VL contains more certificates,
         // but there are withdrawn certificates
         // and the test version contains some duplicate certificates,
-        // so there are only 181 unique not withdrawn certificates
-        ASSERT_EQ(182, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
+        // so there are only 185 unique not withdrawn certificates
+        ASSERT_EQ(186, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
     }
 };
 
@@ -650,7 +662,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongProducedAt_Fail)
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_PRODUCED_AT}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
-                           {TslErrorCode::OCSP_CHECK_REVOCATION_ERROR},
+                           {TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID},
                            HttpStatus::BadRequest);
 }
 
@@ -674,7 +686,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongThisUpdate_Fail)
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_THIS_UPDATE}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
-                           {TslErrorCode::OCSP_CHECK_REVOCATION_ERROR},
+                           {TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID},
                            HttpStatus::BadRequest);
 }
 

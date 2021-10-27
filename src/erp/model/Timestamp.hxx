@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_UTIL_TIMESTAMP_HXX
 #define ERP_UTIL_TIMESTAMP_HXX
 

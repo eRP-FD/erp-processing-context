@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "erp/model/Health.hxx"
 
@@ -28,7 +33,7 @@ TEST_F(ErpWorkflowTest, HealthCheck)
                                       {{Header::Host, client->getHostHttpHeader()},
                                        {Header::UserAgent, "vau-cpp-it-test"s},
                                        {Header::ContentType, "application/octet-stream"}},
-                                      HttpStatus::Unknown, false),
+                                      HttpStatus::Unknown),
                                {});
 
     auto outerResponse = client->send(outerRequest);

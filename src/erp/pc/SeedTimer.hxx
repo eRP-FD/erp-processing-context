@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SEEDTIMER_HXX
 #define ERP_PROCESSING_CONTEXT_SEEDTIMER_HXX
 
@@ -34,7 +39,7 @@ private:
     Seeder mSeeder;
     const AddEntropyFunction mAddEntropy;
     std::chrono::steady_clock::duration mInterval;
-    std::chrono::system_clock::time_point mLastUpdate;
+    std::atomic<std::chrono::system_clock::time_point> mLastUpdate;
 };
 
 

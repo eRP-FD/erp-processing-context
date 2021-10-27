@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/workflow-test/EndpointTestClient.hxx"
 
 #include "erp/ErpProcessingContext.hxx"
@@ -30,9 +35,12 @@ EndpointTestClient::EndpointTestClient()
     mMockDatabase = std::make_unique<MockDatabase>(*hsmPool);
 
     auto serviceContext = std::make_unique<PcServiceContext>(
-        Configuration::instance(), MockDatabaseProxy::createFactory(*mMockDatabase),
-        std::make_unique<DosHandler>(std::make_unique<MockRedisStore>()), std::move(hsmPool),
-        StaticData::getJsonValidator(), StaticData::getXmlValidator());
+        Configuration::instance(),
+        MockDatabaseProxy::createFactory(*mMockDatabase),
+        std::make_unique<MockRedisStore>(),
+        std::move(hsmPool),
+        StaticData::getJsonValidator(),
+        StaticData::getXmlValidator());
 
     if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_IDP_UPDATER_MOCK, false))
         IdpUpdater::create<MockIdpUpdater>(serviceContext->idp, serviceContext->getTslManager());

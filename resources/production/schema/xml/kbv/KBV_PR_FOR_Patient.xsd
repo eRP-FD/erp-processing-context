@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
   <xs:include schemaLocation="KBV_PR_FOR_HumanName.xsd"/>
+  <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
   <xs:element name="Patient" type="KBV_PR_FOR_Patient"/>
   <xs:complexType name="KBV_PR_FOR_Patient">
     <xs:sequence>
@@ -62,7 +68,7 @@
           <xs:element name="line" type="string" maxOccurs="2"/>
           <xs:element name="city" type="string" minOccurs="0" />
           <xs:element name="postalCode" type="string" minOccurs="0" />
-          <xs:element name="country" type="string" minOccurs="0"/>
+          <xs:element name="country" type="CountryListType" minOccurs="0"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>

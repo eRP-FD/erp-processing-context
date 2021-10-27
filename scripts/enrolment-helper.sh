@@ -1,6 +1,11 @@
 #!/bin/bash
 
-usage() { 
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
+usage() {
   echo -e "\nUsage: $0 pc1|pc2|health1|health2 [<blob_type>]\n       <blob_type> only required for pc1/pc2"
 }
 

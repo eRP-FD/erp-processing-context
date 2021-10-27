@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/mock/MockRedisStore.hxx"
 
 bool MockRedisStore::exists(const std::string_view& key)

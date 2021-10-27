@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 #include "erp/crypto/CadesBesSignature.hxx"
@@ -13,6 +18,7 @@
 #include "erp/util/SafeString.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/UrlRequestSenderMock.hxx"
+#include "test/util/CertificateDirLoader.h"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestConfiguration.hxx"
@@ -82,9 +88,10 @@ TEST_F(CadesBesSignatureTest, roundtrip)
         ASSERT_NO_THROW(signedText = Base64::encode(cms.get()));
     }
     {
-        std::initializer_list<Certificate> certs{
-            Certificate::fromPemString(TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_GEM_RCA3)),
-            Certificate::fromPemString(TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_GEM_KOMP_CA10))};
+        const auto& testConfig = TestConfiguration::instance();
+        const auto& cadesBesTrustedCertDir =
+            testConfig.getOptionalStringValue(TestConfigurationKey::TEST_CADESBES_TRUSTED_CERT_DIR, "test/cadesBesSignature/certificates");
+        auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
         CadesBesSignature cms{certs, signedText};
         EXPECT_EQ(cms.payload(), myText);
     }
@@ -265,7 +272,7 @@ TEST_F(CadesBesSignatureTest, missingCertificateAttributesDetected)
 }
 
 
-TEST_F(CadesBesSignatureTest, validateQesG0)
+TEST_F(CadesBesSignatureTest, validateQesG0NoOcspProxy)
 {
     std::string_view myText = "The text to be signed";
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
@@ -284,6 +291,47 @@ TEST_F(CadesBesSignatureTest, validateQesG0)
         {
             {"http://ocsp.test.ibm.de/",
              {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    TslTestHelper::addCaCertificateToTrustStore(certCA, *manager, TslMode::BNA);
+
+    std::string signedText;
+    {
+        CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
+        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+    }
+    {
+        CadesBesSignature cadesBesSignature{signedText, manager.get()};
+        EXPECT_EQ(cadesBesSignature.payload(), myText);
+    }
+}
+
+
+TEST_F(CadesBesSignatureTest, validateQesG0WithOcspProxy)
+{
+    std::string_view myText = "The text to be signed";
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
+        FileHelper::readFileAsString(
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-Certificate.prv.pem")});
+
+    auto cert = Certificate::fromPemString(FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-Certificate.pem"));
+
+    auto certCA = Certificate::fromPemString(FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-CertificateCA.pem"));
+
+    // if proxy URL is set, it must be used for the certificate OCSP request,
+    // because OCSP URL from TEST Certificate AIA Extension is not mapped in TSL
+    const std::string ocspProxyUrl = "http://ocsp.proxy.ibm.de/";
+    const std::string ocspUrlFromCert = "http://ocsp.test.ibm.de/";
+    // The Gematik TI proxy works in the way that the original ocsp url is appended to the
+    // the proxy url, e.g. "http://ocsp.proxy.ibm.de/http://ocsp.test.ibm.de/"
+    EnvironmentVariableGuard guard("ERP_TSL_TI_OCSP_PROXY_URL", ocspProxyUrl);
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
+        {},
+        {},
+        {
+            {ocspProxyUrl + ocspUrlFromCert,
+                {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     TslTestHelper::addCaCertificateToTrustStore(certCA, *manager, TslMode::BNA);
 

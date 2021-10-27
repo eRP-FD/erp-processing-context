@@ -1,5 +1,11 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "Worker.hxx"
 
+#include "erp/util/ExceptionHelper.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"
 
@@ -12,9 +18,13 @@ void fatalTermination()
     TLOG(ERROR) << ">>>>> shutting down!                                                        <<<<<";
     // We have to shut down the process in this case, because we don't know what is the state of the ioContext.
     // Furthermore leaving the process live with one thread less could eventually end up in a useless process.
-    TerminationHandler::instance().notifyTermination(true);
+    TerminationHandler::instance().terminate();
 }
 }
+
+
+thread_local std::atomic_size_t erp::server::Worker::finishedTaskCount = 0;
+thread_local std::optional<std::string> erp::server::Worker::tlogContext{};
 
 void erp::server::Worker::run(boost::asio::io_context& ioContext)
 {
@@ -23,16 +33,22 @@ void erp::server::Worker::run(boost::asio::io_context& ioContext)
         while (not ioContext.stopped())
         {
             ioContext.run_one_for(std::chrono::milliseconds(100));
+            ++finishedTaskCount;
+            tlogContext.reset();
+
             runExtraWork();
         }
     }
-    catch(const std::exception& ex)
-    {
-        TVLOG(1) << "std::exception::what(): " << ex.what();
-        fatalTermination();
-    }
     catch(...)
     {
+        ExceptionHelper::extractInformation(
+            [&]
+                (const std::string& details, const std::string& location)
+            {
+                TLOG(ERROR) << "Unexpected exception, details=" << details << " location=" << location;
+            },
+            std::current_exception());
+
         fatalTermination();
     }
     TVLOG(1) << "finished processing ioContext";
@@ -51,8 +67,11 @@ void erp::server::Worker::runExtraWork()
         std::lock_guard guard{mExtraWorkMutex};
         extraWorkList.swap(mExtraWork);
     }
+
     for (auto&& extraWork: extraWorkList)
     {
         extraWork();
+        ++finishedTaskCount;
+        tlogContext.reset();
     }
 }

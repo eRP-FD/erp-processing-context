@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/idp/Idp.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/TLog.hxx"
@@ -31,8 +36,8 @@ void Idp::resetCertificate(void)
 
 void Idp::healthCheck() const
 {
-    static const auto updateInterval =
-        std::chrono::minutes(Configuration::instance().getIntValue(ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES));
+    static const auto maxLastUpdateInterval =
+        std::chrono::hours(Configuration::instance().getIntValue(ConfigurationKey::IDP_CERTIFICATE_MAX_AGE_HOURS));
 
     std::lock_guard lock(mMutex);
 
@@ -42,7 +47,7 @@ void Idp::healthCheck() const
     }
 
     const auto now = std::chrono::system_clock::now();
-    if (mLastUpdate + updateInterval * 1.1 < now)
+    if (mLastUpdate + maxLastUpdateInterval < now)
     {
         throw std::runtime_error("last update is too old");
     }

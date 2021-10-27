@@ -1,5 +1,11 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/TcpStream.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/TLog.hxx"
 
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -18,7 +24,18 @@ TcpStream::TcpStream (
 {
     Expect(connectionTimeoutSeconds > 0, "Connection timeout must be greater than 0.");
     boost::asio::ip::tcp::resolver resolver(*mIoContext);
-    const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp> resolverResults = resolver.resolve(hostname, port);
+    boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp> resolverResults;
+    try
+    {
+        resolverResults = resolver.resolve(hostname, port);
+    }
+    catch (const boost::system::system_error& e)
+    {
+        // We observed some instability when we try to resolve especially OCSP hosts which should
+        // not happen normally. We catch the observed boost exception and try it again at least once.
+        TLOG(ERROR)  << "resolving hostname failed '" << hostname << ":" << port << "', try again";
+        resolverResults = resolver.resolve(hostname, port);
+    }
 
     mTcpStream->expires_after(std::chrono::seconds(connectionTimeoutSeconds));
 
@@ -56,4 +73,9 @@ std::size_t TcpStream::read_some(
 #endif
 
     return count;
+}
+
+void TcpStream::expiresAfter(const std::chrono::steady_clock::duration& duration)
+{
+    mTcpStream->expires_after(duration);
 }

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 #include "test/erp/tsl/TslTestHelper.hxx"

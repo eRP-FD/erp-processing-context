@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 cmake_minimum_required(VERSION 3.16)
 
 project(erp-processing-context)
@@ -133,6 +138,7 @@ list(
         model/ModelException.cxx
         model/NumberAsStringParserDocument.cxx
         model/NumberAsStringParserWriter.cxx
+        model/OperationOutcome.cxx
         model/Parameters.cxx
         model/Patient.cxx
         model/PrescriptionId.cxx
@@ -169,6 +175,8 @@ list(
         server/response/ServerResponseWriter.cxx
         server/response/ValidatedServerResponse.cxx
         server/session/ServerSession.cxx
+        server/session/AsynchronousServerSession.cxx
+        server/session/SynchronousServerSession.cxx
         service/AuditDataCollector.cxx
         service/AuditEventCreator.cxx
         service/AuditEventTextTemplates.cxx
@@ -240,11 +248,14 @@ list(
         util/SignalHandler.cxx
         util/String.cxx
         util/TerminationHandler.cxx
+        util/ThreadNames.cxx
         util/Timer.cxx
         util/TimerJobBase.cxx
-        util/ThreadNames.cxx
+        util/TLog.cxx
         util/UrlHelper.cxx
         util/Uuid.cxx
+        util/health/ApplicationHealth.cxx
+        util/health/HealthCheck.cxx
         util/search/PagingArgument.cxx
         util/search/SearchArgument.cxx
         util/search/SearchParameter.cxx

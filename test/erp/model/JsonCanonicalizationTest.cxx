@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/erp/model/JsonCanonicalizationTest.hxx"
 #include "erp/fhir/Fhir.hxx"
 #include "erp/model/Communication.hxx"

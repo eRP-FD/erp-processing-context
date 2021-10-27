@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <rapidjson/pointer.h>
 #include "erp/service/task/ActivateTaskHandler.hxx"
 
@@ -26,7 +31,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
 
-    const auto prescriptionId = parseId(session.request);
+    const auto prescriptionId = parseId(session.request, session.accessLog);
 
     auto databaseHandle = session.database();
     auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
@@ -45,7 +50,8 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_19024_01.finish();
 
     A_19024_01.start("check status draft");
-    ErpExpect(taskStatus == model::Task::Status::draft, HttpStatus::Forbidden, "Task not in status draft");
+    ErpExpect(taskStatus == model::Task::Status::draft, HttpStatus::Forbidden,
+              "Task not in status draft but in status " + std::string(model::Task::StatusNames.at(taskStatus)));
     A_19024_01.finish();
 
     const auto parameterResource = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::ActivateTaskParameters);
@@ -78,6 +84,10 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
                     prescription, session.serviceContext.getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle);
             }
             return model::Bundle::fromJson(std::move(document));
+        }
+        catch (const ErpException& )
+        {
+            throw; // should contain diagnostics data, simply rethrow;
         }
         catch (const std::runtime_error& er)
         {
@@ -120,7 +130,16 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto patients = prescriptionBundle.getResourcesByType<model::Patient>("Patient");
     ErpExpect(patients.size() == 1, HttpStatus::BadRequest,
               "Expected exactly one Patient in prescription bundle, got: " + std::to_string(patients.size()));
-    task->setKvnr(patients[0].getKvnr());
+    std::string kvnr;
+    try
+    {
+        kvnr = patients[0].getKvnr();
+    }
+    catch (const model::ModelException& ex)
+    {
+        ErpFail(HttpStatus::BadRequest, ex.what());
+    }
+    task->setKvnr(kvnr);
     A_19127.finish();
 
     A_19128.start("status transition draft -> ready");
@@ -139,7 +158,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     // Collect audit data:
     session.auditDataCollector()
         .setEventId(model::AuditEventId::POST_Task_activate)
-        .setInsurantKvnr(patients[0].getKvnr())
+        .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::update)
         .setPrescriptionId(prescriptionId);
 }

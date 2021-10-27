@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/task/RejectTaskHandler.hxx"
 
 #include "erp/ErpRequirements.hxx"
@@ -18,7 +23,7 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
-    const auto prescriptionId = parseId(session.request);
+    const auto prescriptionId = parseId(session.request, session.accessLog);
 
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
@@ -31,7 +36,8 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
 
     A_19171.start("Check that Task is in progress");
-    ErpExpect(taskStatus == model::Task::Status::inprogress, HttpStatus::Forbidden, "Task not in status in progress");
+    ErpExpect(taskStatus == model::Task::Status::inprogress, HttpStatus::Forbidden,
+              "Task not in status in progress, is: " + std::string(model::Task::StatusNames.at(taskStatus)));
     A_19171.finish();
 
     A_19171.start("Check secret");

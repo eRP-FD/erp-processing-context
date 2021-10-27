@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_TOOLS_RESOURCEMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_TOOLS_RESOURCEMANAGER_HXX
 
@@ -7,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <rapidjson/document.h>
+#include <shared_mutex>
 #include <string>
 #include <string_view>
 
@@ -29,7 +35,9 @@ public:
     ResourceManager& operator =(ResourceManager&&) = delete;
 private:
     ResourceManager();
+    const std::string& getStringResource(const std::string_view& resourceFile, std::unique_lock<std::shared_mutex>&);
 
+    std::shared_mutex mutex;
     std::map<std::string, std::string> stringResources;
     std::map<std::string, shared_EVP_PKEY> publicKeyResources;
     std::map<std::string, rapidjson::Document> jsonResources;

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef E_LIBRARY_COMMON_HEADER_HXX
 #define E_LIBRARY_COMMON_HEADER_HXX
 
@@ -37,8 +42,7 @@ public:
         std::string&& target,
         int version,
         keyValueMap_t&& header,
-        HttpStatus statusCode,
-        bool keepAlive);
+        HttpStatus statusCode);
 
     HttpMethod method (void) const;
     void setMethod (HttpMethod method);
@@ -62,6 +66,7 @@ public:
     HttpStatus status (void) const;
     void setStatus (HttpStatus status);
     bool keepAlive (void) const;
+    void setKeepAlive(bool keepAlive);
 
     /// @return MimeType from Accept header field, if present
     std::optional<AcceptMimeType> getAcceptMimeType(std::string_view mimeType) const;
@@ -112,6 +117,7 @@ public:
     static const std::string ContextStatus;
     static const std::string ExternalInterface;
     static const std::string Host;
+    static const std::string KeepAlive;
     static const std::string Location;
     static const std::string Server;
     static const std::string Session;
@@ -143,7 +149,6 @@ private:
     int mVersion;
     keyValueMap_t mHeader;
     HttpStatus mStatusCode;
-    bool mKeepAlive;
     std::vector<AcceptMimeType> mAcceptMimeTypes;
 };
 

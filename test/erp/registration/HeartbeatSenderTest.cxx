@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/registration/HeartbeatSender.hxx"
 #include "erp/util/TLog.hxx"
 #include "test/mock/MockTerminationHandler.hxx"
@@ -82,11 +87,6 @@ class HeartbeatSenderTest : public testing::Test
 public:
     void SetUp() override
     {
-        MockTerminationHandler::setupForProduction();
-    }
-
-    void TearDown() override
-    {
         MockTerminationHandler::setupForTesting();
     }
 };
@@ -100,8 +100,8 @@ TEST_F(HeartbeatSenderTest, Success)
 
     sender->start();
     std::this_thread::sleep_for(std::chrono::seconds(4));
-    MockTerminationHandler::instance().notifyTermination(false);
-    MockTerminationHandler::instance().waitForTerminated();
+    MockTerminationHandler::instance().notifyTerminationCallbacks(false);
+    dynamic_cast<MockTerminationHandler&>(MockTerminationHandler::instance()).waitForTerminated();
 
     ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::deregistered);
 }
@@ -130,7 +130,7 @@ TEST_F(HeartbeatSenderTest, FailHeartbeat)
     sender->start();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     registrationManager.setSimulateServerDown(true);
-    std::this_thread::sleep_for(std::chrono::seconds(4));
+    dynamic_cast<MockTerminationHandler&>(MockTerminationHandler::instance()).waitForTerminated();
 
     ASSERT_TRUE(registrationManager.deregistrationCalled());
     ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::registered);
@@ -147,8 +147,8 @@ TEST_F(HeartbeatSenderTest, FailDeregistration)
     sender->start();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     registrationManager.setSimulateServerDown(true);
-    MockTerminationHandler::instance().notifyTermination(false);
-    MockTerminationHandler::instance().waitForTerminated();
+    MockTerminationHandler::instance().notifyTerminationCallbacks(false);
+    dynamic_cast<MockTerminationHandler&>(MockTerminationHandler::instance()).waitForTerminated();
 
     ASSERT_TRUE(registrationManager.deregistrationCalled());
     ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::registered);

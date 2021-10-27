@@ -1,9 +1,10 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/response/ResponseBuilder.hxx"
-
-#include "erp/model/Bundle.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/ErpRequirements.hxx"
-
+#include "erp/model/Resource.hxx"
 #include "erp/common/MimeType.hxx"
 
 #include <unordered_set>
@@ -46,12 +47,12 @@ ResponseBuilder& ResponseBuilder::xmlBody (const std::string& body)
 }
 
 
-ResponseBuilder& ResponseBuilder::body (const bool useJson, const model::Bundle& bundle)
+ResponseBuilder& ResponseBuilder::body (const bool useJson, const model::ResourceBase& resource)
 {
     if (useJson)
-        jsonBody(bundle.serializeToJsonString());
+        jsonBody(resource.serializeToJsonString());
     else
-        xmlBody(bundle.serializeToXmlString());
+        xmlBody(resource.serializeToXmlString());
     return *this;
 }
 

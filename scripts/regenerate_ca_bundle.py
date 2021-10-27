@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-
+#
+#  (C) Copyright IBM Deutschland GmbH 2021
+#  (C) Copyright IBM Corp. 2021
+#
 # This script recreates the file src/erp/client/RootCertificates.hxx.
 #
 # It follows this architectural decision:

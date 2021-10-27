@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_VAUREQUESTHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_VAUREQUESTHANDLER_HXX
 
@@ -45,13 +50,13 @@ private:
     static std::unique_ptr<InnerTeeRequest> decryptRequest(PcSessionContext& session);
 
     static bool checkProfessionOID(
-        const JWT& accessToken,
+        const std::unique_ptr<ServerRequest>& innerRequest,
         const RequestHandlerInterface* handler,
         ServerResponse& response,
         AccessLog& log);
     static void processException(
         const std::exception_ptr& exception,
-        const std::optional<std::string>& externalInterface,
+        const std::unique_ptr<ServerRequest>& innerRequest,
         ServerResponse& innerResponse,
         PcSessionContext& outerSession);
     static void handleKeepAlive (

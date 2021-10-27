@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_ACCESSLOG_HXX
 #define ERP_PROCESSING_CONTEXT_ACCESSLOG_HXX
 
@@ -24,7 +29,7 @@ class AccessLog
 {
 public:
     AccessLog (void);
-    AccessLog (std::ostream& os);
+    explicit AccessLog (std::ostream& os);
     ~AccessLog (void);
 
     void setInnerRequestOperation (const std::string_view& operation);
@@ -46,6 +51,13 @@ public:
     void error (std::string_view message);
 
     /**
+     * Add an error detail message based on the given exception.
+     * When called more than once then the individual message are concatenated, separated
+     * by ';'.
+     */
+    void error (const std::string_view message, std::exception_ptr exception);
+
+    /**
      * There are circumstances where an AccessLog object is created but output from it is undesirable.
      * The discard() method prevents any output.
      */
@@ -65,11 +77,22 @@ public:
 
     void location(const FileNameAndLineNumber& loc);
 
+    template<typename ValueType>
+    void keyValue (const std::string_view key, ValueType value);
+
+    void prescriptionId(const std::string_view id);
+
 private:
     std::optional<std::chrono::system_clock::time_point> mStartTime;
     JsonLog mLog;
     std::string mError;
 };
 
+
+template<typename ValueType>
+void AccessLog::keyValue (const std::string_view key, ValueType value)
+{
+    mLog.keyValue(key, std::forward<ValueType>(value));
+}
 
 #endif

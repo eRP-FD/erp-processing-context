@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "CommunicationPostHandler.hxx"
 
 #include "erp/database/Database.hxx"
@@ -68,6 +73,8 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         ErpExpect(task.has_value(), HttpStatus::BadRequest, "Task for prescription id " + prescriptionId.toString() + " is missing");
         std::optional<std::string_view> taskKvnr = task->kvnr();
         ErpExpect(taskKvnr.has_value(), HttpStatus::BadRequest, "Referenced task does not contain a KVNR");
+
+        session.accessLog.prescriptionId(prescriptionId.toString());
 
         // Check for valid format of KNVR of recipient or Telematic ID
         validateRecipient(messageType, recipient);

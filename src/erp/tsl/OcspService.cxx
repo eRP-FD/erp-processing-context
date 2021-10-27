@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/tsl/OcspService.hxx"
 
 #include "erp/client/HttpClient.hxx"
@@ -126,7 +131,8 @@ namespace
             VLOG(2) << "OCSP response, status=" << response.getHeader().status()
                     << " (base-encoded):\n" << Base64::encode(response.getBody()) << "\n\n";
 
-            Expect(response.getHeader().status() == HttpStatus::OK, "OCSP call failed!");
+            Expect(response.getHeader().status() == HttpStatus::OK,
+                   std::string("OCSP call failed, status=") + toString(response.getHeader().status()));
 
             return response.getBody();
         }
@@ -395,7 +401,7 @@ namespace
 
             TslExpect4(checkProducedAt(producedAt, now, gracePeriod),
                        "OCSP producedAt is not valid",
-                       TslErrorCode::OCSP_CHECK_REVOCATION_ERROR,
+                       TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
                        trustStore.getTslMode());
 
             X509* signer{checkSignatureAndGetSigner(*basicResponse)};
@@ -428,7 +434,7 @@ namespace
 
             TslExpect4(checkValidity(thisUpdate, nextUpdate, now, gracePeriod),
                        "OCSP update time is not plausible.",
-                       TslErrorCode::OCSP_CHECK_REVOCATION_ERROR,
+                       TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
                        trustStore.getTslMode());
             // GEMREQ-end GS-A_5215
 

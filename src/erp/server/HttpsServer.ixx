@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/HttpsServer.hxx"
 
 #include "erp/enrolment/EnrolmentServiceContext.hxx"
@@ -76,17 +81,11 @@ HttpsServer<ServiceContextType>::HttpsServer (
         mServiceContext
     )->run();
     LOG(INFO) << "listening on port " << port;
-
-    mTerminationHandlerId = TerminationHandler::instance().registerCallback(
-        [this](auto){mThreadPool.shutDown();});
 }
 
 
 template<class ServiceContextType>
-HttpsServer<ServiceContextType>::~HttpsServer (void)
-{
-    mThreadPool.shutDown();
-}
+HttpsServer<ServiceContextType>::~HttpsServer (void) = default;
 
 
 template<class ServiceContextType>

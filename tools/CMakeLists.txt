@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 set(ERP_TOOL_LIB_SOURCES
     jwt/JwtBuilder.cxx
     ResourceManager.cxx

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/request/ValidatedClientRequest.hxx"
 
 #include <gtest/gtest.h>
@@ -10,8 +15,7 @@ TEST(ClientRequestTest, Construct)
         ClientRequest request(
             Header(HttpMethod::POST, "/target/path", Header::Version_1_1,
                    { {Header::TransferEncoding, "chunked"} },
-                   HttpStatus::Processing,  // code will be ignored because of http method;
-                   false),
+                   HttpStatus::Processing),  // code will be ignored because of http method;
             body);
         ASSERT_TRUE(request.getHeader().hasHeader(Header::ContentLength));
         ASSERT_EQ(request.getHeader().header(Header::ContentLength).value(), std::to_string(body.size()));
@@ -19,7 +23,7 @@ TEST(ClientRequestTest, Construct)
     }
     {
         ClientRequest request(
-            Header(HttpMethod::POST, "/target/path", Header::Version_1_1, {}, HttpStatus::Unknown, false),
+            Header(HttpMethod::POST, "/target/path", Header::Version_1_1, {}, HttpStatus::Unknown),
             body);
         ASSERT_NO_THROW(ValidatedClientRequest{request});
         request.setHeader(Header::TransferEncoding, "compress");

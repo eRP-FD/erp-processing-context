@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
   <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
   <xs:element name="MedicationRequest" type="KBV_PR_ERP_Prescription"/>
@@ -12,7 +17,7 @@
       <xs:element name="intent" type="KBV_PR_ERP_Prescription.Intent"/>
       <xs:element name="medicationReference" type="KBV_PR_ERP_Generics.SimpleReference"/>
       <xs:element name="subject" type="KBV_PR_ERP_Generics.SimpleReference"/>
-      <xs:element name="authoredOn" type="dateTime"/>
+      <xs:element name="authoredOn" type="KBV_PR_ERP_Prescription.date"/>
       <xs:element name="requester" type="KBV_PR_ERP_Generics.SimpleReference"/>
       <xs:element name="insurance" type="KBV_PR_ERP_Generics.SimpleReference"/>
       <xs:element name="note" minOccurs="0" type="KBV_PR_ERP_Prescription.Annotation"/>
@@ -21,6 +26,19 @@
       <xs:element name="substitution" type="KBV_PR_ERP_Prescription.Substitution"/>
     </xs:sequence>
   </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.date">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="KBV_PR_ERP_Prescription.date-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="KBV_PR_ERP_Prescription.date-primitive">
+    <xs:restriction base="string-primitive">
+      <xs:length value="10"/>
+      <xs:pattern value="\d{4}-\d{2}-\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
   <xs:complexType name="KBV_PR_ERP_Prescription.Meta">
     <xs:complexContent>
       <xs:extension base="Element">

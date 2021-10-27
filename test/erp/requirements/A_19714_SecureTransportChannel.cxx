@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/util/ServerTestBase.hxx"
 
 #include "erp/crypto/EllipticCurve.hxx"
@@ -23,7 +28,7 @@
 
 class A_19714_Test : public ServerTestBase
 {
-    virtual void SetUp() override
+    void SetUp() override
     {
         tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
@@ -31,7 +36,7 @@ class A_19714_Test : public ServerTestBase
         ServerTestBase::SetUp();
     }
 
-    virtual void TearDown() override
+    void TearDown() override
     {
         tslEnvironmentGuard.reset();
         ServerTestBase::TearDown();
@@ -59,9 +64,9 @@ TEST_F(A_19714_Test, getCommunicationById_failForMissingObject)
     // Verify and decrypt the outer response. Also the generic part of the inner response.
     auto innerResponse = verifyOuterResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
-    ASSERT_FALSE(innerResponse.getHeader().header(Header::ContentType).has_value());
+    ASSERT_TRUE(innerResponse.getHeader().header(Header::ContentType).has_value()); // error response
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentLength));
-    ASSERT_EQ(innerResponse.getHeader().contentLength(), 0);
+    ASSERT_GT(innerResponse.getHeader().contentLength(), 0);
 }
 
 
@@ -88,8 +93,7 @@ TEST_F(A_19714_Test, getCommunicationById_failForInvalidJWT)
             "/VAU/0",
             Header::Version_1_1,
             {},
-            HttpStatus::Unknown,
-            false),
+            HttpStatus::Unknown),
         mTeeProtocol.createRequest(
             MockCryptography::getEciesPublicKeyCertificate(),
             innerRequest,

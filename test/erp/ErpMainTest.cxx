@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 #include "erp/ErpMain.hxx"
@@ -5,6 +10,8 @@
 #include "erp/client/HttpsClient.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/database/RedisClient.hxx"
+#include "erp/pc/PcServiceContext.hxx"
 #include "erp/registration/RegistrationManager.hxx"
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/ThreadNames.hxx"
@@ -31,7 +38,7 @@
  *
  *  All tests start the application, wait until it has initialized and is listening for incoming requests and then
  *  stop the application.
- *  They differ only in *how* they stop the application. One calls TerminationHandler.notifyTermination() while the
+ *  They differ only in *how* they stop the application. One calls TerminationHandler.notifyTerminationCallbacks() while the
  *  others raise different signals.
  */
 
@@ -111,10 +118,29 @@ public:
                 factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
 
                 factories.tslManagerFactory =
-                    [] (const std::shared_ptr<XmlValidator>&)
-                    { return std::shared_ptr<TslManager>(); };
+                    [] (auto)
+                    {
+                    //  return std::shared_ptr<TslManager>();
+                        return TslTestHelper::createTslManager<TslManager>();
+                    };
 
-                ErpMain::runApplication(9191, std::move(factories), state);
+                factories.redisClientFactory =
+                    []
+                     {
+                        return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
+                            ? std::unique_ptr<RedisInterface>(new MockRedisStore())
+                            : std::unique_ptr<RedisInterface>(new RedisClient());
+                    };
+
+                ErpMain::runApplication(
+                    9191,
+                    std::move(factories),
+                    state,
+                    [](PcServiceContext& serviceContext)
+                    {
+                        // Set the certificate explicitly as a simple mock of the idp updater.
+                        serviceContext.idp.setCertificate(Certificate(StaticData::idpCertificate));
+                    });
             });
 
         // Initialization of the processing context takes some time. Wait until all is setup and the PC is waiting for
@@ -160,7 +186,7 @@ public:
         {
             client.send(
                 ClientRequest(
-                    Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown, false),
+                    Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown),
                     ""));
             // Expecting an exception
             FAIL();
@@ -180,7 +206,7 @@ public:
         HttpsClient client ("127.0.0.1", 9090, 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
         const auto response = client.send(
             ClientRequest(
-                Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown, false),
+                Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown),
                 ""));
 
         ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);
@@ -192,7 +218,7 @@ public:
         HttpsClient client ("127.0.0.1", 9191, 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
         const auto response = client.send(
             ClientRequest(
-                Header(HttpMethod::POST, "/", 11, {}, HttpStatus::Unknown, false),
+                Header(HttpMethod::POST, "/", 11, {}, HttpStatus::Unknown),
                 ""));
 
         ASSERT_EQ(response.getHeader().status(), HttpStatus::NotFound);
@@ -201,34 +227,18 @@ public:
 
 
 
-TEST_F(ErpMainTest, runProcessingContext_notifyTermination)
+TEST_F(ErpMainTest, runProcessingContext_manualTermination)
 {
     runApplication(
-        []{TerminationHandler::instance().notifyTermination(false);});
+        []{ TerminationHandler::instance().terminate();});
     SUCCEED();
 }
 
 
-TEST_F(ErpMainTest, DISABLED_runProcessingContext_SIGABRT)
-{
-    runApplication(
-        []{std::raise(SIGABRT);});
-    SUCCEED();
-}
-
-
-TEST_F(ErpMainTest, DISABLED_runProcessingContext_SIGTERM)
+TEST_F(ErpMainTest, runProcessingContext_SIGTERM)
 {
     runApplication(
         []{std::raise(SIGTERM);});
-    SUCCEED();
-}
-
-
-TEST_F(ErpMainTest, DISABLED_runProcessingContext_SIGSEGV)
-{
-    runApplication(
-        []{std::raise(SIGSEGV);});
     SUCCEED();
 }
 

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/enrolment/EnrolmentHelper.hxx"
 #include "erp/enrolment/EnrolmentModel.hxx"
 #include "erp/common/Constants.hxx"
@@ -202,15 +207,16 @@ Header TpmProxyApi::createHeader (
     const HttpMethod method,
     std::string&& target)
 {
-    return Header(
+    auto result = Header(
         method,
         std::move(target),
         Header::Version_1_1,
         {
             {Header::Authorization, "Basic " + Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS)}
         },
-        HttpStatus::Unknown,
-        false);
+        HttpStatus::Unknown);
+    result.setKeepAlive(false);
+    return result;
 }
 
 

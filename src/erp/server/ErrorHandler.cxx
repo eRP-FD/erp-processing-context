@@ -1,7 +1,12 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "ErrorHandler.hxx"
 
 #include "../util/ServerException.hxx"
-#include "erp/util/GLog.hxx"
+#include "erp/util/TLog.hxx"
 
 #include <boost/asio/ssl/error.hpp>
 
@@ -13,18 +18,20 @@ ErrorHandler::ErrorHandler (boost::beast::error_code ec_)
 }
 
 
-void ErrorHandler::throwOnServerError (const std::string& message)
+void ErrorHandler::throwOnServerError (const std::string& message, std::optional<FileNameAndLineNumber> fileAndLineNumber)
 {
     switch(ec.value())
     {
-        case boost::asio::ssl::error::stream_truncated:
         case 0:
             return;
 
         default:
             std::stringstream s;
             s << message << " : " << ec.message();
-            throw ServerException(s.str());
+            if (fileAndLineNumber.has_value())
+                throw ExceptionWrapper<ServerException>::create(std::move(fileAndLineNumber.value()), s.str());
+            else
+                throw ServerException(s.str());
     }
 }
 
@@ -54,7 +61,7 @@ void ErrorHandler::reportServerError (const std::string& message)
         case 0:
             return;
         default:
-            LOG(ERROR) << message.c_str() << ": " << ec.message().c_str();
+            TLOG(ERROR) << message.c_str() << ": " << ec.message().c_str();
             break;
     }
 }

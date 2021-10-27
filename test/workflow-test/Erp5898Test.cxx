@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/request/ClientRequestWriter.hxx"
 #include "erp/client/request/ValidatedClientRequest.hxx"
 #include "erp/crypto/AesGcm.hxx"

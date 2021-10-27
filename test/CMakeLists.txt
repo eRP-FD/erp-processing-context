@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 project(test)
 
 include(GoogleTest)
@@ -17,10 +22,13 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp5874Test.cxx
         workflow-test/Erp5895Test.cxx
         workflow-test/Erp5898Test.cxx
+        workflow-test/Erp6590Test.cxx
+        workflow-test/Erp6619Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
         workflow-test/ErpWorkflowTestFixture.cxx
         workflow-test/HttpsTestClient.cxx
+        util/CertificateDirLoader.cxx
         util/TestConfiguration.cxx
         util/EnvironmentVariableGuard.hxx
         util/BlobDatabaseHelper.cxx
@@ -129,6 +137,7 @@ list(
         erp/model/JsonMaintainNumberPrecisionTestModel.cxx
         erp/model/MedicationDispenseTest.cxx
         erp/model/MetaDataTest.cxx
+        erp/model/OperationOutcomeTest.cxx
         erp/model/ParameterTest.cxx
         erp/model/PatientTest.cxx
         erp/model/PrescriptionIdTest.cxx
@@ -147,7 +156,9 @@ list(
         erp/server/request/ServerRequestTest.cxx
         erp/server/response/ServerResponseTest.cxx
         erp/server/response/ServerResponseWriterTest.cxx
+        erp/server/response/ValidatedServerResponseTest.cxx
         erp/pc/SeedTimerTest.cxx
+        erp/server/KeepAliveTest.cxx
         erp/server/ThreadPoolTest.cxx
         erp/service/AuditEventCreatorTest.cxx
         erp/service/CommunicationDeleteHandlerTest.cxx
@@ -225,6 +236,7 @@ list(
         tools/JwtBuilderTest.cxx
         util/ServerTestBase.cxx
         util/ServerTestBaseAutoCleanup.cxx
+        util/StaticData.cxx
         mock/UrlRequestSenderMock.cxx
         workflow-test/EndpointTestClient.cxx
         workflow-test/Erp5822Test.cxx # contains invalid KBV bundle, can only run in erp-test

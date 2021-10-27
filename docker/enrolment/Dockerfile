@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.9 as build
 
 # ensure strip command is available

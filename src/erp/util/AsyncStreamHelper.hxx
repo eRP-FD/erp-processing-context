@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_UTIL_ASYNCSTREAMHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_UTIL_ASYNCSTREAMHELPER_HXX
 
@@ -113,9 +118,10 @@ boost::system::error_code AsyncStreamHelper::connect(
     stream.async_connect(
         resolverResults,
         [&ec](const boost::system::error_code& error,
-                    auto const&)
+                    const boost::asio::ip::tcp::endpoint& endpoint)
         {
-          ec = error;
+            TVLOG(2) << "connected to: " << endpoint;
+            ec = error;
         }
     );
 

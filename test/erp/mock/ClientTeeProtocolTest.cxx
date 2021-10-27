@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 /**
  * Note that this is a test for the client side of the TEE protocol which is not part of the production code tree.
  * But as it is an important part of testing the server side of the TEE protocol and because gematik provided

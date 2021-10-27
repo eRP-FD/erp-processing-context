@@ -1,10 +1,14 @@
-#include "erp/server/ServerSocketHandler.hxx"
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
 
 #include "erp/enrolment/EnrolmentServiceContext.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/server/ErrorHandler.hxx"
-#include "erp/server/session/ServerSession.hxx"
+#include "erp/server/ServerSocketHandler.hxx"
+#include "erp/server/session/SynchronousServerSession.hxx"
 
 #include <boost/asio/strand.hpp>
 

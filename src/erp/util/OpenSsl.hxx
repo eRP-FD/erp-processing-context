@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef EGA_LIBRARY_UTIL_OPENSSL_HXX
 #define EGA_LIBRARY_UTIL_OPENSSL_HXX
 

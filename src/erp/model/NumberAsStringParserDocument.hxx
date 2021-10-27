@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERDOCUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERDOCUMENT_HXX
 
@@ -223,10 +228,13 @@ public:
         const rapidjson::Pointer& searchKey,
         const std::string_view& searchValue);
 
-    [[nodiscard]] rapidjson::Value* getMemberInArray(const rapidjson::Pointer& pointerToArray, size_t index);
+    [[nodiscard]] const rapidjson::Value* getMemberInArray(
+        const rapidjson::Pointer& pointerToArray,
+        size_t index) const;
 
     // Returns position of added element:
     std::size_t addToArray(const rapidjson::Pointer& pointerToArray, rapidjson::Value&& object);
+    std::size_t addToArray(rapidjson::Value& array, rapidjson::Value&& object);
 
     void removeFromArray(const rapidjson::Pointer& pointerToArray, std::size_t index);
     void clearArray(const rapidjson::Pointer& pointerToArray);

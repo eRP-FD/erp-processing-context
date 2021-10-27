@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/model/Composition.hxx"
 
 #include <rapidjson/pointer.h>
@@ -127,7 +132,7 @@ std::optional<model::Timestamp> Composition::date() const
 {
     const auto value = getOptionalStringValue(datePointer);
     if (value.has_value())
-        return model::Timestamp::fromXsDateTime(std::string(value.value()));
+        return model::Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 
@@ -136,7 +141,7 @@ std::optional<model::Timestamp> Composition::periodStart() const
 {
     const auto value = getOptionalStringValue(eventPeriodStartPointer);
     if (value.has_value())
-        return model::Timestamp::fromXsDateTime(std::string(value.value()));
+        return model::Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 
@@ -145,7 +150,7 @@ std::optional<model::Timestamp> Composition::periodEnd() const
 {
     const auto value = getOptionalStringValue(eventPeriodEndPointer);
     if (value.has_value())
-        return model::Timestamp::fromXsDateTime(std::string(value.value()));
+        return model::Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 

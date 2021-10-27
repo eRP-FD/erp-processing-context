@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 // Disable the whole file on Mac and Windows. Neither TPM nor HSM are available on these platforms but
 // are required for the tests.
 #if ! defined(__APPLE__) && ! defined(_WIN32)

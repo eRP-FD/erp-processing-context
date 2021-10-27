@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "ResourceManager.hxx"
 
 #include "erp/crypto/EllipticCurveUtils.hxx"
@@ -22,6 +27,10 @@ ResourceManager::~ResourceManager() noexcept = default;
 
 std::filesystem::path ResourceManager::getAbsoluteFilename(const std::filesystem::path& resourceFile)
 {
+    if (resourceFile.is_absolute())
+    {
+        return resourceFile;
+    }
     const std::initializer_list<std::filesystem::path> tryFiles
     {
             ToolConfig::RESOURCE_BINARY_DIR / resourceFile,
@@ -40,6 +49,20 @@ std::filesystem::path ResourceManager::getAbsoluteFilename(const std::filesystem
 
 const std::string& ResourceManager::getStringResource(const std::string_view& resourceFile)
 {
+    {
+        std::shared_lock slock{mutex};
+        auto res = stringResources.find(std::string{resourceFile});
+        if (res != stringResources.end())
+        {
+            return res->second;
+        }
+    }
+    std::unique_lock lock{mutex};
+    return getStringResource(resourceFile, lock);
+}
+
+const std::string & ResourceManager::getStringResource(const std::string_view& resourceFile, std::unique_lock<std::shared_mutex>&)
+{
     auto [iterator, inserted] = stringResources.emplace(std::string{resourceFile}, std::string{});
     if (inserted)
     {
@@ -53,10 +76,19 @@ const std::string& ResourceManager::getStringResource(const std::string_view& re
 
 const rapidjson::Document& ResourceManager::getJsonResource(const std::string_view& resourceFile)
 {
+    {
+        std::shared_lock slock{mutex};
+        auto res = jsonResources.find(std::string{resourceFile});
+        if (res != jsonResources.end())
+        {
+            return res->second;
+        }
+    }
+    std::unique_lock lock{mutex};
     auto [iterator, inserted] = jsonResources.emplace(std::string{resourceFile}, rapidjson::Document{});
     if (inserted)
     {
-        const auto& jsonString = getStringResource(resourceFile);
+        const auto& jsonString = getStringResource(resourceFile, lock);
         rapidjson::Document doc;
         rapidjson::ParseResult result = doc.Parse(jsonString);
         if (result.IsError())

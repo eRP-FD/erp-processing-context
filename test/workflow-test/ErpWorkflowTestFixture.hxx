@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_ERPWORKFLOWTESTFIXTURE_HXX
 #define ERP_PROCESSING_CONTEXT_ERPWORKFLOWTESTFIXTURE_HXX
 
@@ -21,6 +26,7 @@
 #include "erp/model/Task.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/model/AuditEvent.hxx"
+#include "erp/model/OperationOutcome.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Environment.hxx"
@@ -43,43 +49,14 @@ class JsonValidator;
 // refer to http://hl7.org/fhir/R4/datatypes.html#instant
 static const std::regex instantRegex{
     R"(([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))"};// NOLINT
-class ErpWorkflowTest : public ::testing::Test
+
+class ErpWorkflowTestBase
 {
 public:
-    static constexpr char certificate[] =
-        "-----BEGIN CERTIFICATE-----\n"
-        "MIIDpDCCA0ugAwIBAgIHAIdnUk67xjAKBggqhkjOPQQDAjCBqTELMAkGA1UEBhMC\n"
-        "REUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxIDAeBgNVBGEMF1VT\n"
-        "dC1JZE5yLiBERSAwMDk5NzQ1OTMzMTYwNAYDVQQLDC1RdWFsaWZpemllcnRlciBW\n"
-        "REEgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkdFTS5IQkEt\n"
-        "cUNBNiBURVNULU9OTFkwHhcNMjAwNjEwMDAwMDAwWhcNMjUwNjA5MjM1OTU5WjBw\n"
-        "MQswCQYDVQQGEwJERTFhMAwGA1UEBAwFT3TDrXMwFAYDVQQqDA1Hw7xudGhlciBH\n"
-        "cmFmMBsGA1UEBRMUODAyNzY4ODMxMTAwMDAxMjkwODQwHgYDVQQDDBdHw7xudGhl\n"
-        "ciBPdMOtc1RFU1QtT05MWTBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAARWlKcf\n"
-        "W0m68/TET8EeRTIDKz6jg8W5gO53LgcGVuH2OUgkSG3+K8uPnKnBCB1uJh7ZR4Cn\n"
-        "GVKBlspDNCOt7qsYo4IBkzCCAY8wGwYJKwYBBAHAbQMFBA4wDAYKKwYBBAHAbQMF\n"
-        "ATAiBggrBgEFBQcBAwQWMBQwCAYGBACORgEBMAgGBgQAjkYBBDAMBgNVHRMBAf8E\n"
-        "AjAAMB8GA1UdIwQYMBaAFCTZChFbJmvfkp4YpIn0uEodL2NsMB0GA1UdDgQWBBRa\n"
-        "+NF9ioAMs/XDGMH0zuzpvAYqYzAOBgNVHQ8BAf8EBAMCBkAwOQYDVR0gBDIwMDAJ\n"
-        "BgcqghQATARIMAkGBwQAi+xAAQIwCgYIKoIUAEwEgREwDAYKKwYBBAGCzTMBATA4\n"
-        "BggrBgEFBQcBAQQsMCowKAYIKwYBBQUHMAGGHGh0dHA6Ly9laGNhLmdlbWF0aWsu\n"
-        "ZGUvb2NzcC8weQYFKyQIAwMEcDBupCgwJjELMAkGA1UEBhMCREUxFzAVBgNVBAoM\n"
-        "DmdlbWF0aWsgQmVybGluMEIwQDA+MDwwDgwMw4RyenRpbi9Bcnp0MAkGByqCFABM\n"
-        "BB4THzEtSEJBLVRlc3RrYXJ0ZS04ODMxMTAwMDAxMjkwODQwCgYIKoZIzj0EAwID\n"
-        "RwAwRAIgOnPRGFiOQwW7yl0rRvd48ZufBhAlTCUNQ7vNy5jbt+sCIBc/kta/QHQd\n"
-        "gnuTkANjPgdWAOX9rL6rxuan+s+OpXwU\n"
-        "-----END CERTIFICATE-----";
-
-    static constexpr char privateKey[] =
-        "-----BEGIN PRIVATE KEY-----\n"
-        "MIGVAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwR6MHgCAQEEIDBFI9o9ESYDkSf1\n"
-        "GE0c/wDzMf5E5GjPn9rEBQK6tREWoAsGCSskAwMCCAEBB6FEA0IABFaUpx9bSbrz\n"
-        "9MRPwR5FMgMrPqODxbmA7ncuBwZW4fY5SCRIbf4ry4+cqcEIHW4mHtlHgKcZUoGW\n"
-        "ykM0I63uqxg=\n"
-        "-----END PRIVATE KEY-----";
-
     static constexpr std::string_view ProxyUserPseudonymHeader{"Userpseudonym"};
     static constexpr std::string_view VauPreUserPseudonymHeader{"PNP"};
+
+    virtual ~ErpWorkflowTestBase();
 
     std::string toCadesBesSignature(const std::string& content);
 
@@ -89,6 +66,12 @@ public:
     void checkTaskIdentifiers(const rapidjson::Value& identifiers);
 
     void checkTask(const rapidjson::Value& task);
+
+    void checkOperationOutcome(const std::string& responseBody,
+                               bool isJson,
+                               const model::OperationOutcome::Issue::Type expectedErrorCode,
+                               const std::optional<std::string>& expectedIssueText = {},
+                               const std::optional<std::string>& expectedIssueDiagnostics = {}) const;
 
     void getTaskFromBundle(std::optional<model::Task>& task,
         const model::Bundle& bundle);
@@ -101,7 +84,6 @@ public:
     };
 
 
-    void SetUp() override;
 
     class RequestArguments
     {
@@ -141,48 +123,63 @@ public:
     std::tuple<ClientResponse, ClientResponse> send(const RequestArguments& args);
 
     std::optional<model::Task> taskCreate(HttpStatus expectedOuterStatus = HttpStatus::OK,
-                                          HttpStatus expectedInnerStatus = HttpStatus::Created);
+                                          HttpStatus expectedInnerStatus = HttpStatus::Created,
+                                          const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::optional<model::Task> taskActivate(const model::PrescriptionId& prescriptionId,
         const std::string& accessCode,
         const std::string& qesBundle,
-        HttpStatus expectedInnerStatus = HttpStatus::OK);
+        HttpStatus expectedInnerStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::optional<model::Bundle> taskAccept(const model::PrescriptionId& prescriptionId,
-        const std::string& accessCode, HttpStatus expectedInnerStatus = HttpStatus::OK);
+        const std::string& accessCode, HttpStatus expectedInnerStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::optional<model::ErxReceipt> taskClose(const model::PrescriptionId& prescriptionId,
-        const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::OK);
+        const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
-    void taskClose_MedicationDispenseInvalidPrescriptionId(
+    void taskClose_MedicationDispense_invalidPrescriptionId(
         const model::PrescriptionId& prescriptionId,
         const std::string& invalidPrescriptionId,
         const std::string& secret,
         const std::string& kvnr);
 
+    void taskClose_MedicationDispense_invalidWhenHandedOver(
+        const model::PrescriptionId& prescriptionId,
+        const std::string& secret,
+        const std::string& kvnr,
+        const std::string& invalidWhenHandedOver);
+
     void taskAbort(const model::PrescriptionId& prescriptionId,
         JWT jwt,
         const std::optional<std::string>& accessCode,
         const std::optional<std::string>& secret,
-        const HttpStatus expectedStatus = HttpStatus::NoContent);
+        const HttpStatus expectedStatus = HttpStatus::NoContent,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     void taskReject(const model::PrescriptionId& prescriptionId,
         const std::string& secret,
-        HttpStatus expectedInnerStatus = HttpStatus::NoContent);
+        HttpStatus expectedInnerStatus = HttpStatus::NoContent,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
     void taskReject(const std::string& prescriptionIdString,
         const std::string& secret,
-        HttpStatus expectedInnerStatus = HttpStatus::NoContent);
+        HttpStatus expectedInnerStatus = HttpStatus::NoContent,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::optional<model::Bundle> taskGetId(const model::PrescriptionId& prescriptionId,
         const std::string& kvnrOrTid,
         const std::optional<std::string>& accessCodeOrSecret,
         const HttpStatus expectedStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
         bool withAuditEvents = false);
 
     std::optional<model::Bundle> taskGet(
         const std::string& kvnr,
         const std::string& searchArguments = "",
-        const HttpStatus expectedStatus = HttpStatus::OK);
+        const HttpStatus expectedStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::string makeQESBundle(const std::string& kvnr,
         const model::PrescriptionId& prescriptionId,
@@ -295,11 +292,13 @@ public:
     static std::shared_ptr<XmlValidator> getXmlValidator();
     static std::shared_ptr<JsonValidator> getJsonValidator();
 
+    std::optional<Certificate> retrieveEciesRemoteCertificate();
     Certificate getEciesCertificate (void);
 
 protected:
     virtual std::string medicationDispense(const std::string& kvnr,
-                                           const std::string& prescriptionIdForMedicationDispense);
+                                           const std::string& prescriptionIdForMedicationDispense,
+                                           const std::string& whenHandedOver);
 
 private:
     void sendInternal(std::tuple<ClientResponse, ClientResponse>& result, const RequestArguments& args);
@@ -307,7 +306,8 @@ private:
                                         const JWT& jwt);
 
     void taskCreateInternal(std::optional<model::Task>& task, HttpStatus expectedOuterStatus,
-                            HttpStatus expectedInnerStatus);
+                            HttpStatus expectedInnerStatus,
+                            const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
     static void makeQESBundleInternal (std::string& qesBundle,
         const std::string& kvnr,
@@ -318,31 +318,39 @@ private:
         const model::PrescriptionId& prescriptionId,
         const std::string& accessCode,
         const std::string& qesBundle,
-        HttpStatus expectedInnerStatus);
+        HttpStatus expectedInnerStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
     void taskAcceptInternal(std::optional<model::Bundle>& bundle,
         const model::PrescriptionId& prescriptionId,
-        const std::string& accessCode, HttpStatus expectedInnerStatus);
+        const std::string& accessCode, HttpStatus expectedInnerStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
     void taskCloseInternal(std::optional<model::ErxReceipt>& receipt,
         const model::PrescriptionId& prescriptionId,
         const std::string& secret,
         const std::string& kvnr,
         const std::string& prescriptionIdForMedicationDispense, // for test, normally equals prescriptionId;
-        HttpStatus expectedInnerStatus);
+        HttpStatus expectedInnerStatus,
+        const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
+        const std::optional<std::string>& expectedErrorText,
+        const std::optional<std::string>& expectedDiagnostics,
+        const std::string& whenHandedOver);
 
     void taskGetIdInternal(std::optional<model::Bundle>& taskBundle,
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnrOrTid,
         const std::optional<std::string>& accessCodeOrSecret,
         const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
         bool withAuditEvents = false);
 
     void taskGetInternal(
         std::optional<model::Bundle>& taskBundle,
         const std::string& kvnr,
         const std::string& searchArguments,
-        const HttpStatus expectedStatus);
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
     void medicationDispenseGetInternal(
         std::optional<model::MedicationDispense>& medicationDispense,
@@ -412,5 +420,13 @@ public:
         const std::string& fileExtension,
         const std::string& marker = std::string());
 };
+
+template <typename TestClass>
+class ErpWorkflowTestTemplate : public TestClass, public ErpWorkflowTestBase {
+
+};
+
+using ErpWorkflowTest = ErpWorkflowTestTemplate<::testing::Test>;
+
 
 #endif//ERP_PROCESSING_CONTEXT_ERPWORKFLOWTESTFIXTURE_HXX

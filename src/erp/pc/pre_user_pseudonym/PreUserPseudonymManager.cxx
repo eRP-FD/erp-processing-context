@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 
 #include "erp/database/Database.hxx"

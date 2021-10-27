@@ -1,6 +1,12 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_STATICDATA_HXX
 #define ERP_PROCESSING_CONTEXT_STATICDATA_HXX
 
+#include "erp/crypto/Certificate.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "test/util/TestConfiguration.hxx"
@@ -48,6 +54,8 @@ public:
         static auto xmlValidatorStatic = std::make_shared<XmlValidatorStatic>();
         return std::shared_ptr<XmlValidator>(xmlValidatorStatic, &xmlValidatorStatic->mXmlValidator);
     }
+
+    static const Certificate idpCertificate;
 };
 
-#endif//ERP_PROCESSING_CONTEXT_STATICDATA_HXX
+#endif

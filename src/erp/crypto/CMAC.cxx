@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "CMAC.hxx"
 
 #include "erp/crypto/OpenSslHelper.hxx"

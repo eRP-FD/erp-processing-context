@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef EPR_PROCESSINIG_CONTEXT_JSONTESTUTILS_HXX
 #define EPR_PROCESSINIG_CONTEXT_JSONTESTUTILS_HXX
 

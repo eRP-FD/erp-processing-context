@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_RESPONSE_VALIDATEDSERVERRESPONSE_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_RESPONSE_VALIDATEDSERVERRESPONSE_HXX
 
@@ -9,14 +14,14 @@
 class ValidatedServerResponse
 {
 public:
-    explicit ValidatedServerResponse(const ServerResponse& aServerResponse);
+    explicit ValidatedServerResponse (ServerResponse&& serverResponse);
 
     const Header& getHeader() const;
 
     const std::string& getBody() const;
 
 private:
-    const ServerResponse& serverResponse;
+    const ServerResponse mServerResponse;
 };
 
 

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/erp-serverinfo.hxx"
 #include "erp/ErpMain.hxx"
 #include "erp/ErpProcessingContext.hxx"
@@ -39,11 +44,44 @@ namespace
         // to stderr, and that would bypass our GLog settings in production.
         xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {});
     }
+
+    std::map<int, sighandler_t> old_handler;
+
+    void erp_signal_handler(int sig)
+    {
+        std::string message = "\nreceived signal " + std::to_string(sig) + "\n";
+        const auto res = write(STDERR_FILENO, message.data(), message.size());
+        (void) res;
+        if (old_handler.count(sig) > 0)
+        {
+            signal(sig, old_handler[sig]);
+        }
+        else
+        {
+            signal(sig, SIG_DFL);
+        }
+        raise(sig);
+    }
+
+    void register_signals(std::initializer_list<int> signals)
+    {
+        for (const auto& sig : signals)
+        {
+            old_handler[sig] = signal(sig, &erp_signal_handler);
+        }
+    }
 }
 
 
 int main (const int, const char* argv[], char** environment)
 {
+    register_signals({SIGILL, SIGABRT, SIGSEGV, SIGFPE, SIGINT, SIGTERM
+#ifdef SIGSYS
+                      ,SIGSYS
+#endif
+    }
+    );
+
     int exitCode = EXIT_FAILURE;
 
     LOG(WARNING) << "Starting erp-processing-context " << ErpServerInfo::ReleaseVersion
@@ -69,15 +107,7 @@ int main (const int, const char* argv[], char** environment)
     catch(...)
     {
         LOG(ERROR) << "Unexpected exception: " << boost::current_exception_diagnostic_information();
-
-        // Note that at this point we may or may not have reached the line that waits for the TerminationHandler.
-        // In either case, tell the termination handler to terminate the application.
-        TerminationHandler::instance().notifyTermination(true);
     }
-
-    VLOG(1) << "notifying TerminationHandler";
-
-    TerminationHandler::instance().notifyTermination(exitCode != EXIT_SUCCESS);
 
     LOG(WARNING) << "exiting erp-processing-context with exit code " << exitCode;
 

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_CLIENT_IMPLEMENTATION_CLIENTIMPL_HXX
 #define ERP_PROCESSING_CONTEXT_CLIENT_IMPLEMENTATION_CLIENTIMPL_HXX
 
@@ -40,7 +45,10 @@ public:
 
     void inheritTlsSessionTicketFrom (const ClientImpl<StreamClass>& client);
 
+    void close (void);
+
 private:
+    const uint16_t mConnectionTimeoutSeconds;
     std::string mHostName;
     SessionContainer<StreamClass> mSessionContainer;
 };

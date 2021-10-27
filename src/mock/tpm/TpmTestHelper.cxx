@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "TpmTestHelper.hxx"
 #if !defined __APPLE__ && !defined _WIN32
 #include "erp/tpm/TpmProduction.hxx"

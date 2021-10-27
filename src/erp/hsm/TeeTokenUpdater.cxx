@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/hsm/TeeTokenUpdater.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
@@ -53,7 +58,8 @@ TeeTokenUpdater::TeeTokenUpdater (
       mUpdateJobToken(),
       mUpdateFailureCount(0),
       mUpdateInterval(updateInterval),
-      mRetryInterval(retryInterval)
+      mRetryInterval(retryInterval),
+      mLastUpdate(decltype(mLastUpdate)::value_type())
 {
     Expect(mTokenProvider!=nullptr, "can not create TeeTokenUpdater without token provider");
     TVLOG(0) << "TeeTokenUpdater will update every " << std::chrono::duration_cast<std::chrono::seconds>(mUpdateInterval).count() << " seconds";
@@ -117,12 +123,12 @@ void TeeTokenUpdater::requestRetry (void)
 
 void TeeTokenUpdater::healthCheck() const
 {
-    if (mLastUpdate == decltype(mLastUpdate)())
+    if (mLastUpdate.load() == decltype(mLastUpdate)::value_type())
     {
         throw std::runtime_error("never updated successfully");
     }
     const auto now = std::chrono::system_clock::now();
-    if (mLastUpdate + mUpdateInterval * 1.5 < now)
+    if (mLastUpdate.load() + mUpdateInterval * 1.5 < now)
     {
         throw std::runtime_error("last update is too old");
     }

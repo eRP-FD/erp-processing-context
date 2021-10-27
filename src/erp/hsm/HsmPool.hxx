@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_HSMPOOL_HXX
 #define ERP_PROCESSING_CONTEXT_HSMPOOL_HXX
 
@@ -34,6 +39,8 @@ public:
     explicit HsmPool (
         std::unique_ptr<HsmFactory>&& hsmFactory,
         const TeeTokenUpdaterFactory& teeTokenUpdaterFactory);
+
+    ~HsmPool();
 
     /**
      * This method should be called once when the application terminates to release any inactive sessions.

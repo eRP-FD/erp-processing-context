@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/DosHandler.hxx"
 #include "erp/service/RedisInterface.hxx"
 #include "erp/util/Configuration.hxx"

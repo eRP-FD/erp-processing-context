@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/task/AbortTaskHandler.hxx"
 
 #include "erp/ErpRequirements.hxx"
@@ -14,8 +19,9 @@ void AbortTaskHandler::checkAccessValidityPharmacy(
         const ServerRequest &request)
 {
     A_19145.start("Check correct task status for user pharmacy");
-    ErpExpect(task.status() == model::Task::Status::inprogress,
-              HttpStatus::Forbidden, "Task must be in progress for user pharmacy");
+    ErpExpect(task.status() == model::Task::Status::inprogress, HttpStatus::Forbidden,
+              "Task must be in progress for user pharmacy, is: " +
+                  std::string(model::Task::StatusNames.at(task.status())));
     A_19145.finish();
 
     // check secret
@@ -36,8 +42,9 @@ void AbortTaskHandler::checkAccessValidityOutsidePharmacy(
     const ServerRequest &request)
 {
     A_19146.start("Check correct task status for user other than pharmacy");
-    ErpExpect(task.status() != model::Task::Status::inprogress,
-        HttpStatus::Forbidden, "Task must not be in progress for users other than pharmacy");
+    ErpExpect(task.status() != model::Task::Status::inprogress, HttpStatus::Forbidden,
+              "Task must not be in progress for users other than pharmacy, but is: " +
+                  std::string(model::Task::StatusNames.at(task.status())));
     A_19146.finish();
 
     if(professionOIDClaim == profession_oid::oid_versicherter)
@@ -96,7 +103,7 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
     Expect3(professionOIDClaim.has_value(), "Missing professionOIDClaim", std::logic_error);  // should not happen because of professionOID check;
 
-    const auto prescriptionId = parseId(session.request);
+    const auto prescriptionId = parseId(session.request, session.accessLog);
 
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 

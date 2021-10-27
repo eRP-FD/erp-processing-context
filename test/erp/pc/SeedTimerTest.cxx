@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/pc/SeedTimer.hxx"
 
 #include "erp/hsm/HsmPool.hxx"
@@ -33,7 +38,7 @@ TEST(SeedTimerTest, distribute)
                             ++callCount;
                             ASSERT_EQ(seed.size(), Seeder::seedBytes);
                         });
-    seedTimer.start(pool.ioContext());
+    seedTimer.start(pool.ioContext(), interval);
     EXPECT_EQ(callCount, 0);
     ASSERT_NO_FATAL_FAILURE(waitFor([&]{return callCount >= threads;}));
     pool.shutDown();

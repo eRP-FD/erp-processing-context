@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/VauRequestHandler.hxx"
 
 #include "erp/ErpProcessingContext.hxx"
@@ -48,11 +53,11 @@ TEST_F(VauRequestHandlerExternalInterfaceTest, InvalidJwtWithRequestINTERNET)
 {
     auto client = createClient();
     JWT invalidJwt{ jwtWithWrongSignature() };
-    ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown, false), "");
+    ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown), "");
     request.setHeader(Header::ExternalInterface, std::string{Header::ExternalInterface_INTERNET});
     ClientTeeProtocol teeProtocol;
     ClientRequest encryptedRequest(
-        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown, false),
+        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
         teeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, invalidJwt));
     auto response = client.send(encryptedRequest);
     const ClientResponse innerResponse = teeProtocol.parseResponse(response);
@@ -65,11 +70,11 @@ TEST_F(VauRequestHandlerExternalInterfaceTest, InvalidJwtWithRequestTI)
 {
     auto client = createClient();
     JWT invalidJwt{ jwtWithWrongSignature() };
-    ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown, false), "");
+    ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown), "");
     request.setHeader(Header::ExternalInterface, std::string{Header::ExternalInterface_TI});
     ClientTeeProtocol teeProtocol;
     ClientRequest encryptedRequest(
-        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown, false),
+        Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
         teeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, invalidJwt));
     auto response = client.send(encryptedRequest);
     const ClientResponse innerResponse = teeProtocol.parseResponse(response);

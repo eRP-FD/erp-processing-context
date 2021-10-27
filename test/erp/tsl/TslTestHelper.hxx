@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef EPA_TEST_UTIL_TSLHELPER_HXX
 #define EPA_TEST_UTIL_TSLHELPER_HXX
 

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/validation/XmlValidator.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -185,4 +190,11 @@ INSTANTIATE_TEST_SUITE_P(ValidResources, XmlValidatorTestParams,
         TestParams{false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/practitionerrole/", "PractitionerRole_invalid", SchemaType::KBV_PR_FOR_PractitionerRole},
         TestParams{false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/prescription/", "Prescription_invalid", SchemaType::KBV_PR_FOR_PractitionerRole}));
 
+TEST_F(XmlValidatorTest, Erp6345)
+{
+    auto file1 = FileHelper::readFileAsString(std::filesystem::path(TEST_DATA_DIR) / "issues/ERP-6345/bundleFromSignedFile.xml");
+    EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidation(file1, *getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle), ErpException);
 
+    auto file2 = FileHelper::readFileAsString(std::filesystem::path(TEST_DATA_DIR) / "issues/ERP-6345/bundleFromSignedFile_valid.xml");
+    EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(file2, *getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle));
+}

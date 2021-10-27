@@ -1,3 +1,8 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
 # Note to mac and windows users.
 # Conan does not allow OS specific dependencies, but as we have those some manual changes to this file
 # are required on Apple Macs and Windows PCs. Search for the following comments
@@ -28,7 +33,6 @@ gsl-lite:on_contract_violation=throw
 glog:with_gflags=False
 libpq:with_openssl=True
 # To prevent zlib conflicts between libraries
-libpq:with_zlib=False
 libxml2:iconv=False
 libxml2:zlib=False
 tss:with_hardware_tpm=True
@@ -49,7 +53,7 @@ date/3.0.0
 glog/0.4.0
 gsl-lite/0.37.0
 # for C14N
-libxml2/2.9.10
+libxml2/2.9.12
 openssl/1.1.1k
 rapidjson/cci.20200410
 magic_enum/0.7.2
@@ -71,3 +75,5 @@ gtest/1.10.0
 
 hiredis/1.0.0
 redis-plus-plus/1.2.1
+
+autoconf/2.71

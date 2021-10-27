@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #line 2 "@CMAKE_CURRENT_SOURCE_DIR@/tool_config.hxx.in"
 #ifndef ERP_TOOLS_TOOL_CONFIG_HXX
 #define ERP_TOOLS_TOOL_CONFIG_HXX

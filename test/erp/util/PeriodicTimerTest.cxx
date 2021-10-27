@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/util/PeriodicTimer.hxx"
 
 #include <boost/asio/io_context.hpp>
@@ -27,7 +32,7 @@ TEST(PeriodicTimerTest, countAndInterval)
     };
     boost::asio::io_context ioContext;
     TestTimer testTimer(interval);
-    testTimer.start(ioContext);
+    testTimer.start(ioContext, interval);
     testTimer.expectTrigger = std::chrono::steady_clock::now() + interval;
     ioContext.run_for(interval * 5 + tolerance);
     ioContext.stop();
@@ -49,7 +54,7 @@ TEST(PeriodicTimerTest, skip)
     };
     boost::asio::io_context ioContext;
     TestTimer testTimer(interval);
-    testTimer.start(ioContext);
+    testTimer.start(ioContext, interval);
     testTimer.expectTrigger = std::chrono::steady_clock::now() + interval;
     ioContext.run_for(interval * 8 + tolerance);
     ioContext.stop();

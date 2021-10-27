@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/beast/BoostBeastStringReader.hxx"
 
 #include "erp/beast/BoostBeastHeader.hxx"
@@ -27,7 +32,6 @@ namespace {
             const size_t count = parser.put(boost::asio::buffer(s.substr(offset, remaining)), ec);
             // In general it is not an error if count is 0. It means we would need more data, beyond the given `s`, so
             // that the last bytes of `s` can be parsed as well. In this case, however, we can't supply more data.
-            TVLOG(1) << ec.message();
             ErpExpect(ec.value() == 0, HttpStatus::BadRequest, "parsing the HTTP header failed");
             ErpExpect(count > 0, HttpStatus::BadRequest, "not enough data");
 
@@ -55,6 +59,8 @@ std::tuple<Header,std::string> BoostBeastStringReader::parseRequest (const std::
     // The boost beast parser only works if there are no spaces in the request URL. That means that unescaping these
     // spaces, and other escaped characters, could not be done earlier.
     header.setTarget(UrlHelper::unescapeUrl(header.target()));
+
+    TVLOG(1) << "User-Agent: " << header.header("User-Agent").value_or("<not set>");
 
     return {header, body};
 }

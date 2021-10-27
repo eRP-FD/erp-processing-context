@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/server/SslStream.hxx"
 
 #include <boost/beast/core/error.hpp>
@@ -98,4 +103,9 @@ boost::beast::ssl_stream<boost::beast::tcp_stream>& SslStream::getSslStream (voi
 boost::beast::ssl_stream<boost::beast::tcp_stream>::executor_type SslStream::get_executor (void) noexcept
 {
     return mSslStream->get_executor();
+}
+
+void SslStream::expiresAfter(const std::chrono::steady_clock::duration& duration)
+{
+    mSslStream->next_layer().expires_after(duration);
 }

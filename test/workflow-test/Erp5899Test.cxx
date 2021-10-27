@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include "erp/util/Base64.hxx"
@@ -28,7 +33,8 @@ public:
     }
 
     std::string medicationDispense(const std::string& kvnr,
-                                   const std::string& prescriptionIdForMedicationDispense) override
+                                   const std::string& prescriptionIdForMedicationDispense,
+                                   const std::string& /*whenHandedOver*/) override
     {
         (void)kvnr;
         std::string closeBody = resourceManager.getStringResource(testDataPath + "medication_dispense.xml");

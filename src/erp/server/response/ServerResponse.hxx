@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_RESPONSE_SERVERRESPONSE_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_RESPONSE_SERVERRESPONSE_HXX
 
@@ -19,6 +24,7 @@ class ServerResponse : private boost::noncopyable
 public:
     explicit ServerResponse (void);
     ServerResponse (Header header, std::string body);
+    ServerResponse (const ServerResponse& other) noexcept;
     ServerResponse (ServerResponse&& other) noexcept;
     ~ServerResponse (void);
 

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 #include "erp/idp/IdpUpdater.hxx"
@@ -63,23 +68,6 @@ public:
 
 namespace
 {
-const auto idpCertificate = Certificate::fromPemString(R"(-----BEGIN CERTIFICATE-----
-MIICsTCCAligAwIBAgIHAbssqQhqOzAKBggqhkjOPQQDAjCBhDELMAkGA1UEBhMC
-REUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMjAwBgNVBAsMKUtv
-bXBvbmVudGVuLUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMSAwHgYDVQQD
-DBdHRU0uS09NUC1DQTEwIFRFU1QtT05MWTAeFw0yMTAxMTUwMDAwMDBaFw0yNjAx
-MTUyMzU5NTlaMEkxCzAJBgNVBAYTAkRFMSYwJAYDVQQKDB1nZW1hdGlrIFRFU1Qt
-T05MWSAtIE5PVC1WQUxJRDESMBAGA1UEAwwJSURQIFNpZyAzMFowFAYHKoZIzj0C
-AQYJKyQDAwIIAQEHA0IABIYZnwiGAn5QYOx43Z8MwaZLD3r/bz6BTcQO5pbeum6q
-QzYD5dDCcriw/VNPPZCQzXQPg4StWyy5OOq9TogBEmOjge0wgeowDgYDVR0PAQH/
-BAQDAgeAMC0GBSskCAMDBCQwIjAgMB4wHDAaMAwMCklEUC1EaWVuc3QwCgYIKoIU
-AEwEggQwIQYDVR0gBBowGDAKBggqghQATASBSzAKBggqghQATASBIzAfBgNVHSME
-GDAWgBQo8Pjmqch3zENF25qu1zqDrA4PqDA4BggrBgEFBQcBAQQsMCowKAYIKwYB
-BQUHMAGGHGh0dHA6Ly9laGNhLmdlbWF0aWsuZGUvb2NzcC8wHQYDVR0OBBYEFC94
-M9LgW44lNgoAbkPaomnLjS8/MAwGA1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDRwAw
-RAIgCg4yZDWmyBirgxzawz/S8DJnRFKtYU/YGNlRc7+kBHcCIBuzba3GspqSmoP1
-VwMeNNKNaLsgV8vMbDJb30aqaiX1
------END CERTIFICATE-----)");
 
 /**
  * Avoid the download of the IDP signer certificate so that tests can work without internet connection or when the
@@ -111,7 +99,7 @@ protected:
     }
     virtual std::vector<Certificate> doParseDiscovery (std::string&&) override
     {
-        return {idpCertificate};
+        return {StaticData::idpCertificate};
     }
 };
 
@@ -156,7 +144,7 @@ protected:
         if (mMockStatus == UpdateStatus::DiscoveryDownloadFailed)
             throw std::runtime_error("test");
         else
-            return {idpCertificate};
+            return {StaticData::idpCertificate};
     }
     virtual void doVerifyCertificate (const std::vector<Certificate>&) override
     {
@@ -286,7 +274,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge)
     auto tslManager = createAndSetupTslManager();
 
     // Simulate an earlier successful update.
-    idp.setCertificate(Certificate(idpCertificate));
+    idp.setCertificate(Certificate(StaticData::idpCertificate));
     ASSERT_NO_THROW(idp.getCertificate());
 
     // A missing successful update, i.e. directly after the application starts, is treated like it was
@@ -309,7 +297,7 @@ TEST_F(IdpUpdaterTest, update_noResetForMaxAge)
     auto tslManager = createAndSetupTslManager();
 
     // Simulate an earlier successful update.
-    idp.setCertificate(Certificate(idpCertificate));
+    idp.setCertificate(Certificate(StaticData::idpCertificate));
     ASSERT_NO_THROW(idp.getCertificate());
 
     // One successful update to set the lastSuccessfulUpdateTime to "now".
@@ -453,4 +441,93 @@ TEST_F(IdpUpdaterTest, DISABLED_IdpUpdateAfterTslUpdate)
 
     // ... and verify that the IdpUpdater has also been called.
     ASSERT_EQ(updater.updateCount, 1);
+}
+
+/**
+ * Simulate an unstable IDP endpoint where at least 2 retries are required to get a valid response
+ */
+TEST_F(IdpUpdaterTest, initializeWithForcedRetries)
+{
+    Idp idp;
+    auto tslManager = createAndSetupTslManager();
+
+    // Initially the certificate is not set.
+    ASSERT_ANY_THROW(idp.getCertificate());
+
+    // After the initial update ...
+    const std::string idpResponseJson = FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
+    const std::string idpResponseJwk = FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponseJwk.txt");
+    std::shared_ptr<UrlRequestSenderMock> idpRequestSender = std::make_shared<UrlRequestSenderMock>(
+        std::unordered_map<std::string, std::string>{
+            {"https://idp.lu.erezepttest.net:443/certs/puk_idp_sig.json", idpResponseJson}});
+
+    idpRequestSender->setUrlHandler("https://idp.lu.erezepttest.net:443/.well-known/openid-configuration",
+                                    [&idpResponseJwk](const std::string&) -> ClientResponse
+                                    {
+                                        static int count=0;
+                                        Header header;
+                                        if (count++ < 2 )
+                                        {
+                                            header.setStatus(HttpStatus::NetworkConnectTimeoutError);
+                                            header.setContentLength(0);
+                                            return ClientResponse(header, "");
+                                        }
+                                        else
+                                        {
+                                            header.setStatus(HttpStatus::OK);
+                                            header.setContentLength(idpResponseJwk.size());
+                                            return ClientResponse(header, idpResponseJwk);
+                                        }
+                                    });
+
+    auto updater = IdpUpdater::create(
+        idp,
+        tslManager.get(),
+        true,
+        idpRequestSender);
+
+    // ... the certificate is set.
+    ASSERT_NO_THROW(idp.getCertificate());
+}
+
+
+/**
+ * Simulate an unstable IDP endpoint that never returns a valid response
+ */
+TEST_F(IdpUpdaterTest, initializeFailedWithForcedRetries)
+{
+    Idp idp;
+    auto tslManager = createAndSetupTslManager();
+
+    // Initially the certificate is not set.
+    ASSERT_ANY_THROW(idp.getCertificate());
+
+    // After the initial update ...
+    const std::string idpResponseJson = FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
+    const std::string idpResponseJwk = FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponseJwk.txt");
+    std::shared_ptr<UrlRequestSenderMock> idpRequestSender = std::make_shared<UrlRequestSenderMock>(
+        std::unordered_map<std::string, std::string>{
+            {"https://idp.lu.erezepttest.net:443/certs/puk_idp_sig.json", idpResponseJson}});
+
+    idpRequestSender->setUrlHandler("https://idp.lu.erezepttest.net:443/.well-known/openid-configuration",
+                                    [](const std::string&) -> ClientResponse
+                                    {
+                                      Header header;
+                                      header.setStatus(HttpStatus::NetworkConnectTimeoutError);
+                                      header.setContentLength(0);
+                                      return ClientResponse(header, "");
+                                    });
+
+    auto updater = IdpUpdater::create(
+        idp,
+        tslManager.get(),
+        true,
+        idpRequestSender);
+
+    // ... still no certificate is set due to failing download.
+    ASSERT_ANY_THROW(idp.getCertificate());
 }

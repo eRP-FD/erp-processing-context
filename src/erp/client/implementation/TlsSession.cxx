@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/client/implementation/TlsSession.hxx"
 
 #include "erp/client/RootCertificatesMgr.hxx"
@@ -221,13 +226,48 @@ TlsSession::~TlsSession () = default;
 
 void TlsSession::establish (const bool trustCn)
 {
-    configureSession(trustCn);
+    // In some cases it seems to be necessary to retry a handshake.
+    constexpr size_t tryCount = 2;
+    for (size_t index=0; index<tryCount; ++index)
+    {
+        try
+        {
+            configureSession(trustCn);
 
-    mTicket->use();
+            mTicket->use();
 
-    mSslStream.handshake(boost::asio::ssl::stream_base::client);
+            mSslStream.handshake(boost::asio::ssl::stream_base::client);
 
-    mTicket->save();
+            mTicket->save();
+        }
+        catch(const boost::system::system_error& e)
+        {
+            if (e.code().value() == static_cast<int>(boost::beast::error::timeout))
+            {
+                TLOG(ERROR) << "timeout in TLS handshake";
+                throw; // No retry for timeouts.
+            }
+            else if (index+1 == tryCount)
+            {
+                TLOG(ERROR) << "caught exception in TLS handshake";
+                throw;
+            }
+            else
+            {
+                TLOG(WARNING) << "caught exception " << e.what() << " in TLS handshake; ignoring it and trying again";
+            }
+        }
+        catch(...)
+        {
+            if (index+1 == tryCount)
+            {
+                TLOG(ERROR) << "caught exception in TLS handshake";
+                throw;
+            }
+            else
+                TLOG(WARNING) << "caught exception in TLS handshake; ignoring it and trying again";
+        }
+    }
 }
 
 
@@ -244,6 +284,8 @@ void TlsSession::teardown ()
                                                  boost::asio::ip::tcp::socket::shutdown_both);
                                             socket.close();
                                         });
+
+//    mTicket.reset();
 }
 
 

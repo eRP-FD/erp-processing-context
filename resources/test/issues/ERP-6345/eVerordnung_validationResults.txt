@@ -1,0 +1,41 @@
+1: ValidationMessage[level=ERROR,type=INVARIANT,location=Bundle,message=bdl-11: 'A document must have a Composition as the first resource' Rule 'A document must have a Composition as the first resource' Failed]
+2: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[3].resource.ofType(Organization).address[0].country,message=The value provided ('DE') is not in the value set https://fhir.kbv.de/ValueSet/KBV_VS_BASE_GemRS_Anlage_8 (https://fhir.kbv.de/ValueSet/KBV_VS_BASE_GemRS_Anlage_8), and a code is required from this value set) (error message = Unknown code 'DE')]
+3: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[4].resource.ofType(Coverage).extension[2].value.ofType(Coding),message=The Coding references a value set, not a code system ('https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS')]
+4: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[4].resource.ofType(Coverage).extension[2].value.ofType(Coding),message=Invalid System URI: https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS - cannot use a value set URI as a system]
+5: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[4].resource.ofType(Coverage).extension[2].value.ofType(Coding),message=The code provided (https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS#1) is not in the value set https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS, and a code from this value set is required: Unknown code 'https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS#1']
+6: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[4].resource.ofType(Coverage).extension[3].value.ofType(Coding),message=The Coding references a value set, not a code system ('https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP')]
+7: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[4].resource.ofType(Coverage).extension[3].value.ofType(Coding),message=Invalid System URI: https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP - cannot use a value set URI as a system]
+8: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[4].resource.ofType(Coverage).extension[3].value.ofType(Coding),message=The code provided (https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP#02) is not in the value set https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP, and a code from this value set is required: Unknown code 'https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP#02']
+9: ValidationMessage[level=ERROR,type=CODEINVALID,location=Bundle.entry[5].resource.ofType(Medication).amount.numerator,message=Validation failed for 'http://unitsofmeasure.org#IHP']
+10: ValidationMessage[level=ERROR,type=INVALID,location=Bundle.entry[5].resource.ofType(Medication).code.text,message=value is longer than permitted maximum length of 50]
+11: ValidationMessage[level=ERROR,type=INVARIANT,location=Bundle.entry[6].resource.ofType(MedicationRequest),message=-erp-begrenzungDate: 'Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT' Rule 'Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT' Failed]
+12: ValidationMessage[level=ERROR,type=STRUCTURE,location=Bundle.entry[6].resource.ofType(MedicationRequest).medication.ofType(Reference),message=Unable to find a match for profile Medication/217532d0-6d87-43fd-b813-41ff8a4d5136 among choices: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.1, https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.0.1, https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.1, https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Ingredient|1.0.1]
+13: ValidationMessage[level=ERROR,type=STRUCTURE,location=Bundle.entry[6].resource.ofType(MedicationRequest).insurance[0],message=Unable to find a match for profile Coverage/7e884eb8-2722-4db6-afaf-699dd506e839 among choices: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3]
+14: ValidationMessage[level=ERROR,type=STRUCTURE,location=Bundle.entry[7].resource.ofType(Composition).custodian,message=Unable to find a match for profile Organization/890f12a0-f69a-4bfc-972c-47b67ad69936 among choices: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.3]
+15: ValidationMessage[level=ERROR,type=STRUCTURE,location=Bundle.entry[7].resource.ofType(Composition).section[0].entry[0],message=Unable to find a match for profile MedicationRequest/61a9b205-11fa-491d-adb0-6eef8a9c7021 among choices: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1]
+16: ValidationMessage[level=ERROR,type=STRUCTURE,location=Bundle.entry[7].resource.ofType(Composition).section[1].entry[0],message=Unable to find a match for profile Coverage/7e884eb8-2722-4db6-afaf-699dd506e839 among choices: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3]
+17: ValidationMessage[level=ERROR,type=INVALID,location=Bundle.entry[1].resource,message=The first entry in a document must be a composition]
+
+1: Composition fehlt
+--> Kann nicht mit XSD gemacht werden
+2: Fehler korrekt gefunden! In Organization: <country value="DE" />; gemaäß https://www.gkv-datenaustausch.de/media/dokumente/arbeitgeber/deuev/rundschreiben_anlagen/GemRS_Anlage_8_5.01.pdf muss es D sein
+--> War im xsd type="string", Länderliste als enumeration aufgenommen
+3: Angabe des Code System notwendig (korrekt wäre <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"/> statt <system value="https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS" />)
+--> In das extension array kann mit XSDs nicht hineinvalidiert werden, es scheint nicht möglich zu sein für das Element valueCoding unterschiedliche Typen zuzulassen. Es wird hier nur gegen ein generisches fhir extension schema validiert.
+4: gehört zu 3
+5: gehört zu 3
+6: analog Punkt 3 wird ein Code System erwartet (https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP)
+7: gehört zu 6
+8: gehört zu 6
+9: "IHP" gibt es nicht in "http://unitsofmeasure.org/" (https://www.hl7.org/fhir/valueset-ucum-common.html), bei Stückzahl sollte man laut HL7 die "1" verwenden.
+--> Sollten wir alle values von https://www.hl7.org/fhir/valueset-ucum-common.html als enumeration abbilden? Momentan lassen wir hier alle strings zu.
+10: Beschränkung auf 50 Zeichen: <text value="GlaxoSmithKline GmbH &amp; Co. KG VIANI 50 Âµg/250 Âµg Diskus Einzeldos.Inhalat.-Plv." />
+--> Es gibt drei Profile für die Medication Resource. Das kann mit XSD nicht abgebildet werden, stattdessen wird hier nur gegen ein kleinsten gemeinsamen Nenner validiert.
+11: authoredOn muss 10-stellig sein JJJJ-MM-TT (constraint ist nur im XML sichtbar!)
+--> Die Längenvalidierung fehlte im XSD, konnte aber ergänzt werden
+12: vermutlich Folgefehler, weil die Composition fehlt
+13: vermutlich Folgefehler, weil die Composition fehlt
+14: vermutlich Folgefehler, weil die Composition fehlt
+15: vermutlich Folgefehler, weil die Composition fehlt
+16: vermutlich Folgefehler, weil die Composition fehlt
+17: analog 1

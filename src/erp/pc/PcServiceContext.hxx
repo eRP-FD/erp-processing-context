@@ -1,6 +1,12 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_PC_PCSERVICECONTEXT_HXX
 #define ERP_PROCESSING_CONTEXT_PC_PCSERVICECONTEXT_HXX
 
+#include "erp/crypto/Certificate.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/hsm/HsmFactory.hxx"
 #include "erp/hsm/HsmPool.hxx"
@@ -13,8 +19,8 @@
 #include "erp/tsl/TslManager.hxx"
 #include "erp/tsl/TslRefreshJob.hxx"
 #include "erp/util/Configuration.hxx"
+#include "erp/util/health/ApplicationHealth.hxx"
 
-#include <erp/crypto/Certificate.hxx>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -40,7 +46,7 @@ class PcServiceContext
 public:
     PcServiceContext(const Configuration& configuration,
                    Database::Factory&& databaseFactory,
-                   std::unique_ptr<DosHandler>&& dosHandler,
+                   std::unique_ptr<RedisInterface>&& redisClient,
                    std::unique_ptr<HsmPool>&& hsmPool,
                    std::shared_ptr<JsonValidator> jsonValidator,
                    std::shared_ptr<XmlValidator> xmlValidator,
@@ -70,6 +76,7 @@ public:
     const SeedTimer* getPrngSeeder() const;
 
     Idp idp;
+    ApplicationHealth& applicationHealth ();
 
     PcServiceContext(const PcServiceContext& other) = delete;
     PcServiceContext& operator=(const PcServiceContext& other) = delete;
@@ -100,6 +107,7 @@ private:
     std::shared_ptr<TslManager> mTslManager;
     std::unique_ptr<TslRefreshJob> mTslRefreshJob;
     std::unique_ptr<SeedTimer> mPrngSeeder;
+    ApplicationHealth mApplicationHealth;
 };
 
 template<class ServiceContextType> class SessionContext;

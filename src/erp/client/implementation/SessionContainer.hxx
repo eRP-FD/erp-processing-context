@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_CLIENT_IMPLEMENTATION_SESSIONCONTAINER_HXX
 #define ERP_PROCESSING_CONTEXT_CLIENT_IMPLEMENTATION_SESSIONCONTAINER_HXX
 
@@ -26,17 +31,20 @@ public:
         const SafeString& clientPrivateKey,
         const std::optional<std::string>& forcedCiphers)
         : mTlsSession(hostname, port, connectionTimeoutSeconds, enforceServerAuthentication,
-                      caCertificates, clientCertificate, clientPrivateKey, forcedCiphers)
+                      caCertificates, clientCertificate, clientPrivateKey, forcedCiphers),
+          mIsEstablished(false)
     {}
 
     SslStream& getStream() { return mTlsSession.getSslStream(); }
 
     void establish(const bool trustCn)
     {
-        // "ePA frontend of the insurant: TLS connection establishment as required"
-        // GEMREQ-start A_15300
-        mTlsSession.establish(trustCn);
-        // GEMREQ-end A_15300
+        if ( ! mIsEstablished)
+        {
+            mTlsSession.establish(trustCn);
+
+            mIsEstablished = true;
+        }
     };
 
     bool hasBeenResumed() const { return mTlsSession.hasBeenResumed(); }
@@ -46,10 +54,18 @@ public:
         mTlsSession.inheritTicketFrom(container.mTlsSession);
     }
 
-    void teardown() { mTlsSession.teardown(); }
+    void teardown()
+    {
+        if (mIsEstablished)
+        {
+            mIsEstablished = false;
+            mTlsSession.teardown();
+        }
+    }
 
 private:
     TlsSession mTlsSession;
+    bool mIsEstablished;
 };
 
 
@@ -67,7 +83,7 @@ public:
     bool hasBeenResumed() const { return false; }
     void inheritTicketFrom (const SessionContainer<TcpStream>&)
     {
-        throw std::runtime_error("The functionality is not supported.");
+        Fail("The functionality is not supported.");
     }
 
     void teardown() { mTcpStream.shutdown(); }
@@ -75,5 +91,6 @@ public:
 private:
     TcpStream mTcpStream;
 };
+
 
 #endif

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "PeriodicTimer.hxx"
 
 #include "erp/util/Expect.hxx"
@@ -9,9 +14,9 @@ PeriodicTimer::PeriodicTimer(std::chrono::steady_clock::duration interval)
 {
 }
 
-void PeriodicTimer::start(boost::asio::io_context& context)
+void PeriodicTimer::start(boost::asio::io_context& context, std::chrono::steady_clock::duration initialInterval)
 {
-    mTimer = std::make_unique<boost::asio::steady_timer>(context, mInterval);
+    mTimer = std::make_unique<boost::asio::steady_timer>(context, initialInterval);
     mTimer->async_wait(
         [this](auto errCode){timerHandlerInternal(errCode);});
 }

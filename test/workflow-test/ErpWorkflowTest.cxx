@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include "erp/erp-serverinfo.hxx"
@@ -62,6 +67,51 @@ TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
     }
 }
 
+TEST_F(ErpWorkflowTest, MultipleTaskCloseError)
+{
+    // invoke POST /task/$create
+    std::optional<model::PrescriptionId> prescriptionId;
+    std::string accessCode;
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+
+    // Activate.
+    const std::string kvnr{"X987654321"};
+    std::string qesBundle;
+    std::vector<model::Communication> communications;
+    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+
+    // invoke /task/<id>/$accept
+    std::string secret;
+    std::optional<model::Timestamp> lastModifiedDate;
+    ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
+
+    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    ASSERT_TRUE(telematicId.has_value());
+    const JWT jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    std::optional<model::Bundle> communicationsBundle;
+    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtInsurant));
+    ASSERT_TRUE(communicationsBundle);
+    EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, *prescriptionId), communications.size());
+    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20");
+    const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
+    const JWT jwt{ jwtApotheke() };
+    ClientResponse serverResponse;
+
+    // Test that first close request succeeds.
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
+                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+    // Test that any further close request is denied.
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
+                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Forbidden);
+}
+
 TEST_F(ErpWorkflowTest, TaskLifecycleNormal)// NOLINT
 {
     model::Timestamp startTime = model::Timestamp::now();
@@ -71,7 +121,8 @@ TEST_F(ErpWorkflowTest, TaskLifecycleNormal)// NOLINT
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
 
-    const std::string kvnr{"X987654321"};
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
     std::string qesBundle;
     std::vector<model::Communication> communications;
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
@@ -110,8 +161,9 @@ TEST_F(ErpWorkflowTest, TaskLifecycleNormal)// NOLINT
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "de", startTime,
-        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr, kvnr }, { 0, 2, 3, 4, 5 }, { 7 },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+        { kvnr, telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr, kvnr }, { 1, 3, 4, 5, 6 }, { 0, 8 },
+        { model::AuditEvent::SubType::read,
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::read});
@@ -125,7 +177,8 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByInsurantProxy) // NOLINT
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
 
-    const std::string kvnr{"X123456789"};
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
     std::string qesBundle;
     std::vector<model::Communication> communications;
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
@@ -147,8 +200,9 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByInsurantProxy) // NOLINT
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "en", startTime,
-        { telematicIdDoctor, kvnr, kvnrRepresentative }, { 0 }, { },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+        { kvnr, telematicIdDoctor, kvnr, kvnrRepresentative }, { 1 }, { 0 },
+        { model::AuditEvent::SubType::read,
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::del});
 }
 
@@ -171,7 +225,7 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByInsurant) // NOLINT
         checkTaskAbort(*prescriptionId, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr), kvnr, { }, { }, communications));
 
     // Check for correct return code in this case, for bugticket ERP-4972
-    taskAccept(*prescriptionId,accessCode, HttpStatus::Gone);
+    taskAccept(*prescriptionId,accessCode, HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing);
 
     // check no task is returned for GetAllTasks
     auto tasks = taskGet(kvnr);
@@ -195,7 +249,8 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByPharmacy) // NOLINT
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
 
-    const std::string kvnr{"X123456787"};
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
     std::string qesBundle;
     std::vector<model::Communication> communications;
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
@@ -212,8 +267,9 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByPharmacy) // NOLINT
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "de", startTime,
-        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy }, { 0, 2, 3, 4 }, { },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+        { kvnr, telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy }, { 1, 3, 4, 5 }, { 0 },
+        { model::AuditEvent::SubType::read,
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::del });
 }
@@ -226,7 +282,8 @@ TEST_F(ErpWorkflowTest, TaskLifecycleReject) // NOLINT
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
 
-    const std::string kvnr{"X123456786"};
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
     std::string qesBundle;
     std::vector<model::Communication> communications;
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
@@ -249,9 +306,10 @@ TEST_F(ErpWorkflowTest, TaskLifecycleReject) // NOLINT
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "de", startTime,
-        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr,
-          telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr}, { 0, 2, 3, 4, 6, 7, 8, 9 }, { },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+        { kvnr, telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr,
+          telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr}, { 1, 3, 4, 5, 7, 8, 9, 10 }, { 0 },
+        { model::AuditEvent::SubType::read,
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
@@ -288,7 +346,8 @@ TEST_F(ErpWorkflowTest, TaskSearchStatus) // NOLINT
     {
         // Case from bug ticket (ERP-6043). Operation "eq" is not supported for "status", therefore this is treated
         // as unknown value for status and should cause a BadRequest error. It formerly caused an internal server error.
-        ASSERT_NO_FATAL_FAILURE(taskGet(kvnr, "modified=eq2021-06-18&status=eqREADY", HttpStatus::BadRequest));
+        ASSERT_NO_FATAL_FAILURE(taskGet(kvnr, "modified=eq2021-06-18&status=eqREADY",
+                                        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
     }
     {
         const auto bundle = taskGet(kvnr, "status=ready").value();
@@ -704,7 +763,7 @@ TEST_F(ErpWorkflowTest, TaskGetRevinclude ) // NOLINT
 
 
     {
-        const auto bundle = taskGetId(*prescriptionId1, kvnr, accessCode1, HttpStatus::OK, true);
+        const auto bundle = taskGetId(*prescriptionId1, kvnr, accessCode1, HttpStatus::OK, {}, true);
         EXPECT_EQ(bundle->getResourcesByType<model::Task>("Task").size(), 1);
 
         auto auditEvents = bundle->getResourcesByType<model::AuditEvent>("AuditEvent");
@@ -1074,9 +1133,11 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
     EXPECT_EQ("<null>", auditEvent.agentName());
 }
 
-// Test cases of POST /Task/$close where the prescription id of the received medication dispense
-// is invalid (see also ticket ERP-5805):
-TEST_F(ErpWorkflowTest, TaskClose_MedicationDispenseInvalidPrescriptionId) // NOLINT
+// Test cases of
+// 1. POST /Task/$close where the prescription id of the received medication dispense is invalid (see also ticket ERP-5805).
+// 2. POST /Task/$close with invalid field "whenHandedOver" to verify the diagnostics data contained in the OperationOutcome
+//    resource of the error response.
+TEST_F(ErpWorkflowTest, TaskClose_MedicationDispense_invalidPrescriptionIdAndWhenHandedOver) // NOLINT
 {
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
@@ -1098,14 +1159,22 @@ TEST_F(ErpWorkflowTest, TaskClose_MedicationDispenseInvalidPrescriptionId) // NO
     ASSERT_TRUE(secret.has_value());
 
     // Invalid format of prescriptionId for Medication dispense, will be rejected by schema check:
-    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispenseInvalidPrescriptionId(
+    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidPrescriptionId(
         task->prescriptionId(), "INVALID", std::string(secret.value()), kvnr));
     // Valid format of prescriptionId for Medication dispense but invalid content:
-    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispenseInvalidPrescriptionId(
+    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidPrescriptionId(
         task->prescriptionId(), "160.000.000.000.000.00", std::string(secret.value()), kvnr));
     // Valid format and content of prescriptionId for Medication dispense but does not correspond to Task prescriptionId:
-    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispenseInvalidPrescriptionId(
+    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidPrescriptionId(
         task->prescriptionId(), "160.005.363.425.241.41", std::string(secret.value()), kvnr));
+
+    // Invalid values for field "whenHandedOver", check correct values in OperationOutcome:
+    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidWhenHandedOver(
+        task->prescriptionId(), std::string(secret.value()), kvnr, "invalid-Date"));
+    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidWhenHandedOver(
+        task->prescriptionId(), std::string(secret.value()), kvnr, "2021-09-21T07:13:00+00:00.1234"));
+    ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidWhenHandedOver(
+        task->prescriptionId(), std::string(secret.value()), kvnr, "2021-14-12"));
 }
 
 TEST_F(ErpWorkflowTest, TaskAbort_NewlyCreated) // NOLINT
@@ -1115,7 +1184,8 @@ TEST_F(ErpWorkflowTest, TaskAbort_NewlyCreated) // NOLINT
     ASSERT_TRUE(task);
     const std::string accessCode(task->accessCode());
     ASSERT_NO_FATAL_FAILURE(
-        taskAbort(task->prescriptionId(), JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {}, HttpStatus::Forbidden));
+        taskAbort(task->prescriptionId(), JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {},
+                  HttpStatus::Forbidden, model::OperationOutcome::Issue::Type::forbidden));
 }
 
 TEST_F(ErpWorkflowTest, TaskCancelled) // NOLINT
@@ -1135,16 +1205,23 @@ TEST_F(ErpWorkflowTest, TaskCancelled) // NOLINT
     ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {}));
 
     // The following calls all should return with error HttpStatus::Gone:
-    ASSERT_NO_FATAL_FAILURE(taskGetId(prescriptionId, kvnr, accessCode, HttpStatus::Gone));
-    ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {}, HttpStatus::Gone));
-    ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, accessCode, qesBundle, HttpStatus::Gone));
-    ASSERT_NO_FATAL_FAILURE(taskAccept(prescriptionId, accessCode, HttpStatus::Gone));
-    ASSERT_NO_FATAL_FAILURE(taskClose(prescriptionId, {}, kvnr, HttpStatus::Gone));
-    ASSERT_NO_FATAL_FAILURE(taskReject(prescriptionId, {}, HttpStatus::Gone));
+    ASSERT_NO_FATAL_FAILURE(taskGetId(prescriptionId, kvnr, accessCode,
+                                      HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+    ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {},
+                                      HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+    ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, accessCode, qesBundle,
+                                         HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+    ASSERT_NO_FATAL_FAILURE(taskAccept(prescriptionId, accessCode,
+                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+    ASSERT_NO_FATAL_FAILURE(taskClose(prescriptionId, {}, kvnr,
+                                      HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+    ASSERT_NO_FATAL_FAILURE(taskReject(prescriptionId, {},
+                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
 }
 
 TEST_F(ErpWorkflowTest, RejectTaskInvalidId) // NOLINT
 {
     // This is already failing in the VauRequestHandler (tests therefore also the other Task endpoints with id) :
-    ASSERT_NO_FATAL_FAILURE(taskReject("thi$-is_an-invalid-ta$k-id_#§&?ß", {}, HttpStatus::BadRequest));
+    ASSERT_NO_FATAL_FAILURE(taskReject("thi$-is_an-invalid-ta$k-id_#§&?ß", {},
+                                       HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }

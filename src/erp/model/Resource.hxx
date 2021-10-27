@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_RESOURCE_HXX
 #define ERP_PROCESSING_CONTEXT_RESOURCE_HXX
 
@@ -86,6 +91,12 @@ protected:
      */
     [[nodiscard]] std::string_view getStringValue(const rapidjson::Pointer& pointerToEntry) const;
     [[nodiscard]] std::optional<std::string_view> getOptionalStringValue(const rapidjson::Pointer& pointerToEntry) const;
+    /**
+     * Returns the string value of the object member specified by its key.
+     */
+    [[nodiscard]] std::string_view getStringValue(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
+    [[nodiscard]]
+    std::optional<std::string_view> getOptionalStringValue(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
 
     /**
      * Returns the integer value of the given pointer.
@@ -154,10 +165,14 @@ protected:
         const rapidjson::Pointer& searchKey,
         const std::string_view& searchValue);
 
-    [[nodiscard]] rapidjson::Value* getMemberInArray(const rapidjson::Pointer& pointerToArray, size_t index);
+    [[nodiscard]] const rapidjson::Value* getMemberInArray(
+        const rapidjson::Pointer& pointerToArray,
+        size_t index) const;
 
     // Returns position of added element:
     std::size_t addToArray (const rapidjson::Pointer& pointerToArray, rapidjson::Value&& object);
+    std::size_t addToArray (rapidjson::Value& array, rapidjson::Value&& object);
+    std::size_t addStringToArray (rapidjson::Value& array, std::string_view str);
 
     void removeFromArray(const rapidjson::Pointer& pointerToArray, std::size_t index);
     void clearArray(const rapidjson::Pointer& pointerToArray);
@@ -193,6 +208,7 @@ extern template class Resource<class Communication>;
 extern template class Resource<class Device>;
 extern template class Resource<class MedicationDispense>;
 extern template class Resource<class MetaData>;
+extern template class Resource<class OperationOutcome>;
 extern template class Resource<class Parameters>;
 extern template class Resource<class Patient>;
 extern template class Resource<class Signature>;

@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "test/util/ServerTestBase.hxx"
 
 #include "erp/server/context/SessionContext.hxx"
@@ -5,31 +10,33 @@
 #include "erp/server/request/ServerRequest.hxx"
 
 
-class ErrorHandler : public RequestHandlerInterface<PcServiceContext>
-{
-public:
-    void handleRequest (SessionContext<PcServiceContext>& session) override
+namespace {
+    class ErrorHandler : public RequestHandlerInterface<PcServiceContext>
     {
-        const auto requestedResponseStatus = std::stoi(session.request.getPathParameter("status").value_or("200"));
-        throw ErpException("test", fromBoostBeastStatus(requestedResponseStatus));
-    }
-    [[nodiscard]] bool allowedForProfessionOID(std::string_view) const override
-    {
-        return true;
-    }
-    Operation getOperation (void) const override
-    {
-        return mOperation;
-    }
+    public:
+        void handleRequest (SessionContext<PcServiceContext>& session) override
+        {
+            const auto requestedResponseStatus = std::stoi(session.request.getPathParameter("status").value_or("200"));
+            throw ErpException("test", fromBoostBeastStatus(requestedResponseStatus));
+        }
+        [[nodiscard]] bool allowedForProfessionOID(std::string_view) const override
+        {
+            return true;
+        }
+        Operation getOperation (void) const override
+        {
+            return mOperation;
+        }
 
-    void setOperation (const Operation operation)
-    {
-        mOperation = operation;
-    }
+        void setOperation (const Operation operation)
+        {
+            mOperation = operation;
+        }
 
-private:
-    Operation mOperation = Operation::UNKNOWN;
-};
+    private:
+        Operation mOperation = Operation::UNKNOWN;
+    };
+}
 
 
 /**
@@ -61,7 +68,7 @@ protected:
             std::make_unique<ErrorHandler>());
     }
 
-    void testStatusCode (uint32_t statusCode, uint32_t expectedResponseStatus);
+    void testStatusCode (uint32_t statusCode, uint32_t expectedResponseStatus, bool expectResponseBody);
 
 private:
     RequestHandlerContext<PcServiceContext>* mRequestHandler = nullptr;
@@ -91,7 +98,10 @@ TEST_F(EndpointErrorTest, testStatusCodeHandling_operationGetTask)
     for (const auto& range : knownStatusCodes)
     {
         for (uint32_t status=range.first; status<=range.second; ++status)
-            testStatusCode(status, supportedStatusCodes.count(status)==1 ? status : 500);
+        {
+            bool expectResponseBody = status == 500 || supportedStatusCodes.count(status);
+            testStatusCode(status, expectResponseBody ? status : 500, expectResponseBody);
+        }
     }
 }
 
@@ -110,12 +120,14 @@ TEST_F(EndpointErrorTest, testStatusCodeHandling_operationPostTaskIdAccept)
     setMockedOperation(Operation::POST_Task_id_accept);
     for (const auto& status : statusCodes)
     {
-        testStatusCode(status, status);
+        testStatusCode(status, status, true/*expectResponseBody*/);
     }
 }
 
 
-void EndpointErrorTest::testStatusCode (const uint32_t statusCode, const uint32_t expectedResponseStatus)
+void EndpointErrorTest::testStatusCode (const uint32_t statusCode,
+                                        const uint32_t expectedResponseStatus,
+                                        bool expectResponseBody)
 {
     auto client = createClient();
 
@@ -135,5 +147,8 @@ void EndpointErrorTest::testStatusCode (const uint32_t statusCode, const uint32_
     ASSERT_EQ(innerResponse.getHeader().status(), static_cast<HttpStatus>(expectedResponseStatus))
         << "got status " << static_cast<uint32_t>(innerResponse.getHeader().status()) << " but expected "
         << expectedResponseStatus;
-    ASSERT_EQ(innerResponse.getBody(), "");
+    if(expectResponseBody)
+    {
+        ASSERT_NE(innerResponse.getBody(), ""); // => error response exists
+    }
 }

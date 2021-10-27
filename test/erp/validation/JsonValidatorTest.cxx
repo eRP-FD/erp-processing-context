@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/validation/JsonValidator.hxx"
 #include "test/util/StaticData.hxx"
 

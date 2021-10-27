@@ -1,11 +1,16 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_TERMINATIONHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_TERMINATIONHANDLER_HXX
 
-#include <condition_variable>
+#include <atomic>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
-#include <thread>
 #include <vector>
 
 
@@ -24,8 +29,8 @@
  *         ...initialize application... during which
  *            TerminationHandler::instance().registerCallback( for some resource) for all resources that require clean shut down
  *
- *         TerminationHandler::instance().waitForTerminated();
- *         return TerminationHandler::instance().hasError() ? EXIT_FAILURE : EXIT_SUCCESS;
+ *          // after main loop terminated:
+ *          TerminationHandler::instance().notifyTerminationCallbacks(signalHandler.mSignal != SIGTERM);
  *     }
  *
  */
@@ -41,40 +46,29 @@ public:
         Terminated
     };
 
-    /**
-     * The destructor will trigger termination, if that has not yet happened, and then wait for the termination
-     * thread to finish calling all its callbacks.
-     */
-    virtual ~TerminationHandler (void);
-
-    virtual std::optional<size_t> registerCallback (std::function<void(bool hasError)>&& callback);
+    std::optional<size_t> registerCallback (std::function<void(bool hasError)>&& callback);
 
     /**
      * Notify that the termination of the application has been requested. This will
      * 1. put it into state==Terminating
      * 2. call all registered callbacks
      * 3. put it into state==Terminated
-     * 4. notify all threads that wait in waitForTerminated
      *
      * The name of this method could be improved. It is usually to trigger the application exist but relies on
      * the registered callbacks to each do their part of shutting down some resources. It does not, and nor should its
      * callbacks, call exit() or abort(), etc.
      */
-    void notifyTermination (bool hasError);
+    void notifyTerminationCallbacks(bool hasError);
+
+    /// @brief trigger a process termination from anywhere
+    virtual void terminate();
+
+    State getState (void) const;
 
     /**
-     * Block the calling thread until the application is terminated via a call to `notifyTermination`, either because
-     * of an error or because of an explicit shutdown. I.e. until State == Terminated
-     *
+     * Return whether `notifyTerminationCallbacks(bool hasError)` has been called with `hasError==true`.
      */
-    virtual void waitForTerminated (void);
-
-    virtual State getState (void) const;
-
-    /**
-     * Return whether `notifyTermination(bool hasError)` has been called with `hasError==true`.
-     */
-    virtual bool hasError (void) const;
+    bool hasError (void) const;
 
 protected:
     /**
@@ -84,11 +78,9 @@ protected:
 
 private:
     mutable std::mutex mMutex;
-    std::condition_variable mTerminationCondition;
     std::vector<std::function<void(bool)>> mCallbacks;
-    std::unique_ptr<std::thread> mTerminationThread;
-    State mState;
-    bool mHasError;
+    std::atomic<State> mState;
+    std::atomic_bool mHasError;
 
     static std::unique_ptr<TerminationHandler>& rawInstance (void);
 

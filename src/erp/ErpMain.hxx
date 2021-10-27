@@ -1,13 +1,18 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_ERPMAIN_HXX
 #define ERP_PROCESSING_CONTEXT_ERPMAIN_HXX
 
 #include "erp/database/Database.hxx"
-#include "erp/registration/HeartbeatSender.hxx"
 #include "erp/hsm/HsmPool.hxx"
+#include "erp/registration/HeartbeatSender.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/tsl/TslRefreshJob.hxx"
-#include "erp/util/Configuration.hxx"
 #include "erp/util/Condition.hxx"
+#include "erp/util/Configuration.hxx"
 
 #include <memory>
 #include <optional>
@@ -18,6 +23,8 @@ class EnrolmentServer;
 class ErpProcessingContext;
 class HsmClient;
 class HsmFactory;
+class PcServiceContext;
+class RedisInterface;
 class SeedTimer;
 class ThreadPool;
 
@@ -43,6 +50,7 @@ public:
         std::function<std::unique_ptr<HsmFactory>(std::unique_ptr<HsmClient>,std::shared_ptr<BlobCache>)> hsmFactoryFactory;
         HsmPool::TeeTokenUpdaterFactory teeTokenUpdaterFactory;
         TslManager::TslManagerFactory tslManagerFactory;
+        std::function<std::unique_ptr<RedisInterface>()> redisClientFactory;
     };
 
     static Factories createProductionFactories();
@@ -64,7 +72,8 @@ public:
     static int runApplication (
         uint16_t defaultEnrolmentServerPort,
         Factories&& factories,
-        StateCondition& state);
+        StateCondition& state,
+        std::function<void(PcServiceContext&)> postInitializationCallback = {});
 
     static std::unique_ptr<HeartbeatSender> setupHeartbeatSender(
         const uint16_t port,
@@ -80,7 +89,8 @@ public:
         std::unique_ptr<HsmFactory> hsmFactory,
         Database::Factory&& database,
         HsmPool::TeeTokenUpdaterFactory&& teeTokenUpdaterFactory,
-        TslManager::TslManagerFactory&& tslManagerFactory);
+        TslManager::TslManagerFactory&& tslManagerFactory,
+        std::unique_ptr<RedisInterface> redisClient);
 
     static std::unique_ptr<EnrolmentServer> setupEnrolmentServer (
         const uint16_t enrolmentPort,
@@ -95,6 +105,9 @@ public:
     static std::optional<uint16_t> getEnrolementServerPort (
         const uint16_t pcPort,
         const uint16_t defaultEnrolmentServerPort);
+
+    static void waitForHealthUp (PcServiceContext& serviceContext);
+
 };
 
 

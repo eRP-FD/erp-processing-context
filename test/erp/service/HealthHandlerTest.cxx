@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 #include "erp/service/HealthHandler.hxx"
@@ -164,14 +169,14 @@ public:
                 auto md = std::make_unique<HealthHandlerTestMockDatabase>(hsmPool);
                 return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
             },
-            std::make_unique<DosHandler>(std::make_unique<HealthHandlerTestMockRedisStore>()),
+            std::make_unique<HealthHandlerTestMockRedisStore>(),
             std::make_unique<HsmPool>(
                 std::make_unique<HsmMockFactory>(std::make_unique<HealthHandlerTestHsmMockClient>(),
                                                  MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
                 HealthHandlerTestTeeTokenUpdaterFactory::createHealthHandlerTestMockTeeTokenUpdaterFactory()),
             StaticData::getJsonValidator(), StaticData::getXmlValidator(),
                 TslTestHelper::createTslManager<HealthHandlerTestTslManager>());
-        mContext = std::make_unique<SessionContext<PcServiceContext>>(*mServiceContext, request, response);
+        mContext = std::make_unique<SessionContext<PcServiceContext>>(*mServiceContext, request, response, mAccessLog);
 
         mPool.setUp(1);
         using namespace std::chrono_literals;
@@ -193,10 +198,20 @@ public:
     {
     }
 
+    void verifyRootCause (
+        rapidjson::Document& document,
+        const rapidjson::Pointer& pointer,
+        const std::string expectedValue)
+    {
+        const std::string value = pointer.Get(document)->GetString();
+        EXPECT_TRUE(value.find(expectedValue) != std::string::npos);
+    }
+
 protected:
     std::unique_ptr<PcServiceContext> mServiceContext;
     ServerRequest request;
     ServerResponse response;
+    AccessLog mAccessLog;
     std::unique_ptr<SessionContext<PcServiceContext>> mContext;
     ThreadPool mPool;
     HealthHandler mHandler;
@@ -272,8 +287,7 @@ TEST_F(HealthHandlerTest, DatabaseDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(postgresStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(postgresRootCausePointer.Get(healthDocument)->GetString()),
-              std::string("CONNECTION FAILURE"));
+    verifyRootCause(healthDocument, postgresRootCausePointer, "CONNECTION FAILURE");
 }
 
 TEST_F(HealthHandlerTest, HsmDown)
@@ -288,7 +302,7 @@ TEST_F(HealthHandlerTest, HsmDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(hsmStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(hsmRootCausePointer.Get(healthDocument)->GetString()), std::string("FAILURE"));
+    verifyRootCause(healthDocument, hsmRootCausePointer, "FAILURE");
     EXPECT_EQ(std::string(hsmIpPointer.Get(healthDocument)->GetString()),
               Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
 }
@@ -305,7 +319,7 @@ TEST_F(HealthHandlerTest, RedisDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(redisStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(redisRootCausePointer.Get(healthDocument)->GetString()), std::string("REDIS FAILURE"));
+    verifyRootCause(healthDocument, redisRootCausePointer, "REDIS FAILURE");
 }
 
 TEST_F(HealthHandlerTest, TslDown)
@@ -321,7 +335,7 @@ TEST_F(HealthHandlerTest, TslDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(tslStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(tslRootCausePointer.Get(healthDocument)->GetString()), std::string("TSL FAILURE"));
+    verifyRootCause(healthDocument, tslRootCausePointer, "TSL FAILURE");
 }
 
 TEST_F(HealthHandlerTest, BnaDown)
@@ -337,7 +351,7 @@ TEST_F(HealthHandlerTest, BnaDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(bnaStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(bnaRootCausePointer.Get(healthDocument)->GetString()), std::string("BNA FAILURE"));
+    verifyRootCause(healthDocument, bnaRootCausePointer, "BNA FAILURE");
 }
 
 TEST_F(HealthHandlerTest, IdpDown)
@@ -350,7 +364,7 @@ TEST_F(HealthHandlerTest, IdpDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(idpStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(idpRootCausePointer.Get(healthDocument)->GetString()), std::string("never updated"));
+    verifyRootCause(healthDocument, idpRootCausePointer, "never updated");
 }
 
 TEST_F(HealthHandlerTest, SeedTimerDown)
@@ -365,8 +379,7 @@ TEST_F(HealthHandlerTest, SeedTimerDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(seedTimerStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(seedTimerRootCausePointer.Get(healthDocument)->GetString()),
-              std::string("SEEDTIMER FAILURE"));
+    verifyRootCause(healthDocument, seedTimerRootCausePointer, "SEEDTIMER FAILURE");
 }
 
 TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)
@@ -384,6 +397,5 @@ TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()),
               std::string(model::Health::down));
-    EXPECT_EQ(std::string(teeTokenUpdaterRootCausePointer.Get(healthDocument)->GetString()),
-              std::string("last update is too old"));
+    verifyRootCause(healthDocument, teeTokenUpdaterRootCausePointer, "last update is too old");
 }

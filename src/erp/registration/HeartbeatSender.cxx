@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/registration/HeartbeatSender.hxx"
 
 #include "erp/registration/RegistrationManager.hxx"
@@ -90,7 +95,7 @@ void HeartbeatSender::executeJob(void)
         // The proxy client is not accessible.
         // This is a serious error condition that prevents the processing context from operating correctly.
         // => terminate the application.
-        TerminationHandler::instance().notifyTermination(true);
+        TerminationHandler::instance().terminate();
     }
 }
 

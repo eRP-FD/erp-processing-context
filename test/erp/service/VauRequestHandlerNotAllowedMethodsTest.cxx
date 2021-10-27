@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/client/HttpsClient.hxx"
@@ -33,8 +38,7 @@ public:
                 static_cast<std::string>(endpoint),
                 Header::Version_1_1,
                 { getAuthorizationHeaderForJwt(jwt1) },
-                HttpStatus::Unknown,
-                false),
+                HttpStatus::Unknown),
                 "");
 
         // Encrypt with TEE protocol.
@@ -43,8 +47,7 @@ public:
                 "/VAU/0",
                 Header::Version_1_1,
                 {},
-                HttpStatus::Unknown,
-                false),
+                HttpStatus::Unknown),
                 teeProtocol.createRequest(
                         MockCryptography::getEciesPublicKeyCertificate(),
                         request,

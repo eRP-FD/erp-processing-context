@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/validation/XmlValidator.hxx"
 
 #include <magic_enum.hpp>
@@ -72,7 +77,7 @@ void XmlValidator::errorCallback(void* context, const char* msg, ...)
         std::va_list args{};
         va_start(args, msg);
         TVLOG(1) << "XML validation failed: " << String::vaListToString(msg, args);
-        ErpFail(HttpStatus::BadRequest, "XML validation failed");
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "XML validation failed", String::vaListToString(msg, args));
         va_end(args);
     } catch (...)
     {
@@ -111,10 +116,15 @@ void XmlValidator::structuredErrorCallback(void* context, xmlErrorPtr error)
                 TVLOG(1) << error->message;
                 break;
             case XML_ERR_ERROR:
-            case XML_ERR_FATAL: {
-                TVLOG(1) << "On line " << error->line << ": " << error->message;
-                ErpFail(HttpStatus::BadRequest,
-                        std::string("XML error on line ") + std::to_string(error->line));
+            case XML_ERR_FATAL:
+            {
+                std::string_view message = error->message;
+                if(message.back() == '\n')  // remove trailing line feed contained in message from libxml2;
+                    message = message.substr(0, message.size() - 1);
+                TVLOG(1) << "On line " << error->line << ": " << message;
+                ErpFailWithDiagnostics(HttpStatus::BadRequest,
+                                       std::string("XML error on line ") + std::to_string(error->line),
+                                       std::string(message));
             }
         }
     } catch(...)

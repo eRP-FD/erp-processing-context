@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/crypto/SecureRandomGenerator.hxx"
@@ -216,7 +221,7 @@ protected:
         std::string responseBody = innerResponse.getBody();
         ASSERT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, expectedHttpStatus));
 
-        if (!responseBody.empty())
+        if (expectedHttpStatus == HttpStatus::OK)
         {
             if(prescriptionId.has_value())
             {

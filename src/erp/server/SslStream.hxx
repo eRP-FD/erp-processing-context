@@ -1,3 +1,8 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_SSLSTREAM_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_SSLSTREAM_HXX
 
@@ -72,9 +77,17 @@ public:
         const boost::asio::mutable_buffer& buffer,
         boost::beast::error_code& ec);
 
+    template<class MutableBufferSequence, class Handler>
+    void async_read_some(
+        MutableBufferSequence& buffers,
+        BOOST_ASIO_MOVE_ARG(Handler) handler);
+
     boost::beast::ssl_stream<boost::beast::tcp_stream>& getSslStream (void);
 
+    using executor_type = boost::beast::ssl_stream<boost::beast::tcp_stream>::executor_type;
     boost::beast::ssl_stream<boost::beast::tcp_stream>::executor_type get_executor (void) noexcept;
+
+    void expiresAfter(const std::chrono::steady_clock::duration& duration);
 
 private:
     SslStream(boost::asio::io_context* ioContext);
@@ -162,8 +175,18 @@ void SslStream::async_write_some(
 }
 
 
+template<class MutableBufferSequence, class Handler>
+void SslStream::async_read_some(
+    MutableBufferSequence& buffers,
+    BOOST_ASIO_MOVE_ARG(Handler) handler)
+{
+    mSslStream->async_read_some(buffers, std::move(handler));
+}
+
+
 template<> struct boost::beast::is_sync_read_stream<SslStream> : std::true_type {};
 template<> struct boost::beast::is_sync_write_stream<SslStream> : std::true_type {};
+template<> struct boost::beast::is_async_read_stream<SslStream> : std::true_type {};
 template<> struct boost::beast::is_async_write_stream<SslStream> : std::true_type {};
 
 #endif
