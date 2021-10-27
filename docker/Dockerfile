@@ -63,8 +63,6 @@ COPY docker/create_graphene_manifest.sh /build/erp-processing-context/release
 RUN chmod 755 /build/erp-processing-context/release/create_graphene_manifest.sh && \
     /build/erp-processing-context/release/create_graphene_manifest.sh \
     /build/erp-processing-context/release/install_manifest.txt \
-    erp-processing-context \
-    /graphene/graphene \
     /erp/bin/erp-processing-context.manifest
 
 RUN tar -czf ./erp-processing-context.tar.gz /erp
@@ -90,8 +88,6 @@ COPY docker/create_graphene_manifest.sh /build/erp-processing-context/reldeb
 RUN chmod 755 /build/erp-processing-context/reldeb/create_graphene_manifest.sh && \
     /build/erp-processing-context/reldeb/create_graphene_manifest.sh \
     /build/erp-processing-context/reldeb/install_manifest.txt \
-    erp-processing-context \
-    /graphene/graphene \
     /debug/erp/bin/erp-processing-context.manifest
 
 RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp

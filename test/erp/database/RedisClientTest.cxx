@@ -64,7 +64,7 @@ TEST_F(RedisClientTest, BasicTest)
 
     auto exp_ms = time_point<system_clock, milliseconds>(seconds(exp));
 
-    // Fire 10 calls as fast as possible (which si within the upper limit specified above.)
+    // Fire 10 calls as fast as possible (which is within the upper limit specified above.)
     EXPECT_TRUE(dosHandler.updateAccessCounter(jwt.stringForClaim(JWT::subClaim).value(), exp_ms));
     // Add some minor delay to avoid a range of 0 s. The delay is small enough to not affect the overall checks.
     std::this_thread::sleep_for(100ms);
@@ -80,6 +80,66 @@ TEST_F(RedisClientTest, BasicTest)
     std::this_thread::sleep_for(6s);
 
     // Redis Cleanup kicks in which means the token can be used again.
+    EXPECT_TRUE(dosHandler.updateAccessCounter(jwt.stringForClaim(JWT::subClaim).value(), exp_ms));
+
+    // BUT: it's verification will fail because lifetime is expired.
+    ASSERT_THROW(jwt.verify(publicKey), JwtExpiredException);
+}
+
+TEST_F(RedisClientTest, BasicTest2)
+{
+    using namespace std::chrono;
+    DosHandler dosHandler(std::make_unique<MockRedisStore>());
+
+    const auto privateKey = MockCryptography::getIdpPrivateKey();
+    const auto publicKey = MockCryptography::getIdpPublicKey();
+
+    const auto& claimOrig = ResourceManager::instance().getJsonResource(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
+    rapidjson::Document claims;
+    claims.CopyFrom(claimOrig, claims.GetAllocator());
+    claims.RemoveMember(std::string{JWT::nbfClaim});
+
+    // 10 calls / s
+    auto timespan = time_point_cast<milliseconds>(time_point<system_clock>() + seconds(1)) .time_since_epoch() .count();
+    dosHandler.setTimespan(timespan);
+    dosHandler.setRequestsUpperLimit(10);
+
+    // JWT expires in 5 s from now. Use JWT 10 times within 1 s in order to block further access.
+    // Retry one call with the same JWT after at most 5 s.
+    const auto now = system_clock::now();
+    const auto exp = time_point_cast<seconds>(now + 5s).time_since_epoch();
+    const auto iat = time_point_cast<seconds>(now).time_since_epoch();
+    claims[std::string{JWT::expClaim}].SetInt64(exp.count());
+    claims[std::string{JWT::iatClaim}].SetInt64(iat.count());
+    claims[std::string{JWT::subClaim}].SetString("attacker");
+
+    JwtBuilder builder{privateKey};
+    JWT jwt;
+    ASSERT_NO_THROW(jwt = builder.getJWT(claims));
+    ASSERT_NO_THROW(jwt.verify(publicKey));
+
+    auto exp_ms = time_point<system_clock, milliseconds>(seconds(exp));
+
+    // Fire 10 calls as fast as possible (which is within the upper limit specified above.)
+    EXPECT_TRUE(dosHandler.updateAccessCounter(jwt.stringForClaim(JWT::subClaim).value(), exp_ms));
+    std::this_thread::sleep_for(100ms); // Add some minor delay to avoid a range of 0 s. The delay is small enough to not affect the overall checks.
+    // 9 additional calls
+    for (int i=0; i<9; i++)
+    {
+        EXPECT_TRUE(dosHandler.updateAccessCounter(jwt.stringForClaim(JWT::subClaim).value(), exp_ms));
+    }
+
+    // Eleventh call must be denied (constraint is max 10 calls within 1 second.)
+    EXPECT_FALSE(dosHandler.updateAccessCounter(jwt.stringForClaim(JWT::subClaim).value(), exp_ms));
+
+    // Force pause until at least timespan is over. Test that the token is still blocked.
+    std::this_thread::sleep_for(2s);
+    EXPECT_FALSE(dosHandler.updateAccessCounter(jwt.stringForClaim(JWT::subClaim).value(), exp_ms));
+
+    // Force pause until jwt lifetime is expired.
+    std::this_thread::sleep_for(4s);
+
+    // Redis removed the blocklisted key due to its expiration, thus pass.
     EXPECT_TRUE(dosHandler.updateAccessCounter(jwt.stringForClaim(JWT::subClaim).value(), exp_ms));
 
     // BUT: it's verification will fail because lifetime is expired.

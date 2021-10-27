@@ -3,14 +3,14 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-libos.entrypoint                    = "file:_BINARY_"
+libos.entrypoint                    = "erp-processing-context"
 libos.check_invalid_pointers        = false
 
-loader.preload                      = "file:/usr/local/lib64/graphene/libsysdb.so"
+loader.preload                      = "file:/usr/lib/x86_64-linux-gnu/gramine/libsysdb.so"
 loader.log_level                    = "warning"                   # none error warning debug trace all
-loader.log_file                     = "/var/log/erp/graphene.log"
+loader.log_file                     = "/var/log/erp/gramine.log"
 loader.insecure__use_cmdline_argv   = false
-loader.argv0_override               = "_BINARY_"
+loader.argv0_override               = "erp-processing-context"
 loader.insecure__use_host_env       = true
 loader.env.LD_LIBRARY_PATH          = "/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/debug/erp/lib"
 
@@ -21,12 +21,10 @@ sgx.preheat_enclave                 = true
 sys.enable_sigterm_injection        = true         # Allow for injecting SIGTERM signal from the host.
 sys.insecure__allow_eventfd         = true
 
-# Mount host-OS directory to Graphene glibc/runtime libraries (in 'uri') into
-# in graphene visible directory /lib (in 'path').
-
+# Mount host-OS directory to gramine glibc/runtime libraries (in 'uri') into in gramine visible directory /lib (in 'path').
 fs.mount.lib.type = "chroot"
 fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:/usr/local/lib64/graphene/runtime/glibc/"
+fs.mount.lib.uri = "file:/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/"
 
 fs.mount.root_dir.type = "chroot"
 fs.mount.root_dir.path = "/debug"      # Enclave path
@@ -68,61 +66,60 @@ fs.mount.devtpm0.type   = "chroot"
 fs.mount.devtpm0.path   = "/dev/tpm0"
 fs.mount.devtpm0.uri    = "dev:/dev/tpm0"
 
-# Allowed files can be read/written from within the graphene environment.
+# Allowed files can be read/written from within the gramine environment.
+sgx.allowed_files = [
+# Allow some host OS resources for proper operation.
+"file:/etc/nsswitch.conf",
+"file:/etc/ethers",
+"file:/etc/hosts",
+"file:/etc/group",
+"file:/etc/passwd",
+"file:/etc/host.conf",
+"file:/etc/resolv.conf",
+# getaddrinfo(3) configuration file. Glibc reads this file to correctly find network addresses. For more info, see 'man gai.conf'.
+"file:/etc/gai.conf",
+"file:/etc/ld.so.cache",
+"file:/etc/localtime",
+"file:/etc/ssl/openssl.cnf",
+# TPM/TSS runtime generated binary files.
+"file:h80fffffe.bin",
+"file:h80ffffff.bin",
+"file:hp80fffffe.bin",
+"file:hp80ffffff.bin",
+"file:h01c0000a.bin",
+"file:nvp01c0000a.bin",
+"file:h80fffffd.bin",
+"file:hp80fffffd.bin",
+"file:h03000000.bin",
+"file:h03000001.bin",
+# ERP auxiliary configuration
+"file:/var/config/erp/tsl/tsl-ca.der",
+"file:/var/config/erp/config/POSTGRES_CERTIFICATE",
+"file:/var/config/erp/config/POSTGRES_SSL_CERTIFICATE",
+"file:/var/config/erp/config/POSTGRES_SSL_KEY",
+"file:/var/config/erp/config/sslRootCaPath",
+"file:/var/config/erp/config/TSL_SSL_cert_chain.pem",
+"file:/var/config/erp/hsm/work-keyspec",
+"file:/var/config/haproxy/secrets/ca.crt"
+]
 
-sgx.allowed_files.nsswitch    = "file:/etc/nsswitch.conf"
-sgx.allowed_files.ethers      = "file:/etc/ethers"
-sgx.allowed_files.hosts       = "file:/etc/hosts"
-sgx.allowed_files.group       = "file:/etc/group"
-sgx.allowed_files.passwd      = "file:/etc/passwd"
-sgx.allowed_files.host_conf   = "file:/etc/host.conf"
-sgx.allowed_files.resolv_conf = "file:/etc/resolv.conf"
-sgx.allowed_files.gaiconf     = "file:/etc/gai.conf" # getaddrinfo(3) configuration file. Glibc reads this file to correctly find network addresses. For more info, see 'man gai.conf'.
-sgx.allowed_files.ld_so_cache = "file:/etc/ld.so.cache"
-sgx.allowed_files.localtime   = "file:/etc/localtime"
-sgx.allowed_files.openssl     = "file:/etc/ssl/openssl.cnf"
-
-# Trusted files are signed and can only be read from within the graphene environment.
-
-sgx.trusted_files.arch_libdir     = "file:/lib/x86_64-linux-gnu"
-sgx.trusted_files.usr_arch_libdir = "file:/usr/lib/x86_64-linux-gnu"
-
+# Trusted files are signed and can only be read from within the gramine environment.
+sgx.trusted_files = [
+# Host OS library locations
+"file:/lib/x86_64-linux-gnu/",
+"file:/usr/lib/x86_64-linux-gnu/",
+"file:/usr/lib/x86_64-linux-gnu/gramine/",
 # ERP files
-sgx.trusted_files.erp       = "file:_BINARY_"
-sgx.trusted_files.config    = "file:configuration.json"
-sgx.allowed_files.log_dir   = "file:/var/log/erp"
-
-# These files are generated during runtime
-
-sgx.allowed_files.tpm0001   = "file:h80fffffe.bin"
-sgx.allowed_files.tpm0002   = "file:h80ffffff.bin"
-sgx.allowed_files.tpm0003   = "file:hp80fffffe.bin"
-sgx.allowed_files.tpm0004   = "file:hp80ffffff.bin"
-sgx.allowed_files.tpm0005   = "file:h01c0000a.bin"
-sgx.allowed_files.tpm0006   = "file:nvp01c0000a.bin"
-sgx.allowed_files.tpm0007   = "file:h80fffffd.bin"
-sgx.allowed_files.tpm0008   = "file:hp80fffffd.bin"
-sgx.allowed_files.tpm0009   = "file:h03000000.bin"
-sgx.allowed_files.tpm000a   = "file:h03000001.bin"
-
-sgx.allowed_files.ff04      = "file:/var/config/erp/tsl/tsl-ca.der"
-sgx.allowed_files.ff05      = "file:/var/config/erp/config/POSTGRES_CERTIFICATE"
-sgx.allowed_files.ff06      = "file:/var/config/erp/config/POSTGRES_SSL_CERTIFICATE"
-sgx.allowed_files.ff07      = "file:/var/config/erp/config/POSTGRES_SSL_KEY"
-sgx.allowed_files.ff08      = "file:/var/config/erp/config/sslRootCaPath"
-sgx.allowed_files.ff09      = "file:/var/config/erp/config/TSL_SSL_cert_chain.pem"
-sgx.allowed_files.ff10      = "file:/var/config/erp/hsm/work-keyspec"
-sgx.allowed_files.ff11      = "file:/var/config/haproxy/secrets/ca.crt"
-
-sgx.trusted_files.lib0009   = "file:/debug/erp/lib/libcsxapi.so"
-sgx.trusted_files.lib0010   = "file:/debug/erp/lib/libhsmclient.so"
-sgx.trusted_files.lib0011   = "file:/debug/erp/lib/libibmtss.so.1"
-sgx.trusted_files.lib0012   = "file:/debug/erp/lib/libibmtss.so.1.6.0"
-sgx.trusted_files.lib0013   = "file:/debug/erp/lib/libibmtssutils.so.1"
-sgx.trusted_files.lib0014   = "file:/debug/erp/lib/libibmtssutils.so.1.6.0"
-sgx.trusted_files.lib0015   = "file:/debug/erp/lib/libssl.so.1.1"
-sgx.trusted_files.lib0016   = "file:/debug/erp/lib/libtpmclient.so"
-
-sgx.trusted_files.usr_libdir = "file:/usr/local/lib64/graphene"
-
-# ---
+"file:configuration.json",
+"file:/var/log/erp/",
+# ERP libs
+"file:/debug/erp/lib/libcsxapi.so",
+"file:/debug/erp/lib/libhsmclient.so",
+"file:/debug/erp/lib/libibmtss.so.1",
+"file:/debug/erp/lib/libibmtss.so.1.6.0",
+"file:/debug/erp/lib/libibmtssutils.so.1",
+"file:/debug/erp/lib/libibmtssutils.so.1.6.0",
+"file:/debug/erp/lib/libssl.so.1.1",
+"file:/debug/erp/lib/libtpmclient.so",
+__ADDITIONAL_TRUST_FILES__
+]

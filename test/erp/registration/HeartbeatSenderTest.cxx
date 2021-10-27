@@ -120,23 +120,6 @@ TEST_F(HeartbeatSenderTest, FailStartup)
     ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::initialized);
 }
 
-TEST_F(HeartbeatSenderTest, FailHeartbeat)
-{
-    auto uniqueRegistrationManager = std::make_unique<RegistrationMock>();
-    auto& registrationManager = *uniqueRegistrationManager;
-    auto sender = std::make_unique<HeartbeatSender>(
-        std::move(uniqueRegistrationManager), std::chrono::seconds(1), std::chrono::seconds(1));
-
-    sender->start();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    registrationManager.setSimulateServerDown(true);
-    dynamic_cast<MockTerminationHandler&>(MockTerminationHandler::instance()).waitForTerminated();
-
-    ASSERT_TRUE(registrationManager.deregistrationCalled());
-    ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::registered);
-    ASSERT_EQ(registrationManager.heartbeatRetryNum(), static_cast<unsigned int>(3));
-}
-
 TEST_F(HeartbeatSenderTest, FailDeregistration)
 {
     auto uniqueRegistrationManager = std::make_unique<RegistrationMock>();

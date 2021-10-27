@@ -32,46 +32,42 @@ bool DosHandler::updateAccessCounter(const std::string& sub, const std::chrono::
 {
     using namespace std::chrono;
 
-    const std::string key{ std::string{dosKeyPrefix} + sub};
     const auto tNow = time_point_cast<milliseconds>(system_clock::now());
+    const auto nowVal = tNow.time_since_epoch().count();
     const auto tSpan = time_point<system_clock, milliseconds>( milliseconds( mTimespan ) );
+    const auto spanVal = tSpan.time_since_epoch().count();
+    const auto tBucket = nowVal - (nowVal % spanVal);
+    const auto tUpper = tBucket + spanVal;
+
+    const std::string baseKey{ std::string{dosKeyPrefix} + sub };
+    const std::string key{ baseKey + ":" + std::to_string(tBucket) };
 
     try
     {
-        if (mInterface->exists(key))
+        if (mInterface->exists(baseKey))
         {
-            auto countValue = mInterface->fieldValueForKey(key, countField).value_or(std::to_string(0));
-            auto t0Value = mInterface->fieldValueForKey(key, t0Field).value_or(std::to_string(0));
-            unsigned long count = std::stoul(countValue);
-            const auto t0 = time_point<system_clock, milliseconds>( milliseconds( std::stoull(t0Value) ) );
-            count++;
-            if (mInterface->hasKeyWithField(key, std::string{blockedField}))
-            {
-                // Token is blocked.
-                VLOG(1) << "Access token blocked and will expire in about " << (exp - tNow).count() << " ms." << std::endl;
-                return false;
-            }
-            else if (count > mNumreqs && ((tNow - t0).count() < tSpan.time_since_epoch().count()))
-            {
-                // Too many attempts within timespan, mark token as blocked.
-                mInterface->setKeyFieldValue(key, std::string{blockedField}, "1");
+            // Access token is blocked.
+            return false;
+        }
 
-                VLOG(1) << count - 1 << " requests within t0 + " << (tNow - t0).count() << " ms. Blocked request attempt #" << count << std::endl;
-                VLOG(1) << "Expires in about " << (exp - tNow).count() << " ms." << std::endl;
-                return false;
-            }
-
-            // Token pass.
-            mInterface->setKeyFieldValue(key, countField, std::to_string(count));
-            VLOG(1) << "request #" << count << " within " << (tNow - t0).count() << " ms." << std::endl;
+        auto calls = mInterface->incr(key);
+        if (calls == 1)
+        {
+            // Initial access, always pass.
+            mInterface->setKeyExpireAt(key, exp);
+        }
+        else if (calls > static_cast<int>(mNumreqs) && nowVal < tUpper)
+        {
+            // Token will be blocked from now on.
+            VLOG(1) << "Access token blocked and will expire in about " << (exp - tNow).count() << " ms." << std::endl;
+            mInterface->setKeyFieldValue(baseKey, "", "");
+            mInterface->setKeyExpireAt(baseKey, exp);
+            return false;
         }
         else
         {
-            // Initial access, always pass.
-            mInterface->setKeyFieldValue(key, countField, "1");
-            mInterface->setKeyFieldValue(key, t0Field, std::to_string(tNow.time_since_epoch().count()));
-            mInterface->setKeyExpireAt(key, exp);
-            VLOG(1) << "request #" << 1 << " at t0 " << std::to_string(tNow.time_since_epoch().count()) << std::endl;
+            // Token pass.
+            VLOG(1) << "request #" << calls << " within " << spanVal << " ms." << std::endl;
         }
         return true;
     }

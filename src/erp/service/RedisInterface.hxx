@@ -30,6 +30,7 @@ public:
                    const std::chrono::time_point<std::chrono::system_clock,
                    std::chrono::milliseconds>& timestamp) = 0;
 
+    virtual int incr(const std::string_view& key) = 0;
 };
 
 #endif

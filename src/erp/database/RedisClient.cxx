@@ -77,3 +77,8 @@ void RedisClient::setKeyExpireAt(
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(String::concatenateItems("Redis:setKeyExpireAt(", key, ")"));
     mConnection->pexpireat(key, timestamp);
 }
+
+int RedisClient::incr(const std::string_view& key)
+{
+    return mConnection->incr(key);
+}

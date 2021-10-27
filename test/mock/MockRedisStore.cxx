@@ -45,6 +45,19 @@ void MockRedisStore::setKeyExpireAt(
     mData[std::string{key}]["expireat"] = s;
 }
 
+int MockRedisStore::incr(const std::string_view& key)
+{
+    const std::string_view field = "_mockCount";
+    auto count = 1;
+    if (exists(key)) {
+        auto countStr = fieldValueForKey(key, field).value();
+        count = std::stoul(countStr);
+        count++;
+    }
+    setKeyFieldValue(key, field, std::to_string(count));
+    return count;
+}
+
 void MockRedisStore::removeExpiredEntries()
 {
     // Perform basic cleanup which simulates Redis expireat feature.

@@ -90,7 +90,7 @@ TEST_F(TslServiceTest, providedTsl)
         {"http://ehca.gematik.de/ocsp/", "http://ehca-testref.sig-test.telematik-test:8080/status/qocsp"},
         {"http://ocsp.pki.telematik-test:8080/CMOCSP/OCSP", "http://ehca-testref.sig-test.telematik-test:8080/status/qocsp"},
         {"http://ocsp-qes.egk-test-tsp.de", "http://ocsp-qes-testref.atos.tsp-hba.telematik-test"},
-        {"http://qocsp-hba.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
+        {"http://qocsp-hba.testumgebung.dgnservice.de:8080/ocsp", "http://tiru-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
     };
 
     EXPECT_FALSE(mTrustStore->mServiceInformationMap.empty());

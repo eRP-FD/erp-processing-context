@@ -203,7 +203,7 @@ int ErpMain::runApplication (
 
     // trigger construction of singleton, before starting any thread
     (void)Holidays::instance();
-    
+
     // access the Fhir instance to load the structure definitions now.
     log << "initializing FHIR data processing";
     (void)Fhir::instance();
@@ -442,11 +442,11 @@ bool ErpMain::waitForHealthUp (ErpProcessingContext& processingContext)
     auto response = ServerResponse();
     AccessLog accessLog;
     accessLog.discard();  // This accessLog object is only used to satisfy the SessionContext constructor.
-    SessionContext<PcServiceContext> session(*serviceContext, request, response, accessLog);
     bool healthCheckIsUp = false;
 
     while (!server.isStopped())
     {
+        SessionContext<PcServiceContext> session(*serviceContext, request, response, accessLog);
         if (loopCount % loopHealthCheckInterval == 0)
         {
             TVLOG(1) << "running health check";

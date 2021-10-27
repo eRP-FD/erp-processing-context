@@ -28,6 +28,7 @@ public:
                    const std::chrono::time_point<std::chrono::system_clock,
                                                  std::chrono::milliseconds>& timestamp) override;
 
+    int incr(const std::string_view& key) override;
 private:
     std::unique_ptr<sw::redis::Redis> mConnection;
     sw::redis::ConnectionOptions mOptions{};
