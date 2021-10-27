@@ -69,9 +69,22 @@ void ServerRequestReader::readAsynchronously (RequestConsumer&& requestConsumer)
         mStream,
         mBuffer,
         mParser,
-        [this, requestConsumer=std::move(requestConsumer)]
+        [this, requestConsumer=std::move(requestConsumer), logContext = erp::server::Worker::tlogContext]
         (const boost::beast::error_code& ec, const size_t count)
         {
+            ScopedLogContext logScope{logContext};
+            if (count == 0)
+            {
+                TVLOG(0) << "closing stream.";
+                closeConnection(true);
+                if (ec != boost::beast::http::error::end_of_stream &&
+                    ec != boost::asio::ssl::error::stream_truncated)
+                {
+                    TLOG(WARNING) << "error on stream while waiting for next request: " << ec.message();
+                }
+                requestConsumer({}, {});
+                return;
+            }
             if (ec)
             {
                 TLOG(WARNING) << "after reading " << count << " bytes: " << ec.message();
@@ -81,12 +94,6 @@ void ServerRequestReader::readAsynchronously (RequestConsumer&& requestConsumer)
                 TVLOG(2) << "request bytes: " << count;
             }
 
-            if (count == 0)
-            {   // stream closed:
-                markStreamAsClosed();
-                requestConsumer({}, {});
-                return;
-            }
             try
             {
                 ErrorHandler(ec).throwOnServerError("ServerRequestReader::readAsynchronously", fileAndLine);
@@ -125,7 +132,11 @@ void ServerRequestReader::closeConnection (const bool expectError)
     }
     catch(const boost::system::system_error& e)
     {
-        if (expectError)
+        if (e.code() == boost::asio::error::not_connected)
+        {
+            TVLOG(3) << "stream already closed";
+        }
+        else if (expectError)
         {
             // We are closing the connection hard. This is supposed the reaction to an earlier error where
             // either client or (this) server has made an error. Therefore some data may not have been read from

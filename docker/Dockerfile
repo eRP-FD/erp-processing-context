@@ -81,7 +81,7 @@ RUN cmake \
     -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
     -DCMAKE_INSTALL_PREFIX=/debug/erp .. && \
     cmake --build . -j 6 --target production && \
-    cmake --install . --strip --component production &&\
+    cmake --install . --component production &&\
     cp install_manifest_production.txt install_manifest.txt
 
 COPY docker/manifest.reldeb.template /debug/erp/bin/erp-processing-context.manifest

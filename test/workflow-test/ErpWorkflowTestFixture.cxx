@@ -5,6 +5,7 @@
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
+#include "erp/beast/BoostBeastStringWriter.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/fhir/Fhir.hxx"
@@ -1277,11 +1278,18 @@ void ErpWorkflowTestBase::metaDataGetInternal(
     ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
     auto contentType = response.getHeader().header(Header::ContentType);
     ASSERT_TRUE(contentType);
-    EXPECT_EQ(contentType.value(), static_cast<std::string>(ContentMimeType::fhirJsonUtf8));
-    metaData = model::MetaData::fromJson(response.getBody());
-    ASSERT_TRUE(metaData);
-    ASSERT_NO_THROW(getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(metaData->jsonDocument()), SchemaType::fhir));
+    EXPECT_EQ(contentType.value(), static_cast<std::string>(acceptContentType));
+    if (static_cast<std::string>(acceptContentType) == static_cast<std::string>(ContentMimeType::fhirJsonUtf8))
+    {
+        metaData = model::MetaData::fromJson(response.getBody());
+        ASSERT_TRUE(metaData);
+        ASSERT_NO_THROW(getJsonValidator()->validate(
+            model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(metaData->jsonDocument()), SchemaType::fhir));
+    }
+    else
+    {
+        ASSERT_NO_THROW(metaData = model::MetaData::fromXml(response.getBody(),*StaticData::getXmlValidator(), SchemaType::fhir));
+    }
 }
 
 void ErpWorkflowTestBase::deviceGetInternal(
@@ -1314,7 +1322,9 @@ void ErpWorkflowTestBase::deviceGetInternal(
 }
 
 void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse>& result,
-                                   const ErpWorkflowTestBase::RequestArguments& args)
+                                       const ErpWorkflowTestBase::RequestArguments& args,
+                                       std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest,
+                                       std::optional<std::function<void(Header&)>> manipInnerRequestHeader)
 {
     static std::regex XMLUtf8EncodingRegex{R"(^<\?xml[^>]*encoding="utf-8")", std::regex::icase|std::regex::optimize};
     using std::get;
@@ -1334,6 +1344,18 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
         Header(args.method, std::string(args.vauPath), Header::Version_1_1, std::move(hdrFlds), HttpStatus::Unknown),
         std::string(args.clearTextBody));
 
+    std::string teeRequest;
+    if(manipInnerRequestHeader.has_value())
+    {
+        manipInnerRequestHeader.value()(innerRequest.header);
+        teeRequest = creatUnvalidatedTeeRequest(client->getEciesCertificate(), innerRequest, jwt);
+    }
+    else
+        teeRequest = creatTeeRequest(client->getEciesCertificate(), innerRequest, jwt);
+
+    if(manipEncryptedInnerRequest.has_value())
+        manipEncryptedInnerRequest.value()(teeRequest);
+
     std::string outerPath = "/VAU/" + userPseudonym;
     if (userPseudonymType == UserPseudonymType::PreUserPseudonym)
     {
@@ -1350,10 +1372,7 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
               {Header::ContentType, "application/octet-stream"},
               {Header::XRequestId, Uuid().toString()}},
             HttpStatus::Unknown),
-        creatTeeRequest(
-            client->getEciesCertificate(),
-            innerRequest,
-            jwt));
+        teeRequest);
 
     outerResponse = client->send(outerRequest);
 
@@ -1365,13 +1384,16 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
         ASSERT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/octet-stream");
     }
 
+    if(outerResponse.getHeader().status() != HttpStatus::OK) // in this case there is no encrypted inner response
+        return;
+
     // the inner response;
     try
     {
         innerResponse = teeProtocol.parseResponse(outerResponse);
 
         // verify Inner-* headers
-        // this check make only sense when testing without tls-proxy and erp-service
+        // this check makes only sense when testing without tls-proxy and erp-service
         // and against an erp-processing-context directly
         auto hostaddress = client->getHostAddress();
         if (hostaddress == "localhost" || hostaddress == "127.0.0.1")
@@ -1407,6 +1429,13 @@ std::string ErpWorkflowTestBase::creatTeeRequest(const Certificate& serverPublic
                                              const ClientRequest& request, const JWT& jwt)
 {
     return teeProtocol.createRequest(serverPublicKeyCertificate, request, jwt);
+}
+
+std::string ErpWorkflowTestBase::creatUnvalidatedTeeRequest(const Certificate& serverPublicKeyCertificate,
+                                                            const ClientRequest& request, const JWT& jwt)
+{
+    const auto serializedRequest = BoostBeastStringWriter::serializeRequest(request.getHeader(), request.getBody());
+    return teeProtocol.createRequest(serverPublicKeyCertificate, serializedRequest, jwt);
 }
 
 void ErpWorkflowTestBase::checkTaskMeta(const rapidjson::Value& meta)
@@ -1493,10 +1522,12 @@ void ErpWorkflowTestBase::getTaskFromBundle(std::optional<model::Task>& task, co
 }
 
 std::tuple<ClientResponse, ClientResponse>
-ErpWorkflowTestBase::send(const ErpWorkflowTestBase::RequestArguments& args)
+ErpWorkflowTestBase::send(const ErpWorkflowTestBase::RequestArguments& args,
+                          std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest,
+                          std::optional<std::function<void(Header&)>> manipInnerRequestHeader)
 {
     std::tuple<ClientResponse, ClientResponse> result;
-    sendInternal(result, args);
+    sendInternal(result, args, manipEncryptedInnerRequest, manipInnerRequestHeader);
     return result;
 }
 std::optional<model::Task> ErpWorkflowTestBase::taskCreate(HttpStatus expectedOuterStatus, HttpStatus expectedInnerStatus,

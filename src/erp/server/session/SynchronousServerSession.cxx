@@ -89,7 +89,7 @@ void SynchronousServerSession::do_read (void)
         }
         else
         {
-            erp::server::Worker::tlogContext = request.header().header(Header::XRequestId);
+            setLogId(request.header().header(Header::XRequestId));
             accessLog.updateFromOuterRequest(request);
             auto [success, response] = mRequestHandler->handleRequest(std::move(request), accessLog);
             response.setKeepAlive(false); // Keep alive is not supported by the SynchronousServerSession.

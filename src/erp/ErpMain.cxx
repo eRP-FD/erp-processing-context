@@ -203,6 +203,10 @@ int ErpMain::runApplication (
 
     // trigger construction of singleton, before starting any thread
     (void)Holidays::instance();
+    
+    // access the Fhir instance to load the structure definitions now.
+    log << "initializing FHIR data processing";
+    (void)Fhir::instance();
 
     log << "starting TEE server";
     auto& configuration = Configuration::instance();
@@ -218,6 +222,9 @@ int ErpMain::runApplication (
         std::move(factories.tslManagerFactory),
         factories.redisClientFactory());
 
+    SignalHandler signalHandler(processingContext->getServer().getThreadPool().ioContext());
+    signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
+
     // Setup the IDP updater. As this triggers a first, synchronous update, the IDP updater has to be started
     // before the TEE server accepts connections.
     log << "starting IDP update";
@@ -231,10 +238,6 @@ int ErpMain::runApplication (
     const auto enrolmentPort = getEnrolementServerPort(pcPort, defaultEnrolmentServerPort);
     if (enrolmentPort.has_value())
         enrolmentServer = setupEnrolmentServer(enrolmentPort.value(), blobCache);
-
-    // access the Fhir instance to load the structure definitions now.
-    log << "initializing FHIR data processing";
-    Fhir::instance();
 
     log << "starting the TEE server";
     const int threadCount = configuration.getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 10);
@@ -259,19 +262,16 @@ int ErpMain::runApplication (
     // We wait and block the main thread until background configuration is complete and the health check
     // has found all required services.
     log << "waiting for health check to report all services as up";
-    waitForHealthUp(serviceContext);
+    std::unique_ptr<HeartbeatSender> heartbeatSender;
+    if(waitForHealthUp(*processingContext))
+    {
+        log << "complete";
+        std::cout << "press CTRL-C to stop" << std::endl;
 
-    SignalHandler signalHandler(processingContext->getServer().getThreadPool().ioContext());
-    signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
-
-
-    log << "complete";
-    std::cout << "press CTRL-C to stop" << std::endl;
-
-    // Advertise the tee server as available via redis at the vau proxy.
-    log << "setting up heartbeat sender";
-    auto heartbeatSender = setupHeartbeatSender(pcPort, std::move(factories.registrationFactory));
-
+        // Advertise the tee server as available via redis at the vau proxy.
+        log << "setting up heartbeat sender";
+        heartbeatSender = setupHeartbeatSender(pcPort, std::move(factories.registrationFactory));
+    }
     state = State::WaitingForTermination;
     processingContext->getServer().waitForShutdown();
     if (enrolmentServer)
@@ -428,38 +428,44 @@ std::optional<uint16_t> ErpMain::getEnrolementServerPort (
 }
 
 
-void ErpMain::waitForHealthUp (PcServiceContext& serviceContext)
+bool ErpMain::waitForHealthUp (ErpProcessingContext& processingContext)
 {
     constexpr size_t loopWaitSeconds = 1;
     constexpr size_t loopMessageInterval = 2;
     constexpr size_t loopHealthCheckInterval = 5;
+    auto& server = processingContext.getServer();
+    const auto& serviceContext = server.serviceContext();
+
     size_t loopCount = 0;
 
     auto request = ServerRequest(Header());
     auto response = ServerResponse();
     AccessLog accessLog;
     accessLog.discard();  // This accessLog object is only used to satisfy the SessionContext constructor.
-    SessionContext<PcServiceContext> session (serviceContext, request, response, accessLog);
+    SessionContext<PcServiceContext> session(*serviceContext, request, response, accessLog);
+    bool healthCheckIsUp = false;
 
-    while (true)
+    while (!server.isStopped())
     {
         if (loopCount % loopHealthCheckInterval == 0)
         {
             TVLOG(1) << "running health check";
             HealthCheck::update(session);
         }
-
-        if (session.serviceContext.applicationHealth().isUp())
+        healthCheckIsUp = serviceContext->applicationHealth().isUp();
+        if (healthCheckIsUp)
             break;
 
         ++loopCount;
         if (loopCount % loopMessageInterval == 1)
-            LOG(WARNING) << "health status is DOWN (" << session.serviceContext.applicationHealth().downServicesString()
+            LOG(WARNING) << "health status is DOWN (" << serviceContext->applicationHealth().downServicesString()
                          << "), waiting for it to go up";
 
         std::this_thread::sleep_for(std::chrono::seconds(loopWaitSeconds));
     }
 
-    if (loopCount > 0)
+    if (healthCheckIsUp)
         LOG(WARNING) << "health status is UP";
+
+    return healthCheckIsUp;
 }

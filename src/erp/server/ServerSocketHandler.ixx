@@ -69,6 +69,21 @@ void ServerSocketHandler<ServiceContextType>::do_accept (void)
 template<class ServiceContextType>
 void ServerSocketHandler<ServiceContextType>::on_accept (boost::beast::error_code ec, boost::asio::ip::tcp::socket socket)
 {
+    std::ostringstream endpointStrm;
+    endpointStrm << socket.remote_endpoint();
+    ScopedLogContext scopeLog{endpointStrm.str()};
+    TLOG(INFO) << "Accepted connection";
+    socket.async_wait(boost::asio::ip::tcp::socket::wait_error,
+        [endpoint = socket.remote_endpoint()](boost::system::error_code ec){
+        if (ec)
+        {
+            TLOG(WARNING) << "connection " << endpoint << ": " << ec.message();
+        }
+        else
+        {
+            TVLOG(2) << "connection closed: " << endpoint;
+        }
+    });
     if (ec)
     {
         ErrorHandler(ec).throwOnServerError("on_accept");

@@ -206,7 +206,7 @@ TEST(UrlHelperTest, parseSimpleDefaultFtpPort)
 
     EXPECT_EQ(urlParts.mProtocol, "ftp://");
     EXPECT_EQ(urlParts.mHost, "localhost");
-    EXPECT_EQ(urlParts.mPath, "");
+    EXPECT_EQ(urlParts.mPath, "/");
     EXPECT_EQ(urlParts.mRest, "");
     EXPECT_EQ(urlParts.mPort, 80);
 }
@@ -217,7 +217,7 @@ TEST(UrlHelperTest, parseMalformed)
 
     EXPECT_EQ(urlParts.mProtocol, "");
     EXPECT_EQ(urlParts.mHost, "malformed");
-    EXPECT_EQ(urlParts.mPath, "");
+    EXPECT_EQ(urlParts.mPath, "/");
     EXPECT_EQ(urlParts.mRest, "");
     EXPECT_EQ(urlParts.mPort, 80);
 }

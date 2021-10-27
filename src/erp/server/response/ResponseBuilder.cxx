@@ -70,3 +70,10 @@ ResponseBuilder& ResponseBuilder::keepAlive (bool keepAlive)
     mResponse.setKeepAlive(keepAlive);
     return *this;
 }
+
+
+ResponseBuilder& ResponseBuilder::header(const std::string& key, const std::string& value)
+{
+    mResponse.setHeader(key, value);
+    return *this;
+}

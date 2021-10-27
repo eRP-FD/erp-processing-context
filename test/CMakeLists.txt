@@ -138,6 +138,7 @@ list(
         erp/model/MedicationDispenseTest.cxx
         erp/model/MetaDataTest.cxx
         erp/model/OperationOutcomeTest.cxx
+        erp/model/OuterResponseErrorDataTest.cxx
         erp/model/ParameterTest.cxx
         erp/model/PatientTest.cxx
         erp/model/PrescriptionIdTest.cxx

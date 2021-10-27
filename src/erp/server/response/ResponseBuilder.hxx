@@ -36,6 +36,8 @@ public:
 
     ResponseBuilder &keepAlive(bool keepAlive);
 
+    ResponseBuilder &header(const std::string& key, const std::string& value);
+
 private:
     ServerResponse& mResponse;
 };

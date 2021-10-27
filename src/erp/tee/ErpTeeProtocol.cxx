@@ -27,7 +27,7 @@ InnerTeeRequest ErpTeeProtocol::decrypt (const std::string& outerRequestBody, Hs
     }
     catch(const std::runtime_error& exc)
     {
-        ErpFail(HttpStatus::BadRequest, "Unable to create public key from message data");
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, std::string("Unable to create public key from message data"), exc.what());
     }
     const SafeString symmetricKey{
         hsmSession.session().vauEcies128(

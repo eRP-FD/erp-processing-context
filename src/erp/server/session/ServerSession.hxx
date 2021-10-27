@@ -53,6 +53,9 @@ public:
     static ServerResponse getServerErrorResponse (void);
 
 protected:
+    void setLogId(const std::optional<std::string>& requestId);
+    void setLogIdToRemote();
+
     SslStream mSslStream;
     std::shared_ptr<void> mResponseKeepAlive;
     std::shared_ptr<void> mSerializerKeepAlive;

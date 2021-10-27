@@ -139,6 +139,7 @@ list(
         model/NumberAsStringParserDocument.cxx
         model/NumberAsStringParserWriter.cxx
         model/OperationOutcome.cxx
+        model/OuterResponseErrorData.cxx
         model/Parameters.cxx
         model/Patient.cxx
         model/PrescriptionId.cxx

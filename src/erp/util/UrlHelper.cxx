@@ -216,6 +216,10 @@ UrlHelper::UrlParts UrlHelper::parseUrl(const std::string &url)
         }
 
         std::string path = matchResults.str(8);
+        if (path.empty())
+        {
+            path = '/';
+        }
 
         std::string query = matchResults.str(10);
         if (!query.empty())

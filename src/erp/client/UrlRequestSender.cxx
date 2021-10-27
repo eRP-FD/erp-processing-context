@@ -111,6 +111,7 @@ ClientResponse UrlRequestSender::doSend(
     httpHeaders.emplace(Header::UserAgent, "erp-processing-context");
     httpHeaders.emplace(Header::Accept, "*/*");
     httpHeaders.emplace(Header::Host, url.mHost);
+    httpHeaders.emplace(Header::Connection, Header::ConnectionClose);
 
     const ClientRequest request(
         Header(method, std::string(url.mPath + url.mRest),

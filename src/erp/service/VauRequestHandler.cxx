@@ -11,6 +11,7 @@
 #include "erp/database/Database.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/OperationOutcome.hxx"
+#include "erp/model/OuterResponseErrorData.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonym.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
@@ -128,25 +129,26 @@ void fillErrorResponse(ServerResponse& innerResponse,
                        const std::optional<std::string>& diagnostics)
 {
     ResponseBuilder(innerResponse).status(httpStatus).clearBody().keepAlive(false);
+    bool callerWantsJson = false;
     if(innerRequest.get())
     {
-        // By now issue type, error text and diagnostics (if available) are filled.
-        bool callerWantsJson = false;
+        // Read wanted format from inner request if available, else use XML as general default;
         try
         {
             callerWantsJson = ErpRequestHandler::callerWantsJson(*innerRequest);
         }
         catch(...)
-        {   // use default:
+        {   // use default for specific role:
             const auto professionOIDClaim = innerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim);
             callerWantsJson = professionOIDClaim.has_value() && professionOIDClaim == profession_oid::oid_versicherter;
         }
-        const model::OperationOutcome operationOutcome({
-            model::OperationOutcome::Issue::Severity::error,
-            httpCodeToOutcomeIssueType(httpStatus),
-            detailsText, diagnostics, {} /*expression*/ });
-        ResponseBuilder(innerResponse).body(callerWantsJson, operationOutcome);
     }
+    // By now issue type, error text and diagnostics (if available) are filled.
+    const model::OperationOutcome operationOutcome({
+        model::OperationOutcome::Issue::Severity::error,
+        httpCodeToOutcomeIssueType(httpStatus),
+        detailsText, diagnostics, {} /*expression*/ });
+    ResponseBuilder(innerResponse).body(callerWantsJson, operationOutcome);
 }
 
 } // anonymous namespace
@@ -256,10 +258,11 @@ VauRequestHandler::VauRequestHandler(RequestHandlerManager<PcServiceContext>&& h
 
 void VauRequestHandler::handleRequest(PcSessionContext& session)
 {
+    const auto sessionIdentifier = session.request.header().header(Header::XRequestId).value_or("unknown X-Request-Id");
     // Set up the duration consumer that will output times spend on calls to external services without the need
     // of explicitly passing an object to the downloading code.
     DurationConsumerGuard durationConsumerGuard (
-        session.request.header().header(Header::XRequestId).value_or("unknown X-Request-Id"),
+        sessionIdentifier,
         []
         (const std::chrono::system_clock::duration duration, const std::string& description, const std::string& sessionIdentifier)
         {
@@ -285,7 +288,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
         ErpExpect(upParam.has_value(), HttpStatus::BadRequest, "Missing Pre-User-Pseudonym in Path.");
 
         // Decrypt
-        innerTeeRequest = decryptRequest(session);
+        innerTeeRequest = decryptRequest(session, sessionIdentifier);
         if (nullptr == innerTeeRequest)
         {
             session.accessLog.error("decryption of inner request failed");
@@ -397,7 +400,6 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
         ResponseValidator::validate(innerServerResponse, innerOperation);
         handleKeepAlive(session, innerServerRequest.get(), innerServerResponse);
 
-        // TODO The next step causes a crash if exception because of missing Pre-User-Pseudonym before was thrown (i.e. no inner request existent):
         // Encrypt the response.
         OuterTeeResponse outerTeeResponse =
             ErpTeeProtocol::encrypt(innerServerResponse, innerTeeRequest->aesKey(), innerTeeRequest->requestId());
@@ -445,43 +447,54 @@ Operation VauRequestHandler::getOperation (void) const
 }
 
 
-std::unique_ptr<InnerTeeRequest> VauRequestHandler::decryptRequest(PcSessionContext& session)
+std::unique_ptr<InnerTeeRequest> VauRequestHandler::decryptRequest(PcSessionContext& session, const std::string& sessionIdentifier)
 {
-    try
-    {
+    HttpStatus errorStatus = HttpStatus::OK;
+    std::string errorText;
+    std::optional<std::string> errorMessage;
+    try {
         return std::make_unique<InnerTeeRequest>(
             ErpTeeProtocol::decrypt(session.request.getBody(), session.serviceContext.getHsmPool()));
     }
     catch (const AesGcmException& e)
     {
         // Can't encrypt/decrypt. Only outer response can be provided.
-        ResponseBuilder(session.response).status(HttpStatus::BadRequest).clearBody().keepAlive(false);
         session.accessLog.locationFromException(e);
-        session.accessLog.error(std::string("vau decryption failed: AesGcmException ") + e.what());
+        errorStatus = HttpStatus::BadRequest;
+        errorText = std::string("vau decryption failed: AesGcmException ") + e.what();
     }
     catch (const ErpException& e)
     {
-        ResponseBuilder(session.response).status(e.status()).clearBody().keepAlive(false);
         session.accessLog.locationFromException(e);
-        session.accessLog.error(std::string("vau decryption failed: ErpException ") + e.what());
+        errorStatus = e.status();
+        errorText = std::string("vau decryption failed: ErpException ") + e.what();
+        errorMessage = e.diagnostics();
     }
     catch (const JwtException& e)
     {
-        ResponseBuilder(session.response).status(HttpStatus::Unauthorized).clearBody().keepAlive(false);
         session.accessLog.locationFromException(e);
-        session.accessLog.error(std::string("vau decryption failed: JwtException ") + e.what());
+        errorStatus = HttpStatus::Unauthorized;
+        errorText = std::string("vau decryption failed: JwtException ") + e.what();
     }
     catch (const std::exception& e)
     {
-        ResponseBuilder(session.response).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
         session.accessLog.locationFromException(e);
-        session.accessLog.error(std::string("vau decryption failed: std::exception"));
+        errorStatus = HttpStatus::InternalServerError;
+        errorText = "vau decryption failed: std::exception";
     }
     catch (...)
     {
-        ResponseBuilder(session.response).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
-        session.accessLog.error(std::string("vau decryption failed: unexpected exception"));
+        errorStatus = HttpStatus::InternalServerError;
+        errorText = "vau decryption failed: unexpected exception";
     }
+
+    model::OuterResponseErrorData errorData(sessionIdentifier, errorStatus, errorText, errorMessage);
+    ResponseBuilder(session.response)
+        .status(errorStatus)
+        .body(true, errorData)
+        .header(Header::ContentType, ContentMimeType::json)
+        .keepAlive(false);
+    session.accessLog.error(errorText);
     return nullptr;
 }
 

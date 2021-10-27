@@ -6,6 +6,7 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include "erp/erp-serverinfo.hxx"
+#include "erp/model/OuterResponseErrorData.hxx"
 #include "erp/fhir/Fhir.hxx"
 #include "test/util/StaticData.hxx"
 #include "tools/ResourceManager.hxx"
@@ -427,6 +428,12 @@ TEST_F(ErpWorkflowTest, TaskSearchStatusERP4627) // NOLINT
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 
+    ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
+    // Default result format is XML, if no inner request could be created:
+    ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
+    checkOperationOutcome(
+        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
+        "Parsing the HTTP message header failed.");
 }
 
 TEST_F(ErpWorkflowTest, TaskSearchLastModified) // NOLINT
@@ -1224,4 +1231,136 @@ TEST_F(ErpWorkflowTest, RejectTaskInvalidId) // NOLINT
     // This is already failing in the VauRequestHandler (tests therefore also the other Task endpoints with id) :
     ASSERT_NO_FATAL_FAILURE(taskReject("thi$-is_an-invalid-ta$k-id_#§&?ß", {},
                                        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+}
+
+namespace
+{
+    void checkJsonString(
+        const rapidjson::Document& document,
+        const rapidjson::Pointer& jsonPointer,
+        const std::optional<std::string>& expected)
+    {
+        using mrb = model::ResourceBase;
+        ASSERT_NE(jsonPointer.Get(document), nullptr) << "Element " << mrb::pointerToString(jsonPointer) << " is missing";
+        ASSERT_TRUE(jsonPointer.Get(document)->IsString()) << "Element " << mrb::pointerToString(jsonPointer) << " is no string";
+        if(expected.has_value())
+        {
+            EXPECT_EQ(std::string(jsonPointer.Get(document)->GetString()), expected.value());
+        }
+    }
+    void checkJsonInt(
+        const rapidjson::Document& document,
+        const rapidjson::Pointer& jsonPointer,
+        const std::optional<int>& expected)
+    {
+        using mrb = model::ResourceBase;
+        ASSERT_NE(jsonPointer.Get(document), nullptr) << "Element " << mrb::pointerToString(jsonPointer) << " is missing";
+        ASSERT_TRUE(jsonPointer.Get(document)->IsInt()) << "Element " << mrb::pointerToString(jsonPointer) << " is no integer";
+        if(expected.has_value())
+        {
+            EXPECT_EQ(jsonPointer.Get(document)->GetInt(), expected.value());
+        }
+    }
+} // anonymous namespace
+
+TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
+{
+    ClientResponse outerResponse;
+    ClientResponse innerResponse;
+    const JWT jwt = defaultJwt();
+
+    const rapidjson::Pointer xRequestIdPointer ("/x-request-id");
+    const rapidjson::Pointer statusPointer ("/status");
+    const rapidjson::Pointer errorPointer ("/error");
+    const rapidjson::Pointer messagePointer ("/message");
+
+    rapidjson::Document outerErrorResponseDocument;
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(outerResponse, innerResponse) =
+            send(RequestArguments{HttpMethod::GET, "/Task/", {}}.withJwt(jwt),
+                 [](std::string& request){ request[2] = '-'; }));
+    ASSERT_EQ(outerResponse.getHeader().status(), HttpStatus::BadRequest);
+    ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/json");
+
+    outerErrorResponseDocument.Parse(outerResponse.getBody());
+
+    checkJsonString(outerErrorResponseDocument, xRequestIdPointer, {});
+    EXPECT_TRUE(Uuid(xRequestIdPointer.Get(outerErrorResponseDocument)->GetString()).isValidIheUuid());
+    checkJsonInt(outerErrorResponseDocument, statusPointer, 400);
+    checkJsonString(outerErrorResponseDocument, errorPointer,
+                    "vau decryption failed: ErpException Unable to create public key from message data");
+    checkJsonString(outerErrorResponseDocument, messagePointer,
+                    "could not create public key from x,y components error:1012606B:elliptic curve routines:"
+                    "EC_POINT_set_affine_coordinates:point is not on curve");
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(outerResponse, innerResponse) =
+            send(RequestArguments{HttpMethod::GET, "/Task/", {}}.withJwt(jwt),
+                [](std::string& request){ request[request.size()/2] = '-'; }));
+    ASSERT_EQ(outerResponse.getHeader().status(), HttpStatus::BadRequest);
+    ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/json");
+
+    outerErrorResponseDocument.Parse(outerResponse.getBody());
+
+    checkJsonString(outerErrorResponseDocument, xRequestIdPointer, {});
+    EXPECT_TRUE(Uuid(xRequestIdPointer.Get(outerErrorResponseDocument)->GetString()).isValidIheUuid());
+    checkJsonInt(outerErrorResponseDocument, statusPointer, 400);
+    checkJsonString(outerErrorResponseDocument, errorPointer,
+                    "vau decryption failed: AesGcmException can't finalize AES-GCM decryption");
+    ASSERT_EQ(messagePointer.Get(outerErrorResponseDocument), nullptr); // field "message" does not exist;
+}
+
+TEST_F(ErpWorkflowTest, ErrorResponseNoInnerRequest) // NOLINT
+{
+    // invoke POST /task/$create
+    std::optional<model::PrescriptionId> prescriptionId;
+    std::string accessCode;
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+
+    const std::string kvnr{"X987654321"};
+    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20");
+    const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=XXXXX" ;
+    const JWT jwt{ jwtApotheke() };
+    RequestArguments args{HttpMethod::POST, closePath, closeBody, "application/fhir+xml", false};
+    args.jwt = jwt;
+    args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(jwt));
+    args.overrideExpectedInnerOperation = "UNKNOWN";
+    args.overrideExpectedInnerRole = "XXX";
+    ClientResponse innerResponse;
+
+    // Send request with missing ContentLength header
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, innerResponse) =
+            send(args, {}, [](Header& header){ header.removeHeaderField(Header::ContentLength); }));
+    ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
+    checkOperationOutcome(
+        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
+        "HTTP parser finished before end of message, Content-Length field is missing or the value is too low.");
+
+    // Send request with ContentLength header containing too low value
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, innerResponse) =
+            send(args, {}, [](Header& header){ header.addHeaderField(Header::ContentLength, "200"); }));
+    ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
+    checkOperationOutcome(
+        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
+        "HTTP parser finished before end of message, Content-Length field is missing or the value is too low.");
+
+    // Send request with ContentLength header containing too high value
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, innerResponse) =
+            send(args, {}, [](Header& header){ header.addHeaderField(Header::ContentLength, "999999"); }));
+    ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
+    checkOperationOutcome(
+        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
+        "HTTP parser did not finish correctly, Content-Length field is too large.");
 }

@@ -120,7 +120,10 @@ public:
     };
 
     /// @returns {outerResponse, innerResponse}
-    std::tuple<ClientResponse, ClientResponse> send(const RequestArguments& args);
+    std::tuple<ClientResponse, ClientResponse> send(
+        const RequestArguments& args,
+        std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest = {}, // used to simulate errors;
+        std::optional<std::function<void(Header&)>> manipInnerRequestHeader = {});        // used to simulate errors;
 
     std::optional<model::Task> taskCreate(HttpStatus expectedOuterStatus = HttpStatus::OK,
                                           HttpStatus expectedInnerStatus = HttpStatus::Created,
@@ -301,9 +304,14 @@ protected:
                                            const std::string& whenHandedOver);
 
 private:
-    void sendInternal(std::tuple<ClientResponse, ClientResponse>& result, const RequestArguments& args);
+    void sendInternal(
+        std::tuple<ClientResponse, ClientResponse>& result, const RequestArguments& args,
+        std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest = {},
+        std::optional<std::function<void(Header&)>> manipInnerRequestHeader = {});
     virtual std::string creatTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
                                         const JWT& jwt);
+    virtual std::string creatUnvalidatedTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
+                                                   const JWT& jwt);
 
     void taskCreateInternal(std::optional<model::Task>& task, HttpStatus expectedOuterStatus,
                             HttpStatus expectedInnerStatus,

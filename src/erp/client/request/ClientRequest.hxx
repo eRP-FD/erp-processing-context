@@ -25,6 +25,8 @@ public:
 private:
     Header header;
     std::string body;
+
+    friend class ErpWorkflowTestBase;
 };
 
 #endif

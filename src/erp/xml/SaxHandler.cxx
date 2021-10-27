@@ -68,7 +68,20 @@ typename decltype(toCallbackClass(memberFunctionPointer))::Type makeCallback()
     using CallbackFunctionMakerClass = typename CallbackClass::template FunctionMakerClass<memberFunctionPointer>;
     return &CallbackFunctionMakerClass::cStyleCallbackFunction;
 }
+
+static void failMaybeWithDiagnostics(const std::string& message, const xmlError& error)
+{
+    if (error.message)
+    {
+        std::string errorMessage = error.message;
+        if(errorMessage.back() == '\n')  // remove trailing line feed contained in message from libxml2;
+            errorMessage = errorMessage.substr(0, errorMessage.size() - 1);
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, message, errorMessage);
+    }
+    ErpFail(HttpStatus::BadRequest, message);
 }
+
+} // anonymous namespace
 
 std::string_view SaxHandler::Attribute::localname() const
 {
@@ -252,13 +265,19 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler,
         std::rethrow_exception(mExceptionPtr);
     }
 
-    if (mContext->errNo != 0)
+    if (mContext->errNo != 0 && mContext->lastError.level > XML_ERR_WARNING)
     {
         LOG(ERROR) << "libxml2 ctxt->errNo: " << mContext->errNo;
+        failMaybeWithDiagnostics("Error from xmlParseDocument", mContext->lastError);
     }
-    ErpExpect(parseResult == 0, HttpStatus::BadRequest, "Error from xmlParseDocument");
-    ErpExpect(mContext->wellFormed, HttpStatus::BadRequest,
-              "Error from xmlParseDocument: !ctxt->wellFormed");
+    if (parseResult != 0)
+    {
+        failMaybeWithDiagnostics("Error from xmlParseDocument", mContext->lastError);
+    }
+    if (!mContext->wellFormed)
+    {
+        failMaybeWithDiagnostics("Error from xmlParseDocument: !ctxt->wellFormed", mContext->lastError);
+    }
 }
 
 void SaxHandler::parseFile(const std::filesystem::path& fileName)

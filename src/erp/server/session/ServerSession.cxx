@@ -65,6 +65,27 @@ ServerResponse ServerSession::getServerErrorResponse(void)
     return response;
 }
 
+void ServerSession::setLogId(const std::optional<std::string>& requestId)
+{
+    if (requestId.has_value())
+    {
+        TLOG(INFO) << "Handling request with id: " << *requestId;
+        erp::server::Worker::tlogContext = requestId;
+    }
+    else
+    {
+        TLOG(WARNING) << "No ID in request.";
+        setLogIdToRemote();
+    }
+}
+
+void ServerSession::setLogIdToRemote()
+{
+    std::ostringstream endpointStrm;
+    endpointStrm << mSslStream.getLowestLayer().socket().remote_endpoint();
+    erp::server::Worker::tlogContext = endpointStrm.str();
+}
+
 
 void ServerSession::logException(std::exception_ptr exception)
 {

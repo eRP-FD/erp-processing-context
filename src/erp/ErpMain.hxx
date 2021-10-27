@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 
+class ApplicationHealth;
 class BlobCache;
 class BlobDatabase;
 class EnrolmentServer;
@@ -106,7 +107,8 @@ public:
         const uint16_t pcPort,
         const uint16_t defaultEnrolmentServerPort);
 
-    static void waitForHealthUp (PcServiceContext& serviceContext);
+    static bool waitForHealthUp (ErpProcessingContext& serviceContext);
+
 
 };
 

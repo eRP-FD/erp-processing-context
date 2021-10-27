@@ -84,15 +84,16 @@ int main (const int, const char* argv[], char** environment)
 
     int exitCode = EXIT_FAILURE;
 
-    LOG(WARNING) << "Starting erp-processing-context " << ErpServerInfo::ReleaseVersion
-                 << " (build: " << ErpServerInfo::BuildVersion << "; " << ErpServerInfo::ReleaseDate << ")";
 
     try
     {
+        GLogConfiguration::init_logging(argv[0]);
+
+        LOG(WARNING) << "Starting erp-processing-context " << ErpServerInfo::ReleaseVersion
+                    << " (build: " << ErpServerInfo::BuildVersion << "; " << ErpServerInfo::ReleaseDate << ")";
+
         ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
 
-        GLogConfiguration::init_logging(argv[0]);
-        TVLOG(1) << "initialized logging";
 
         deactivateLibxmlLoggingToStderr();
 

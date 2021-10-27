@@ -47,7 +47,7 @@ public:
 private:
     const RequestHandlerManager<PcServiceContext> mRequestHandlers;
 
-    static std::unique_ptr<InnerTeeRequest> decryptRequest(PcSessionContext& session);
+    static std::unique_ptr<InnerTeeRequest> decryptRequest(PcSessionContext& session, const std::string& sessionIdentifier);
 
     static bool checkProfessionOID(
         const std::unique_ptr<ServerRequest>& innerRequest,

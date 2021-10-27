@@ -27,13 +27,13 @@ namespace {
         while (remaining > 0)
         {
             ErpExpect(! parser.is_done(), HttpStatus::BadRequest,
-                      "Parser is already done, maybe the Content-Length field was not correct.");
+                "HTTP parser finished before end of message, Content-Length field is missing or the value is too low.");
             boost::beast::error_code ec;
             const size_t count = parser.put(boost::asio::buffer(s.substr(offset, remaining)), ec);
             // In general it is not an error if count is 0. It means we would need more data, beyond the given `s`, so
             // that the last bytes of `s` can be parsed as well. In this case, however, we can't supply more data.
-            ErpExpect(ec.value() == 0, HttpStatus::BadRequest, "parsing the HTTP header failed");
-            ErpExpect(count > 0, HttpStatus::BadRequest, "not enough data");
+            ErpExpect(ec.value() == 0, HttpStatus::BadRequest, "Parsing the HTTP message header failed.");
+            ErpExpect(count > 0, HttpStatus::BadRequest, "HTTP message parser: not enough data");
 
             offset += count;
             remaining -= count;
@@ -50,8 +50,10 @@ std::tuple<Header,std::string> BoostBeastStringReader::parseRequest (const std::
     parser.eager(true);
 
     putString(parser, headerAndBody);
-    Expect(parser.is_header_done(), "parser has not finished to parse the request");
-    Expect(parser.is_done(), "parser has not finished to parse the request");
+    ErpExpect(parser.is_header_done(), HttpStatus::BadRequest,
+              "HTTP Parser did not finish correctly to parse the request header");
+    ErpExpect(parser.is_done(), HttpStatus::BadRequest,
+              "HTTP parser did not finish correctly, Content-Length field is too large.");
 
     auto header = BoostBeastHeader::fromBeastRequestParser(parser);
     auto& body = parser.get().body();

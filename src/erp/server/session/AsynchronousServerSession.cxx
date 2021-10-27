@@ -107,9 +107,7 @@ void AsynchronousServerSession::run (void)
     // Perform the SSL handshake
     mSslStream.getSslStream().async_handshake(
         boost::asio::ssl::stream_base::server,
-        boost::beast::bind_front_handler(
-            &AsynchronousServerSession::onTlsHandshakeComplete,
-            shared_from_this()));
+        try_handler([self = shared_from_this()](boost::beast::error_code ec) mutable { self->onTlsHandshakeComplete(ec);}));
 }
 
 
@@ -208,7 +206,7 @@ void AsynchronousServerSession::do_handleRequest (ServerRequest request, Session
 
     try
     {
-        erp::server::Worker::tlogContext = request.header().header(Header::XRequestId);
+        setLogId(request.header().header(Header::XRequestId));
         data->accessLog.updateFromOuterRequest(request);
         const bool keepAlive = requestSupportsKeepAlive(request, data->accessLog);
         auto [success, response] = mRequestHandler->handleRequest(std::move(request), data->accessLog);
@@ -262,11 +260,11 @@ void AsynchronousServerSession::on_write (const bool keepConnectionAlive, Sessio
 
         boost::asio::post(
             mSslStream.get_executor(),
-            [self=shared_from_this()]
+            try_handler([self=shared_from_this()] () mutable
             {
                 DebugLog("on_write callback");
                 self->do_read();
-            });
+            }));
     }
     else
     {
@@ -303,9 +301,14 @@ void AsynchronousServerSession::on_shutdown (boost::beast::error_code ec, Sessio
 {
     DebugLog("on_shutdown");
 
+    mSslStream.getLowestLayer().socket().shutdown(boost::asio::socket_base::shutdown_both, ec);
+
     data.reset();
 
-    ErrorHandler(ec).reportServerError("ServerSession::on_shutdown");
+    if (ec != boost::asio::error::not_connected)
+    {
+        ErrorHandler(ec).reportServerError("ServerSession::on_shutdown");
+    }
 
     // At this point the connection has been closed gracefully.
 }
