@@ -1,39 +1,32 @@
 # erp-processing-context
-TEE processing context for the ePrescription (**eR**eze**p**t, erp) service.
+TEE processing context für den Dienst **eR**eze**p**t (erp).
 
-TEE = trusted execution environment or german VAU = vertrauenswürdige Ausführungsumgebung. 
+TEE = trusted execution environment oder deutsch VAU = vertrauenswürdige Ausführungsumgebung.
 
 # Project Setup
 
-See [here](doc/ProjectSetup.md)
+Siehe [hier](doc/ProjectSetup.md)
 
-# Building project
+# Bau des Projectes
 
-See [here](doc/Building.md) for details related to building the project and updating the necessary test resources including `TSL_valid.xml` and `BNA_valid.xml`.
+Siehe [hier](doc/Building.md) für Einzelheiten zur Erstellung des Projekts und zur Aktualisierung der erforderlichen Testressourcen einschließlich `TSL_valid.xml` und `BNA_valid.xml`.
 
-# The Outside World
-Communication with the outside world
-- incoming HTTP requests
+# Verbindungen zu anderen Komponenten
+
+- eingehende HTTP-Anfragen
 - PostgreSQL
 - HSM
-- registration service
-- remote attestation service 
-
-# Code Reuse
-The current plan to reuse code from the ePA project, which has been reviewed by SRC and been extensively tested, 
-is to provide at least the relevant source code trees as zip file together with instructions or a script file to
-integrate it to your development environment.
-After choosing a file for reuse, decide whether to use it unmodified or whether modifications are necessary. Unmodified 
-files go into a small library and allow easy and mechanical transfer of future changes in the ePA project.
+- registration service (Redis)
+- remote attestation service
 
 # Implementation
-A [guide](doc/GuideToImplementation.md) outlines the implementation.
+Eine [Anleitung](doc/GuideToImplementation.md) beschreibt die Implementierung.
 
-# Notes
-The test key/certificate pair in resources/test/configuration.json (erp/processing-context/server/certificate)
-was generated on macOS Catalina 10.15.1 using OpenSSL 3.0.0-dev.
+# Hinweise
+Das test key/certificate-Paar in resources/test/02_development.config.json.in (erp/processing-context/server/certificate)
+wurde auf macOS Catalina 10.15.1 mit OpenSSL 3.0.0-dev erzeugt.
 
-They are meant to be used exclusively for testing purposes on a server running locally.
+Sie sind ausschließlich für Testzwecke auf einem lokal betriebenen Server gedacht.
 
 ```shell
  openssl req -newkey rsa:2048 -nodes -keyout key.pem \
@@ -43,38 +36,37 @@ They are meant to be used exclusively for testing purposes on a server running l
               -addext "subjectAltName = DNS:127.0.0.1"
  ```
 
-# Build image
-```$xslt
+# Bauumgebung im Docker-Image
+```shell
 cd docker/build
 docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.3 .
 docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.3
 ```
 
 # Tools
-## JWT signing tool `jwt`
+## JWT-Signatur-Tool `jwt`
 
-This tool uses the private key located in the source tree at `resources/test/jwt/idp_id` to sign a json-claim file
-provided at the command line and prints it to _stdout_.  
+Dieses Werkzeug verwendet den Private Key, der sich im Quellbaum unter `resources/test/jwt/idp_id` befindet, um eine json-claim-Datei zu signieren, welche
+ in der Befehlszeile angegeben wird, und gibt sie auf _stdout_ aus.  
 
 ```
 Usage: jwt <claimfile>
 
-<claimfile>   file containing claim to sign
+<claimfile>   Datei mit claims die signiert werden sollen
 ```
 
-## VAU Request encryption tool `vau_encrypt`
-This tool uses the key from `vau/private-key` in `configuration.json` or environment variable `ERP_VAU_PRIVATE_KEY`
-to create an encrypted request.
+## VAU-Anfrage-Verschlüsselungs-Tool `vau_encrypt`
+Dieses Werkzeug verwendet den Key aus `vau/private-key` in `02_development.config.json` oder die Umgebungsvariable `ERP_VAU_PRIVATE_KEY`
+um eine verschlüsselte Anfrage zu erstellen.
 
 ```
 Usage: vau_encrypt <infile> <outfile>
-<infile>      name of file with plain text request
-<outfile>     target file for encrypted request
+<infile>      Name einer Datei mit Klartext-Anfrage (Request)
+<outfile>     Ausgabedatei für die verschlüsselte Anfrage
 ```
 
-## Create PKCS7 bundles on command line:
-in directory resources/test/EndpointHandlerTest
+## Erstellung eines PKCS7 bundles auf der Kommandozeile:
+In Verzeichnis resources/test/EndpointHandlerTest
 ```
 cat kbv_bundle.xml| openssl smime -sign -signer ../ssl/ec.crt -inkey ../ssl/ec.priv.pem -outform der -nodetach |base64 -w0  >kbv_bundle.xml.p7s
 ```
-
