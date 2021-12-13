@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../shared/xml/GenericTypes.xsd"/>
+  <xs:include schemaLocation="KBV_PR_ERP_Composition.xsd"/>
+  <xs:include schemaLocation="KBV_PR_ERP_Medication_BundleDummy.xsd"/>
+  <xs:include schemaLocation="KBV_PR_ERP_PracticeSupply.xsd"/>
+  <xs:include schemaLocation="KBV_PR_ERP_Prescription.xsd"/>
+  <xs:include schemaLocation="KBV_PR_FOR_Coverage.xsd"/>
+  <xs:include schemaLocation="KBV_PR_FOR_Organization.xsd"/>
+  <xs:include schemaLocation="KBV_PR_FOR_Patient.xsd"/>
+  <xs:include schemaLocation="KBV_PR_FOR_Practitioner.xsd"/>
+  <xs:include schemaLocation="KBV_PR_FOR_PractitionerRole.xsd"/>
+  <xs:element name="Bundle" type="KBV_PR_ERP_Bundle"/>
+  <xs:complexType name="KBV_PR_ERP_Bundle">
+    <xs:sequence>
+      <xs:element name="id" type="id"/>
+      <xs:element name="meta" type="KBV_PR_ERP_Bundle.Meta"/>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="identifier" type="KBV_PR_ERP_Bundle.Identifier"/>
+      <xs:element name="type" type="KBV_PR_ERP_Bundle.Type"/>
+      <xs:element name="timestamp" type="instant"/>
+      <xs:element name="entry" type="KBV_PR_ERP_Bundle.Entry" maxOccurs="unbounded"/>
+      <xs:element name="signature" minOccurs="0" type="Signature"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Bundle.Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="lastUpdated" type="instant" minOccurs="0"/>
+          <xs:element name="profile" type="KBV_PR_ERP_Bundle.Meta.profile"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Bundle.Meta.profile">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Bundle.Identifier">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="KBV_PR_ERP_Bundle.Identifier.system"/>
+          <xs:element name="value" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Bundle.Identifier.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Bundle.Type">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="document"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Bundle.Entry">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="fullUrl" type="uri"/>
+          <xs:element name="resource" type="KBV_PR_ERP_Bundle.ResourceContainer"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Bundle.ResourceContainer">
+    <xs:choice>
+      <xs:element ref="Composition"/>
+      <xs:element ref="Medication"/>
+      <xs:element ref="SupplyRequest"/>
+      <xs:element ref="MedicationRequest"/>
+      <xs:element ref="Coverage"/>
+      <xs:element ref="Organization"/>
+      <xs:element ref="Patient"/>
+      <xs:element ref="Practitioner"/>
+      <xs:element ref="PractitionerRole"/>
+    </xs:choice>
+  </xs:complexType>
+</xs:schema>

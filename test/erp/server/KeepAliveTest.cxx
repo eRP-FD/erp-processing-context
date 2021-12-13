@@ -197,6 +197,11 @@ TEST_F(KeepAliveTest, manyRequests_keepAlive)
 {
     EnvironmentVariableGuard isKeepAliveSupported ("ERP_SERVER_KEEP_ALIVE", "TRUE");
 
+    if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false))
+    {
+        GTEST_SKIP_("DOS check could not be disabled");
+    }
+
     auto client = createClient();
     std::chrono::steady_clock::duration totalDuration;
     std::array<size_t,manyRequestCount> durations;

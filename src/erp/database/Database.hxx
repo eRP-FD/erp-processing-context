@@ -20,6 +20,7 @@ class AuditData;
 class Binary;
 class Bundle;
 class Communication;
+class Consent;
 class ErxReceipt;
 class MedicationDispense;
 class PrescriptionId;
@@ -33,6 +34,8 @@ class DatabaseBackend;
 class KeyDerivation;
 class UrlArguments;
 class Uuid;
+
+enum class CmacKeyCategory : int8_t;
 
 /**
  * Facade for an external database.
@@ -67,8 +70,9 @@ public:
         const std::string& kvnr,
         const std::optional<UrlArguments>& search) = 0;
 
-    virtual std::optional<model::Task> retrieveTask (const model::PrescriptionId& taskId) = 0;
     virtual std::optional<model::Task> retrieveTaskForUpdate (const model::PrescriptionId& taskId) = 0;
+    [[nodiscard]] virtual ::std::tuple<::std::optional<::model::Task>, ::std::optional<::model::Binary>>
+    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) = 0;
 
     virtual std::tuple<std::optional<model::Task>, std::optional<model::Bundle>> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
@@ -83,7 +87,7 @@ public:
         const std::string& kvnr,
         const std::optional<UrlArguments>& search) = 0;
 
-    virtual CmacKey acquireCmac(const date::sys_days& validDate, RandomSource& randomSource = RandomSource::defaultSource()) = 0;
+    virtual CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource = RandomSource::defaultSource()) = 0;
 
     /**
      * Insert the `communication` object into the database.
@@ -139,7 +143,13 @@ public:
         const model::Timestamp& retrieved,
         const std::string& recipient) = 0;
 
+    virtual void storeConsent(const model::Consent& consent) = 0;
+    virtual std::optional<model::Consent> getConsent(const std::string_view& kvnr) = 0;
+    [[nodiscard]] virtual bool clearConsent(const std::string_view& kvnr) = 0;
+
+
     virtual DatabaseBackend& getBackend() = 0;
+
 };
 
 #endif

@@ -1,0 +1,77 @@
+{
+  "common": {
+    "debug": {
+      "enable-hsm-mock": "true",
+      "disable-registration": "false",
+      "disable-dos-check": "false",
+      "disable-enrolment-api-auth": "true",
+      "disable-qes-id-check": "false"
+    },
+    "test": {
+      "use-postgres": "false",
+      "use-redis-mock": "true",
+      "use-idp-updater-mock": "true",
+      "additional-xml-schema": {
+        "de.gematik.erezept-workflow.r4": {
+          "1.0.3-1": [
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/auditevent/Gem_erxAuditEvent.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/binary/Gem_erxBinary.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/composition/Gem_erxCompositionElement.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/device/Gem_erxDevice.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/medicationdispense/Gem_erxMedicationDispense.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/organization/Gem_erxOrganizationElement.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/receipt/Gem_erxReceiptBundle.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/task/Gem_erxTask.xsd"
+          ],
+          "1.1.1": [
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/auditevent/Gem_erxAuditEvent.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/binary/Gem_erxBinary.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/composition/Gem_erxCompositionElement.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/device/Gem_erxDevice.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/medicationdispense/Gem_erxMedicationDispense.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/organization/Gem_erxOrganizationElement.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/receipt/Gem_erxReceiptBundle.xsd",
+            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/task/Gem_erxTask.xsd"
+          ]
+        },
+        "kbv.ita.erp": {
+          "1.0.1": [
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Coverage.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_HumanName.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Organization.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Patient.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Practitioner.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_PractitionerRole.xsd"
+          ],
+          "1.0.2": [
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Coverage.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_HumanName.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Organization.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Patient.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Practitioner.xsd",
+            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_PractitionerRole.xsd"
+          ]
+        }
+      },
+      "client": {
+        "enableAuthentication": "true",
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIDkTCCAnkCFCOnltB0u6JRe7YLPXNALVAqMuXNMA0GCSqGSIb3DQEBCwUAMIGE\nMQswCQYDVQQGEwJERTELMAkGA1UECAwCSEgxEDAOBgNVBAcMB0hhbWJ1cmcxDDAK\nBgNVBAoMA0lCTTEdMBsGA1UECwwUR2VzdW5kaGVpdHNwbGF0dGZvcm0xKTAnBgNV\nBAMMIGVSUCBUZXN0IENsaWVudCBmb3IgdW5pdCB0ZXN0aW5nMB4XDTIxMDUxNzEx\nNDMwMFoXDTMxMDUxNTExNDMwMFowgYQxCzAJBgNVBAYTAkRFMQswCQYDVQQIDAJI\nSDEQMA4GA1UEBwwHSGFtYnVyZzEMMAoGA1UECgwDSUJNMR0wGwYDVQQLDBRHZXN1\nbmRoZWl0c3BsYXR0Zm9ybTEpMCcGA1UEAwwgZVJQIFRlc3QgQ2xpZW50IGZvciB1\nbml0IHRlc3RpbmcwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDnjafA\npLjHvv/u153DqkdT9q64fgvTRaP2YglqT0LbEbkL6OqfmAxOJDvPzxBPe+dVGE9c\nqEy6qubhFbyXrBIEr2fx0qVkutj/UU+B4ihrZIvVoYNm9FrYoZJFR0WrNi6plJGQ\n8x93l04US7kIM3sjYs2tJ3vqrUYnlzS8yAfLP6rPfdW75B6wJw21J12K28eM1b0K\nqTGV+Lw0cFS64AxWbGQKnxofO80sbtpvz/GBpshEuIQTj3W3qtt4z/MV2fVAq1Kz\nBb0IPNc6gKZ2kPs2SGafyw/3CCVa3Nx7uQanzYeuua1pd8zIseN5KMJRy9+V1tM9\nOjoJioWG0eMCFfpDAgMBAAEwDQYJKoZIhvcNAQELBQADggEBADZipJQ4Fueb+uC+\n+nb+VmOvfJKa4IAldrHqXdCBD54wK8PJdBkykKpGQFMSLBcPzrf+1kLasDqZTAV+\nddN4uAfVF9XHjYf7AYxbFZDiZlbDR11Usj2/v5SefCYuZWM06qSshw9gxUlAcxrV\nUpE/m15K8QYzn4qKbrQk7u0kslHciEwSBC/E3w5SPFe7NaWx12NQYSjKzn+g7wrP\nfOP0aIaYuhlozyCqrUwnAi/ha3qfrhPNBuXlf/TyEoTSZEDudfRomflLwXd1jdLT\nbhSa/RTsqOEgSnJN1dmrKf9cQLr4QgB5w0lCC3kSAdY9+hjCBmk7Rv0DHKfnbC+R\nHWOT0g8=\n-----END CERTIFICATE-----\n",
+        "certificateKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQIBAAKCAQEA542nwKS4x77/7tedw6pHU/auuH4L00Wj9mIJak9C2xG5C+jq\nn5gMTiQ7z88QT3vnVRhPXKhMuqrm4RW8l6wSBK9n8dKlZLrY/1FPgeIoa2SL1aGD\nZvRa2KGSRUdFqzYuqZSRkPMfd5dOFEu5CDN7I2LNrSd76q1GJ5c0vMgHyz+qz33V\nu+QesCcNtSdditvHjNW9Cqkxlfi8NHBUuuAMVmxkCp8aHzvNLG7ab8/xgabIRLiE\nE491t6rbeM/zFdn1QKtSswW9CDzXOoCmdpD7Nkhmn8sP9wglWtzce7kGp82Hrrmt\naXfMyLHjeSjCUcvfldbTPTo6CYqFhtHjAhX6QwIDAQABAoIBAQDCx7VaZvYNCM1P\nw86xXla7+aGGDnmyEj3XryZOaDhMAb+QljBvab7IKNCrgXot8oNpYJa50dUhnUu0\nAc3wJE3P5SFiGZkJf+ez9lkUYAMyO5UpcsEPZPPakSdy4X5ohJ6CBjjhHrLUrdF/\nXydaD7xAywdK5hDmGzYNbbNuLjHoNJ9S701OVXBmfoIWkqx17bVddYq50PN2QT6W\nTM9qTEDR8DvdSD51buf1Tnv6cVaAj4efdtzzJAgJlvBRUo7ACG5jbi4eg6a7EHrd\nH6Qudfj9YOz/Mq7fccHLdOecbqHwdcZqP9MtRyXmaguUYK5Qh0G6McyTXegjtWrs\nnMpWXzlBAoGBAP8TBC/8AUCxzjGDhiluqi4/UniT2J0FapcT8tAZOvv8lNOfcjqf\n7mUCO9Zf4nM97djCg/t1DsCWPF1Dj3ejT0BzhvLGBnvbzM+NXjb6+i6DFc8uuib5\n8mrLJ0o2ZUE0jbhk/RsXgeR5uhyZVrnXlELhDko54X8fqgAswa3qAe+hAoGBAOhk\nyUHUP/NQGCvcKhM5wlS0uRm3thnWKjzPyVFZ3o5wbuR3ZZniwPnxLFPjEFun5lmD\nk9VdY7iVJG1Zr8Ms2om6OdEJjU62DlPtTFVw0KhOWN4SMWuFaQx5dCDHQWr32aGf\nSkjcmZmef/+bxpjjsfdyG3jQs181NVy3DcY8P+9jAoGBAJ3ZudSsImZT4qN3nlYT\nmxNlsnbWH84EZRM7kB9CDeOVStCvsrQe9xvhRwCCdBQXNhLXRXAe39NE5fRdc/J4\nyPm8xL2G2MpbmqKy/KQPqzWPf7aoVyD5uxBlylm90emJSU7ciFn0sTigMBG0vxvh\nEmpU9k/vA+J0yPK0v+MNlschAoGBAM7ArBU3AlY0Ee0jiQNlxbCawHtS6F4AHb/Q\nlSkdLVXITcBRQUExbcJwgKF5SBpjPBqzZxjSZ1/WwHvQ6QBZrWwPFFUXjHJUolak\nrd7t6ZVzbrjTssgX/yer/lcTLu49549VKj+8k6MKUpJUQtHO8YxWJn7MHmk762e7\nLDQLck5FAoGAUT05LFb7Nm7wpSmiCcrrBUKpH3nXdOeA964lMK/tOO4/bG3mAizn\nJEEc6ASk0tfWABGjQl429afbvhWlAToxqwB2f0uwUi9RrQ7h6vKZi1GudDi7jbSR\n7B4dH5SScUDpkHgKU7bbQS7Se4plvbELusIn9jYCCmfca0nSd5vNhWA=\n-----END RSA PRIVATE KEY-----\n"
+      }
+    },
+    "mock": {
+      "ecies": {
+        "public-key": "-----BEGIN PUBLIC KEY-----\nMFowFAYHKoZIzj0CAQYJKyQDAwIIAQEHA0IABIY0ISgw2tRXygUwXmaHE0FmucIa\nZf/r9VX05137BIiIZuS2hDYky9pDyX6omWi8Qf1TV2+CwD76fWAbn6ysKyk=\n-----END PUBLIC KEY-----",
+        "private-key": "-----BEGIN EC PRIVATE KEY-----\nMHgCAQEEIKVKVoW4D3H9Xr7pFlmvqYyEfFyGTiM1hEFGZ1r8WV48oAsGCSskAwMC\nCAEBB6FEA0IABIY0ISgw2tRXygUwXmaHE0FmucIaZf/r9VX05137BIiIZuS2hDYk\ny9pDyX6omWi8Qf1TV2+CwD76fWAbn6ysKyk=\n-----END EC PRIVATE KEY-----"
+      },
+      "idp": {
+        "public-key": "-----BEGIN PUBLIC KEY-----\nMFowFAYHKoZIzj0CAQYJKyQDAwIIAQEHA0IABIYZnwiGAn5QYOx43Z8MwaZLD3r/\nbz6BTcQO5pbeum6qQzYD5dDCcriw/VNPPZCQzXQPg4StWyy5OOq9TogBEmM=\n-----END PUBLIC KEY-----",
+        "private-key": "-----BEGIN PRIVATE KEY-----\nMIGVAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwR6MHgCAQEEIJEeJegS5+R91IGR\ngUsfFFDntiID2L3BkOmZ565krSvPoAsGCSskAwMCCAEBB6FEA0IABIYZnwiGAn5Q\nYOx43Z8MwaZLD3r/bz6BTcQO5pbeum6qQzYD5dDCcriw/VNPPZCQzXQPg4StWyy5\nOOq9TogBEmM=\n-----END PRIVATE KEY-----"
+      },
+      "id.fd.sig": {
+        "private-key": "-----BEGIN PRIVATE KEY-----\nMIGVAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwR6MHgCAQEEIKd3WtkUFC5Z0NZl\n4MAjxjh69DnnYV5e03WbLFQoq9qDoAsGCSskAwMCCAEBB6FEA0IABEldYn6CK9ft\n8L8HMpJBRLSG852LwqbmFUkhbdsK1G4oBDYhAqB0IMyo+PJ3fUluggoAOHRDTPT0\nGR0WhqTFkFs=\n-----END PRIVATE KEY-----\n"
+      },
+      "use-mock-tpm": "true"
+    }
+  }
+}

@@ -21,20 +21,20 @@
 
 class HsmIdentity;
 
-constexpr static int ERP_UTIMACO_FUNCTION_DOESNT_EXIST =      0xB0830006;
-constexpr static int ERP_UTIMACO_SESSION_EXPIRED =            0xB0830022;
-constexpr static int ERP_UTIMACO_SIGNATURE_VERIFICATION =     0xB09C0007;
-constexpr static int ERP_UTIMACO_INVALID_HANDLE =             0xB9000001;
-constexpr static int ERP_UTIMACO_CONNECTION_TERMIINATED =     0xB9010005;
-constexpr static int ERP_UTIMACO_TIMEOUT_OCCURED =            0xB9010007;
-constexpr static int ERP_UTIMACO_INVALID_USER_NAME =          0xb0830007;
-constexpr static int ERP_UTIMACO_DECRYPT_FAILED =             0xB08B000E;
-constexpr static int ERP_UTIMACO_UNKNOWN_USER =               0xb0830016;
-constexpr static int ERP_UTIMACO_MESSAGING_FAILED =           0xB0830021;
-constexpr static int ERP_UTIMACO_INVALID_MESSAGING_ID =       0xb0830023;
-constexpr static int ERP_UTIMACO_MAX_AUTH_FAILURES =          0xB0830046;
-constexpr static int ERP_UTIMACO_SESSION_CLOSED =             0xb0830072;
-constexpr static int ERP_UTIMACO_MAX_LOGINS =                 0xB083003E;
+constexpr static uint32_t ERP_UTIMACO_FUNCTION_DOESNT_EXIST =     0xB0830006u;
+constexpr static uint32_t ERP_UTIMACO_SESSION_EXPIRED =           0xB0830022u;
+constexpr static uint32_t ERP_UTIMACO_SIGNATURE_VERIFICATION =    0xB09C0007u;
+constexpr static uint32_t ERP_UTIMACO_INVALID_HANDLE =            0xB9000001u;
+constexpr static uint32_t ERP_UTIMACO_CONNECTION_TERMIINATED =    0xB9010005u;
+constexpr static uint32_t ERP_UTIMACO_TIMEOUT_OCCURED =           0xB9010007u;
+constexpr static uint32_t ERP_UTIMACO_INVALID_USER_NAME =         0xB0830007u;
+constexpr static uint32_t ERP_UTIMACO_DECRYPT_FAILED =            0xB08B000Eu;
+constexpr static uint32_t ERP_UTIMACO_UNKNOWN_USER =              0xB0830016u;
+constexpr static uint32_t ERP_UTIMACO_MESSAGING_FAILED =          0xB0830021u;
+constexpr static uint32_t ERP_UTIMACO_INVALID_MESSAGING_ID =      0xB0830023u;
+constexpr static uint32_t ERP_UTIMACO_MAX_AUTH_FAILURES =         0xB0830046u;
+constexpr static uint32_t ERP_UTIMACO_SESSION_CLOSED =            0xb0830072u;
+constexpr static uint32_t ERP_UTIMACO_MAX_LOGINS =                0xB083003Eu;
 
 
 class HsmProductionClient

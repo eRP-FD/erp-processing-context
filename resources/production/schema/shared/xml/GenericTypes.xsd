@@ -1,0 +1,1091 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ /*
+  ~  * (C) Copyright IBM Deutschland GmbH 2021
+  ~  * (C) Copyright IBM Corp. 2021
+  ~  */
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:xhtml="http://www.w3.org/1999/xhtml"
+           xmlns="http://hl7.org/fhir"
+           targetNamespace="http://hl7.org/fhir"
+           elementFormDefault="qualified"
+           version="4.0.1">
+  <xs:import namespace="http://www.w3.org/1999/xhtml" schemaLocation="fhir-xhtml.xsd"/>
+
+  <xs:simpleType name="id-primitive">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Za-z0-9\-\.]{1,64}"/>
+      <xs:minLength value="1"/>
+      <xs:maxLength value="64"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="id">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="id-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="uri-primitive">
+    <xs:restriction base="xs:anyURI">
+      <xs:pattern value="\S*"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="uri-fixed-kvid-10">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/NamingSystem/gkv/kvid-10"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="uri-fixed-type-de-basis">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/CodeSystem/identifier-type-de-basis"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="url-primitive">
+    <xs:restriction base="xs:anyURI">
+      <xs:pattern value="\S*"/>
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="url">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="url-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="code-primitive">
+    <xs:restriction base="xs:token">
+      <xs:minLength value="1"/>
+      <xs:pattern value="[^\s]+(\s[^\s]+)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Coding.code.WorkflowType">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="WorkflowTypeCodeEnum"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="display.WorkflowType">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="WorkflowTypeDisplayEnum"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="WorkflowTypeCodeEnum" final="restriction" >
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="160" />
+      <xs:enumeration value="169" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="WorkflowTypeDisplayEnum" final="restriction" >
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Muster 16 (Apothekenpflichtige Arzneimittel)" />
+      <xs:enumeration value="Muster 16 (Direkte Zuweisung)" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="string-primitive">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="string">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="string-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="instant-primitive">
+    <xs:restriction base="xs:dateTime">
+      <xs:pattern value="([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00))"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="instant">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="instant-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="canonical-primitive">
+    <xs:restriction base="xs:anyURI">
+      <xs:pattern value="\S*"/>
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="canonical">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="boolean-primitive">
+    <xs:restriction base="xs:boolean">
+      <xs:pattern value="true|false"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="boolean">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="boolean-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="dateTime-primitive">
+    <xs:restriction>
+      <xs:simpleType>
+        <xs:union memberTypes="xs:gYear xs:gYearMonth xs:date xs:dateTime"/>
+      </xs:simpleType>
+      <xs:pattern value="([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="dateTime">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="dateTime-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="time-primitive">
+    <xs:restriction base="xs:time">
+      <xs:pattern value="([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="time">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="time-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="markdown-primitive">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:pattern value="[ \r\n\t\S]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="markdown">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="markdown-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="positiveInt-primitive">
+    <xs:restriction base="xs:positiveInteger">
+      <xs:pattern value="[1-9][0-9]*"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="positiveInt">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="positiveInt-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="unsignedInt-primitive">
+    <xs:restriction base="xs:nonNegativeInteger">
+      <xs:pattern value="[0]|([1-9][0-9]*)"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="unsignedInt">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="unsignedInt-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="date-primitive">
+    <xs:restriction>
+      <xs:simpleType>
+        <xs:union memberTypes="xs:gYear xs:gYearMonth xs:date"/>
+      </xs:simpleType>
+      <xs:pattern value="([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[0-9]|[1-2][0-9]|3[0-1]))?)?"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="date">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="date-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="ListMode-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="working"/>
+      <xs:enumeration value="snapshot"/>
+      <xs:enumeration value="changes"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="ListMode">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="ListMode-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="decimal-primitive">
+    <xs:union memberTypes="xs:decimal xs:double"/>
+  </xs:simpleType>
+  <xs:complexType name="decimal">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="decimal-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="integer-primitive">
+    <xs:restriction base="xs:int">
+      <xs:pattern value="-?([0]|([1-9][0-9]*))"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="integer">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="integer-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="base64Binary-primitive">
+    <xs:restriction base="xs:base64Binary">
+      <xs:pattern value="(\s*([0-9a-zA-Z\+/=]){4}\s*)+"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="base64Binary">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="base64Binary-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="DaysOfWeek-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="mon"/>
+      <xs:enumeration value="tue"/>
+      <xs:enumeration value="wed"/>
+      <xs:enumeration value="thu"/>
+      <xs:enumeration value="fri"/>
+      <xs:enumeration value="sat"/>
+      <xs:enumeration value="sun"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="DaysOfWeek">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="DaysOfWeek-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="DomainResource">
+    <xs:complexContent>
+      <xs:extension base="Resource">
+        <xs:sequence>
+          <xs:element name="text" type="Narrative" minOccurs="0"/>
+          <xs:element name="contained" type="ResourceContainer" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Resource">
+    <xs:sequence>
+      <xs:element name="id" type="id" minOccurs="0"/>
+      <xs:element name="meta" type="Meta" minOccurs="0"/>
+      <xs:element name="implicitRules" type="uri" minOccurs="0"/>
+      <xs:element name="language" type="code" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="versionId" type="id" minOccurs="0"/>
+          <xs:element name="lastUpdated" type="instant" minOccurs="0"/>
+          <xs:element name="source" type="uri" minOccurs="0"/>
+          <xs:element name="profile" type="canonical" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="security" type="Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="tag" type="Coding" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Element">
+    <xs:sequence>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="string-primitive"/>
+  </xs:complexType>
+  <xs:complexType name="Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="uri" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="code" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:choice minOccurs="0">
+          <xs:element name="valueBase64Binary" type="base64Binary"/>
+          <xs:element name="valueBoolean" type="boolean"/>
+          <xs:element name="valueCanonical" type="canonical"/>
+          <xs:element name="valueCode" type="code"/>
+          <xs:element name="valueDate" type="date"/>
+          <xs:element name="valueDateTime" type="dateTime"/>
+          <xs:element name="valueDecimal" type="decimal"/>
+          <xs:element name="valueId" type="id"/>
+          <xs:element name="valueInstant" type="instant"/>
+          <xs:element name="valueInteger" type="integer"/>
+          <xs:element name="valueMarkdown" type="markdown"/>
+          <xs:element name="valuePositiveInt" type="positiveInt"/>
+          <xs:element name="valueString" type="string"/>
+          <xs:element name="valueTime" type="time"/>
+          <xs:element name="valueUnsignedInt" type="unsignedInt"/>
+          <xs:element name="valueUri" type="uri"/>
+          <xs:element name="valueUrl" type="url"/>
+          <xs:element name="valueAddress" type="Address"/>
+          <xs:element name="valueAnnotation" type="Annotation"/>
+          <xs:element name="valueCodeableConcept" type="CodeableConcept"/>
+          <xs:element name="valueCoding" type="Coding"/>
+          <xs:element name="valueContactPoint" type="ContactPoint"/>
+          <xs:element name="valueDuration" type="Duration"/>
+          <xs:element name="valueHumanName" type="HumanName"/>
+          <xs:element name="valueIdentifier" type="Identifier"/>
+          <xs:element name="valuePeriod" type="Period"/>
+          <xs:element name="valueQuantity" type="Quantity"/>
+          <xs:element name="valueRange" type="Range"/>
+          <xs:element name="valueRatio" type="Ratio"/>
+          <xs:element name="valueReference" type="Reference"/>
+          <xs:element name="valueSignature" type="Signature"/>
+          <xs:element name="valueTiming" type="Timing"/>
+          <xs:element name="valueDosage" type="Dosage"/>
+          <xs:element name="valueMeta" type="Meta"/>
+        </xs:choice>
+        <xs:attribute name="url" type="uri-primitive" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Narrative">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="status" type="NarrativeStatus"/>
+          <xs:element ref="xhtml:div" minOccurs="1" maxOccurs="1"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="NarrativeStatus">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="NarrativeStatus-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="NarrativeStatus-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="generated"/>
+      <xs:enumeration value="extensions"/>
+      <xs:enumeration value="additional"/>
+      <xs:enumeration value="empty"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Identifier">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="IdentifierUse" minOccurs="0"/>
+          <xs:element name="type" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="system" type="uri" minOccurs="0"/>
+          <xs:element name="value" type="string" minOccurs="0"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="assigner" type="Reference" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Identifier.KVID-10">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="IdentifierUse-fixed-official" minOccurs="0"/>
+          <xs:element name="type" type="CodeableConcept.KVID-10" minOccurs="0"/>
+          <xs:element name="system" type="uri-fixed-kvid-10"/>
+          <xs:element name="value" type="string" />
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="assigner" type="Reference" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="IdentifierUse">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="IdentifierUse-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="IdentifierUse-fixed-official">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="string-primitive" fixed="official"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="IdentifierUse-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="usual"/>
+      <xs:enumeration value="official"/>
+      <xs:enumeration value="temp"/>
+      <xs:enumeration value="secondary"/>
+      <xs:enumeration value="old"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="CodeableConcept">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="CodeableConcept.KVID-10">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="Coding.KVID-10" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Coding.KVID-10">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="uri-fixed-type-de-basis" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="IdentifierTypeDeBasis.Coding.code" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Period">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="start" type="dateTime" minOccurs="0"/>
+          <xs:element name="end" type="dateTime" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Reference">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="uri" minOccurs="0"/>
+          <xs:element name="identifier" type="Identifier" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="BackboneElement">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Annotation">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:choice minOccurs="0">
+            <xs:element name="authorReference" type="Reference"/>
+            <xs:element name="authorString" type="string"/>
+          </xs:choice>
+          <xs:element name="time" type="dateTime" minOccurs="0"/>
+          <xs:element name="text" type="markdown"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Quantity">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="value" type="decimal" minOccurs="0"/>
+          <xs:element name="comparator" type="QuantityComparator" minOccurs="0"/>
+          <xs:element name="unit" type="string" minOccurs="0"/>
+          <xs:element name="system" type="uri" minOccurs="0"/>
+          <xs:element name="code" type="code" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="QuantityComparator-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="&lt;"/>
+      <xs:enumeration value="&lt;="/>
+      <xs:enumeration value=">="/>
+      <xs:enumeration value=">"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="QuantityComparator">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="QuantityComparator-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Dosage">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="sequence" type="integer" minOccurs="0"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+          <xs:element name="additionalInstruction" type="CodeableConcept" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="patientInstruction" type="string" minOccurs="0"/>
+          <xs:element name="timing" type="Timing" minOccurs="0"/>
+          <xs:choice minOccurs="0">
+            <xs:element name="asNeededBoolean" type="boolean"/>
+            <xs:element name="asNeededCodeableConcept" type="CodeableConcept"/>
+          </xs:choice>
+          <xs:element name="site" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="route" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="method" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="doseAndRate" type="Dosage.DoseAndRate" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="maxDosePerPeriod" type="Ratio" minOccurs="0"/>
+          <xs:element name="maxDosePerAdministration" type="Quantity" minOccurs="0"/>
+          <xs:element name="maxDosePerLifetime" type="Quantity" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Timing">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="event" type="dateTime" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="repeat" type="Timing.Repeat" minOccurs="0"/>
+          <xs:element name="code" type="CodeableConcept" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Timing.Repeat">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:choice minOccurs="0">
+            <xs:element name="boundsDuration" type="Duration"/>
+            <xs:element name="boundsRange" type="Range"/>
+            <xs:element name="boundsPeriod" type="Period"/>
+          </xs:choice>
+          <xs:element name="count" type="positiveInt" minOccurs="0"/>
+          <xs:element name="countMax" type="positiveInt" minOccurs="0"/>
+          <xs:element name="duration" type="decimal" minOccurs="0"/>
+          <xs:element name="durationMax" type="decimal" minOccurs="0"/>
+          <xs:element name="durationUnit" type="UnitsOfTime" minOccurs="0"/>
+          <xs:element name="frequency" type="positiveInt" minOccurs="0"/>
+          <xs:element name="frequencyMax" type="positiveInt" minOccurs="0"/>
+          <xs:element name="period" type="decimal" minOccurs="0"/>
+          <xs:element name="periodMax" type="decimal" minOccurs="0"/>
+          <xs:element name="periodUnit" type="UnitsOfTime" minOccurs="0"/>
+          <xs:element name="dayOfWeek" type="code" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="timeOfDay" type="time" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="when" type="EventTiming" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="offset" type="unsignedInt" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="UnitsOfTime-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="s"/>
+      <xs:enumeration value="min"/>
+      <xs:enumeration value="h"/>
+      <xs:enumeration value="d"/>
+      <xs:enumeration value="wk"/>
+      <xs:enumeration value="mo"/>
+      <xs:enumeration value="a"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="UnitsOfTime">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="UnitsOfTime-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="EventTiming-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="MORN"/>
+      <xs:enumeration value="MORN.early"/>
+      <xs:enumeration value="MORN.late"/>
+      <xs:enumeration value="NOON"/>
+      <xs:enumeration value="AFT"/>
+      <xs:enumeration value="AFT.early"/>
+      <xs:enumeration value="AFT.late"/>
+      <xs:enumeration value="EVE"/>
+      <xs:enumeration value="EVE.early"/>
+      <xs:enumeration value="EVE.late"/>
+      <xs:enumeration value="NIGHT"/>
+      <xs:enumeration value="PHS"/>
+      <xs:enumeration value="HS"/>
+      <xs:enumeration value="WAKE"/>
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="CM"/>
+      <xs:enumeration value="CD"/>
+      <xs:enumeration value="CV"/>
+      <xs:enumeration value="AC"/>
+      <xs:enumeration value="ACM"/>
+      <xs:enumeration value="ACD"/>
+      <xs:enumeration value="ACV"/>
+      <xs:enumeration value="PC"/>
+      <xs:enumeration value="PCM"/>
+      <xs:enumeration value="PCD"/>
+      <xs:enumeration value="PCV"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="EventTiming">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="EventTiming-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Duration">
+    <xs:complexContent>
+      <xs:extension base="Quantity">
+        <xs:sequence/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Range">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="low" type="Quantity" minOccurs="0"/>
+          <xs:element name="high" type="Quantity" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Dosage.DoseAndRate">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="type" type="CodeableConcept" minOccurs="0"/>
+          <xs:choice minOccurs="0">
+            <xs:element name="doseRange" type="Range"/>
+            <xs:element name="doseQuantity" type="Quantity"/>
+          </xs:choice>
+          <xs:choice minOccurs="0">
+            <xs:element name="rateRatio" type="Ratio"/>
+            <xs:element name="rateRange" type="Range"/>
+            <xs:element name="rateQuantity" type="Quantity"/>
+          </xs:choice>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Ratio">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="numerator" type="Quantity" minOccurs="0"/>
+          <xs:element name="denominator" type="Quantity" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Bundle.Link">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="relation" type="string"/>
+          <xs:element name="url" type="uri"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Bundle.Search">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="mode" minOccurs="0" type="SearchEntryMode"/>
+          <xs:element name="score" minOccurs="0" type="decimal"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Bundle.Request">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="method" type="HTTPVerb"/>
+          <xs:element name="url" type="uri"/>
+          <xs:element name="ifNoneMatch" minOccurs="0" type="string"/>
+          <xs:element name="ifModifiedSince" minOccurs="0" type="instant"/>
+          <xs:element name="ifMatch" minOccurs="0" type="string"/>
+          <xs:element name="ifNoneExist" minOccurs="0" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Bundle.Response">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="status" type="string"/>
+          <xs:element name="location" minOccurs="0" type="uri"/>
+          <xs:element name="etag" minOccurs="0" type="string"/>
+          <xs:element name="lastModified" minOccurs="0" type="instant"/>
+          <xs:element name="outcome" minOccurs="0" type="ResourceContainer"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="SearchEntryMode-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="match"/>
+      <xs:enumeration value="include"/>
+      <xs:enumeration value="outcome"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="SearchEntryMode">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="SearchEntryMode-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="HTTPVerb-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="GET"/>
+      <xs:enumeration value="HEAD"/>
+      <xs:enumeration value="POST"/>
+      <xs:enumeration value="PUT"/>
+      <xs:enumeration value="DELETE"/>
+      <xs:enumeration value="PATCH"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="HTTPVerb">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="HTTPVerb-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="ResourceContainer">
+    <xs:sequence>
+      <xs:any processContents="skip"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="ContactPoint">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="ContactPointSystem" minOccurs="0"/>
+          <xs:element name="value" type="string" minOccurs="0"/>
+          <xs:element name="use" type="ContactPointUse" minOccurs="0"/>
+          <xs:element name="rank" type="positiveInt" minOccurs="0"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="ContactPointSystem-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="phone"/>
+      <xs:enumeration value="fax"/>
+      <xs:enumeration value="email"/>
+      <xs:enumeration value="pager"/>
+      <xs:enumeration value="url"/>
+      <xs:enumeration value="sms"/>
+      <xs:enumeration value="other"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="ContactPointSystem">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="ContactPointSystem-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="ContactPointUse-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="home"/>
+      <xs:enumeration value="work"/>
+      <xs:enumeration value="temp"/>
+      <xs:enumeration value="old"/>
+      <xs:enumeration value="mobile"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="ContactPointUse">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="ContactPointUse-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Address">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="AddressUse" minOccurs="0"/>
+          <xs:element name="type" type="AddressType" minOccurs="0"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+          <xs:element name="line" type="string" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="city" type="string" minOccurs="0" />
+          <xs:element name="district" type="string" minOccurs="0"/>
+          <xs:element name="state" type="string" minOccurs="0"/>
+          <xs:element name="postalCode" type="string" minOccurs="0" />
+          <xs:element name="country" type="string" minOccurs="0"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="AddressUse-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="home"/>
+      <xs:enumeration value="work"/>
+      <xs:enumeration value="temp"/>
+      <xs:enumeration value="old"/>
+      <xs:enumeration value="billing"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="AddressUse">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="AddressUse-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="AddressType-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="postal"/>
+      <xs:enumeration value="physical"/>
+      <xs:enumeration value="both"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="AddressType">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="AddressType-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Organization">
+    <xs:complexContent>
+      <xs:extension base="DomainResource">
+        <xs:sequence>
+          <xs:element name="identifier" minOccurs="0" maxOccurs="unbounded" type="Identifier"/>
+          <xs:element name="active" minOccurs="0" type="boolean"/>
+          <xs:element name="type" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept"/>
+          <xs:element name="name" minOccurs="0" type="string"/>
+          <xs:element name="alias" minOccurs="0" maxOccurs="unbounded" type="string"/>
+          <xs:element name="telecom" minOccurs="0" maxOccurs="unbounded" type="ContactPoint"/>
+          <xs:element name="address" minOccurs="0" maxOccurs="unbounded" type="Address"/>
+          <xs:element name="partOf" minOccurs="0" type="Reference"/>
+          <xs:element name="contact" type="Organization.Contact" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="endpoint" minOccurs="0" maxOccurs="unbounded" type="Reference"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Organization.Contact">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="purpose" minOccurs="0" type="CodeableConcept"/>
+          <xs:element name="name" minOccurs="0" type="HumanName"/>
+          <xs:element name="telecom" minOccurs="0" maxOccurs="unbounded" type="ContactPoint"/>
+          <xs:element name="address" minOccurs="0" type="Address"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="HumanName">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="NameUse" minOccurs="0"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+          <xs:element name="family" type="string" minOccurs="0"/>
+          <xs:element name="given" type="string" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="prefix" type="string" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="suffix" type="string" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="NameUse-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="usual"/>
+      <xs:enumeration value="official"/>
+      <xs:enumeration value="temp"/>
+      <xs:enumeration value="nickname"/>
+      <xs:enumeration value="anonymous"/>
+      <xs:enumeration value="old"/>
+      <xs:enumeration value="maiden"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="NameUse">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="NameUse-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Medication.Batch">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="lotNumber" minOccurs="0" type="string"/>
+          <xs:element name="expirationDate" minOccurs="0" type="dateTime"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Signature">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="type" type="Coding" maxOccurs="unbounded"/>
+          <xs:element name="when" type="instant"/>
+          <xs:element name="who" type="Reference"/>
+          <xs:element name="onBehalfOf" type="Reference" minOccurs="0"/>
+          <xs:element name="targetFormat" type="code" minOccurs="0"/>
+          <xs:element name="sigFormat" type="code" minOccurs="0"/>
+          <xs:element name="data" type="base64Binary" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="IdentifierTypeDeBasis.Coding.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="IdentifierTypeDeBasis.Coding.code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="IdentifierTypeDeBasis.Coding.code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="GKV"/>
+      <xs:enumeration value="PKV"/>
+      <xs:enumeration value="LANR"/>
+      <xs:enumeration value="ZANR"/>
+      <xs:enumeration value="BSNR"/>
+      <xs:enumeration value="KZVA"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="IdentifierUse.restricted">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="official"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="IKNR.Identifier">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="IdentifierUse.restricted" minOccurs="0"/>
+          <xs:element name="type" type="IKNR.CodeableConcept" minOccurs="0"/>
+          <xs:element name="system" type="IKNR.Identifier.uri"/>
+          <xs:element name="value" type="string"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="assigner" type="Reference" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="IKNR.CodeableConcept">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="IKNR.Coding" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="IKNR.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="system.identifier-basis.iknr"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="code.identifier-basis.iknr"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="system.identifier-basis.iknr">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://terminology.hl7.org/CodeSystem/v2-0203"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="code.identifier-basis.iknr">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="XX"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="IKNR.Identifier.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/NamingSystem/arge-ik/iknr"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

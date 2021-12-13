@@ -14,11 +14,11 @@
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/mock/MockIdpUpdater.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 
 EndpointTestClient::EndpointTestClient()
@@ -40,7 +40,8 @@ EndpointTestClient::EndpointTestClient()
         std::make_unique<MockRedisStore>(),
         std::move(hsmPool),
         StaticData::getJsonValidator(),
-        StaticData::getXmlValidator());
+        StaticData::getXmlValidator(),
+        StaticData::getInCodeValidator());
 
     if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_IDP_UPDATER_MOCK, false))
         IdpUpdater::create<MockIdpUpdater>(serviceContext->idp, serviceContext->getTslManager());

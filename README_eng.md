@@ -23,7 +23,7 @@ Communication with the outside world
 A [guide](doc/GuideToImplementation.md) outlines the implementation.
 
 # Notes
-The test key/certificate pair in `resources/test/configuration.json.in` (erp/processing-context/server/certificate)
+The test key/certificate pair in `resources/test/02_development.config.json.in` (erp/processing-context/server/certificate)
 was generated on macOS Catalina 10.15.1 using OpenSSL 3.0.0-dev.
 
 They are meant to be used exclusively for testing purposes on a server running locally.
@@ -56,7 +56,7 @@ Usage: jwt <claimfile>
 ```
 
 ## VAU Request encryption tool `vau_encrypt`
-This tool uses the key from `vau/private-key` in `configuration.json` or environment variable `ERP_VAU_PRIVATE_KEY`
+This tool uses the key from `vau/private-key` in `02_development.config.json` or environment variable `ERP_VAU_PRIVATE_KEY`
 to create an encrypted request.
 
 ```

@@ -4,11 +4,11 @@
  */
 
 #include "erp/service/task/CloseTaskHandler.hxx"
-
 #include "erp/ErpRequirements.hxx"
 #include "erp/common/MimeType.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/database/Database.hxx"
+#include "erp/model/Binary.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
@@ -22,6 +22,8 @@
 #include "erp/util/TLog.hxx"
 #include "erp/util/Uuid.hxx"
 
+#include <memory>
+#include <optional>
 
 CloseTaskHandler::CloseTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
     : TaskHandlerBase(Operation::POST_Task_id_close, allowedProfessionOiDs)
@@ -39,7 +41,7 @@ void CloseTaskHandler::handleRequest (PcSessionContext& session)
 
     auto* databaseHandle = session.database();
 
-    auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
+    auto [task, prescription] = databaseHandle->retrieveTaskForUpdateAndPrescription(prescriptionId);
     ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
     const auto taskStatus = task->status();
 
@@ -102,16 +104,30 @@ void CloseTaskHandler::handleRequest (PcSessionContext& session)
     const auto completedTimestamp = model::Timestamp::now();
     const auto linkBase = getLinkBase();
     const auto authorIdentifier = model::Device::createReferenceString(linkBase);
-    model::Composition compositionResource(telematikIdFromAccessToken.value(), inProgressDate, completedTimestamp, authorIdentifier);
+    const std::string prescriptionDigestIdentifier = "PrescriptionDigest-" + prescriptionId.toString();
+    model::Composition compositionResource(telematikIdFromAccessToken.value(), inProgressDate, completedTimestamp,
+                                           authorIdentifier, "Binary/" + prescriptionDigestIdentifier);
     model::Device deviceResource;
 
     A_19233.start("Save bundle reference in task.output");
     task->setReceiptUuid();
     A_19233.finish();
 
-    model::ErxReceipt responseReceipt(
-        Uuid(*task->receiptUuid()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/",
-        prescriptionId, compositionResource, authorIdentifier, deviceResource);
+    A_19233_03.start("Add the prescription signature digest");
+    ErpExpect(prescription.has_value() && prescription.value().data().has_value(), ::HttpStatus::InternalServerError,
+              "No matching prescription found.");
+    const auto digest =
+        CadesBesSignature{::std::string{prescription.value().data().value()}, nullptr}.getMessageDigest();
+    ErpExpect(digest, ::HttpStatus::InternalServerError, "Cannot get prescription message digest.");
+    const auto base64Digest = ::Base64::encode(digest.value());
+    const auto prescriptionDigestResource =
+        ::model::Binary{prescriptionDigestIdentifier, base64Digest, ::model::Binary::Type::Base64};
+
+    const auto taskUrl = linkBase + "/Task/" + prescriptionId.toString();
+    model::ErxReceipt responseReceipt(Uuid(*task->receiptUuid()), taskUrl + "/$close/", prescriptionId,
+                                      compositionResource, authorIdentifier, deviceResource,
+                                      taskUrl + "/PrescriptionDigest", prescriptionDigestResource);
+    A_19233_03.finish();
     A_19233.finish();
 
     A_19233.start("Sign the receipt with ID.FD.SIG using [RFC5652] with profile CAdES-BES ([CAdES]) ");

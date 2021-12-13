@@ -8,6 +8,7 @@
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/KeyDerivation.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #include <pqxx/transaction>
 #include <gtest/gtest.h>
@@ -40,7 +41,8 @@ public:
     }
 private:
     HsmPool mHsmPool{
-        std::make_unique<HsmMockFactory>(),
+        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                         MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
     KeyDerivation mKeyDerivation{mHsmPool};
 

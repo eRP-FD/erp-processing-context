@@ -11,9 +11,9 @@ a mock database or a PostgreSQL database.
 Functional tests use the MockDatabase by default but can easily be configured to use a locally 
 running Postgres DB. For this work 
 - Either set environment variable `TEST_USE_POSTGRES` to "1", or "on", or "true" (all case insensitive) or alternatively
-  modify `resources/test/configuration.json` so that `/test/use-postgres` is set to `"true"` (with double quotes).
+  modify `resources/test/02_development.config.json` so that `/test/use-postgres` is set to `"true"` (with double quotes).
   Recompilation is not necessary.
-- If your locally running db does not support SSL connections then modify `resources/test/configuration.json` so
+- If your locally running db does not support SSL connections then modify `resources/test/02_development.config.json` so
 that `erp/postgres/useSsl` is set `"false"` and that `erp/postgres/certificatePath` is empty. Alternatively you can set 
   environment variables `ERP_POSTGRES_USESSL` and `ERP_POSTGRES_CERTIFICATE_PATH` respectively.
   

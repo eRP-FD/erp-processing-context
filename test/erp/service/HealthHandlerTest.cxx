@@ -17,9 +17,9 @@
 #include "erp/util/Hash.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/erp/service/HealthHandlerTestTslManager.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockOcsp.hxx"
 #include "test/mock/MockRedisStore.hxx"
@@ -172,9 +172,9 @@ public:
             std::make_unique<HealthHandlerTestMockRedisStore>(),
             std::make_unique<HsmPool>(
                 std::make_unique<HsmMockFactory>(std::make_unique<HealthHandlerTestHsmMockClient>(),
-                                                 MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+                                                 MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
                 HealthHandlerTestTeeTokenUpdaterFactory::createHealthHandlerTestMockTeeTokenUpdaterFactory()),
-            StaticData::getJsonValidator(), StaticData::getXmlValidator(),
+            StaticData::getJsonValidator(), StaticData::getXmlValidator(), StaticData::getInCodeValidator(),
                 TslTestHelper::createTslManager<HealthHandlerTestTslManager>());
         mContext = std::make_unique<SessionContext<PcServiceContext>>(*mServiceContext, request, response, mAccessLog);
 

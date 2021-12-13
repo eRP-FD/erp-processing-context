@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <pqxx/connection>
+#include <pqxx/transaction>
 
 class PostgresConnection
 {
@@ -17,6 +18,7 @@ public:
     /// @brief (re-) connects if not already connected. Should not be called in the middle of a transaction.
     void connectIfNeeded();
     void close();
+    std::unique_ptr<pqxx::work> createTransaction();
 
     operator pqxx::connection&() const;// NOLINT(google-explicit-constructor)
 

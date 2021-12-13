@@ -44,13 +44,13 @@ public:
     class Transaction
     {
     public:
-        explicit Transaction (pqxx::connection& connection);
+        explicit Transaction (std::unique_ptr<pqxx::work>&& transaction);
 
         void commit (void);
         pqxx::work* operator-> (void); // This exists for historical reasons.
 
     private:
-        pqxx::work mWork;
+        std::unique_ptr<pqxx::work> mWork;
     };
     Transaction createTransaction(void) const;
 

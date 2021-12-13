@@ -87,6 +87,39 @@ namespace {
         return { hasTimeZone, timeZoneIsZulu };
     }
 
+    void validate(const ::std::string& dateAndTime, bool timeZoneIsOptional, bool missingSeconds, ::std::size_t minSize)
+    {
+        using namespace std::string_literals;
+
+        // Check the first 16/19 characters (YYYY-MM-DDTHH:MM[:SS]) to sort out cases that are allowed by xs:dateTime but not by FHIR.
+        // This concerns width of fields and the leading '-'.
+        ModelExpect(dateAndTime.size() >= minSize, "date does not match YYYY-MM-DDTHH:MM"s +
+                                                       (missingSeconds ? "[:SS.sss]" : ":SS[.sss]") +
+                                                       (timeZoneIsOptional ? "[Z|(+|-)hh:mm]" : "(Z|(+|-)hh:mm)"));
+        ModelExpect(dateAndTime[0] != '-', "negative years are not supported");
+        ModelExpect(dateAndTime[4] == '-', "expecting four digits for year");
+        ModelExpect(dateAndTime[5] != '-', "negative months are not permitted");
+        ModelExpect(dateAndTime[7] == '-', "expecting two digits for month");
+        ModelExpect(dateAndTime[8] != '-', "negative days are not permitted");
+        ModelExpect(dateAndTime[10] == 'T', "expecting two digits for day");
+        ModelExpect(dateAndTime[11] != '-', "negative hours are not permitted");
+        ModelExpect(dateAndTime[13] == ':', "expecting two digits for hour");
+        ModelExpect(dateAndTime[14] != '-', "negative minutes are not permitted");
+        ModelExpect(std::isdigit(dateAndTime[15]), "expecting two digits for hours");
+        if (! missingSeconds)
+        {
+            ModelExpect(dateAndTime[16] == ':', "expecting two digits for minutes");
+            ModelExpect(dateAndTime[17] != '-', "negative seconds are not permitted");
+            ModelExpect(std::isdigit(dateAndTime[18]), "expecting two digits for seconds");
+
+            const auto hasMilliseconds = (dateAndTime.size() >= 24) && (dateAndTime[19] == '.');
+            if (hasMilliseconds)
+            {
+                ModelExpect(dateAndTime[20] != '-', "negative milliseconds are not permitted");
+            }
+        }
+    }
+
     Timestamp fromXsDateTime(
         const std::string& dateAndTime,
         bool timeZoneIsOptional,
@@ -98,22 +131,7 @@ namespace {
         if(missingSeconds)
             minSize -= 3;
 
-        // Check the first 16/19 characters (YYYY-MM-DDTHH:MM[:SS]) to sort out cases that are allowed by xs:dateTime but not by FHIR.
-        // This concerns width of fields and the leading '-'.
-        ModelExpect(dateAndTime.size() >= minSize, "date does not match YYYY-MM-DDTHH:MM"s +
-                                                       (missingSeconds ? "[:SS.sss]" : ":SS[.sss]") +
-                                                       (timeZoneIsOptional ? "[Z|(+|-)hh:mm]" : "(Z|(+|-)hh:mm)"));
-        ModelExpect(dateAndTime[0]!='-', "negative years are not supported");
-        ModelExpect(dateAndTime[4]=='-', "expecting four digits for year");
-        ModelExpect(dateAndTime[7]=='-', "expecting two digits for month");
-        ModelExpect(dateAndTime[10]=='T', "expecting two digits for day");
-        ModelExpect(dateAndTime[13]==':', "expecting two digits for hour");
-        ModelExpect(std::isdigit(dateAndTime[15]), "expecting two digits for hours");
-        if(!missingSeconds)
-        {
-            ModelExpect(dateAndTime[16] == ':', "expecting two digits for minutes");
-            ModelExpect(std::isdigit(dateAndTime[18]), "expecting two digits for seconds");
-        }
+        validate(dateAndTime, timeZoneIsOptional, missingSeconds, minSize);
 
         const auto [hasTimeZone, timeZoneIsZulu] = evaluateTimeZone(dateAndTime, timeZoneIsOptional, minSize);
         std::chrono::system_clock::time_point result;
@@ -321,7 +339,10 @@ std::string Timestamp::toXsDateTime() const
     const auto tm = gmTimeWrapper(&t);
     s << std::put_time(&tm, "%FT%T")
       // Milliseconds are not supported by put_time. We have to add them manually.
-      << '.' << std::setfill('0') << std::setw(3) << (std::chrono::duration_cast<std::chrono::milliseconds>(mDateAndTime.time_since_epoch()).count() % 1000)
+      << '.' << std::setfill('0') << std::setw(3)
+      << ::std::chrono::duration_cast<std::chrono::milliseconds>(
+             mDateAndTime - ::std::chrono::floor<::std::chrono::seconds>(mDateAndTime))
+             .count()
       // Default UTC time zone. The %z specifier does not emit the colon.
       << "+00:00";
     return s.str();
@@ -367,6 +388,10 @@ std::string Timestamp::toXsGYear() const
 
 std::chrono::system_clock::time_point Timestamp::toChronoTimePoint () const
 {
+    // Though it is technically allowed, a pre-epoch timestamp should not happen in production
+    // and the codebase is not prepared to handle such a case correctly.
+    ModelExpect(::std::chrono::duration_cast<::std::chrono::seconds>(mDateAndTime.time_since_epoch()).count() >= 0l,
+                "Timestamp is before start of epoch");
     return mDateAndTime;
 }
 

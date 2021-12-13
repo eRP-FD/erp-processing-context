@@ -82,6 +82,8 @@ public:
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false);
     }
 
+    std::shared_ptr<BlobCache> blobCache() { return mBlobCache; }
+
 
 protected:
     class Query {
@@ -129,6 +131,7 @@ protected:
         auto deleteTxn = createTransaction();
         deleteTxn.exec("DELETE FROM erp.communication");
         deleteTxn.exec("DELETE FROM erp.task");
+        deleteTxn.exec("DELETE FROM erp.task_169");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.commit();
     }
@@ -158,11 +161,11 @@ protected:
     }
 
 
-    void cleanKvnr(std::string_view kvnr)
+    void cleanKvnr(std::string_view kvnr, const std::string& taskTableName)
     {
         auto&& txn = createTransaction();
         auto kvnr_hashed = mKeyDerivation->hashKvnr(kvnr);
-        txn.exec_params("DELETE FROM erp.task WHERE kvnr=$1", kvnr_hashed.binarystring());
+        txn.exec_params("DELETE FROM " + taskTableName + " WHERE kvnr=$1", kvnr_hashed.binarystring());
         txn.exec_params("DELETE FROM erp.auditevent WHERE kvnr_hashed=$1", kvnr_hashed.binarystring());
         txn.commit();
     }

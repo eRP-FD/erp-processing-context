@@ -19,14 +19,15 @@
 
 namespace model
 {
+using namespace std::string_literals;
 
-constexpr std::string_view task_template = R"--(
+const std::string task_template = R"--(
 {
   "resourceType": "Task",
   "id": "",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/StructureDefinition/ErxTask"
+      ""
     ]
   },
   "identifier": [
@@ -183,14 +184,16 @@ constexpr uint8_t uuidFeatureRecipt = 3;
 
 
 Task::Task(const model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode)
-    : Resource<Task>()
+    : Resource<Task>("https://gematik.de/fhir/StructureDefinition/ErxTask",
+                     []() {
+                         std::call_once(onceFlag, initTemplates);
+
+                         A_19114.start("create Task in status draft");
+                         return TaskTemplate;
+                         A_19114.finish();
+                     }()
+                         .instance())
 {
-    std::call_once(onceFlag, initTemplates);
-
-    A_19114.start("create Task in status draft");
-    initFromTemplate(*TaskTemplate);
-    A_19114.finish();
-
     if (accessCode.has_value())
     {
         setAccessCode(*accessCode);
@@ -204,11 +207,11 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     A_19112.finish();
 
     A_19214.start("set Task.performerType corresponding to the value of prescriptionType");
-    A_19445.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_21265.start("set Task.performerType corresponding to the value of prescriptionType");
     setValue(performerTypePointer, PrescriptionTypePerformerType.at(prescriptionType));
     setValue(performerTypeDisplayPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
     setValue(performerTypeTextPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
-    A_19445.finish();
+    A_21265.finish();
     A_19214.finish();
 
     setValue(authoredOnPointer, Timestamp::now().toXsDateTime());
@@ -402,6 +405,7 @@ void Task::setAcceptDate(const Timestamp& acceptDate)
 void Task::setAcceptDate(const Timestamp& baseTime, const KbvStatusKennzeichen& legalBasisCode,
                          int entlassRezeptValidityWorkingDays)
 {
+    using namespace std::chrono_literals;
     switch(legalBasisCode)
     {
         case KbvStatusKennzeichen::ohneErsatzverordnungskennzeichen:
@@ -410,14 +414,16 @@ void Task::setAcceptDate(const Timestamp& baseTime, const KbvStatusKennzeichen& 
         case KbvStatusKennzeichen::nurErsatzverordnungsKennzeichen:
         case KbvStatusKennzeichen::asvKennzeichenMitErsatzverordnungskennzeichen:
         case KbvStatusKennzeichen::tssKennzeichenMitErsatzverordungskennzeichen:
-            setAcceptDate(baseTime + std::chrono::hours(24) * 30);
+            A_21265.start("Task.AcceptDate = <Date of QES Creation + 28 days");
+            setAcceptDate(baseTime + (24h * 28));
+            A_21265.finish();
             break;
         case KbvStatusKennzeichen::entlassmanagementKennzeichen:
         case KbvStatusKennzeichen::entlassmanagementKennzeichenMitErsatzverordungskennzeichen:
-            A_19517_01.start("deviant accept date for Entlassrezepte");
+            A_19517_02.start("deviant accept date for Entlassrezepte");
             // -1 because the current day is part of the duration.
             setAcceptDate((WorkDay(baseTime) + (entlassRezeptValidityWorkingDays - 1)).toTimestamp());
-            A_19517_01.finish();
+            A_19517_02.finish();
             break;
     }
 }

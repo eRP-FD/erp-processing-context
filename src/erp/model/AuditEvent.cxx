@@ -14,14 +14,15 @@
 
 namespace model
 {
+using namespace std::string_literals;
 
-constexpr std::string_view auditevent_template = R"--(
+const std::string auditevent_template = R"--(
 {
   "resourceType": "AuditEvent",
   "id": "",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent"
+      ""
     ]
   },
   "text": {
@@ -160,10 +161,13 @@ const rapidjson::Pointer entityDescriptionPointer("/entity/0/description");
 
 
 AuditEvent::AuditEvent()
-    : Resource<AuditEvent>()
+    : Resource<AuditEvent>("https://gematik.de/fhir/StructureDefinition/ErxAuditEvent",
+                           []() {
+                               std::call_once(onceFlag, initTemplates);
+                               return AuditEventTemplate;
+                           }()
+                               .instance())
 {
-    std::call_once(onceFlag, initTemplates);
-    initFromTemplate(*AuditEventTemplate);
 }
 
 void AuditEvent::setId(const std::string_view& id)

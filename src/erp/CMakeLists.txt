@@ -7,19 +7,6 @@ cmake_minimum_required(VERSION 3.16)
 
 project(erp-processing-context)
 
-#
-# Handle any debug configuration.
-#
-if(NOT CMAKE_BUILD_TYPE)
-    # Perform a Debug build by default,
-    set(CMAKE_BUILD_TYPE Debug)
-endif()
-if(CMAKE_BUILD_TYPE)
-    if((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
-        add_compile_options(-DENABLE_DEBUG_LOG)
-    endif()
-endif()
-
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/erp-serverinfo.hxx.in" "${CMAKE_CURRENT_BINARY_DIR}/erp-serverinfo.hxx")
 
 set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
@@ -82,14 +69,13 @@ list(
         database/DatabaseFrontend.cxx
         database/DatabaseModel.cxx
         database/PostgresBackend.cxx
+        database/PostgresBackendHelper.cxx
+        database/PostgresBackendTask.cxx
         database/PostgresConnection.cxx
         database/RedisClient.cxx
         hsm/BlobCache.cxx
         hsm/BlobDatabase.cxx
-        hsm/production/HsmProductionClient.cxx
-        hsm/production/ProductionBlobDatabase.cxx
         enrolment/EnrolmentData.cxx
-        enrolment/EnrolmentHelper.cxx
         enrolment/EnrolmentModel.cxx
         enrolment/EnrolmentRequestHandler.cxx
         enrolment/EnrolmentServer.cxx
@@ -113,11 +99,9 @@ list(
         hsm/HsmPoolSessionRemover.cxx
         hsm/HsmException.cxx
         hsm/KeyDerivation.cxx
-        hsm/production/HsmProductionFactory.cxx
-        hsm/production/HsmRawSession.cxx
-        hsm/HsmSessionExpiredException.cxx
-        hsm/production/TeeTokenProductionUpdater.cxx
         hsm/HsmSession.cxx
+        hsm/HsmSessionExpiredException.cxx
+        hsm/production/ProductionBlobDatabase.cxx
         hsm/TeeTokenUpdater.cxx
         idp/Idp.cxx
         idp/IdpUpdater.cxx
@@ -125,13 +109,30 @@ list(
         model/AuditEvent.cxx
         model/Binary.cxx
         model/Bundle.cxx
+        model/ChargeItem.cxx
         model/Communication.cxx
         model/CommunicationPayload.cxx
         model/CommunicationPayloadItem.cxx
         model/Composition.cxx
+        model/Consent.cxx
         model/Device.cxx
         model/ErxReceipt.cxx
+        model/Extension.cxx
+        model/extensions/KBVEXERPAccident.cxx
+        model/extensions/KBVEXFORLegalBasis.cxx
+        model/extensions/KBVMultiplePrescription.cxx
         model/Health.cxx
+        model/KbvBundle.cxx
+        model/KbvComposition.cxx
+        model/KbvCoverage.cxx
+        model/KbvMedicationCompounding.cxx
+        model/KbvMedicationFreeText.cxx
+        model/KbvMedicationIngredient.cxx
+        model/KbvMedicationPzn.cxx
+        model/KbvMedicationRequest.cxx
+        model/KbvOrganization.cxx
+        model/KbvPractitioner.cxx
+        model/KbvPracticeSupply.cxx
         model/Link.cxx
         model/MedicationDispense.cxx
         model/MetaData.cxx
@@ -143,8 +144,11 @@ list(
         model/Parameters.cxx
         model/Patient.cxx
         model/PrescriptionId.cxx
+        model/Reference.cxx
         model/Resource.cxx
+        model/ResourceVersion.cxx
         model/Signature.cxx
+        model/Subscription.cxx
         model/Task.cxx
         model/TimePeriod.cxx
         model/Timestamp.cxx
@@ -153,6 +157,7 @@ list(
         pc/PcTemplateInstantiations.cxx
         pc/pre_user_pseudonym/PreUserPseudonym.cxx
         pc/pre_user_pseudonym/PreUserPseudonymManager.cxx
+        pc/telematic_pseudonym/TelematicPseudonymManager.cxx
         registration/HeartbeatSender.cxx
         registration/RegistrationManager.cxx
         server/AccessLog.cxx
@@ -193,7 +198,15 @@ list(
         service/MetaDataHandler.cxx
         service/Operation.cxx
         service/RedisInterface.hxx
+        service/SubscriptionPostHandler.cxx
         service/VauRequestHandler.cxx
+        service/chargeitem/ChargeItemDeleteHandler.cxx
+        service/chargeitem/ChargeItemGetHandler.cxx
+        service/chargeitem/ChargeItemPostHandler.cxx
+        service/chargeitem/ChargeItemPutHandler.cxx
+        service/consent/ConsentDeleteHandler.cxx
+        service/consent/ConsentGetHandler.cxx
+        service/consent/ConsentPostHandler.cxx
         service/task/AbortTaskHandler.cxx
         service/task/AcceptTaskHandler.cxx
         service/task/ActivateTaskHandler.cxx
@@ -263,16 +276,36 @@ list(
         util/search/SortArgument.cxx
         util/search/UrlArguments.cxx
         util/WorkDay.cxx
+        validation/InCodeValidator.cxx
         validation/JsonValidator.cxx
+        validation/KbvBundleValidator.cxx
+        validation/KbvCompositionValidator.cxx
+        validation/KbvCoverageValidator.cxx
+        validation/KbvMedicationCompoundingValidator.cxx
+        validation/KbvMedicationFreeTextValidator.cxx
+        validation/KbvMedicationIngredientValidator.cxx
+        validation/KbvMedicationPZNValidator.cxx
+        validation/KbvMedicationModelHelper.cxx
+        validation/KbvMedicationRequestValidator.cxx
+        validation/KbvOrganizationValidator.cxx
+        validation/KbvPatientValidator.cxx
+        validation/KbvPractitionerValidator.cxx
+        validation/KbvPracticeSupplyValidator.cxx
+        validation/KbvValidationUtils.cxx
         validation/XmlValidator.cxx
         xml/SaxHandler.cxx
         xml/XmlDocument.cxx
         xml/XmlMemory.cxx
         )
 
-if(NOT APPLE AND NOT MSVC)
+if(ERP_WITH_HSM_TPM_PRODUCTION)
     list(
         APPEND erp-processing-context-source-files
+            enrolment/EnrolmentHelper.cxx
+            hsm/production/HsmProductionClient.cxx
+            hsm/production/HsmProductionFactory.cxx
+            hsm/production/HsmRawSession.cxx
+            hsm/production/TeeTokenProductionUpdater.cxx
             tpm/TpmProduction.cxx
      )
 endif()
@@ -281,6 +314,16 @@ add_library(
     erp-processing-context-files OBJECT
     ${erp-processing-context-source-files}
         )
+
+#TODO: ERP-8426, pqxx::binarystring is deprecated
+target_compile_options(erp-processing-context-files PUBLIC -Wno-deprecated-declarations)
+
+if(ERP_WITH_HSM_MOCK)
+    target_compile_definitions(erp-processing-context-files PUBLIC WITH_HSM_MOCK=1)
+endif()
+if(ERP_WITH_HSM_TPM_PRODUCTION)
+    target_compile_definitions(erp-processing-context-files PUBLIC WITH_HSM_TPM_PRODUCTION=1)
+endif()
 
 target_include_directories (
     erp-processing-context-files
@@ -304,7 +347,7 @@ target_link_libraries (
         PUBLIC CONAN_PKG::magic_enum
         PUBLIC CONAN_PKG::zstd
 )
-if(NOT APPLE AND NOT MSVC)
+if(ERP_WITH_HSM_TPM_PRODUCTION)
     target_link_libraries (
         erp-processing-context-files
             PUBLIC

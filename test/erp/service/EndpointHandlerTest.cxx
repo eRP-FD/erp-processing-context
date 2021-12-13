@@ -6,8 +6,9 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/model/Bundle.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
@@ -33,16 +34,18 @@
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/CertificateDirLoader.h"
+#include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/StaticData.hxx"
 #include "test_config.h"
 #include "tools/jwt/JwtBuilder.hxx"
+#include "tools/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 #include <regex>
@@ -125,10 +128,11 @@ public:
               std::make_unique<HsmPool>(
                   std::make_unique<HsmMockFactory>(
                       std::make_unique<HsmMockClient>(),
-                      MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+                      MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
                   TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
               StaticData::getJsonValidator(),
-              StaticData::getXmlValidator())
+              StaticData::getXmlValidator(),
+              StaticData::getInCodeValidator())
     {
         mJwtBuilder = std::make_unique<JwtBuilder>(MockCryptography::getIdpPrivateKey());
     }
@@ -153,8 +157,9 @@ public:
             task.setHealthCarePrescriptionUuid();
             const std::optional<std::string_view> healthCarePrescriptionUuid =
                 task.healthCarePrescriptionUuid().value();
+            const auto& kbvBundle = ResourceManager::instance().getStringResource(dataPath + "/kbv_bundle.xml");
             const model::Binary healthCarePrescriptionBundle{
-                healthCarePrescriptionUuid.value(), FileHelper::readFileAsString(dataPath + "/kbv_bundle.xml.p7s") };
+                healthCarePrescriptionUuid.value(), CryptoHelper::toCadesBesSignature(kbvBundle)};
             database->activateTask(task, healthCarePrescriptionBundle);
         }
         database->commitTransaction();
@@ -179,7 +184,7 @@ public:
         ASSERT_NO_THROW(handler.handleRequest(sessionContext));
         ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-        const auto auditEventBundle = model::Bundle::fromJson(serverResponse.getBody());
+        const auto auditEventBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
 
         ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
             model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEventBundle.jsonDocument()),
@@ -189,13 +194,11 @@ public:
         ASSERT_EQ(auditEvents.size(), 1);
 
         auto& auditEvent = auditEvents.front();
+        ASSERT_NO_THROW(model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                                   *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
 
-        ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-            model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEvent.jsonDocument()),
-            SchemaType::Gem_erxAuditEvent));
-
-        auto expectedAuditEvent =
-            model::AuditEvent::fromJson(FileHelper::readFileAsString(dataPath + "/" + expectedResultFilename));
+        auto expectedAuditEvent = model::AuditEvent::fromJsonNoValidation(
+            FileHelper::readFileAsString(dataPath + "/" + expectedResultFilename));
 
         ASSERT_EQ(canonicalJson(auditEvent.serializeToJsonString()),
                   canonicalJson(expectedAuditEvent.serializeToJsonString()));
@@ -234,12 +237,12 @@ TEST_F(EndpointHandlerTest, GetTaskById)
     ASSERT_NO_THROW(document.Parse(bodyActual));
 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
-    auto bundle = model::Bundle::fromJson(bodyActual);
+    auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
     auto tasks = bundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(tasks[0].jsonDocument()),
-        SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+
 
     ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
 //    ASSERT_EQ(rapidjson::Pointer("/type").Get(document)->GetString(), "searchset");
@@ -249,6 +252,43 @@ TEST_F(EndpointHandlerTest, GetTaskById)
 
     serverRequest.setPathParameters({ "id" }, { "9a27d600-5a50-4e2b-98d3-5e05d2e85aa0" });
     EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::NotFound);
+}
+
+TEST_F(EndpointHandlerTest, GetTaskById169NoAccessCode)
+{
+    GetTaskHandler handler({});
+
+    const auto idStr = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 4711).toString();
+
+    Header requestHeader{ HttpMethod::GET, "/Task/" + idStr, 0, {}, HttpStatus::Unknown};
+    ServerRequest serverRequest{ std::move(requestHeader) };
+    serverRequest.setAccessToken(mJwtBuilder->makeJwtVersicherter("X123456789"));
+    serverRequest.setPathParameters({ "id" }, { idStr });
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog };
+
+
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+    std::string bodyActual;
+    ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
+
+    rapidjson::Document document;
+    ASSERT_NO_THROW(document.Parse(bodyActual));
+
+    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
+    auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
+    auto tasks = bundle.getResourcesByType<model::Task>("Task");
+    ASSERT_EQ(tasks.size(), 1);
+
+    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+
+    ASSERT_THROW((void)tasks[0].accessCode(), model::ModelException);
+
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)
@@ -277,14 +317,13 @@ TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)
     ASSERT_NO_THROW(document.Parse(bodyActual));
 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
-    auto bundle = model::Bundle::fromJson(bodyActual);
+    auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
 
     auto prescriptions = bundle.getResourcesByType<model::Bundle>("Bundle");
     ASSERT_EQ(prescriptions.size(), 1);
 
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(prescriptions[0].jsonDocument()),
-        SchemaType::KBV_PR_ERP_Bundle));
+    ASSERT_NO_THROW(model::KbvBundle::fromXml(prescriptions[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                              *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle));
 
     ASSERT_TRUE(prescriptions[0].getSignature().has_value());
     auto signature = prescriptions[0].getSignature().value();
@@ -307,7 +346,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)
     ASSERT_TRUE(codePointer.Get(jsonSignature));
     EXPECT_EQ(std::string(codePointer.Get(jsonSignature)->GetString()), "1.2.840.10065.1.12.1.5");
 
-    auto signatureSerialized = *signature.data();
+    auto signatureSerialized = Base64::decodeToString(*signature.data());
     auto parts = String::split(signatureSerialized, '.');
     ASSERT_EQ(parts.size(), 3);
     ASSERT_TRUE(parts[1].empty());
@@ -336,16 +375,15 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    const auto responseBundle = model::Bundle::fromJson(serverResponse.getBody());
+    const auto responseBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(responseBundle.jsonDocument()),
         SchemaType::fhir));
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(tasks[0].jsonDocument()),
-        SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)
@@ -372,16 +410,15 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    const auto responseBundle = model::Bundle::fromJson(serverResponse.getBody());
+    const auto responseBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(responseBundle.jsonDocument()),
         SchemaType::fhir));
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(tasks[0].jsonDocument()),
-        SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)
@@ -413,16 +450,15 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    const auto responseBundle = model::Bundle::fromJson(serverResponse.getBody());
+    const auto responseBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(responseBundle.jsonDocument()),
         SchemaType::fhir));
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(tasks[0].jsonDocument()),
-        SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdWrongAccessCodeHeader)
@@ -580,9 +616,8 @@ TEST_F(EndpointHandlerTest, GetAllTasks)
     ASSERT_FALSE(tasks.empty());
     for (const auto& item : tasks)
     {
-        ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-            model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(item.jsonDocument()),
-            SchemaType::Gem_erxTask));
+        ASSERT_NO_THROW(model::Task::fromXml(item.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                             *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
     }
 }
 
@@ -602,7 +637,7 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
     auto jwt = JwtBuilder(MockCryptography::getIdpPrivateKey()).getJWT(jwtDocument);
 
 
-    // two Task is expected:
+    // 3 Task are expected:
     {
         Header requestHeader{ HttpMethod::GET, "/Task/", 0, {}, HttpStatus::Unknown};
         ServerRequest serverRequest{ std::move(requestHeader) };
@@ -625,7 +660,7 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
 
         auto bundle =
             model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
-        ASSERT_EQ(bundle.getResourceCount(), 2);
+        ASSERT_EQ(bundle.getResourceCount(), 3);
         ASSERT_TRUE(bundle.getLink(model::Link::Self).has_value());
         // Next ist set, even if there is no next page.
         ASSERT_TRUE(bundle.getLink(model::Link::Next).has_value());
@@ -710,7 +745,7 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
 
         auto bundle3 =
             model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
-        ASSERT_EQ(bundle3.getResourceCount(), 12);
+        ASSERT_EQ(bundle3.getResourceCount(), 13);
         ASSERT_TRUE(bundle3.getLink(model::Link::Self).has_value());
         ASSERT_TRUE(bundle3.getLink(model::Link::Next).has_value());
         ASSERT_EQ(std::string(bundle3.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=150");
@@ -749,6 +784,7 @@ TEST_F(EndpointHandlerTest, CreateTask)
     std::optional<model::Task> retrievedTask;
     ASSERT_NO_THROW(retrievedTask.emplace(model::Task::fromXml(serverResponse.getBody(),
                                                                *StaticData::getXmlValidator(),
+                                                               *StaticData::getInCodeValidator(),
                                                                SchemaType::Gem_erxTask)));
     EXPECT_GT(retrievedTask->prescriptionId().toDatabaseId(), 0);
     EXPECT_EQ(retrievedTask->status(), model::Task::Status::draft);
@@ -796,7 +832,9 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyXml)
 
 TEST_F(EndpointHandlerTest, ActivateTask)
 {
-    const auto cadesBesSignatureFile = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/kbv_bundle.xml.p7s");
+    auto& resourceManager = ResourceManager::instance();
+    const auto kbvBundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
+    auto cadesBesSignatureFile = CryptoHelper::toCadesBesSignature(kbvBundle);
 
     const auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713).toString();
 
@@ -832,6 +870,7 @@ TEST_F(EndpointHandlerTest, ActivateTask)
     std::optional<model::Task> task;
     ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(),
                                                 *StaticData::getXmlValidator(),
+                                                *StaticData::getInCodeValidator(),
                                                 SchemaType::Gem_erxTask));
     ASSERT_TRUE(task.has_value());
     EXPECT_EQ(task->prescriptionId().toDatabaseId(), 4713);
@@ -924,10 +963,12 @@ TEST_F(EndpointHandlerTest, CloseTask)
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    ASSERT_NO_THROW((void)Fhir::instance().converter().xmlStringToJsonWithValidation(
-        serverResponse.getBody(), *StaticData::getXmlValidator(), SchemaType::Gem_erxReceiptBundle));
+    ASSERT_NO_THROW((void) model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
+                                                  *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle));
 
-    model::ErxReceipt receipt = model::ErxReceipt::fromXml(serverResponse.getBody());
+    model::ErxReceipt receipt =
+        model::ErxReceipt::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
+                                   *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle);
 
     jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(); // need to be newly created as moved to access token
 
@@ -936,8 +977,8 @@ TEST_F(EndpointHandlerTest, CloseTask)
     ASSERT_EQ(compositionResources.size(), 1);
     const auto& composition = compositionResources.front();
     EXPECT_NO_THROW(static_cast<void>(composition.id()));
-    EXPECT_TRUE(composition.telematicId().has_value());
-    EXPECT_EQ(composition.telematicId().value(), jwtPharmacy.stringForClaim(JWT::idNumberClaim).value());
+    EXPECT_TRUE(composition.telematikId().has_value());
+    EXPECT_EQ(composition.telematikId().value(), jwtPharmacy.stringForClaim(JWT::idNumberClaim).value());
     EXPECT_TRUE(composition.periodStart().has_value());
     EXPECT_EQ(composition.periodStart().value().toXsDateTime(), "2021-02-02T16:18:43.036+00:00");
     EXPECT_TRUE(composition.periodEnd().has_value());
@@ -950,6 +991,9 @@ TEST_F(EndpointHandlerTest, CloseTask)
     const auto& device = deviceResources.front();
     EXPECT_EQ(device.serialNumber(), ErpServerInfo::ReleaseVersion);
     EXPECT_EQ(device.version(), ErpServerInfo::ReleaseVersion);
+
+    const auto prescriptionDigest = receipt.prescriptionDigest();
+    EXPECT_EQ(prescriptionDigest.data(), "uqQu3nvsTNw7Gz97jkAuCzSebWyvZ4FZ5zE7TQTdxg0=");
 
     const auto signature = receipt.getSignature();
     ASSERT_TRUE(signature.has_value());
@@ -965,7 +1009,7 @@ TEST_F(EndpointHandlerTest, CloseTask)
     auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
     CadesBesSignature cms(certs, signatureData);
 
-    model::ErxReceipt receiptFromSignature = model::ErxReceipt::fromXml(cms.payload());
+    model::ErxReceipt receiptFromSignature = model::ErxReceipt::fromXmlNoValidation(cms.payload());
     EXPECT_FALSE(receiptFromSignature.getSignature().has_value());
 
     serverRequest.setPathParameters({ "id" }, { "9a27d600-5a50-4e2b-98d3-5e05d2e85aa0" });
@@ -1097,13 +1141,13 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    auto auditEvent = model::AuditEvent::fromJson(serverResponse.getBody());
+    auto auditEvent = model::AuditEvent::fromJsonNoValidation(serverResponse.getBody());
 
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEvent.jsonDocument()),
-        SchemaType::Gem_erxAuditEvent));
+    ASSERT_NO_THROW(model::Task::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
 
-    auto expectedAuditEvent = model::AuditEvent::fromJson(FileHelper::readFileAsString(dataPath + "/audit_event.json"));
+    auto expectedAuditEvent =
+        model::AuditEvent::fromJsonNoValidation(FileHelper::readFileAsString(dataPath + "/audit_event.json"));
 
     ASSERT_EQ(canonicalJson(auditEvent.serializeToJsonString()),
               canonicalJson(expectedAuditEvent.serializeToJsonString()));
@@ -1111,6 +1155,7 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)
 
 TEST_F(EndpointHandlerTest, AcceptTaskSuccess)
 {
+    auto& resourceManager = ResourceManager::instance();
     AcceptTaskHandler handler({});
     const auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714).toString();
     Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
@@ -1129,7 +1174,8 @@ TEST_F(EndpointHandlerTest, AcceptTaskSuccess)
     std::optional<model::Bundle> bundle;
     ASSERT_NO_THROW(bundle = model::Bundle::fromXml(serverResponse.getBody(),
                                                     *StaticData::getXmlValidator(),
-                                                    SchemaType::Gem_erxBundle));
+                                                    *StaticData::getInCodeValidator(),
+                                                    SchemaType::fhir));
     ASSERT_EQ(bundle->getResourceCount(), 2);
 
     const auto tasks = bundle->getResourcesByType<model::Task>("Task");
@@ -1141,8 +1187,10 @@ TEST_F(EndpointHandlerTest, AcceptTaskSuccess)
     const auto binaryResources = bundle->getResourcesByType<model::Binary>("Binary");
     ASSERT_EQ(binaryResources.size(), 1);
     ASSERT_TRUE(binaryResources[0].data().has_value());
-    auto prescription = FileHelper::readFileAsString(dataPath + "/kbv_bundle.xml.p7s");
-    ASSERT_EQ(binaryResources[0].data().value(), prescription);
+    std::optional<CadesBesSignature> signature;
+    ASSERT_NO_THROW(signature.emplace(std::string{binaryResources[0].data().value()}, nullptr));
+    const auto& prescription = resourceManager.getStringResource(dataPath + "/kbv_bundle.xml");
+    ASSERT_EQ(signature->payload(), prescription);
 
     ASSERT_TRUE(tasks[0].healthCarePrescriptionUuid().has_value());
     ASSERT_TRUE(binaryResources[0].id().has_value());
@@ -1208,12 +1256,13 @@ namespace
 
 using QueryParameters = std::vector<std::pair<std::string,std::string>>;
 
-std::string getId(const std::variant<int64_t, std::string>& databaseId)
+std::string getId(const std::variant<int64_t, std::string>& databaseId,
+                  model::PrescriptionType type = model::PrescriptionType::apothekenpflichigeArzneimittel)
 {
     try
     {
         return model::PrescriptionId::fromDatabaseId(
-                   model::PrescriptionType::apothekenpflichigeArzneimittel,
+                   type,
                    std::get<int64_t>(databaseId))
             .toString();
     }
@@ -1230,10 +1279,11 @@ void checkTaskOperation(
     const std::variant<int64_t, std::string>& taskId,
     Header::keyValueMap_t&& headers,
     QueryParameters&& queryParameters,
-    const HttpStatus expectedStatus)
+    const HttpStatus expectedStatus,
+    model::PrescriptionType type = model::PrescriptionType::apothekenpflichigeArzneimittel)
 {
     AbortTaskHandler handler({});
-    const auto id = getId(taskId);
+    const auto id = getId(taskId, type);
     Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/" + operationName + "/", 0, std::move(headers), HttpStatus::Unknown};
 
     ServerRequest serverRequest{ std::move(requestHeader) };
@@ -1319,6 +1369,20 @@ TEST_F(EndpointHandlerTest, AbortTask)
     EXPECT_NO_THROW(checkTaskOperation(operation, mServiceContext, jwtPharmacy, taskNotInProgressId, { }, { }, HttpStatus::Forbidden));
 }
 
+TEST_F(EndpointHandlerTest, AbortTask169NotAllowed)
+{
+    const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
+    const std::string operation = "$abort";
+
+    const auto task= 4711;
+
+    const std::string kvnr = "X234567890";
+    // Insurant -> invalid status:
+    const auto jwtInsurant1 = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    EXPECT_NO_THROW(checkTaskOperation(operation, mServiceContext, jwtInsurant1, task, {}, {}, HttpStatus::Forbidden,
+                                       model::PrescriptionType::direkteZuweisung));
+}
+
 TEST_F(EndpointHandlerTest, RejectTask)
 {
     const auto jwt = JwtBuilder::testBuilder().makeJwtApotheke();
@@ -1363,6 +1427,7 @@ TEST_F(EndpointHandlerTest, MetaDataXml)
     std::optional<model::MetaData> metaData;
     ASSERT_NO_THROW(metaData = model::MetaData::fromXml(serverResponse.getBody(),
                                                         *StaticData::getXmlValidator(),
+                                                        *StaticData::getInCodeValidator(),
                                                         SchemaType::fhir));
     EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion);
     EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
@@ -1397,7 +1462,7 @@ TEST_F(EndpointHandlerTest, MetaDataJson)
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    auto metaData = model::MetaData::fromJson(serverResponse.getBody());
+    auto metaData = model::MetaData::fromJsonNoValidation(serverResponse.getBody());
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(metaData.jsonDocument()), SchemaType::fhir));
 
@@ -1411,7 +1476,8 @@ TEST_F(EndpointHandlerTest, MetaDataJson)
     metaData.setDate(now);
     metaData.setReleaseDate(now);
 
-    auto expectedMetaData = model::MetaData::fromJson(FileHelper::readFileAsString(dataPath + "/metadata.json"));
+    auto expectedMetaData =
+        model::MetaData::fromJsonNoValidation(FileHelper::readFileAsString(dataPath + "/metadata.json"));
     expectedMetaData.setVersion(version);
     expectedMetaData.setDate(now);
     expectedMetaData.setReleaseDate(now);
@@ -1439,6 +1505,7 @@ TEST_F(EndpointHandlerTest, DeviceXml)
     std::optional<model::Device> device;
     ASSERT_NO_THROW(device = model::Device::fromXml(serverResponse.getBody(),
                                                     *StaticData::getXmlValidator(),
+                                                    *StaticData::getInCodeValidator(),
                                                     SchemaType::fhir));
 
     EXPECT_EQ(device->status(), model::Device::Status::active);
@@ -1466,7 +1533,7 @@ TEST_F(EndpointHandlerTest, DeviceJson)
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    auto device = model::Device::fromJson(serverResponse.getBody());
+    auto device = model::Device::fromJsonNoValidation(serverResponse.getBody());
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(device.jsonDocument()), SchemaType::fhir));
 

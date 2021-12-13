@@ -32,12 +32,22 @@ enum class AuditEventId : std::int16_t
     POST_Task_abort_pharmacy,
     GET_MedicationDispense,    // only allowed by insurant;
     GET_MedicationDispense_id, // only allowed by insurant;
-    Task_delete_expired_id,    // deletion of expired tasks by maintenance script;
-    MAX = Task_delete_expired_id
+    Task_delete_expired_id,    // deletion of expired tasks by maintenance script => Id 14 used by database script!
+    DELETE_ChargeItem_id_insurant,
+    DELETE_ChargeItem_id_pharmacy,
+    POST_ChargeItem,           // always caused by pharmacy;
+    PUT_ChargeItem_id_insurant,
+    PUT_ChargeItem_id_pharmacy,
+    POST_Consent,              // only allowed by insurant;
+    DELETE_Consent_id,         // only allowed by insurant;
+    ChargeItem_delete_expired_id, // deletion of expired ChargeItems by maintenance script => Id 22 used by database script!
+    MAX = ChargeItem_delete_expired_id
 };
 
 bool isEventCausedByPatient(AuditEventId eventId);
 bool isEventCausedByRepresentative(AuditEventId eventId);
+bool isEventCausedByMaintenanceScript(AuditEventId eventId);
+std::string createEventResourceReference(AuditEventId eventId, const std::string& prescriptionId);
 
 
 class AuditMetaData : public Resource<AuditMetaData>

@@ -34,8 +34,9 @@ PrescriptionId PrescriptionId::fromString (const std::string_view prescriptionId
     ModelExpect(parts[5].size() == 2, "Wrong format of Prescription ID: " + std::string(prescriptionId));
 
     uint8_t part0 = static_cast<uint8_t>(std::stoi(parts[0]));
-    ModelExpect(part0 == static_cast<std::underlying_type_t<PrescriptionType>>(PrescriptionType::apothekenpflichigeArzneimittel), "Unsupported prescription type " + parts[0]);
-    const auto type = static_cast<PrescriptionType>(part0);
+    const auto type = magic_enum::enum_cast<PrescriptionType>(part0);
+    ModelExpect(type.has_value(), "Unsupported prescription type " + parts[0]);
+
 
     int64_t id = std::stoll(parts[1]) * 1'000'000'000
                + std::stoll(parts[2]) * 1'000'000
@@ -45,10 +46,10 @@ PrescriptionId PrescriptionId::fromString (const std::string_view prescriptionId
     const uint8_t checksum = static_cast<uint8_t>(std::stoi(parts[5]));
 
     A_19218.start("Validate the incoming checksum");
-    validateChecksum(type, id, checksum);
+    validateChecksum(*type, id, checksum);
     A_19218.finish();
 
-    return PrescriptionId(type, id, checksum);
+    return PrescriptionId(*type, id, checksum);
 }
 
 PrescriptionId::PrescriptionId (const PrescriptionType prescriptionType, const int64_t id, const uint8_t checksum)

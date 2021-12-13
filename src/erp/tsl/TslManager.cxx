@@ -147,7 +147,8 @@ X509Store TslManager::getTslTrustedCertificateStore(
 
 void TslManager::verifyCertificate(const TslMode tslMode,
                                    X509Certificate& certificate,
-                                   const std::unordered_set<CertificateType>& typeRestrictions)
+                                   const std::unordered_set<CertificateType>& typeRestrictions,
+                                   const OcspResponsePtr& ocspResponse)
 {
     // no mutex is necessary because trust store is thread safe
     try
@@ -160,7 +161,8 @@ void TslManager::verifyCertificate(const TslMode tslMode,
             certificate,
             typeRestrictions,
             *mRequestSender,
-            getTrustStore(tslMode));
+            getTrustStore(tslMode),
+            ocspResponse);
     }
     catch(...)
     {

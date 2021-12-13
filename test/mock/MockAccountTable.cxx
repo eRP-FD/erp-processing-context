@@ -33,3 +33,15 @@ std::optional<db_model::Blob> MockAccountTable::getSalt(const db_model::HashedId
     auto account = mAccounts.find({accountId, masterKeyType, blobId});
     return (account == mAccounts.end())?std::nullopt:std::make_optional(account->second);
 }
+
+bool MockAccountTable::isBlobUsed(BlobId blobId) const
+{
+    auto hasBlobId = [blobId](const auto& row) { return row.first.blobId == blobId;};
+    auto blobUser = find_if(mAccounts.begin(), mAccounts.end(), hasBlobId);
+    if (blobUser != mAccounts.end())
+    {
+        TVLOG(0) << "Blob " << blobId << " is still in use by an account";
+        return true;
+    }
+    return false;
+}

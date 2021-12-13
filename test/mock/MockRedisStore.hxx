@@ -28,6 +28,7 @@ public:
                                                  std::chrono::milliseconds>& timestamp) override;
 
     int incr(const std::string_view& key) override;
+    void publish(const std::string_view& channel, const std::string_view& message) override;
 private:
     void removeExpiredEntries();
 

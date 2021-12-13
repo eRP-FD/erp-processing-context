@@ -31,11 +31,12 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
-
-    EXPECT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        SchemaType::Gem_erxCommunicationInfoReq));
+    std::optional<Communication> communication1;
+    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyRequest, *StaticData::getJsonValidator(),
+                                                             *StaticData::getXmlValidator(),
+                                                             *StaticData::getInCodeValidator(),
+                                                             SchemaType::Gem_erxCommunicationInfoReq));
+    auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::idPointer.Get(communication.jsonDocument()), nullptr);
@@ -49,7 +50,8 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)
     ASSERT_EQ(Communication::receivedPointer.Get(communication.jsonDocument()), nullptr);
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer), structure_definition::communicationInfoReq);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
+              ::model::ResourceVersion::versionizeProfile(structure_definition::communicationInfoReq));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::telematicID);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyA");
@@ -76,11 +78,13 @@ TEST_F(CommunicationTest, CreateReplyFromJson)
         .setPrescriptionId("160.123.456.789.123.58")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
 
-    EXPECT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        SchemaType::Gem_erxCommunicationReply));
+    std::optional<Communication> communication1;
+    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyRequest, *StaticData::getJsonValidator(),
+                                                             *StaticData::getXmlValidator(),
+                                                             *StaticData::getInCodeValidator(),
+                                                             SchemaType::Gem_erxCommunicationReply));
+    auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::idPointer.Get(communication.jsonDocument()), nullptr);
@@ -94,7 +98,8 @@ TEST_F(CommunicationTest, CreateReplyFromJson)
     ASSERT_EQ(Communication::receivedPointer.Get(communication.jsonDocument()), nullptr);
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer), structure_definition::communicationReply);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
+              ::model::ResourceVersion::versionizeProfile(structure_definition::communicationReply));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::gkvKvid10);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
@@ -122,11 +127,13 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
 
-    EXPECT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        SchemaType::Gem_erxCommunicationDispReq));
+    std::optional<Communication> communication1;
+    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyRequest, *StaticData::getJsonValidator(),
+                                                             *StaticData::getXmlValidator(),
+                                                             *StaticData::getInCodeValidator(),
+                                                             SchemaType::Gem_erxCommunicationDispReq));
+    auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::idPointer.Get(communication.jsonDocument()), nullptr);
@@ -140,7 +147,8 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)
     ASSERT_EQ(Communication::receivedPointer.Get(communication.jsonDocument()), nullptr);
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer), structure_definition::communicationDispReq);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
+              ::model::ResourceVersion::versionizeProfile(structure_definition::communicationDispReq));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::telematicID);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyA");
@@ -170,11 +178,13 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Kannst Du das Medikament fuer mich holen?").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
 
-    EXPECT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        SchemaType::Gem_erxCommunicationRepresentative));
+    std::optional<Communication> communication1;
+    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyRequest, *StaticData::getJsonValidator(),
+                                                             *StaticData::getXmlValidator(),
+                                                             *StaticData::getInCodeValidator(),
+                                                             SchemaType::Gem_erxCommunicationRepresentative));
+    auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::idPointer.Get(communication.jsonDocument()), nullptr);
@@ -188,7 +198,8 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)
     ASSERT_EQ(Communication::receivedPointer.Get(communication.jsonDocument()), nullptr);
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer), structure_definition::communicationRepresentative);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
+              ::model::ResourceVersion::versionizeProfile(structure_definition::communicationRepresentative));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::gkvKvid10);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
@@ -218,7 +229,7 @@ TEST_F(CommunicationTest, InfoReqSetId)
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.id().has_value(), false);
 
     // This call adds the member "id" below the root.
@@ -253,7 +264,7 @@ TEST_F(CommunicationTest, InfoReqSetSender)
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.sender().has_value(), false);
 
     // This call adds the members "/sender/identifier/system" and "/sender/identifier/value".
@@ -288,7 +299,7 @@ TEST_F(CommunicationTest, InfoReqSetRecipient)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.recipient().has_value(), false);
 
     // This call adds the members "/recipient/0/identifier/system" and "/recipient/0/identifier/value".
@@ -324,7 +335,7 @@ TEST_F(CommunicationTest, InfoReqSetTimeSent)
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeSent().has_value(), false);
 
@@ -357,7 +368,7 @@ TEST_F(CommunicationTest, InfoReqSetTimeReceived)
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeReceived().has_value(), false);
 
@@ -389,7 +400,7 @@ TEST_F(CommunicationTest, ReplySetId)
         .setPrescriptionId("160.123.456.789.123.58")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.id().has_value(), false);
 
     // This call adds the member "id" below the root.
@@ -423,7 +434,7 @@ TEST_F(CommunicationTest, ReplySetSender)
         .setPrescriptionId("160.123.456.789.123.58")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.sender().has_value(), false);
 
     // This call adds the members "/sender/identifier/system" and "/sender/identifier/value".
@@ -457,7 +468,7 @@ TEST_F(CommunicationTest, ReplySetRecipient)
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
         .setPayload("Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.recipient().has_value(), false);
 
     // This call adds the members "/recipient/0/identifier/system" and "/recipient/0/identifier/value".
@@ -492,7 +503,7 @@ TEST_F(CommunicationTest, ReplySetTimeSent)
         .setPrescriptionId("160.123.456.789.123.58")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeSent().has_value(), false);
 
@@ -524,7 +535,7 @@ TEST_F(CommunicationTest, ReplySetTimeReceived)
         .setPrescriptionId("160.123.456.789.123.58")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeReceived().has_value(), false);
 
@@ -557,7 +568,7 @@ TEST_F(CommunicationTest, DispReqSetId)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Bitte schicken Sie einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.id().has_value(), false);
 
     // This call adds the member "id" below the root.
@@ -592,7 +603,7 @@ TEST_F(CommunicationTest, DispReqSetSender)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Bitte schicken Sie einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.sender().has_value(), false);
 
     // This call adds the members "/sender/identifier/system" and "/sender/identifier/value".
@@ -627,7 +638,7 @@ TEST_F(CommunicationTest, DispReqSetRecipient)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setPayload("Bitte schicken Sie einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.recipient().has_value(), false);
 
     // This call adds the members "/recipient/0/identifier/system" and "/recipient/0/identifier/value".
@@ -663,7 +674,7 @@ TEST_F(CommunicationTest, DispReqSetTimeSent)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Bitte schicken Sie einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeSent().has_value(), false);
 
@@ -696,7 +707,7 @@ TEST_F(CommunicationTest, DispReqSetTimeReceived)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Pharmacists, "PharmacyA")
         .setPayload("Bitte schicken Sie einen Boten.").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeReceived().has_value(), false);
 
@@ -729,7 +740,7 @@ TEST_F(CommunicationTest, RepresentativeSetId)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Kannst Du das Medikament fuer mich holen?").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.id().has_value(), false);
 
     // This call adds the member "id" below the root.
@@ -764,7 +775,7 @@ TEST_F(CommunicationTest, RepresentativeSetSender)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Kannst Du das Medikament fuer mich holen?").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.sender().has_value(), false);
 
     // This call adds the members "/sender/identifier/system" and "/sender/identifier/value".
@@ -799,7 +810,7 @@ TEST_F(CommunicationTest, RepresentativeSetRecipient)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setPayload("Kannst Du das Medikament fuer mich holen?").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     EXPECT_EQ(communication.recipient().has_value(), false);
 
     // This call adds the members "/recipient/0/identifier/system" and "/recipient/0/identifier/value".
@@ -835,7 +846,7 @@ TEST_F(CommunicationTest, RepresentativeSetTimeSent)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Kannst Du das Medikament fuer mich holen?").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeSent().has_value(), false);
 
@@ -868,7 +879,7 @@ TEST_F(CommunicationTest, RepresentativeSetTimeReceived)
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("Kannst Du das Medikament fuer mich holen?").createJsonString();
-    Communication communication = Communication::fromJson(bodyRequest);
+    Communication communication = Communication::fromJsonNoValidation(bodyRequest);
     Timestamp timestamp = Timestamp::now();
     EXPECT_EQ(communication.timeReceived().has_value(), false);
 

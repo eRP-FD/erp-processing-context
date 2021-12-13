@@ -10,12 +10,13 @@
 #include "erp/crypto/Jws.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/Bundle.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ModelException.hxx"
 #include "erp/model/Signature.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/service/AuditEventCreator.hxx"
+#include "erp/util/Base64.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
@@ -27,7 +28,7 @@ TaskHandlerBase::TaskHandlerBase(const Operation operation,
 }
 
 void TaskHandlerBase::addToPatientBundle(model::Bundle& bundle, const model::Task& task,
-                                         const std::optional<model::Bundle>& patientConfirmation,
+                                         const std::optional<model::KbvBundle>& patientConfirmation,
                                          const std::optional<model::Bundle>& receipt)
 {
     bundle.addResource(makeFullUrl("/Task/" + task.prescriptionId().toString()),
@@ -44,10 +45,10 @@ void TaskHandlerBase::addToPatientBundle(model::Bundle& bundle, const model::Tas
 }
 
 
-model::Bundle TaskHandlerBase::convertToPatientConfirmation(const model::Binary& healthcareProviderPrescription,
+model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Binary& healthcareProviderPrescription,
                                                             const Uuid& uuid, PcServiceContext& serviceContext)
 {
-    A_19029_02.start("1. convert prescription bundle to JSON");
+    A_19029_03.start("1. convert prescription bundle to JSON");
     Expect3(healthcareProviderPrescription.data().has_value(), "healthcareProviderPrescription unexpected empty Binary",
             std::logic_error);
 
@@ -56,18 +57,18 @@ model::Bundle TaskHandlerBase::convertToPatientConfirmation(const model::Binary&
         CadesBesSignature(std::string(*healthcareProviderPrescription.data()), nullptr);
 
     // this comes from the database and has already been validated when initially received
-    auto bundle = model::Bundle::fromXmlNoValidation(cadesBesSignature.payload());
-    A_19029_02.finish();
+    auto bundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
+    A_19029_03.finish();
 
-    A_19029_02.start("assign identifier");
+    A_19029_03.start("assign identifier");
     bundle.setId(uuid);
-    A_19029_02.finish();
+    A_19029_03.finish();
 
-    A_19029_02.start("2. serialize to normalized JSON");
+    A_19029_03.start("2. serialize to normalized JSON");
     auto normalizedJson = bundle.serializeToCanonicalJsonString();
-    A_19029_02.finish();
+    A_19029_03.finish();
 
-    A_19029_02.start("3. sign the JSON bundle using C.FD.SIG");
+    A_19029_03.start("3. sign the JSON bundle using C.FD.SIG");
     JoseHeader joseHeader(JoseHeader::Algorithm::BP256R1);
     joseHeader.setX509Certificate(serviceContext.getCFdSigErp());
     joseHeader.setType(ContentMimeType::jose);
@@ -75,15 +76,16 @@ model::Bundle TaskHandlerBase::convertToPatientConfirmation(const model::Binary&
 
     const Jws jsonWebSignature(joseHeader, normalizedJson, serviceContext.getCFdSigErpPrv());
     const auto signatureData = jsonWebSignature.compactDetachedSerialized();
-    A_19029_02.finish();
+    A_19029_03.finish();
 
-    A_19029_02.start("store the signature in the bundle");
-    model::Signature signature(signatureData, model::Timestamp::now(), model::Device::createReferenceString(getLinkBase()));
+    A_19029_03.start("store the signature in the bundle");
+    model::Signature signature(Base64::encode(signatureData), model::Timestamp::now(),
+                               model::Device::createReferenceString(getLinkBase()));
     signature.setTargetFormat(MimeType::fhirJson);
     signature.setSigFormat(MimeType::jose);
     signature.setType(model::Signature::jwsSystem, model::Signature::jwsCode);
     bundle.setSignature(signature);
-    A_19029_02.finish();
+    A_19029_03.finish();
 
     return bundle;
 }
@@ -152,7 +154,7 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
     auto resultSet = databaseHandle->retrieveAllTasksForPatient(kvnr.value(), arguments);
     A_19115.finish();
 
-    model::Bundle responseBundle(model::Bundle::Type::searchset);
+    model::Bundle responseBundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     const auto links = arguments->getBundleLinks(getLinkBase(), "/Task");
     for (const auto& link : links)
     {
@@ -181,11 +183,7 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
     makeResponse(session, HttpStatus::OK, &responseBundle);
     A_19514.finish();
 
-    // Collect Audit data
-    session.auditDataCollector()
-        .setEventId(model::AuditEventId::GET_Task)
-        .setInsurantKvnr(*kvnr)
-        .setAction(model::AuditEvent::Action::read);
+    // No Audit data collected and no Audit event created for GET /Task (since ERP-8507).
 }
 
 
@@ -250,7 +248,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         A_20753.finish();
     }
 
-    std::optional<model::Bundle> patientConfirmation;
+    std::optional<model::KbvBundle> patientConfirmation;
     if (healthcareProviderPrescription.has_value())
     {
         auto confirmationId = task->patientConfirmationUuid();
@@ -263,8 +261,15 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     // Unknown clients are filtered out by the VAU Proxy, nothing to do in the erp-processing-context.
     A_20702_01.finish();
 
+    A_21360.start("remove access code from task if workflow is 169");
+    if (task->type() == model::PrescriptionType::direkteZuweisung)
+    {
+        task->deleteAccessCode();
+    }
+    A_21360.finish();
+
     A_21375.start("create response bundle for patient");
-    model::Bundle responseBundle(model::Bundle::Type::collection);
+    model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, makeFullUrl("/Task/") + task.value().prescriptionId().toString());
     addToPatientBundle(responseBundle, task.value(), patientConfirmation, {});
     A_21375.finish();
@@ -311,7 +316,7 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
     A_20703.finish();
 
     const auto selfLink = makeFullUrl("/Task/" + task.value().prescriptionId().toString());
-    model::Bundle responseBundle(model::Bundle::Type::collection);
+    model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, selfLink);
     responseBundle.addResource(
         selfLink, {}, {}, task->jsonDocument());

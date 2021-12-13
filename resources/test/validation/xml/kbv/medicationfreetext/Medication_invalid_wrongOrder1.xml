@@ -10,7 +10,7 @@
     <valueBoolean value="false" />
   </extension>
   <meta>
-    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.1" />
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.2" />
   </meta>
   <code>
     <coding>

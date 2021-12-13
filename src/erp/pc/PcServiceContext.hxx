@@ -14,6 +14,7 @@
 #include "erp/idp/Idp.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
+#include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/service/AuditEventTextTemplates.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "erp/tsl/TslManager.hxx"
@@ -28,6 +29,8 @@
 
 class BlobCache;
 class PreUserPseudonymManager;
+class TelematicPseudonymManager;
+class InCodeValidator;
 class JsonValidator;
 class XmlValidator;
 class SeedTimer;
@@ -50,6 +53,7 @@ public:
                    std::unique_ptr<HsmPool>&& hsmPool,
                    std::shared_ptr<JsonValidator> jsonValidator,
                    std::shared_ptr<XmlValidator> xmlValidator,
+                   std::shared_ptr<InCodeValidator> inCodeValidator,
                    std::shared_ptr<TslManager> tslManager = {});
     ~PcServiceContext(void);
 
@@ -57,11 +61,14 @@ public:
 
     std::unique_ptr<Database> databaseFactory();
     const DosHandler& getDosHandler();
+    std::shared_ptr<RedisInterface> getRedisClient();
     HsmPool& getHsmPool();
     KeyDerivation& getKeyDerivation();
     PreUserPseudonymManager& getPreUserPseudonymManager();
+    TelematicPseudonymManager& getTelematicPseudonymManager();
     const JsonValidator& getJsonValidator() const;
     const XmlValidator& getXmlValidator() const;
+    const InCodeValidator& getInCodeValidator() const;
 
     const Certificate& getCFdSigErp() const;
     const shared_EVP_PKEY& getCFdSigErpPrv() const;
@@ -90,12 +97,15 @@ private:
      * are created on demand and destroyed as soon as possible.
      */
     Database::Factory mDatabaseFactory;
+    std::shared_ptr<RedisInterface> mRedisClient;
     std::unique_ptr<DosHandler> mDosHandler;
     std::unique_ptr<HsmPool> mHsmPool;
     KeyDerivation mKeyDerivation;
     const std::shared_ptr<JsonValidator> mJsonValidator;
     const std::shared_ptr<XmlValidator> mXmlValidator;
+    const std::shared_ptr<InCodeValidator> mInCodeValidator;
     std::unique_ptr<PreUserPseudonymManager> mPreUserPseudonymManager;
+    std::unique_ptr<TelematicPseudonymManager> mTelematicPseudonymManager;
     Certificate mCFdSigErp;
     mutable shared_EVP_PKEY mCFdSigErpPrivateKey;
     AuditEventTextTemplates mAuditEventTextTemplates;

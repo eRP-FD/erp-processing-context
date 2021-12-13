@@ -14,10 +14,7 @@
 #include "erp/enrolment/EnrolmentServer.hxx"
 #include "erp/enrolment/EnrolmentServiceContext.hxx"
 #include "erp/fhir/Fhir.hxx"
-#include "erp/hsm/production/HsmProductionClient.hxx"
-#include "erp/hsm/production/HsmProductionFactory.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/tpm/Tpm.hxx"
@@ -29,28 +26,31 @@
 #include "erp/util/SignalHandler.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"
+#include "erp/validation/InCodeValidator.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 
-
-#if !defined __APPLE__ && !defined _WIN32
-#include "erp/tpm/TpmProduction.hxx"
-#else
+#if WITH_HSM_MOCK > 0
+#include "mock/hsm/HsmMockFactory.hxx"
+#include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
+#include "mock/tpm/TpmTestHelper.hxx"
 #endif
+#if WITH_HSM_TPM_PRODUCTION > 0
+#include "erp/hsm/production/HsmProductionClient.hxx"
+#include "erp/hsm/production/HsmProductionFactory.hxx"
+#include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
+#include "erp/tpm/TpmProduction.hxx"
+#endif
+
 
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
-
-#if WITH_HSM_MOCK > 0
-#include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
-#include "mock/tpm/TpmTestHelper.hxx"
-#endif
 
 namespace
 {
@@ -125,7 +125,9 @@ std::unique_ptr<ErpProcessingContext> ErpMain::setupTeeServer (
         configuration.getPathValue(ConfigurationKey::JSON_META_SCHEMA));
 
     auto xmlValidator = std::make_shared<XmlValidator>();
-    xmlValidator->loadSchemas(configuration.getArray(ConfigurationKey::XML_SCHEMA));
+    configureXmlValidator(*xmlValidator);
+
+    auto inCodeValidator = std::make_shared<InCodeValidator>();
 
     auto tslManager = tslManagerFactory(xmlValidator);
 
@@ -139,6 +141,7 @@ std::unique_ptr<ErpProcessingContext> ErpMain::setupTeeServer (
             std::move(teeTokenUpdaterFactory)),
         std::move(jsonValidator),
         std::move(xmlValidator),
+        std::move(inCodeValidator),
         std::move(tslManager));
 
     if (serviceContext->getTslManager() != nullptr)
@@ -174,11 +177,11 @@ std::unique_ptr<EnrolmentServer> ErpMain::setupEnrolmentServer (
     auto enrolmentServer = std::make_unique<EnrolmentServer>(
         enrolmentPort,
         std::move(handlers),
-        #if !defined __APPLE__ && !defined _WIN32
+#if WITH_HSM_TPM_PRODUCTION > 0
         std::make_unique<EnrolmentServiceContext>(TpmProduction::createFactory(), blobCache));
-        #else
+#else
         std::make_unique<EnrolmentServiceContext>(TpmMock::createFactory(), blobCache));
-        #endif
+#endif
 
     // Number of requests is expected to be very low with days between small groups of requests.
     // Also, the TPM effectively being a singleton without multi-threading support, using a single server
@@ -244,6 +247,10 @@ int ErpMain::runApplication (
     Expect(threadCount>0, "thread count is negative or zero");
     processingContext->getServer().serve(threadCount);
 
+    const std::chrono::seconds blobCacheRefreshInterval{
+            configuration.getIntValue(ConfigurationKey::HSM_CACHE_REFRESH_SECONDS)};
+    blobCache->startRefresher(processingContext->getServer().getThreadPool().ioContext(), blobCacheRefreshInterval);
+
     // Start periodically seeding and updating seeds in all worker threads.
     // Started after the TEE server because a) it runs asynchronously anyway and b) it will access the thread pool which
     // therefore has to be initialized first.
@@ -297,14 +304,21 @@ ErpMain::Factories ErpMain::createProductionFactories()
 {
     ErpMain::Factories factories;
 
-    TVLOG(0) << "HSM mock is configured as "
+    TVLOG(0) << "HSM/TPM mock is configured as "
         << (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_HSM_MOCK, false) ? "ON" : "OFF");
-    TVLOG(0) << "HSM mock is compiled "
+    TVLOG(0) << "HSM/TPM mock is compiled "
     #if WITH_HSM_MOCK > 0
         << "IN";
     #else
         << "OUT";
     #endif
+
+    TVLOG(0) << "Production HSM/TPM is compiled "
+#if WITH_HSM_TPM_PRODUCTION > 0
+             << "IN";
+#else
+             << "OUT";
+#endif
 
     factories.registrationFactory = HeartbeatSender::createDefaultRegistrationFactory();
     factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation)
@@ -334,9 +348,10 @@ ErpMain::Factories ErpMain::createProductionFactories()
                 std::make_unique<HsmMockClient>(),
                 std::move(blobCache));
         };
+
         factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
 
-        TLOG(WARNING) << "Using builtin security module.";
+        TLOG(WARNING) << "Using MOCK security module.";
 #else
         Fail(
             "Mock HSM enabled, but it was not compiled in. "
@@ -346,19 +361,19 @@ ErpMain::Factories ErpMain::createProductionFactories()
     }
     else
     {
+#if WITH_HSM_TPM_PRODUCTION > 0
         factories.hsmClientFactory = []()
         {
-#if !defined __APPLE__ && !defined _WIN32
             return std::make_unique<HsmProductionClient>();
-#else
-            return std::make_unique<HsmMockClient>();
-#endif
         };
         factories.hsmFactoryFactory = [](std::unique_ptr<HsmClient>&& client, std::shared_ptr<BlobCache> blobCache)
         {
             return std::make_unique<HsmProductionFactory>(std::move(client), std::move(blobCache));
         };
         factories.teeTokenUpdaterFactory = TeeTokenUpdater::createProductionTeeTokenUpdaterFactory();
+#else
+        Fail2("production HSM/TPM not compiled in", std::logic_error);
+#endif
     }
 
     factories.redisClientFactory =
@@ -446,7 +461,7 @@ bool ErpMain::waitForHealthUp (ErpProcessingContext& processingContext)
 
     while (!server.isStopped())
     {
-        SessionContext<PcServiceContext> session(*serviceContext, request, response, accessLog);
+        SessionContext<PcServiceContext> session (*serviceContext, request, response, accessLog);
         if (loopCount % loopHealthCheckInterval == 0)
         {
             TVLOG(1) << "running health check";

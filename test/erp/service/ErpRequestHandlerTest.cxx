@@ -11,9 +11,11 @@
 
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/Communication.hxx"
+#include "erp/model/Parameters.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test_config.h"
 
 #include <gtest/gtest.h>
@@ -31,16 +33,18 @@ public:
               &MockDatabase::createMockDatabase,
               std::make_unique<MockRedisStore>(),
               std::make_unique<HsmPool>(
-                  std::make_unique<HsmMockFactory>(),
+                  std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                                   MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
                   TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
               StaticData::getJsonValidator(),
               StaticData::getXmlValidator(),
+              StaticData::getInCodeValidator(),
               TslTestHelper::createTslManager<TslManager>())
     {
     }
 
     template <typename TModel>
-    void testParseAndValidateRequestBody(std::string body, const std::string& contentMimeType, SchemaType schemaType, bool expectFail)
+    void testParseAndValidateRequestBodyT(std::string body, const std::string& contentMimeType, SchemaType schemaType, bool expectFail)
     {
         Header header(HttpMethod::POST, "", Header::Version_1_1, {{Header::ContentType, contentMimeType}}, HttpStatus::Unknown);
         ServerRequest serverRequest(std::move(header));
@@ -57,6 +61,52 @@ public:
         {
             ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, schemaType))
                 << "failed with " << contentMimeType << ", " << magic_enum::enum_name(schemaType) << " expectFail=false";
+        }
+
+    }
+
+    void testParseAndValidateRequestBody(std::string body, const std::string& contentMimeType, SchemaType schemaType, bool expectFail)
+    {
+        switch (schemaType)
+        {
+            case SchemaType::fhir:
+                testParseAndValidateRequestBodyT<model::Parameters>(body, contentMimeType, schemaType, expectFail);
+                break;
+            case SchemaType::Gem_erxCommunicationDispReq:
+            case SchemaType::Gem_erxCommunicationInfoReq:
+            case SchemaType::Gem_erxCommunicationReply:
+            case SchemaType::Gem_erxCommunicationRepresentative:
+                testParseAndValidateRequestBodyT<model::Communication>(body, contentMimeType, schemaType, expectFail);
+                break;
+            case SchemaType::Gem_erxMedicationDispense:
+                testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, schemaType, expectFail);
+                break;
+            case SchemaType::Gem_erxOrganizationElement:
+            case SchemaType::Gem_erxReceiptBundle:
+            case SchemaType::Gem_erxTask:
+            case SchemaType::Gem_erxAuditEvent:
+            case SchemaType::Gem_erxBinary:
+            case SchemaType::BNA_tsl:
+            case SchemaType::Gematik_tsl:
+            case SchemaType::KBV_PR_ERP_Composition:
+            case SchemaType::KBV_PR_ERP_Medication_Compounding:
+            case SchemaType::KBV_PR_ERP_Medication_FreeText:
+            case SchemaType::KBV_PR_ERP_Medication_Ingredient:
+            case SchemaType::KBV_PR_ERP_Medication_PZN:
+            case SchemaType::KBV_PR_ERP_PracticeSupply:
+            case SchemaType::KBV_PR_ERP_Prescription:
+            case SchemaType::KBV_PR_FOR_Coverage:
+            case SchemaType::KBV_PR_FOR_HumanName:
+            case SchemaType::KBV_PR_FOR_Organization:
+            case SchemaType::KBV_PR_FOR_Practitioner:
+            case SchemaType::Gem_erxCompositionElement:
+            case SchemaType::Gem_erxDevice:
+            case SchemaType::KBV_PR_ERP_Bundle:
+            case SchemaType::KBV_PR_FOR_PractitionerRole:
+            case SchemaType::KBV_PR_FOR_Patient:
+
+                ASSERT_TRUE(false) << "wrong SchemaType for this test";
+                break;
         }
     }
 
@@ -113,12 +163,12 @@ TEST_P(ErpRequestHandlerTest, validateRequestBodyReferenceSamplesJSON)
     {
         GTEST_SKIP_(GetParam().skipReason->data());
     }
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody<model::Communication>(
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
         FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" /
             GetParam().jsonSample), ContentMimeType::fhirJsonUtf8, GetParam().schemaType, false);
 
     // check that it does not validate using wrong mime type
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody<model::Communication>(
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
         FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" /
             GetParam().jsonSample), ContentMimeType::fhirXmlUtf8, GetParam().schemaType, true);
 }
@@ -129,49 +179,29 @@ TEST_P(ErpRequestHandlerTest, validateRequestBodyReferenceSamplesXML)
     {
         GTEST_SKIP_(GetParam().skipReason->data());
     }
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody<model::Communication>(
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
         FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" /
             GetParam().xmlSample), ContentMimeType::fhirXmlUtf8, GetParam().schemaType, false);
 
     // check that it does not validate using wrong mime type
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody<model::Communication>(
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
         FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" /
             GetParam().xmlSample), ContentMimeType::fhirJsonUtf8, GetParam().schemaType, true);
 }
 
 using namespace std::string_view_literals;
 
+
+// Test the resources that are actually supported at this interface.
 INSTANTIATE_TEST_SUITE_P(
     gematikExamples, ErpRequestHandlerTest,
     ::testing::Values(
-        SampleFile{"audit_event.xml", "audit_event.json", SchemaType::Gem_erxAuditEvent},
         SampleFile{"communication_dispense_req.xml", "communication_dispense_req.json",
                    SchemaType::Gem_erxCommunicationDispReq},
         SampleFile{"communication_info_req.xml", "communication_info_req.json",
                    SchemaType::Gem_erxCommunicationInfoReq},
         SampleFile{"communication_reply.xml", "communication_reply.json", SchemaType::Gem_erxCommunicationReply},
-        SampleFile{"composition.xml", "composition.json", SchemaType::KBV_PR_ERP_Composition},
-        SampleFile{"coverage.xml", "coverage.json", SchemaType::KBV_PR_FOR_Coverage, "ERP-5559: coding system for type"},
-        SampleFile{"device.xml", "device.json", SchemaType::Gem_erxDevice},
-        SampleFile{"erx_bundle.xml", "erx_bundle.json", SchemaType::Gem_erxReceiptBundle},
-        SampleFile{"erx_composition.xml", "erx_composition.json", SchemaType::Gem_erxCompositionElement},
-        SampleFile{"kbv_bundle.xml", "kbv_bundle.json", SchemaType::KBV_PR_ERP_Bundle,
-                   "ERP-5559: coding system for Coverage.type"},
-        SampleFile{"medication_compounding.xml", "medication_compounding.json",
-                   SchemaType::KBV_PR_ERP_Medication_Compounding},
         SampleFile{"medication_dispense.xml", "medication_dispense.json", SchemaType::Gem_erxMedicationDispense},
-        SampleFile{"medication_free_text.xml", "medication_free_text.json", SchemaType::KBV_PR_ERP_Medication_FreeText},
-        SampleFile{"medication_ingredient.xml", "medication_ingredient.json",
-                   SchemaType::KBV_PR_ERP_Medication_Ingredient},
-        SampleFile{"medication_pzn.xml", "medication_pzn.json", SchemaType::KBV_PR_ERP_Medication_PZN},
-        SampleFile{"medication_request.xml", "medication_request.json", SchemaType::KBV_PR_ERP_Prescription},
-        SampleFile{"organization.xml", "organization.json", SchemaType::KBV_PR_FOR_Organization},
-        SampleFile{"patient.xml", "patient.json", SchemaType::KBV_PR_FOR_Patient},
-        SampleFile{"practitioner.xml", "practitioner.json", SchemaType::KBV_PR_FOR_Practitioner},
-        SampleFile{"practitioner_role.xml", "practitioner_role.json", SchemaType::KBV_PR_FOR_PractitionerRole},
-        SampleFile{"task_activate_parameters.xml", "task_activate_parameters.json", SchemaType::ActivateTaskParameters,
-                   "No JSON schema"},
-        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::CreateTaskParameters,
-                   "No JSON schema"},
-        SampleFile{"task.xml", "task.json", SchemaType::Gem_erxTask},
-        SampleFile{"task_no_secret.xml", "task_no_secret.json", SchemaType::Gem_erxTask}));
+        SampleFile{"task_activate_parameters.xml", "task_activate_parameters.json", SchemaType::fhir},
+        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::fhir}
+));

@@ -41,7 +41,7 @@
   <entry>
     <fullUrl value="some.uri"/>
     <resource>
-      <Composition>
+      <Composition> 
         <meta>
           <profile value="https://gematik.de/fhir/StructureDefinition/erxComposition"/>
         </meta>
@@ -70,13 +70,18 @@
             <end value="2020-03-20T07:31:34.328+00:00"/>
           </period>
         </event>
+        <section>
+          <entry>
+            <reference value="Binary/123456"/>
+          </entry>
+        </section>
       </Composition>
     </resource>
   </entry>
   <entry>
     <fullUrl value="some.uri"/>
     <resource>
-      <Device>
+      <Device> 
         <id value="eRxService"/>
         <meta>
           <profile value="https://gematik.de/fhir/StructureDefinition/erxDevice"/>
@@ -91,6 +96,20 @@
           <value value="1.0.0"/>
         </version>
       </Device>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="urn:uuid:1111100000011111"/>
+    <resource>
+      <Binary>
+        <id value="123456"/>
+        <meta>
+          <versionId value="1"/>
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxBinary|1.1.1"/>
+        </meta>
+        <contentType value="application/pkcs7-mime"/>
+        <data value="MIJVIwYJKoZIhvcNAQcCoIJVFDCCVRACAQExDzANBglghkgBZQMEAgEFADCCS1AGCSqGSIb3DQEHAaCCS0EEgks9PEJ1bmRsZSB4bWxucz0iaHR0"/>
+      </Binary>
     </resource>
   </entry>
   <signature>

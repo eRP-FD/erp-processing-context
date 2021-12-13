@@ -1,0 +1,124 @@
+{
+    "resourceType":"Bundle",
+    "id":"281a985c-f25b-4aae-91a6-41ad744080b0",
+    "meta":{
+        "profile":[
+            "https://gematik.de/fhir/StructureDefinition/ErxReceipt|1.1.1"
+        ]
+    },
+    "link": [
+        {
+            "relation": "self",
+            "url": "ErxReceipt"
+        }
+    ],
+    "identifier": {
+             "system": "https://gematik.de/fhir/NamingSystem/PrescriptionID",
+             "value": "160.123.456.789.123.58"
+    },
+    "type":"document",
+    "timestamp":"2020-03-20T07:31:34.328+00:00",
+    "entry":[
+        {
+            "fullUrl": "urn:uuid:d9821f6b-fdd0-4ba4-ba36-8c172f9c477b",
+            "resource": {
+                "resourceType": "Composition",
+                "id": "d9821f6b-fdd0-4ba4-ba36-8c172f9c477b",
+                "meta": {
+                    "profile": [
+                        "https://gematik.de/fhir/StructureDefinition/ErxComposition|1.1.1"
+                    ]
+                },
+                "extension":[
+                    {
+                        "url":"https://gematik.de/fhir/StructureDefinition/BeneficiaryExtension",
+                        "valueIdentifier":{
+                            "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
+                            "value":"606358757"
+                        }
+                    }
+                ],
+                "status":"final",
+                "type":{
+                    "coding":[
+                        {
+                            "system":"https://gematik.de/fhir/CodeSystem/Documenttype",
+                            "code":"3",
+                            "display":"Receipt"
+                        }
+                    ]
+                },
+                "date":"2020-03-20T07:31:34.328+00:00",
+                "author":[
+                    {
+                        "reference":"https://prescriptionserver.telematik/Device/ErxService"
+                    }
+                ],
+                "title":"Quittung",
+                "event":[
+                    {
+                        "period":{
+                            "start":"2020-03-20T07:23:34.328+00:00",
+                            "end":"2020-03-20T12:21:34.558+00:00"
+                        }
+                    }
+                ],
+                "section": [
+                    {
+                        "entry": [
+                            {
+                                "reference": "Binary/TestDigest"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "fullUrl": "https://prescriptionserver.telematik/Device/ErxService",
+            "resource":{
+                "resourceType":"Device",
+                "id":"eRxService",
+                "meta":{
+                    "profile":[
+                        "https://gematik.de/fhir/StructureDefinition/ErxDevice|1.1.1"
+                    ]
+                },
+                "status":"active",
+                "deviceName":[
+                    {
+                        "name":"E-Rezept Fachdienst",
+                        "type":"user-friendly-name"
+                    }
+                ],
+                "version":[
+                    {
+                        "value":"1.4.0"
+                    }
+                ],
+                "serialNumber":"R4.0.0.287342834",
+                "contact":[
+                    {
+                        "system": "url",
+                        "value": "https://github.com/gematik/api-erp"
+                    }
+                ]
+            }
+        },
+        {
+            "fullUrl": "ErxReceipt/PrescriptionMessageDigest",
+            "resource": {
+                "resourceType": "Binary",
+                "id": "TestDigest",
+                "meta": {
+                    "versionId": "1",
+                    "profile": [
+                        "http://hl7.org/fhir/StructureDefinition/Binary|4.0.1"
+                    ]
+                },
+                "contentType": "application/octet-stream",
+                "data": "Test"
+            }
+        }
+    ]
+}

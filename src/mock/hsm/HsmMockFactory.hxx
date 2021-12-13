@@ -18,7 +18,6 @@
 class HsmMockFactory : public HsmFactory
 {
 public:
-    HsmMockFactory (void);
     explicit HsmMockFactory (
         std::unique_ptr<HsmClient>&& hsmClient,
         std::shared_ptr<BlobCache> blobCache);

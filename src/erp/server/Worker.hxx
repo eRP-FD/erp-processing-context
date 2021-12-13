@@ -10,6 +10,8 @@
 #include <boost/asio/io_context.hpp>
 #include <functional>
 #include <list>
+#include <mutex>
+#include <optional>
 
 namespace erp::server
 {

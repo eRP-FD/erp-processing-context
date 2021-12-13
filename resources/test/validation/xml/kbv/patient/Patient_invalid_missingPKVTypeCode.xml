@@ -49,11 +49,7 @@
     <given value="Ludger" />
     <prefix value="Seine königliche Hoheit"/>
   </name>
-  <birthDate>
-    <extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason">
-      <valueCode value="unknown"/>
-    </extension>
-  </birthDate>
+  <birthDate value="1950-01-01"/>
   <address>
     <type value="both" />
     <line value="Musterstr. 1">

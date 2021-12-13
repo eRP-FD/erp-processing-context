@@ -14,6 +14,7 @@
 #include <boost/beast/core/flat_static_buffer.hpp>
 
 
+class AccessLog;
 class SslStream;
 class ValidatedServerResponse;
 
@@ -24,13 +25,13 @@ public:
 
     void write (
         SslStream& stream,
-        ValidatedServerResponse&& response);
+        ValidatedServerResponse&& response, AccessLog* accessLog = nullptr);
 
     using Callback = std::function<void(bool success)>;
     void writeAsynchronously (
         SslStream& stream,
         ValidatedServerResponse&& response,
-        Callback callback);
+        Callback callback, AccessLog* accessLog = nullptr);
 
     std::string toString (ValidatedServerResponse&& response);
 };

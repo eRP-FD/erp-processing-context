@@ -10,16 +10,22 @@
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Composition.hxx"
+#include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/Parameters.hxx"
-#include "erp/model/Bundle.hxx"
+#include "erp/model/KbvBundle.hxx"
+#include "erp/model/KbvCoverage.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
-
 #include "erp/util/Uuid.hxx"
+
+#include <date/date.h>
+#include <date/tz.h>
+
 
 ActivateTaskHandler::ActivateTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
         : TaskHandlerBase(Operation::POST_Task_id_activate, allowedProfessionOiDs)
@@ -54,7 +60,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
               "Task not in status draft but in status " + std::string(model::Task::StatusNames.at(taskStatus)));
     A_19024_01.finish();
 
-    const auto parameterResource = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::ActivateTaskParameters);
+    const auto parameterResource = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::fhir);
     const auto* ePrescriptionValue = parameterResource.findResourceParameter("ePrescription");
     ErpExpect(ePrescriptionValue != nullptr, HttpStatus::BadRequest, "Failed to get ePrescription from requestBody");
     const auto& ePrescriptionParameter = model::Binary::fromJson(*ePrescriptionValue);
@@ -73,31 +79,53 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto& prescription = cadesBesSignature.payload();
 
     auto prescriptionBundle = [&]() {
-        try
+        if (Configuration::instance().getOptionalBoolValue(
+            ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION, true))
         {
-            auto document = Fhir::instance().converter().xmlStringToJsonWithValidation(
-                prescription, session.serviceContext.getXmlValidator(), SchemaType::fhir);
-            if (Configuration::instance().getOptionalBoolValue(
-                ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION, true))
-            {
-                (void) Fhir::instance().converter().xmlStringToJsonWithValidation(
-                    prescription, session.serviceContext.getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle);
-            }
-            return model::Bundle::fromJson(std::move(document));
+            return model::KbvBundle::fromXml(prescription, session.serviceContext.getXmlValidator(),
+                                             session.serviceContext.getInCodeValidator(),
+                                             SchemaType::KBV_PR_ERP_Bundle);
         }
-        catch (const ErpException& )
-        {
-            throw; // should contain diagnostics data, simply rethrow;
-        }
-        catch (const std::runtime_error& er)
-        {
-            TVLOG(1) << "runtime_error: " << er.what();
-            ErpFail(HttpStatus::BadRequest, "runtime_error");
-        }
+        return model::KbvBundle::fromXml(prescription, session.serviceContext.getXmlValidator(),
+                                         session.serviceContext.getInCodeValidator(), SchemaType::fhir);
     }();
+
+    checkMultiplePrescription(prescriptionBundle);
+
+    std::optional<model::PrescriptionId> bundlePrescriptionId;
+    try {
+        bundlePrescriptionId.emplace(prescriptionBundle.getIdentifier());
+    }
+    catch (const model::ModelException& ex)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest,
+                               "Error while extracting prescriptionId from QES-Bundle", ex.what());
+    }
+    ErpExpect(bundlePrescriptionId.has_value(), HttpStatus::BadRequest,
+              "Failed to extract prescriptionId from QES-Bundle");
+
+    A_21370.start("compare the task flowtype against the prefix of the prescription-id");
+    ErpExpect(bundlePrescriptionId->type() == task->type(), HttpStatus::BadRequest,
+              "Flowtype mismatch between Task and QES-Bundle");
+    A_21370.finish();
+
+    if (! Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
+    {
+        A_21370.start("compare the prescription id of the QES bundle with the task");
+        ErpExpect(*bundlePrescriptionId == task->prescriptionId(), HttpStatus::BadRequest,
+                    "PrescriptionId mismatch between Task and QES-Bundle");
+        A_21370.finish();
+    }
+    else
+    {
+        TLOG(ERROR) << "PrescriptionId check of QES-Bundle is disabled";
+    }
+
 
     const auto signingTime = cadesBesSignature.getSigningTime();
     ErpExpect(signingTime.has_value(), HttpStatus::BadRequest, "No signingTime in PKCS7 file");
+
+    checkValidCoverage(prescriptionBundle);
 
     A_19025.start("3. reference the PKCS7 file in task");
     task->setHealthCarePrescriptionUuid();
@@ -107,11 +135,12 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
     // A_19445 Part 1 and 4 are in $create
-    A_19445.start("2. Task.ExpiryDate = <Date of QES Creation + 92 days");
-    task->setExpiryDate(*signingTime + std::chrono::hours(24) * 92);
-    A_19445.finish();
-    A_19445.start("3. Task.AcceptDate = <Date of QES Creation + 30 days");
-    A_19517_01.start("different validity duration (accept date) for different types");
+    A_21265.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
+    date::year_month_day signingDay{date::floor<date::days>(signingTime->toChronoTimePoint())};
+    task->setExpiryDate(model::Timestamp{date::sys_days{signingDay + date::months{3}}});
+    A_21265.finish();
+    A_21265.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
+    A_19517_02.start("different validity duration (accept date) for different types");
     const auto compositions = prescriptionBundle.getResourcesByType<model::Composition>("Composition");
     ErpExpect(compositions.size() == 1, HttpStatus::BadRequest,
         "Expected exactly one Composition in prescription bundle, got: " + std::to_string(compositions.size()));
@@ -120,8 +149,8 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     task->setAcceptDate(*signingTime, *legalBasisCode,
                         Configuration::instance().getIntValue(
                             ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD));
-    A_19517_01.finish();
-    A_19445.finish();
+    A_19517_02.finish();
+    A_21265.finish();
     A_19999.finish();
 
 
@@ -133,7 +162,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     std::string kvnr;
     try
     {
-        kvnr = patients[0].getKvnr();
+        kvnr = patients[0].kvnr();
     }
     catch (const model::ModelException& ex)
     {
@@ -203,4 +232,36 @@ CadesBesSignature ActivateTaskHandler::unpackCadesBesSignature(
         VauFail(HttpStatus::InternalServerError, VauErrorCode::invalid_prescription,
                 "unexpected throwable");
     }
+}
+
+void ActivateTaskHandler::checkMultiplePrescription(const model::KbvBundle& bundle)
+{
+    A_22068.start(R"(Fehlercode 400 und einem Hinweis auf den Ausschluss der Mehrfachverorndung)"
+                  R"(("Mehrfachverordnung nicht zulässig" im OperationOutcome))");
+    const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationRequest>();
+    for (const auto& mr : medicationRequests)
+    {
+        ErpExpect(!mr.isMultiplePrescription(), HttpStatus::BadRequest, "Mehrfachverordnung nicht zulässig");
+    }
+    A_22068.finish();
+}
+
+void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle)
+{
+    A_22222.start("Check for allowed coverage type");
+    const auto& coverage = bundle.getResourcesByType<model::KbvCoverage>("Coverage");
+    for (const auto& currentCoverage : coverage)
+    {
+        const auto coverageType = currentCoverage.typeCodingCode();
+        ErpExpect((coverageType == "GKV")
+                  || (coverageType == "SEL")
+                  || (coverageType == "BG")
+                  || (coverageType == "UK")
+                  || (Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false)
+                      && (coverageType == "PKV")),
+
+                  HttpStatus::BadRequest,
+                  "Kostenträger nicht zulässig");
+    }
+    A_22222.finish();
 }

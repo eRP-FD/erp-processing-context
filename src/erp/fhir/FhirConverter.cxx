@@ -4,7 +4,6 @@
  */
 
 #include "FhirConverter.hxx"
-
 #include "erp/fhir/Fhir.hxx"
 #include "erp/fhir/internal/FhirJsonToXmlConverter.hxx"
 #include "erp/fhir/internal/FhirSAXHandler.hxx"
@@ -19,12 +18,32 @@ model::NumberAsStringParserDocument FhirConverter::xmlStringToJson(const std::st
     return FhirSaxHandler::parseXMLintoJSON(Fhir::instance().structureRepository(), xmlDocument, {});
 }
 
-model::NumberAsStringParserDocument FhirConverter::xmlStringToJsonWithValidation(const std::string_view& xmlDocument,
-                                                                 const XmlValidator& validator,
-                                                                 SchemaType schemaType) const
+model::NumberAsStringParserDocument
+FhirConverter::xmlStringToJsonWithValidationNoVer(const std::string_view& xmlDocument, const XmlValidator& validator,
+                                                  SchemaType schemaType) const
 {
-    auto schemaValidationContext = validator.getSchemaValidationContext(schemaType);
-    return FhirSaxHandler::parseXMLintoJSON(Fhir::instance().structureRepository(), xmlDocument, schemaValidationContext.get());
+    auto schemaValidationContext = validator.getSchemaValidationContextNoVer(schemaType);
+    return FhirSaxHandler::parseXMLintoJSON(Fhir::instance().structureRepository(), xmlDocument,
+                                            schemaValidationContext.get());
+}
+
+model::NumberAsStringParserDocument
+FhirConverter::xmlStringToJsonWithValidation(const std::string_view& xmlDocument, const XmlValidator& validator,
+                                             SchemaType schemaType,
+                                             model::ResourceVersion::DeGematikErezeptWorkflowR4 schemaVersion) const
+{
+    auto schemaValidationContext = validator.getSchemaValidationContext(schemaType, schemaVersion);
+    return FhirSaxHandler::parseXMLintoJSON(Fhir::instance().structureRepository(), xmlDocument,
+                                            schemaValidationContext.get());
+}
+model::NumberAsStringParserDocument
+FhirConverter::xmlStringToJsonWithValidation(const std::string_view& xmlDocument, const XmlValidator& validator,
+                                             SchemaType schemaType,
+                                             model::ResourceVersion::KbvItaErp schemaVersion) const
+{
+    auto schemaValidationContext = validator.getSchemaValidationContext(schemaType, schemaVersion);
+    return FhirSaxHandler::parseXMLintoJSON(Fhir::instance().structureRepository(), xmlDocument,
+                                            schemaValidationContext.get());
 }
 
 UniqueXmlDocumentPtr FhirConverter::jsonToXml(const model::NumberAsStringParserDocument& jsonDOM) const
@@ -36,7 +55,7 @@ UniqueXmlDocumentPtr FhirConverter::jsonToXml(const model::NumberAsStringParserD
 std::string FhirConverter::jsonToXmlString(const model::NumberAsStringParserDocument& jsonDOM) const
 {
     const auto& asXmlDoc = jsonToXml(jsonDOM);
-    std::unique_ptr<xmlChar[],void(*)(void*)> buffer{nullptr, xmlFree};
+    std::unique_ptr<xmlChar[], void (*)(void*)> buffer{nullptr, xmlFree};
     int size = 0;
     {
         xmlChar* rawBuffer = nullptr;

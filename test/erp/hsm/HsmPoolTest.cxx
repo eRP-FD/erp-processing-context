@@ -6,7 +6,7 @@
 #include "erp/hsm/HsmPool.hxx"
 
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/tools/HsmPoolHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
@@ -23,7 +23,8 @@ class HsmPoolTest : public testing::Test
 public:
     HsmPoolTest (void)
         : hsmPool(
-              std::make_unique<HsmMockFactory>(),
+              std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                               MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
               TeeTokenUpdater::createMockTeeTokenUpdaterFactory())
     {
     }
@@ -186,7 +187,7 @@ TEST_F(HsmPoolTest, keepAlive)
     auto pool = HsmPool(
         std::make_unique<HsmMockFactory>(
             std::move(client),
-            MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+            MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
 
     ASSERT_EQ(clientReference.callCount, 0);
@@ -209,7 +210,7 @@ TEST_F(HsmPoolTest, keepAliveJob)
     auto pool = HsmPool(
         std::make_unique<HsmMockFactory>(
             std::make_unique<::HsmSessionTestClient>(),
-            MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+            MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
 
     ASSERT_TRUE(pool.isKeepAliveJobRunning());

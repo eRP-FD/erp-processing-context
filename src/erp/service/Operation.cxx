@@ -26,7 +26,18 @@ namespace {
     constexpr std::string_view operationName_GET_AuditEvent            = "GET /AuditEvent";
     constexpr std::string_view operationName_GET_AuditEvent_id         = "GET /AuditEvent/<id>";
     constexpr std::string_view operationName_GET_Device                = "GET /Device";
+    constexpr std::string_view operationName_POST_Subscription         = "POST /Subscription";
     constexpr std::string_view operationName_GET_metadata              = "GET /metadata";
+    // PKV specific:  ->
+    constexpr std::string_view operationName_DELETE_ChargeItem_id      = "DELETE /ChargeItem/<id>";
+    constexpr std::string_view operationName_GET_ChargeItem            = "GET /ChargeItem";
+    constexpr std::string_view operationName_GET_ChargeItem_id         = "GET /ChargeItem/<id>";
+    constexpr std::string_view operationName_POST_ChargeItem           = "POST /ChargeItem";
+    constexpr std::string_view operationName_PUT_ChargeItem_id         = "PUT /ChargeItem/<id>";
+    constexpr std::string_view operationName_DELETE_Consent_id         = "DELETE /Consent/<id>";
+    constexpr std::string_view operationName_GET_Consent               = "GET /Consent";
+    constexpr std::string_view operationName_POST_Consent              = "POST /Consent";
+    // <-
     constexpr std::string_view operationName_UNKNOWN                   = "UNKNOWN";
 }
 
@@ -52,7 +63,19 @@ const std::string_view& toString (Operation operation)
         case Operation::GET_AuditEvent:            return operationName_GET_AuditEvent;
         case Operation::GET_AuditEvent_id:         return operationName_GET_AuditEvent_id;
         case Operation::GET_Device:                return operationName_GET_Device;
+        case Operation::POST_Subscription:         return operationName_POST_Subscription;
         case Operation::GET_metadata:              return operationName_GET_metadata;
+        // PKV specific:  ->
+        case Operation::DELETE_ChargeItem_id:      return operationName_DELETE_ChargeItem_id;
+        case Operation::GET_ChargeItem:            return operationName_GET_ChargeItem;
+        case Operation::GET_ChargeItem_id:         return operationName_GET_ChargeItem_id;
+        case Operation::POST_ChargeItem:           return operationName_POST_ChargeItem;
+        case Operation::PUT_ChargeItem_id:         return operationName_PUT_ChargeItem_id;
+        case Operation::DELETE_Consent_id:         return operationName_DELETE_Consent_id;
+        case Operation::GET_Consent:               return operationName_GET_Consent;
+        case Operation::POST_Consent:              return operationName_POST_Consent;
+        // <-
+
         case Operation::UNKNOWN:                   return operationName_UNKNOWN;
         case Operation::GET_notifications_opt_in:
         case Operation::GET_notifications_opt_out:

@@ -20,16 +20,17 @@ class MockDatabase;
 class MockDatabaseProxy : public DatabaseBackend
 {
 public:
-    static Database::Factory createFactory(DatabaseBackend& backend);
+    static Database::Factory createFactory(MockDatabase& backend);
 
-    explicit MockDatabaseProxy(DatabaseBackend&);
+    explicit MockDatabaseProxy(MockDatabase&);
 
     void commitTransaction() override;
     void closeConnection() override;
 
     void healthCheck() override;
 
-    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::Task::Status taskStatus,
+    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
+                                                                   model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,
                                                                    const model::Timestamp& created) override;
 
@@ -74,8 +75,9 @@ public:
     uint64_t countAuditEventData(const db_model::HashedKvnr& kvnr,
                                  const std::optional<UrlArguments>& search) override;
 
-    std::optional<db_model::Task> retrieveTaskBasics(const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) override;
+    [[nodiscard]] ::std::optional<::db_model::Task>
+    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
     std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
@@ -90,7 +92,7 @@ public:
     uint64_t countAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
                                          const std::optional<UrlArguments>& search) override;
 
-    CmacKey acquireCmac(const date::sys_days& validDate, RandomSource& randomSource) override;
+    CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
     std::optional<Uuid> insertCommunication(const model::PrescriptionId& prescriptionId,
                                             const model::Timestamp& timeSent,
                                             const model::Communication::MessageType messageType,
@@ -125,8 +127,18 @@ public:
     std::optional<db_model::Blob> retrieveSaltForAccount(const db_model::HashedId& accountId,
                                                          db_model::MasterKeyType masterKeyType,
                                                          BlobId blobId) override;
+
+    void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
+    std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr& kvnr) override;
+    [[nodiscard]] bool clearConsent(const db_model::HashedKvnr& kvnr) override;
+
+    bool isBlobUsed(BlobId blobId) const;
+    void deleteTask (const model::PrescriptionId& taskId);
+    void deleteAuditEvent(const Uuid& eventId);
+
+
 private:
-    DatabaseBackend& mDatabase;
+    MockDatabase& mDatabase;
 };
 
 #endif

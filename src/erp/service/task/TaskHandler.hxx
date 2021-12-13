@@ -17,7 +17,7 @@
 namespace model
 {
 class Task;
-class Bundle;
+class KbvBundle;
 class PrescriptionId;
 }
 
@@ -29,15 +29,15 @@ class TaskHandlerBase
 public:
     TaskHandlerBase (Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOIDs);
 
+
 protected:
     static void addToPatientBundle(model::Bundle& bundle,
                                    const model::Task& task,
-                                   const std::optional<model::Bundle>& patientConfirmation,
+                                   const std::optional<model::KbvBundle>& patientConfirmation,
                                    const std::optional<model::Bundle>& receipt);
 
-    static model::Bundle convertToPatientConfirmation(const model::Binary& healthcareProviderPrescription,
+    static model::KbvBundle convertToPatientConfirmation(const model::Binary& healthcareProviderPrescription,
                                                       const Uuid& uuid, PcServiceContext& serviceContext);
-
     /// @brief extract and validate ID from URL
     static model::PrescriptionId parseId(const ServerRequest& request, AccessLog& accessLog);
     static void checkAccessCodeMatches(const ServerRequest& request, const model::Task& task);

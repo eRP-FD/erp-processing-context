@@ -164,12 +164,20 @@ bool String::starts_with (const std::string& s, const std::string_view& head)
     return boost::starts_with(s, head);
 }
 
+bool String::starts_with(const std::string_view s, const std::string_view head)
+{
+    return boost::starts_with(s, head);
+}
 
 bool String::ends_with (const std::string& s, const std::string_view& tail)
 {
     return boost::ends_with(s, tail);
 }
 
+bool String::ends_with(const std::string_view s, const std::string_view tail)
+{
+    return boost::ends_with(s, tail);
+}
 
 std::string String::quoteNewlines (const std::string& in)
 {

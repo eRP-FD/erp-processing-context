@@ -18,7 +18,7 @@
 #include "test/util/ErpMacros.hxx"
 
 
-class PostgresDatabaseTaskTest : public PostgresDatabaseTest
+class PostgresDatabaseTaskTest : public PostgresDatabaseTest, public testing::WithParamInterface<model::PrescriptionType>
 {
 public:
     PostgresDatabaseTaskTest()
@@ -26,7 +26,7 @@ public:
         if (usePostgres())
         {
             auto deleteTxn = createTransaction();
-            deleteTxn.exec("DELETE FROM erp.task");
+            deleteTxn.exec("DELETE FROM " + taskTableName());
             deleteTxn.commit();
         }
     }
@@ -39,13 +39,30 @@ public:
         }
     }
 
+    std::string taskTableName() const
+    {
+        switch(GetParam())
+        {
+            case model::PrescriptionType::apothekenpflichigeArzneimittel:
+                return "erp.task";
+            case model::PrescriptionType::direkteZuweisung:
+                return "erp.task_169";
+        }
+        Fail("invalid prescription type: " + std::to_string(uintmax_t(GetParam())));
+    }
+
+    model::PrescriptionType prescriptionType() const
+    {
+        return GetParam();
+    }
+
     void retrieveTaskData(pqxx::result& result, const model::PrescriptionId& prescriptionId)
     {
         const Query retrieveTask{
             "retrieveTask",
             "SELECT * "
-            "FROM erp.task "
-            "WHERE prescription_id = $1"};
+            "FROM " + taskTableName() +
+            " WHERE prescription_id = $1"};
         prepare(retrieveTask);
 
         auto &&txn = createTransaction();
@@ -99,11 +116,12 @@ public:
         return search;
     }
 
-    void setupTasks(size_t nTasks, std::string_view kvnr, std::vector<model::Task>& outTasks)
+    void setupTasks(size_t nTasks, std::string_view kvnr, std::vector<model::Task>& outTasks,
+                    model::PrescriptionType prescriptionType = GetParam())
     {
         for (size_t i = 0; i < nTasks; ++i)
         {
-            model::Task task1(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+            model::Task task1(prescriptionType, "access_code");
             const auto id1 = database().storeTask(task1);
             // The database generates the ID
             task1.setPrescriptionId(id1);
@@ -114,8 +132,9 @@ public:
             task1.setAcceptDate(model::Timestamp::now());
             task1.setStatus(model::Task::Status::ready);
             database().activateTask(
-                task1,
-                model::Binary(Uuid().toString(),model::Bundle(model::Bundle::Type::document).serializeToJsonString()));
+                task1, model::Binary(Uuid().toString(),
+                                     model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile)
+                                         .serializeToJsonString()));
             database().commitTransaction();
 
             outTasks.emplace_back(std::move(task1));
@@ -124,29 +143,29 @@ public:
 };
 
 
-TEST_F(PostgresDatabaseTaskTest, InsertTask)
+TEST_P(PostgresDatabaseTaskTest, InsertTask)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
 
-    model::Task task1(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task1(prescriptionType(), "access_code");
 
     const auto id1 = database().storeTask(task1);
     database().commitTransaction();
     ASSERT_GT(id1.toDatabaseId(), 0);
 
-    const auto task1FromDb = database().retrieveTask(id1);
+    const auto task1FromDb = std::get<0>(database().retrieveTaskAndPrescription(id1));
     ASSERT_TRUE(task1FromDb.has_value());
 
 
-    model::Task task2(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task2(prescriptionType(), "access_code");
     const auto id2 = database().storeTask(task2);
     database().commitTransaction();
     ASSERT_GT(id2.toDatabaseId(), id1.toDatabaseId());
 
-    const auto task2FromDb = database().retrieveTask(id2);
+    const auto task2FromDb = std::get<0>(database().retrieveTaskAndPrescription(id2));
     database().commitTransaction();
     ASSERT_TRUE(task2FromDb.has_value());
 
@@ -173,14 +192,14 @@ TEST_F(PostgresDatabaseTaskTest, InsertTask)
     ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
-TEST_F(PostgresDatabaseTaskTest, updateTaskActivate)
+TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
 
-    model::Task task1(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task1(prescriptionType(), "access_code");
     task1.setKvnr(InsurantA);
 
     // does not store the KVNR:
@@ -193,7 +212,9 @@ TEST_F(PostgresDatabaseTaskTest, updateTaskActivate)
     task1.setAcceptDate(model::Timestamp::now());
     database().activateTask(
         task1,
-        model::Binary(Uuid().toString(), model::Bundle(model::Bundle::Type::document).serializeToJsonString()));
+        model::Binary(
+            Uuid().toString(),
+            model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile).serializeToJsonString()));
     database().commitTransaction();
 
     // KVNR is now set
@@ -223,14 +244,14 @@ TEST_F(PostgresDatabaseTaskTest, updateTaskActivate)
     ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
-TEST_F(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
+TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
 
-    model::Task task1(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task1(prescriptionType(), "access_code");
     task1.setKvnr(InsurantA);
 
     // does not store the KVNR:
@@ -238,7 +259,7 @@ TEST_F(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
     database().commitTransaction();
 
     {
-        const auto taskFromDb = database().retrieveTask(task1.prescriptionId());
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndPrescription(task1.prescriptionId()));
         ASSERT_EQ(taskFromDb->status(), model::Task::Status::draft);
         const auto task2FromDb = database().retrieveTaskForUpdate(task1.prescriptionId());
         ASSERT_EQ(task2FromDb->status(), model::Task::Status::draft);
@@ -250,21 +271,21 @@ TEST_F(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
     database().commitTransaction();
 
     {
-        const auto taskFromDb = database().retrieveTask(task1.prescriptionId());
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndReceipt(task1.prescriptionId()));
         ASSERT_EQ(taskFromDb->status(), model::Task::Status::ready);
         ASSERT_EQ(taskFromDb->secret(), "secret");
     }
     database().commitTransaction();
 }
 
-TEST_F(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
+TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
 
-    model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task(prescriptionType(), "access_code");
     const auto id = database().storeTask(task);
     database().commitTransaction();
     task.setPrescriptionId(id);
@@ -282,7 +303,7 @@ TEST_F(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     ASSERT_EQ(std::string(healthCareProviderPrescription.value().data().value()), "HealthCareProviderPrescription");
 }
 
-TEST_F(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)
+TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)
 {
     if (!usePostgres())
     {
@@ -298,15 +319,15 @@ TEST_F(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)
     // cleanup
     {
         auto&& txn = createTransaction();
-        txn.exec_params("DELETE FROM erp.task WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr1).binarystring());
-        txn.exec_params("DELETE FROM erp.task WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr2).binarystring());
+        txn.exec_params("DELETE FROM " + taskTableName() + " WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr1).binarystring());
+        txn.exec_params("DELETE FROM " + taskTableName() + " WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr2).binarystring());
         txn.commit();
     }
 
     // store three tasks, they contain no KVNR yet
-    model::Task task1(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    model::Task task2(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    model::Task task3(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task1(prescriptionType(), "access_code");
+    model::Task task2(prescriptionType(), "access_code");
+    model::Task task3(prescriptionType(), "access_code");
     const auto id1 = database().storeTask(task1);
     const auto id2 = database().storeTask(task2);
     const auto id3 = database().storeTask(task3);
@@ -328,19 +349,25 @@ TEST_F(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)
     task1.setAcceptDate(model::Timestamp::now());
     database().activateTask(
         task1,
-        model::Binary(Uuid().toString(),model::Bundle(model::Bundle::Type::document).serializeToJsonString()));
+        model::Binary(
+            Uuid().toString(),
+            model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile).serializeToJsonString()));
     task2.setKvnr(kvnr2);
     task2.setExpiryDate(model::Timestamp::now());
     task2.setAcceptDate(model::Timestamp::now());
     database().activateTask(
         task2,
-        model::Binary(Uuid().toString(), model::Bundle(model::Bundle::Type::document).serializeToJsonString()));
+        model::Binary(
+            Uuid().toString(),
+            model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile).serializeToJsonString()));
     task3.setKvnr(kvnr2);
     task3.setExpiryDate(model::Timestamp::now());
     task3.setAcceptDate(model::Timestamp::now());
     database().activateTask(
         task3,
-        model::Binary(Uuid().toString(), model::Bundle(model::Bundle::Type::document).serializeToJsonString()));
+        model::Binary(
+            Uuid().toString(),
+            model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile).serializeToJsonString()));
     database().commitTransaction();
 
 
@@ -368,30 +395,31 @@ TEST_F(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)
     // cleanup
     {
         auto&& txn = createTransaction();
-        txn.exec_params("DELETE FROM erp.task WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr1).binarystring());
-        txn.exec_params("DELETE FROM erp.task WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr2).binarystring());
+        txn.exec_params("DELETE FROM " + taskTableName() + " WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr1).binarystring());
+        txn.exec_params("DELETE FROM " + taskTableName() + " WHERE kvnr_hashed=$1", getKeyDerivation().hashKvnr(kvnr2).binarystring());
         txn.commit();
     }
 }
 
 
-TEST_F(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)
+TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
-    model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task(prescriptionType(), "access_code");
     task.setPrescriptionId(database().storeTask(task));
     task.setKvnr("X123456789");
 
     const auto medicationDispenseJson =
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_output1.json");
-    const model::MedicationDispense medicationDispense = model::MedicationDispense::fromJson(medicationDispenseJson);
+    const model::MedicationDispense medicationDispense =
+        model::MedicationDispense::fromJsonNoValidation(medicationDispenseJson);
 
     const auto receiptJson =
-        FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/erx_receipt1.json");
-    const model::ErxReceipt receipt = model::ErxReceipt::fromJson(receiptJson);
+        FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/erx_receipt1_1_1.json");
+    const model::ErxReceipt receipt = model::ErxReceipt::fromJsonNoValidation(receiptJson);
 
     task.setStatus(model::Task::Status::completed);
 
@@ -421,14 +449,14 @@ TEST_F(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)
     ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
-TEST_F(PostgresDatabaseTaskTest, updateTaskClearPersonalData)
+TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
 
-    model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task(prescriptionType(), "access_code");
     task.setStatus(model::Task::Status::ready);
     const auto id = database().storeTask(task);
     database().commitTransaction();
@@ -443,8 +471,8 @@ TEST_F(PostgresDatabaseTaskTest, updateTaskClearPersonalData)
 
         const Query updateTaskComplete{
                 "updateTaskComplete",
-                "UPDATE erp.task "
-                "SET status = $2, kvnr = $3, healthcare_provider_prescription = $4, "
+                "UPDATE " + taskTableName() +
+                " SET status = $2, kvnr = $3, healthcare_provider_prescription = $4, "
                 "    receipt = $5, performer = $6, medication_dispense_bundle = $7 "
                 "WHERE prescription_id = $1"};
         prepare(updateTaskComplete);
@@ -486,13 +514,13 @@ TEST_F(PostgresDatabaseTaskTest, updateTaskClearPersonalData)
         ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
     }
 
-    const auto updatedTask = database().retrieveTask(task.prescriptionId());
+    const auto updatedTask = std::get<0>(database().retrieveTaskAndPrescription(task.prescriptionId()));
     database().commitTransaction();
     ASSERT_TRUE(updatedTask);
     ASSERT_EQ(updatedTask->status(), model::Task::Status::cancelled);
 }
 
-TEST_F(PostgresDatabaseTaskTest, SearchTasksStatus)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)
 {
     if (!usePostgres())
     {
@@ -501,7 +529,7 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksStatus)
 
     const std::string kvnr1 = "XYZABC1234";
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 
     std::vector<model::Task> tasks;
 
@@ -513,8 +541,8 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksStatus)
 
     {
         auto&& txn = createTransaction();
-        txn.exec("UPDATE erp.task SET status = 3 WHERE prescription_id='" + std::to_string(id1.toDatabaseId()) + "'");
-        txn.exec("UPDATE erp.task SET status = 3 WHERE prescription_id='" + std::to_string(id3.toDatabaseId()) + "'");
+        txn.exec("UPDATE " + taskTableName() + " SET status = 3 WHERE prescription_id='" + std::to_string(id1.toDatabaseId()) + "'");
+        txn.exec("UPDATE " + taskTableName() + " SET status = 3 WHERE prescription_id='" + std::to_string(id3.toDatabaseId()) + "'");
         txn.commit();
     }
 
@@ -551,10 +579,10 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksStatus)
     }
     database().commitTransaction();
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_F(PostgresDatabaseTaskTest, SearchTasksLastModified)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksLastModified)
 {
     if (!usePostgres())
     {
@@ -563,7 +591,7 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksLastModified)
 
     const std::string kvnr1 = "XYZABC1234";
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 
     std::vector<model::Task> tasks;
 
@@ -579,10 +607,10 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksLastModified)
 
     {
         auto&& txn = createTransaction();
-        txn.exec("UPDATE erp.task SET last_modified = '" +
+        txn.exec("UPDATE " + taskTableName() + " SET last_modified = '" +
                  lastModified2.toXsDateTimeWithoutFractionalSeconds() + "' WHERE prescription_id='" +
                  std::to_string(id2.toDatabaseId()) + "'");
-        txn.exec("UPDATE erp.task SET last_modified = '" +
+        txn.exec("UPDATE " + taskTableName() + " SET last_modified = '" +
                  lastModified3.toXsDateTimeWithoutFractionalSeconds() + "' WHERE prescription_id='" +
                  std::to_string(id3.toDatabaseId()) + "'");
         txn.commit();
@@ -632,10 +660,10 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksLastModified)
     }
     database().commitTransaction();
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_F(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)
 {
     if (!usePostgres())
     {
@@ -644,7 +672,7 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)
 
     const std::string kvnr1 = "XYZABC1234";
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 
     std::vector<model::Task> tasks;
 
@@ -660,10 +688,10 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)
 
     {
         auto&& txn = createTransaction();
-        txn.exec("UPDATE erp.task SET authored_on = '" +
+        txn.exec("UPDATE " + taskTableName() + " SET authored_on = '" +
             authoredOn2.toXsDateTimeWithoutFractionalSeconds() + "' WHERE prescription_id='" +
             std::to_string(id2.toDatabaseId()) + "'");
-        txn.exec("UPDATE erp.task SET authored_on = '" +
+        txn.exec("UPDATE " + taskTableName() + " SET authored_on = '" +
             authoredOn3.toXsDateTimeWithoutFractionalSeconds() + "' WHERE prescription_id='" +
             std::to_string(id3.toDatabaseId()) + "'");
         txn.commit();
@@ -713,10 +741,10 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)
     }
     database().commitTransaction();
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_F(PostgresDatabaseTaskTest, SearchTasksSort)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksSort)
 {
     if (!usePostgres())
     {
@@ -725,7 +753,7 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksSort)
 
     const std::string kvnr1 = "XYZABC1234";
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 
     std::vector<model::Task> tasks;
 
@@ -742,10 +770,10 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksSort)
 
     {
         auto&& txn = createTransaction();
-        txn.exec("UPDATE erp.task SET authored_on = '" +
+        txn.exec("UPDATE " + taskTableName() + " SET authored_on = '" +
             authoredOn2.toXsDateTimeWithoutFractionalSeconds() + "' WHERE prescription_id='" +
             std::to_string(id2.toDatabaseId()) + "'");
-        txn.exec("UPDATE erp.task SET authored_on = '" +
+        txn.exec("UPDATE " + taskTableName() + " SET authored_on = '" +
             authoredOn3.toXsDateTimeWithoutFractionalSeconds() + "' WHERE prescription_id='" +
             std::to_string(id3.toDatabaseId()) + "'");
         txn.commit();
@@ -770,10 +798,10 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksSort)
     }
     database().commitTransaction();
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_F(PostgresDatabaseTaskTest, SearchTasksPaging)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksPaging)
 {
     if (!usePostgres())
     {
@@ -782,11 +810,12 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksPaging)
 
     const std::string kvnr1 = "XYZABC1234";
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 
     std::vector<model::Task> tasks;
 
-    setupTasks(5, kvnr1, tasks);
+    setupTasks(3, kvnr1, tasks, model::PrescriptionType::apothekenpflichigeArzneimittel);
+    setupTasks(2, kvnr1, tasks, model::PrescriptionType::direkteZuweisung);
 
     {
         auto result = database().retrieveAllTasksForPatient(kvnr1, paging(2, 0));
@@ -829,23 +858,23 @@ TEST_F(PostgresDatabaseTaskTest, SearchTasksPaging)
     }
     database().commitTransaction();
 
-    cleanKvnr(kvnr1);
+    cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_F(PostgresDatabaseTaskTest, createAndReadAuditEventData)
+TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
 
-    cleanKvnr(InsurantA);
+    cleanKvnr(InsurantA, taskTableName());
 
     const auto kvnr = InsurantA;
     const auto telematicId = "3-SMC-XXXX-883110000120312";
     const auto deviceId = 42;
 
-    model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    model::Task task(prescriptionType(), "access_code");
     task.setStatus(model::Task::Status::ready);
 
     const auto id = database().storeTask(task);
@@ -879,5 +908,9 @@ TEST_F(PostgresDatabaseTaskTest, createAndReadAuditEventData)
     EXPECT_EQ(entry.id(), auditDataOrig.id());
     EXPECT_EQ(entry.recorded(), auditDataOrig.recorded());
 
-    cleanKvnr(InsurantA);
+    cleanKvnr(InsurantA, taskTableName());
 }
+
+INSTANTIATE_TEST_SUITE_P(PostgresDatabaseTaskTestInst, PostgresDatabaseTaskTest,
+                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                         model::PrescriptionType::direkteZuweisung));

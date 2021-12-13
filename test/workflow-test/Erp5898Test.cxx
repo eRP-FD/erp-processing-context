@@ -45,7 +45,7 @@ public:
 TEST_F(Erp5898Test, run)
 {
     mOde = Erp5898Test::mode::mode1;
-    taskCreate(HttpStatus::BadRequest, HttpStatus::Unknown);
+    taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel, HttpStatus::BadRequest, HttpStatus::Unknown);
     mOde = Erp5898Test::mode::mode2;
-    taskCreate(HttpStatus::Unauthorized, HttpStatus::Unknown);
+    taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel, HttpStatus::Unauthorized, HttpStatus::Unknown);
 }

@@ -19,6 +19,7 @@ set(RESOURCE_BINARY_DIR "${CMAKE_BINARY_DIR}/bin/resources")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tool_config.hxx.in" "${CMAKE_CURRENT_BINARY_DIR}/tool_config.hxx")
 
 add_library(erp-tool-lib EXCLUDE_FROM_ALL OBJECT ${ERP_TOOL_LIB_SOURCES})
+target_compile_definitions(erp-tool-lib PUBLIC WITH_HSM_MOCK=1)
 target_include_directories(erp-tool-lib
     PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}"
@@ -59,7 +60,7 @@ target_link_libraries(make_task_id
 
 # The blob-db-initialization relies on HSM and TPM support. On platforms where they are not supported, the tool can
 # not be built.
-if(NOT APPLE AND NOT MSVC)
+if(ERP_WITH_HSM_TPM_PRODUCTION)
     add_executable(
         blob-db-initialization
             blob-db-initialization/BlobDbInitialization.cxx
@@ -67,7 +68,7 @@ if(NOT APPLE AND NOT MSVC)
     target_link_libraries(
         blob-db-initialization
         PRIVATE
-            erp-hsm-tpm-mock
+            erp-mock-enrollmentmanager
             erp-processing-context-files
     )
     target_include_directories(

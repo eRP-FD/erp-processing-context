@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:element name="extension" type="UnfallKennzeichen.Extension"/>
+  <xs:complexType name="UnfallKennzeichen.Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueCoding" type="UnfallKennzeichen.Coding"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="uri-primitive" fixed="unfallkennzeichen" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="UnfallKennzeichen.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="UnfallKennzeichen.System"/>
+          <xs:element name="code" type="UnfallKennzeichen.Code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="UnfallKennzeichen.System">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="UnfallKennzeichen.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="UnfallKennzeichen.Code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="UnfallKennzeichen.Code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

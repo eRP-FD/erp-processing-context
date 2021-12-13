@@ -20,7 +20,7 @@
     <mode value="server"/>
     <resource>
       <type value="Task"/>
-      <profile value="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
+      <profile value="https://gematik.de/fhir/StructureDefinition/ErxTask|1.1.1"/>
       <interaction>
         <code value="create"/>
       </interaction>
@@ -66,11 +66,11 @@
     </resource>
     <resource>
       <type value="Communication"/>
-      <profile value="http://hl7.org/fhir/StructureDefinition/Communication"/>
-      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq"/>
-      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply"/>
-      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq"/>
-      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"/>
+      <profile value="http://hl7.org/fhir/StructureDefinition/Communication|4.0.1"/>
+      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq|1.1.1"/>
+      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply|1.1.1"/>
+      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq|1.1.1"/>
+      <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative|1.1.1"/>
       <interaction>
         <code value="create"/>
       </interaction>
@@ -99,7 +99,7 @@
     </resource>
     <resource>
       <type value="MedicationDispense"/>
-      <profile value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"/>
+      <profile value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense|1.1.1"/>
       <interaction>
         <code value="read"/>
       </interaction>
@@ -118,7 +118,7 @@
     </resource>
     <resource>
       <type value="AuditEvent"/>
-      <profile value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent"/>
+      <profile value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent|1.1.1"/>
       <interaction>
         <code value="read"/>
       </interaction>
@@ -133,7 +133,7 @@
     </resource>
     <resource>
       <type value="Device"/>
-      <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
+      <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice|1.1.1"/>
       <interaction>
         <code value="read"/>
       </interaction>

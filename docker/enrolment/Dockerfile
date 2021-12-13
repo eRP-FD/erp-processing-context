@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.9 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.10 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \

@@ -53,6 +53,9 @@ private:
     // mCmac[1] belongs to the day before ...
     std::vector<CmacKey> mKeys;
 
+#ifdef FRIEND_TEST
+    FRIEND_TEST(PreUserPseudonymCmacTest, ERP6504RecoverAfterFailure);
+#endif
 };
 
 

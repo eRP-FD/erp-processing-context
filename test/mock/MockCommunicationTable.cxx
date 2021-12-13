@@ -183,6 +183,26 @@ void MockCommunicationTable::markCommunicationsAsRetrieved(const std::vector<Uui
     }
 }
 
+bool MockCommunicationTable::isBlobUsed(BlobId blobId) const
+{
+    auto hasBlobId = [blobId](const auto& row) {
+    return row.second.senderBlobId == blobId ||
+           row.second.recipientBlobId == blobId;
+
+    };
+    auto blobUser = find_if(mCommunications.begin(), mCommunications.end(), hasBlobId);
+    if (blobUser != mCommunications.end())
+    {
+        auto prescriptionId = model::PrescriptionId::fromDatabaseId(
+            model::PrescriptionType::apothekenpflichigeArzneimittel, blobUser->second.prescriptionId);
+        TVLOG(0) << "Blob " << blobId << R"( is still in use by an "task":)" << prescriptionId.toString();
+        return true;
+    }
+    return false;
+
+}
+
+
 void MockCommunicationTable::deleteCommunicationsForTask(const model::PrescriptionId& taskId)
 {
     std::lock_guard lock(mutex);

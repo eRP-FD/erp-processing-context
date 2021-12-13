@@ -756,7 +756,7 @@ namespace
         try
         {
             std::unique_ptr<XmlValidatorContext> validatorContext =
-                xmlValidator.getSchemaValidationContext(
+                xmlValidator.getSchemaValidationContextNoVer(
                     mode == TslMode::TSL ? SchemaType::Gematik_tsl : SchemaType::BNA_tsl);
             Expect3(validatorContext != nullptr,
                     "Can not get validator context.",

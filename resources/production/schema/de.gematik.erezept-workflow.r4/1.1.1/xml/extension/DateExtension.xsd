@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../GenericTypes.xsd"/>
+  <xs:element name="extension" type="Date.Extension"/>
+  <xs:complexType name="Date.Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueDate" type="date"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="Date.Extension.url" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Date.Extension.url">
+    <xs:restriction base="uri-primitive">
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/AcceptDate"/>
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ExpiryDate"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

@@ -11,18 +11,19 @@
 
 
 namespace model {
+using namespace std::string_literals;
 
-constexpr std::string_view binary_template = R"--(
+const std::string binary_template = R"--(
 {
   "resourceType": "Binary",
   "id": "",
   "meta": {
     "versionId": "1",
     "profile": [
-      "https://gematik.de/fhir/StructureDefinition/ErxBinary"
+      ""
     ]
   },
-  "contentType": "application/pkcs7-mime",
+  "contentType": "",
   "data" : ""
 }
 )--";
@@ -42,20 +43,46 @@ void initTemplates ()
 }
 
 // definition of JSON pointers:
-rapidjson::Pointer idPointer ("/id");
-rapidjson::Pointer dataPointer ("/data");
+rapidjson::Pointer idPointer("/id");
+rapidjson::Pointer contentTypePointer("/contentType");
+rapidjson::Pointer dataPointer("/data");
 
 }  // anonymous namespace
 
 
-Binary::Binary(std::string_view id, std::string_view data)
-    : Resource<Binary>()
-{
-    std::call_once(onceFlag, initTemplates);
+Binary::Binary(std::string_view id, std::string_view data, const Type type)
+    : Resource<Binary>(
+          [type]() {
+              switch (type)
+              {
+                  case Type::PKCS7:
+                      return "https://gematik.de/fhir/StructureDefinition/ErxBinary";
+                      break;
+                  case Type::Base64:
+                      return "http://hl7.org/fhir/StructureDefinition/Binary";
+                      break;
+              }
 
-    initFromTemplate(*BinaryTemplate);
+              Fail("Unhandled type value.");
+              return "";
+          }(),
+          []() {
+              std::call_once(onceFlag, initTemplates);
+              return BinaryTemplate;
+          }()
+              .instance())
+{
     setValue(idPointer, id);
     setValue(dataPointer, data);
+    switch (type)
+    {
+        case Type::PKCS7:
+            setValue(contentTypePointer, "application/pkcs7-mime");
+            break;
+        case Type::Base64:
+            setValue(contentTypePointer, "application/octet-stream");
+            break;
+    }
 }
 
 

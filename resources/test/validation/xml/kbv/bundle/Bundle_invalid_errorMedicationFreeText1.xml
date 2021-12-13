@@ -2,7 +2,7 @@
   <!--  Beispiel-Bundle Freitextverordnung als Sprechstundenbedarf  -->
   <id value="85d581e4-0153-4899-9bfa-f78d36ad8d82" />
   <meta>
-    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1" />
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2" />
   </meta>
   <identifier>
     <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
@@ -16,7 +16,7 @@
       <Composition>
         <id value="f965cb71-b3e9-4ab6-9209-333f39da3b20" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2" />
         </meta>
         <status value="final" />
         <type>
@@ -62,7 +62,7 @@
       <SupplyRequest>
         <id value="3dd54b78-65e2-4ac2-8e65-66b769ad1d95" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_PracticeSupply|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_PracticeSupply|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_PracticeSupply_Payor">
           <extension url="ik">
@@ -101,7 +101,7 @@
     <resource>
       <Medication>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
           <valueCoding>

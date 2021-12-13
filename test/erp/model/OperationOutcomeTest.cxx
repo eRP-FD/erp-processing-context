@@ -150,7 +150,7 @@ const std::string json = R"(
   ]
 })";
 
-    ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(OperationOutcome::fromJson(json)));
+    ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(OperationOutcome::fromJsonNoValidation(json)));
 }
 
 
@@ -194,8 +194,8 @@ TEST(OperationOutcomeTest, ConstructFromXml)
 </OperationOutcome>
 )";
 
-    ASSERT_NO_FATAL_FAILURE(
-        checkOperationOutcome(OperationOutcome::fromXml(xml, *StaticData::getXmlValidator(), SchemaType::fhir)));
+    ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(OperationOutcome::fromXml(
+        xml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir)));
 }
 
 

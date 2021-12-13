@@ -27,8 +27,8 @@ public:
     setKeyExpireAt(const std::string_view& key,
                    const std::chrono::time_point<std::chrono::system_clock,
                                                  std::chrono::milliseconds>& timestamp) override;
-
     int incr(const std::string_view& key) override;
+    void publish(const std::string_view& channel, const std::string_view& message) override;
 private:
     std::unique_ptr<sw::redis::Redis> mConnection;
     sw::redis::ConnectionOptions mOptions{};

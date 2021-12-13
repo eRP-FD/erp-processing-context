@@ -23,12 +23,16 @@ RUN apt-get update --fix-missing && \
     pkg-config \
     xz-utils \
     curl \
-    cmake \
     automake \
     clang-tidy \
     libefiboot-dev \
     libefivar-dev \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Update certificates and install latest version of cmake
+RUN update-ca-certificates && \
+    pip install --upgrade cmake
 
 # build gtest
 WORKDIR /usr/src/googletest

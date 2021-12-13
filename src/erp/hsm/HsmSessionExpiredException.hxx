@@ -15,7 +15,7 @@
 class HsmSessionExpiredException : public HsmException
 {
 public:
-    HsmSessionExpiredException (const std::string& what, int errorCode);
+    HsmSessionExpiredException(const std::string& what, const uint32_t errorCode);
 };
 
 

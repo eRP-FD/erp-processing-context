@@ -5,9 +5,9 @@
 
 #include "erp/tpm/Tpm.hxx"
 #include "erp/tpm/TpmProduction.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
@@ -41,7 +41,7 @@ private:
  */
 TEST_F(TpmProductionTest, createInstance)
 {
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
 
     std::unique_ptr<Tpm> tpm;
 
@@ -54,7 +54,7 @@ TEST_F(TpmProductionTest, createInstance)
 
 TEST_F(TpmProductionTest, getAttestationKey)
 {
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
 
     std::unique_ptr<Tpm> tpm = TpmProduction::createInstance(*blobCache);
 
@@ -71,7 +71,7 @@ TEST_F(TpmProductionTest, getAttestationKey)
 
 TEST_F(TpmProductionTest, getAttestationKey_failForMissingAkKeyPair)
 {
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
 
     std::unique_ptr<Tpm> tpm = TpmProduction::createInstance(*blobCache);
 
@@ -98,7 +98,7 @@ TEST_F(TpmProductionTest, getAttestationKey_getAttestationKey_manyThreads)
     const size_t threadCount = 100;
     const size_t callCount = 100;
 
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
 
     const auto ak = TpmProduction::createInstance(*blobCache)->getAttestationKey(true);
 
@@ -108,7 +108,7 @@ TEST_F(TpmProductionTest, getAttestationKey_getAttestationKey_manyThreads)
     {
         threads.emplace_back([&]
         {
-            for (size_t innerIndex = 0; innerIndex<callCount; ++innerIndex)
+            for (size_t innerIndex=0; innerIndex<callCount; ++innerIndex)
             {
                 std::unique_ptr<Tpm> tpm = TpmProduction::createInstance(*blobCache, -1);
                 const auto innerAk = tpm->getAttestationKey(true);

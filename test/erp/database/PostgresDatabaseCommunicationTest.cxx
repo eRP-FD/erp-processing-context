@@ -34,13 +34,6 @@ PrescriptionId PostgresDatabaseCommunicationTest::insertTask(Task& task)
     return prescriptionId;
 }
 
-void PostgresDatabaseCommunicationTest::deleteTaskByPrescriptionId(const int64_t prescriptionId)
-{
-    auto transaction = createTransaction();
-    const pqxx::result result = transaction.exec("DELETE FROM erp.task WHERE prescription_id = " + std::to_string(prescriptionId));
-    transaction.commit();
-}
-
 std::optional<Uuid> PostgresDatabaseCommunicationTest::insertCommunication(Communication& communication)
 {
     std::optional<Uuid> communicationId = database().insertCommunication(communication);
@@ -91,7 +84,7 @@ PostgresDatabaseCommunicationTest::retrieveCommunication(const Uuid& communicati
         auto key = getKeyDerivation().communicationKey(sender, getKeyDerivation().hashIdentity(sender), blobId, salt);
         auto communicationJson = getDBCodec().decode(
             db_model::EncryptedBlob{result[0][2].as<pqxx::binarystring>()}, key);
-        Communication communication = Communication::fromJson(communicationJson);
+        Communication communication = Communication::fromJsonNoValidation(communicationJson);
         // Please note that the communication id is not stored in the json string of the message
         // column as the id is only available after the data row has been inserted in the table.
         // To return a valid communication object the id will be set here.
@@ -132,8 +125,20 @@ UrlArguments PostgresDatabaseCommunicationTest::searchForReceived (const std::st
     return search;
 }
 
+std::string PostgresDatabaseCommunicationTest::taskFile() const
+{
+    switch (GetParam())
+    {
+        case PrescriptionType::apothekenpflichigeArzneimittel:
+            return "task1.json";
+        case PrescriptionType::direkteZuweisung:
+            return "task169.json";
+    }
+    return "task1.json";
+}
 
-TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
+
+TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
 {
     if (!usePostgres())
     {
@@ -144,8 +149,8 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -154,7 +159,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy)
         .setPayload("Do you have the medication available?").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     // The sender and timestamp json objects are usually added by the Post Communication Handler.
     // Those two json objects are mandatory when adding the communication object to the database.
     // So we simulate the Post Communication Handler here:
@@ -171,7 +176,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationReply)
+TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationReply)
 {
     if (!usePostgres())
     {
@@ -182,8 +187,8 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationReply)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -192,7 +197,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationReply)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
         .setPayload("Yes. The medication is available.").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     // The sender and timestamp json objects are usually added by the Post Communication Handler.
     // Those two json objects are mandatory when adding the communication object to the database.
     // So we simulate the Post Communication Handler here:
@@ -209,7 +214,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationReply)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
+TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
 {
     if (!usePostgres())
     {
@@ -220,8 +225,8 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -231,7 +236,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Pharmacists, mPharmacy)
         .setPayload("I want to pick up the medication.").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     // The sender and timestamp json objects are usually added by the Post Communication Handler.
     // Those two json objects are mandatory when adding the communication object to the database.
     // So we simulate the Post Communication Handler here:
@@ -248,7 +253,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
+TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
 {
     if (!usePostgres())
     {
@@ -259,8 +264,8 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -270,7 +275,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("json blob A").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     // The sender and timestamp json objects are usually added by the Post Communication Handler.
     // Those two json objects are mandatory when adding the communication object to the database.
     // So we simulate the Post Communication Handler here:
@@ -287,7 +292,7 @@ TEST_F(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication)
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)
 {
     if (!usePostgres())
     {
@@ -298,8 +303,8 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -311,7 +316,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy)
         .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJson(jsonString);
+    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
     infoReq.setSender(kvnrInsurant);
     infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
     std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
@@ -320,7 +325,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
         .setPayload("Yes. The medication is available.").createJsonString();
-    Communication reply = Communication::fromJson(jsonString);
+    Communication reply = Communication::fromJsonNoValidation(jsonString);
     reply.setSender(mPharmacy);
     reply.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:45:00.000+00:00"));
     std::optional<Uuid> idReply = insertCommunication(reply);
@@ -330,7 +335,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Pharmacists, mPharmacy)
         .setPayload("I want to pick up the medication").createJsonString();
-    Communication dispReq = Communication::fromJson(jsonString);
+    Communication dispReq = Communication::fromJsonNoValidation(jsonString);
     dispReq.setSender(kvnrInsurant);
     dispReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:54:00.000+00:00"));
     std::optional<Uuid> idDispReq = insertCommunication(dispReq);
@@ -340,7 +345,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantB)
         .setPayload("Can you pick up the medication for me?").createJsonString();
-    Communication representative = Communication::fromJson(jsonString);
+    Communication representative = Communication::fromJsonNoValidation(jsonString);
     representative.setSender(kvnrInsurant);
     representative.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:58:00.000+00:00"));
     representative.setTimeReceived(Timestamp::fromXsDateTime("2022-01-24T12:58:00.000+00:00"));
@@ -427,7 +432,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)
 {
     if (!usePostgres())
     {
@@ -438,8 +443,8 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -453,7 +458,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy)
         .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJson(jsonString);
+    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
     infoReq.setSender(kvnrInsurant);
     infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
     std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
@@ -492,7 +497,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
 {
     if (!usePostgres())
     {
@@ -503,8 +508,8 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -516,7 +521,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy)
         .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJson(jsonString);
+    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
     infoReq.setSender(kvnrInsurant);
     infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
     std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
@@ -525,7 +530,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
         .setPayload("Yes. The medication is available.").createJsonString();
-    Communication reply = Communication::fromJson(jsonString);
+    Communication reply = Communication::fromJsonNoValidation(jsonString);
     reply.setSender(mPharmacy);
     reply.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:45:00.000+00:00"));
     std::optional<Uuid> idReply = insertCommunication(reply);
@@ -535,7 +540,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Pharmacists, mPharmacy)
         .setPayload("I want to pick up the medication").createJsonString();
-    Communication dispReq = Communication::fromJson(jsonString);
+    Communication dispReq = Communication::fromJsonNoValidation(jsonString);
     dispReq.setSender(kvnrInsurant);
     dispReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:54:00.000+00:00"));
     std::optional<Uuid> idDispReq = insertCommunication(dispReq);
@@ -545,7 +550,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantB)
         .setPayload("Can you pick up the medication for me?").createJsonString();
-    Communication representative = Communication::fromJson(jsonString);
+    Communication representative = Communication::fromJsonNoValidation(jsonString);
     representative.setSender(kvnrInsurant);
     representative.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:58:00.000+00:00"));
     std::optional<Uuid> idRepresentative = insertCommunication(representative);
@@ -618,7 +623,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipient)
+TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipient)
 {
     if (!usePostgres())
     {
@@ -629,8 +634,8 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipie
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -643,7 +648,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipie
             .setRecipient(ActorRole::Insurant, InsurantA)
             .setPayload("json blob A")
             .setTimeSent("2022-01-23T12:34:00Z").createJsonString();
-    auto c1 = Communication::fromJson(jsonStringC1);
+    auto c1 = Communication::fromJsonNoValidation(jsonStringC1);
     insertCommunication(c1);
 
     const std::string jsonStringC2 = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
@@ -653,7 +658,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipie
             .setRecipient(ActorRole::Insurant, InsurantA)
             .setTimeSent("2022-01-23T12:45:00Z")
             .setPayload("json blob B").createJsonString();
-    auto c2 = Communication::fromJson(jsonStringC2);
+    auto c2 = Communication::fromJsonNoValidation(jsonStringC2);
     insertCommunication(c2);
 
     {
@@ -671,7 +676,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipie
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId)
+TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId)
 {
     if (!usePostgres())
     {
@@ -682,8 +687,8 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -694,7 +699,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("json blob A").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     c1.setSender(kvnrInsurant);
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     const auto c1id = insertCommunication(c1);
@@ -704,7 +709,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("json blob B").createJsonString();
-    Communication c2 = Communication::fromJson(jsonStringC2);
+    Communication c2 = Communication::fromJsonNoValidation(jsonStringC2);
     c2.setSender(kvnrInsurant);
     c2.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:45:00Z"));
     const auto c2id = insertCommunication(c2);
@@ -731,7 +736,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId
  * At the moment only a part of the underlying data types is (dateTime) is implemented and allow only test
  * for equality. Periods and timing are not supported yet.
 */
-TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)
+TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)
 {
     if (!usePostgres())
     {
@@ -742,8 +747,8 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -754,7 +759,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("json blob A").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     c1.setSender(kvnrInsurant);
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     insertCommunication(c1);
@@ -764,7 +769,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("json blob B").createJsonString();
-    Communication c2 = Communication::fromJson(jsonStringC2);
+    Communication c2 = Communication::fromJsonNoValidation(jsonStringC2);
     c2.setSender(kvnrInsurant);
     c2.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:45:00Z"));
     insertCommunication(c2);
@@ -797,7 +802,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)
  * At the moment only a part of the underlying data types is (dateTime) is implemented and allow only test
  * for equality. Periods and timing are not supported yet.
 */
-TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
+TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
 {
     if (!usePostgres())
     {
@@ -808,8 +813,8 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -820,7 +825,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("json blob A").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     c1.setSender(kvnrInsurant);
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     c1.setTimeReceived(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
@@ -831,7 +836,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantA)
         .setPayload("json blob B").createJsonString();
-    Communication c2 = Communication::fromJson(jsonStringC2);
+    Communication c2 = Communication::fromJsonNoValidation(jsonStringC2);
     c2.setSender(kvnrInsurant);
     c2.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:45:00Z"));
     c2.setTimeReceived(Timestamp::fromXsDateTime("2022-01-23T12:45:00Z"));
@@ -859,7 +864,7 @@ TEST_F(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
  * This test is work in progress because the task id is not yet a member of the Communication class nor of
  * the erp_communication table. Therefore it can not yet act as filter on the count.
 */
-TEST_F(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
+TEST_P(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
 {
     if (!usePostgres())
     {
@@ -870,8 +875,8 @@ TEST_F(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -881,7 +886,7 @@ TEST_F(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
         .setPayload("json blob A").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     c1.setSender(InsurantB);
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     insertCommunication(c1);
@@ -891,7 +896,7 @@ TEST_F(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantB)
         .setPayload("json blob B").createJsonString();
-    Communication c2 = Communication::fromJson(jsonStringC2);
+    Communication c2 = Communication::fromJsonNoValidation(jsonStringC2);
     c2.setSender(kvnrInsurant);
     c2.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     insertCommunication(c2);
@@ -901,7 +906,7 @@ TEST_F(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantC)
         .setPayload("json blob C").createJsonString();
-    Communication c3 = Communication::fromJson(jsonStringC3);
+    Communication c3 = Communication::fromJsonNoValidation(jsonStringC3);
     c3.setSender(kvnrInsurant);
     c3.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     insertCommunication(c3);
@@ -945,7 +950,7 @@ TEST_F(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
+TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
 {
     if (!usePostgres())
     {
@@ -956,8 +961,8 @@ TEST_F(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
     verifyDatabaseIsTidy();
 
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -967,7 +972,7 @@ TEST_F(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
         .setPayload("json blob A").createJsonString();
-    Communication c1 = Communication::fromJson(jsonStringC1);
+    Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     c1.setSender(InsurantB);
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     const auto c1id = insertCommunication(c1);
@@ -977,7 +982,7 @@ TEST_F(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantB)
         .setPayload("json blob B").createJsonString();
-    Communication c2 = Communication::fromJson(jsonStringC2);
+    Communication c2 = Communication::fromJsonNoValidation(jsonStringC2);
     c2.setSender(kvnrInsurant);
     c2.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:45:00Z"));
     c2.setTimeReceived(Timestamp::fromXsDateTime("2022-01-23T12:45:00Z"));
@@ -988,7 +993,7 @@ TEST_F(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Insurant, InsurantC)
         .setPayload("json blob C").createJsonString();
-    Communication c3 = Communication::fromJson(jsonStringC3);
+    Communication c3 = Communication::fromJsonNoValidation(jsonStringC3);
     c3.setSender(kvnrInsurant);
     c3.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     const auto c3id = insertCommunication(c3);
@@ -1020,15 +1025,15 @@ TEST_F(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
 }
 
 
-TEST_F(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
     std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-    Task task = Task::fromJson(jsonString);
+    std::string jsonString = FileHelper::readFileAsString(dataPath  + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     std::string_view kvnrInsurant = task.kvnr().value();
 
@@ -1038,7 +1043,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
                 .setAccessCode(std::string(task.accessCode()))
                 .setRecipient(ActorRole::Pharmacists, mPharmacy)
                 .setPayload("Message text 1.").createJsonString();
-        Communication comm = Communication::fromJson(jsonString);
+        Communication comm = Communication::fromJsonNoValidation(jsonString);
         comm.setSender(kvnrInsurant);
         comm.setTimeSent(Timestamp::fromXsDateTime("2021-02-17T13:34:45.940+00:00"));
         insertCommunication(comm);
@@ -1049,7 +1054,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
                 .setAccessCode(std::string(task.accessCode()))
                 .setRecipient(ActorRole::Pharmacists, mPharmacy)
                 .setPayload("Message text 1.").createJsonString();
-        Communication comm = Communication::fromJson(jsonString);
+        Communication comm = Communication::fromJsonNoValidation(jsonString);
         comm.setSender(kvnrInsurant);
         comm.setTimeSent(Timestamp::fromXsDateTime("2021-02-17T14:50:11.863+00:00"));
         insertCommunication(comm);
@@ -1072,3 +1077,7 @@ TEST_F(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
 
     ASSERT_EQ(result.front().at(0).as<int>(), 0);
 }
+
+INSTANTIATE_TEST_SUITE_P(PostgresDatabaseCommunicationTestInst, PostgresDatabaseCommunicationTest,
+                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                         model::PrescriptionType::direkteZuweisung));

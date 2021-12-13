@@ -11,6 +11,7 @@
 #include <rapidjson/pointer.h>
 #include <thread>// for std::this_thread::sleep_for
 
+#include "erp/ErpRequirements.hxx"
 #include "erp/model/ModelException.hxx"
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -127,8 +128,8 @@ TEST_F(TaskTest, SetAndDeleteKvnr)
 TEST_F(TaskTest, FromJson)
 {
     const auto task1 = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/task1.json");
-    ASSERT_NO_THROW(model::Task::fromJson(task1));
-    const auto task = model::Task::fromJson(task1);
+    ASSERT_NO_THROW(model::Task::fromJsonNoValidation(task1));
+    const auto task = model::Task::fromJsonNoValidation(task1);
     ASSERT_EQ(task.status(), model::Task::Status::ready);
     const auto prescriptionId = task.prescriptionId();
     ASSERT_EQ(prescriptionId.toString(), "160.000.000.004.711.86");
@@ -187,15 +188,17 @@ TEST_F(TaskTest, AcceptDate)
 }
 
 
-TEST_F(TaskTest, AcceptDate30Days)
+TEST_F(TaskTest, AcceptDate28Days)
 {
+    A_21265.test("Task.AcceptDate = <Date of QES Creation + 28 days");
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     auto baseDate = 2021_y/April/23;
     task.setAcceptDate(model::Timestamp(sys_days{baseDate}), model::KbvStatusKennzeichen::asvKennzeichen, 3);
-    auto expected = sys_days{baseDate} + days{30};
+    auto expected = sys_days{baseDate} + days{28};
     ASSERT_EQ(task.acceptDate().toChronoTimePoint(), expected);
+    A_21265.finish();
 }
 
 

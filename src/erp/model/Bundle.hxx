@@ -6,24 +6,46 @@
 #ifndef ERP_PROCESSING_CONTEXT_BUNDLE_HXX
 #define ERP_PROCESSING_CONTEXT_BUNDLE_HXX
 
-//#include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/Link.hxx"
+#include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Resource.hxx"
+#include "erp/model/Signature.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/server/response/ServerResponse.hxx"
-#include "erp/model/Signature.hxx"
 #include "erp/util/Expect.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
 #include <vector>
 
+
 class Uuid;
 
 namespace model
 {
 
-class Bundle : public Resource<Bundle>
+// https://simplifier.net/packages/hl7.fhir.r4.core/4.0.1/files/80374
+enum class BundleType
+{
+    document,            // The bundle is a document. The first resource is a Composition.
+    message,             // The bundle is a message. The first resource is a MessageHeader.
+    transaction,         // The bundle is a transaction - intended to be processed by a server as an atomic commit.
+    transaction_response,// The bundle is a transaction response. Because the response is a transaction response,
+                         //  the transaction has succeeded, and all responses are error free.
+    batch,               // The bundle is a set of actions - intended to be processed by a server as a group of
+                         //  independent actions
+    batch_response,      // The bundle is a batch response. Note that as a batch, some responses may indicate
+                         //  failure and others success.
+    history,             // The bundle is a list of resources from a history interaction on a server.
+    searchset,           // The bundle is a list of resources returned as a result of a search/query interaction,
+                         //  operation, or message.
+    collection           // The bundle is a set of resources collected into a single package for ease of
+                         //  distribution that imposes no processing obligations or behavioral rules beyond
+                         //  persistence.
+};
+
+template <class DerivedBundle, typename SchemaVersionType = ResourceVersion::DeGematikErezeptWorkflowR4>
+class BundleBase : public Resource<DerivedBundle, SchemaVersionType>
 {
 public:
     enum class SearchMode
@@ -33,28 +55,17 @@ public:
         outcome
     };
 
-    // https://simplifier.net/packages/hl7.fhir.r4.core/4.0.1/files/80374
-    enum class Type
-    {
-        document,            // The bundle is a document. The first resource is a Composition.
-        message,             // The bundle is a message. The first resource is a MessageHeader.
-        transaction,         // The bundle is a transaction - intended to be processed by a server as an atomic commit.
-        transaction_response,// The bundle is a transaction response. Because the response is a transaction response,
-                             //  the transaction has succeeded, and all responses are error free.
-        batch,               // The bundle is a set of actions - intended to be processed by a server as a group of
-                             //  independent actions
-        batch_response,      // The bundle is a batch response. Note that as a batch, some responses may indicate
-                             //  failure and others success.
-        history,             // The bundle is a list of resources from a history interaction on a server.
-        searchset,           // The bundle is a list of resources returned as a result of a search/query interaction,
-                             //  operation, or message.
-        collection           // The bundle is a set of resources collected into a single package for ease of
-                             //  distribution that imposes no processing obligations or behavioral rules beyond
-                             //  persistence.
-    };
+    using Resource<DerivedBundle, SchemaVersionType>::Resource;
+    using Resource<DerivedBundle, SchemaVersionType>::setValue;
+    using Resource<DerivedBundle, SchemaVersionType>::setKeyValue;
+    using Resource<DerivedBundle, SchemaVersionType>::addToArray;
+    using Resource<DerivedBundle, SchemaVersionType>::getValueMember;
+    using Resource<DerivedBundle, SchemaVersionType>::getValue;
+    using Resource<DerivedBundle, SchemaVersionType>::getStringValue;
+    using Resource<DerivedBundle, SchemaVersionType>::findStringInArray;
 
-    explicit Bundle (Type type);
-    explicit Bundle (Type type, const Uuid& bundleId);
+    BundleBase(BundleType type, ResourceBase::Profile profile);
+    BundleBase(BundleType type, ResourceBase::Profile profile, const Uuid& bundleId);
 
     void setId(const Uuid& bundleId);
 
@@ -81,7 +92,7 @@ public:
     [[nodiscard]] std::string_view getResourceLink (const size_t index) const;
 
     template<typename TResource>
-    [[nodiscard]] std::vector<TResource> getResourcesByType(std::string_view type) const;
+    [[nodiscard]] std::vector<TResource> getResourcesByType(std::string_view type = TResource::resourceTypeName) const;
 
     void setSignature (rapidjson::Value& signature);
     void setSignature(const model::Signature& signature);
@@ -97,12 +108,10 @@ public:
     [[nodiscard]] std::string_view getResourceType (void) const;
     [[nodiscard]] Uuid getId () const;
     [[nodiscard]] size_t getTotalSearchMatches() const;
-    [[nodiscard]] Type getBundleType() const;
+    [[nodiscard]] BundleType getBundleType() const;
+    [[nodiscard]] PrescriptionId getIdentifier() const;
 
     void setTotalSearchMatches(std::size_t totalSearchMatches);
-
-protected:
-    explicit Bundle (NumberAsStringParserDocument&& document);
 
 private:
     void increaseTotalSearchMatches();
@@ -112,12 +121,13 @@ private:
 };
 
 
+template <class DerivedBundle, typename SchemaVersionType>
 template<typename TResource>
-std::vector<TResource> Bundle::getResourcesByType (const std::string_view type) const
+std::vector<TResource> BundleBase<DerivedBundle, SchemaVersionType>::getResourcesByType (const std::string_view type) const
 {
     std::vector<TResource> resources;
 
-    const auto* entries = getValue(rapidjson::Pointer("/entry"));
+    const auto* entries = this->getValue(rapidjson::Pointer("/entry"));
     ModelExpect(entries && entries->IsArray(), "entry array not present in Bundle");
     for (auto entry = entries->Begin(), end = entries->End(); entry != end; ++entry)
     {
@@ -134,6 +144,14 @@ std::vector<TResource> Bundle::getResourcesByType (const std::string_view type) 
 
     return resources;
 }
+
+class Bundle final : public BundleBase<Bundle>
+{
+public:
+    using BundleBase<Bundle>::BundleBase;
+    using Resource<Bundle>::fromXml;
+    using Resource<Bundle>::fromJson;
+};
 
 } // end of namespace model
 

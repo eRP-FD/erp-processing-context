@@ -58,8 +58,9 @@ public:
     [[nodiscard]] uint64_t countAuditEventData(const std::string& kvnr,
                                                const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] std::optional<model::Task> retrieveTask(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::optional<model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) override;
+    [[nodiscard]] ::std::tuple<::std::optional<::model::Task>, ::std::optional<::model::Binary>>
+    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
 
     [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Bundle>>
     retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
@@ -77,7 +78,7 @@ public:
     countAllMedicationDispenses(const std::string& kvnr,
                                 const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] CmacKey acquireCmac(const date::sys_days& validDate, RandomSource& randomSource) override;
+    [[nodiscard]] CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
     [[nodiscard]] std::optional<Uuid> insertCommunication(model::Communication& communication) override;
     [[nodiscard]] uint64_t countRepresentativeCommunications(const std::string& insurantA, const std::string& insurantB,
                                                              const model::PrescriptionId& prescriptionId) override;
@@ -93,6 +94,10 @@ public:
     void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds, const model::Timestamp& retrieved,
                                        const std::string& recipient) override;
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId) override;
+
+    void storeConsent(const model::Consent& consent) override;
+    std::optional<model::Consent> getConsent(const std::string_view& kvnr) override;
+    [[nodiscard]] bool clearConsent(const std::string_view& kvnr) override;
 
     [[nodiscard]] DatabaseBackend& getBackend() override;
 

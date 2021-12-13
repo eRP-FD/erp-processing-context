@@ -33,8 +33,19 @@ namespace {
             Operation::DELETE_Communication_id,
             Operation::GET_AuditEvent,
             Operation::GET_AuditEvent_id,
+            // PKV specific:  ->
+            Operation::DELETE_ChargeItem_id,
+            Operation::GET_ChargeItem,
+            Operation::GET_ChargeItem_id,
+            Operation::POST_ChargeItem,
+            Operation::PUT_ChargeItem_id,
+            Operation::DELETE_Consent_id,
+            Operation::GET_Consent,
+            Operation::POST_Consent,
+            // <-
             Operation::GET_Device,
             Operation::GET_metadata,
+            Operation::POST_Subscription,
             Operation::UNKNOWN // when parsing the inner request fails the operation is unknown
 
             // Well, almost all operations. and POST_VAU_up are special and not included.
@@ -58,7 +69,18 @@ namespace {
             Operation::POST_Task_id_close,
             Operation::POST_Task_id_abort,
             Operation::POST_Communication,
-            Operation::DELETE_Communication_id   // Added although not present in spec
+            Operation::DELETE_Communication_id,  // Added although not present in spec
+            Operation::POST_Subscription,
+            // PKV specific:  ->
+            Operation::DELETE_ChargeItem_id,
+            Operation::GET_ChargeItem,
+            Operation::GET_ChargeItem_id,
+            Operation::POST_ChargeItem,
+            Operation::PUT_ChargeItem_id,
+            Operation::DELETE_Consent_id,
+            Operation::GET_Consent,
+            Operation::POST_Consent,
+            // <-
         };
 
     std::unordered_set<Operation> operationsWithRequestBody =
@@ -67,6 +89,12 @@ namespace {
             Operation::POST_Task_id_activate,
             Operation::POST_Task_id_close,
             Operation::POST_Communication,
+            Operation::POST_Subscription,
+            // PKV specific:  ->
+            Operation::POST_ChargeItem,
+            Operation::PUT_ChargeItem_id,
+            Operation::POST_Consent,
+            // <-
         };
 
     std::unordered_set<Operation> operationsWithResponseBody =
@@ -83,6 +111,15 @@ namespace {
             Operation::POST_Task_id_activate,
             Operation::POST_Task_id_accept,
             Operation::POST_Task_id_close,
+            Operation::POST_Subscription,
+            // PKV specific:  ->
+            Operation::GET_ChargeItem,
+            Operation::GET_ChargeItem_id,
+            Operation::POST_ChargeItem,
+            Operation::PUT_ChargeItem_id,
+            Operation::GET_Consent,
+            Operation::POST_Consent,
+            // <-
             Operation::GET_notifications_opt_in,
             Operation::GET_notifications_opt_out,
             Operation::GET_Device,
@@ -104,10 +141,17 @@ namespace {
                     Operation::POST_Task_id_activate,
                     Operation::POST_Task_id_accept,
                     Operation::POST_Task_id_close,
+                    // PKV specific:  ->
+                    Operation::GET_ChargeItem,
+                    Operation::GET_ChargeItem_id,
+                    Operation::PUT_ChargeItem_id,
+                    Operation::GET_Consent,
+                    // <-
                     Operation::GET_notifications_opt_in,
                     Operation::GET_notifications_opt_out,
                     Operation::GET_Device,
-                    Operation::GET_metadata
+                    Operation::GET_metadata,
+                    Operation::POST_Subscription
 
                  // gemspec_FD_eRp_V1.1.1 is a bit vague about the exact set of values. I.e. it ends in the sentence
                  // (translated) GET, etc for all other operations
@@ -117,13 +161,21 @@ namespace {
             {HttpStatus::Created,                 // 201
                 {
                     Operation::POST_Task_create,
-                    Operation::POST_Communication
+                    Operation::POST_Communication,
+                    // PKV specific:  ->
+                    Operation::POST_ChargeItem,
+                    Operation::POST_Consent,
+                    // <-
                 }},
             {HttpStatus::NoContent,               // 204
                 {
                     Operation::POST_Task_id_abort,
                     Operation::POST_Task_id_reject,
-                    Operation::DELETE_Communication_id
+                    Operation::DELETE_Communication_id,
+                    // PKV specific:  ->
+                    Operation::DELETE_ChargeItem_id,
+                    Operation::DELETE_Consent_id
+                    // <-
                 }},
             {HttpStatus::BadRequest,              // 400
                 allOperations},
@@ -144,10 +196,22 @@ namespace {
                     Operation::GET_Communication_id,
                     Operation::GET_MedicationDispense_id,
                     Operation::GET_notifications_opt_out,
-                    Operation::DELETE_Communication_id
+                    Operation::DELETE_Communication_id,
+                    // PKV specific:  ->
+                    Operation::GET_ChargeItem_id,
+                    Operation::PUT_ChargeItem_id,
+                    Operation::DELETE_Consent_id,
+                    Operation::GET_Consent,     // TODO not sure;
+                    Operation::POST_Consent,
+                    // <-
                 }},
             {HttpStatus::MethodNotAllowed,        // 405
-                {Operation::UNKNOWN}},
+                {
+                    // PKV specific:  ->
+                    Operation::POST_ChargeItem,
+                    // <-
+                    Operation::UNKNOWN
+                }},
             {HttpStatus::NotAcceptable,           // 406
                 operationsWithResponseBody},
             {HttpStatus::RequestTimeout,          // 408
@@ -155,7 +219,10 @@ namespace {
             {HttpStatus::Conflict,                // 409
                 {
                     Operation::POST_Task_id_accept,
-                    Operation::POST_Task_id_abort
+                    Operation::POST_Task_id_abort,
+                    // PKV specific:  ->
+                    Operation::POST_Consent,
+                    // <-
                 }},
             {HttpStatus::Gone,                    // 410
                 {

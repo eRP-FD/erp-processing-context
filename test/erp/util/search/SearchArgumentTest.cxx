@@ -45,16 +45,17 @@ public:
         // Create a task object that can be referenced from communication objects.
         std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
         std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-        model::Task task = model::Task::fromJson(jsonString);
+        model::Task task = model::Task::fromJsonNoValidation(jsonString);
         mTaskId.emplace(database->storeTask(task));
 
         // Create a communication object.
-        model::Communication communication = model::Communication::fromJson(
+        model::Communication communication = model::Communication::fromJsonNoValidation(
             CommunicationJsonStringBuilder(model::Communication::MessageType::Representative)
                 .setSender(ActorRole::Representative, sender)
                 .setRecipient(ActorRole::Representative, recipient)
                 .setTimeSent("2021-09-08T12:34:56.123+00:00")
-                .setPrescriptionId(mTaskId.value().toString()).createJsonString());
+                .setPrescriptionId(mTaskId.value().toString())
+                .createJsonString());
         mCommunicationId = database->insertCommunication(communication);
         mCommunicationSender = communication.sender().value();
         communication.setId(mCommunicationId.value());
@@ -601,7 +602,7 @@ TEST_F(SearchArgumentTest, eb_date_sql)
 
 TEST_F(SearchArgumentTest, data_failForFractionalSeconds)
 {
-    for (const std::string& prefix : {"", "eq", "ne", "gt", "ge", "lt", "le", "sa", "eb"})
+    for (const std::string prefix : {"", "eq", "ne", "gt", "ge", "lt", "le", "sa", "eb"})
     {
         // Fail for fractional seconds.
         testFailure("sent", prefix + "2021-09-08T12:34:56.123+00:00");

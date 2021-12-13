@@ -1,0 +1,66 @@
+{
+  "resourceType": "Communication",
+  "meta": {
+    "profile": [
+      "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply"
+    ],
+    "tag": [
+      {
+        "code": "patient-provider",
+        "display": "Antwort Belieferfaehigkeit"
+      }
+    ]
+  },
+  "basedOn": [
+    {
+      "reference": "Task/160.000.074.296.023.43"
+    }
+  ],
+  "status": "unknown",
+  "sent": "2020-03-12T18:01:10+00:00",
+  "recipient": [
+    {
+      "identifier": {
+        "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
+        "value": "X123456799"
+      }
+    }
+  ],
+  "sender": {
+    "identifier": {
+      "system": "https://gematik.de/fhir/NamingSystem/TelematikID",
+      "value": "I-4234234230"
+    }
+  },
+  "payload": [
+    {
+      "extension": [
+        {
+          "url": "https://gematik.de/fhir/StructureDefinition/SupplyOptionsType",
+          "extension": [
+            {
+              "url": "onPremise",
+              "valueBoolean": true
+            },
+            {
+              "url": "delivery",
+              "valueBoolean": true
+            },
+            {
+              "url": "shipment",
+              "valueBoolean": true
+            }
+          ]
+        },
+        {
+          "url": "https://gematik.de/fhir/StructureDefinition/AvailabilityStateExtension",
+          "valueCoding": {
+            "system": "https://gematik.de/fhir/CodeSystem/AvailabilityStatus",
+            "code": "10"
+          }
+        }
+      ],
+      "contentString": "Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten. https://apotheken-pvs/uri?q=1&q2"
+    }
+  ]
+}

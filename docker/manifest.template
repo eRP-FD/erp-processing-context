@@ -12,7 +12,7 @@ loader.log_file                     = "/var/log/erp/gramine.log"
 loader.insecure__use_cmdline_argv   = false
 loader.argv0_override               = "erp-processing-context"
 loader.insecure__use_host_env       = true
-loader.env.LD_LIBRARY_PATH          = "/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:/erp/lib"
+loader.env.LD_LIBRARY_PATH          = "/erp/lib:/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu"
 
 sgx.enclave_size                    = "4096M"
 sgx.nonpie_binary                   = false
@@ -110,7 +110,7 @@ sgx.trusted_files = [
 "file:/usr/lib/x86_64-linux-gnu/",
 "file:/usr/lib/x86_64-linux-gnu/gramine/",
 # ERP files
-"file:configuration.json",
+"file:01_production.config.json",
 "file:/var/log/erp/",
 # ERP libs
 "file:/erp/lib/libcsxapi.so",
@@ -119,6 +119,7 @@ sgx.trusted_files = [
 "file:/erp/lib/libibmtss.so.1.6.0",
 "file:/erp/lib/libibmtssutils.so.1",
 "file:/erp/lib/libibmtssutils.so.1.6.0",
+"file:/erp/lib/libcrypto.so.1.1",
 "file:/erp/lib/libssl.so.1.1",
 "file:/erp/lib/libtpmclient.so",
 __ADDITIONAL_TRUST_FILES__

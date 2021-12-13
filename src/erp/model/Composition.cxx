@@ -18,14 +18,15 @@ namespace model
 
 namespace
 {
+using namespace std::string_literals;
 
-constexpr std::string_view composition_template = R"--(
+const std::string composition_template = R"--(
  {
   "resourceType": "Composition",
   "id": "",
   "meta":{
     "profile":[
-      "https://gematik.de/fhir/StructureDefinition/ErxComposition"
+      ""
     ]
   },
   "extension":[
@@ -77,35 +78,42 @@ void initTemplates ()
 
 // definition of JSON pointers:
 const rapidjson::Pointer idPointer ("/id");
-const rapidjson::Pointer telematicIdPointer ("/extension/0/valueIdentifier/value");
+const rapidjson::Pointer telematikIdPointer("/extension/0/valueIdentifier/value");
 const rapidjson::Pointer datePointer ("/date");
 const rapidjson::Pointer eventPeriodStartPointer ("/event/0/period/start");
 const rapidjson::Pointer eventPeriodEndPointer ("/event/0/period/end");
+const rapidjson::Pointer authorArrayPointer ("/author");
+const rapidjson::Pointer authorRelSystemPointer ("/identifier/system");
 const rapidjson::Pointer authorPointer ("/author/0/reference");
 const rapidjson::Pointer extensionPointer ("/extension");
 const rapidjson::Pointer valueCodingCodeRelPointer ("/valueCoding/code");
 const rapidjson::Pointer valueCodingSystemRelPointer("/valueCoding/system");
 const rapidjson::Pointer urlRelPointer("/url");
+const rapidjson::Pointer section0Entry0ReferencePointer("/section/0/entry/0/reference");
 }  // anonymous namespace
 
 
-Composition::Composition(
-    const std::string_view& telematicId,
-    const model::Timestamp& start,
-    const model::Timestamp& end,
-    const std::string_view& author)
-    : Resource<Composition>()
+Composition::Composition(const std::string_view& telematicId, const model::Timestamp& start,
+                         const model::Timestamp& end, const std::string_view& author,
+                         const std::string_view& prescriptionDigestIdentifier)
+    : Resource<Composition>("https://gematik.de/fhir/StructureDefinition/ErxComposition",
+                            []() {
+                                std::call_once(onceFlag, initTemplates);
+                                return compositionTemplate;
+                            }()
+                                .instance())
 {
-    std::call_once(onceFlag, initTemplates);
-
-    initFromTemplate(*compositionTemplate);
-
     setValue(idPointer, Uuid().toString());
-    setValue(telematicIdPointer, telematicId);
+    setValue(telematikIdPointer, telematicId);
     setValue(datePointer, end.toXsDateTime());
     setValue(eventPeriodStartPointer, start.toXsDateTime());
     setValue(eventPeriodEndPointer, end.toXsDateTime());
     setValue(authorPointer, author);
+    const auto profileVersion = ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>();
+    if (profileVersion != ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1)
+    {
+        setValue(section0Entry0ReferencePointer, prescriptionDigestIdentifier);
+    }
 }
 
 
@@ -122,9 +130,9 @@ std::string_view Composition::id() const
 }
 
 
-std::optional<std::string_view> Composition::telematicId () const
+std::optional<std::string_view> Composition::telematikId() const
 {
-    return getOptionalStringValue(telematicIdPointer);
+    return getOptionalStringValue(telematikIdPointer);
 }
 
 
@@ -158,6 +166,23 @@ std::optional<model::Timestamp> Composition::periodEnd() const
 std::optional<std::string_view> Composition::author () const
 {
     return getOptionalStringValue(authorPointer);
+}
+
+
+std::optional<std::string_view> Composition::prescriptionDigestIdentifier() const
+{
+    return getOptionalStringValue(section0Entry0ReferencePointer);
+}
+
+
+std::optional<std::string_view> Composition::authorIdentifierSystem(int idx) const
+{
+    const auto* author = getMemberInArray(authorArrayPointer, idx);
+    if (author)
+    {
+        return this->getOptionalStringValue(*author, authorRelSystemPointer);
+    }
+    return std::nullopt;
 }
 
 

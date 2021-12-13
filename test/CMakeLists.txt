@@ -16,6 +16,9 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/test_config.h.in" "${CMAKE_CURRENT_B
 set(ERP_TEST_LIB_SOURCES
         mock/ClientTeeProtocol.cxx
         util/JsonTestUtils.cxx
+        workflow-test/A_21265_ProzessParameterFlowtype.cxx
+        workflow-test/A_21370_CheckPrescriptionIdOnActivate.cxx
+        workflow-test/A_22068_MehrfachverordnungAblehnen.cxx
         workflow-test/TestClient.cxx
         workflow-test/Erp5827Test.cxx
         workflow-test/Erp5833Test.cxx
@@ -24,15 +27,17 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp5898Test.cxx
         workflow-test/Erp6590Test.cxx
         workflow-test/Erp6619Test.cxx
+        workflow-test/Erp8538Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
+        workflow-test/ErpWorkflow169Test.cxx
         workflow-test/ErpWorkflowTestFixture.cxx
         workflow-test/HttpsTestClient.cxx
         util/CertificateDirLoader.cxx
+        util/CryptoHelper.cxx
         util/TestConfiguration.cxx
         util/EnvironmentVariableGuard.hxx
-        util/BlobDatabaseHelper.cxx
-        util/HsmTestBase.cxx)
+    )
 
 add_library(erp-test-lib OBJECT ${ERP_TEST_LIB_SOURCES})
 target_link_libraries(erp-test-lib
@@ -95,6 +100,7 @@ list(
         erp/crypto/SecureRandomGeneratorTest.cxx
         erp/crypto/SeederTest.cxx
         erp/crypto/Sha256Test.cxx
+        erp/database/ConsentTableTest.cxx
         erp/database/DatabaseCodecTest.cxx
         erp/database/DatabaseEncryptionTest.cxx
         erp/database/PostgresBackendTest.cxx
@@ -105,7 +111,6 @@ list(
         erp/database/RedisClientTest.cxx
         erp/database/TransactionTest.cxx
         erp/enrolment/EnrolmentServerTest.cxx
-        erp/enrolment/EnrolmentHelperTest.cxx
         erp/fhir/FhirConverterTest.cxx
         erp/fhir/FhirElementTest.cxx
         erp/fhir/FhirStructureDefinitionParserTest.cxx
@@ -115,11 +120,8 @@ list(
         erp/hsm/BlobDatabaseTest.cxx
         erp/hsm/ErpTypesTest.cxx
         erp/hsm/HsmIdentityTest.cxx
-        erp/hsm/HsmPoolTest.cxx
         erp/hsm/HsmPoolSessionRemoverTest.cxx
-        erp/hsm/production/HsmSessionReconnectTest.cxx
         erp/hsm/production/ProductionBlobDatabaseTest.cxx
-        erp/hsm/TeeTokenUpdaterTest.cxx
         erp/idp/IdpTest.cxx
         erp/idp/IdpUpdaterTest.cxx
         erp/mock/ClientTeeProtocolTest.cxx
@@ -127,10 +129,13 @@ list(
         erp/model/AuditEventTest.cxx
         erp/model/BinaryTest.cxx
         erp/model/BundleTest.cxx
+        erp/model/ChargeItemTest.cxx
         erp/model/CommunicationTest.cxx
         erp/model/CompositionTest.cxx
+        erp/model/ConsentTest.cxx
         erp/model/DeviceTest.cxx
         erp/model/ErxReceiptTest.cxx
+        erp/model/ExtensionTest.cxx
         erp/model/JsonCanonicalizationTest.cxx
         erp/model/JsonCanonicalizationTestModel.cxx
         erp/model/JsonMaintainNumberPrecisionTest.cxx
@@ -142,7 +147,10 @@ list(
         erp/model/ParameterTest.cxx
         erp/model/PatientTest.cxx
         erp/model/PrescriptionIdTest.cxx
+        erp/model/ResourceTest.cxx
+        erp/model/ResourceVersionTest.cxx
         erp/model/SignatureTest.cxx
+        erp/model/SubscriptionTest.cxx
         erp/model/TaskTest.cxx
         erp/model/TimePeriodTest.cxx
         erp/model/TimestampTest.cxx
@@ -158,6 +166,7 @@ list(
         erp/server/response/ServerResponseTest.cxx
         erp/server/response/ServerResponseWriterTest.cxx
         erp/server/response/ValidatedServerResponseTest.cxx
+        erp/server/telematic_pseudonym/TelematicPseudonymManagerTest.cxx
         erp/pc/SeedTimerTest.cxx
         erp/server/KeepAliveTest.cxx
         erp/server/ThreadPoolTest.cxx
@@ -170,6 +179,7 @@ list(
         erp/service/ErpRequestHandlerTest.cxx
         erp/service/HealthHandlerTest.cxx
         erp/service/MedicationDispenseGetHandlerTest.cxx
+        erp/service/SubscriptionHandlerTest.cxx
         erp/service/TaskAbortHandlerTest.cxx
         erp/service/VauRequestHandlerExternalInterfaceTest.cxx
         erp/service/VauRequestHandlerNotAllowedMethodsTest.cxx
@@ -219,10 +229,13 @@ list(
         erp/util/search/UrlArgumentsTest.cxx
         erp/util/WorkDayTest.cxx
         erp/validation/JsonValidatorTest.cxx
+        erp/validation/KbvBundleValidationTest.cxx
         erp/validation/XmlValidatorTest.cxx
         erp/xml/SaxParserTest.cxx
         mock/MockAccountTable.cxx
         mock/MockCommunicationTable.cxx
+        mock/MockBlobDatabase.cxx
+        mock/MockConsentTable.cxx
         mock/MockDatabase.cxx
         mock/MockDatabaseProxy.cxx
         mock/MockIdpUpdater.cxx
@@ -235,6 +248,7 @@ list(
         mock/TestUrlArguments.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx
+        util/BlobDatabaseHelper.cxx
         util/ServerTestBase.cxx
         util/ServerTestBaseAutoCleanup.cxx
         util/StaticData.cxx
@@ -242,16 +256,22 @@ list(
         workflow-test/EndpointTestClient.cxx
         workflow-test/Erp5822Test.cxx # contains invalid KBV bundle, can only run in erp-test
         workflow-test/Erp5899Test.cxx # contains invalid KBV bundle, can only run in erp-test
+        workflow-test/Erp8090Test.cxx # contains environment changes, can only run in erp-test
 )
 
-if(NOT APPLE AND NOT MSVC)
+if(ERP_WITH_HSM_TPM_PRODUCTION)
     list(
         APPEND erp-test-source-files
+            erp/enrolment/EnrolmentHelperTest.cxx
+            erp/hsm/HsmPoolTest.cxx
             erp/hsm/HsmSessionTest.cxx
+            erp/hsm/production/HsmSessionReconnectTest.cxx
             erp/hsm/production/HsmProductionClientTest.cxx
             erp/hsm/production/HsmProductionFactoryTest.cxx
+            erp/hsm/TeeTokenUpdaterTest.cxx
             erp/tpm/TpmTest.cxx
             erp/tpm/TpmProductionTest.cxx
+            util/HsmTestBase.cxx
     )
 endif()
 
@@ -263,6 +283,16 @@ list(
     APPEND erp-connection-test-source-files
 
 )
+
+
+target_compile_definitions(erp-test PUBLIC WITH_HSM_MOCK=1)
+if (ERP_WITH_HSM_TPM_PRODUCTION)
+    target_compile_definitions(erp-test PUBLIC WITH_HSM_TPM_PRODUCTION=1)
+    target_link_libraries(erp-test
+            PUBLIC
+            erp-mock-enrollmentmanager
+            )
+endif ()
 
 target_include_directories (
     erp-test
@@ -291,9 +321,13 @@ set(ERP_CLOUD_TEST_SOURCES
 )
 
 add_executable(erp-integration-test ${ERP_CLOUD_TEST_SOURCES})
+target_compile_definitions(erp-integration-test PUBLIC WITH_HSM_MOCK=1)
+if(ERP_WITH_HSM_TPM_PRODUCTION)
+    target_compile_definitions(erp-integration-test PUBLIC WITH_HSM_TPM_PRODUCTION=1)
+endif()
+
 target_link_libraries(erp-integration-test
     PRIVATE
-        erp-hsm-tpm-mock
         erp-test-lib
         erp-tool-lib
         erp-processing-context-files
@@ -320,7 +354,6 @@ target_include_directories (
 target_link_libraries (
         erp-connection-test
         PUBLIC
-        erp-hsm-tpm-mock
         erp-test-lib
         erp-tool-lib
         erp-processing-context-files

@@ -114,6 +114,8 @@ namespace local
  */
 #define ErpExpect(expression, errorStatus, message) \
     local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, message, fileAndLine, errorStatus)
+#define ErpExpectWithDiagnostics(expression, errorStatus, message, diagnostics) \
+    local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, message, fileAndLine, errorStatus, diagnostics)
 #define VauExpect(expression, errorStatus, vauError, message) \
     local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, message, fileAndLine, errorStatus, vauError)
 

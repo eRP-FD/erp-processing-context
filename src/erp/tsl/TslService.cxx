@@ -711,7 +711,8 @@ namespace
                                       const CertificateType certificateType,
                                       const X509Certificate& issueCertificate,
                                       const UrlRequestSender& requestSender,
-                                      TrustStore& trustStore)
+                                      TrustStore& trustStore,
+                                      const OcspResponsePtr& ocspResponse)
     {
         const auto ocspUrl = getOcspUrl(certificate, certificateType, issueCertificate, trustStore);
 
@@ -723,7 +724,8 @@ namespace
                 requestSender,
                 ocspUrl,
                 trustStore,
-                hashExtensionMustBeValidated(certificateType)),
+                hashExtensionMustBeValidated(certificateType),
+                ocspResponse),
             trustStore);
     }
 
@@ -1070,7 +1072,8 @@ TslService::checkCertificate(
     X509Certificate& certificate,
     const std::unordered_set<CertificateType>& typeRestrictions,
     const UrlRequestSender& requestSender,
-    TrustStore& trustStore)
+    TrustStore& trustStore,
+    const OcspResponsePtr& ocspResponse)
 {
     VLOG(2) << "Checking Certificate: [" << certificate.toBase64() << "]";
     const CertificateType certificateType = getCertificateType(certificate);
@@ -1133,5 +1136,11 @@ TslService::checkCertificate(
               "Invalid extended key usage.",
               TslErrorCode::WRONG_EXTENDEDKEYUSAGE);
 
-    checkOcspStatusOfCertificate(certificate, certificateType, caInfo->certificate, requestSender, trustStore);
+    checkOcspStatusOfCertificate(
+        certificate,
+        certificateType,
+        caInfo->certificate,
+        requestSender,
+        trustStore,
+        ocspResponse);
 }

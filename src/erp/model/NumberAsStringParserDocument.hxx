@@ -6,6 +6,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERDOCUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERDOCUMENT_HXX
 
+#ifdef RAPIDJSON_ASSERT
+#undef RAPIDJSON_ASSERT
+#endif
+#include "erp/util/Expect.hxx"
+#define RAPIDJSON_ASSERT(x) ModelExpect(x, "rapidjson assertion")
+
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
 #include <rapidjson/stringbuffer.h>
@@ -209,6 +215,8 @@ public:
     [[nodiscard]]
     std::optional<double> getOptionalDoubleValue(const rapidjson::Pointer& pointerToEntry) const;
 
+    [[nodiscard]] std::optional<std::string_view> getNumericAsString(const rapidjson::Pointer& pointerToEntry) const;
+
     [[nodiscard]] std::optional<std::string_view> findStringInArray(
         const rapidjson::Pointer& pointerToArray,
         const rapidjson::Pointer& searchKey,
@@ -228,6 +236,11 @@ public:
         const rapidjson::Pointer& searchKey,
         const std::string_view& searchValue);
 
+    [[nodiscard]] const rapidjson::Value* findMemberInArray(
+        const rapidjson::Pointer& pointerToArray,
+        const rapidjson::Pointer& searchKey,
+        const std::string_view& searchValue) const;
+
     [[nodiscard]] const rapidjson::Value* getMemberInArray(
         const rapidjson::Pointer& pointerToArray,
         size_t index) const;
@@ -235,6 +248,8 @@ public:
     // Returns position of added element:
     std::size_t addToArray(const rapidjson::Pointer& pointerToArray, rapidjson::Value&& object);
     std::size_t addToArray(rapidjson::Value& array, rapidjson::Value&& object);
+    void addMemberToArrayEntry(const ::rapidjson::Pointer& pointerToArray, ::std::size_t index,
+                               ::rapidjson::Value&& key, ::rapidjson::Value&& value);
 
     void removeFromArray(const rapidjson::Pointer& pointerToArray, std::size_t index);
     void clearArray(const rapidjson::Pointer& pointerToArray);

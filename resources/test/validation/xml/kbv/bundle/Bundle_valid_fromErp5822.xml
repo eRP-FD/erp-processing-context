@@ -1,7 +1,7 @@
 <Bundle xmlns="http://hl7.org/fhir">
     <id value="53ca15a9-4072-44db-aeb3-8754f17f4a4e"></id>
     <meta>
-        <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1"></profile>
+        <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2"></profile>
     </meta>
     <identifier>
         <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"></system>
@@ -15,7 +15,7 @@
             <Composition xmlns="http://hl7.org/fhir">
                 <id value="7d101376-cafa-43d8-bae9-a2b4511b1bb7"></id>
                 <meta>
-                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.1"></profile>
+                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2"></profile>
                 </meta>
                 <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
                     <valueCoding>
@@ -91,7 +91,7 @@
             <MedicationRequest xmlns="http://hl7.org/fhir">
                 <id value="e44c1ae3-7671-41cd-ad0b-918ad338b0f3"></id>
                 <meta>
-                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1"></profile>
+                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2"></profile>
                 </meta>
                 <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
                     <valueCoding>
@@ -161,11 +161,7 @@
                     </extension>
                     <text value="1-0-1-0"></text>
                 </dosageInstruction>
-                <dispenseRequest>
-                    <validityPeriod>
-                        <start value="2021-05-30T08:09:58+02:00"></start>
-                        <end value="2021-05-30T08:09:58+02:00"></end>
-                    </validityPeriod>
+                <dispenseRequest>                    
                     <quantity>
                         <value value="1"></value>
                         <system value="http://unitsofmeasure.org"></system>
@@ -184,7 +180,7 @@
             <Medication xmlns="http://hl7.org/fhir">
                 <id value="e701e2aa-f8c9-4fe4-ae37-c6d3bbcdda4f"></id>
                 <meta>
-                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.1"></profile>
+                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2"></profile>
                 </meta>
                 <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
                     <valueCoding>
@@ -270,7 +266,7 @@
                 <payor>
                     <identifier>
                         <system value="http://fhir.de/NamingSystem/arge-ik/iknr"></system>
-                        <value value="0"></value>
+                        <value value="00000000"></value>
                     </identifier>
                     <display value="test"></display>
                 </payor>
@@ -293,7 +289,7 @@
                         </coding>
                     </type>
                     <system value="http://fhir.de/NamingSystem/arge-ik/iknr"></system>
-                    <value value="123456"></value>
+                    <value value="12345678"></value>
                 </identifier>
                 <telecom>
                     <system value="phone"></system>

@@ -82,3 +82,8 @@ int RedisClient::incr(const std::string_view& key)
 {
     return mConnection->incr(key);
 }
+
+void RedisClient::publish(const std::string_view& channel, const std::string_view& message)
+{
+    mConnection->publish(channel, message);
+}

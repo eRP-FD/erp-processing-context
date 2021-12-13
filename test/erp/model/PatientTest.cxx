@@ -75,8 +75,8 @@ TEST(PatientTest, getKvnr)
         ]
       })--";
 
-    const auto patient = model::Patient::fromJson(patientJson);
+    const auto patient = model::Patient::fromJsonNoValidation(patientJson);
 
-    ASSERT_EQ(patient.getKvnr(), "X234567890");
+    ASSERT_EQ(patient.kvnr(), "X234567890");
 }
 

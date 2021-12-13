@@ -6,6 +6,7 @@
 #include "erp/hsm/HsmPoolSessionRemover.hxx"
 
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
 
 #include <gtest/gtest.h>
@@ -16,7 +17,7 @@ class HsmPoolSessionRemoverTest : public testing::Test
 public:
     virtual void SetUp (void) override
     {
-        BlobDatabaseHelper::clearBlobDatabase();
+        BlobDatabaseHelper::removeUnreferencedBlobs();
     }
 };
 
@@ -29,7 +30,8 @@ TEST_F(HsmPoolSessionRemoverTest, removeSession)
 
     ASSERT_EQ(expected, nullptr);
 
-    auto session = HsmMockFactory().connect();
+    auto session = HsmMockFactory(std::make_unique<HsmMockClient>(),
+                                  MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)).connect();
     ASSERT_NE(session, nullptr);
 
     // Verify that removeSession ...
@@ -50,7 +52,8 @@ TEST_F(HsmPoolSessionRemoverTest, notifyPoolRelease)
 
     ASSERT_EQ(expected, nullptr);
 
-    auto session = HsmMockFactory().connect();
+    auto session = HsmMockFactory(std::make_unique<HsmMockClient>(),
+                                  MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)).connect();
     ASSERT_NE(session, nullptr);
 
     // Verify that after a call to notifyPoolRelease ...

@@ -20,7 +20,7 @@ NEXUS_USERNAME="<nexus-user>"
 NEXUS_PASSWORD="<nexus-password>"
 GIT_USERNAME="<git-user>"
 GIT_OAUTH_TOKEN="<git-oauth-token>"
-RELEASE_VERSION=1.0.0
+RELEASE_VERSION=1.4.0
 BUILD_VERSION=v-0.0.1
 
 if [ $# -ne 2 ] && [ $# -ne 3 ]; then

@@ -19,11 +19,14 @@ enum class MockConfigurationKey
     MOCK_IDP_PRIVATE_KEY,
     MOCK_IDP_PUBLIC_KEY,
     MOCK_ID_FD_SIG_PRIVATE_KEY,
-    MOCK_USE_BLOB_DATABASE_MOCK,
     MOCK_USE_MOCK_TPM
 };
 
-using MockConfigurationKeyNames = ConfigurationKeyNamesTemplate<MockConfigurationKey>;
+class MockConfigurationKeyNames : public ConfigurationKeyNamesBase<MockConfigurationKey>
+{
+public:
+    MockConfigurationKeyNames();
+};
 
 using MockConfiguration = ConfigurationTemplate<MockConfigurationKey, MockConfigurationKeyNames>;
 

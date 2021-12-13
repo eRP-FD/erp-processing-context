@@ -31,14 +31,14 @@ void PreUserPseudonymManager::LoadCmacs(const date::sys_days& forDay)
 {
     TVLOG(1) << "Loading CMAC for PreUserPseudonym from Database";
     auto database = mServiceContext->databaseFactory();
-    mKeyDate = forDay;
     mKeys.clear();
     mKeys.reserve(keyHistoryLength);
     for (size_t i = 0; i < keyHistoryLength; ++i)
     {
-        mKeys.push_back(database->acquireCmac(mKeyDate - date::days{i}));
+        mKeys.push_back(database->acquireCmac(forDay - date::days{i}, CmacKeyCategory::user));
     }
     database->commitTransaction();
+    mKeyDate = forDay;
 }
 
 CmacSignature PreUserPseudonymManager::sign(const std::string_view& subClaim)
@@ -100,6 +100,3 @@ void PreUserPseudonymManager::ensureKeysUptodate(std::shared_lock<std::shared_mu
     }
     A_20163.finish();
 }
-
-
-

@@ -1,7 +1,17 @@
-/*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
- */
+--
+-- (C) Copyright IBM Deutschland GmbH 2021
+-- (C) Copyright IBM Corp. 2021
+--
+
+DROP DATABASE IF EXISTS erp_processing_context;
+DROP SCHEMA IF EXISTS erp CASCADE;
+
+-- remove old roles
+DROP ROLE IF EXISTS role_proc_admin;
+DROP ROLE IF EXISTS role_proc_user;
+DROP ROLE IF EXISTS role_proc_maintenance;
+DROP ROLE IF EXISTS role_proc_readonly;
+
 
 -- These roles are assigned to the users based on the requirements. In this context, admin refers to the ability to
 -- perform DDL statements, not superuser privileges.
@@ -27,16 +37,13 @@ CREATE ROLE role_proc_maintenance WITH NOLOGIN INHERIT;
 -- users
 CREATE ROLE role_proc_readonly WITH NOLOGIN INHERIT;
 
+
 -- Database for ERP processing context
 CREATE DATABASE erp_processing_context OWNER role_proc_admin ENCODING 'UTF-8';
 GRANT CONNECT ON DATABASE erp_processing_context TO role_proc_user;
 GRANT CONNECT ON DATABASE erp_processing_context TO role_proc_maintenance;
 GRANT CONNECT ON DATABASE erp_processing_context TO role_proc_readonly;
-\c erp_processing_context
 
--- Do not allow the use of public schema
-REVOKE ALL ON SCHEMA public FROM PUBLIC;
 
 -- Python3 is required for generating sortable UUID
 CREATE EXTENSION IF NOT EXISTS plpython3u WITH SCHEMA pg_catalog;
-

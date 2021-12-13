@@ -12,9 +12,9 @@
 class HsmException : public std::runtime_error
 {
 public:
-    const int errorCode;
+    const uint32_t errorCode;
 
-    HsmException (const std::string& what, int errorCode);
+    HsmException(const std::string& what, const uint32_t errorCode);
 };
 
 

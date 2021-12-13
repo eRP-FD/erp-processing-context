@@ -9,14 +9,21 @@
 #include "test/mock/MockTerminationHandler.hxx"
 
 #include <gtest/gtest.h>
+#include <chrono>
 
 
-int main (int argc, char** argv)
+using namespace ::std::chrono_literals;
+
+int main(int argc, char** argv)
 {
     Environment::set("ERP_VLOG_MAX_VALUE", "1");
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
 
-    TestClient::setFactory([]{return std::make_unique<EndpointTestClient>();});
+    const auto yesterday = (::model::Timestamp::now() + -24h).toXsDateTime();
+    Environment::set("ERP_FHIR_PROFILE_VALID_FROM", yesterday);
+    Environment::set("ERP_FHIR_PROFILE_RENDER_FROM", yesterday);
+
+    TestClient::setFactory([] { return std::make_unique<EndpointTestClient>(); });
     GLogConfiguration::init_logging(argv[0]);
     ThreadNames::instance().setCurrentThreadName("test");
     ::testing::InitGoogleTest(&argc, argv);

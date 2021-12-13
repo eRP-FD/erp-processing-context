@@ -58,6 +58,11 @@ int MockRedisStore::incr(const std::string_view& key)
     return count;
 }
 
+void MockRedisStore::publish(const std::string_view& channel [[maybe_unused]], const std::string_view& message [[maybe_unused]])
+{
+    // NOTE: implementation probably not required.
+}
+
 void MockRedisStore::removeExpiredEntries()
 {
     // Perform basic cleanup which simulates Redis expireat feature.

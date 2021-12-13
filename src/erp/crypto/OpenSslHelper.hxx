@@ -11,6 +11,27 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/OpenSsl.hxx"
 
+// Unique smart pointers for openssl types
+
+template<class C, void(*deleter)(C*)>
+class OpensslUniquePtr : public std::unique_ptr<C, decltype(deleter)>
+{
+public:
+    OpensslUniquePtr()
+        : std::unique_ptr<C, decltype(deleter)>(nullptr, deleter)
+    {}
+
+    explicit OpensslUniquePtr(C* pointer)
+        : std::unique_ptr<C, decltype(deleter)>(pointer, deleter)
+    {}
+};
+
+using Asn1ObjectPtr = OpensslUniquePtr<ASN1_OBJECT, &ASN1_OBJECT_free>;
+using OcspBasicRespPtr = OpensslUniquePtr<OCSP_BASICRESP, &OCSP_BASICRESP_free>;
+using OcspCertidPtr = OpensslUniquePtr<OCSP_CERTID, &OCSP_CERTID_free>;
+using OcspRequestPtr = OpensslUniquePtr<OCSP_REQUEST, &OCSP_REQUEST_free>;
+using OcspResponsePtr = OpensslUniquePtr<OCSP_RESPONSE, &OCSP_RESPONSE_free>;
+
 
 // Use
 // #define LOCAL_LOGGING
@@ -18,7 +39,7 @@
 
 void showAllOpenSslErrors (void);
 std::string bioToString (BIO* bio);
-std::string x509NameString(const X509_NAME* name);
+std::string x509NametoString(const X509_NAME* name);
 
 
 /**

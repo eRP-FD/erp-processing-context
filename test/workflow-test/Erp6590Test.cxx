@@ -35,6 +35,7 @@ TEST_P(Erp6590Test, run)
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
+    kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.012.564.98", task->prescriptionId().toString());
     std::string accessCode{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivate(task->prescriptionId(), accessCode, toCadesBesSignature(kbv_bundle_xml),
                                          GetParam().expectedInnerStatus, GetParam().expectedErrorCode));

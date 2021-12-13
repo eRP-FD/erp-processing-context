@@ -15,6 +15,7 @@
 #include "erp/service/HealthHandler.hxx"
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "erp/service/MetaDataHandler.hxx"
+#include "erp/service/SubscriptionPostHandler.hxx"
 #include "erp/service/VauRequestHandler.hxx"
 #include "erp/service/task/AbortTaskHandler.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
@@ -22,6 +23,13 @@
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
+#include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
+#include "erp/service/chargeitem/ChargeItemDeleteHandler.hxx"
+#include "erp/service/chargeitem/ChargeItemPostHandler.hxx"
+#include "erp/service/chargeitem/ChargeItemPutHandler.hxx"
+#include "erp/service/consent/ConsentGetHandler.hxx"
+#include "erp/service/consent/ConsentDeleteHandler.hxx"
+#include "erp/service/consent/ConsentPostHandler.hxx"
 #include "erp/util/Configuration.hxx"
 
 
@@ -34,7 +42,7 @@ ErpProcessingContext::ErpProcessingContext (
         port,
         std::move(handlerManager),
         std::move(serviceContext),
-        ! Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_PROXY_AUTHENTICATION, false),
+        false,
         SafeString(Configuration::instance().getOptionalStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE, "")))
 {
 }
@@ -163,4 +171,55 @@ void ErpProcessingContext::addSecondaryEndpoints (RequestHandlerManager<PcServic
     handlerManager.onGetDo("/metadata",
             std::make_unique<MetaDataHandler>());
     A_20171.finish();
+
+    // For POST /Subscription
+    A_22362.start("Register the allowed professionOIDs");
+    handlerManager.onPostDo("/Subscription",
+            std::make_unique<SubscriptionPostHandler>(oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
+    A_22362.finish();
+
+    if(Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false))
+    {
+        // PKV endpoints:
+
+        // Resource ChargeItem (gemF_eRp_PKV_V1.0.0_CC, 6.1.4)
+        const oids chargeItemOIDsExceptCreation{oid_versicherter, oid_oeffentliche_apotheke, oid_krankenhausapotheke};
+        A_22113.start("Register the allowed professionOIDs");
+        handlerManager.onDeleteDo("/ChargeItem/{id}",
+                                  std::make_unique<ChargeItemDeleteHandler>(chargeItemOIDsExceptCreation));
+        A_22113.finish();
+
+        A_22118.start("Register the allowed professionOIDs");
+        handlerManager.onGetDo("/ChargeItem", std::make_unique<ChargeItemGetAllHandler>(chargeItemOIDsExceptCreation));
+        A_22118.finish();
+
+        A_22124.start("Register the allowed professionOIDs");
+        handlerManager.onGetDo("/ChargeItem/{id}",
+                               std::make_unique<ChargeItemGetByIdHandler>(chargeItemOIDsExceptCreation));
+        A_22124.finish();
+
+        A_22129.start("Register the allowed professionOIDs");
+        handlerManager.onPostDo("/ChargeItem", std::make_unique<ChargeItemPostHandler>(
+                                                   oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
+        A_22129.finish();
+
+        A_22144.start("Register the allowed professionOIDs");
+        handlerManager.onPutDo("/ChargeItem/{id}",
+                               std::make_unique<ChargeItemPutHandler>(chargeItemOIDsExceptCreation));
+        A_22144.finish();
+
+        // Resource Consent (gemF_eRp_PKV_V1.0.0_CC, 6.1.5)
+        const oids consentOIDs{oid_versicherter};
+        A_22155.start("Register the allowed professionOIDs");
+        handlerManager.onDeleteDo("/Consent/{id}", std::make_unique<ConsentDeleteHandler>(consentOIDs));
+        A_22155.finish();
+
+        A_22159.start("Register the allowed professionOIDs");
+        handlerManager.onGetDo("/Consent", std::make_unique<ConsentGetHandler>(consentOIDs));
+        A_22159.finish();
+
+        A_22161.start("Register the allowed professionOIDs");
+        handlerManager.onPostDo("/Consent", std::make_unique<ConsentPostHandler>(consentOIDs));
+        A_22161.finish();
+    }
 }

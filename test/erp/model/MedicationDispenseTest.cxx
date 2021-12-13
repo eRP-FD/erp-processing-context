@@ -55,11 +55,10 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(
+                     json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
+                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
@@ -112,11 +111,10 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(
+                     json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
+                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
@@ -164,11 +162,11 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
@@ -216,11 +214,11 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
@@ -269,11 +267,11 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaMissingSubject)
@@ -316,68 +314,11 @@ TEST(MedicationDispenseTest, WrongSchemaMissingSubject)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
-}
-
-TEST(MedicationDispenseTest, WrongSchemaTooManySubjects)
-{
-    const std::string json = R"(
-{
-    "resourceType":"MedicationDispense",
-    "id": "160.000.000.004.715.74",
-    "meta":{
-        "profile":[
-            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
-        ]
-    },
-    "identifier":[
-        {
-            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
-            "value":"160.000.000.004.715.74"
-        }
-    ],
-    "status":"completed",
-    "medicationReference":{
-        "reference":"Medication/1234"
-    },
-    "subject":{
-        "identifier":{
-            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
-            "value":"X123456789"
-        },
-        "identifier":{
-            "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
-            "value":"0815"
-        }
-    },
-    "performer":[
-        {
-            "actor":{
-                "identifier":{
-                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
-                    "value":"1111"
-                }
-            }
-        }
-    ],
-    "whenHandedOver":"2020-03-20T07:13:00+05:00",
-    "dosageInstruction":[
-        {
-            "text":"1-0-1-0"
-        }
-    ]
-}
-)";
-
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongSubject)
@@ -426,11 +367,11 @@ TEST(MedicationDispenseTest, WrongSchemaWrongSubject)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
@@ -469,11 +410,11 @@ TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
@@ -538,11 +479,11 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
@@ -591,11 +532,11 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
@@ -643,11 +584,11 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
 }
 )";
 
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense), ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
+                                                            *StaticData::getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::Gem_erxMedicationDispense),
+                 ErpException);
 }
 
 TEST(MedicationDispenseTest, CorrectSchema)
@@ -695,12 +636,11 @@ TEST(MedicationDispenseTest, CorrectSchema)
     ]
 }
 )";
-
-    auto medicationDispense = model::MedicationDispense::fromJson(json);
-
-    EXPECT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense));
+    std::optional<model::MedicationDispense> medicationDispense1;
+    EXPECT_NO_THROW(medicationDispense1 = model::MedicationDispense::fromJson(
+                        json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
+                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense));
+    auto& medicationDispense = *medicationDispense1;
 
     const model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.715.74");
     medicationDispense.setId(prescriptionId);
@@ -723,10 +663,6 @@ TEST(MedicationDispenseTest, CorrectSchema)
     medicationDispense.setWhenPrepared(whenPrepared);
     EXPECT_TRUE(medicationDispense.whenPrepared().has_value());
     EXPECT_EQ(medicationDispense.whenPrepared().value(), whenPrepared);
-
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(medicationDispense.jsonDocument()),
-        SchemaType::Gem_erxMedicationDispense));
 }
 
 TEST(MedicationDispenseTest, ERP_6610_optionalTime)
@@ -743,9 +679,10 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)
         resMan.getStringResource("test/fhir/conversion/medication_dispense.json"));
 
     auto validate = [&] {
-        StaticData::getJsonValidator()->validate(copyToOriginalFormat(md), SchemaType::Gem_erxMedicationDispense);
+        StaticData::getJsonValidator()->validate(copyToOriginalFormat(md), SchemaType::fhir);
         auto xmlStr = Fhir::instance().converter().jsonToXmlString(md);
         (void) model::MedicationDispense::fromXml(xmlStr, *StaticData::getXmlValidator(),
+                                                  *StaticData::getInCodeValidator(),
                                                   SchemaType::Gem_erxMedicationDispense);
     };
 

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:element name="extension" type="CourierService.Extension"/>
+  <xs:complexType name="CourierService.Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueString" type="string"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="uri-primitive" use="required" fixed="https://gematik.de/fhir/StructureDefinition/CourierService"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

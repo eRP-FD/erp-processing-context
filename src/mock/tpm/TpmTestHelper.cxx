@@ -13,9 +13,7 @@
 #include "mock/util/MockConfiguration.hxx"
 
 
-// TPM_SUPPORTED tells us whether the tpmclient library can be compiled and is available on the current platform,
-// not if it should be used.
-#if !defined __APPLE__ && !defined _WIN32
+#if WITH_HSM_TPM_PRODUCTION > 0
 #define TPM_SUPPORTED
 #else
 #undef TPM_SUPPORTED
@@ -63,6 +61,7 @@ Tpm::Factory TpmTestHelper::createTpmFactory (void)
         TVLOG(1) << "creating production TPM";
         auto tpm = TpmProduction::createInstance(blobCache);
 #else
+        (void)blobCache;
         std::unique_ptr<Tpm> tpm = nullptr;
 #endif
         if (tpm == nullptr)
@@ -106,6 +105,7 @@ std::unique_ptr<Tpm> TpmTestHelper::createProductionTpm (BlobCache& blobCache)
         return {};
     }
 #endif
+    (void) blobCache;
     TVLOG(0) << "TPM support is not present";
     return {};
 }
@@ -168,6 +168,7 @@ Tpm::AuthenticateCredentialInput ProductionTpmTestHelper::getAuthenticateCredent
 
     return input;
 #else
+    (void) blobCache;
     Fail("not supported on this platform");
 #endif
 }

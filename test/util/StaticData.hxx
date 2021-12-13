@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_STATICDATA_HXX
 
 #include "erp/crypto/Certificate.hxx"
+#include "erp/validation/InCodeValidator.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "test/util/TestConfiguration.hxx"
@@ -21,8 +22,6 @@ public:
     JsonValidatorStatic()
     {
         auto schemas = Configuration::instance().getArray(ConfigurationKey::JSON_SCHEMA);
-        auto additionalSchemas = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_ADDITIONAL_JSON_SCHEMAS);
-        schemas.insert(schemas.end(), additionalSchemas.begin(), additionalSchemas.end());
         mJsonValidator.loadSchema(
             schemas,
             Configuration::instance().getPathValue(ConfigurationKey::JSON_META_SCHEMA));
@@ -34,8 +33,17 @@ class XmlValidatorStatic {
 public:
     XmlValidatorStatic()
     {
-        mXmlValidator.loadSchemas(Configuration::instance().getArray(ConfigurationKey::XML_SCHEMA));
-        mXmlValidator.loadSchemas(TestConfiguration::instance().getArray(TestConfigurationKey::TEST_ADDITIONAL_XML_SCHEMAS));
+        configureXmlValidator(mXmlValidator);
+        const auto& additionalGematik = TestConfiguration::instance().getMap(TestConfigurationKey::TEST_ADDITIONAL_XML_SCHEMAS_GEMATIK);
+        for (const auto& additionalGematikVer: additionalGematik)
+        {
+            mXmlValidator.loadGematikSchemas(additionalGematikVer.first, additionalGematikVer.second, std::nullopt, std::nullopt);
+        }
+        const auto& additionalKbv = TestConfiguration::instance().getMap(TestConfigurationKey::TEST_ADDITIONAL_XML_SCHEMAS_KBV);
+        for (const auto& additionalKbvVer : additionalKbv)
+        {
+            mXmlValidator.loadKbvSchemas(additionalKbvVer.first, additionalKbvVer.second, std::nullopt, std::nullopt);
+        }
     }
     XmlValidator mXmlValidator;
 };
@@ -53,6 +61,11 @@ public:
     {
         static auto xmlValidatorStatic = std::make_shared<XmlValidatorStatic>();
         return std::shared_ptr<XmlValidator>(xmlValidatorStatic, &xmlValidatorStatic->mXmlValidator);
+    }
+    static const std::shared_ptr<InCodeValidator> getInCodeValidator()
+    {
+        static auto inCodeValidatorStatic = std::make_shared<InCodeValidator>();
+        return inCodeValidatorStatic;
     }
 
     static const Certificate idpCertificate;

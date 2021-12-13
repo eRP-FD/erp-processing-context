@@ -16,6 +16,7 @@
 #include "erp/model/AuditData.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Communication.hxx"
+#include "erp/model/Consent.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/PrescriptionId.hxx"
@@ -75,7 +76,8 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const std::string& kvnr,
             std::tie(key, std::ignore) =
                     keys.emplace(res.blobId, mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, *salt));
         }
-        resultSet.emplace_back(model::MedicationDispense::fromJson(mCodec.decode(res.medicationDispense, key->second)));
+        resultSet.emplace_back(
+            model::MedicationDispense::fromJsonNoValidation(mCodec.decode(res.medicationDispense, key->second)));
     }
     return resultSet;
 }
@@ -86,15 +88,15 @@ uint64_t DatabaseFrontend::countAllMedicationDispenses(const std::string& kvnr,
     return mBackend->countAllMedicationDispenses(mDerivation.hashKvnr(kvnr), search);
 }
 
-CmacKey DatabaseFrontend::acquireCmac(const date::sys_days& validDate, RandomSource& randomSource)
+CmacKey DatabaseFrontend::acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource)
 {
-    return mBackend->acquireCmac(validDate, randomSource);
+    return mBackend->acquireCmac(validDate, cmacType, randomSource);
 }
 
 PrescriptionId DatabaseFrontend::storeTask(const Task& task)
 {
     auto [prescriptionId, authoredOn] =
-            mBackend->createTask(task.status(), task.lastModifiedDate(), task.authoredOn());
+            mBackend->createTask(task.type(), task.status(), task.lastModifiedDate(), task.authoredOn());
 
     A_19700.start("Initial key derivation for Task.");
     // use authoredOn returned from createTask to ensure we have identical rounding (see ERP-5602)
@@ -228,7 +230,7 @@ DatabaseFrontend::retrieveAuditEventData(const std::string& kvnr, const std::opt
                 Expect(salt, "Salt not found in database.");
                 key->second = mDerivation.auditEventKey(item.insurantKvnr, *item.blobId, *salt);
             }
-            auto auditMetaData = AuditMetaData::fromJson(mCodec.decode(*item.metaData, key->second));
+            auto auditMetaData = AuditMetaData::fromJsonNoValidation(mCodec.decode(*item.metaData, key->second));
 
             ret.emplace_back(item.eventId, std::move(auditMetaData), item.action, item.agentType, kvnr, item.deviceId,
                              item.prescriptionId);
@@ -250,17 +252,6 @@ uint64_t DatabaseFrontend::countAuditEventData(const std::string& kvnr,
     return mBackend->countAuditEventData(mDerivation.hashKvnr(kvnr), search);
 }
 
-std::optional<Task> DatabaseFrontend::retrieveTask(const PrescriptionId& taskId)
-{
-    const auto& dbTask = mBackend->retrieveTaskBasics(taskId);
-    if (! dbTask)
-    {
-        return std::nullopt;
-    }
-    auto key = taskKey(*dbTask);
-    return getModelTask(*dbTask, key);
-}
-
 std::optional<model::Task> DatabaseFrontend::retrieveTaskForUpdate(const PrescriptionId& taskId)
 {
     const auto& dbTask = mBackend->retrieveTaskForUpdate(taskId);
@@ -270,6 +261,19 @@ std::optional<model::Task> DatabaseFrontend::retrieveTaskForUpdate(const Prescri
     }
     auto key = taskKey(*dbTask);
     return getModelTask(*dbTask, key);
+}
+
+::std::tuple<::std::optional<::model::Task>, ::std::optional<::model::Binary>>
+DatabaseFrontend::retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId)
+{
+    const auto& dbTask = mBackend->retrieveTaskForUpdateAndPrescription(taskId);
+    if (! dbTask)
+    {
+        return {};
+    }
+    const auto keyForTask = taskKey(*dbTask);
+    return ::std::make_tuple(getModelTask(*dbTask, keyForTask),
+                             keyForTask ? getHealthcareProviderPrescription(*dbTask, *keyForTask) : ::std::nullopt);
 }
 
 std::tuple<std::optional<Task>, std::optional<Bundle>>
@@ -380,7 +384,7 @@ std::vector<Communication> DatabaseFrontend::retrieveCommunications(const std::s
             key->second = mDerivation.communicationKey(user, hashedUser, item.blobId, item.salt);
         }
         auto communicationJson = mCodec.decode(item.communication, key->second);
-        model::Communication communication = model::Communication::fromJson(communicationJson);
+        model::Communication communication = model::Communication::fromJsonNoValidation(communicationJson);
         // Please note that the communication id is not stored in the json string of the message
         // column as the id is only available after the data row has been inserted in the table.
         // To return a valid communication object the id will be set here.
@@ -424,6 +428,29 @@ void DatabaseFrontend::markCommunicationsAsRetrieved(const std::vector<Uuid>& co
 void DatabaseFrontend::deleteCommunicationsForTask(const model::PrescriptionId& taskId)
 {
     return mBackend->deleteCommunicationsForTask(taskId);
+}
+
+void DatabaseFrontend::storeConsent(const Consent& consent)
+{
+    const auto& hashedKvnr = mDerivation.hashKvnr(consent.patientKvnr());
+    return mBackend->storeConsent(hashedKvnr, consent.dateTime());
+}
+
+std::optional<model::Consent> DatabaseFrontend::getConsent(const std::string_view& kvnr)
+{
+    const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
+    auto dateTime = mBackend->getConsentDateTime(hashedKvnr);
+    if (dateTime.has_value())
+    {
+        return std::make_optional<model::Consent>(kvnr, *dateTime);
+    }
+    return std::nullopt;
+}
+
+bool DatabaseFrontend::clearConsent(const std::string_view& kvnr)
+{
+    const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
+    return mBackend->clearConsent(hashedKvnr);
 }
 
 DatabaseBackend& DatabaseFrontend::getBackend()
@@ -475,7 +502,7 @@ std::optional<model::Binary> DatabaseFrontend::getHealthcareProviderPrescription
     {
         return std::nullopt;
     }
-    return model::Binary::fromJson(mCodec.decode(*dbTask.healthcareProviderPrescription, key));
+    return model::Binary::fromJsonNoValidation(mCodec.decode(*dbTask.healthcareProviderPrescription, key));
 }
 
 std::optional<model::Bundle> DatabaseFrontend::getReceipt(const db_model::Task& dbTask, const SafeString& key)
@@ -484,7 +511,7 @@ std::optional<model::Bundle> DatabaseFrontend::getReceipt(const db_model::Task& 
     {
         return std::nullopt;
     }
-    return model::Bundle::fromJson(mCodec.decode(*dbTask.receipt, key));
+    return model::Bundle::fromJsonNoValidation(mCodec.decode(*dbTask.receipt, key));
 }
 
 

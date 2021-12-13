@@ -7,6 +7,7 @@
 
 #include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/search/UrlArguments.hxx"
@@ -74,7 +75,8 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
     std::map<std::string, MedicationDispense>& medicationDispensesByPrescriptionIds,
     std::map<std::string, std::vector<std::string>>& prescriptionIdsByPatients,
     std::map<std::string, std::vector<std::string>>& prescriptionIdsByPharmacies,
-    std::map<std::string, std::string>& medicationDispensesInputXmlStrings)
+    std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
+    model::PrescriptionType prescriptionType)
 {
     int idxTask = 0;
 
@@ -84,7 +86,7 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
         std::string pharmacy = std::get<1>(patientAndPharmacy);
         std::optional<Timestamp> whenPrepared = std::get<2>(patientAndPharmacy);
 
-        Task task = createAcceptedTask(kvnrPatient);
+        Task task = createAcceptedTask(kvnrPatient, prescriptionType);
         MedicationDispense medicationDispense = closeTask(task, pharmacy, whenPrepared);
 
         PrescriptionId prescriptionId = task.prescriptionId();
@@ -184,9 +186,9 @@ void PostgresDatabaseMedicationDispenseTest::writeCurrentTestOutputFile(
     FileHelper::writeFile(fileName, testOutput);
 }
 
-Task PostgresDatabaseMedicationDispenseTest::createAcceptedTask(const std::string_view& kvnrPatient)
+Task PostgresDatabaseMedicationDispenseTest::createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType)
 {
-    Task task = createTask();
+    Task task = createTask(prescriptionType);
     task.setKvnr(kvnrPatient);
     activateTask(task);
     acceptTask(task);
@@ -204,8 +206,11 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::closeTask(
     const Timestamp completedTimestamp = model::Timestamp::now();
     const std::string linkBase = "https://127.0.0.1:8080";
     const std::string authorIdentifier = linkBase + "/Device";
-    Composition compositionResource(telematicIdPharmacy, inProgessDate, completedTimestamp, authorIdentifier);
+    const std::string prescriptionDigestIdentifier = "Binary/TestDigest";
+    Composition compositionResource(telematicIdPharmacy, inProgessDate, completedTimestamp, authorIdentifier,
+                                    prescriptionDigestIdentifier);
     Device deviceResource;
+    ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Base64};
 
     task.setReceiptUuid();
     task.updateLastUpdate();
@@ -214,8 +219,8 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::closeTask(
         createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared);
 
     ErxReceipt responseReceipt(
-        Uuid(task.receiptUuid().value()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/",
-        prescriptionId, compositionResource, authorIdentifier, deviceResource);
+        Uuid(task.receiptUuid().value()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/", prescriptionId,
+        compositionResource, authorIdentifier, deviceResource, "TestDigest", prescriptionDigestResource);
 
     database().updateTaskMedicationDispenseReceipt(task, medicationDispense, responseReceipt);
     database().commitTransaction();
@@ -235,6 +240,7 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::createMedicationDispe
     MedicationDispense medicationDispense = MedicationDispense::fromXml(
     medicationDispenseXmlString,
         *StaticData::getXmlValidator(),
+        *StaticData::getInCodeValidator(),
         SchemaType::Gem_erxMedicationDispense);
 
     PrescriptionId prescriptionId = task.prescriptionId();
@@ -254,10 +260,10 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::createMedicationDispe
     return medicationDispense;
 }
 
-Task PostgresDatabaseMedicationDispenseTest::createTask()
+Task PostgresDatabaseMedicationDispenseTest::createTask(PrescriptionType prescriptionType)
 {
     const std::string accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32));
-    PrescriptionType prescriptionType = PrescriptionType::apothekenpflichigeArzneimittel;
+
     Task task(prescriptionType, accessCode);
 
     PrescriptionId prescriptionId = database().storeTask(task);
@@ -284,7 +290,7 @@ void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
     prescriptionBundleXmlString = String::replaceAll(prescriptionBundleXmlString, "##PrescriptionId##", prescriptionId.toString());
     prescriptionBundleXmlString = String::replaceAll(prescriptionBundleXmlString, "##kvnrPatient##", kvnrPatient);
 
-    Bundle prescriptionBundle = Bundle::fromXmlNoValidation(prescriptionBundleXmlString);
+    auto prescriptionBundle = KbvBundle::fromXmlNoValidation(prescriptionBundleXmlString);
 
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
@@ -292,7 +298,7 @@ void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
 
     for (const auto& patient : patients)
     {
-        ASSERT_EQ(patient.getKvnr(), kvnrPatient);
+        ASSERT_EQ(patient.kvnr(), kvnrPatient);
     }
 
     task.setHealthCarePrescriptionUuid();
@@ -336,7 +342,7 @@ void PostgresDatabaseMedicationDispenseTest::deleteTaskByPrescriptionId(const in
 }
 
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
+TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
 {
     if (!usePostgres())
     {
@@ -375,7 +381,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
     checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
 {
     if (!usePostgres())
     {
@@ -536,7 +542,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
+TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
 {
     if (!usePostgres())
     {
@@ -585,7 +591,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
 {
     if (!usePostgres())
     {
@@ -754,7 +760,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
 {
     if (!usePostgres())
     {
@@ -805,7 +811,11 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
     insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
                 tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
                 prescriptionIdsByPatients, prescriptionIdsByPharmacies,
-                medicationDispensesInputXmlStrings);
+                medicationDispensesInputXmlStrings, model::PrescriptionType::apothekenpflichigeArzneimittel);
+    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
+                tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
+                prescriptionIdsByPatients, prescriptionIdsByPharmacies,
+                medicationDispensesInputXmlStrings, model::PrescriptionType::direkteZuweisung);
 
     // GET Medication Dispenses
     //-------------------------
@@ -824,6 +834,8 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
                 ++expectedCountAll;
             }
         }
+
+        expectedCountAll *= 2;
 
         // Paging.
         ASSERT_TRUE(expectedCountAll > 50);
@@ -926,7 +938,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
+TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
 {
     if (!usePostgres())
     {
@@ -971,7 +983,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdSeveralFilters)
 {
     if (!usePostgres())
     {
@@ -1138,7 +1150,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdSeveralFilters)
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)
+TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)
 {
     if (!usePostgres())
     {
@@ -1190,7 +1202,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdSeveralFilters)
 {
     if (!usePostgres())
     {
@@ -1436,7 +1448,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdSeveralFilters
     }
 }
 
-TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdUnknownId)
+TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdUnknownId)
 {
     if (!usePostgres())
     {
@@ -1484,3 +1496,7 @@ TEST_F(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdUnknownId)
     database().commitTransaction();
     EXPECT_EQ(medicationDispenses.size(), 0);
 }
+
+INSTANTIATE_TEST_SUITE_P(PostgresDatabaseMedicationDispenseTestInst, PostgresDatabaseMedicationDispenseTest,
+                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                         model::PrescriptionType::direkteZuweisung));

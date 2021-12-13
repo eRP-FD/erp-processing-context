@@ -44,15 +44,19 @@ PcServiceContext::PcServiceContext(const Configuration& configuration,
                                    std::unique_ptr<HsmPool>&& hsmPool,
                                    std::shared_ptr<JsonValidator> jsonValidator,
                                    std::shared_ptr<XmlValidator> xmlValidator,
+                                   std::shared_ptr<InCodeValidator> inCodeValidator,
                                    std::shared_ptr<TslManager> tslManager)
     : idp()
     , mDatabaseFactory(std::move(databaseFactory))
-    , mDosHandler(std::make_unique<DosHandler>(std::move(redisClient)))
+    , mRedisClient(std::move(redisClient))
+    , mDosHandler(std::make_unique<DosHandler>(mRedisClient))
     , mHsmPool(std::move(hsmPool))
     , mKeyDerivation(*mHsmPool)
     , mJsonValidator(std::move(jsonValidator))
     , mXmlValidator(std::move(xmlValidator))
+    , mInCodeValidator(inCodeValidator)
     , mPreUserPseudonymManager(PreUserPseudonymManager::create(this))
+    , mTelematicPseudonymManager(TelematicPseudonymManager::create(*this))
     , mCFdSigErp(Certificate::fromPemString(configuration.getStringValue(ConfigurationKey::C_FD_SIG_ERP)))
     , mCFdSigErpPrivateKey()
     , mTslManager(std::move(tslManager))
@@ -76,6 +80,11 @@ PreUserPseudonymManager& PcServiceContext::getPreUserPseudonymManager()
     return *mPreUserPseudonymManager;
 }
 
+TelematicPseudonymManager& PcServiceContext::getTelematicPseudonymManager()
+{
+    return *mTelematicPseudonymManager;
+}
+
 const JsonValidator& PcServiceContext::getJsonValidator() const
 {
     return *mJsonValidator;
@@ -89,6 +98,11 @@ std::unique_ptr<Database> PcServiceContext::databaseFactory()
 const DosHandler& PcServiceContext::getDosHandler()
 {
     return *mDosHandler;
+}
+
+std::shared_ptr<RedisInterface> PcServiceContext::getRedisClient()
+{
+    return mRedisClient;
 }
 
 HsmPool& PcServiceContext::getHsmPool()
@@ -105,6 +119,12 @@ const XmlValidator& PcServiceContext::getXmlValidator() const
 {
     return *mXmlValidator;
 }
+
+const InCodeValidator& PcServiceContext::getInCodeValidator() const
+{
+    return *mInCodeValidator;
+}
+
 const Certificate& PcServiceContext::getCFdSigErp() const
 {
     return mCFdSigErp;

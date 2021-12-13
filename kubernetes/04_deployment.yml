@@ -93,6 +93,11 @@ spec:
               value: "mssim"
             - name: TPM_SERVER_NAME
               value: tpm-simulator-2.%NAMESPACE%.svc.cluster.local
+            - name: ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: secret-subscription-erp-pc
+                  key: SERVICE_SUBSCRIPTION_SIGNING_KEY
           envFrom:
             - prefix: ERP_
               secretRef:
@@ -101,6 +106,10 @@ spec:
             - prefix: ERP_
               secretRef:
                 name: secret-redis-erp-pc
+                optional: false
+            - prefix: ERP_
+              secretRef:
+                name: secret-subscription-erp-pc
                 optional: false
       volumes:
         - name: erp-config

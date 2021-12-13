@@ -21,12 +21,10 @@ const rapidjson::Pointer messagePointer ("/message");
 }  // anonymous namespace
 
 
-OuterResponseErrorData::OuterResponseErrorData(
-    const std::string_view& xRequestId,
-    HttpStatus status,
-    const std::string_view& error,
-    const std::optional<std::string_view>& message)
-    : ResourceBase()
+OuterResponseErrorData::OuterResponseErrorData(const std::string_view& xRequestId, HttpStatus status,
+                                               const std::string_view& error,
+                                               const std::optional<std::string_view>& message)
+    : ResourceBase(ResourceBase::NoProfile)
 {
     setXRequestId(xRequestId);
     setStatus(status);

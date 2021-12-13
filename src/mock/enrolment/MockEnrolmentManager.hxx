@@ -6,13 +6,6 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKENROLMENTMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKENROLMENTMANAGER_HXX
 
-#if defined(__APPLE__) || defined(_WIN32)
-    #error "MockEnrolmentManager requires both TPM and HSM and can not be compiled or run on this platform"
-#endif
-#if WITH_HSM_MOCK  != 1
-#error MockEnrolmentManager.hxx included but WITH_HSM_MOCK not enabled
-#endif
-
 #include "erp/enrolment/EnrolmentHelper.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 

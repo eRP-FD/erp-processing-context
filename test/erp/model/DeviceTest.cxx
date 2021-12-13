@@ -73,7 +73,7 @@ TEST(DeviceTest, ConstructFromJson)
     const std::string urlContact = "www::gematic.de";
     const std::string smsContact = "+49 333 123456789 30";
 
-    Device device = Device::fromJson(json);
+    Device device = Device::fromJsonNoValidation(json);
 
     device.setStatus(Device::Status::entered_in_error);
     device.setVersion(version);

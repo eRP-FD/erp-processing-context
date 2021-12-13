@@ -5,11 +5,14 @@
 
 #include "erp/model/Bundle.hxx"
 
+#include "erp/model/ErxReceipt.hxx"
+#include "erp/model/KbvBundle.hxx"
+#include "erp/model/ResourceVersion.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/Uuid.hxx"
 
-#include <rapidjson/pointer.h>
 #include <magic_enum.hpp>
+#include <rapidjson/pointer.h>
 
 
 using namespace rapidjson;
@@ -37,25 +40,26 @@ namespace
     Pointer resourceTypePointer ("/resourceType");
     Pointer signaturePointer ("/signature");
     Pointer signatureWhenPointer ("/signature/when");
+    Pointer prescriptionIdPointer ("/identifier/value");
 
 }
 
 // Сustom definitions of names for enum.
 // Specialization of `enum_name` must be injected in `namespace magic_enum::customize`.
 template <>
-constexpr std::string_view magic_enum::customize::enum_name<model::Bundle::Type>(model::Bundle::Type value) noexcept {
+constexpr std::string_view magic_enum::customize::enum_name<model::BundleType>(typename model::BundleType value) noexcept {
     switch (value) {
-        case model::Bundle::Type::document:
-        case model::Bundle::Type::message:
-        case model::Bundle::Type::transaction:
-        case model::Bundle::Type::batch:
-        case model::Bundle::Type::history:
-        case model::Bundle::Type::searchset:
-        case model::Bundle::Type::collection:
+        case model::BundleType::document:
+        case model::BundleType::message:
+        case model::BundleType::transaction:
+        case model::BundleType::batch:
+        case model::BundleType::history:
+        case model::BundleType::searchset:
+        case model::BundleType::collection:
             return {};
-        case model::Bundle::Type::transaction_response:
+        case model::BundleType::transaction_response:
             return "transaction-response";
-        case model::Bundle::Type::batch_response:
+        case model::BundleType::batch_response:
             return "batch-response";
     }
     return {};
@@ -65,8 +69,10 @@ constexpr std::string_view magic_enum::customize::enum_name<model::Bundle::Type>
 namespace model
 {
 
-Bundle::Bundle (const Type type, const Uuid& bundleId)
-    : Resource<Bundle>()
+template<class DerivedBundle, typename SchemaVersionType>
+BundleBase<DerivedBundle, SchemaVersionType>::BundleBase(const BundleType type, ResourceBase::Profile profile,
+                                                         const Uuid& bundleId)
+    : Resource<DerivedBundle, SchemaVersionType>(profile)
 {
     // The bundle ID:
     setId(bundleId);
@@ -77,37 +83,34 @@ Bundle::Bundle (const Type type, const Uuid& bundleId)
     // Set the resource type to "Bundle".
     setValue(resourceTypePointer, valueResourceTypeBundle);
 
-    if (type == Type::searchset)
+    if (type == BundleType::searchset)
     {
         setValue(totalPointer, rapidjson::Value(gsl::narrow<uint64_t>(0u)));
     }
 }
 
 
-Bundle::Bundle (const Type type)
-    : Bundle(type, Uuid())
+template<class DerivedBundle, typename SchemaVersionType>
+BundleBase<DerivedBundle, SchemaVersionType>::BundleBase(const BundleType type, ResourceBase::Profile profile)
+    : BundleBase<DerivedBundle, SchemaVersionType>(type, profile, Uuid())
 {
 }
 
 
-Bundle::Bundle (NumberAsStringParserDocument&& document)
-    : Resource<Bundle>(std::move(document))
-{
-    ModelExpect(getResourceType()==valueResourceTypeBundle, "resource type is not 'Bundle'");
-}
-
-void Bundle::setId(const Uuid& bundleId)
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::setId(const Uuid& bundleId)
 {
     setValue(idPointer, bundleId.toString());
 }
 
-void Bundle::addResource(const std::optional<std::string>& fullUrl,
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::addResource(const std::optional<std::string>& fullUrl,
                          const std::optional<std::string>& resourceLink,
                          const std::optional<SearchMode>& searchMode,
                          rapidjson::Value&& resourceObject)
 {
     // Set up a new entry object.
-    auto entry = createEmptyObject();
+    auto entry = this->createEmptyObject();
     if (resourceLink)
     {
         setKeyValue(entry, linkPointer, resourceLink.value());
@@ -120,7 +123,7 @@ void Bundle::addResource(const std::optional<std::string>& fullUrl,
     setKeyValue(entry, resourcePointer, resourceObject);
     if (searchMode)
     {
-        Expect3(getBundleType() == Type::searchset, "search mode shall only be set for searchsets", std::logic_error);
+        Expect3(getBundleType() == BundleType::searchset, "search mode shall only be set for searchsets", std::logic_error);
         switch (searchMode.value())
         {
             case SearchMode::match:
@@ -140,54 +143,61 @@ void Bundle::addResource(const std::optional<std::string>& fullUrl,
 }
 
 
-void Bundle::addResource(const std::optional<std::string>& fullUrl,
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::addResource(const std::optional<std::string>& fullUrl,
                          const std::optional<std::string>& resourceLink,
                          const std::optional<SearchMode>& searchMode,
                          const rapidjson::Value& resourceObject)
 {
     // Create a copy of `resourceObject` before forwarding to the non-const variant of `addResource`.
-    auto value = copyValue(resourceObject);
+    auto value = this->copyValue(resourceObject);
     addResource(fullUrl, resourceLink, searchMode, std::move(value));
 }
 
 
-size_t Bundle::getResourceCount(void) const
+template <class DerivedBundle, typename SchemaVersionType>
+size_t BundleBase<DerivedBundle, SchemaVersionType>::getResourceCount(void) const
 {
-    return valueSize(entryPointer);
+    return this->valueSize(entryPointer);
 }
 
 
-const rapidjson::Value& Bundle::getResource (const size_t index) const
+template <class DerivedBundle, typename SchemaVersionType>
+const rapidjson::Value& BundleBase<DerivedBundle, SchemaVersionType>::getResource (const size_t index) const
 {
-    const auto* arrayEntry = const_cast<Bundle*>(this)->getMemberInArray(entryPointer, index);
+    const auto* arrayEntry = this->getMemberInArray(entryPointer, index);
     ModelExpect(arrayEntry != nullptr, "resource entry does not exist");
     return getValueMember(*arrayEntry, keyEntryResource);
 }
 
 
-std::string_view Bundle::getResourceLink (const size_t index) const
+template <class DerivedBundle, typename SchemaVersionType>
+std::string_view BundleBase<DerivedBundle, SchemaVersionType>::getResourceLink (const size_t index) const
 {
-    const auto* arrayEntry = const_cast<Bundle*>(this)->getMemberInArray(entryPointer, index);
+    const auto* arrayEntry = this->getMemberInArray(entryPointer, index);
     ModelExpect(arrayEntry != nullptr, "resource entry does not exist");
     const auto& value = getValueMember(*arrayEntry, keyEntryLink);
     return NumberAsStringParserDocument::getStringValueFromValue(&value);
 }
 
 
-void Bundle::setSignature (rapidjson::Value& signature)
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::setSignature (rapidjson::Value& signature)
 {
     setValue(signaturePointer, signature);
 }
 
 
-void Bundle::setSignature(const model::Signature& signature)
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::setSignature(const model::Signature& signature)
 {
-    auto value = copyValue(signature.jsonDocument());
+    auto value = this->copyValue(signature.jsonDocument());
     setSignature(value);
 }
 
 
-std::optional<model::Signature> Bundle::getSignature() const
+template <class DerivedBundle, typename SchemaVersionType>
+std::optional<model::Signature> BundleBase<DerivedBundle, SchemaVersionType>::getSignature() const
 {
     const auto* signature = getValue(signaturePointer);
     if (signature != nullptr)
@@ -198,13 +208,15 @@ std::optional<model::Signature> Bundle::getSignature() const
 }
 
 
-Timestamp Bundle::getSignatureWhen () const
+template <class DerivedBundle, typename SchemaVersionType>
+Timestamp BundleBase<DerivedBundle, SchemaVersionType>::getSignatureWhen () const
 {
     return Timestamp::fromXsDateTime(std::string{getStringValue(signatureWhenPointer)});
 }
 
 
-void Bundle::setLink (const Link::Type linkType, const std::string_view linkText)
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::setLink (const Link::Type linkType, const std::string_view linkText)
 {
     std::string_view valueLinkRelation;
     switch(linkType)
@@ -219,12 +231,12 @@ void Bundle::setLink (const Link::Type linkType, const std::string_view linkText
             valueLinkRelation = valueLinkRelationNext;
             break;
     }
-    auto* value = findMemberInArray(linkPointer, relationPointer, valueLinkRelation);
+    auto* value = this->findMemberInArray(linkPointer, relationPointer, valueLinkRelation);
 
     if (value == nullptr)
     {
         // Link does not yet exist. Create a new one.
-        auto link = createEmptyObject();
+        auto link = this->createEmptyObject();
         setKeyValue(link, relationPointer, valueLinkRelation);
         setKeyValue(link, urlPointer, linkText);
         // Add it to the link array.
@@ -238,7 +250,8 @@ void Bundle::setLink (const Link::Type linkType, const std::string_view linkText
 }
 
 
-std::optional<std::string_view> Bundle::getLink (const Link::Type type) const
+template <class DerivedBundle, typename SchemaVersionType>
+std::optional<std::string_view> BundleBase<DerivedBundle, SchemaVersionType>::getLink (const Link::Type type) const
 {
     switch(type)
     {
@@ -250,40 +263,58 @@ std::optional<std::string_view> Bundle::getLink (const Link::Type type) const
 }
 
 
-std::string_view Bundle::getResourceType (void) const
+template <class DerivedBundle, typename SchemaVersionType>
+std::string_view BundleBase<DerivedBundle, SchemaVersionType>::getResourceType (void) const
 {
     return getStringValue(resourceTypePointer);
 }
 
-Uuid Bundle::getId() const
+template <class DerivedBundle, typename SchemaVersionType>
+Uuid BundleBase<DerivedBundle, SchemaVersionType>::getId() const
 {
     return Uuid(std::string(getStringValue(idPointer)));
 }
 
-size_t Bundle::getTotalSearchMatches() const
+template <class DerivedBundle, typename SchemaVersionType>
+size_t BundleBase<DerivedBundle, SchemaVersionType>::getTotalSearchMatches() const
 {
-    auto optionalTotal = getOptionalInt64Value(totalPointer);
+    auto optionalTotal = this->getOptionalInt64Value(totalPointer);
     return optionalTotal.value_or(0);
 }
 
-Bundle::Type Bundle::getBundleType() const
+template <class DerivedBundle, typename SchemaVersionType>
+BundleType BundleBase<DerivedBundle, SchemaVersionType>::getBundleType() const
 {
     auto strVal = getStringValue(typePointer);
-    auto enumVal = magic_enum::enum_cast<Type>(strVal);
+    auto enumVal = magic_enum::enum_cast<BundleType>(strVal);
     Expect(enumVal.has_value(), "Type of Bundle could not be determined");
     return *enumVal;
 }
 
-void Bundle::setTotalSearchMatches(std::size_t totalSearchMatches)
+template <class DerivedBundle, typename SchemaVersionType>
+PrescriptionId BundleBase<DerivedBundle, SchemaVersionType>::getIdentifier() const
 {
-    Expect3(getBundleType() == Type::searchset, "total shall only be set for searchsets", std::logic_error);
+    const auto prescriptionIdStr = getStringValue(prescriptionIdPointer);
+    return PrescriptionId::fromString(prescriptionIdStr);
+}
+
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::setTotalSearchMatches(std::size_t totalSearchMatches)
+{
+    Expect3(getBundleType() == BundleType::searchset, "total shall only be set for searchsets", std::logic_error);
     setValue(totalPointer, rapidjson::Value(totalSearchMatches));
 }
 
-void Bundle::increaseTotalSearchMatches()
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::increaseTotalSearchMatches()
 {
     auto current = getTotalSearchMatches();
     setValue(totalPointer, rapidjson::Value(gsl::narrow<uint64_t>(current+1)));
 }
+
+
+template class BundleBase<ErxReceipt>;
+template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
+template class BundleBase<Bundle>;
 
 } // end of namespace model

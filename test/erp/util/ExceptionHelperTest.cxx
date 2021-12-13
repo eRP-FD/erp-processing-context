@@ -118,6 +118,9 @@ TEST_F(ExceptionHelperTest, JwtException)
 
 TEST_F(ExceptionHelperTest, HsmException)
 {
+#if WITH_HSM_TPM_PRODUCTION != 1
+    GTEST_SKIP_("skipped due to WITH_HSM_TPM_PRODUCTION != 1");
+#endif
     throwAndCatchException<HsmException>(
         "HsmException(details,42420001 ERP_ERR_NO_CONNECTION without index)",
         "details",

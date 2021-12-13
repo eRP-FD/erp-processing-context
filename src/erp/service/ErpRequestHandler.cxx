@@ -156,6 +156,14 @@ bool ErpRequestHandler::responseIsPartOfMultiplePages(const PagingArgument& pagi
     return pagingArgument.getOffset() > 0 || pagingArgument.getCount() == numOfResults;
 }
 
+void ErpRequestHandler::checkValidEncoding(const ContentMimeType& contentMimeType)
+{
+    const auto& encoding = contentMimeType.getEncoding();
+    bool validEncoding = !encoding || encoding->empty() || encoding.value() == Encoding::utf8;
+    ErpExpect(validEncoding, HttpStatus::UnsupportedMediaType,
+              "Invalid content type encoding received: " + std::string(contentMimeType));
+}
+
 // ---
 
 ErpUnconstrainedRequestHandler::ErpUnconstrainedRequestHandler (const Operation operation)

@@ -174,16 +174,8 @@ void SaxHandler::parseStringView(const std::string_view& xmlDocument)
     parseStringViewInternal(mHandler, xmlDocument, this);
 }
 
-void SaxHandler::parseAndValidateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext)
+void SaxHandler::validateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext)
 {
-    // We decided to run the SAX parser twice.
-    // The first time with only the xsd validation plugin installed,
-    // the second time with only the FHIR SAX Handler callbacks installed.
-    // We could do it in one run, but the FHIR SAX Handler callbacks are implemented with the
-    // premise in mind, that the incoming data is already validated. I.e. they may be not 100% fail safe.
-    // libxml2 has the behaviour, that it first calls the registered callbacks, and afterwards does
-    // the xsd validation.
-
     xmlSAXHandler handler{};
     xmlSAXHandlerPtr handlerPtr = &handler;
     handler.initialized = XML_SAX2_MAGIC;
@@ -205,6 +197,19 @@ void SaxHandler::parseAndValidateStringView(const std::string_view& xmlDocument,
         TVLOG(2) << xmlDocument;
         std::rethrow_exception(schemaValidationContext.mExceptionPtr);
     }
+}
+
+void SaxHandler::parseAndValidateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext)
+{
+    // We decided to run the SAX parser twice.
+    // The first time with only the xsd validation plugin installed,
+    // the second time with only the FHIR SAX Handler callbacks installed.
+    // We could do it in one run, but the FHIR SAX Handler callbacks are implemented with the
+    // premise in mind, that the incoming data is already validated. I.e. they may be not 100% fail safe.
+    // libxml2 has the behaviour, that it first calls the registered callbacks, and afterwards does
+    // the xsd validation.
+
+    validateStringView(xmlDocument, schemaValidationContext);
 
     parseStringView(xmlDocument);
 }
@@ -245,6 +250,8 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler,
     }
 
     mContext->sax = &handler;
+
+    xmlCtxtUseOptions(mContext.get(), XML_PARSE_NOENT);
 
     int parseResult = 0;
     try

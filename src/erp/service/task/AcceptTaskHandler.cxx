@@ -86,7 +86,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 
     // Create response:
     const auto linkBase = makeFullUrl("/Task/" + prescriptionId.toString());
-    model::Bundle responseBundle(model::Bundle::Type::collection);
+    model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, linkBase + "/$accept/");
     responseBundle.addResource(linkBase, {}, {}, task->jsonDocument());
     responseBundle.addResource({}, {}, {}, healthCareProviderPrescription->jsonDocument());

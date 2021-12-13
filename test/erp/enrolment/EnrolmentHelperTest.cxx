@@ -3,10 +3,6 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-// Disable the whole file on Mac and Windows. Neither TPM nor HSM are available on these platforms but
-// are required for the tests.
-#if ! defined(__APPLE__) && ! defined(_WIN32)
-
 #include "erp/enrolment/EnrolmentHelper.hxx"
 
 #include "erp/hsm/BlobCache.hxx"
@@ -16,8 +12,9 @@
 #include "erp/util/TLog.hxx"
 
 #include "mock/enrolment/MockEnrolmentManager.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
+#include "mock/hsm/MockBlobCache.hxx"
 #include "mock/util/MockConfiguration.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #include "mock/mock_config.h"
 
@@ -121,7 +118,7 @@ public:
 TEST_F(MockEnrolmentManagerTest, DISABLED_createTeeToken_failForExpiredNonceBlob)
 {
     // Create blob cache without adding any blobs.
-    auto blobCache = std::make_shared<BlobCache>(std::move(std::make_unique<MockBlobDatabase>()));
+    auto blobCache = std::make_shared<BlobCache>(std::make_unique<MockBlobDatabase>());
 
     // Use TPM and HSM (simulators) to setup the necessary blobs for TEE token negotiation.
     TpmProxyDirect tpm (*blobCache);
@@ -132,5 +129,3 @@ TEST_F(MockEnrolmentManagerTest, DISABLED_createTeeToken_failForExpiredNonceBlob
     ASSERT_ANY_THROW(
         enrolmentHelper.createTeeTokenWithSimulatedError(tpm, *blobCache, TestEnrolmentHelper::SimulatedError::NonceBlobExpiration));
 }
-
-#endif

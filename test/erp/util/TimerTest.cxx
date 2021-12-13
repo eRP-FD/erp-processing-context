@@ -86,7 +86,7 @@ TEST_F(TimerTest, runAt_now)
     timer.runAt(std::chrono::system_clock::now(), [&value]{value.append("test");});
 
     ASSERT_EQ(value.updateCount(), 0);
-    value.waitForUpdateCount(std::chrono::milliseconds(10), 1);
+    value.waitForUpdateCount(std::chrono::milliseconds(100), 1);
     ASSERT_EQ(value.updateCount(), 1);
     ASSERT_EQ(value.get(), "test");
 }
@@ -97,10 +97,10 @@ TEST_F(TimerTest, runAt_inTheNearFuture)
     LocalTimer timer;
     SharedValue value;
 
-    timer.runAt(std::chrono::system_clock::now() + std::chrono::milliseconds(10), [&value]{value.append("test"); });
+    timer.runAt(std::chrono::system_clock::now() + std::chrono::milliseconds(100), [&value]{value.append("test"); });
 
     ASSERT_EQ(value.updateCount(), 0);
-    value.waitForUpdateCount(std::chrono::milliseconds(20), 1);
+    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
     ASSERT_EQ(value.updateCount(), 1);
     ASSERT_EQ(value.get(), "test");
 }
@@ -111,10 +111,10 @@ TEST_F(TimerTest, runIn)
     LocalTimer timer;
     SharedValue value;
 
-    timer.runIn(std::chrono::milliseconds(10), [&value]{value.append("test"); });
+    timer.runIn(std::chrono::milliseconds(100), [&value]{value.append("test"); });
 
     ASSERT_EQ(value.updateCount(), 0);
-    value.waitForUpdateCount(std::chrono::milliseconds(20), 1);
+    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
     ASSERT_EQ(value.updateCount(), 1);
     ASSERT_EQ(value.get(), "test");
 }
@@ -143,13 +143,13 @@ TEST_F(TimerTest, runRepeating)
     SharedValue value;
     size_t index = 0;
 
-    timer.runRepeating(std::chrono::milliseconds(5), std::chrono::milliseconds(10), [&]
+    timer.runRepeating(std::chrono::milliseconds(500), std::chrono::milliseconds(1000), [&]
     {
         value.append(" " + std::to_string(index++));
     });
 
     ASSERT_EQ(value.updateCount(), 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     ASSERT_EQ(value.updateCount(), 3);
     ASSERT_EQ(value.get(), " 0 1 2");
     ASSERT_EQ(index, 3);
@@ -168,13 +168,13 @@ TEST_F(TimerTest, runRepeating_multipleJobs)
 
     for (size_t index=0; index<jobCount; ++index)
     {
-        timer.runRepeating(std::chrono::milliseconds(5), std::chrono::milliseconds(10), [&,index]
+        timer.runRepeating(std::chrono::milliseconds(500), std::chrono::milliseconds(1000), [&,index]
         {
             values[index].append(" " + std::to_string(indices[index]++));
         });
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
     for (size_t index=0; index<jobCount; ++index)
     {
         ASSERT_EQ(values[index].updateCount(), 3);
@@ -189,14 +189,14 @@ TEST_F(TimerTest, cancel_oneTimeJob)
     LocalTimer timer;
     SharedValue value;
 
-    const auto token = timer.runIn(std::chrono::milliseconds(10), [&value]{value.append("test"); });
+    const auto token = timer.runIn(std::chrono::milliseconds(100), [&value]{value.append("test"); });
 
     ASSERT_EQ(value.updateCount(), 0);
 
     timer.cancel(token);
 
     // Give the job time too be triggered but note that that is expected not to happen.
-    value.waitForUpdateCount(std::chrono::milliseconds(20), 1);
+    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
     ASSERT_EQ(value.updateCount(), 0);
 }
 
@@ -207,8 +207,8 @@ TEST_F(TimerTest, cancel_repeatingJob)
     SharedValue value;
 
     const auto token = timer.runRepeating(
-        std::chrono::milliseconds(5),
-        std::chrono::milliseconds(10),
+        std::chrono::milliseconds(50),
+        std::chrono::milliseconds(100),
         [&value]{value.append("test"); });
 
     ASSERT_EQ(value.updateCount(), 0);
@@ -216,7 +216,7 @@ TEST_F(TimerTest, cancel_repeatingJob)
     timer.cancel(token);
 
     // Give the job time too be triggered but note that that is expected not to happen.
-    value.waitForUpdateCount(std::chrono::milliseconds(20), 1);
+    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
     ASSERT_EQ(value.updateCount(), 0);
 }
 
@@ -229,20 +229,20 @@ TEST_F(TimerTest, cancel_repeatingJobAfterFirstTrigger)
     SharedValue value;
 
     const auto token = timer.runRepeating(
-        std::chrono::milliseconds(5),
         std::chrono::milliseconds(50),
+        std::chrono::milliseconds(500),
         [&value]{value.append("test"); });
 
     ASSERT_EQ(value.updateCount(), 0);
 
     // Wait for the job to be executed once.
-    value.waitForUpdateCount(std::chrono::milliseconds(10), 1);
+    value.waitForUpdateCount(std::chrono::milliseconds(100), 1);
 
     // Now cancel to prevent a second trigger.
     timer.cancel(token);
 
     // Give the job time too be triggered again but note that that is expected not to happen.
-    value.waitForUpdateCount(std::chrono::milliseconds(100), 2);
+    value.waitForUpdateCount(std::chrono::milliseconds(1000), 2);
     ASSERT_EQ(value.updateCount(), 1);
     ASSERT_EQ(value.get(), "test");
 }

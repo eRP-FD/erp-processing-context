@@ -32,7 +32,7 @@
         "id": "c504ae01-3c05-4210-a865-97c8dd38bd39",
         "meta": {
           "profile": [
-            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.1"
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2"
           ]
         },
         "resourceType": "Composition",
@@ -200,7 +200,7 @@
         },
         "meta": {
           "profile": [
-            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1"
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2"
           ]
         },
         "requester": {
@@ -263,7 +263,7 @@
         "id": "e13a135a-4db5-4dc7-8ab3-b61dab9887c0",
         "meta": {
           "profile": [
-            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.1"
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2"
           ]
         },
         "resourceType": "Medication"

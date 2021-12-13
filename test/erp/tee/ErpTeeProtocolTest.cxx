@@ -12,7 +12,8 @@
 #include "erp/util/FileHelper.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
+#include "mock/hsm/MockBlobCache.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test_config.h"
 
 #include <gtest/gtest.h>
@@ -73,7 +74,7 @@ public:
 
 TEST_P(ErpTeeProtocolTest, gematik_ref_key_config) // NOLINT
 {
-    // this test assumes that the key is configured in configuration.json
+    // this test assumes that the key is configured in 02_development.config.json
     // the key is intentionally not hard coded as it is supposed to test
     // that the key is correctly configured
     // The key is located in: https://github.com/gematik/ref-eRp-FD-Server/blob/master/vau/src/decrypt.rs

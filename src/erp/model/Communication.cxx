@@ -4,16 +4,16 @@
  */
 
 #include "erp/model/Communication.hxx"
-
-#include <rapidjson/writer.h>
-#include <map>
-#include <regex>
-#include <tuple>
-
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/UrlHelper.hxx"
 #include "erp/util/Uuid.hxx"
+
+#include <erp/util/String.hxx>
+#include <rapidjson/writer.h>
+#include <map>
+#include <regex>
+#include <tuple>
 
 using namespace model;
 using namespace model::resource;
@@ -97,10 +97,12 @@ const std::string_view& Communication::messageTypeToProfileUrl(MessageType messa
     return it->second;
 }
 
-Communication::MessageType Communication::profileUrlToMessageType(const std::string_view& messageType)
+Communication::MessageType Communication::profileUrlToMessageType(const std::string_view& profileUrl)
 {
-    const auto& it = ProfileUrlToMessageType.find(messageType);
-    ModelExpect(it != ProfileUrlToMessageType.end(), "Could not retrieve message type from " + std::string(messageType));
+    const auto parts = String::split(profileUrl, '|');
+    ModelExpect(!parts.empty(), "error processing profileUrl: " + std::string(profileUrl));
+    const auto& it = ProfileUrlToMessageType.find(parts[0]);
+    ModelExpect(it != ProfileUrlToMessageType.end(), "Could not retrieve message type from " + std::string(profileUrl));
     return it->second;
 }
 

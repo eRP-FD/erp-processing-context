@@ -29,13 +29,13 @@ constexpr std::string_view contact_template = R"(
   }
 })";
 
-constexpr std::string_view device_template = R"(
+const std::string device_template = R"(
 {
   "resourceType":"Device",
   "id":"DEVICE_ID",
   "meta":{
     "profile":[
-      "https://gematik.de/fhir/StructureDefinition/ErxDevice"
+      ""
     ]
   },
   "status":"DEVICE_STATUS",
@@ -88,12 +88,13 @@ const rj::Pointer valuePointer(ElementName::path(elements::value));
 
 
 Device::Device()
-    : Resource<Device>()
+    : Resource<Device>("https://gematik.de/fhir/StructureDefinition/ErxDevice",
+                       []() {
+                           std::call_once(onceFlag, initTemplates);
+                           return deviceTemplate;
+                       }()
+                           .instance())
 {
-    std::call_once(onceFlag, initTemplates);
-
-    initFromTemplate(*deviceTemplate);
-
     setId(std::to_string(Id));
     setStatus(Status::active);
     setVersion(ErpServerInfo::ReleaseVersion);

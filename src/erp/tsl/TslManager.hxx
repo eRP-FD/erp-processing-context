@@ -63,12 +63,14 @@ public:
      * @param tslMode                   specifies which trust store should be provided TSL or BNetzA-VL
      * @param certificate               the certificate to check
      * @param typeRestrictions          if provided, the certificate type must be in the set
+     * @param ocspResponse              optional ocsp response that should be used for OCSP check if present
      *
      * @throws TslError in case of problems
      */
     virtual void verifyCertificate(const TslMode tslMode,
                                    X509Certificate& certificate,
-                                   const std::unordered_set<CertificateType>& typeRestrictions);
+                                   const std::unordered_set<CertificateType>& typeRestrictions,
+                                   const OcspResponsePtr& ocspResponse = {});
 
     /**
      * Checks whether the trust stores have to be update and does the update if necessary.

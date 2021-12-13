@@ -13,22 +13,27 @@
 class EnvironmentVariableGuard
 {
 public:
-    EnvironmentVariableGuard(const std::string& variableName, const std::string& value)
+    EnvironmentVariableGuard(const std::string& variableName, const std::optional<std::string>& value)
         : mVariableName(variableName)
         , mPreviousValue(Environment::get(variableName))
     {
-        Environment::set(variableName, value);
+        set(value);
     }
 
     ~EnvironmentVariableGuard()
     {
-        if (mPreviousValue)
-            Environment::set(mVariableName, *mPreviousValue);
+        set(mPreviousValue);
+    }
+
+private:
+    void set(const std::optional<std::string>& value)
+    {
+        if (value)
+            Environment::set(mVariableName, *value);
         else
             Environment::unset(mVariableName);
     }
 
-private:
     const std::string mVariableName;
     std::optional<std::string> mPreviousValue;
 };

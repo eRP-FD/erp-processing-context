@@ -37,9 +37,6 @@ public:
         MockTarget target,
         std::unique_ptr<BlobDatabase>&& blobDatabase);
 
-    static std::shared_ptr<BlobCache> createBlobCache (
-        MockTarget target);
-
     static void setupBlobCache (
         MockTarget target,
         BlobCache& blobCache);

@@ -16,6 +16,7 @@
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/ServerTestBase.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 
 #include "tools/jwt/JwtBuilder.hxx"
 
@@ -77,6 +78,12 @@ public:
           taskId(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711)
                      .toString())
     {
+    }
+
+    void SetUp (void)
+    {
+        EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
+        ServerTestBase::SetUp();
     }
 
     std::unique_ptr<Database> createDatabaseFrontend()
@@ -174,7 +181,6 @@ TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsCommunication)
     testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
 }
 
-
 TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsAuditEvents)
 {
     A_19402.test("Not allowed HTTP methods for /AuditEvent");
@@ -189,5 +195,29 @@ TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsAuditEvents)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+}
+
+TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsChargeItem)
+{
+    A_22111.test("Not allowed HTTP methods for /ChargeItem");
+    std::string_view endpoint = "/ChargeItem/";
+    testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    endpoint = "/ChargeItem/<id>";
+    testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+}
+
+TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsConsent)
+{
+    A_22153.test("Not allowed HTTP methods for /Consent");
+    std::string_view endpoint = "/Consent/";
+    testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    endpoint = "/Consent/<id>";
+    testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
 }

@@ -67,6 +67,9 @@ public:
     void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds,
                                        const model::Timestamp& retrieved,
                                        const db_model::HashedId& recipient);
+
+    bool isBlobUsed(BlobId blobId) const;
+
     class Row
     {
     public:
@@ -82,7 +85,7 @@ public:
         db_model::HashedId recipient;
         model::Communication::MessageType messageType;
         std::optional<model::Timestamp> received;
-        std::optional<int64_t> prescriptionId;
+        int64_t prescriptionId;
         BlobId senderBlobId;
         db_model::EncryptedBlob messageForSender;
         BlobId recipientBlobId;

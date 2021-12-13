@@ -22,6 +22,10 @@ public:
 
     void SetUp() override
     {
+        if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
+        {
+            GTEST_SKIP_("disabled, because the QES Key check could not be disabled");
+        }
         kvnr = jwtVersicherter().stringForClaim(JWT::idNumberClaim).value();
         telematikIdApotheke = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
         ASSERT_NO_FATAL_FAILURE(communicationDeleteAll(jwtVersicherter()));
@@ -116,6 +120,7 @@ public:
     std::string telematikIdApotheke;
     std::optional<Task> task;
     EnvironmentVariableGuard environmentVariableGuard{"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION", "false"};
+    EnvironmentVariableGuard environmentVariableGuard2{"DEBUG_DISABLE_QES_ID_CHECK", "true"};
 };
 
 TEST_F(Erp5822Test, InsurantFirst)

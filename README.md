@@ -23,7 +23,7 @@ Siehe [hier](doc/Building.md) für Einzelheiten zur Erstellung des Projekts und 
 Eine [Anleitung](doc/GuideToImplementation.md) beschreibt die Implementierung.
 
 # Hinweise
-Das test key/certificate-Paar in `resources/test/configuration.json.in` (erp/processing-context/server/certificate)
+Das test key/certificate-Paar in `resources/test/02_development.config.json.in` (erp/processing-context/server/certificate)
 wurde auf macOS Catalina 10.15.1 mit OpenSSL 3.0.0-dev erzeugt.
 
 Sie sind ausschließlich für Testzwecke auf einem lokal betriebenen Server gedacht.
@@ -56,7 +56,7 @@ Usage: jwt <claimfile>
 ```
 
 ## VAU-Anfrage-Verschlüsselungs-Tool `vau_encrypt`
-Dieses Werkzeug verwendet den Key aus `vau/private-key` in `configuration.json` oder die Umgebungsvariable `ERP_VAU_PRIVATE_KEY`
+Dieses Werkzeug verwendet den Key aus `vau/private-key` in `02_development.config.json` oder die Umgebungsvariable `ERP_VAU_PRIVATE_KEY`
 um eine verschlüsselte Anfrage zu erstellen.
 
 ```

@@ -10,10 +10,7 @@
 enum class SchemaType
 {
     Gem_erxAuditEvent,
-    ActivateTaskParameters,
-    CreateTaskParameters,
     Gem_erxBinary,
-    Gem_erxBundle,
     fhir, // general FHIR schema
     Gem_erxCommunicationDispReq,
     Gem_erxCommunicationInfoReq,
@@ -23,8 +20,6 @@ enum class SchemaType
     Gem_erxDevice,
     KBV_PR_ERP_Bundle,
     KBV_PR_ERP_Composition,
-//    KBV_PR_ERP_Generics,
-//    KBV_PR_ERP_Medication_BundleDummy,
     KBV_PR_ERP_Medication_Compounding,
     KBV_PR_ERP_Medication_FreeText,
     KBV_PR_ERP_Medication_Ingredient,

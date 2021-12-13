@@ -29,6 +29,9 @@ public:
         parameter = factory();
         if (parameter == nullptr)
             GTEST_SKIP();
+#ifndef DEBUG
+        GTEST_SKIP_("disabled in Release");
+#endif
     }
 };
 

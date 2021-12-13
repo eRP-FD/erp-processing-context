@@ -21,7 +21,13 @@ namespace model
 class Binary : public Resource<Binary>
 {
 public:
-    explicit Binary(std::string_view id, std::string_view data);
+    enum class Type
+    {
+        Base64,
+        PKCS7
+    };
+
+    Binary(std::string_view id, std::string_view data, const Type type = Type::PKCS7);
 
     [[nodiscard]] std::optional<std::string_view> id() const;
     [[nodiscard]] std::optional<std::string_view> data() const;

@@ -3,12 +3,12 @@
   "id": "01eb69a4-9029-d610-b1cf-ddb8c6c0bfbc",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent"
+      "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent|1.1.1"
     ]
   },
   "text": {
     "status": "generated",
-    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Veraltete E-Rezepte wurden vom Fachdienst automatisch gelöscht.</div>"
+    "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Veraltete Rezepte wurden vom Fachdienst automatisch gelöscht.</div>"
   },
   "language": "de",
   "type": {

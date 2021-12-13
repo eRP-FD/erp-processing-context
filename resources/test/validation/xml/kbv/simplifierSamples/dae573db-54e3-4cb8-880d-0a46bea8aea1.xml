@@ -2,7 +2,7 @@
   <id value="dae573db-54e3-4cb8-880d-0a46bea8aea1" />
   <meta>
     <lastUpdated value="2021-04-06T08:30:00Z" />
-    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1" />
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2" />
   </meta>
   <identifier>
     <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
@@ -16,7 +16,7 @@
       <Composition xmlns="http://hl7.org/fhir">
         <id value="e1d276c4-f4d5-4e2d-8a82-04d92b34ca51" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
           <valueCoding>
@@ -43,7 +43,7 @@
           <type value="Device" />
           <identifier>
             <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer" />
-            <value value="Y/410/2107/36/999" />
+            <value value="Y/400/2107/36/999" />
           </identifier>
         </author>
         <title value="elektronische Arzneimittelverordnung" />
@@ -84,7 +84,7 @@
         <!--Beispiel MedicationRequest für eine Rezepturverordnung -->
         <id value="c97a6538-6742-45a3-a229-2e0e792db446" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
           <valueCoding>
@@ -140,7 +140,7 @@
       <Medication xmlns="http://hl7.org/fhir">
         <id value="fd681c2a-6f35-4fa9-8c84-573157130773" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
           <valueCoding>
@@ -220,7 +220,7 @@
         </identifier>
         <name>
           <use value="official" />
-          <family value="Grossherzog von und zu der Schaumbërg-von-und-zu-Schaumburg-und-Radëberg">
+          <family value="Grossherzog von und zu der Schaumberg-von-und-zu-Schaumburg-und-Radeberg">
             <extension url="http://fhir.de/StructureDefinition/humanname-namenszusatz">
               <valueString value="Grossherzog" />
             </extension>
@@ -228,10 +228,10 @@
               <valueString value="von und zu der" />
             </extension>
             <extension url="http://hl7.org/fhir/StructureDefinition/humanname-own-name">
-              <valueString value="Schaumbërg-von-und-zu-Schaumburg-und-Radëberg" />
+              <valueString value="Schaumberg-von-und-zu-Schaumburg-und-Radeberg" />
             </extension>
           </family>
-          <given value="Friëdrich-Wilhelm-Karl-Gustav-Justus-Gotfried" />
+          <given value="Friedrich-Wilhelm-Karl-Gustav-Justus-Gotfried" />
           <prefix value="Prof. habil. Dr. med">
             <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier">
               <valueCode value="AC" />
@@ -399,7 +399,7 @@
             <system value="http://fhir.de/NamingSystem/arge-ik/iknr" />
             <value value="108035612" />
           </identifier>
-          <display value="mhplus Betriebskrankenkasse" />
+          <display value="mhplus BKK" />
         </payor>
       </Coverage>
     </resource>

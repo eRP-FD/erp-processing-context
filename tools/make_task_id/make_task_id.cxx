@@ -10,14 +10,14 @@
 
 int main(int argc, char** argv)
 {
-    if (argc != 2)
+    if (argc != 3)
     {
-        std::cerr << "usage: " << argv[0] << " <id>" << std::endl;
+        std::cerr << "usage: " << argv[0] << " 160|169 <id>" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     auto prescriptionId = model::PrescriptionId::fromDatabaseId(
-        model::PrescriptionType::apothekenpflichigeArzneimittel, std::stoll(argv[1]));
+        magic_enum::enum_cast<model::PrescriptionType>(std::stoll(argv[1])).value(), std::stoll(argv[2]));
 
     std::cout << prescriptionId.toString() << std::endl;
 

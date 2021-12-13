@@ -85,7 +85,7 @@ void SynchronousServerSession::do_read (void)
         if (reader.isStreamClosed())
         {
             accessLog.error("stream is closed, reading request failed");
-            sendResponse(getBadRequestResponse());
+            sendResponse(getBadRequestResponse(), &accessLog);
         }
         else
         {
@@ -96,7 +96,7 @@ void SynchronousServerSession::do_read (void)
 
             // Send the response.
             A_20163.start("10 - send response back to web interface");
-            sendResponse(std::move(response));
+            sendResponse(std::move(response), &accessLog);
             A_20163.finish();
         }
 
@@ -115,7 +115,7 @@ void SynchronousServerSession::do_read (void)
 
         // Having said all that, the stream is still good and a response has not yet been sent. That means that we can
         // still respond with a generic error response. Note that it is not encrypted.
-        sendResponse(getServerErrorResponse());
+        sendResponse(getServerErrorResponse(), &accessLog);
     }
 }
 

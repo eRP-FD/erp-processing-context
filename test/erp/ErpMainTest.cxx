@@ -16,10 +16,8 @@
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/ThreadNames.hxx"
 
-#include "mock/hsm/MockBlobCache.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
 
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
@@ -27,6 +25,7 @@
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #include <csignal>
 
@@ -59,13 +58,11 @@ public:
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
             std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
-        ThreadNames::instance().setCurrentThreadName("test-main");
         MockTerminationHandler::setupForProduction();
     }
 
     void TearDown () override
     {
-        ThreadNames::instance().setCurrentThreadName("test-main");
         MockTerminationHandler::setupForTesting();
         mCaDerPathGuard.reset();
     }
@@ -89,7 +86,7 @@ public:
         ErpMain::StateCondition state (ErpMain::State::Unknown);
         auto processingContextThread = std::thread(
             [&state,
-            blobCache=MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)]
+            blobCache=MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)]
             {
                 // Run the processing context in a thread so that it does not block the test.
                 ThreadNames::instance().setCurrentThreadName("pc-main");
@@ -229,6 +226,9 @@ public:
 
 TEST_F(ErpMainTest, runProcessingContext_manualTermination)
 {
+#ifndef DEBUG
+    GTEST_SKIP_("disabled in release build");
+#endif
     runApplication(
         []{ TerminationHandler::instance().terminate();});
     SUCCEED();
@@ -237,6 +237,9 @@ TEST_F(ErpMainTest, runProcessingContext_manualTermination)
 
 TEST_F(ErpMainTest, runProcessingContext_SIGTERM)
 {
+#ifndef DEBUG
+    GTEST_SKIP_("disabled in release build");
+#endif
     runApplication(
         []{std::raise(SIGTERM);});
     SUCCEED();

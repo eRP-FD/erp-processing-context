@@ -72,6 +72,11 @@ private:
 TEST_F(Erp5899Test, run)
 {
     EnvironmentVariableGuard environmentVariableGuard("ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION", "false");
+    EnvironmentVariableGuard environmentVariableGuard2("DEBUG_DISABLE_QES_ID_CHECK", "true");
+    if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
+    {
+        GTEST_SKIP_("disabled, because the QES Key check could not be diabled");
+    }
     static constexpr auto originalQuery
         {"whenhandedover=gt2021-05-30T07%3A58%3A37%2B02%3A00&performer=3-SMC-B-Testkarte-883110000129068"};
     static constexpr auto geQuery

@@ -15,6 +15,7 @@
 #include "erp/tsl/OcspUrl.hxx"
 #include "erp/tsl/X509Certificate.hxx"
 #include "erp/util/Gsl.hxx"
+#include "erp/crypto/OpenSslHelper.hxx"
 
 
 class TrustStore;
@@ -86,13 +87,19 @@ public:
      * @param trustStore    contains the certificate of the issuer and cached
      *                      OCSP responses
      * @param validateHashExtension whether the hash extension should be validated
+     * @param ocspResponse  optional ocsp response that should be used for OCSP check if present
      *
      * @return OCSP status (good / revoked / unknown) plus revocation time
      * @throws std::runtime_error on error
      */
     static Status
-    getCurrentStatus (const X509Certificate& certificate, const UrlRequestSender& requestSender,
-                      const OcspUrl& ocspUrl, TrustStore& trustStore, const bool validateHashExtension);
+    getCurrentStatus (
+        const X509Certificate& certificate,
+        const UrlRequestSender& requestSender,
+        const OcspUrl& ocspUrl,
+        TrustStore& trustStore,
+        const bool validateHashExtension,
+        const OcspResponsePtr& ocspResponse = {});
 
     /**
      * Gets the OCSP status for the TSL signer certificate.

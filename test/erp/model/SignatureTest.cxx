@@ -45,7 +45,7 @@ TEST(SignatureTest, ConstructFromJson)
     "data":"QXVmZ3J1bmQgZGVyIENvcm9uYS1TaXR1YXRpb24ga29ubnRlIGhpZXIga3VyemZyaXN0aWcga2"
 })";
 
-    const auto signature = model::Signature::fromJson(json);
+    const auto signature = model::Signature::fromJsonNoValidation(json);
 
     const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1TaXR1YXRpb24ga29ubnRlIGhpZXIga3VyemZyaXN0aWcga2";
     const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");

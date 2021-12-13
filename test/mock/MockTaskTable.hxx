@@ -9,6 +9,7 @@
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "test/mock/TestUrlArguments.hxx"
 
 #include <map>
 #include <optional>
@@ -42,13 +43,14 @@ public:
         std::optional<db_model::EncryptedBlob> medicationDispenseBundle = std::nullopt;
     };
 
-    explicit MockTaskTable(MockAccountTable& accountTable);
+    explicit MockTaskTable(MockAccountTable& accountTable, const model::PrescriptionType& prescriptionType);
 
     Row& createRow(const model::PrescriptionId& taskId,
                    const model::Timestamp& lastUpdated,
                    const model::Timestamp& created);
 
-    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::Task::Status taskStatus,
+    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
+                                                                   model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,
                                                                    const model::Timestamp& created);
 
@@ -88,6 +90,7 @@ public:
 
     std::optional<db_model::Task> retrieveTaskBasics (const model::PrescriptionId& taskId);
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId);
+    ::std::optional<::db_model::Task> retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId);
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId);
     std::vector<db_model::Task> retrieveAllTasksForPatient (const db_model::HashedKvnr& kvnrHashed,
                                                             const std::optional<UrlArguments>& search,
@@ -95,7 +98,7 @@ public:
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search);
 
-    std::vector<db_model::MedicationDispense>
+    std::vector<TestUrlArguments::SearchMedicationDispense>
     retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
                                    const std::optional<model::PrescriptionId>& prescriptionId,
                                    const std::optional<UrlArguments>& search,
@@ -104,6 +107,8 @@ public:
                                          const std::optional<UrlArguments>& search);
 
     void deleteTask(const model::PrescriptionId& taskId);
+
+    bool isBlobUsed(BlobId blobId) const;
 
 private:
     enum FieldName
@@ -135,6 +140,7 @@ private:
 
     int64_t mTaskId = 0;
     std::map<int64_t, Row> mTasks;
+    model::PrescriptionType mPrescriptionType;
 };
 
 

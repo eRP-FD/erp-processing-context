@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Patient xmlns="http://hl7.org/fhir">
+  <address>
+    <line value="l1">
+      <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber">
+        <valueString value="1" />
+      </extension>
+    </line>
+    <line value="l2"/>
+  </address>
+</Patient>

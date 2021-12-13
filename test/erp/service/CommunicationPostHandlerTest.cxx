@@ -410,11 +410,12 @@ TEST_F(CommunicationPostHandlerTest, InfoReq)
 
     ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
-    const auto communication = Communication::fromJson(bodyResponse);
-
-    ASSERT_NO_THROW(
-        StaticData::getJsonValidator()->validate(NumberAsStringParserDocumentConverter::copyToOriginalFormat(
-            communication.jsonDocument()), SchemaType::Gem_erxCommunicationInfoReq));
+    std::optional<Communication> communication1;
+    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
+                                                             *StaticData::getXmlValidator(),
+                                                             *StaticData::getInCodeValidator(),
+                                                             SchemaType::Gem_erxCommunicationInfoReq));
+    auto& communication = *communication1;
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication.id().has_value());
@@ -468,6 +469,7 @@ TEST_F(CommunicationPostHandlerTest, Reply)
 
     ASSERT_NO_THROW(communication = Communication::fromXml(innerResponse.getBody(),
                                                            *StaticData::getXmlValidator(),
+                                                           *StaticData::getInCodeValidator(),
                                                            SchemaType::Gem_erxCommunicationReply));
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
@@ -522,11 +524,12 @@ TEST_F(CommunicationPostHandlerTest, DispReq)
 
     ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
-    const auto communication = Communication::fromJson(bodyResponse);
-
-    ASSERT_NO_THROW(
-        StaticData::getJsonValidator()->validate(NumberAsStringParserDocumentConverter::copyToOriginalFormat(
-            communication.jsonDocument()), SchemaType::Gem_erxCommunicationDispReq));
+    std::optional<Communication> communication1;
+    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
+                                                             *StaticData::getXmlValidator(),
+                                                             *StaticData::getInCodeValidator(),
+                                                             SchemaType::Gem_erxCommunicationDispReq));
+    auto& communication = *communication1;
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication.id().has_value());
@@ -587,11 +590,12 @@ TEST_F(CommunicationPostHandlerTest, Representative)
 
     ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
-    const auto communicationByInsurant = Communication::fromJson(bodyResponse);
-
-    ASSERT_NO_THROW(
-        StaticData::getJsonValidator()->validate(NumberAsStringParserDocumentConverter::copyToOriginalFormat(
-            communicationByInsurant.jsonDocument()), SchemaType::Gem_erxCommunicationRepresentative));
+    std::optional<Communication> communication1;
+    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
+                                                             *StaticData::getXmlValidator(),
+                                                             *StaticData::getInCodeValidator(),
+                                                             SchemaType::Gem_erxCommunicationRepresentative));
+    auto& communicationByInsurant = *communication1;
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communicationByInsurant.id().has_value());
@@ -638,11 +642,12 @@ TEST_F(CommunicationPostHandlerTest, Representative)
 
     ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
-    const auto communicationByRepresentative = Communication::fromJson(bodyResponse);
-
-    ASSERT_NO_THROW(
-        StaticData::getJsonValidator()->validate(NumberAsStringParserDocumentConverter::copyToOriginalFormat(
-            communicationByRepresentative.jsonDocument()), SchemaType::Gem_erxCommunicationRepresentative));
+    std::optional<Communication> communicationOpt;
+    ASSERT_NO_THROW(communicationOpt = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
+                                                               *StaticData::getXmlValidator(),
+                                                               *StaticData::getInCodeValidator(),
+                                                               SchemaType::Gem_erxCommunicationRepresentative));
+    auto& communicationByRepresentative = *communicationOpt;
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communicationByRepresentative.id().has_value());
@@ -866,11 +871,12 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)
 
             ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
-            const auto communication = Communication::fromJson(bodyResponse);
-
-            ASSERT_NO_THROW(
-                StaticData::getJsonValidator()->validate(NumberAsStringParserDocumentConverter::copyToOriginalFormat(
-                    communication.jsonDocument()), SchemaType::Gem_erxCommunicationRepresentative));
+            std::optional<Communication> communication1;
+            ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
+                                                                     *StaticData::getXmlValidator(),
+                                                                     *StaticData::getInCodeValidator(),
+                                                                     SchemaType::Gem_erxCommunicationRepresentative));
+            auto& communication = *communication1;
 
             // The communication id must have been added to the json body.
             ASSERT_TRUE(communication.id().has_value());
@@ -993,11 +999,12 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)
 
             ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
-            const auto communication = Communication::fromJson(bodyResponse);
-
-            ASSERT_NO_THROW(
-                StaticData::getJsonValidator()->validate(NumberAsStringParserDocumentConverter::copyToOriginalFormat(
-                    communication.jsonDocument()), SchemaType::Gem_erxCommunicationRepresentative));
+            std::optional<Communication> communication1;
+            ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
+                                                                     *StaticData::getXmlValidator(),
+                                                                     *StaticData::getInCodeValidator(),
+                                                                     SchemaType::Gem_erxCommunicationRepresentative));
+            auto& communication = *communication1;
 
             // The communication id must have been added to the json body.
             ASSERT_TRUE(communication.id().has_value());
@@ -1144,11 +1151,12 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
 
         EXPECT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
-        const auto communication = Communication::fromJson(bodyResponse);
-
-        ASSERT_NO_THROW(
-            StaticData::getJsonValidator()->validate(NumberAsStringParserDocumentConverter::copyToOriginalFormat(
-                communication.jsonDocument()), SchemaType::Gem_erxCommunicationRepresentative));
+        std::optional<Communication> communication1;
+        ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
+                                                                 *StaticData::getXmlValidator(),
+                                                                 *StaticData::getInCodeValidator(),
+                                                                 SchemaType::Gem_erxCommunicationRepresentative));
+        auto& communication = *communication1;
 
         // The communication id must have been added to the json body.
         ASSERT_TRUE(communication.id().has_value());

@@ -1,0 +1,36 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
+#include "MockConsentTable.hxx"
+
+#include "erp/util/Expect.hxx"
+#include "erp/model/Consent.hxx"
+
+#include <pqxx/except.hxx>
+
+void MockConsentTable::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+{
+    bool inserted;
+    std::tie(std::ignore, inserted) = mConsents.emplace(kvnr, creationTime);
+    if (!inserted)
+    {
+        throw pqxx::unique_violation(R"(ERROR:  duplicate key value violates unique constraint "consent_pkey")");
+    }
+}
+
+std::optional<model::Timestamp> MockConsentTable::getConsentDateTime(const db_model::HashedKvnr& kvnr)
+{
+    auto dbConsent = mConsents.find(kvnr);
+    if (dbConsent == mConsents.end())
+    {
+        return std::nullopt;
+    }
+    return dbConsent->second;
+}
+
+bool MockConsentTable::clearConsent(const db_model::HashedKvnr& kvnr)
+{
+    return mConsents.erase(kvnr) > 0;
+}

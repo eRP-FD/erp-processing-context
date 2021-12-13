@@ -36,7 +36,6 @@ namespace
 {
 
 std::unordered_set<Operation> auditRelevantOperations = {
-    Operation::GET_Task,
     Operation::GET_Task_id,
     Operation::POST_Task_id_activate,
     Operation::POST_Task_id_accept,
@@ -161,7 +160,8 @@ void runErpExceptionHandler(const ErpException& exception,
                             ServerResponse& innerResponse, PcSessionContext& outerSession)
 {
     using namespace std::string_literals;
-    TVLOG(1) << "caught ErpException " << exception.what();
+    TVLOG(1) << "caught ErpException what=" << exception.what()
+             << " diagnostics=" << exception.diagnostics().value_or("none");
     outerSession.accessLog.locationFromException(exception);
     std::string detailsText = exception.what();
     std::optional<std::string> diagnostics = exception.diagnostics();
@@ -275,186 +275,17 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
 
     session.accessLog.keyValue("health", session.serviceContext.applicationHealth().isUp() ? "UP" : "DOWN");
 
-    std::unique_ptr<InnerTeeRequest> innerTeeRequest;
-    std::unique_ptr<ServerRequest> innerServerRequest;
-    ServerResponse innerServerResponse;
-    // Remove when all endpoints are implemented (or update missing endpoint return values.)
-    innerServerResponse.setStatus(HttpStatus::OK);
-    Operation innerOperation = Operation::UNKNOWN;
-
-    try
-    {
-        auto upParam = session.request.getPathParameter("UP");
-        ErpExpect(upParam.has_value(), HttpStatus::BadRequest, "Missing Pre-User-Pseudonym in Path.");
-
-        // Decrypt
-        innerTeeRequest = decryptRequest(session, sessionIdentifier);
-        if (nullptr == innerTeeRequest)
-        {
-            session.accessLog.error("decryption of inner request failed");
-            return;
-        }
-
-        innerTeeRequest->parseHeaderAndBody();
-        innerServerRequest = std::make_unique<ServerRequest>( innerTeeRequest->releaseHeader() );
-        innerServerRequest->setBody(innerTeeRequest->releaseBody());
-
-        ErpExpect(innerServerRequest->header().hasHeader(Header::Authorization),
-                  HttpStatus::BadRequest, "Authorization header is missing");
-        const JWT vauJwt = innerTeeRequest->releaseAuthenticationToken();
-        JWT authorizationJwt = getJwtFromAuthorizationHeader(innerServerRequest->header().header(Header::Authorization).value()) ;
-        ErpExpect(authorizationJwt == vauJwt,
-                  HttpStatus::BadRequest, "Authorization header is invalid");
-        innerServerRequest->setAccessToken(std::move(authorizationJwt));
-
-        // Create an inner session that contains the unencrypted request and a, yet to be filled, unencrypted response.
-        PcSessionContext innerSession(session.serviceContext, *innerServerRequest, innerServerResponse, session.accessLog);
-
-        // Look up the secondary request handler. Required for determining the inner operation.
-        const std::string& target = innerServerRequest->header().target();
-        auto matchingHandler =
-            mRequestHandlers.findMatchingHandler(innerServerRequest->header().method(), target);
-        if (matchingHandler.handlerContext == nullptr)
-        {
-            TVLOG(1) << "did not find a handler for " << innerServerRequest->header().method() << " "
-                     << target;
-            A_19030.start("return 405 if no handler for Task with method and target was found");
-            A_19400.start("return 405 if no handler for MedicationDispense with method and target was found");
-            A_19401.start("return 405 if no handler for Communication with method and target was found");
-            A_19402.start("return 405 if no handler for AuditEvent with method and target was found");
-            ErpFail(HttpStatus::MethodNotAllowed, "no matching handler found.");
-        }
-
-        // Determnine inner operation. Required for final response.
-        auto* handler = matchingHandler.handlerContext->handler.get();
-        innerOperation = (handler != nullptr) ? handler->getOperation() : Operation::UNKNOWN;
-        session.accessLog.setInnerRequestOperation(toString(innerOperation));
-
-        A_20163.start("4 - verify JWT");
-        A_20365.start("Pass the IDP pubkey to the verification method.");
-        innerServerRequest->getAccessToken().verify(getIdpPublicKey(session.serviceContext));
-        A_20365.finish();
-        A_20163.finish();
-
-        A_20163.start(
-            R"(7. Die E-Rezept-VAU MUSS aus dem "sub"-Feld-Wert mittels des CMAC-Schlüssels den 128 Bit langen CMAC-Wert
-                          berechnen und hexadezimal kodieren (32 Byte lang). Dies sei das Prenutzerpseudonym (PNP).)");
-        auto sub = innerServerRequest->getAccessToken().stringForClaim(JWT::subClaim);
-        Expect(sub.has_value(), "Missing Sub field in JWT claim");
-
-        if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false))
-        {
-            handleDosCheck(session, sub, innerServerRequest->getAccessToken().intForClaim(JWT::expClaim).value());
-        }
-
-        auto&& PnPVerifier = session.serviceContext.getPreUserPseudonymManager();
-        CmacSignature preUserPseudonym{getPreUserPseudonym(PnPVerifier, *upParam, *sub, session)};
-        A_20163.finish();
-        A_20163.start(
-            "10. Die E-Rezept-VAU MUSS c' und das PNP an die Webschnittstelle als Antwort übergeben.");
-        session.response.setHeader(std::string{PreUserPseudonymManager::PNPHeader},
-                                   preUserPseudonym.hex());
-        TVLOG(2) << "adding PNP: " << preUserPseudonym.hex();
-        A_20163.finish();
-
-        ErpExpect(matchingHandler.pathParameters.size() == matchingHandler.handlerContext->pathParameterNames.size(),
-                  HttpStatus::BadRequest, "Parameter mismatch.");
-        innerSession.request.setPathParameters(matchingHandler.handlerContext->pathParameterNames,
-                                                matchingHandler.pathParameters);
-        innerSession.request.setFragment(std::move(matchingHandler.fragment));
-        innerSession.request.setQueryParameters(std::move(matchingHandler.queryParameters));
-
-        if (checkProfessionOID(innerServerRequest,
-                               matchingHandler.handlerContext->handler.get(), innerSession.response, session.accessLog))
-        {
-            matchingHandler.handlerContext->handler->preHandleRequestHook(innerSession);
-
-            // Run the secondary handler
-            A_20163.start("5 - process inner request");
-            matchingHandler.handlerContext->handler->handleRequest(innerSession);
-            A_20163.finish();
-
-            if(auditRelevantOperations.count(innerOperation))
-            {
-                storeAuditData(innerSession, innerServerRequest->getAccessToken());
-            }
-
-
-            A_18936.start("commit transaction");
-            auto transaction = innerSession.releaseDatabase();
-            if (transaction)
-            {
-                transaction->commitTransaction();
-                transaction.reset();
-            }
-            A_18936.finish();
-        }
-    }
-    catch(...)
-    {
-        processException(std::current_exception(), innerServerRequest, innerServerResponse, session);
-    }
-
-    try
-    {
-        ResponseValidator::validate(innerServerResponse, innerOperation);
-        handleKeepAlive(session, innerServerRequest.get(), innerServerResponse);
-
-        // Encrypt the response.
-        OuterTeeResponse outerTeeResponse =
-            ErpTeeProtocol::encrypt(innerServerResponse, innerTeeRequest->aesKey(), innerTeeRequest->requestId());
-
-        outerTeeResponse.convert(session.response);
-
-        // In case of certain jwt related exceptions (those who fail early), Operation remains UNKNOWN.
-        // The Inner-* header for the java-proxy
-        session.response.setHeader(Header::InnerResponseCode,
-                                   std::to_string(magic_enum::enum_integer(innerServerResponse.getHeader().status())));
-
-        session.response.setHeader(Header::InnerRequestOperation, std::string(toString(innerOperation)));
-
-        if (innerServerRequest)
-        {
-            const auto professionOIDClaim =
-                innerServerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim).value_or("");
-            session.response.setHeader(Header::InnerRequestRole,
-                                       std::string(profession_oid::toInnerRequestRole(professionOIDClaim)));
-        }
-    }
-    catch (const std::exception& e)
-    {
-        // outer response with error:
-        ResponseBuilder(session.response).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
-        session.accessLog.locationFromException(e);
-        session.accessLog.error("preparing, encrypting or sending of response failed");
-    }
-    catch (...)
-    {
-        // outer response with error:
-        ResponseBuilder(session.response).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
-        session.accessLog.error("preparing, encrypting or sending of response failed");
-    }
-
-    session.accessLog.updateFromInnerRequest(*innerServerRequest);
-    session.accessLog.updateFromInnerResponse(innerServerResponse);
-    session.accessLog.updateFromOuterResponse(session.response);
-}
-
-
-Operation VauRequestHandler::getOperation (void) const
-{
-    return Operation::POST_VAU_up;
-}
-
-
-std::unique_ptr<InnerTeeRequest> VauRequestHandler::decryptRequest(PcSessionContext& session, const std::string& sessionIdentifier)
-{
     HttpStatus errorStatus = HttpStatus::OK;
     std::string errorText;
     std::optional<std::string> errorMessage;
     try {
-        return std::make_unique<InnerTeeRequest>(
+        auto upParam = session.request.getPathParameter("UP");
+        Expect3(upParam.has_value(), "Missing Pre-User-Pseudonym in Path.", std::logic_error);
+
+        auto innerTeeRequest = std::make_unique<InnerTeeRequest>(
             ErpTeeProtocol::decrypt(session.request.getBody(), session.serviceContext.getHsmPool()));
+        handleInnerRequest(session, upParam.value(), std::move(innerTeeRequest));
+        return;
     }
     catch (const AesGcmException& e)
     {
@@ -495,7 +326,198 @@ std::unique_ptr<InnerTeeRequest> VauRequestHandler::decryptRequest(PcSessionCont
         .header(Header::ContentType, ContentMimeType::json)
         .keepAlive(false);
     session.accessLog.error(errorText);
-    return nullptr;
+}
+
+
+void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
+                                           const std::string& upParam,
+                                           std::unique_ptr<InnerTeeRequest>&& innerTeeRequest)
+{
+    std::unique_ptr<ServerRequest> innerServerRequest;
+    ServerResponse innerServerResponse;
+    // Remove when all endpoints are implemented (or update missing endpoint return values.)
+    innerServerResponse.setStatus(HttpStatus::OK);
+    Operation innerOperation = Operation::UNKNOWN;
+
+    try {
+        innerTeeRequest->parseHeaderAndBody();
+        innerServerRequest = std::make_unique<ServerRequest>( innerTeeRequest->releaseHeader() );
+        innerServerRequest->setBody(innerTeeRequest->releaseBody());
+
+        ErpExpect(innerServerRequest->header().hasHeader(Header::Authorization),
+                  HttpStatus::BadRequest, "Authorization header is missing");
+        const JWT vauJwt = innerTeeRequest->releaseAuthenticationToken();
+        JWT authorizationJwt = getJwtFromAuthorizationHeader(innerServerRequest->header().header(Header::Authorization).value()) ;
+        ErpExpect(authorizationJwt == vauJwt,
+                  HttpStatus::BadRequest, "Authorization header is invalid");
+        innerServerRequest->setAccessToken(std::move(authorizationJwt));
+
+        // Create an inner session that contains the unencrypted request and a, yet to be filled, unencrypted response.
+        PcSessionContext innerSession(outerSession.serviceContext, *innerServerRequest, innerServerResponse,
+                                      outerSession.accessLog);
+
+        // Look up the secondary request handler. Required for determining the inner operation.
+        const std::string& target = innerServerRequest->header().target();
+        auto matchingHandler =
+            mRequestHandlers.findMatchingHandler(innerServerRequest->header().method(), target);
+        if (matchingHandler.handlerContext == nullptr)
+        {
+            TVLOG(1) << "did not find a handler for " << innerServerRequest->header().method() << " "
+                     << target;
+            A_19030.start("return 405 if no handler for Task with method and target was found");
+            A_19400.start("return 405 if no handler for MedicationDispense with method and target was found");
+            A_19401.start("return 405 if no handler for Communication with method and target was found");
+            A_19402.start("return 405 if no handler for AuditEvent with method and target was found");
+            A_22111.start("return 405 if no handler for ChargeItem with method and target was found");
+            A_22153.start("return 405 if no handler for Consent with method and target was found");
+            ErpFail(HttpStatus::MethodNotAllowed, "no matching handler found.");
+        }
+
+        // Determnine inner operation. Required for final response.
+        auto* handler = matchingHandler.handlerContext->handler.get();
+        innerOperation = (handler != nullptr) ? handler->getOperation() : Operation::UNKNOWN;
+        outerSession.accessLog.setInnerRequestOperation(toString(innerOperation));
+
+        A_20163.start("4 - verify JWT");
+        A_20365.start("Pass the IDP pubkey to the verification method.");
+        innerServerRequest->getAccessToken().verify(getIdpPublicKey(outerSession.serviceContext));
+        A_20365.finish();
+        A_20163.finish();
+
+        A_20163.start(
+            R"(7. Die E-Rezept-VAU MUSS aus dem "sub"-Feld-Wert mittels des CMAC-Schlüssels den 128 Bit langen CMAC-Wert
+                          berechnen und hexadezimal kodieren (32 Byte lang). Dies sei das Prenutzerpseudonym (PNP).)");
+        auto sub = innerServerRequest->getAccessToken().stringForClaim(JWT::subClaim);
+        Expect(sub.has_value(), "Missing Sub field in JWT claim");
+
+        if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false))
+        {
+            handleDosCheck(outerSession, sub, innerServerRequest->getAccessToken().intForClaim(JWT::expClaim).value());
+        }
+
+        auto&& PnPVerifier = outerSession.serviceContext.getPreUserPseudonymManager();
+        CmacSignature preUserPseudonym{getPreUserPseudonym(PnPVerifier, upParam, *sub, outerSession)};
+        A_20163.finish();
+        A_20163.start(
+            "10. Die E-Rezept-VAU MUSS c' und das PNP an die Webschnittstelle als Antwort übergeben.");
+        outerSession.response.setHeader(std::string{PreUserPseudonymManager::PNPHeader},
+                                   preUserPseudonym.hex());
+        TVLOG(2) << "adding PNP: " << preUserPseudonym.hex();
+        A_20163.finish();
+
+        ErpExpect(matchingHandler.pathParameters.size() == matchingHandler.handlerContext->pathParameterNames.size(),
+                  HttpStatus::BadRequest, "Parameter mismatch.");
+        innerSession.request.setPathParameters(matchingHandler.handlerContext->pathParameterNames,
+                                                matchingHandler.pathParameters);
+        innerSession.request.setFragment(std::move(matchingHandler.fragment));
+        innerSession.request.setQueryParameters(std::move(matchingHandler.queryParameters));
+
+        if (checkProfessionOID(innerServerRequest,
+                               matchingHandler.handlerContext->handler.get(), innerSession.response, outerSession.accessLog))
+        {
+            matchingHandler.handlerContext->handler->preHandleRequestHook(innerSession);
+
+            // Run the secondary handler
+            A_20163.start("5 - process inner request");
+            matchingHandler.handlerContext->handler->handleRequest(innerSession);
+            A_20163.finish();
+
+            if(auditRelevantOperations.count(innerOperation))
+            {
+                storeAuditData(innerSession, innerServerRequest->getAccessToken());
+            }
+
+
+            A_18936.start("commit transaction");
+            auto transaction = innerSession.releaseDatabase();
+            if (transaction)
+            {
+                transaction->commitTransaction();
+                transaction.reset();
+            }
+            A_18936.finish();
+        }
+    }
+    catch(...)
+    {
+        processException(std::current_exception(), innerServerRequest, innerServerResponse, outerSession);
+    }
+    makeResponse(innerServerResponse, innerOperation, innerServerRequest.get(), *innerTeeRequest, outerSession);
+}
+
+
+void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const Operation& innerOperation,
+                                     const ServerRequest* innerServerRequest, const InnerTeeRequest& innerTeeRequest,
+                                     PcSessionContext& outerSession)
+{
+    try
+    {
+        ResponseValidator::validate(innerServerResponse, innerOperation);
+        handleKeepAlive(outerSession, innerServerRequest, innerServerResponse);
+
+        OuterTeeResponse outerTeeResponse =
+            ErpTeeProtocol::encrypt(innerServerResponse, innerTeeRequest.aesKey(), innerTeeRequest.requestId());
+
+        outerTeeResponse.convert(outerSession.response);
+
+        // In case of certain jwt related exceptions (those who fail early), Operation remains UNKNOWN.
+        // The Inner-* header for the java-proxy
+        outerSession.response.setHeader(Header::InnerResponseCode,
+                                   std::to_string(magic_enum::enum_integer(innerServerResponse.getHeader().status())));
+
+        outerSession.response.setHeader(Header::InnerRequestOperation, std::string(toString(innerOperation)));
+
+        if (innerServerRequest != nullptr && innerServerRequest->header().method() == HttpMethod::POST)
+        {
+            const auto prescriptionIdValue = innerServerRequest->getPathParameter("id");
+            if (prescriptionIdValue.has_value())
+            {
+                std::string flowtype;
+                try
+                {
+                    const auto prescriptionId = model::PrescriptionId::fromString(prescriptionIdValue.value());
+                    flowtype = std::to_string(
+                        static_cast<std::underlying_type_t<model::PrescriptionType>>(prescriptionId.type()));
+                }
+                catch (const model::ModelException& ex)
+                {
+                    TVLOG(1) << "error parsing prescription ID for Inner-Request-Flowtype: " << ex.what();
+                }
+                outerSession.response.setHeader(Header::InnerRequestFlowtype, flowtype);
+            }
+        }
+
+        if (innerServerRequest)
+        {
+            const auto professionOIDClaim =
+                innerServerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim).value_or("");
+            outerSession.response.setHeader(Header::InnerRequestRole,
+                                       std::string(profession_oid::toInnerRequestRole(professionOIDClaim)));
+        }
+    }
+    catch (const std::exception& e)
+    {
+        // outer response with error:
+        ResponseBuilder(outerSession.response).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
+        outerSession.accessLog.locationFromException(e);
+        outerSession.accessLog.error("preparing, encrypting or sending of response failed");
+    }
+    catch (...)
+    {
+        // outer response with error:
+        ResponseBuilder(outerSession.response).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
+        outerSession.accessLog.error("preparing, encrypting or sending of response failed");
+    }
+
+    outerSession.accessLog.updateFromInnerRequest(*innerServerRequest);
+    outerSession.accessLog.updateFromInnerResponse(innerServerResponse);
+    outerSession.accessLog.updateFromOuterResponse(outerSession.response);
+}
+
+
+Operation VauRequestHandler::getOperation (void) const
+{
+    return Operation::POST_VAU_up;
 }
 
 
@@ -524,6 +546,7 @@ bool VauRequestHandler::checkProfessionOID(
     A_19395.start("Check if professionOID claim is allowed for this endpoint");
     A_19405.start("Check if professionOID claim is allowed for this endpoint");
     A_19446_01.start("Check if professionOID claim is allowed for this endpoint");
+    A_22362.start("Check if professionOID claim is allowed for this endpoint");
     if (! handler->allowedForProfessionOID(professionOIDClaim))
     {
         TVLOG(1) << "endpoint is forbidden for professionOID: " << professionOIDClaim;
@@ -541,6 +564,7 @@ bool VauRequestHandler::checkProfessionOID(
         A_19395.finish();
         A_19405.finish();
         A_19446_01.finish();
+        A_22362.finish();
         log.location(fileAndLine);
         log.error("endpoint is forbidden for professionOID");
         return false;

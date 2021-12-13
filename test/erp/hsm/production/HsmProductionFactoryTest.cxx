@@ -3,12 +3,12 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "mock/hsm/MockBlobCache.hxx"
 
 #include "erp/hsm/production/HsmProductionClient.hxx"
 #include "erp/hsm/production/HsmProductionFactory.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/TLog.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #include <gtest/gtest.h>
 
@@ -34,7 +34,7 @@ TEST_F(HsmProductionFactoryTest, DISABLED_logIn)
 {
     skipIfUnsupported();
 
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::SimulatedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::SimulatedHsm);
     HsmProductionFactory factory (
         std::make_unique<HsmProductionClient>(),
         std::move(blobCache));

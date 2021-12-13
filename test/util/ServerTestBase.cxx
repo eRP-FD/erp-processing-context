@@ -5,7 +5,6 @@
 
 #include "test/util/ServerTestBase.hxx"
 
-#include "mock/hsm/MockBlobCache.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/mock/MockDatabase.hxx"
@@ -17,7 +16,7 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/model/Bundle.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
@@ -28,11 +27,12 @@
 
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
+#include "mock/hsm/MockBlobCache.hxx"
 
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 
 #ifdef _WINNT_
@@ -97,7 +97,7 @@ void ServerTestBase::startServer (void)
     auto hsmPool = std::make_unique<HsmPool>(
         std::make_unique<HsmMockFactory>(
             std::make_unique<HsmMockClient>(),
-            MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+            MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
     mMockDatabase = std::make_unique<MockDatabase>(*hsmPool);
 
@@ -108,7 +108,8 @@ void ServerTestBase::startServer (void)
         createRedisInstance(),
         std::move(hsmPool),
         StaticData::getJsonValidator(),
-        StaticData::getXmlValidator());
+        StaticData::getXmlValidator(),
+        StaticData::getInCodeValidator());
     initializeIdp(serviceContext->idp);
     mServer = std::make_unique<HttpsServer<PcServiceContext>>(
         "0.0.0.0",
@@ -381,8 +382,8 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
     prescriptionBundleXmlString =
         String::replaceAll(prescriptionBundleXmlString, "##kvnrPatient##", kvnrPatient);
 
-    Bundle prescriptionBundle =
-        Bundle::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle);
+    auto prescriptionBundle = KbvBundle::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
+                                                 *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle);
 
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
@@ -390,7 +391,7 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
 
     for (const auto& patient : patients)
     {
-        ASSERT_EQ(patient.getKvnr(), kvnrPatient);
+        ASSERT_EQ(patient.kvnr(), kvnrPatient);
     }
 
     task.setHealthCarePrescriptionUuid();
@@ -433,8 +434,11 @@ MedicationDispense ServerTestBase::closeTask(
     const Timestamp completedTimestamp = model::Timestamp::now();
     const std::string linkBase = "https://127.0.0.1:8080";
     const std::string authorIdentifier = linkBase + "/Device";
-    Composition compositionResource(telematicIdPharmacy, inProgessDate, completedTimestamp, authorIdentifier);
+    const std::string prescriptionDigestIdentifier = "Binary/TestDigest";
+    Composition compositionResource(telematicIdPharmacy, inProgessDate, completedTimestamp, authorIdentifier,
+                                    prescriptionDigestIdentifier);
     Device deviceResource;
+    const ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Base64};
 
     task.setReceiptUuid();
     task.setStatus(Task::Status::completed);
@@ -444,8 +448,8 @@ MedicationDispense ServerTestBase::closeTask(
         createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared);
 
     ErxReceipt responseReceipt(
-        Uuid(task.receiptUuid().value()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/",
-        prescriptionId, compositionResource, authorIdentifier, deviceResource);
+        Uuid(task.receiptUuid().value()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/", prescriptionId,
+        compositionResource, authorIdentifier, deviceResource, "TestDigest", prescriptionDigestResource);
 
     auto database = createDatabase();
     database->updateTaskMedicationDispenseReceipt(task, medicationDispense, responseReceipt);
@@ -485,6 +489,7 @@ MedicationDispense ServerTestBase::createMedicationDispense(
     MedicationDispense medicationDispense = MedicationDispense::fromXml(
             medicationDispenseString,
             *StaticData::getXmlValidator(),
+            *StaticData::getInCodeValidator(),
             SchemaType::Gem_erxMedicationDispense);
 
     PrescriptionId prescriptionId = task.prescriptionId();
@@ -544,7 +549,7 @@ model::Communication ServerTestBase::addCommunicationToDatabase(const Communicat
     {
         builder.setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
     }
-    model::Communication communication = Communication::fromJson(builder.createJsonString());
+    model::Communication communication = Communication::fromJsonNoValidation(builder.createJsonString());
     auto database = createDatabase();
     const auto communicationId = database->insertCommunication(communication);
     database->commitTransaction();

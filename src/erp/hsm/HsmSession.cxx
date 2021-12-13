@@ -4,16 +4,16 @@
  */
 
 #include "erp/hsm/HsmSession.hxx"
-
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/HsmSessionExpiredException.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/JsonLog.hxx"
-#include "erp/hsm/production/HsmProductionClient.hxx"
-#include "erp/hsm/HsmSessionExpiredException.hxx"
-#include "erp/model/Timestamp.hxx"
 
+#if WITH_HSM_TPM_PRODUCTION > 0
+#include "erp/hsm/production/HsmProductionClient.hxx"
+#endif
 
 namespace
 {
@@ -45,7 +45,11 @@ namespace
             {
                 // Failure due to an expired HSM connection. Try again.
                 JsonLog(LogId::HSM_WARNING)
-                    .message("HSM connection expired: " + HsmProductionClient::hsmErrorDetails(e.errorCode))
+                    .message("HSM connection expired: "
+#if WITH_HSM_TPM_PRODUCTION > 0
+                             + HsmProductionClient::hsmErrorDetails(e.errorCode)
+#endif
+                             )
                     .keyValue("retry", retryCount);
                 ++retryCount;
 
@@ -57,7 +61,11 @@ namespace
                 // Some other failure (not an expired HSM connection). Try again.
                 // This catch may be removed later.
                 JsonLog(LogId::HSM_WARNING)
-                    .message("HSM error: " + HsmProductionClient::hsmErrorDetails(e.errorCode))
+                    .message("HSM error: "
+#if WITH_HSM_TPM_PRODUCTION > 0
+                             + HsmProductionClient::hsmErrorDetails(e.errorCode)
+#endif
+                             )
                     .keyValue("retry", retryCount);
                 ++retryCount;
 

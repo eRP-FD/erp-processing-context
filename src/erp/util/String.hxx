@@ -54,7 +54,10 @@ public:
     static std::string replaceAll (const std::string& in, const std::string& from, const std::string& to);
 
     static bool starts_with (const std::string& s, const std::string_view& head);
+    static bool starts_with(const std::string_view s, const std::string_view head);
+
     static bool ends_with (const std::string& s, const std::string_view& tail);
+    static bool ends_with(const std::string_view s, const std::string_view tail);
 
     /* Used to strip a final character from the [in/out] argument str
     * Will only strip the token if it is the last token in the string

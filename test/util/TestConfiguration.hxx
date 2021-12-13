@@ -11,8 +11,8 @@
 
 enum class TestConfigurationKey
 {
-    TEST_ADDITIONAL_JSON_SCHEMAS,
-    TEST_ADDITIONAL_XML_SCHEMAS,
+    TEST_ADDITIONAL_XML_SCHEMAS_GEMATIK,
+    TEST_ADDITIONAL_XML_SCHEMAS_KBV,
     TEST_CADESBES_TRUSTED_CERT_DIR,
     TEST_USE_POSTGRES,
     TEST_USE_REDIS_MOCK,
@@ -23,8 +23,13 @@ enum class TestConfigurationKey
     TEST_QES_PEM_FILE_NAME,
 };
 
-using TestConfigurationKeyNames = ConfigurationKeyNamesTemplate<TestConfigurationKey>;
+class TestConfigKeyNames : public ConfigurationKeyNamesBase<TestConfigurationKey>
+{
+public:
+    TestConfigKeyNames();
+};
 
-using TestConfiguration = ConfigurationTemplate<TestConfigurationKey, TestConfigurationKeyNames>;
+using TestConfiguration = ConfigurationTemplate<TestConfigurationKey, TestConfigKeyNames>;
+
 
 #endif

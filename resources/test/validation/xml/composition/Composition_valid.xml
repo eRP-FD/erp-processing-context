@@ -26,4 +26,9 @@
       <end value="2020-03-05T08:25:05+00:00"/>
     </period>
   </event>
+  <section>
+    <entry>
+      <reference value="Binary/123456"/>
+    </entry>
+  </section>
 </Composition>

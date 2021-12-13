@@ -8,7 +8,7 @@
 #include "erp/util/Base64.hxx"
 #include "mock/tpm/TpmTestData.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #include <gtest/gtest.h>
 #include <memory>
@@ -66,7 +66,7 @@ public:
         try
         {
             TestDescriptor descriptor = GetParam()();
-            blobCache = MockBlobCache::createBlobCache (
+            blobCache = MockBlobDatabase::createBlobCache (
                 descriptor.isSimulated
                     ? MockBlobCache::MockTarget::SimulatedHsm
                     : MockBlobCache::MockTarget::MockedHsm);

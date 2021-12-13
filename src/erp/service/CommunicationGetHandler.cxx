@@ -51,7 +51,7 @@ void CommunicationGetHandlerBase::markCommunicationsAsRetrieved (
 model::Bundle CommunicationGetHandlerBase::createBundle (const std::vector<model::Communication>& communications) const
 {
     const std::string linkBase = getLinkBase() + "/Communication";
-    model::Bundle bundle(model::Bundle::Type::searchset);
+    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     for (const auto& communication : communications)
     {
         Expect(communication.id().has_value(), "communication id has not been initialized");

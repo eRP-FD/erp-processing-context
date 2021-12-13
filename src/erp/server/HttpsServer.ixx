@@ -30,14 +30,14 @@ namespace
         TlsSettings::restrictVersions(sslContext);
         TlsSettings::setAllowedCiphersAndCurves(sslContext, std::nullopt);
 
-        if(!enforceClientAuthentication)
-        {
-           sslContext.set_verify_mode(boost::asio::ssl::verify_none);
-        }
-        else
+        if(enforceClientAuthentication)
         {
             sslContext.set_verify_mode(boost::asio::ssl::context::verify_fail_if_no_peer_cert | boost::asio::ssl::context::verify_peer);
             RootCertificatesMgr::loadCaCertificates(sslContext, caCertificates);
+        }
+        else
+        {
+            sslContext.set_verify_mode(boost::asio::ssl::verify_none);
         }
 
         sslContext.use_certificate_chain(boost::asio::buffer(serverCertificate, serverCertificate.size()));
@@ -130,4 +130,3 @@ std::shared_ptr<ServiceContextType> HttpsServer<ServiceContextType>::serviceCont
 {
     return mServiceContext;
 }
-

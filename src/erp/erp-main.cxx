@@ -24,20 +24,6 @@ namespace
 {
     constexpr uint16_t DefaultEnrolmentServerPort = 9191;
 
-    void showEnvironment (char** environment)
-    {
-    #ifdef DEBUG
-        size_t index = 0;
-        for (char** env = environment; *env!=nullptr; ++env,++index)
-        {
-            LOG(ERROR) << index << " : " << *env;
-        }
-    #else
-        (void)environment;
-    #endif
-    }
-
-
     void deactivateLibxmlLoggingToStderr()
     {
         // Silence libxml2 by installing a no-op error handler. Without this, errors are logged
@@ -73,7 +59,7 @@ namespace
 }
 
 
-int main (const int, const char* argv[], char** environment)
+int main (const int, const char* argv[], char** /*environment*/)
 {
     register_signals({SIGILL, SIGABRT, SIGSEGV, SIGFPE, SIGINT, SIGTERM
 #ifdef SIGSYS
@@ -96,8 +82,6 @@ int main (const int, const char* argv[], char** environment)
 
 
         deactivateLibxmlLoggingToStderr();
-
-        showEnvironment(environment);
 
         ErpMain::StateCondition state (ErpMain::State::Unknown); // Only used for tests.
         exitCode = ErpMain::runApplication(

@@ -12,6 +12,7 @@
 #include "erp/server/context/ServiceContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
+#include "erp/service/SubscriptionPostHandler.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/ErpRequirements.hxx"
@@ -63,7 +64,8 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         // secondly validate against the communication profile, which can only be determined
         // by looking into the resource, which must therefore already be parsed
         A_19447.start("validate against the fhir profile schema");
-        validateAgainstFhirProfile(messageType, communication, session.serviceContext.getJsonValidator());
+        validateAgainstFhirProfile(messageType, communication, session.serviceContext.getXmlValidator(),
+                                   session.serviceContext.getInCodeValidator());
         A_19447.finish();
 
         auto* databaseHandle = session.database();
@@ -144,6 +146,13 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         }
 
         makeResponse(session, HttpStatus::Created, &communication);
+
+        A_22367.start("Create initial subscription only for specific message types.");
+        if (messageType == Communication::MessageType::InfoReq || messageType == Communication::MessageType::DispReq)
+        {
+            SubscriptionPostHandler::publish(session.serviceContext, recipient);
+        }
+        A_22367.finish();
     }
     catch (const ModelException& e)
     {
@@ -155,11 +164,11 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 void CommunicationPostHandler::validateAgainstFhirProfile(
     model::Communication::MessageType messageType,
     const model::Communication& communication,
-    const JsonValidator& jsonValidator) const
+    const XmlValidator& xmlValidator,
+    const InCodeValidator& inCodeValidator) const
 {
-    jsonValidator.validate(
-        NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        Communication::messageTypeToSchemaType(messageType));
+    Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
+                           Communication::messageTypeToSchemaType(messageType));
 }
 
 void CommunicationPostHandler::validateSender(

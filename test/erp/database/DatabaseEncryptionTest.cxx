@@ -54,8 +54,9 @@ protected:
         model::PrescriptionId prescriptionId = db.storeTask(task);
         task.setPrescriptionId(prescriptionId);
         db.activateTask(task, model::Binary{binId, binData});
-        auto erxReceipt = model::ErxReceipt::fromJson(ResourceManager::instance().getStringResource(erxBundleResource));
-        auto medicationDispense = model::MedicationDispense::fromJson(
+        auto erxReceipt =
+            model::ErxReceipt::fromJsonNoValidation(ResourceManager::instance().getStringResource(erxBundleResource));
+        auto medicationDispense = model::MedicationDispense::fromJsonNoValidation(
             ResourceManager::instance().getStringResource(medicationDispenseResource));
         db.updateTaskMedicationDispenseReceipt(task, medicationDispense, erxReceipt);
         db.updateTaskStatusAndSecret(task);
@@ -177,13 +178,14 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     db_model::EncryptedBlob encryptedPrescription{row[col::healthcare_provider_prescription].as<pqxx::binarystring>()};
     std::optional<model::Binary> decryptedPrescription;
     ASSERT_NO_THROW(decryptedPrescription =
-                        model::Binary::fromJson(getDBCodec().decode(encryptedPrescription, taskKey)));
+                        model::Binary::fromJsonNoValidation(getDBCodec().decode(encryptedPrescription, taskKey)));
     EXPECT_EQ(decryptedPrescription->id(), binId);
     EXPECT_EQ(decryptedPrescription->data(), binData);
     // 13: receipt bytea,
     db_model::EncryptedBlob encryptedReceipt{row[col::receipt].as<pqxx::binarystring>()};
     std::optional<model::ErxReceipt> decryptedReceipt;
-    ASSERT_NO_THROW(decryptedReceipt = model::ErxReceipt::fromJson(getDBCodec().decode(encryptedReceipt, taskKey)));
+    ASSERT_NO_THROW(decryptedReceipt =
+                        model::ErxReceipt::fromJsonNoValidation(getDBCodec().decode(encryptedReceipt, taskKey)));
     EXPECT_EQ(decryptedReceipt->prescriptionId(), erxReceipt.prescriptionId());
     // 14: when_handed_over timestamp with time zone,
     //     not encrypted
@@ -200,8 +202,8 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     std::optional<model::MedicationDispense> decryptedMedicationDispense;
     {
         auto key = medicationDispenseKey(kvnrHashed, medicationDispenseBlobId);
-        ASSERT_NO_THROW(decryptedMedicationDispense =
-                            model::MedicationDispense::fromJson(getDBCodec().decode(encryptedMedicationDispense, key)));
+        ASSERT_NO_THROW(decryptedMedicationDispense = model::MedicationDispense::fromJsonNoValidation(
+                            getDBCodec().decode(encryptedMedicationDispense, key)));
         EXPECT_EQ(decryptedMedicationDispense->kvnr(), medicationDispense.kvnr());
     }
     A_19688.finish();
@@ -227,6 +229,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
             message_for_sender,
             recipient_blob_id,
             message_for_recipient,
+            prescription_type,
         };
     };
     auto& db = database();
@@ -239,7 +242,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel,815).toString());
     builder.setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.");
     builder.setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
-    auto communication = model::Communication::fromJson(builder.createJsonString());
+    auto communication = model::Communication::fromJsonNoValidation(builder.createJsonString());
     communication.setSender(InsurantA);
     communication.setRecipient(mPharmacy);
     communication.setTimeSent(model::Timestamp{(int64_t)1612134000});
@@ -250,7 +253,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
     auto row = txn.exec_params1("SELECT * FROM erp.communication WHERE id = $1", id->toString());
     txn.commit();
-    ASSERT_EQ(row.size(), 10) << "Expected table `erp.communication` to have 10 columns.";
+    ASSERT_EQ(row.size(), 11) << "Expected table `erp.communication` to have 11 columns.";
 
     //  0: id uuid DEFAULT erp.gen_suuid(CURRENT_TIMESTAMP) NOT NULL,
     //     not encrypted
@@ -266,15 +269,18 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
     //     not encrypted
     //  5: prescription_id bigint,
     //     not encrypted
-    //  6: sender_blob_id integer NOT NULL,
+    //  6: prescription_type smallint,
     //     not encrypted
-    //  7: message_for_sender bytea NOT NULL,
+    //  7: sender_blob_id integer NOT NULL,
+    //     not encrypted
+    //  8: message_for_sender bytea NOT NULL,
     auto senderBlobId = gsl::narrow<BlobId>(row[col::sender_blob_id].as<int32_t>());
     {
         auto key = communicationKey(communication.sender().value(), senderHashed, senderBlobId);
         db_model::EncryptedBlob encryptedMessage{row[col::message_for_sender].as<pqxx::binarystring>()};
         std::optional<model::Communication> decryptedMessage;
-        ASSERT_NO_THROW(decryptedMessage = model::Communication::fromJson(getDBCodec().decode(encryptedMessage, key)));
+        ASSERT_NO_THROW(decryptedMessage =
+                            model::Communication::fromJsonNoValidation(getDBCodec().decode(encryptedMessage, key)));
         ASSERT_EQ(decryptedMessage->sender(), communication.sender());
         ASSERT_EQ(decryptedMessage->recipient(), communication.recipient());
     }
@@ -286,7 +292,8 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
         auto key = communicationKey(communication.recipient().value(), recipientHashed, recipientBlobId);
         db_model::EncryptedBlob encryptedMessage{row[col::message_for_recipient].as<pqxx::binarystring>()};
         std::optional<model::Communication> decryptedMessage;
-        ASSERT_NO_THROW(decryptedMessage = model::Communication::fromJson(getDBCodec().decode(encryptedMessage, key)));
+        ASSERT_NO_THROW(decryptedMessage =
+                            model::Communication::fromJsonNoValidation(getDBCodec().decode(encryptedMessage, key)));
         ASSERT_EQ(decryptedMessage->sender(), communication.sender());
         ASSERT_EQ(decryptedMessage->recipient(), communication.recipient());
     }
@@ -313,6 +320,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)
             prescription_id,
             metadata,
             blob_id,
+            prescription_type,
         };
     };
     model::AuditData auditData{model::AuditEventId::GET_Task,
@@ -329,7 +337,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
     auto row = txn.exec_params1("SELECT * FROM erp.auditevent WHERE id = $1", id);
     txn.commit();
-    ASSERT_EQ(row.size(), 9) << "Expected table `erp.auditevent` to have 9 columns.";
+    ASSERT_EQ(row.size(), 10) << "Expected table `erp.auditevent` to have 10 columns.";
     auto kvnrHashed = getKeyDerivation().hashKvnr(InsurantA);
     auto blobId = gsl::narrow<BlobId>(row[col::blob_id].as<int32_t>());
     const auto& key = auditeventKey(kvnrHashed, blobId);
@@ -347,10 +355,13 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)
     //     not encrypted
     //  6: prescription_id bigint,
     //     not encrypted
-    //  7: metadata bytea,
+    //  7: prescription_type smallint,
+    //     not encrypted
+    //  8: metadata bytea,
     db_model::EncryptedBlob encryptedMetaData{row[col::metadata].as<pqxx::binarystring>()};
     std::optional<model::AuditMetaData> decryptedMetaData;
-    ASSERT_NO_THROW(decryptedMetaData = model::AuditMetaData::fromJson(getDBCodec().decode(encryptedMetaData, key)));
+    ASSERT_NO_THROW(decryptedMetaData =
+                        model::AuditMetaData::fromJsonNoValidation(getDBCodec().decode(encryptedMetaData, key)));
     EXPECT_EQ(decryptedMetaData->agentWho(), InsurantA);
     EXPECT_EQ(decryptedMetaData->agentName(), agentName);
     //  8: blob_id integer NOT NULL

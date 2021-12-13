@@ -116,6 +116,15 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
     ErpExpect(taskStatus != model::Task::Status::draft, HttpStatus::Forbidden, "Abort not expected for newly created Task");
 
+    A_22102.start("insurant not allowed to delete incomplete tasks.");
+    if (prescriptionId.type() == model::PrescriptionType::direkteZuweisung &&
+        professionOIDClaim.value() == profession_oid::oid_versicherter)
+    {
+        ErpExpect(taskStatus == model::Task::Status::completed, HttpStatus::Forbidden,
+                  "Abort for patient in WF 169 only allowed for completed Task");
+    }
+    A_22102.finish();
+
     checkAccessValidity(session.auditDataCollector(), *professionOIDClaim, *task, session.request);
 
     const auto kvnr = task->kvnr();

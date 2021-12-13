@@ -4,9 +4,8 @@
  */
 
 #include "erp/util/ExceptionHelper.hxx"
-
 #include "erp/common/HttpStatus.hxx"
-#include "erp/hsm/production/HsmProductionClient.hxx"
+#include "erp/hsm/HsmException.hxx"
 #include "erp/util/ErpException.hxx"
 #include "erp/util/JwtException.hxx"
 
@@ -14,6 +13,9 @@
 #include <boost/exception/exception.hpp>
 #include <sstream>
 
+#if WITH_HSM_TPM_PRODUCTION > 0
+#include "erp/hsm/production/HsmProductionClient.hxx"
+#endif
 
 namespace
 {
@@ -92,7 +94,11 @@ void ExceptionHelper::extractInformationAndRethrow (
     }
     catch (const HsmException& e)
     {
-        consumer("HsmException(" + std::string(e.what()) + "," + HsmProductionClient::hsmErrorDetails(e.errorCode) + ")", getLocationString(e));
+        consumer("HsmException(" + std::string(e.what())
+#if WITH_HSM_TPM_PRODUCTION > 0
+                     + "," + HsmProductionClient::hsmErrorDetails(e.errorCode)
+#endif
+                     + ")", getLocationString(e));
         throw;
     }
     catch (const std::runtime_error& e)

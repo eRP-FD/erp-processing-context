@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../identifier/Identifier.xsd"/>
+  <xs:complexType name="EventStatus">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="unknown"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Task.Reference">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string"/>
+          <xs:element name="type" type="Task.uri" minOccurs="0"/>
+          <xs:element name="identifier" type="Identifier" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Task.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="RequestPriority-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="routine"/>
+      <xs:enumeration value="urgent"/>
+      <xs:enumeration value="asap"/>
+      <xs:enumeration value="stat"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="RequestPriority">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="RequestPriority-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="CommunicationGenerics.Payload">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="contentString" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

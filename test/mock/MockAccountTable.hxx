@@ -20,6 +20,8 @@ public:
                                           db_model::MasterKeyType masterKeyType,
                                           BlobId blobId);
 
+    bool isBlobUsed(BlobId blobId) const;
+
 private:
     struct AccountsPrimaryKey
     {

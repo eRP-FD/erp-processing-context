@@ -16,41 +16,6 @@
 namespace
 {
 
-std::string createWhatReference(
-    model::AuditEventId eventId,
-    const std::string& prescriptionId)
-{
-    switch(eventId)
-    {
-        case model::AuditEventId::GET_Task:
-            return "Task";
-        case model::AuditEventId::GET_Task_id_insurant:
-        case model::AuditEventId::GET_Task_id_representative:
-        case model::AuditEventId::GET_Task_id_pharmacy:
-        case model::AuditEventId::Task_delete_expired_id:
-            return "Task/" + prescriptionId;
-        case model::AuditEventId::POST_Task_activate:
-            return "Task/" + prescriptionId + "/$activate";
-        case model::AuditEventId::POST_Task_accept:
-            return "Task/" + prescriptionId + "/$accept";
-        case model::AuditEventId::POST_Task_reject:
-            return "Task/" + prescriptionId + "/$reject";
-        case model::AuditEventId::POST_Task_close:
-            return "Task/" + prescriptionId + "/$close";
-        case model::AuditEventId::POST_Task_abort_doctor:
-        case model::AuditEventId::POST_Task_abort_insurant:
-        case model::AuditEventId::POST_Task_abort_representative:
-        case model::AuditEventId::POST_Task_abort_pharmacy:
-            return "Task/" + prescriptionId + "/$abort";
-        case model::AuditEventId::GET_MedicationDispense:
-            return "MedicationDispense";
-        case model::AuditEventId::GET_MedicationDispense_id:
-            return "MedicationDispense/" + prescriptionId;
-        default:
-            throw std::logic_error("Invalid event id");
-    }
-}
-
 std::tuple<std::string, std::string, std::string> evalAgentData(
     const model::AuditData& auditData,
     const JWT& accessToken)
@@ -77,7 +42,7 @@ std::tuple<std::string, std::string, std::string> evalAgentData(
         whoIdentifierValue = auditData.metaData().agentWho().value();
         if (!model::isEventCausedByRepresentative(auditData.eventId()) && !auditData.metaData().agentName().has_value())
         {
-            agentName = "<null>";
+            agentName = "unbekannt";
         }
         else
         {
@@ -120,7 +85,7 @@ model::AuditEvent AuditEventCreator::fromAuditData(
 
     // agent data
     std::string agentName = "E-Rezept Fachdienst"; // default value for audit events created by maintenance script;
-    if(auditData.eventId() != model::AuditEventId::Task_delete_expired_id)
+    if(!isEventCausedByMaintenanceScript(auditData.eventId()))
     {
         const auto [whoIdentifierSystem, whoIdentifierValue, whoAgentName] = evalAgentData(auditData, accessToken);
         auditEvent.setAgentWho(whoIdentifierSystem, whoIdentifierValue);
@@ -140,12 +105,15 @@ model::AuditEvent AuditEventCreator::fromAuditData(
     else
     {
         // entity.description is mandatory according to the profile. If we don't have a unique prescriptionID
-        // to fill it (for endpoints GET /Task or GET /AuditEvent), we write a fixed string "+".
-        // See https://dth01.ibmgcloud.net/jira/browse/ERP-5081.
+        // to fill it (for endpoints GET /Task or GET /MedicationDispense), we write a fixed string "+".
+        // See ticket ERP-5081.
         auditEvent.setEntityDescription("+");
+
+        // TODO Clarify what should be set for the audit events created by the Consent endpoints where no
+        // prescription id is available (see Question ERP-7951).
     }
     auditEvent.setEntityName(auditData.insurantKvnr());
-    auditEvent.setEntityWhatReference(createWhatReference(auditData.eventId(), prescriptionIdStr));
+    auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), prescriptionIdStr));
 
     // text/div
     const auto text = replaceTextTemplateVariables(

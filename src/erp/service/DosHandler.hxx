@@ -17,7 +17,7 @@
 class DosHandler
 {
 public:
-    explicit DosHandler(std::unique_ptr<RedisInterface> iface);
+    explicit DosHandler(std::shared_ptr<RedisInterface> iface);
 
 
     void setRequestsUpperLimit(size_t numreqs);
@@ -38,14 +38,14 @@ public:
 
     void healthCheck() const;
 
-    constexpr static std::string_view dosKeyPrefix = "ERP-DOS:";
+    constexpr static std::string_view dosKeyPrefix = "ERP-PC-DOS:";
     constexpr static std::string_view blockedField = "blocked";
     constexpr static std::string_view countField = "count";
     constexpr static std::string_view t0Field = "t0";
     constexpr static std::string_view healthCheckKey = "health_check";
 
 private:
-    std::unique_ptr<RedisInterface> mInterface;
+    std::shared_ptr<RedisInterface> mInterface;
     size_t mNumreqs{0};
     uint64_t mTimespan{0};
 };

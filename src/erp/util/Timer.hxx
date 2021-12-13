@@ -9,6 +9,7 @@
 #include <boost/asio/io_context.hpp>
 #include <chrono>
 #include <functional>
+#include <mutex>
 #include <thread>
 #include <unordered_map>
 

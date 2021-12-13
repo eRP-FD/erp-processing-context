@@ -8,6 +8,7 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/PostgresConnection.hxx"
 #include "erp/util/Configuration.hxx"
+#include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/TestConfiguration.hxx"
 
 #include "test_config.h"
@@ -35,10 +36,7 @@ public:
 
         database = std::make_unique<ProductionBlobDatabase>();
 
-        // Clear the blob database.
-        auto transaction = database->createTransaction();
-        transaction->exec("DELETE FROM erp.blob WHERE true");
-        transaction->commit();
+        BlobDatabaseHelper::removeUnreferencedBlobs();
     }
 
     pqxx::result execute (const std::string& query)
@@ -83,14 +81,17 @@ TEST_P(ProductionBlobDatabaseHostIpTest, storeBlob)
 {
     const auto[blobType, isHostIpExpected, isBuildExpected] = GetParam();
 
+    std::string entryName = "ProductionBlobDatabaseHostIpTest.storeBlob.";
+    entryName += magic_enum::enum_name(blobType);
+
     BlobDatabase::Entry entry;
     entry.type = blobType;
-    entry.name = ErpVector::create("blob-name");
+    entry.name = ErpVector::create(entryName);
     database->storeBlob(std::move(entry));
 
     ASSERT_FALSE(Configuration::instance().serverHost().empty());
 
-    const auto result = execute("SELECT host_ip, build FROM erp.blob WHERE name='blob-name'");
+    const auto result = execute("SELECT host_ip, build FROM erp.blob WHERE name='" + entryName + "'");
     ASSERT_EQ(result.size(), 1);
     const auto& row = result.front();
     ASSERT_EQ(row.size(), 2);
@@ -100,9 +101,12 @@ TEST_P(ProductionBlobDatabaseHostIpTest, storeBlob)
     else
         ASSERT_TRUE(row[0].is_null());
     if (isBuildExpected)
-        ASSERT_EQ(row[1].as<std::string>(), std::string(ErpServerInfo::ReleaseVersion)+'/'+ErpServerInfo::BuildVersion);
+        ASSERT_EQ(row[1].as<std::string>(), std::string(ErpServerInfo::ReleaseVersion)
+                                    + "/" + std::string(ErpServerInfo::BuildVersion)
+                                    + "/" + std::string(ErpServerInfo::BuildType));
     else
         ASSERT_TRUE(row[1].is_null());
+    (void)execute("DELETE FROM erp.blob WHERE name='" + entryName + "'");
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -142,9 +146,9 @@ TEST_F(ProductionBlobDatabaseTest, getAllBlobsSortedById_withHostIp)
     const auto id1 = result1.front()[0].as<size_t>();
 
     const auto blobs = database->getAllBlobsSortedById();
-    ASSERT_EQ(blobs.size(), 1);
-    ASSERT_EQ(blobs.front().name, ErpVector::create("localhost-1"));
-    ASSERT_EQ(blobs.front().id, id1);
+    ASSERT_GE(blobs.size(), 1);
+    ASSERT_EQ(blobs.back().name, ErpVector::create("localhost-1"));
+    ASSERT_EQ(blobs.back().id, id1);
 }
 
 
@@ -159,9 +163,9 @@ TEST_F(ProductionBlobDatabaseTest, getAllBlobsSortedById_withoutHostIp)
     const auto id1 = result1.front()[0].as<size_t>();
 
     const auto blobs = database->getAllBlobsSortedById();
-    ASSERT_EQ(blobs.size(), 1);
-    ASSERT_EQ(blobs[0].name, ErpVector::create("localhost-1"));
-    ASSERT_EQ(blobs[0].id, id1);
+    ASSERT_GE(blobs.size(), 1);
+    ASSERT_EQ(blobs.back().name, ErpVector::create("localhost-1"));
+    ASSERT_EQ(blobs.back().id, id1);
 }
 
 
@@ -203,9 +207,9 @@ TEST_F(ProductionBlobDatabaseTest, getBlob_withoutHostIp)
     const auto id1 = result1.front()[0].as<size_t>();
 
     const auto blobs = database->getAllBlobsSortedById();
-    ASSERT_EQ(blobs.size(), 1);
-    ASSERT_EQ(blobs.front().name, ErpVector::create("localhost-1"));
-    ASSERT_EQ(blobs.front().id, id1);
+    ASSERT_GE(blobs.size(), 1);
+    ASSERT_EQ(blobs.back().name, ErpVector::create("localhost-1"));
+    ASSERT_EQ(blobs.back().id, id1);
 }
 
 
@@ -247,33 +251,39 @@ TEST_F(ProductionBlobDatabaseTest, noBuildForOtherBlobs)
  */
 TEST_F(ProductionBlobDatabaseTest, deleteBlob)
 {
+    size_t expectedCount;
+    {
+        const auto countResult = execute("SELECT COUNT(*) FROM erp.blob");
+        expectedCount = countResult.front()[0].as<size_t>();
+    }
+
     const auto result1 = execute("INSERT INTO erp.blob (type,          name, data, generation) VALUES (1,              'ek',   'data', 1) RETURNING blob_id");
     const auto result2 = execute("INSERT INTO erp.blob (type, host_ip, name, data, generation) VALUES (2, '127.0.0.1', 'ak-1', 'data', 1) RETURNING blob_id");
     const auto result3 = execute("INSERT INTO erp.blob (type, host_ip, name, data, generation) VALUES (2, '127.0.0.2', 'ak-2', 'data', 1) RETURNING blob_id");
-
+    expectedCount += 3;
     {
         const auto countResult = execute("SELECT COUNT(*) FROM erp.blob");
-        ASSERT_EQ(countResult.front()[0].as<size_t>(), 3);
+        ASSERT_EQ(countResult.front()[0].as<size_t>(), expectedCount);
     }
 
     database->deleteBlob(BlobType::EndorsementKey, ErpVector::create("ek"));
-
+    --expectedCount;
     {
         const auto countResult = execute("SELECT COUNT(*) FROM erp.blob");
-        ASSERT_EQ(countResult.front()[0].as<size_t>(), 2);
+        ASSERT_EQ(countResult.front()[0].as<size_t>(), expectedCount);
     }
-
+    --expectedCount;
     database->deleteBlob(BlobType::AttestationPublicKey, ErpVector::create("ak-1"));
 
     {
         const auto countResult = execute("SELECT COUNT(*) FROM erp.blob");
-        ASSERT_EQ(countResult.front()[0].as<size_t>(), 1);
+        ASSERT_EQ(countResult.front()[0].as<size_t>(), expectedCount);
     }
 
     database->deleteBlob(BlobType::AttestationPublicKey, ErpVector::create("ak-2"));
-
+    --expectedCount;
     {
         const auto countResult = execute("SELECT COUNT(*) FROM erp.blob");
-        ASSERT_EQ(countResult.front()[0].as<size_t>(), 0);
+        ASSERT_EQ(countResult.front()[0].as<size_t>(), expectedCount);
     }
 }

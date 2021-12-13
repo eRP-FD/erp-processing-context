@@ -9,10 +9,10 @@
 #include "erp/util/TLog.hxx"
 #include "erp/model/Timestamp.hxx"
 
-#include "mock/hsm/MockBlobDatabase.hxx"
-#include "mock/util/MockConfiguration.hxx"
-
+#include "mock/hsm/MockBlobCache.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
+#include "test/util/TestConfiguration.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #include <gtest/gtest.h>
 
@@ -27,8 +27,7 @@ namespace {
     std::vector<std::tuple<DatabaseFactory,bool>> getProductionDatabaseFactories (void)
     {
         std::vector<std::tuple<DatabaseFactory,bool>> factories;
-        // Misuse the MOCK_USE_BLOB_DATABASE_MOCK a little bit to mean "is production blob database not supported".
-        if ( ! MockConfiguration::instance().getOptionalBoolValue(MockConfigurationKey::MOCK_USE_BLOB_DATABASE_MOCK, true))
+        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
             factories.emplace_back([]{return std::make_unique<ProductionBlobDatabase>();}, false);
         return factories;
     }
@@ -67,7 +66,7 @@ class BlobDatabaseTest : public testing::Test,
 public:
     virtual void SetUp (void) override
     {
-        BlobDatabaseHelper::clearBlobDatabase();
+        BlobDatabaseHelper::removeUnreferencedBlobs();
     }
 
     virtual void TearDown (void) override
@@ -105,9 +104,9 @@ private:
 
     void deleteAllItems (void)
     {
-        if ( ! std::get<1>(GetParam()))
-            for (const auto& item : mBlobsToDelete)
-                ProductionBlobDatabase().deleteBlob(std::get<0>(item), std::get<1>(item));
+        auto blobDB = std::get<DatabaseFactory>(GetParam())();
+        for (const auto& item : mBlobsToDelete)
+            blobDB->deleteBlob(std::get<0>(item), std::get<1>(item));
     }
 };
 
@@ -197,6 +196,7 @@ TEST_P(BlobDatabaseTest, getAllBlobsSortedById)
     entry.id = 0;
 
     auto database = databaseFactory();
+    size_t initialBlobCount = databaseFactory()->getAllBlobsSortedById().size();
 
     // Store it n times.
     const size_t n = 10;
@@ -211,7 +211,7 @@ TEST_P(BlobDatabaseTest, getAllBlobsSortedById)
 
     // Verify that we get all entries back.
     const std::vector<BlobDatabase::Entry> entries = databaseFactory()->getAllBlobsSortedById();
-    ASSERT_EQ(entries.size(), n);
+    ASSERT_EQ(entries.size(), n + initialBlobCount);
 
     // and that they are sorted on their id.
     size_t lastId = 0;
@@ -337,8 +337,8 @@ TEST_P(BlobDatabaseTest, blob_filterByRelease)
     // Get all blobs ...
     const auto entries = databaseFactory()->getAllBlobsSortedById();
     // ... and expect the second quote blob to have been filtered out.
-    ASSERT_EQ(entries.size(), 1);
-    ASSERT_EQ(entries.front().id, blobId);
+    ASSERT_GE(entries.size(), 1);
+    ASSERT_EQ(entries.back().id, blobId);
 
     // Verify that the first blob is recognized as a valid quote blob.
     const auto flags = databaseFactory()->hasValidBlobsOfType({BlobType::Quote});

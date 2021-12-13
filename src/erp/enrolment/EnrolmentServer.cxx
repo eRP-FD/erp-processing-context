@@ -17,7 +17,7 @@ EnrolmentServer::EnrolmentServer(
         HttpsServer<EnrolmentServiceContext>::defaultHost,
         enrolmentPort,
         std::move(handlerManager),
-        std::move(serviceContext))
+        std::move(serviceContext) )
 {
 }
 

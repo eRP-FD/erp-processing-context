@@ -25,6 +25,7 @@
 
 #include "test_config.h"
 
+using namespace ::std::string_view_literals;
 
 class CadesBesSignatureTest : public ::testing::Test
 {
@@ -147,6 +148,40 @@ TEST_F(CadesBesSignatureTest, getSigningTime)
     ASSERT_EQ(signingTime.value(), referenceTime);
 }
 
+TEST_F(CadesBesSignatureTest, getMessageDigest)
+{
+    // Extracted manually from kbv_bundle.p7s
+    const auto referenceDigest = "ZDYUYul4VgUZHdmpy1hxS57lwRTw3ayuW8qfaMN90Fo="sv;
+
+    CadesBesSignature cadesBesSignature(
+        Base64::encode(FileHelper::readFileAsString(::std::string(TEST_DATA_DIR) + "/issues/ERP-5822/kbv_bundle.p7s")),
+        nullptr);
+    const auto messageDigest = cadesBesSignature.getMessageDigest();
+    ASSERT_TRUE(messageDigest.has_value());
+    EXPECT_EQ(Base64::encode(messageDigest.value()), referenceDigest);
+}
+
+
+TEST_F(CadesBesSignatureTest, setSigningTime)
+{
+    std::string_view myText = "The text to be signed";
+    auto signingTime = model::Timestamp::fromXsDateTime("2019-02-25T08:05:05Z");
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
+    auto cert = Certificate::fromPemString(certificate);
+    std::string signedText;
+    {
+        CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}, signingTime};
+        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+    }
+    {
+        CadesBesSignature cadesBesSignature{signedText, nullptr};
+        EXPECT_EQ(cadesBesSignature.payload(), myText);
+        auto signingTime = cadesBesSignature.getSigningTime();
+        ASSERT_TRUE(signingTime.has_value());
+        ASSERT_EQ(signingTime.value(), signingTime);
+    }
+}
+
 
 TEST_F(CadesBesSignatureTest, validateWithBna)
 {
@@ -178,6 +213,38 @@ TEST_F(CadesBesSignatureTest, validateWithBna)
         CadesBesSignature cadesBesSignature{signedText, manager.get()};
         EXPECT_EQ(cadesBesSignature.payload(), myText);
     }
+}
+
+
+TEST_F(CadesBesSignatureTest, GematikExampleWithOcsp)
+{
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
+
+    // To accept old OCSP-Response the OCSP grace period is set to ca 50 years
+    EnvironmentVariableGuard environmentGuard("ERP_OCSP_QES_GRACE_PERIOD", "1576800000");
+    const auto raw =
+        FileHelper::readFileAsString(
+            std::string(TEST_DATA_DIR)
+            + "/cadesBesSignature/4fe2013d-ae94-441a-a1b1-78236ae65680_S_SECUN_secu_kon_4.8.2_4.1.3.p7s");
+    CadesBesSignature cadesBesSignature(raw, manager.get());
+
+    ASSERT_FALSE(cadesBesSignature.payload().empty());
+}
+
+
+TEST_F(CadesBesSignatureTest, GematikExampleWithOutdatedOcsp)
+{
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
+
+    // The old OCSP-Response is outdated, and thus an OCSP-Request should be send.
+    // The test framework is not configured to support the OCSP-Request that should produce OCSP_NOT_AVAILABLE error.
+    const auto raw =
+        FileHelper::readFileAsString(
+            std::string(TEST_DATA_DIR)
+            + "/cadesBesSignature/4fe2013d-ae94-441a-a1b1-78236ae65680_S_SECUN_secu_kon_4.8.2_4.1.3.p7s");
+    EXPECT_TSL_ERROR_THROW(CadesBesSignature(raw, manager.get()),
+               {TslErrorCode::OCSP_NOT_AVAILABLE},
+               HttpStatus::InternalServerError);
 }
 
 

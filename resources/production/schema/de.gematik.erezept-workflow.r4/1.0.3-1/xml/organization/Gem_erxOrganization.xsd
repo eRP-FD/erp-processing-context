@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:include schemaLocation="../identifier/Identifier.xsd"/>
+  <xs:complexType name="Gem_erxOrganization">
+    <xs:complexContent>
+      <xs:extension base="Resource">
+        <xs:sequence>
+          <xs:element name="text" type="Narrative" minOccurs="0"/>
+          <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="identifier" type="TelematikID.Identifier"/>
+          <xs:element name="active" type="boolean"/>
+          <xs:element name="type" type="Gem_erxOrganization.Type"/>
+          <xs:element name="name" type="string"/>
+          <xs:element name="alias" minOccurs="0" maxOccurs="unbounded" type="string"/>
+          <xs:element name="telecom" minOccurs="0" maxOccurs="unbounded" type="ContactPoint"/>
+          <xs:element name="address" maxOccurs="unbounded" type="Gem_erxOrganization.Address"/>
+          <xs:element name="partOf" minOccurs="0" type="Reference"/>
+          <xs:element name="contact" type="Gem_erxOrganization.Contact" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="endpoint" minOccurs="0" maxOccurs="unbounded" type="Reference"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxOrganization.Contact">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="purpose" minOccurs="0" type="CodeableConcept"/>
+          <xs:element name="name" minOccurs="0" type="HumanName"/>
+          <xs:element name="telecom" minOccurs="0" maxOccurs="unbounded" type="ContactPoint"/>
+          <xs:element name="address" minOccurs="0" type="Address"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxOrganization.Address">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="AddressUse" minOccurs="0"/>
+          <xs:element name="type" type="AddressType" minOccurs="0"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+          <xs:element name="line" type="string" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="city" type="string"/>
+          <xs:element name="district" type="string" minOccurs="0"/>
+          <xs:element name="state" type="string" minOccurs="0"/>
+          <xs:element name="postalCode" type="string"/>
+          <xs:element name="country" type="string" minOccurs="0"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxOrganization.Type">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="Gem_erxOrganization.Type.Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxOrganization.Type.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="Gem_erxOrganization.Type.Coding.uri" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="Gem_erxOrganization.Type.Coding.code" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxOrganization.Type.Coding.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/ValueSet/Organizationtype"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxOrganization.Type.Coding.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxOrganization.Type.Coding.code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxOrganization.Type.Coding.code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="urn:oid:1.2.276.0.76.4.54"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

@@ -76,16 +76,16 @@ const rapidjson::Pointer releasedatePointer("/version/releasedate");
 }
 
 Health::Health()
+    : ResourceBase(ResourceBase::NoProfile,
+                   []() {
+                       RapidjsonNumberAsStringParserDocument<struct HealthMark> hT;
+                       rapidjson::StringStream ss(health_template.data());
+                       hT->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(ss);
+                       Expect3(! hT->HasParseError(), "error parsing json template for health model", std::logic_error);
+                       return hT;
+                   }()
+                       .instance())
 {
-    static auto healthTemplate = []() {
-        RapidjsonNumberAsStringParserDocument<struct HealthMark> hT;
-        rapidjson::StringStream ss(health_template.data());
-        hT->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(ss);
-        Expect3(!hT->HasParseError(), "error parsing json template for health model", std::logic_error);
-        return hT;
-    }();
-
-    initFromTemplate(healthTemplate.instance());
     setValue(buildPointer, ErpServerInfo::BuildVersion);
     setValue(buildTypePointer, ErpServerInfo::BuildType);
     setValue(releasePointer, ErpServerInfo::ReleaseVersion);

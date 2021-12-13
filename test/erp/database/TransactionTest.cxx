@@ -9,6 +9,7 @@
 
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/hsm/BlobCache.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/util/Configuration.hxx"
 #include "test_config.h"
@@ -16,6 +17,8 @@
 class TransactionTest : public PostgresDatabaseTest
 {
 public:
+
+
 };
 
 TEST_F(TransactionTest, rollback)
@@ -26,10 +29,12 @@ TEST_F(TransactionTest, rollback)
     }
     std::optional<model::PrescriptionId> prescriptionId;
     {
+        BlobId blobId = blobCache()->getBlob(BlobType::TaskKeyDerivation).id;
         PostgresBackend database;
-        prescriptionId.emplace(std::get<0>(
-                database.createTask(model::Task::Status::draft, model::Timestamp::now(), model::Timestamp::now())));
-        database.updateTask(*prescriptionId, db_model::EncryptedBlob(pqxx::binarystring("accessCode")), 0,
+        prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                                               model::Task::Status::draft, model::Timestamp::now(),
+                                                               model::Timestamp::now())));
+        database.updateTask(*prescriptionId, db_model::EncryptedBlob(pqxx::binarystring("accessCode")), blobId,
                             db_model::Blob(pqxx::binarystring("salt")));
     }// closing scope performs rollback
 
@@ -37,23 +42,26 @@ TEST_F(TransactionTest, rollback)
 
     {
         PostgresBackend database;
-        auto taskOptional = database.retrieveTaskBasics(*prescriptionId);
+        auto taskOptional = database.retrieveTaskAndPrescription(*prescriptionId);
         ASSERT_FALSE(taskOptional);
     }
 }
 
 TEST_F(TransactionTest, commit)
 {
-    if (!usePostgres())// NOLINT
+    if (!usePostgres())
     {
         GTEST_SKIP();
     }
+
     std::optional<model::PrescriptionId> prescriptionId;
     {
+        BlobId blobId = blobCache()->getBlob(BlobType::TaskKeyDerivation).id;
         PostgresBackend database;
-        prescriptionId.emplace(std::get<0>(
-            database.createTask(model::Task::Status::draft, model::Timestamp::now(), model::Timestamp::now())));
-        database.updateTask(*prescriptionId, db_model::EncryptedBlob(pqxx::binarystring("accessCode")), 0,
+        prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                                               model::Task::Status::draft, model::Timestamp::now(),
+                                                               model::Timestamp::now())));
+        database.updateTask(*prescriptionId, db_model::EncryptedBlob(pqxx::binarystring("accessCode")), blobId,
                             db_model::Blob(pqxx::binarystring("salt")));
         database.commitTransaction();
     }
@@ -62,7 +70,7 @@ TEST_F(TransactionTest, commit)
 
     {
         PostgresBackend database;
-        auto taskOptional = database.retrieveTaskBasics(*prescriptionId);
+        auto taskOptional = database.retrieveTaskAndPrescription(*prescriptionId);
         ASSERT_TRUE(taskOptional);
     }
 }

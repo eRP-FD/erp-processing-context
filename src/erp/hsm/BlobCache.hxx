@@ -69,6 +69,7 @@ public:
 
 
     explicit BlobCache (std::unique_ptr<BlobDatabase>&& db);
+    ~BlobCache();
 
     /**
      * Return the requested blob which is identified by type and blob id. Throws an exception if
@@ -119,6 +120,8 @@ public:
         BlobType type,
         const ErpVector& name);
 
+    void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);
+
 private:
     mutable std::shared_mutex mDatabaseMutex;
     std::unique_ptr<BlobDatabase> mDatabase;
@@ -128,6 +131,9 @@ private:
     std::unordered_map<CacheKey, Entry> mEntries;
     /// For the lookup per blob type alone (references the newest blob of its type).
     std::unordered_map<BlobType, std::reference_wrapper<Entry>> mNewestEntries;
+
+    class Refresher;
+    std::unique_ptr<Refresher> mRefresher;
 
     void rebuildCache (void);
     template<class KeyType, class ValueType>

@@ -33,7 +33,7 @@ bool hasValue(const rapidjson::Value& val)
     {
         return hasNonNullElement(val.GetArray());
     }
-    return !val.IsNull() && !val.ObjectEmpty();
+    return !val.IsNull() && (!val.IsObject() || !val.ObjectEmpty());
 }
 
 }
@@ -120,6 +120,12 @@ model::NumberAsStringParserDocument FhirSaxHandler::parseXMLintoJSON(const FhirS
                                                      XmlValidatorContext* schemaValidationContext)
 {
     return FhirSaxHandler{repo}.parseXMLintoJSONInternal(xmlDocument, schemaValidationContext);
+}
+
+void FhirSaxHandler::validateXML(const FhirStructureRepository& repo, const std::string_view& xmlDocument,
+                                 XmlValidatorContext& schemaValidationContext)
+{
+    FhirSaxHandler{repo}.validateStringView(xmlDocument, schemaValidationContext);
 }
 
 model::NumberAsStringParserDocument FhirSaxHandler::parseXMLintoJSONInternal(
@@ -227,8 +233,14 @@ void FhirSaxHandler::pushArrayContext(const Context& parentItem, const FhirEleme
 void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandler::AttributeList& attributes, const FhirStructureDefinition& type, const FhirElement& element)
 {
     auto kind = type.kind();
+    auto value = attributes.findAttribute("value");
     if (kind == FhirStructureDefinition::Kind::primitiveType)
     {
+        if (!value)
+        {
+            mStack.emplace_back(type, element, std::string{name}, rapidjson::kNullType);
+            return;
+        }
         kind = systemTypeFor(type).kind();
     }
     switch (kind)
@@ -236,21 +248,21 @@ void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandle
         using K = FhirStructureDefinition::Kind;
         case K::systemBoolean:
         {
-            auto value = valueAttributeFrom(attributes, name);
-            pushBoolean(name, value, type, element);
+            ErpExpect(value.has_value(), HttpStatus::BadRequest, "Missing value for system type: " + getPath());
+            pushBoolean(name, value->value(), type, element);
             return;
         }
         case K::systemDouble:
         case K::systemInteger:
         {
-            auto value = valueAttributeFrom(attributes, name);
-            pushNumber(name, value, type, element);
+            ErpExpect(value.has_value(), HttpStatus::BadRequest, "Missing value for system type: " + getPath());
+            pushNumber(name, value->value(), type, element);
             return;
         }
         case K::systemString:
         {
-            auto value = valueAttributeFrom(attributes, name);
-            pushString(name, value, type, element);
+            ErpExpect(value.has_value(), HttpStatus::BadRequest, "Missing value for system type: " + getPath());
+            pushString(name, value->value(), type, element);
             return;
         }
         case K::complexType:
@@ -438,6 +450,7 @@ void FhirSaxHandler::joinTopStackElements()
 void FhirSaxHandler::joinContext(FhirSaxHandler::Context&& context)
 {
     auto& top = mStack.back();
+    dropTrailingNullsIfArray(context.value);
     if (context.isSubObjectOfPrimitive)
     {
         joinSubObjectOfPrimitive(std::move(context));
@@ -449,7 +462,11 @@ void FhirSaxHandler::joinContext(FhirSaxHandler::Context&& context)
     }
     else if (top.value.IsObject())
     {
-        top.value.AddMember(asJsonValue(context.name), std::move(context.value), mResult.GetAllocator());
+        if (hasValue(context.value))
+        {
+            top.value.AddMember(asJsonValue(context.name), std::move(context.value), mResult.GetAllocator());
+        }
+        dropTrailingNullsIfArray(context.subObjectOfPrimitive);
         if (hasValue(context.subObjectOfPrimitive))
         {
             top.value.AddMember(asJsonValue('_' + context.name), std::move(context.subObjectOfPrimitive), mResult.GetAllocator());
@@ -522,6 +539,21 @@ rapidjson::Value FhirSaxHandler::asJsonValue(const xmlChar* value)
     return rapidjson::Value{reinterpret_cast<const char*>(value), mResult.GetAllocator()};
 }
 
+
+void FhirSaxHandler::dropTrailingNullsIfArray(rapidjson::Value& value)
+{
+    if (!value.IsArray())
+    {
+        return;
+    }
+    auto&& arr = value.GetArray();
+    while (!arr.Empty() && arr[arr.Size() - 1].IsNull())
+    {
+        arr.PopBack();
+    }
+}
+
+
 void FhirSaxHandler::pushRootResource(const XmlStringView& resoureType)
 {
     TVLOG(3) << "Create root resource: " << std::string_view{resoureType};
@@ -532,13 +564,6 @@ void FhirSaxHandler::pushRootResource(const XmlStringView& resoureType)
     Expect3(backBone != nullptr, "Element not defined: " + type->url() + "@" + type->typeId(), std::logic_error);
     auto& state = mStack.emplace_back(*type, *backBone, std::string{resoureType}, rapidjson::kObjectType);
     state.value.AddMember("resourceType", mResult.makeString(type->typeId()), mResult.GetAllocator());
-}
-
-std::string_view FhirSaxHandler::valueAttributeFrom(const AttributeList& attributes, const std::string_view& elementName) const
-{
-    auto valueAttribute = attributes.findAttribute("value");
-    ErpExpect(valueAttribute.has_value(), HttpStatus::BadRequest, "missing value field on primitive field: " + getPath().append(elementName));
-    return valueAttribute->value();
 }
 
 

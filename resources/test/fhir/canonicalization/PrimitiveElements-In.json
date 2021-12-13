@@ -3,7 +3,7 @@
     "id": "281a985c-f25b-4aae-91a6-41ad744080b0",
     "meta": {
         "profile": [
-            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1"
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2"
         ]
     },
     "identifier": {
@@ -40,12 +40,12 @@
                 "name": [
                     {
                         "use": "official",
-                        "family": "Ludger Königsstein",
+                        "family": "Ludger KÃ¶nigsstein",
                         "_family": {
                             "extension": [
                                 {
                                     "url": "http://hl7.org/fhir/StructureDefinition/humanname-own-name",
-                                    "valueString": "Königsstein"
+                                    "valueString": "KÃ¶nigsstein"
                                 }
                             ]
                         },

@@ -83,7 +83,7 @@ Bundle GetAllMedicationDispenseHandler::createBundle(
     const std::vector<MedicationDispense>& medicationDispenses)
 {
     const std::string linkBase = getLinkBase() + "/MedicationDispense";
-    Bundle bundle(Bundle::Type::searchset);
+    Bundle bundle(BundleType::searchset, ::model::ResourceBase::NoProfile);
     for (const auto& medicationDispense : medicationDispenses)
     {
         std::optional<PrescriptionId> id = medicationDispense.id();

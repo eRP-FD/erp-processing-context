@@ -23,7 +23,8 @@ private:
     void validateAgainstFhirProfile(
         model::Communication::MessageType messageType,
         const model::Communication& communication,
-        const JsonValidator& jsonValidator) const;
+        const XmlValidator& xmlValidator,
+        const InCodeValidator& inCodeValidator) const;
     void validateSender(
         model::Communication::MessageType messageType,
         const std::string& professionOid,

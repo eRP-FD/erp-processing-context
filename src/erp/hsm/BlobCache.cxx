@@ -6,21 +6,22 @@
 #include "erp/hsm/BlobCache.hxx"
 
 #include "erp/util/Hash.hxx"
+#include "erp/util/PeriodicTimer.hxx"
 
 #include <vector>
 
 
 namespace
 {
-    template<class KeyType>
-    std::string keyToString (const KeyType key)
+
+    std::string keyToString (const BlobType key)
     {
-        if constexpr (std::is_same_v<KeyType, BlobType>)
-            return "'" + std::string(magic_enum::enum_name(key)) + "'";
-        else if constexpr (std::is_same_v<KeyType, CacheKey>)
-            return "(" + std::string(magic_enum::enum_name(key.type)) + ", " + std::to_string(key.id) + ")";
-        else
-            return "<unknown>";
+        return "'" + std::string(magic_enum::enum_name(key)) + "'";
+    }
+
+    std::string keyToString (const CacheKey& key)
+    {
+        return "(" + std::string(magic_enum::enum_name(key.type)) + ", " + std::to_string(key.id) + ")";
     }
 
     /**
@@ -28,15 +29,32 @@ namespace
      * unmodified otherwise.
      */
     template<class ValueType>
-    BlobCache::Entry& unwrap (ValueType& value)
+    decltype(auto) unwrap (ValueType&& value)
     {
-        if constexpr (std::is_same_v<ValueType, BlobCache::Entry>)
-            return value;
-        else if constexpr (std::is_same_v<ValueType, std::reference_wrapper<BlobCache::Entry>>)
-            return value.get();
-        // else fail to compile
+        return std::ref(std::forward<ValueType>(value)).get();
     }
 }
+
+class BlobCache::Refresher : public PeriodicTimer {
+public:
+    explicit Refresher(BlobCache& blobCache, std::chrono::steady_clock::duration interval)
+        : PeriodicTimer{interval}
+        , mBlobCache{blobCache}
+    { }
+private:
+    void timerHandler() override {
+        TLOG(INFO) << "Refreshing Blob-Cache.";
+        try
+        {
+            mBlobCache.rebuildCache();
+        }
+        catch (const std::runtime_error& error)
+        {
+            TLOG(ERROR) << "failed to refresh the blob cache: " << error.what();
+        }
+    }
+    BlobCache& mBlobCache;
+};
 
 
 template<class KeyType, class ValueType>
@@ -48,9 +66,8 @@ BlobCache::Entry BlobCache::getBlob (const KeyType key, std::unordered_map<KeyTy
         std::shared_lock lock (mMutex);
 
         const auto iterator = map.find(key);
-        if (iterator != map.end())
+        if (iterator != map.end() && unwrap(iterator->second).isBlobValid())
         {
-            ErpExpect(unwrap(iterator->second).isBlobValid(), HttpStatus::InternalServerError, "blob " + keyToString(key) + " is not valid");
             return unwrap(iterator->second);
         }
     }
@@ -66,8 +83,9 @@ BlobCache::Entry BlobCache::getBlob (const KeyType key, std::unordered_map<KeyTy
         const auto iterator = map.find(key);
         if (iterator != map.end())
         {
-            ErpExpect(unwrap<ValueType>(iterator->second).isBlobValid(), HttpStatus::InternalServerError, "blob " + keyToString(key) + " is not valid");
-            return unwrap<ValueType>(iterator->second);
+            ErpExpect(unwrap(iterator->second).isBlobValid(), HttpStatus::InternalServerError,
+                      "blob " + keyToString(key) + " is not valid");
+            return unwrap(iterator->second);
         }
     }
 
@@ -83,6 +101,7 @@ BlobCache::BlobCache (std::unique_ptr<BlobDatabase>&& db)
 {
 }
 
+BlobCache::~BlobCache() = default;
 
 BlobCache::Entry BlobCache::getBlob (
     const BlobType type,
@@ -176,6 +195,12 @@ void BlobCache::deleteBlob (
     rebuildCache();
 }
 
+void BlobCache::startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval)
+{
+    Expect3(mRefresher == nullptr, "refresher already started", std::logic_error);
+    mRefresher = std::make_unique<Refresher>(*this, interval);
+    mRefresher->start(context, interval);
+}
 
 std::vector<bool> BlobCache::hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const
 {

@@ -6,6 +6,7 @@
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/server/handler/RequestHandlerInterface.hxx"
 #include "erp/ErpRequirements.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
 
@@ -22,6 +23,8 @@ public:
         : mRequestHandlerManager(),
           mAllProfessionOIDs()
     {
+        EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
+
         ErpProcessingContext::addSecondaryEndpoints(mRequestHandlerManager);
         ErpProcessingContext::addPrimaryEndpoints(mRequestHandlerManager);
         std::string prefix = "1.2.276.0.76.4.";
@@ -220,6 +223,81 @@ TEST_F(ErpProcessingContextTest, GetAuditEvent_ProfessionOIDs)
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }
+
+
+TEST_F(ErpProcessingContextTest, DeleteChargeItem_ProfessionOIDs)
+{
+    A_22113.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::DELETE, "/ChargeItem/{id}", {
+            "1.2.276.0.76.4.49", // oid_versicherter
+            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+    });
+}
+
+TEST_F(ErpProcessingContextTest, GetAllChargeItems_ProfessionOIDs)
+{
+    A_22118.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::GET, "/ChargeItem", {
+            "1.2.276.0.76.4.49", // oid_versicherter
+            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+    });
+}
+
+TEST_F(ErpProcessingContextTest, GetChargeItem_ProfessionOIDs)
+{
+    A_22124.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::GET, "/ChargeItem/{id}", {
+            "1.2.276.0.76.4.49", // oid_versicherter
+            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+    });
+}
+
+TEST_F(ErpProcessingContextTest, PostChargeItem_ProfessionOIDs)
+{
+    A_22129.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/ChargeItem", {
+            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+    });
+}
+
+TEST_F(ErpProcessingContextTest, PutChargeItem_ProfessionOIDs)
+{
+    A_22144.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::PUT, "/ChargeItem/{id}", {
+            "1.2.276.0.76.4.49", // oid_versicherter
+            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+    });
+}
+
+TEST_F(ErpProcessingContextTest, DeleteConsent_ProfessionOIDs)
+{
+    A_22155.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::DELETE, "/Consent/{id}", {
+            "1.2.276.0.76.4.49", // oid_versicherter
+    });
+}
+
+TEST_F(ErpProcessingContextTest, GetConsent_ProfessionOIDs)
+{
+    A_22159.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::GET, "/Consent", {
+            "1.2.276.0.76.4.49", // oid_versicherter
+    });
+}
+
+TEST_F(ErpProcessingContextTest, PostConsent_ProfessionOIDs)
+{
+    A_22161.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Consent", {
+            "1.2.276.0.76.4.49", // oid_versicherter
+    });
+}
+
 
 TEST_F(ErpProcessingContextTest, GetDevice_ProfessionOIDs)
 {

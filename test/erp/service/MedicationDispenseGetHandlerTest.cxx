@@ -227,15 +227,14 @@ protected:
             {
                 if (!responseBody.empty())
                 {
-                    ASSERT_NO_FATAL_FAILURE(medicationDispensesResponse.push_back(
-                        MedicationDispense::fromJson(responseBody)));
+                    ASSERT_NO_FATAL_FAILURE(medicationDispensesResponse.push_back(MedicationDispense::fromJsonNoValidation(responseBody)));
                     std::string xmlString = medicationDispensesResponse.back().serializeToXmlString();
                 }
             }
             else
             {
-                Bundle responseBundle(Bundle::Type::searchset);
-                ASSERT_NO_FATAL_FAILURE(responseBundle = Bundle::fromJson(innerResponse.getBody()));
+                Bundle responseBundle(BundleType::searchset, ::model::ResourceBase::NoProfile);
+                ASSERT_NO_FATAL_FAILURE(responseBundle = Bundle::fromJsonNoValidation(innerResponse.getBody()));
                 for (size_t idxResource = 0; idxResource < responseBundle.getResourceCount(); ++idxResource)
                 {
                     ASSERT_NO_FATAL_FAILURE(medicationDispensesResponse.push_back(

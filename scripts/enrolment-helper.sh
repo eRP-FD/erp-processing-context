@@ -24,24 +24,30 @@ fi
 PC=$1 
 shift
 
+# extract namespace from host variable
+IFS='.'
+read -ra PARTS <<< "$ERP_SERVER_HOST"
+IFS=' '
+NAMESPACE=${PARTS[1]}
+
 command="./blob-db-initialization -c /erp/vau-hsm/client/test/resources/saved/cacertecc.crt -s /erp/vau-hsm/client/test/resources/saved $*"
-healthpc1="curl https://erp-processing-context-1.erp-system.svc.cluster.local:9085/health -k | jq"
-healthpc2="curl https://erp-processing-context-2.erp-system.svc.cluster.local:9086/health -k | jq"
+healthpc1="curl https://erp-processing-context-1.${NAMESPACE}.svc.cluster.local:9085/health -k | jq"
+healthpc2="curl https://erp-processing-context-2.${NAMESPACE}.svc.cluster.local:9086/health -k | jq"
 
 case $PC in
 
   pc1)
     echo "Running enrolment for erp-processing-context-1\n"
-    export ERP_SERVER_HOST=erp-processing-context-1.erp-system.svc.cluster.local
-    export TPM_SERVER_NAME=tpm-simulator-1.erp-system.svc.cluster.local
+    export ERP_SERVER_HOST=erp-processing-context-1.${NAMESPACE}.svc.cluster.local
+    export TPM_SERVER_NAME=tpm-simulator-1.${NAMESPACE}.svc.cluster.local
     echo "$command"
     eval $command
     ;;
 
   pc2)
     echo "Running enrolment for erp-processing-context-2\n"
-    export ERP_SERVER_HOST=erp-processing-context-2.erp-system.svc.cluster.local
-    export TPM_SERVER_NAME=tpm-simulator-2.erp-system.svc.cluster.local
+    export ERP_SERVER_HOST=erp-processing-context-2.${NAMESPACE}.svc.cluster.local
+    export TPM_SERVER_NAME=tpm-simulator-2.${NAMESPACE}.svc.cluster.local
     echo "$command"
     eval $command
     ;;

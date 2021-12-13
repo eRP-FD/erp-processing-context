@@ -11,6 +11,7 @@
 #include "erp/validation/JsonValidator.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -45,10 +46,12 @@ TEST_F(ServiceContextTest, init)
         &MockDatabase::createMockDatabase,
         std::make_unique<MockRedisStore>(),
         std::make_unique<HsmPool>(
-            std::make_unique<HsmMockFactory>(),
+            std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                             MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
             TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
         StaticData::getJsonValidator(),
-        StaticData::getXmlValidator());
+        StaticData::getXmlValidator(),
+        StaticData::getInCodeValidator());
     ASSERT_TRUE(serviceContext.databaseFactory());
 }
 
@@ -60,10 +63,12 @@ TEST_F(ServiceContextTest, initWithTsl)
         &MockDatabase::createMockDatabase,
         std::make_unique<MockRedisStore>(),
         std::make_unique<HsmPool>(
-            std::make_unique<HsmMockFactory>(),
+            std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                             MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
             TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
         StaticData::getJsonValidator(),
         StaticData::getXmlValidator(),
+        StaticData::getInCodeValidator(),
         TslTestHelper::createTslManager<TslManager>());
 
     ASSERT_TRUE(serviceContext.databaseFactory());

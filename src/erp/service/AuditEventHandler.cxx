@@ -40,7 +40,7 @@ model::Bundle GetAllAuditEventsHandler::createBundle (
 {
     const std::string linkBase = getLinkBase() + "/AuditEvent";
     const auto language = getLanguageFromHeader(request.header());
-    model::Bundle bundle(model::Bundle::Type::searchset);
+    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     for (const auto& data : auditData)
     {
         const model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(

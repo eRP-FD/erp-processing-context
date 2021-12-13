@@ -17,8 +17,9 @@ namespace model
 
 namespace
 {
+using namespace std::string_literals;
 
-constexpr std::string_view metadata_template = R"--(
+const std::string metadata_template = R"--(
 {
   "resourceType": "CapabilityStatement",
   "name": "Gem_erxCapabilityStatement",
@@ -45,7 +46,7 @@ constexpr std::string_view metadata_template = R"--(
       "resource": [
         {
           "type": "Task",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxTask",
+          "profile": "",
           "interaction": [
             {
               "code": "create"
@@ -97,13 +98,8 @@ constexpr std::string_view metadata_template = R"--(
         },
         {
           "type": "Communication",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Communication",
-          "supportedProfile": [
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq",
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply",
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq",
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"
-          ],
+          "profile": "",
+          "supportedProfile": [],
           "interaction": [
             {
               "code": "create"
@@ -136,7 +132,7 @@ constexpr std::string_view metadata_template = R"--(
         },
         {
           "type": "MedicationDispense",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense",
+          "profile": "",
           "interaction": [
             {
               "code": "read"
@@ -159,7 +155,7 @@ constexpr std::string_view metadata_template = R"--(
         },
         {
           "type": "AuditEvent",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent",
+          "profile": "",
           "interaction": [
             {
               "code": "read"
@@ -178,7 +174,7 @@ constexpr std::string_view metadata_template = R"--(
         },
         {
           "type": "Device",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxDevice",
+          "profile": "",
           "interaction": [
             {
               "code": "read"
@@ -211,10 +207,41 @@ const rapidjson::Pointer releaseDatePointer ("/software/releaseDate");
 
 
 MetaData::MetaData()
-    : Resource<MetaData>()
+    : Resource<MetaData>(ResourceBase::NoProfile,
+                         []() {
+                             std::call_once(onceFlag, initTemplates);
+                             return metaDataTemplate;
+                         }()
+                             .instance())
 {
-    std::call_once(onceFlag, initTemplates);
-    initFromTemplate(*metaDataTemplate);
+    addMemberToArrayEntry(
+        ::rapidjson::Pointer{"/rest/0/resource"}, 0, "profile",
+        ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxTask"));
+
+    addMemberToArrayEntry(
+        ::rapidjson::Pointer{"/rest/0/resource"}, 1, "profile",
+        ::model::ResourceVersion::versionizeProfile("http://hl7.org/fhir/StructureDefinition/Communication"));
+
+    addMemberToArrayEntry(::rapidjson::Pointer{"/rest/0/resource"}, 1, "supportedProfile",
+                          {::model::ResourceVersion::versionizeProfile(
+                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq"),
+                           ::model::ResourceVersion::versionizeProfile(
+                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply"),
+                           ::model::ResourceVersion::versionizeProfile(
+                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq"),
+                           ::model::ResourceVersion::versionizeProfile(
+                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative")});
+
+    addMemberToArrayEntry(::rapidjson::Pointer{"/rest/0/resource"}, 2, "profile",
+                          ::model::ResourceVersion::versionizeProfile(
+                              "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"));
+    addMemberToArrayEntry(
+        ::rapidjson::Pointer{"/rest/0/resource"}, 3, "profile",
+        ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxAuditEvent"));
+    addMemberToArrayEntry(
+        ::rapidjson::Pointer{"/rest/0/resource"}, 4, "profile",
+        ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxDevice"));
+
     setVersion(ErpServerInfo::ReleaseVersion);
     Timestamp releaseDate = Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
     setDate(releaseDate);

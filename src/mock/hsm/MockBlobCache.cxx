@@ -13,12 +13,10 @@
 #include "erp/util/TLog.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
-#if ! defined(__APPLE__) && ! defined(_WIN32)
+#if WITH_HSM_TPM_PRODUCTION > 0
 #include "mock/enrolment/MockEnrolmentManager.hxx"
 #endif
-#include "mock/hsm/MockBlobDatabase.hxx"
 #include "mock/tpm/TpmTestData.hxx"
-#include "mock/util/MockConfiguration.hxx"
 
 #include "mock_config.h"
 
@@ -42,28 +40,10 @@ std::shared_ptr<BlobCache> MockBlobCache::createAndSetup (
     return blobCache;
 }
 
-std::shared_ptr<BlobCache> MockBlobCache::createBlobCache (
-    const MockTarget target)
-{
-    if (MockConfiguration::instance().getOptionalBoolValue(MockConfigurationKey::MOCK_USE_BLOB_DATABASE_MOCK, true))
-        return createAndSetup(target, std::make_unique<MockBlobDatabase>());
-    else
-        return createAndSetup(target, std::make_unique<ProductionBlobDatabase>());
-}
-
-
 void MockBlobCache::setupBlobCache (
     MockTarget target,
     BlobCache& blobCache)
 {
-    if ( ! MockConfiguration::instance().getOptionalBoolValue(MockConfigurationKey::MOCK_USE_BLOB_DATABASE_MOCK, true))
-    {
-        auto connection = pqxx::connection(PostgresBackend::defaultConnectString());
-        pqxx::work transaction (connection);
-        transaction.exec("DELETE FROM erp.blob WHERE true");
-        transaction.commit();
-    }
-
     setupBlobCacheForAllTargets(blobCache);
 
     switch(target)
@@ -149,13 +129,15 @@ void MockBlobCache::setupBlobCacheForAllTargets (BlobCache& blobCache)
 
 void MockBlobCache::setupBlobCacheForSimulatedHsm (BlobCache& blobCache)
 {
-#if ! defined(__APPLE__) && ! defined(_WIN32)
+#if WITH_HSM_TPM_PRODUCTION > 0
     TpmProxyDirect tpm (blobCache);
     MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob(
         tpm,
         blobCache,
         std::string(MOCK_DATA_DIR) + "/enrolment/cacertecc.crt",
         1);
+#else
+    Fail2("cannot use simulated HSM if #if WITH_HSM_TPM_PRODUCTION is not defined", std::logic_error);
 #endif
 
     // Ecies key.

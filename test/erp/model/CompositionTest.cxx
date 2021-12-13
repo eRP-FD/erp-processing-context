@@ -14,11 +14,12 @@ TEST(CompositionTest, ConstructFromData)
     const model::Timestamp start = model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
     const model::Timestamp end = model::Timestamp::fromXsDateTime("2021-02-05T11:12:00+01:00");
     const std::string_view author = "https://prescriptionserver.telematik/Device/ErxService";
+    const std::string_view prescriptionDigestIdentifier = "Binary/PrescriptionDigest-160.000.080.761.527.39";
 
-    const model::Composition composition(telematicId, start, end, author);
+    const model::Composition composition(telematicId, start, end, author, prescriptionDigestIdentifier);
 
-    EXPECT_TRUE(composition.telematicId().has_value());
-    EXPECT_EQ(composition.telematicId().value(), telematicId);
+    EXPECT_TRUE(composition.telematikId().has_value());
+    EXPECT_EQ(composition.telematikId().value(), telematicId);
 
     EXPECT_TRUE(composition.periodStart().has_value());
     EXPECT_EQ(composition.periodStart().value(), start);
@@ -31,6 +32,9 @@ TEST(CompositionTest, ConstructFromData)
 
     EXPECT_TRUE(composition.author().has_value());
     EXPECT_EQ(composition.author().value(), author);
+
+    EXPECT_TRUE(composition.prescriptionDigestIdentifier().has_value());
+    EXPECT_EQ(composition.prescriptionDigestIdentifier().value(), prescriptionDigestIdentifier);
 }
 
 
@@ -88,7 +92,7 @@ TEST(CompositionTest, ConstructFromJson)
 }
 )";
 
-    const auto composition = model::Composition::fromJson(json);
+    const auto composition = model::Composition::fromJsonNoValidation(json);
 
     const std::string telematicId = "987654321";
     const model::Timestamp start = model::Timestamp::fromXsDateTime("2021-01-20T07:23:34.328+00:00");
@@ -96,8 +100,8 @@ TEST(CompositionTest, ConstructFromJson)
     const model::Timestamp date = model::Timestamp::fromXsDateTime("2021-03-20T07:32:34.328+00:00");
     const std::string_view author = "https://prescriptionserver.telematik/Device/ErxService";
 
-    EXPECT_TRUE(composition.telematicId().has_value());
-    EXPECT_EQ(composition.telematicId().value(), telematicId);
+    EXPECT_TRUE(composition.telematikId().has_value());
+    EXPECT_EQ(composition.telematikId().value(), telematicId);
 
     EXPECT_TRUE(composition.periodStart().has_value());
     EXPECT_EQ(composition.periodStart().value(), start);

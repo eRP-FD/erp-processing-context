@@ -39,7 +39,8 @@ public:
     CadesBesSignature(const std::list<Certificate>& trustedCertificates, const std::string& base64Data);
 
     /// @brief initialize from plain payload data, that shall be signed using cert and privateKey.
-    CadesBesSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey, const std::string& payload);
+    CadesBesSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey, const std::string& payload,
+                      const std::optional<model::Timestamp>& signingTime = std::nullopt);
 
     /// @brief returns the the signature as CMS file.
     std::string get();
@@ -50,7 +51,10 @@ public:
     /// return the signingTime (OID 1.2.840.113549.1.9.5) from the CMS structure
     std::optional<model::Timestamp> getSigningTime() const;
 
+    [[nodiscard]] ::std::optional<::std::string> getMessageDigest() const;
+
 private:
+    void setSigningTime(const model::Timestamp& signingTime);
     void internalInitialization(const std::string& base64Data,
                                 const std::function<int(CMS_ContentInfo&, BIO&)>& cmsVerifyFunction);
 

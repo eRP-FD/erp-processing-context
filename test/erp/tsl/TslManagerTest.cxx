@@ -250,7 +250,24 @@ namespace
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP21 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP22 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA21 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA22 TEST-ONLY"
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA22 TEST-ONLY",
+        "/C=DE/O=medisign GmbH NOT-VALID/CN=MESIG.HBA-OCSP10 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=GEM.HBA-CA14 TEST-ONLY",
+        "/C=DE/O=BITMARCK TECHNIK GMBH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-QU-BITMARCK",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=GEM.KOMP-CA41 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=GEM.KOMP-CA51 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=GEM.HBA-CA41 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=GEM.HBA-CA51 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=GEM.VPNK-CA28 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=GEM.VPNK-CA41 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=GEM.VPNK-CA50 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=GEM.VPNK-CA51 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=GEM.EGK-CA41 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=GEM.EGK-CA51 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=GEM.EGK-ALVI-CA41 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=GEM.EGK-ALVI-CA51 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA41 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA51 TEST-ONLY"
     };
 }
 

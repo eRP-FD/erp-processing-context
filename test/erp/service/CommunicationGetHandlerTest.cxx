@@ -68,10 +68,10 @@ public:
         // Verify the returned bundle.
         if (expectedHttpStatus == HttpStatus::OK)
         {
-            model::Bundle bundle(model::Bundle::Type::searchset);
+            model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
             if (expectedMimeType == std::string(ContentMimeType::fhirJsonUtf8))
             {
-                bundle = model::Bundle::fromJson(innerResponse.getBody());
+                bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
             }
             else
             {
@@ -98,8 +98,9 @@ public:
                 for (size_t index=0; index<expectedCommunicationIds.size(); ++index)
                 {
                     const auto& communication = communications.at(index);
-                    EXPECT_NO_THROW(StaticData::getJsonValidator()->validate(
-                        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
+                    EXPECT_NO_THROW(model::Communication::fromXml(
+                        communication.serializeToXmlString(), *StaticData::getXmlValidator(),
+                        *StaticData::getInCodeValidator(),
                         model::Communication::messageTypeToSchemaType(communication.messageType())));
                     EXPECT_EQ(communication.id().value().toString(), expectedCommunicationIds[index].toString());
                 }
@@ -154,13 +155,13 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_noFilter)
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned bundle.
-    const auto bundle = model::Bundle::fromJson(innerResponse.getBody());
+    const auto bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
 
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        SchemaType::Gem_erxCommunicationRepresentative));
+    EXPECT_NO_THROW(model::Communication::fromXml(
+        communication.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+        model::Communication::messageTypeToSchemaType(communication.messageType())));
 
     ASSERT_EQ(communication.id(), givenCommunication.id());
 }
@@ -201,13 +202,13 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned bundle. Of the two Communication objects in the DB, only one is expected, based on the recipient.
-    const auto bundle = model::Bundle::fromJson(innerResponse.getBody());
+    const auto bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
 
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        SchemaType::Gem_erxCommunicationRepresentative));
+    EXPECT_NO_THROW(model::Communication::fromXml(
+        communication.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+        model::Communication::messageTypeToSchemaType(communication.messageType())));
 
     ASSERT_EQ(communication.id(), givenCommunication1.id());
 }
@@ -248,17 +249,17 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned bundle. Of the two Communication objects in the DB, only one is expected, based on the recipient.
-    const auto bundle = model::Bundle::fromJson(innerResponse.getBody());
+    const auto bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
     ASSERT_EQ(bundle.getResourceCount(), 2);
     const auto communication1 = model::Communication::fromJson(bundle.getResource(0));
     const auto communication2 = model::Communication::fromJson(bundle.getResource(1));
 
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication1.jsonDocument()),
-        SchemaType::Gem_erxCommunicationRepresentative));
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication2.jsonDocument()),
-        SchemaType::Gem_erxCommunicationRepresentative));
+    EXPECT_NO_THROW(model::Communication::fromXml(communication1.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                                  *StaticData::getInCodeValidator(),
+                                                  SchemaType::Gem_erxCommunicationRepresentative));
+    EXPECT_NO_THROW(model::Communication::fromXml(communication2.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                                  *StaticData::getInCodeValidator(),
+                                                  SchemaType::Gem_erxCommunicationRepresentative));
 
     ASSERT_TRUE(communication1.id() == givenCommunication1.id() || communication1.id() == givenCommunication3.id());
     ASSERT_TRUE(communication2.id() == givenCommunication1.id() || communication2.id() == givenCommunication3.id());
@@ -1055,8 +1056,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)
             outerResponse, { infoReqByRepresentative1ToPharmacy1.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        // When converting the xml byte stream into json: & is encoded as "&#38;"
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&#38;sender=" + kvnrRepresentative1);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&sender=" + kvnrRepresentative1);
     }
     // Search for "sender=<Pharmacy>&received=NULL". Expected result: all unread messages for the sender.
     {
@@ -1081,8 +1081,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)
             outerResponse, { replyByPharmacy2ToRepresentative2.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        // When converting the xml byte stream into json: & is encoded as "&#38;"
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&#38;recipient=" + kvnrRepresentative2);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&recipient=" + kvnrRepresentative2);
     }
     // Search for "recipient=<Pharmacy>&received=NULL". Expected result: all unread messages for the sender.
     {
@@ -1171,8 +1170,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)
             outerResponse, { }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        // When converting the xml byte stream into json: & is encoded as "&#38;"
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&#38;sender=" + kvnrRepresentative1);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&sender=" + kvnrRepresentative1);
     }
 
     // Search for "recipient=<Insurant>&sent=NULL". Expected result: no "unsent" messages.
@@ -1185,8 +1183,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)
             outerResponse, { }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        // When converting the xml byte stream into json: & is encoded as "&#38;"
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&#38;recipient=" + kvnrRepresentative2);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&recipient=" + kvnrRepresentative2);
     }
 
     // Search for "sent=NULL". Expected result: no "unsent" messages.
@@ -1308,13 +1305,12 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_success)
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned Communication object.
-    const auto communication = model::Communication::fromJson(innerResponse.getBody());
+    std::optional<model::Communication> communication;
+    ASSERT_NO_THROW(communication = model::Communication::fromJson(
+                        innerResponse.getBody(), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
+                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxCommunicationRepresentative));
 
-    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
-        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(communication.jsonDocument()),
-        SchemaType::Gem_erxCommunicationRepresentative));
-
-    ASSERT_EQ(communication.id(), givenCommunication1.id());
+    ASSERT_EQ(communication->id(), givenCommunication1.id());
 }
 
 

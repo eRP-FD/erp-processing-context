@@ -2,6 +2,7 @@
  * (C) Copyright IBM Deutschland GmbH 2021
  * (C) Copyright IBM Corp. 2021
  */
+#include <gtest/gtest.h>
 
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 
@@ -12,14 +13,11 @@
 #include "erp/service/DosHandler.hxx"
 #include "erp/util/Expect.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/StaticData.hxx"
-
-#include <gtest/gtest.h>
 
 
 static auto todaysKey = CmacKey::fromBin("--Today's Key!--"); // NOLINT
@@ -30,8 +28,16 @@ class PreUserPseudonymCmacTestDatabase : public MockDatabase
 {
     using MockDatabase::MockDatabase;
 
-    CmacKey acquireCmac(const date::sys_days& validDate, RandomSource&) override
+    CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& category, RandomSource&) override
     {
+        if (category != CmacKeyCategory::user)
+        {
+            return wrongKey;
+        }
+        if (fail_)
+        {
+            throw std::runtime_error("failed");
+        }
         auto today = std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now());
         if (validDate == today)
         {
@@ -43,7 +49,11 @@ class PreUserPseudonymCmacTestDatabase : public MockDatabase
             return yesterdaysKey;
         }
     }
+
+public:
+    static bool fail_;
 };
+bool PreUserPseudonymCmacTestDatabase::fail_ = false;
 
 class PreUserPseudonymCmacTest : public ::testing::Test
 {
@@ -62,10 +72,11 @@ public:
             std::make_unique<HsmPool>(
                 std::make_unique<HsmMockFactory>(
                     std::make_unique<HsmMockClient>(),
-                    MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+                    MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
                 TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
             StaticData::getJsonValidator(),
             StaticData::getXmlValidator(),
+            StaticData::getInCodeValidator(),
             TslTestHelper::createTslManager<TslManager>());
     }
 
@@ -110,4 +121,18 @@ TEST_F(PreUserPseudonymCmacTest, verifyAndResign) // NOLINT
     EXPECT_EQ(get<1>(resToday)    , sigToday);
     EXPECT_EQ(get<1>(resYesterday), sigToday);
     EXPECT_EQ(get<1>(resWrong)    , sigToday);
+}
+
+// regression test for ERP-6504 Pre-User-Pseudonym CMAC-Key not loaded when first load fails
+TEST_F(PreUserPseudonymCmacTest, ERP6504RecoverAfterFailure)
+{
+    std::string_view testSub{"RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk"};
+    PreUserPseudonymCmacTestDatabase::fail_ = true;
+    getPreUserPseudonymCmac().mKeyDate = {};
+    ASSERT_ANY_THROW(getPreUserPseudonymCmac().LoadCmacs(
+        std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now())));
+    ASSERT_ANY_THROW((void) getPreUserPseudonymCmac().sign(testSub));
+
+    PreUserPseudonymCmacTestDatabase::fail_ = false;
+    ASSERT_NO_THROW((void) getPreUserPseudonymCmac().sign(testSub));
 }

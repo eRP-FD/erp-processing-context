@@ -4,7 +4,6 @@
  */
 
 #include "erp/tsl/OcspService.hxx"
-
 #include "erp/client/HttpClient.hxx"
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/model/Timestamp.hxx"
@@ -40,32 +39,25 @@ namespace
     // value "Toleranz t" from GS-A_5215
     constexpr const int tolerance = 37;
 
-    using OcspRequestPtr = std::unique_ptr<OCSP_REQUEST, decltype(&OCSP_REQUEST_free)>;
-    using OcspResponsePtr = std::unique_ptr<OCSP_RESPONSE, decltype(&OCSP_RESPONSE_free)>;
-    using Asn1ObjectPtr = std::unique_ptr<ASN1_OBJECT, decltype(&ASN1_OBJECT_free)>;
-
-    std::pair<OcspRequestPtr, OCSP_CERTID*>
-    createOcspRequest (const X509Certificate& certificate, const X509Certificate& issuer)
+    OcspRequestPtr
+    createOcspRequest (const OcspCertidPtr& certId)
     {
-        Expect(certificate.hasX509Ptr(),
-               "certificate must provide X509 representation");
-        Expect(issuer.hasX509Ptr(),
-               "issuer certificate must provide X509 representation");
+        Expect(certId != nullptr, "OCSP certificate ID must be provided");
 
-        OcspRequestPtr request{OCSP_REQUEST_new(), OCSP_REQUEST_free};
-        Expect(request.operator bool(), "Could not create OCSP request!");
+        OcspRequestPtr request{OCSP_REQUEST_new()};
+        Expect(request != nullptr, "Could not create OCSP request!");
 
-        OCSP_CERTID* id{OCSP_cert_to_id(nullptr, certificate.getX509ConstPtr(), issuer.getX509ConstPtr())};
+        OcspCertidPtr id(OCSP_CERTID_dup(certId.get()));
         Expect(id, "Could not create OCSP request!");
 
-        if (!OCSP_request_add0_id(request.get(), id))
+        if (!OCSP_request_add0_id(request.get(), id.get()))
         {
-            OCSP_CERTID_free(id);
             throw OcspService::OcspError("Could not create OCSP request!");
         }
 
         // after this, id will be part of request, so it does no longer have to be freed
-        return std::make_pair(std::move(request), id);
+        id.release();
+        return request;
     }
 
 
@@ -151,11 +143,10 @@ namespace
     {
         if (response.empty())
         {
-            return OcspResponsePtr{nullptr, OCSP_RESPONSE_free};
+            return {};
         }
         const unsigned char* buffer = reinterpret_cast<const unsigned char*>(response.data());
-        return OcspResponsePtr{ d2i_OCSP_RESPONSE(nullptr, &buffer, gsl::narrow_cast<int>(response.size())),
-                                OCSP_RESPONSE_free };
+        return OcspResponsePtr(d2i_OCSP_RESPONSE(nullptr, &buffer, gsl::narrow_cast<int>(response.size())));
     }
 
 
@@ -308,7 +299,7 @@ namespace
         Expect(singleResponse != nullptr, "singleResponse must not be null");
 
         // search for cert hash single extension
-        const Asn1ObjectPtr obj{OBJ_txt2obj("1.3.36.8.3.13", 1), ASN1_OBJECT_free};
+        const Asn1ObjectPtr obj{OBJ_txt2obj("1.3.36.8.3.13", 1)};
         Expect(obj != nullptr, "can not create txt object");
         const auto extensionLocation{OCSP_SINGLERESP_get_ext_by_OBJ(singleResponse, obj.get(), -1)};
         TslExpect4(extensionLocation >= 0,
@@ -371,7 +362,7 @@ namespace
     parseResponse (
             const X509Certificate& certificate,
             const OcspResponsePtr& response,
-            OCSP_CERTID* id,
+            const OcspCertidPtr& id,
             const TrustStore& trustStore,
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
             const bool validateHashExtension)
@@ -415,7 +406,7 @@ namespace
                        TslErrorCode::OCSP_CERT_MISSING,
                        trustStore.getTslMode());
 
-            const int index{OCSP_resp_find(basicResponse.get(), id, -1)};
+            const int index{OCSP_resp_find(basicResponse.get(), id.get(), -1)};
             TslExpect4(index >= 0,
                        "Certificate ID not found in OCSP response",
                        TslErrorCode::OCSP_CHECK_REVOCATION_ERROR,
@@ -474,6 +465,30 @@ namespace
     }
 
 
+    OcspService::Status validateOcspResponse(
+        const X509Certificate& certificate,
+        const OcspResponsePtr& ocspResponse,
+        const OcspCertidPtr& certId,
+        TrustStore& trustStore,
+        const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
+        const bool validateHashExtension)
+    {
+        TslExpect4(ocspResponse != nullptr,
+           "Can not parse OCSP response",
+           TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
+           trustStore.getTslMode());
+
+        const auto [newStatus, gracePeriod, producedAt] =
+            parseResponse(certificate, ocspResponse, certId,
+                          trustStore, ocspSignerCertificates, validateHashExtension);
+
+        VLOG(2) << "Returning new OCSP status: " << newStatus.to_string();
+
+        trustStore.setCacheOcspStatus(certificate.getSha256FingerprintHex(), newStatus, gracePeriod, producedAt);
+        return newStatus;
+    }
+
+
     /**
      * Gets the OCSP status of a certificate.
      *
@@ -487,11 +502,12 @@ namespace
      * @param isResponseRequired if false then response will remain empty if a cached status is found
      *                      if true a cached status is ignored and a lookup is always made to produce the requested OCSP response
      * @param validateHashExtension whether the response hash extension should be validated
+     * @param providedOcspResponse  optional ocsp response that should be used for OCSP check if present
      *
-     * @return  pair of OCSP status (good / revoked / unknown) plus revocation time and the ocsp response
+     * @return  OCSP status (good / revoked / unknown)
      * @throws OcspService::OcspError on error
      */
-    std::pair<OcspService::Status, util::Buffer> getCurrentStatusAndResponse (
+    OcspService::Status getCurrentStatusAndResponse (
             const X509Certificate& certificate,
             const X509Certificate& issuer,
             const UrlRequestSender& requestSender,
@@ -499,43 +515,81 @@ namespace
             TrustStore& trustStore,
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
             const bool isResponseRequired,
-            const bool validateHashExtension)
+            const bool validateHashExtension,
+            const OcspResponsePtr& providedOcspResponse)
     {
         VLOG(2) << "OcspService: getCurrentStatusAndResponse";
 
         Expect( certificate.hasX509Ptr() && issuer.hasX509Ptr(),
                 "Invalid certificate is provided for OCSP verification.");
 
-        if ( ! isResponseRequired)
+        OcspCertidPtr certId;
+        if (providedOcspResponse != nullptr)
         {
-            const auto cachedStatus = trustStore.getCachedOcspStatus(certificate.getSha256FingerprintHex());
-            if (cachedStatus)
+            try
             {
-                VLOG(2) << "Returning cached OCSP status: " << cachedStatus->to_string();
-                return {cachedStatus.value(), {}};
+                VLOG(2) << "Using provided OCSP response from request.";
+                certId = OcspCertidPtr(OCSP_cert_to_id(nullptr, certificate.getX509ConstPtr(), issuer.getX509ConstPtr()));
+                Expect(certId, "Could not create OCSP certificate id!");
+
+                OcspService::Status status = validateOcspResponse(
+                    certificate,
+                    providedOcspResponse,
+                    certId,
+                    trustStore,
+                    ocspSignerCertificates,
+                    validateHashExtension);
+                if (status.certificateStatus == OcspService::CertificateStatus::good)
+                {
+                    // return the status only in case OCSP-response is valid
+                    // otherwise do the OCSP-request
+                    return status;
+                }
+                else
+                {
+                    TLOG(WARNING) << "The OCSP-response from CMS has unexpected status: "
+                                  << OcspService::toString(status.certificateStatus);
+                }
+            }
+            catch(const TslError& e)
+            {
+                // TslError means that the provided OCSP-response is invalid,
+                // do not throw the exception further and do the OCSP-request
+                TLOG(WARNING) << "The OCSP-response from CMS has validation problem: "
+                              << e.what();
             }
         }
 
-        auto [request, id] = createOcspRequest(certificate, issuer);
+        if ( ! isResponseRequired)
+        {
+            const auto cachedStatus = trustStore.getCachedOcspStatus(certificate.getSha256FingerprintHex());
+            if (cachedStatus.has_value())
+            {
+                VLOG(2) << "Returning cached OCSP status: " << cachedStatus->to_string();
+                return cachedStatus.value();
+            }
+        }
+
+        if (certId == nullptr)
+        {
+            certId = OcspCertidPtr(OCSP_cert_to_id(nullptr, certificate.getX509ConstPtr(), issuer.getX509ConstPtr()));
+            Expect(certId, "Could not create OCSP certificate id!");
+        }
+
+        OcspRequestPtr request = createOcspRequest(certId);
 
         VLOG(2) << "Sending new OCSP request with URL: " << ocspUrl.url;
 
         const std::string response{sendOcspRequest(requestSender, ocspUrl, toBuffer(request))};
-        auto ocspResponse{toOcspResponse(response)};
+        OcspResponsePtr ocspResponse = toOcspResponse(response);
 
-        TslExpect4(ocspResponse.operator bool(),
-                   "Can not parse OCSP response",
-                   TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
-                   trustStore.getTslMode());
-
-        const auto [newStatus, gracePeriod, producedAt] =
-            parseResponse(certificate, ocspResponse, id,
-                          trustStore, ocspSignerCertificates, validateHashExtension);
-
-        VLOG(2) << "Returning new OCSP status: " << newStatus.to_string();
-
-        trustStore.setCacheOcspStatus(certificate.getSha256FingerprintHex(), newStatus, gracePeriod, producedAt);
-        return {newStatus, util::stringToBuffer(response)};
+        return validateOcspResponse(
+            certificate,
+            ocspResponse,
+            certId,
+            trustStore,
+            ocspSignerCertificates,
+            validateHashExtension);
     }
 }   // anonymous namespace
 
@@ -545,7 +599,8 @@ OcspService::getCurrentStatus (const X509Certificate& certificate,
                                const UrlRequestSender& requestSender,
                                const OcspUrl& ocspUrl,
                                TrustStore& trustStore,
-                               const bool validateHashExtension)
+                               const bool validateHashExtension,
+                               const OcspResponsePtr& ocspResponse)
 {
     const auto caInfo = trustStore.lookupCaCertificate(certificate);
     Expect(caInfo.has_value(), "CA of the certificate must be in trust store.");
@@ -553,7 +608,8 @@ OcspService::getCurrentStatus (const X509Certificate& certificate,
                                          requestSender, ocspUrl, trustStore,
                                          std::nullopt,
                                          false,
-                                         validateHashExtension).first;
+                                         validateHashExtension,
+                                         ocspResponse);
 }
 
 
@@ -579,7 +635,8 @@ OcspService::getCurrentStatusOfTslSigner (const X509Certificate& certificate,
                                                  oldTrustStore,
                                                  ocspSignerCertificates,
                                                  false,
-                                                 validateHashExtension).first;
+                                                 validateHashExtension,
+                                                 OcspResponsePtr(nullptr));
         }
     }
 

@@ -3,7 +3,7 @@
   <id value="4fe2013d-ae94-441a-a1b1-78236ae65680" />
   <meta>
     <lastUpdated value="2020-05-04T08:30:00Z" />
-    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1" />
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2" />
   </meta>
   <identifier>
     <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
@@ -17,7 +17,7 @@
       <Composition>
         <id value="b0e22b86-e7e9-46c1-80fe-e6e24442d77c" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
           <valueCoding>
@@ -90,7 +90,7 @@
       <MedicationRequest>
         <id value="f58f4403-7a3a-4a12-bb15-b2fa25b02561" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
           <valueCoding>
@@ -178,7 +178,7 @@
       <Medication>
         <id value="e3a4efa7-84fc-465b-b14c-720195097783" />
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Ingredient|1.0.1" />
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Ingredient|1.0.2" />
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
           <valueCoding>
@@ -457,7 +457,7 @@
   <signature>
     <type>
       <system value="urn:iso-astm:E1762-95:2013"/>
-      <version value="1.0.1"/>
+      <version value="1.0.2"/>
       <code value="1.2.840.10065.1.12.1.1"/>
       <display value="Author's Signature"/>
       <userSelected value="true"/>

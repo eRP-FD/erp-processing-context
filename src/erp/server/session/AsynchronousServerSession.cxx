@@ -167,11 +167,14 @@ void AsynchronousServerSession::do_read ()
                 }
                 else if (reader->isStreamClosed())
                 {
+                    // no request has been read.
+                    // This could be due to keep-alive was requested but no more request follows
+                    data->accessLog.discard();
                     self->do_close(std::move(data));
                 }
                 else
                 {
-                    Expect(request.has_value(), "neither request nor exception is set");
+                    Expect3(request.has_value(), "neither request nor exception is set", std::logic_error);
                     self->on_read(std::move(request.value()), std::move(data));
                 }
             }));
@@ -240,11 +243,11 @@ void AsynchronousServerSession::do_write (ServerResponse response, const bool ke
     writer->writeAsynchronously(
         mSslStream,
         ValidatedServerResponse(std::move(response)),
-        try_handler([self = shared_from_this(), writer, keepConnectionAlive, data = std::move(data)]
+        try_handler([self = shared_from_this(), writer, keepConnectionAlive, data]
         (const bool success) mutable
         {
             self->on_write(keepConnectionAlive && success, std::move(data));
-        }));
+        }), &data->accessLog);
     A_20163.finish();
 }
 

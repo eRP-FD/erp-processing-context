@@ -24,59 +24,91 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 1,
-          "textTemplate": "{self} hat ein E-Rezept {prescriptionId} heruntergeladen."
+          "textTemplate": "{self} hat das Rezept mit der ID {prescriptionId} heruntergeladen."
         },
         {
           "eventId": 2,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} heruntergeladen."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} heruntergeladen."
         },
         {
           "eventId": 3,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} heruntergeladen."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} heruntergeladen."
         },
         {
           "eventId": 4,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} eingestellt."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} eingestellt."
         },
         {
           "eventId": 5,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} angenommen."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} angenommen."
         },
         {
           "eventId": 6,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} zurückgegeben."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} zurückgegeben."
         },
         {
           "eventId": 7,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} beliefert."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} beliefert."
         },
         {
           "eventId": 8,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} gelöscht."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} gelöscht."
         },
         {
           "eventId": 9,
-          "textTemplate": "{self} hat ein E-Rezept {prescriptionId} gelöscht."
+          "textTemplate": "{self} hat das Rezept mit der ID {prescriptionId} gelöscht."
         },
         {
           "eventId": 10,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} gelöscht."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} gelöscht."
         },
         {
           "eventId": 11,
-          "textTemplate": "{agentName} hat ein E-Rezept {prescriptionId} gelöscht."
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} gelöscht."
         },
         {
           "eventId": 12,
-          "textTemplate": "{self} hat eine Liste von Medikament-Informationen heruntergeladen."
+          "textTemplate": "{self} hat eine Liste mit Medikament-Informationen heruntergeladen."
         },
         {
           "eventId": 13,
-          "textTemplate": "{self} hat Medikament-Informationen zu einem E-Rezept {prescriptionId} heruntergeladen."
+          "textTemplate": "{self} hat Medikament-Informationen zu dem Rezept mit der ID {prescriptionId} heruntergeladen."
         },
         {
           "eventId": 14,
-          "textTemplate": "Veraltete E-Rezepte wurden vom Fachdienst automatisch gelöscht."
+          "textTemplate": "Veraltete Rezepte wurden vom Fachdienst automatisch gelöscht."
+        },
+        {
+          "eventId": 15,
+          "textTemplate": "{self} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} gelöscht."
+        },
+        {
+          "eventId": 16,
+          "textTemplate": "{agentName} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} gelöscht."
+        },
+        {
+          "eventId": 17,
+          "textTemplate": "{agentName} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} gespeichert."
+        },
+        {
+          "eventId": 18,
+          "textTemplate": "{self} hat Markierung zu Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} geändert."
+        },
+        {
+          "eventId": 19,
+          "textTemplate": "{agentName} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} geändert."
+        },
+        {
+          "eventId": 20,
+          "textTemplate": "{self} hat die Einwilligung erteilt."
+        },
+        {
+          "eventId": 21,
+          "textTemplate": "{self} hat die Einwilligung widerrufen."
+        },
+        {
+          "eventId": 22,
+          "textTemplate": "Veraltete Abrechnungsinformationen wurden vom Fachdienst automatisch gelöscht."
         }
       ]
     },
@@ -85,51 +117,51 @@ constexpr std::string_view auditEventTextTemplates = R"--(
       "eventTextTemplates": [
         {
           "eventId": 0,
-          "textTemplate": "{self} retrieved a list of e-prescriptions."
+          "textTemplate": "{self} retrieved a list of prescriptions."
         },
         {
           "eventId": 1,
-          "textTemplate": "{self} downloaded an e-prescription {prescriptionId}."
+          "textTemplate": "{self} downloaded a prescription {prescriptionId}."
         },
         {
           "eventId": 2,
-          "textTemplate": "{agentName} downloaded an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} downloaded a prescription {prescriptionId}."
         },
         {
           "eventId": 3,
-          "textTemplate": "{agentName} downloaded an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} downloaded a prescription {prescriptionId}."
         },
         {
           "eventId": 4,
-          "textTemplate": "{agentName} activated an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} activated a prescription {prescriptionId}."
         },
         {
           "eventId": 5,
-          "textTemplate": "{agentName} accepted an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} accepted a prescription {prescriptionId}."
         },
         {
           "eventId": 6,
-          "textTemplate": "{agentName} rejected an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} rejected a prescription {prescriptionId}."
         },
         {
           "eventId": 7,
-          "textTemplate": "{agentName} closed an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} closed a prescription {prescriptionId}."
         },
         {
           "eventId": 8,
-          "textTemplate": "{agentName} deleted an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} deleted a prescription {prescriptionId}."
         },
         {
           "eventId": 9,
-          "textTemplate": "{self} deleted an e-prescription {prescriptionId}."
+          "textTemplate": "{self} deleted a prescription {prescriptionId}."
         },
         {
           "eventId": 10,
-          "textTemplate": "{agentName} deleted an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} deleted a prescription {prescriptionId}."
         },
         {
           "eventId": 11,
-          "textTemplate": "{agentName} deleted an e-prescription {prescriptionId}."
+          "textTemplate": "{agentName} deleted a prescription {prescriptionId}."
         },
         {
           "eventId": 12,
@@ -137,17 +169,48 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 13,
-          "textTemplate": "{self} downloaded the medication dispense for an e-prescription {prescriptionId}."
+          "textTemplate": "{self} downloaded the medication dispense for a prescription {prescriptionId}."
         },
         {
           "eventId": 14,
-          "textTemplate": "Outdated e-prescriptions where deleted automatically by the service."
+          "textTemplate": "Outdated prescriptions were deleted automatically by the service."
+        },
+        {
+          "eventId": 15,
+          "textTemplate": "{self} deleted charging information for a prescription {prescriptionId}."
+        },
+        {
+          "eventId": 16,
+          "textTemplate": "{agentName} deleted charging information for a prescription {prescriptionId}."
+        },
+        {
+          "eventId": 17,
+          "textTemplate": "{agentName} stored charging information for a prescription {prescriptionId}."
+        },
+        {
+          "eventId": 18,
+          "textTemplate": "{self} changed marking in charging information for a prescription {prescriptionId}."
+        },
+        {
+          "eventId": 19,
+          "textTemplate": "{agentName} changed charging information for a prescription {prescriptionId}"
+        },
+        {
+          "eventId": 20,
+          "textTemplate": "{self} gave the consent."
+        },
+        {
+          "eventId": 21,
+          "textTemplate": "{self} withdrew the consent."
+        },
+        {
+          "eventId": 22,
+          "textTemplate": "Outdated charging information was deleted automatically by the service."
         }
       ]
     }
   ]
-}
-)--";
+})--";
 
 // definition of JSON pointers:
 const rapidjson::Pointer languageTextTemplatesPointer("/languageTextTemplates");

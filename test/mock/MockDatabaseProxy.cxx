@@ -8,22 +8,23 @@
 
 #include "erp/crypto/CMAC.hxx"
 #include "erp/hsm/HsmClient.hxx"
+#include "erp/model/Consent.hxx"
 
-Database::Factory MockDatabaseProxy::createFactory(DatabaseBackend& backend)
+Database::Factory MockDatabaseProxy::createFactory(MockDatabase& backend)
 {
     return [&](HsmPool& hsmPool, KeyDerivation& keyDerivation){
         return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabaseProxy>(backend), hsmPool, keyDerivation);
     };
 }
 
-MockDatabaseProxy::MockDatabaseProxy(DatabaseBackend& database)
+MockDatabaseProxy::MockDatabaseProxy(MockDatabase& database)
     : mDatabase(database)
 {
 }
 
-CmacKey MockDatabaseProxy::acquireCmac(const date::sys_days& validDate, RandomSource& randomSource)
+CmacKey MockDatabaseProxy::acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource)
 {
-    return mDatabase.acquireCmac(validDate, randomSource);
+    return mDatabase.acquireCmac(validDate, cmacType, randomSource);
 }
 
 void MockDatabaseProxy::activateTask(const model::PrescriptionId& taskId,
@@ -61,11 +62,12 @@ uint64_t MockDatabaseProxy::countRepresentativeCommunications(const db_model::Ha
     return mDatabase.countRepresentativeCommunications(insurantA, insurantB, prescriptionId);
 }
 
-std::tuple<model::PrescriptionId, model::Timestamp> MockDatabaseProxy::createTask(model::Task::Status taskStatus,
+std::tuple<model::PrescriptionId, model::Timestamp> MockDatabaseProxy::createTask(model::PrescriptionType prescriptionType,
+                                                                                  model::Task::Status taskStatus,
                                                                                   const model::Timestamp& lastUpdated,
                                                                                   const model::Timestamp& created)
 {
-    return mDatabase.createTask(taskStatus, lastUpdated, created);
+    return mDatabase.createTask(prescriptionType, taskStatus, lastUpdated, created);
 }
 
 void MockDatabaseProxy::deleteCommunicationsForTask(const model::PrescriptionId& taskId)
@@ -167,14 +169,15 @@ std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndReceipt(const mo
     return mDatabase.retrieveTaskAndReceipt(taskId);
 }
 
-std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskBasics(const model::PrescriptionId& taskId)
-{
-    return mDatabase.retrieveTaskBasics(taskId);
-}
-
 std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskForUpdate(const model::PrescriptionId& taskId)
 {
     return mDatabase.retrieveTaskForUpdate(taskId);
+}
+
+::std::optional<::db_model::Task>
+MockDatabaseProxy::retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId)
+{
+    return mDatabase.retrieveTaskForUpdateAndPrescription(taskId);
 }
 
 std::string MockDatabaseProxy::storeAuditEventData(db_model::AuditData& auditData)
@@ -243,4 +246,34 @@ std::optional<db_model::Blob> MockDatabaseProxy::retrieveSaltForAccount(const db
                                                                         BlobId blobId)
 {
     return mDatabase.retrieveSaltForAccount(accountId, masterKeyType, blobId);
+}
+
+void MockDatabaseProxy::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+{
+    mDatabase.storeConsent(kvnr, creationTime);
+}
+
+std::optional<model::Timestamp> MockDatabaseProxy::getConsentDateTime(const db_model::HashedKvnr& kvnr)
+{
+    return mDatabase.getConsentDateTime(kvnr);
+}
+
+bool MockDatabaseProxy::clearConsent(const db_model::HashedKvnr& kvnr)
+{
+    return mDatabase.clearConsent(kvnr);
+}
+
+bool MockDatabaseProxy::isBlobUsed(BlobId blobId) const
+{
+    return mDatabase.isBlobUsed(blobId);
+}
+
+void MockDatabaseProxy::deleteTask(const model::PrescriptionId& taskId)
+{
+    mDatabase.deleteTask(taskId);
+}
+
+void MockDatabaseProxy::deleteAuditEvent(const Uuid& eventId)
+{
+    mDatabase.deleteAuditEvent(eventId);
 }

@@ -18,6 +18,7 @@
 
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/mock/MockDatabase.hxx"
+#include "test/util/CryptoHelper.hxx"
 #include "test/util/ServerTestBase.hxx"
 
 #include <gtest/gtest.h>
@@ -25,6 +26,7 @@
 
 #include "test_config.h"
 #include "tools/jwt/JwtBuilder.hxx"
+#include "tools/ResourceManager.hxx"
 
 
 class VauRequestHandlerTest : public ServerTestBase
@@ -644,13 +646,15 @@ TEST_F(VauRequestHandlerTestForceMockDB, InvalidPrescriptionHeaderTaskActivate)
 
 TEST_F(VauRequestHandlerTestForceMockDB, NoInvalidPrescriptionHeaderTaskActivate)
 {
+    auto& resourceManager = ResourceManager::instance();
     A_20704.start("NoInvalidPrescriptionHeaderTaskActivate");
 
     mMockDatabase->fillWithStaticData();
 
     auto client = createClient();
 
-    const auto cadesBesSignatureFile = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/kbv_bundle.xml.p7s");
+    const auto cadesBesSignatureFile =
+        CryptoHelper::toCadesBesSignature(resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml"));
     std::string parameters = R"--(
 <Parameters xmlns="http://hl7.org/fhir">
     <parameter>
@@ -813,9 +817,34 @@ TEST_F(VauRequestHandlerTest, failForMissingTls)
 
 TEST_F(VauRequestHandlerTest, VerifyTokenBlocklisting)
 {
+    constexpr int timespan_ms = 4000;
     EnvironmentVariableGuard enableDosCheck{"DEBUG_DISABLE_DOS_CHECK", "false"};
+    EnvironmentVariableGuard calls{"TOKEN_ULIMIT_CALLS", "5"};
+    EnvironmentVariableGuard timespan{"TOKEN_ULIMIT_TIMESPAN_MS", std::to_string(timespan_ms)};
     auto client = createClient();
     auto encryptedRequest = makeEncryptedRequest(HttpMethod::GET, "/AuditEvent/", *mJwt);
+
+    {
+        using namespace std::chrono;
+        // This code for bucket computation is extracted from DosHandler.cxx - if it wouldn't trigger
+        // security assessments, this piece of code should be extracted and reused. For now, I tend
+        // to copy/paste it here.
+        auto tNow = time_point_cast<milliseconds>(system_clock::now());
+        auto nowVal = tNow.time_since_epoch().count();
+
+        auto tSpan = time_point<system_clock, milliseconds>( milliseconds( timespan_ms ) );
+        auto spanVal = tSpan.time_since_epoch().count();
+        auto tBucket = nowVal - (nowVal % spanVal);
+
+        // If remaining bucket time is less than 600 ms, wait until next bucket time. This should
+        // give the test enough (bucket) time after the sleep call.
+        auto jitter = timespan_ms - (nowVal - tBucket);
+        if (jitter < 600)
+        {
+            std::this_thread::sleep_for(milliseconds(jitter));
+        }
+    }
+
     // ERP_TOKEN_ULIMIT_CALLS is set to 5 in the test setup and it is expected that the 6th request
     // triggers the blocklisting and return the expected status (429 - too many requests)
     auto response = client.send(encryptedRequest);

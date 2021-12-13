@@ -36,3 +36,6 @@ GRANT UPDATE ON TABLE erp.task TO role_proc_user;
 
 -- Communications may be deleted by users, processing context needs delete permissions for this
 GRANT UPDATE, DELETE ON TABLE erp.communication TO role_proc_user;
+
+-- Do not allow the use of public schema
+REVOKE ALL ON SCHEMA public FROM PUBLIC;

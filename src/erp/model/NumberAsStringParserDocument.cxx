@@ -265,6 +265,23 @@ NumberAsStringParserDocument::getOptionalStringValue(const rj::Value& object, co
     return {};
 }
 
+std::optional<std::string_view>
+NumberAsStringParserDocument::getNumericAsString(const rapidjson::Pointer& key) const
+{
+    const auto* pointerValue = key.Get(*this);
+    if (pointerValue && pointerValue->IsString())
+    {
+        ModelExpect(pointerValue->GetStringLength() > 0,
+                    pointerToString(key) + ": at least prefix character expected");
+        ModelExpect(pointerValue->GetString()[0] == prefixNumber || pointerValue->GetString()[0] == prefixString,
+                    pointerToString(key) + ": string values must start with prefix character");
+        ModelExpect(pointerValue->GetString()[0] == prefixNumber,
+                    pointerToString(key) + ": entry is not a numeric type");
+        return &pointerValue->GetString()[1];
+    }
+    return {};
+}
+
 std::optional<int>
 NumberAsStringParserDocument::getOptionalIntValue(const rj::Value& object, const rj::Pointer& key) const
 {
@@ -483,6 +500,7 @@ std::optional<std::tuple<const rj::Value*, std::size_t>> NumberAsStringParserDoc
     const rj::Pointer& resultKeyPointer,
     bool ignoreValueCase) const
 {
+    std::optional<std::tuple<const rj::Value*, std::size_t>> ret;
     const auto* array = arrayPointer.Get(*this);
     if (array != nullptr && array->IsArray())
     {
@@ -498,11 +516,12 @@ std::optional<std::tuple<const rj::Value*, std::size_t>> NumberAsStringParserDoc
                   (ignoreValueCase && ::String::toLower(prefixedSearchValue) == ::String::toLower(member->GetString()))))
             {
                 member = resultKeyPointer.Get(*item);
-                return { { member, std::distance(array->Begin(), item) } };
+                ModelExpect(!ret, "duplicate array entry for " + std::string(searchValue));
+                ret = { { member, std::distance(array->Begin(), item) } };
             }
         }
     }
-    return {};
+    return ret;
 }
 
 rj::Value* NumberAsStringParserDocument::findMemberInArray(
@@ -510,20 +529,31 @@ rj::Value* NumberAsStringParserDocument::findMemberInArray(
     const rj::Pointer& searchKey,
     const std::string_view& searchValue)
 {
-    auto* array = arrayPointer.Get(*this);
+    return const_cast<rj::Value*>(
+       static_cast<const NumberAsStringParserDocument*>(this)->findMemberInArray(arrayPointer, searchKey, searchValue));
+}
+
+const rj::Value* NumberAsStringParserDocument::findMemberInArray(
+    const rj::Pointer& arrayPointer,
+    const rj::Pointer& searchKey,
+    const std::string_view& searchValue) const
+{
+    const auto* array = arrayPointer.Get(*this);
+    const rapidjson::Value* foundItem = nullptr;
     if (array != nullptr && array->IsArray())
     {
-        std::string prefixedSearchValue = NumberAsStringParserDocument::prefixString + std::string(searchValue);
+        const std::string prefixedSearchValue = NumberAsStringParserDocument::prefixString + std::string(searchValue);
         for (auto item = array->Begin(), end = array->End(); item != end; ++item)
         {
-            auto* member = searchKey.Get(*item);
+            const auto* member = searchKey.Get(*item);
             if (member != nullptr && member->IsString() && prefixedSearchValue == member->GetString())
             {
-                return item;
+                ModelExpect(!foundItem, "duplicate array entry for " + std::string(searchValue));
+                foundItem = item;
             }
         }
     }
-    return nullptr;
+    return foundItem;
 }
 
 const rj::Value* NumberAsStringParserDocument::getMemberInArray(const rj::Pointer& pointerToArray, size_t index) const
@@ -553,6 +583,25 @@ std::size_t NumberAsStringParserDocument::addToArray(rj::Value& array, rj::Value
     ModelExpect(array.IsArray(), "Element must be array");
     array.PushBack(std::move(object), GetAllocator());
     return array.Size() - 1;
+}
+
+void NumberAsStringParserDocument::addMemberToArrayEntry(const ::rapidjson::Pointer& pointerToArray,
+                                                         ::std::size_t index, ::rapidjson::Value&& key,
+                                                         ::rapidjson::Value&& value)
+{
+    auto* array = pointerToArray.Get(*this);
+    ModelExpect(array && array->IsArray(), "array not found");
+    ModelExpect(array->Size() > index, "array index invalid");
+
+    auto& arrayEntry = (*array)[static_cast<::rapidjson::SizeType>(index)];
+    if (auto entry = arrayEntry.FindMember(key); entry != arrayEntry.MemberEnd())
+    {
+        entry->value = value;
+    }
+    else
+    {
+        arrayEntry.AddMember(key, value, GetAllocator());
+    }
 }
 
 void NumberAsStringParserDocument::removeFromArray(const rj::Pointer& pointerToArray, std::size_t index)

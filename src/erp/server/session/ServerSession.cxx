@@ -118,12 +118,12 @@ void ServerSession::logException(std::exception_ptr exception)
 }
 
 
-void ServerSession::sendResponse (ServerResponse&& response)
+void ServerSession::sendResponse (ServerResponse&& response, AccessLog* accessLog)
 {
     try
     {
         ServerResponseWriter()
-            .write(mSslStream, ValidatedServerResponse(std::move(response)));
+            .write(mSslStream, ValidatedServerResponse(std::move(response)), accessLog);
     }
     catch(...)
     {

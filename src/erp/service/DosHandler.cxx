@@ -12,7 +12,7 @@
 #include <chrono>
 #include <string>
 
-DosHandler::DosHandler(std::unique_ptr<RedisInterface> iface) : mInterface(std::move(iface))
+DosHandler::DosHandler(std::shared_ptr<RedisInterface> iface) : mInterface(iface)
 {
     mNumreqs = Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS, 100);
     mTimespan = Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS, 1000);

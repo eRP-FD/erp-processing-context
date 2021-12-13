@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:element name="extension" type="WOP.Extension"/>
+  <xs:complexType name="WOP.Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueCoding" type="WOP.Coding"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="uri-primitive" fixed="http://fhir.de/StructureDefinition/gkv/wop" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="WOP.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="WOP.System"/>
+          <xs:element name="code" type="WOP.Code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="WOP.System">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="WOP.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="WOP.Code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="WOP.Code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="00"/>
+      <xs:enumeration value="01"/>
+      <xs:enumeration value="02"/>
+      <xs:enumeration value="03"/>
+      <xs:enumeration value="17"/>
+      <xs:enumeration value="20"/>
+      <xs:enumeration value="38"/>
+      <xs:enumeration value="46"/>
+      <xs:enumeration value="47"/>
+      <xs:enumeration value="48"/>
+      <xs:enumeration value="49"/>
+      <xs:enumeration value="50"/>
+      <xs:enumeration value="51"/>
+      <xs:enumeration value="52"/>
+      <xs:enumeration value="55"/>
+      <xs:enumeration value="60"/>
+      <xs:enumeration value="61"/>
+      <xs:enumeration value="61"/>
+      <xs:enumeration value="71"/>
+      <xs:enumeration value="72"/>
+      <xs:enumeration value="73"/>
+      <xs:enumeration value="78"/>
+      <xs:enumeration value="83"/>
+      <xs:enumeration value="88"/>
+      <xs:enumeration value="93"/>
+      <xs:enumeration value="98"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

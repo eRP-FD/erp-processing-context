@@ -49,6 +49,8 @@ class PrescriptionId;
 class Timestamp;
 }
 
+enum class CmacKeyCategory: int8_t;
+
 class DatabaseBackend
 {
 public:
@@ -64,7 +66,8 @@ public:
     ///       It has been passed through the database and has undergone the same rounding as will be done
     ///       when decrypting. Using the input parameter @p created might suffer from later rounding errors
     ///       see ERP-5602
-    virtual std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::Task::Status taskStatus,
+    virtual std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
+                                                                           model::Task::Status taskStatus,
                                                                            const model::Timestamp& lastUpdated,
                                                                            const model::Timestamp& created) = 0;
 
@@ -102,8 +105,10 @@ public:
     virtual uint64_t countAuditEventData(const db_model::HashedKvnr& kvnr,
                                          const std::optional<UrlArguments>& search) = 0;
 
-    virtual std::optional<db_model::Task> retrieveTaskBasics(const model::PrescriptionId& taskId) = 0;
     virtual std::optional<db_model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) = 0;
+    [[nodiscard]] virtual ::std::optional<::db_model::Task>
+    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) = 0;
+
     virtual std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
     virtual std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
@@ -119,7 +124,7 @@ public:
         const db_model::HashedKvnr& kvnr,
         const std::optional<UrlArguments>& search) = 0;
 
-    virtual CmacKey acquireCmac(const date::sys_days& validDate, RandomSource& randomSource) = 0;
+    virtual CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) = 0;
 
 
     /**
@@ -194,7 +199,14 @@ public:
                               db_model::MasterKeyType masterKeyType,
                               BlobId blobId,
                               const db_model::Blob& salt) = 0;
+
+    virtual void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) = 0;
+
+    virtual std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr& kvnr) = 0;
+    [[nodiscard]] virtual bool clearConsent(const db_model::HashedKvnr& kvnr) = 0;
+
+
+
 };
 
 #endif//ERP_PROCESSING_CONTEXT_DATABASEBACKEND_HXX
-

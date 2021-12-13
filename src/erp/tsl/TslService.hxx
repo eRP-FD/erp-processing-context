@@ -90,6 +90,7 @@ public:
      * @param requestSender             used to send OCSP status requests
      * @param trustStore                where to look for the certificate; may be updated
      *                                  during this call
+     * @param ocspResponse              optional ocsp response that should be used for OCSP check if present
      *
      * @throws TslError                 in case of problems
      */
@@ -97,7 +98,8 @@ public:
         X509Certificate& certificate,
         const std::unordered_set<CertificateType>& typeRestrictions,
         const UrlRequestSender& requestSender,
-        TrustStore& trustStore);
+        TrustStore& trustStore,
+        const OcspResponsePtr& ocspResponse = {});
 
     /**
      * Allows to initialise TI trust space and to update it.

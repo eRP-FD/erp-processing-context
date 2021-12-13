@@ -16,6 +16,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+if((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
+    add_compile_options(-DENABLE_DEBUG_LOG)
+endif()
+
+
 if(NOT ERP_BUILD_VERSION)
     message(WARNING "ERP_BUILD_VERSION not set.")
     set(ERP_BUILD_VERSION "LOCAL VERSION")
@@ -28,6 +33,16 @@ if(NOT ERP_RELEASE_VERSION)
     set(ERP_RELEASE_VERSION "UNRELEASED VERSION")
 else()
     message(NOTICE "ERP_RELEASE_VERSION: ${ERP_RELEASE_VERSION}")
+endif()
+
+set(ERP_WITH_HSM_TPM_PRODUCTION ON CACHE BOOL "Link against the production HSM and TPM from hsmclient and tpmclient libraries.")
+set(ERP_WITH_HSM_MOCK OFF CACHE BOOL "Link against mock implementations of HSM and TPM.")
+
+message(NOTICE "ERP_WITH_HSM_TPM_PRODUCTION: ${ERP_WITH_HSM_TPM_PRODUCTION}")
+message(NOTICE "ERP_WITH_HSM_MOCK: ${ERP_WITH_HSM_MOCK}")
+
+if (NOT ERP_WITH_HSM_TPM_PRODUCTION AND NOT ERP_WITH_HSM_MOCK)
+    message(FATAL_ERROR "either ERP_WITH_HSM_TPM_PRODUCTION or ERP_WITH_HSM_MOCK must be enabled.")
 endif()
 
 string(TIMESTAMP ERP_RELEASE_DATE "%Y-%m-%dT%H:%M:%S+00:00" UTC)
@@ -51,6 +66,16 @@ message(NOTICE "ERP_RELEASE_DATE: ${ERP_RELEASE_DATE}")
 # [build_requires]
 # [env]
 
+if(NOT ERP_WITH_HSM_TPM_PRODUCTION)
+    set(CONAN_HSM_TPM -o with_tpmclient=False -o with_hsmclient=False)
+else()
+    set(CONAN_HSM_TPM -o with_tpmclient=True -o with_hsmclient=True)
+endif()
+
+if(ERP_CONAN_PROFILE)
+    set(CONAN_PROFILE -pr ${ERP_CONAN_PROFILE})
+endif()
+
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
     message(SYSTEM "installing conan packages")
     execute_process(
@@ -62,7 +87,7 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
             WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     )
     execute_process(
-            COMMAND           conan install . --build missing --install-folder "${CMAKE_BINARY_DIR}"
+            COMMAND           conan install . --build missing --install-folder "${CMAKE_BINARY_DIR}" ${CONAN_HSM_TPM} ${CONAN_PROFILE}
             WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     )
 endif()
@@ -94,6 +119,15 @@ endif()
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
+
+if (ERP_WITH_HSM_TPM_PRODUCTION)
+    if("${CONAN_HSMCLIENT_ROOT}" STREQUAL "")
+        message(FATAL_ERROR "CONAN_HSMCLIENT_ROOT not found, building against production HSM can be disabled with ERP_WITH_HSM_TPM_PRODUCTION=OFF")
+    endif()
+    if ("${CONAN_TPMCLIENT_ROOT}" STREQUAL "")
+        message(FATAL_ERROR "CONAN_TPMCLIENT_ROOT not found, building against production HSM can be disabled with ERP_WITH_HSM_TPM_PRODUCTION=OFF")
+    endif()
+endif()
 
 include(GNUInstallDirs)
 

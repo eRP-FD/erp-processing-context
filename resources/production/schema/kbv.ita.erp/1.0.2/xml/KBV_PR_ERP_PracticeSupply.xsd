@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
+  <xs:element name="SupplyRequest" type="KBV_PR_ERP_PracticeSupply"/>
+  <xs:complexType name="KBV_PR_ERP_PracticeSupply">
+    <xs:sequence>
+      <xs:element name="id" type="id"/>
+      <xs:element name="meta" type="KBV_PR_ERP_PracticeSupply.Meta"/>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="itemReference" type="KBV_PR_ERP_Generics.SimpleReference"/>
+      <xs:element name="quantity" type="KBV_PR_ERP_Generics.Quantity"/>
+      <xs:element name="authoredOn" type="dateTime"/>
+      <xs:element name="requester" type="KBV_PR_ERP_Generics.SimpleReference"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_PracticeSupply.Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="profile" type="KBV_PR_ERP_PracticeSupply.Meta.profile"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_PracticeSupply.Meta.profile">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_PracticeSupply|1.0.2"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

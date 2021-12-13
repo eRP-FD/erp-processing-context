@@ -6,15 +6,20 @@
 #ifndef ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 #define ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 
-#include "erp/util/SafeString.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/SafeString.hxx"
 
-#include <filesystem>
-#include <string>
-#include <optional>
+#include <erp/ErpConstants.hxx>
 #include <rapidjson/document.h>
-#include <vector>
+#include <filesystem>
 #include <map>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "Environment.hxx"
+
+class XmlValidator;
 
 
 enum class ConfigurationKey
@@ -48,6 +53,7 @@ enum class ConfigurationKey
     SERVICE_TASK_ACTIVATE_EASTER_CSV,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION,
     SERVICE_COMMUNICATION_MAX_MESSAGES,
+    SERVICE_SUBSCRIPTION_SIGNING_KEY,
     PCR_SET,
     POSTGRES_HOST,
     POSTGRES_PORT,
@@ -75,7 +81,19 @@ enum class ConfigurationKey
     TSL_INITIAL_CA_DER_PATH_NEW_START,
     TSL_REFRESH_INTERVAL,
     TSL_DOWNLOAD_CIPHERS,
-    XML_SCHEMA,
+    XML_SCHEMA_MISC,
+    FHIR_PROFILE_OLD_VALID_UNTIL,
+    FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION,
+    FHIR_PROFILE_OLD_XML_SCHEMA_KBV,
+    FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK_VERSION,
+    FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK,
+    FHIR_PROFILE_VALID_FROM,
+    FHIR_PROFILE_RENDER_FROM,
+    FHIR_PROFILE_XML_SCHEMA_KBV_VERSION,
+    FHIR_PROFILE_XML_SCHEMA_KBV,
+    FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION,
+    FHIR_PROFILE_XML_SCHEMA_GEMATIK,
+    HSM_CACHE_REFRESH_SECONDS,
     HSM_DEVICE,
     HSM_MAX_SESSION_COUNT,
     HSM_WORK_USERNAME,
@@ -107,12 +125,15 @@ enum class ConfigurationKey
     TOKEN_ULIMIT_CALLS,
     TOKEN_ULIMIT_TIMESPAN_MS,
 
+    // Feature related configuration
+    FEATURE_PKV,
+
     // Debug related configuration
     DEBUG_DISABLE_REGISTRATION,
     DEBUG_DISABLE_DOS_CHECK,
     DEBUG_ENABLE_HSM_MOCK,
-    DEBUG_DISABLE_PROXY_AUTHENTICATION,
-    DEBUG_DISABLE_ENROLMENT_API_AUTH
+    DEBUG_DISABLE_ENROLMENT_API_AUTH,
+    DEBUG_DISABLE_QES_ID_CHECK
 };
 
 
@@ -139,13 +160,15 @@ public:
     uint16_t serverPort() const;
 
 protected:
-    ConfigurationBase (const std::vector<KeyNames>& allKeyNames);
+    explicit ConfigurationBase(const std::vector<KeyNames>& allKeyNames);
 
     std::optional<std::string> getStringValueInternal (KeyNames key) const;
     std::optional<SafeString> getSafeStringValueInternal (KeyNames key) const;
     std::optional<int> getIntValueInternal (KeyNames key) const;
     std::optional<bool> getBoolValueInternal (KeyNames key) const;
     std::vector<std::string> getArrayInternal (KeyNames key) const;
+    std::vector<std::string> getOptionalArrayInternal (KeyNames key) const;
+    std::map<std::string, std::vector<std::string>> getMapInternal (KeyNames key) const;
 
     int getOptionalIntValue (KeyNames key, int defaultValue) const;
     int getIntValue (KeyNames key) const;
@@ -190,32 +213,80 @@ public:
         return instance;
     }
 
-    int getOptionalIntValue (Key key, int defaultValue) const    {return ConfigurationBase::getOptionalIntValue(Names::strings(key), defaultValue);}
-    std::optional<int> getOptionalIntValue (Key key) const       {return ConfigurationBase::getIntValueInternal(Names::strings(key));}
-    int getIntValue (Key key) const                              {return ConfigurationBase::getIntValue(Names::strings(key));}
+    int getOptionalIntValue (Key key, int defaultValue) const;
+    std::optional<int> getOptionalIntValue (Key key) const       {return ConfigurationBase::getIntValueInternal(names_.strings(key));}
+    int getIntValue (Key key) const                              {return ConfigurationBase::getIntValue(names_.strings(key));}
 
-    std::string getStringValue (Key key) const                   {return ConfigurationBase::getStringValue(Names::strings(key));}
-    std::string getOptionalStringValue (Key key, const std::string& defaultValue) const {return ConfigurationBase::getOptionalStringValue(Names::strings(key), defaultValue);}
-    std::optional<std::string> getOptionalStringValue (Key key) const                   {return ConfigurationBase::getOptionalStringValue(Names::strings(key));}
-    SafeString getSafeStringValue (Key key) const                {return ConfigurationBase::getSafeStringValue(Names::strings(key));}
-    SafeString getOptionalSafeStringValue (Key key, SafeString&& defaultValue) const    {return ConfigurationBase::getOptionalSafeStringValue(Names::strings(key), std::move(defaultValue));}
+    std::string getStringValue (Key key) const                   {return ConfigurationBase::getStringValue(names_.strings(key));}
+    std::string getOptionalStringValue (Key key, const std::string& defaultValue) const;
+    std::optional<std::string> getOptionalStringValue (Key key) const                   {return ConfigurationBase::getOptionalStringValue(names_.strings(key));}
+    SafeString getSafeStringValue (Key key) const                {return ConfigurationBase::getSafeStringValue(names_.strings(key));}
+    SafeString getOptionalSafeStringValue (Key key, SafeString&& defaultValue) const;
 
-    bool getBoolValue (Key key) const                            {return ConfigurationBase::getBoolValue(Names::strings(key));}
-    bool getOptionalBoolValue (Key key, bool defaultValue) const {return ConfigurationBase::getOptionalBoolValue(Names::strings(key), defaultValue);}
+    bool getBoolValue (Key key) const                            {return ConfigurationBase::getBoolValue(names_.strings(key));}
+    bool getOptionalBoolValue (Key key, bool defaultValue) const;
 
-    std::vector<std::string> getArray (Key key) const            {return ConfigurationBase::getArrayInternal(Names::strings(key));}
+    std::vector<std::string> getArray (Key key) const            {return ConfigurationBase::getArrayInternal(names_.strings(key));}
+    std::vector<std::string> getOptionalArray(Key key) const     {return ConfigurationBase::getOptionalArrayInternal(names_.strings(key));}
 
-    std::filesystem::path getPathValue(Key key) const            {return ConfigurationBase::getPathValue(Names::strings(key));}
+    std::map<std::string, std::vector<std::string>> getMap(Key key) const {return ConfigurationBase::getMapInternal(names_.strings(key));}
 
-    static const char* getEnvironmentVariableName (Key key) {return Names::strings(key).environmentVariable.data();}
+    std::filesystem::path getPathValue(Key key) const            {return ConfigurationBase::getPathValue(names_.strings(key));}
+
+    const char* getEnvironmentVariableName (Key key)             {return names_.strings(key).environmentVariable.data();}
 
 private:
     ConfigurationTemplate()
-    : ConfigurationBase(Names::allStrings())
-    { }
+        : ConfigurationBase(Names().allStrings())
+    {
+    }
+
+    const Names names_;
 
     friend class ConfigurationTest;
 };
+
+
+template<class Key, class Names>
+int ConfigurationTemplate<Key, Names>::getOptionalIntValue(Key key, int defaultValue) const
+{
+    if (names_.contains(key))
+    {
+        return ConfigurationBase::getOptionalIntValue(names_.strings(key), defaultValue);
+    }
+    return defaultValue;
+}
+
+template<class Key, class Names>
+std::string ConfigurationTemplate<Key, Names>::getOptionalStringValue(Key key, const std::string& defaultValue) const
+{
+    if (names_.contains(key))
+    {
+        return ConfigurationBase::getOptionalStringValue(names_.strings(key), defaultValue);
+    }
+    return defaultValue;
+}
+
+template<class Key, class Names>
+SafeString ConfigurationTemplate<Key, Names>::getOptionalSafeStringValue(Key key, SafeString&& defaultValue) const
+{
+    if (names_.contains(key))
+    {
+        return ConfigurationBase::getOptionalSafeStringValue(names_.strings(key), std::move(defaultValue));
+    }
+    return std::move(defaultValue);
+}
+
+template<class Key, class Names>
+bool ConfigurationTemplate<Key, Names>::getOptionalBoolValue(Key key, bool defaultValue) const
+{
+    if (names_.contains(key))
+    {
+        return ConfigurationBase::getOptionalBoolValue(names_.strings(key), defaultValue);
+    }
+    return defaultValue;
+}
+
 
 template<typename TKeyValueContainer>
 std::vector<typename TKeyValueContainer::mapped_type> getAllValues(const TKeyValueContainer& keyValueContainer)
@@ -233,30 +304,50 @@ std::vector<typename TKeyValueContainer::mapped_type> getAllValues(const TKeyVal
 /**
  * A provider template of KeyNames objects for all keys in TConfigurationKey.
  */
-template<typename TConfigurationKey>
-class ConfigurationKeyNamesTemplate
+template<class KeyType>
+class ConfigurationKeyNamesBase
 {
 public:
-    static KeyNames strings (TConfigurationKey key)
+    KeyNames strings (KeyType key) const
     {
         const auto entry = mNamesByKey.find(key);
-        Expect(entry != mNamesByKey.end(), "unknown configuration key");
+        Expect(entry != mNamesByKey.end(), "unknown configuration key: " + std::string(magic_enum::enum_name(key)));
         return entry->second;
     }
-    static std::vector<KeyNames> allStrings()
+    std::vector<KeyNames> allStrings() const
     {
         return getAllValues(mNamesByKey);
     }
+    bool contains(KeyType key) const
+    {
+        return mNamesByKey.count(key) > 0;
+    }
 
-private:
-    static std::map<TConfigurationKey, KeyNames> mNamesByKey;
+    virtual ~ConfigurationKeyNamesBase() = default;
+
+protected:
+    std::map<KeyType, KeyNames> mNamesByKey;
 };
 
-using ConfigurationKeyNames = ConfigurationKeyNamesTemplate<ConfigurationKey>;
+// contains all keys needed for operational, but no development or test related keys
+class OpsConfigKeyNames : public ConfigurationKeyNamesBase<ConfigurationKey>
+{
+public:
+    OpsConfigKeyNames();
+};
+// contains all keys needed for development, but no test related keys
+class DevConfigKeyNames : public OpsConfigKeyNames
+{
+public:
+    DevConfigKeyNames();
+};
 
-using Configuration = ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>;
+#ifdef NDEBUG
+using Configuration = ConfigurationTemplate<ConfigurationKey, OpsConfigKeyNames>;
+#else
+using Configuration = ConfigurationTemplate<ConfigurationKey, DevConfigKeyNames>;
+#endif
 
-template<>
-std::map<ConfigurationKey,KeyNames> ConfigurationKeyNamesTemplate<ConfigurationKey>::mNamesByKey;
+extern void configureXmlValidator(XmlValidator& xmlValidator);
 
 #endif

@@ -4,6 +4,7 @@
  */
 
 #include "erp/model/AuditData.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <rapidjson/pointer.h>
 
@@ -17,7 +18,11 @@ bool isEventCausedByPatient(AuditEventId eventId)
            eventId == AuditEventId::GET_Task_id_insurant ||
            eventId == AuditEventId::POST_Task_abort_insurant ||
            eventId == AuditEventId::GET_MedicationDispense ||
-           eventId == AuditEventId::GET_MedicationDispense_id;
+           eventId == AuditEventId::GET_MedicationDispense_id ||
+           eventId == AuditEventId::DELETE_ChargeItem_id_insurant ||
+           eventId == AuditEventId::PUT_ChargeItem_id_insurant ||
+           eventId == AuditEventId::POST_Consent ||
+           eventId == AuditEventId::DELETE_Consent_id;
 }
 
 bool isEventCausedByRepresentative(AuditEventId eventId)
@@ -26,6 +31,53 @@ bool isEventCausedByRepresentative(AuditEventId eventId)
            eventId == AuditEventId::GET_Task_id_representative;
 }
 
+bool isEventCausedByMaintenanceScript(AuditEventId eventId)
+{
+    return eventId == AuditEventId::Task_delete_expired_id ||
+           eventId == AuditEventId::ChargeItem_delete_expired_id;
+}
+
+std::string createEventResourceReference(AuditEventId eventId, const std::string& prescriptionId)
+{
+    switch(eventId)
+    {
+        case model::AuditEventId::GET_Task:
+            return "Task";
+        case model::AuditEventId::GET_Task_id_insurant:
+        case model::AuditEventId::GET_Task_id_representative:
+        case model::AuditEventId::GET_Task_id_pharmacy:
+        case model::AuditEventId::Task_delete_expired_id:
+            return "Task/" + prescriptionId;
+        case model::AuditEventId::POST_Task_activate:
+            return "Task/" + prescriptionId + "/$activate";
+        case model::AuditEventId::POST_Task_accept:
+            return "Task/" + prescriptionId + "/$accept";
+        case model::AuditEventId::POST_Task_reject:
+            return "Task/" + prescriptionId + "/$reject";
+        case model::AuditEventId::POST_Task_close:
+            return "Task/" + prescriptionId + "/$close";
+        case model::AuditEventId::POST_Task_abort_doctor:
+        case model::AuditEventId::POST_Task_abort_insurant:
+        case model::AuditEventId::POST_Task_abort_representative:
+        case model::AuditEventId::POST_Task_abort_pharmacy:
+            return "Task/" + prescriptionId + "/$abort";
+        case model::AuditEventId::GET_MedicationDispense:
+            return "MedicationDispense";
+        case model::AuditEventId::GET_MedicationDispense_id:
+            return "MedicationDispense/" + prescriptionId;
+        case model::AuditEventId::POST_ChargeItem:
+        case model::AuditEventId::DELETE_ChargeItem_id_insurant:
+        case model::AuditEventId::DELETE_ChargeItem_id_pharmacy:
+        case model::AuditEventId::PUT_ChargeItem_id_insurant:
+        case model::AuditEventId::PUT_ChargeItem_id_pharmacy:
+        case model::AuditEventId::ChargeItem_delete_expired_id:
+            return "ChargeItem/" + prescriptionId;
+        case model::AuditEventId::POST_Consent:
+        case model::AuditEventId::DELETE_Consent_id:
+            return "Consent";
+    }
+    Fail2("Invalid event id", std::logic_error);
+}
 
 namespace
 {
@@ -36,10 +88,9 @@ const rapidjson::Pointer agentWhoPointer("/aw");
 }
 
 
-AuditMetaData::AuditMetaData(
-    const std::optional<std::string_view>& agentName,
-    const std::optional<std::string_view>& agentWho)
-    : Resource<AuditMetaData>()
+AuditMetaData::AuditMetaData(const std::optional<std::string_view>& agentName,
+                             const std::optional<std::string_view>& agentWho)
+    : Resource<AuditMetaData>(Resource::NoProfile)
 {
     if(agentName.has_value())
         setValue(agentNamePointer, agentName.value());

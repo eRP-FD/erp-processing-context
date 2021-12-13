@@ -57,15 +57,14 @@ const rapidjson::Pointer typeCodePointer ("/type/0/code");
 }  // anonymous namespace
 
 
-Signature::Signature(
-    const std::string_view& data,
-    const model::Timestamp& when,
-    const std::string_view& who)
-    : Resource<Signature>()
+Signature::Signature(const std::string_view& data, const model::Timestamp& when, const std::string_view& who)
+    : Resource<Signature>(ResourceBase::NoProfile,
+                          []() {
+                              std::call_once(onceFlag, initTemplates);
+                              return signatureTemplate;
+                          }()
+                              .instance())
 {
-    std::call_once(onceFlag, initTemplates);
-
-    initFromTemplate(*signatureTemplate);
     setValue(dataPointer, data);
     setValue(whenPointer, when.toXsDateTime());
     setValue(whoPointer, who);

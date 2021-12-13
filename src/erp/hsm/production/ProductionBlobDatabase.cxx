@@ -250,17 +250,23 @@ void ProductionBlobDatabase::deleteBlob (
     const BlobType type,
     const ErpVector& name)
 {
+    using namespace std::string_literals;
     auto transaction = createTransaction();
-    const pqxx::result result = transaction->exec_params(
-        "DELETE FROM erp.blob "
-        "WHERE type = $1 AND name = $2",
-        gsl::narrow<int16_t>(type),
-        pqxx::binarystring(name.data(), name.size()));
-
-    Expect(result.size() == 0, "did not expect an output");
-    const auto count = result.affected_rows();
-    ErpExpect(count==1, HttpStatus::NotFound, "did not find the blob");
-
+    try
+    {
+        const pqxx::result result = transaction->exec_params(
+            "DELETE FROM erp.blob "
+            "WHERE type = $1 AND name = $2",
+            gsl::narrow<int16_t>(type),
+            pqxx::binarystring(name.data(), name.size()));
+        Expect(result.size() == 0, "did not expect an output");
+        const auto count = result.affected_rows();
+        ErpExpect(count==1, HttpStatus::NotFound, "did not find the blob");
+    }
+    catch (const pqxx::foreign_key_violation& ex)
+    {
+        ErpFail(HttpStatus::Conflict, "Key is still in use: "s + ex.what());
+    }
     transaction.commit();
 }
 
@@ -268,7 +274,7 @@ void ProductionBlobDatabase::deleteBlob (
 ProductionBlobDatabase::Transaction ProductionBlobDatabase::createTransaction (void) const
 {
     mConnection.connectIfNeeded();
-    return Transaction(mConnection);
+    return Transaction(mConnection.createTransaction());
 }
 
 
@@ -370,15 +376,15 @@ BlobDatabase::Entry ProductionBlobDatabase::convertEntry (const pqxx::row& dbEnt
 }
 
 
-ProductionBlobDatabase::Transaction::Transaction (pqxx::connection& connection)
-    : mWork(connection)
+ProductionBlobDatabase::Transaction::Transaction (std::unique_ptr<pqxx::work>&& transaction)
+    : mWork(std::move(transaction))
 {
 }
 
 
 pqxx::work* ProductionBlobDatabase::Transaction::operator-> (void)
 {
-    return &mWork;
+    return mWork.get();
 }
 
 
@@ -387,7 +393,8 @@ void ProductionBlobDatabase::Transaction::commit (void)
     constexpr std::string_view error = "Error committing database transaction";
     try
     {
-        mWork.commit();
+        Expect3(mWork, "transaction pointer is null", std::logic_error);
+        mWork->commit();
     }
     catch (const pqxx::in_doubt_error& /*inDoubtError*/)
     {

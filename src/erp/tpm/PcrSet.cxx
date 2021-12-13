@@ -27,7 +27,7 @@ PcrSet PcrSet::fromString (const std::string& stringValue)
 
     const auto innerList = String::removeEnclosing("[", "]", stringValue);
 
-    for (const auto pcrItem : String::split(innerList, ','))
+    for (const auto& pcrItem : String::split(innerList, ','))
     {
         const uint8_t value = gsl::narrow<uint8_t>(std::stoi(pcrItem));
         Expect(value < 16, "pcr registers must be in range [0,15]");

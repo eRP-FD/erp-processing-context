@@ -20,7 +20,8 @@ public:
     static constexpr std::int64_t SocketTimeoutSeconds = 30;
 
     static constexpr const char* ConfigurationFileNameVariable = "ERP_PROCESSING_CONTEXT_CONFIG";
-    static constexpr const char* ConfigurationFileNameDefault = ".";
+    static constexpr const char* ConfigurationFileSearchPathDefault = ".";
+    static constexpr const char* ConfigurationFileSearchPatternDefault = ".*\\.config\\.json";
 
 };
 

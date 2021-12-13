@@ -25,6 +25,7 @@
 #include "erp/model/Timestamp.hxx"
 #include "test/mock/MockAccountTable.hxx"
 #include "test/mock/MockCommunicationTable.hxx"
+#include "test/mock/MockConsentTable.hxx"
 #include "test/mock/MockTaskTable.hxx"
 
 class Database;
@@ -43,7 +44,8 @@ public:
 
     void fillWithStaticData();
 
-    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::Task::Status taskStatus,
+    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
+                                                                   model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,
                                                                    const model::Timestamp& created) override;
 
@@ -67,6 +69,7 @@ public:
                       const model::Timestamp& expiryDate,
                       const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription) override;
+
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
                                              const model::Timestamp& lastModified,
@@ -90,8 +93,9 @@ public:
         const db_model::HashedKvnr& kvnr,
         const std::optional<UrlArguments>& search) override;
 
-    std::optional<db_model::Task> retrieveTaskBasics (const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskForUpdate (const model::PrescriptionId& taskId) override;
+    [[nodiscard]] ::std::optional<::db_model::Task>
+    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
     std::vector<db_model::Task> retrieveAllTasksForPatient (const db_model::HashedKvnr& kvnrHashed,
@@ -106,7 +110,7 @@ public:
     uint64_t countAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
                                          const std::optional<UrlArguments>& search) override;
 
-    CmacKey acquireCmac(const date::sys_days& validDate, RandomSource& randomSource) override;
+    CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
 
     /**
      * Insert the `communication` object into the database.
@@ -173,6 +177,7 @@ public:
         const db_model::HashedId& recipient) override;
    // Test-only methods.
     void deleteTask (const model::PrescriptionId& taskId);
+    void deleteAuditEvent(const Uuid& eventId);
     void deleteAuditEventDataForTask (const model::PrescriptionId& taskId);
 
    [[nodiscard]]
@@ -188,6 +193,11 @@ public:
                               BlobId blobId,
                               const db_model::Blob& salt) override;
 
+    void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
+    std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr & kvnr) override;
+    [[nodiscard]] bool clearConsent(const db_model::HashedKvnr & kvnr) override;
+
+    bool isBlobUsed(BlobId blobId) const;
 
 private:
     [[nodiscard]]
@@ -208,15 +218,19 @@ private:
     void insertAuditEvent(const model::AuditEvent& auditEvent,
                           model::AuditEventId id);
 
+    MockTaskTable& getTaskTable(model::PrescriptionType prescriptionType);
+
 
     std::mutex mutex;
 
     std::list<db_model::AuditData> mAuditEventData;
 
-    std::map<date::sys_days, CmacKey> mCmac;
+    std::map<std::string, CmacKey> mCmac;
     MockAccountTable mAccounts;
     MockTaskTable mTasks;
+    MockTaskTable mTasks169;
     MockCommunicationTable mCommunications;
+    MockConsentTable mConsents;
     KeyDerivation mDerivation;
     HsmPool& mHsmPool;
     DataBaseCodec mCodec;

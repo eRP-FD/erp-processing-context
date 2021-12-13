@@ -43,19 +43,24 @@ private:
     [[nodiscard]]
     size_t convertMember(xmlNode& targetNode, const std::string& memberName,
                          const FhirStructureDefinition& fhirParentType, size_t fhirElementIndex,
-                         const rapidjson::Value& object, const rapidjson::Value& subObjectOfPrimary);
+                         const rapidjson::Value* object, const rapidjson::Value& subObjectOfPrimary);
 
     [[nodiscard]]
     size_t convertMemberWithType(xmlNode& targetNode, const std::string& memberName,
                          const FhirStructureDefinition& fhirParentType,
                          const FhirStructureDefinition& fhirElementType,
                          size_t fhirElementIndex,
-                         const rapidjson::Value& object, const rapidjson::Value& subObjectOfPrimary);
+                         const rapidjson::Value* object, const rapidjson::Value& subObjectOfPrimary);
 
     [[nodiscard]]
     size_t convertSingleMember(xmlNode& targetNode, const std::string& memberName,
-                       const FhirStructureDefinition& type, size_t fhirElementIndex,
-                       const rapidjson::Value& object, const rapidjson::Value& subObjectOfPrimary);
+                       const FhirStructureDefinition& fhirType, size_t fhirElementIndex,
+                       const rapidjson::Value* object, const rapidjson::Value& subObjectOfPrimary);
+
+    [[nodiscard]]
+    size_t convertPrimitive(xmlNode& targetNode, const std::string& memberName, const FhirStructureDefinition& fhirType,
+                            size_t fhirElementIndex, const FhirStructureDefinition& fhirElementType,
+                            const rapidjson::Value* jsonObject, const rapidjson::Value& subObjectOfPrimary);
 
     [[nodiscard]]
     size_t convertXHTMLMember(xmlNode& targetNode, const std::string& memberName,
@@ -66,6 +71,11 @@ private:
     static size_t skipElement(const FhirStructureDefinition& type, size_t elementIndex);
 
     static std::string valueString(const std::string_view& elementName, const rapidjson::Value& member);
+
+    static bool hasIndex(const rapidjson::Value* value, size_t idx);
+
+    static rapidjson::SizeType elementCount(const rapidjson::Value* arr1);
+    static rapidjson::SizeType maxElements(const rapidjson::Value* arr1, const rapidjson::Value* arr2);
 
     const FhirStructureRepository& mStructureRepository;
 

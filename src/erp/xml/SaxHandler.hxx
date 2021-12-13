@@ -81,6 +81,7 @@ public:
 protected:
 
     void parseStringView(const std::string_view& xmlDocument);
+    void validateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext);
     void parseAndValidateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext);
     void parseFile(const std::filesystem::path& fileName);
 

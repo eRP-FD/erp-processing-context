@@ -10,7 +10,7 @@
 class BlobDatabaseHelper
 {
 public:
-    static void clearBlobDatabase (void);
+    static void removeUnreferencedBlobs (void);
 };
 
 

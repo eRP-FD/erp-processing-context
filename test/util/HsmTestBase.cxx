@@ -11,7 +11,7 @@
 #include "erp/util/TLog.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #if ! defined(__APPLE__)
     #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
@@ -34,7 +34,7 @@ bool HsmTestBase::isHsmSimulatorSupportedAndConfigured (void)
 
 void HsmTestBase::setupHsmTest (void)
 {
-    mBlobCache = MockBlobCache::createBlobCache(
+    mBlobCache = MockBlobDatabase::createBlobCache(
         isHsmSimulatorSupportedAndConfigured()
             ? MockBlobCache::MockTarget::SimulatedHsm
             : MockBlobCache::MockTarget::MockedHsm

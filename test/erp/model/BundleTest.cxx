@@ -19,7 +19,7 @@ class BundleTest : public testing::Test
 
 TEST_F(BundleTest, selfLink)
 {
-    model::Bundle bundle(model::Bundle::Type::collection);
+    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     bundle.setLink(model::Link::Type::Self, "this is the self link");
 
     ASSERT_TRUE(bundle.getLink(model::Link::Type::Self).has_value());
@@ -30,7 +30,7 @@ TEST_F(BundleTest, selfLink)
 TEST_F(BundleTest, id)
 {
     const Uuid id;
-    model::Bundle bundle (model::Bundle::Type::collection, id);
+    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile, id);
 
     ASSERT_EQ(bundle.getId(), id);
 }
@@ -38,7 +38,7 @@ TEST_F(BundleTest, id)
 
 TEST_F(BundleTest, getResourceType)
 {
-    model::Bundle bundle(model::Bundle::Type::collection);
+    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
 
     ASSERT_EQ(bundle.getResourceType(), "Bundle");
 }
@@ -46,7 +46,7 @@ TEST_F(BundleTest, getResourceType)
 
 TEST_F(BundleTest, serrializeToJsonString)
 {
-    model::Bundle bundle(model::Bundle::Type::collection);
+    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     bundle.setLink(model::Link::Type::Self, "self");
 
     const auto json = bundle.serializeToJsonString();
@@ -57,7 +57,7 @@ TEST_F(BundleTest, serrializeToJsonString)
 
 TEST_F(BundleTest, toJsonString)
 {
-    const auto bundle = model::Bundle::fromJson(R"(
+    const auto bundle = model::Bundle::fromJsonNoValidation(R"(
     {
         "resourceType": "Bundle",
         "link": [
@@ -76,7 +76,7 @@ TEST_F(BundleTest, toJsonString)
 
 TEST_F(BundleTest, getResourceSize)
 {
-    model::Bundle bundle(model::Bundle::Type::collection);
+    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
 
     ASSERT_EQ(bundle.getResourceCount(), 0u);
 
@@ -112,7 +112,7 @@ TEST_F(BundleTest, getResourceSize)
 
 TEST_F(BundleTest, getTotalSearchMatches)
 {
-    model::Bundle bundle(model::Bundle::Type::searchset);
+    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
 
     ASSERT_EQ(bundle.getTotalSearchMatches(), 0);
 
@@ -138,23 +138,23 @@ TEST_F(BundleTest, getTotalSearchMatches)
 TEST_F(BundleTest, getResourcesByTypePatient)
 {
     const auto bundleData = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/kbv_bundle1.json");
-    const auto bundle = model::Bundle::fromJson(bundleData);
+    const auto bundle = model::Bundle::fromJsonNoValidation(bundleData);
 
     auto patients = bundle.getResourcesByType<model::Patient>("Patient");
     ASSERT_EQ(patients.size(), 1);
-    ASSERT_EQ((patients[0].getKvnr()), "X234567890");
+    ASSERT_EQ((patients[0].kvnr()), "X234567890");
 }
 
 TEST_F(BundleTest, getSignatureWhen)
 {
     const auto bundleData = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/kbv_bundle1.json");
-    const auto bundle = model::Bundle::fromJson(bundleData);
+    const auto bundle = model::Bundle::fromJsonNoValidation(bundleData);
     ASSERT_NO_THROW((void)bundle.getSignatureWhen());
 }
 
 TEST_F(BundleTest, searchSetTotal0)
 {
-    model::Bundle bundle(model::Bundle::Type::searchset);
+    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     const auto& document = model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(bundle.jsonDocument());
     const rapidjson::Pointer totalPointer("/total");
     ASSERT_TRUE(totalPointer.Get(document));

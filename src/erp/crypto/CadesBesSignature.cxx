@@ -137,10 +137,44 @@ namespace
     }
 
 
+    OcspResponsePtr getOcspResponse(CMS_ContentInfo& cmsContentInfo)
+    {
+        static const int nidOcspResponseRevocationContainer =
+            OBJ_create("1.3.6.1.5.5.7.16.2", "OCSP container", "OCSP response revocation container");
+
+        if (nidOcspResponseRevocationContainer != NID_undef)
+        {
+            ASN1_OBJECT* formatObject = OBJ_nid2obj(nidOcspResponseRevocationContainer);
+            Expect(formatObject != nullptr, "Failure by creation of ASN1 format object.");
+            int index = CMS_get_anotherRevocationInfo_by_format(&cmsContentInfo, formatObject, -1);
+            if (index >= 0)
+            {
+                ASN1_TYPE* ocspResponseAny = CMS_get0_anotherRevocationInfo(&cmsContentInfo, index);
+                if (ocspResponseAny != nullptr)
+                {
+                    int objectType = ASN1_TYPE_get(ocspResponseAny);
+                    if (objectType == V_ASN1_SEQUENCE)
+                    {
+                        return OcspResponsePtr(
+                            reinterpret_cast<OCSP_RESPONSE*>(
+                                ASN1_TYPE_unpack_sequence(ASN1_ITEM_rptr(OCSP_RESPONSE), ocspResponseAny)));
+                    }
+                }
+            }
+        }
+
+        TLOG(WARNING) << "No OCSP-response is provided in CMS.";
+
+        return {};
+    }
+
+
     void verifySignerCertificates(
         CMS_ContentInfo& cmsContentInfo,
         TslManager& tslManager)
     {
+        OcspResponsePtr ocspResponse = getOcspResponse(cmsContentInfo);
+
         const auto releaseList = [] (STACK_OF(X509)* lst) {
             sk_X509_pop_free(lst, X509_free);
         };
@@ -154,7 +188,8 @@ namespace
             tslManager.verifyCertificate(
                 TslMode::BNA,
                 certificate,
-                {CertificateType::C_HP_QES, CertificateType::C_HP_ENC});
+                {CertificateType::C_HP_QES, CertificateType::C_HP_ENC},
+                ocspResponse);
             checkProfessionOids(certificate);
         }
     }
@@ -287,9 +322,8 @@ CadesBesSignature::CadesBesSignature(const std::list<Certificate>& trustedCertif
 
 }
 
-
 CadesBesSignature::CadesBesSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey,
-                                     const std::string& payload)
+                                     const std::string& payload, const std::optional<model::Timestamp>& signingTime)
     : mPayload(payload)
 {
     auto bio = shared_BIO::make();
@@ -298,6 +332,10 @@ CadesBesSignature::CadesBesSignature(const Certificate& cert, const shared_EVP_P
     mCmsHandle = shared_CMS_ContentInfo::make(
         CMS_sign(cert.toX509().removeConst(), privateKey.removeConst(), nullptr, bio.get(), CMS_BINARY | CMS_STREAM | CMS_PARTIAL));
     OpenSslExpect(mCmsHandle.isSet(), "Failed to sign with CMS");
+    if (signingTime.has_value())
+    {
+        setSigningTime(*signingTime);
+    }
     addCertificateToSignerInfo(*mCmsHandle, *bio.get(), cert, EVP_PKEY_base_id(privateKey.removeConst()));
 }
 
@@ -349,4 +387,53 @@ std::optional<model::Timestamp> CadesBesSignature::getSigningTime() const
         }
     }
     return {};
+}
+
+::std::optional<::std::string> CadesBesSignature::getMessageDigest() const
+{
+    const auto* const signerInfos = CMS_get0_SignerInfos(mCmsHandle.removeConst().get());
+    OpenSslExpect(signerInfos, "Error getting signer info from CMS structure");
+    const auto signerInfoCount = sk_CMS_SignerInfo_num(signerInfos);
+    OpenSslExpect(signerInfoCount > 0, "Error getting signer info from CMS structure");
+
+    for (auto index = 0; index < signerInfoCount; ++index)
+    {
+        const auto* const signerInfo = sk_CMS_SignerInfo_value(signerInfos, index);
+        OpenSslExpect(signerInfo, "got nullptr from sk_CMS_SignerInfo_value");
+        const auto attributeIndex = CMS_signed_get_attr_by_NID(signerInfo, NID_pkcs9_messageDigest, -1);
+        auto* x509Attributes = CMS_signed_get_attr(signerInfo, attributeIndex);
+        const auto* const asn1Type = X509_ATTRIBUTE_get0_type(x509Attributes, 0);
+        if (asn1Type)
+        {
+            OpenSslExpect((asn1Type->type == V_ASN1_OCTET_STRING) && asn1Type->value.octet_string,
+                          "Unexpected type of messageDigest.");
+
+            return ::std::string{reinterpret_cast<const char*>(asn1Type->value.octet_string->data),
+                                 static_cast<size_t>(asn1Type->value.octet_string->length)};
+        }
+    }
+
+    return {};
+}
+
+void CadesBesSignature::setSigningTime(const model::Timestamp& signingTime)
+{
+    using namespace std::chrono;
+    auto secondsSinceEpoch = duration_cast<seconds>(signingTime.toChronoTimePoint().time_since_epoch()).count();
+    std::unique_ptr<ASN1_TIME, void (*)(ASN1_TIME*)> sigTimeAsn1{ASN1_TIME_new(), &ASN1_TIME_free};
+    ASN1_TIME_set(sigTimeAsn1.get(), secondsSinceEpoch);
+    const auto* const signerInfos = CMS_get0_SignerInfos(mCmsHandle);
+    OpenSslExpect(signerInfos != nullptr, "Error getting signer info from CMS structure");
+
+    const auto signerInfosCount = sk_CMS_SignerInfo_num(signerInfos);
+    OpenSslExpect(signerInfosCount > 0, "Error getting signer info from CMS structure");
+
+    for (int ind = 0; ind < signerInfosCount; ++ind)
+    {
+        auto* const signerInfo = sk_CMS_SignerInfo_value(signerInfos, ind);
+        OpenSslExpect(signerInfo != nullptr, "got nullptr from sk_CMS_SignerInfo_value");
+        const auto CMS_signed_add1_attr_by_NID_result =
+            CMS_signed_add1_attr_by_NID(signerInfo, NID_pkcs9_signingTime, sigTimeAsn1->type, sigTimeAsn1.get(), -1);
+        OpenSslExpect(CMS_signed_add1_attr_by_NID_result == 1, "Failed to set signing time");
+    }
 }

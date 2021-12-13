@@ -58,7 +58,8 @@ public:
 
     virtual ~ErpWorkflowTestBase();
 
-    std::string toCadesBesSignature(const std::string& content);
+    std::string toCadesBesSignature(const std::string& content,
+                                    const std::optional<model::Timestamp>& signingTime = std::nullopt);
 
     void checkTaskMeta(const rapidjson::Value& meta);
     void checkTaskSingleIdentifier(const rapidjson::Value& id);
@@ -125,7 +126,8 @@ public:
         std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest = {}, // used to simulate errors;
         std::optional<std::function<void(Header&)>> manipInnerRequestHeader = {});        // used to simulate errors;
 
-    std::optional<model::Task> taskCreate(HttpStatus expectedOuterStatus = HttpStatus::OK,
+    std::optional<model::Task> taskCreate(model::PrescriptionType workflowType = model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                          HttpStatus expectedOuterStatus = HttpStatus::OK,
                                           HttpStatus expectedInnerStatus = HttpStatus::Created,
                                           const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
@@ -133,7 +135,9 @@ public:
         const std::string& accessCode,
         const std::string& qesBundle,
         HttpStatus expectedInnerStatus = HttpStatus::OK,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
+        const std::optional<std::string>& expectedIssueText = {},
+        const std::optional<std::string>& expectedIssueDiagnostics = {});
 
     std::optional<model::Bundle> taskAccept(const model::PrescriptionId& prescriptionId,
         const std::string& accessCode, HttpStatus expectedInnerStatus = HttpStatus::OK,
@@ -173,7 +177,7 @@ public:
 
     std::optional<model::Bundle> taskGetId(const model::PrescriptionId& prescriptionId,
         const std::string& kvnrOrTid,
-        const std::optional<std::string>& accessCodeOrSecret,
+        const std::optional<std::string>& accessCodeOrSecret = std::nullopt,
         const HttpStatus expectedStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
         bool withAuditEvents = false);
@@ -221,7 +225,8 @@ public:
 
     void checkTaskCreate(
         std::optional<model::PrescriptionId>& createdId,
-        std::string& createdAccessCode);
+        std::string& createdAccessCode,
+        model::PrescriptionType workflowType = model::PrescriptionType::apothekenpflichigeArzneimittel);
 
     void checkTaskActivate(
         std::string& qesBundle,
@@ -315,7 +320,8 @@ private:
 
     void taskCreateInternal(std::optional<model::Task>& task, HttpStatus expectedOuterStatus,
                             HttpStatus expectedInnerStatus,
-                            const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+                            const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+                            model::PrescriptionType workflowType);
 
     static void makeQESBundleInternal (std::string& qesBundle,
         const std::string& kvnr,
@@ -327,7 +333,9 @@ private:
         const std::string& accessCode,
         const std::string& qesBundle,
         HttpStatus expectedInnerStatus,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+        const std::optional<std::string>& expectedIssueText,
+        const std::optional<std::string>& expectedIssueDiagnostics);
 
     void taskAcceptInternal(std::optional<model::Bundle>& bundle,
         const model::PrescriptionId& prescriptionId,
@@ -409,7 +417,7 @@ public:
 
     ClientTeeProtocol teeProtocol;
 
-    virtual JWT jwtVersicherter() const { return JwtBuilder::testBuilder().makeJwtVersicherter("0123456789"); }
+    virtual JWT jwtVersicherter() const { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456789"); }
     virtual JWT jwtArzt() const { return JwtBuilder::testBuilder().makeJwtArzt(); }
     virtual JWT jwtApotheke() const { return JwtBuilder::testBuilder().makeJwtApotheke(); }
 
@@ -435,6 +443,7 @@ class ErpWorkflowTestTemplate : public TestClass, public ErpWorkflowTestBase {
 };
 
 using ErpWorkflowTest = ErpWorkflowTestTemplate<::testing::Test>;
+using ErpWorkflowTestP = ErpWorkflowTestTemplate<::testing::TestWithParam<model::PrescriptionType>>;
 
 
 #endif//ERP_PROCESSING_CONTEXT_ERPWORKFLOWTESTFIXTURE_HXX

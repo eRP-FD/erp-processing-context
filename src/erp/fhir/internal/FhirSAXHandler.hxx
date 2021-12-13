@@ -44,6 +44,9 @@ public:
         const FhirStructureRepository& repo, const std::string_view& xmlDocument,
         XmlValidatorContext* schemaValidationContext);
 
+    static void validateXML(const FhirStructureRepository& repo, const std::string_view& xmlDocument,
+                            XmlValidatorContext& schemaValidationContext);
+
 private:
     class Context;
     explicit FhirSaxHandler(const FhirStructureRepository& repo);
@@ -99,9 +102,6 @@ private:
 
     static std::string makeElementId(const FhirElement& baseElement, const std::string_view& name);
 
-    std::string_view valueAttributeFrom(const AttributeList& attributes, const std::string_view& elementName) const;
-
-
     // return type ensures a constructor for rapidjson::Value exists, if it exists its always rapidjson::Value
     template <typename T>
     auto asJsonValue(T&& value) -> decltype(rapidjson::Value{std::forward<T>(value), std::declval<rapidjson::Document::AllocatorType>()});
@@ -109,6 +109,8 @@ private:
     rapidjson::Value asJsonValue(const std::string_view& value);
 
     rapidjson::Value asJsonValue(const xmlChar* value);
+
+    static void dropTrailingNullsIfArray(rapidjson::Value& value);
 
     std::string getPath() const;
 

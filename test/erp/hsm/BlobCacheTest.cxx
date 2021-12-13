@@ -2,13 +2,14 @@
  * (C) Copyright IBM Deutschland GmbH 2021
  * (C) Copyright IBM Corp. 2021
  */
+#include <gtest/gtest.h>
 
 #include "erp/hsm/BlobCache.hxx"
 
 #include "erp/util/Expect.hxx"
 
-#include <gtest/gtest.h>
 #include <atomic>
+#include <test/util/TestUtils.hxx>
 
 namespace {
     std::atomic_int getBlobCallcount = 0;
@@ -95,6 +96,7 @@ public:
         database = db.get();
         cache = std::make_unique<BlobCache>(std::move(db));
         getBlobCallcount = 0;
+        getAllBlobsCallcount = 0;
     }
 
     BlobDatabase::Entry createTestBlob (
@@ -230,6 +232,80 @@ TEST_F(BlobCacheTest, deleteBlob_failForMissingBlob)
         cache->deleteBlob(BlobType::TaskKeyDerivation, ErpVector::create("other-blob-key")));
 }
 
+
+
+TEST_F(BlobCacheTest, updateAfterKeyExpired)
+{
+    using namespace std::chrono;
+    using namespace std::chrono_literals;
+    auto expiresAt = system_clock::now() + 200ms;
+    database->mEntries.emplace_back(
+        BlobDatabase::Entry({
+            BlobType::TaskKeyDerivation,
+            ErpVector::create("blob-key"),
+            ErpBlob{"blob-data", 3},
+            expiresAt,
+            {},
+            {},
+            2,
+            {},{}}));
+    ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
+    waitFor([&]{ return system_clock::now() > expiresAt;});
+    ASSERT_ANY_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
+    expiresAt = system_clock::now() + 5s;
+    database->mEntries.emplace_back(
+        BlobDatabase::Entry({
+            BlobType::TaskKeyDerivation,
+            ErpVector::create("blob-key"),
+            ErpBlob{"blob-data", 3},
+            expiresAt,
+            {},
+            {},
+            3,
+            {},{}}));
+    ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
+}
+
+
+TEST_F(BlobCacheTest, updateBeforeKeyExpired)
+{
+    using namespace std::chrono;
+    using namespace std::chrono_literals;
+    auto expiresAt = system_clock::now() + 5s;
+    database->mEntries.emplace_back(
+        BlobDatabase::Entry({
+            BlobType::TaskKeyDerivation,
+            ErpVector::create("blob-key"),
+            ErpBlob{"blob-data", 3},
+            expiresAt,
+            {},
+            {},
+            2,
+            {},{}}));
+    ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
+    expiresAt = system_clock::now() + 5s;
+    database->mEntries.emplace_back(
+        BlobDatabase::Entry({
+            BlobType::TaskKeyDerivation,
+            ErpVector::create("blob-key"),
+            ErpBlob{"blob-data", 3},
+            expiresAt,
+            {},
+            {},
+            3,
+            {},{}}));
+    boost::asio::io_context ioContext;
+    cache->startRefresher(ioContext, 500ms);
+    std::thread contextThread{[&]{ ioContext.run();}};
+    EXPECT_NO_FATAL_FAILURE(
+        waitFor([&]{
+            auto entry = cache->getBlob(BlobType::TaskKeyDerivation);
+            return entry.id == 3;
+        });
+    );
+    ioContext.stop();
+    contextThread.join();
+}
 
 // There is not much sense in testing hasValidBlobsOfType() as that is just forwarding to the database without any
 // processing of input or output values.

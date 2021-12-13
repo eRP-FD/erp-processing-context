@@ -134,9 +134,9 @@ void TeeTokenUpdater::healthCheck() const
     }
 }
 
-
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeTokenUpdaterFactory (void)
 {
+#if WITH_HSM_TPM_PRODUCTION > 0
     return [](auto&& tokenConsumer, auto& hsmFactory)
     {
         return std::make_unique<TeeTokenUpdater>(
@@ -147,8 +147,10 @@ TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeToke
                 return TeeTokenProductionUpdater::provideTeeToken(factory);
             });
     };
+#else
+    Fail2("production HSM/TPM not compiled in.", std::logic_error);
+#endif
 }
-
 
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createMockTeeTokenUpdaterFactory (void)
 {

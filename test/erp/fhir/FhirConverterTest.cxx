@@ -158,12 +158,20 @@ INSTANTIATE_TEST_SUITE_P(gematikExamples , FhirConverterTest,
 INSTANTIATE_TEST_SUITE_P(fhirSpecialCases , FhirConverterTest,
         ::testing::Values(
     // clang-format off
-    //           XML file name                        JSON file Name                         skip reason (if test shall be skipped)
-    SampleFiles{"ERP-4397.xml"                      , "ERP-4397.json"},
-    SampleFiles{"ERP-5478-numeric-precision.xml"    , "ERP-5478-numeric-precision.json"},
-    SampleFiles{"ERP-5002-field-refrence-type.xml"  , "ERP-5002-field-refrence-type.json"},
-    SampleFiles{"ERP-5615-unsignedInt.xml"          , "ERP-5615-unsignedInt.json"},
-    SampleFiles{"ERP-5615-positiveInt.xml"          , "ERP-5615-positiveInt.json"},
-    SampleFiles{"ERP-4468-xhtml.xml"                , "ERP-4468-xhtml.json"}
+    //           XML file name                                        JSON file Name                         skip reason (if test shall be skipped)
+    SampleFiles{"ERP-4397.xml"                                      , "ERP-4397.json"},
+    SampleFiles{"ERP-5478-numeric-precision.xml"                    , "ERP-5478-numeric-precision.json"},
+    SampleFiles{"ERP-5002-field-refrence-type.xml"                  , "ERP-5002-field-refrence-type.json"},
+    SampleFiles{"ERP-5615-unsignedInt.xml"                          , "ERP-5615-unsignedInt.json"},
+    SampleFiles{"ERP-5615-positiveInt.xml"                          , "ERP-5615-positiveInt.json"},
+    SampleFiles{"ERP-4468-xhtml.xml"                                , "ERP-4468-xhtml.json"},
+    SampleFiles{"ERP-8163-Ampersand-encoding.xml"                   , "ERP-8163-Ampersand-encoding.json"},
+    SampleFiles{"ERP-8395-primary-without-value.xml"                , "ERP-8395-primary-without-value.json"},
+    SampleFiles{"ERP-8395-primary-without-value-more-extensions.xml", "ERP-8395-primary-without-value-more-extensions.json"},
+    SampleFiles{"ERP-8395-primary-without-value-more-values.xml"    , "ERP-8395-primary-without-value-more-values.json"},
+    SampleFiles{"ERP-8395-primary-without-value-null-extension.xml" , "ERP-8395-primary-without-value-null-extension.json"},
+    SampleFiles{"ERP-8395-primary-without-value-null-value.xml"     , "ERP-8395-primary-without-value-null-value.json"},
+    SampleFiles{"ERP-8395-primary-without-value-null-mixed.xml"     , "ERP-8395-primary-without-value-null-mixed.json"}
+
     // clang-format on
 ));

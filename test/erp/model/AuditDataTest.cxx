@@ -65,7 +65,7 @@ TEST(AuditDataTest, ConstructFromJson)
     const model::Timestamp recorded = model::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData::fromJson(metaDataJson), action, agentType, insurantKvnr, deviceId, prescriptionId);
+        eventId, model::AuditMetaData::fromJsonNoValidation(metaDataJson), action, agentType, insurantKvnr, deviceId, prescriptionId);
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 

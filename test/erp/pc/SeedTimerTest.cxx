@@ -7,6 +7,7 @@
 
 #include "erp/hsm/HsmPool.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
@@ -31,7 +32,8 @@ TEST(SeedTimerTest, distribute)
     ASSERT_NO_FATAL_FAILURE(waitFor([&]{return pool.getWorkerCount() >= threads; }));
     std::atomic_size_t callCount = 0;
     HsmPool mockHsmPool{
-        std::make_unique<HsmMockFactory>(),
+        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                         MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
     SeedTimer seedTimer(pool, mockHsmPool, threads, interval,
                         [&](const SafeString& seed){

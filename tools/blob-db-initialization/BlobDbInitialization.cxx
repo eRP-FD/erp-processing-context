@@ -14,12 +14,34 @@
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/GLog.hxx"
 #include "mock/enrolment/MockEnrolmentManager.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
 
 #include <iostream>
 #include <unordered_set>
 
+class DummyBlobDatabase : public BlobDatabase
+{
+    void deleteBlob(BlobType, const ErpVector &) override
+    {
+        Fail("DummyBlobDatabase::deleteBlob should not be called.");
+    }
+    std::vector<Entry> getAllBlobsSortedById() const override
+    {
+        Fail("DummyBlobDatabase::getAllBlobsSortedById should not be called.");
+    }
+    BlobDatabase::Entry getBlob(BlobType, BlobId) const override
+    {
+        Fail("DummyBlobDatabase::getBlob should not be called.");
+    }
+    std::vector<bool> hasValidBlobsOfType(std::vector<BlobType> &&) const override
+    {
+        Fail("DummyBlobDatabase::hasValidBlobsOfType should not be called.");
+    }
+
+    BlobId storeBlob(BlobDatabase::Entry &&) override
+    {
+        Fail("DummyBlobDatabase::storeBlob should not be called.");
+    }
+};
 
 void usage (const char* argv0, const std::string message = "")
 {
@@ -208,7 +230,7 @@ CommandLineArguments processCommandLine (const int argc, const char* argv[])
             else
             {
                 bool found = false;
-                for (const auto descriptor : blobDescriptors)
+                for (const auto& descriptor : blobDescriptors)
                     if (argument==descriptor.shortName || argument==descriptor.longName)
                     {
                         arguments.blobTypes.insert(descriptor.type);
@@ -396,7 +418,7 @@ int main (const int argc, const char* argv[])
     if (hasDynamicBlobTypes)
     {
         // Run the attestation sequence to compute blobs for known attestation key, known endorsement key and known quote.
-        auto blobCache = std::make_shared<BlobCache>(std::make_unique<MockBlobDatabase>()); // We have to provide a blob cache as argument but it should not be used.
+        auto blobCache = std::make_shared<BlobCache>(std::make_unique<DummyBlobDatabase>()); // We have to provide a blob cache as argument but it should not be used.
         MockEnrolmentManager enrolmentManager;
         dynamicBlobs = enrolmentManager.createAndReturnAkEkAndQuoteBlob(
             *blobCache,

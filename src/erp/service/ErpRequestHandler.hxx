@@ -61,6 +61,7 @@ protected:
     static bool responseIsPartOfMultiplePages(const PagingArgument& pagingArgument, std::size_t numOfResults);
 
 private:
+    static void checkValidEncoding(const ContentMimeType& contentMimeType);
 
     const Operation mOperation;
     std::unordered_set<std::string_view> mAllowedProfessionOIDs;
@@ -81,46 +82,23 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext<PcSer
     ErpExpect(header.contentType().has_value(), HttpStatus::BadRequest, "Missing ContentType in request header");
     ContentMimeType contentMimeType(header.contentType().value());
     const auto& mimeType = contentMimeType.getMimeType();
-    const auto& encoding = contentMimeType.getEncoding();
 
-    bool validEncoding = !encoding || encoding->empty() || encoding.value() == Encoding::utf8;
-    ErpExpect(validEncoding, HttpStatus::UnsupportedMediaType,
-              "Invalid content type encoding received: " + header.contentType().value());;
+    checkValidEncoding(contentMimeType);
 
-    try
+    if (mimeType == MimeType::fhirJson || mimeType == MimeType::json)
     {
-        try
-        {
-            if (mimeType == MimeType::fhirJson || mimeType == MimeType::json)
-            {
-                auto resource = TModel::fromJson(body);
-                resource.validate();
-                auto resourceForJsonValidation =
-                        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(resource.jsonDocument());
-                context.serviceContext.getJsonValidator().validate(resourceForJsonValidation, schemaType);
-                return resource;
-            }
-            else if (mimeType == MimeType::xml || mimeType == MimeType::fhirXml)
-            {
-                auto resource = TModel::fromXml(body, context.serviceContext.getXmlValidator(), schemaType);
-                resource.validate();
-                return resource;
-            }
-        }
-        catch (const std::nested_exception& ex)
-        {
-            ex.rethrow_nested();
-        }
+        auto resource = TModel::fromJson(body, context.serviceContext.getJsonValidator(),
+                                         context.serviceContext.getXmlValidator(),
+                                         context.serviceContext.getInCodeValidator(), schemaType);
+        return resource;
     }
-    catch (const ErpException& )
+    else if (mimeType == MimeType::xml || mimeType == MimeType::fhirXml)
     {
-        throw; // should contain diagnostics data, simply rethrow;
+        auto resource = TModel::fromXml(body, context.serviceContext.getXmlValidator(),
+                                        context.serviceContext.getInCodeValidator(), schemaType);
+        return resource;
     }
-    catch (const std::runtime_error& ex)
-    {
-        TVLOG(1) << "runtime_error: " << ex.what();
-        ErpFail(HttpStatus::BadRequest, "parsing / validation error");
-    }
+
     ErpFail(HttpStatus::UnsupportedMediaType, "Invalid content type (mime type) received: " + header.contentType().value());
 }
 

@@ -12,7 +12,7 @@
 #include <memory>
 
 
-#if WITH_HSM_MOCK  != 1
+#if WITH_HSM_MOCK != 1
 #error TpmTestHelper.hxx included but WITH_HSM_MOCK not enabled
 #endif
 /**

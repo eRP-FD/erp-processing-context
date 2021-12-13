@@ -41,6 +41,8 @@ private:
     friend class CmacKey;
 };
 
+enum class CmacKeyCategory : int8_t { user, telematic };
+
 class CmacKey
 {
 public:

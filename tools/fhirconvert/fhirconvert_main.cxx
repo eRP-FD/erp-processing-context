@@ -24,7 +24,9 @@ std::ostream& usage(std::ostream& out)
 
 int main(int argc, char* argv[])
 {
+    Environment::set("ERP_SERVER_HOST", "none");
     try {
+        GLogConfiguration::init_logging(argv[0]);
         Expect(argc == 2, "Missing input filename.");
         auto fileContent = FileHelper::readFileAsString(argv[1]);
         auto typeIndicator = fileContent.find_first_of("{<");

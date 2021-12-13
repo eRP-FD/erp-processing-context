@@ -10,7 +10,7 @@
 #include "erp/server/request/ServerRequest.hxx"
 
 
-class PostgresDatabaseMedicationDispenseTest : public PostgresDatabaseTest
+class PostgresDatabaseMedicationDispenseTest : public PostgresDatabaseTest, public testing::WithParamInterface<model::PrescriptionType>
 {
 public:
     PostgresDatabaseMedicationDispenseTest();
@@ -24,7 +24,8 @@ protected:
         std::map<std::string, model::MedicationDispense>& medicationDispensesByPrescriptionIds,
         std::map<std::string, std::vector<std::string>>& prescriptionIdsByPatients,
         std::map<std::string, std::vector<std::string>>& prescriptionIdsByPharmacies,
-        std::map<std::string, std::string>& medicationDispensesInputXmlStrings);
+        std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
+        model::PrescriptionType prescriptionType = GetParam());
     UrlArguments createSearchArguments(ServerRequest::QueryParametersType&& queryParameters);
     void checkMedicationDispensesXmlStrings(
         std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
@@ -35,7 +36,7 @@ protected:
         const std::string& marker = std::string());
     bool writeTestOutputFileEnabled = false;
 private:
-    model::Task createAcceptedTask(const std::string_view& kvnrPatient);
+    model::Task createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType = GetParam());
     model::MedicationDispense closeTask(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
@@ -45,7 +46,7 @@ private:
         const std::string_view& telematicIdPharmacy,
         const model::Timestamp& whenHandedOver,
         const std::optional<model::Timestamp>& whenPrepared = std::nullopt);
-    model::Task createTask();
+    model::Task createTask(model::PrescriptionType prescriptionType = GetParam());
     void activateTask(model::Task& task);
     void acceptTask(model::Task& task);
     void deleteTaskByPrescriptionId(const int64_t prescriptionId);

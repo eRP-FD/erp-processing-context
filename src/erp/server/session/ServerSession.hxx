@@ -66,7 +66,7 @@ protected:
     std::unique_ptr<AbstractRequestHandler> mRequestHandler;
 
     void logException(std::exception_ptr exception);
-    void sendResponse (ServerResponse&& response);
+    void sendResponse (ServerResponse&& response, AccessLog* accessLog = nullptr);
 };
 
 #endif

@@ -16,10 +16,11 @@
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
 #include "mock/tpm/TpmTestData.hxx"
 
+#include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/HsmTestBase.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #if ! defined(__APPLE__) && ! defined(_WINNT_)
     #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
@@ -52,6 +53,12 @@ public:
             GTEST_SKIP();
     }
 
+    void TearDown() override
+    {
+        if (parameters.enabled)
+            BlobDatabaseHelper::removeUnreferencedBlobs();
+    }
+
     ParameterSet parameters;
 };
 
@@ -68,7 +75,8 @@ namespace
                 ParameterSet parameters;
 
                 parameters.name = "simulated";
-                parameters.blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::SimulatedHsm);
+                BlobDatabaseHelper::removeUnreferencedBlobs();
+                parameters.blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::SimulatedHsm);
                 parameters.factory = std::make_unique<HsmProductionFactory>(
                     std::make_unique<HsmProductionClient>(),
                     parameters.blobCache);
@@ -106,7 +114,8 @@ namespace
         {
             ParameterSet parameters;
             parameters.name = "mocked";
-            parameters.blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+            BlobDatabaseHelper::removeUnreferencedBlobs();
+            parameters.blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
             parameters.factory = std::make_unique<HsmMockFactory>(
                 std::make_unique<HsmMockClient>(),
                 parameters.blobCache);
@@ -422,7 +431,7 @@ namespace {
 TEST_F(UnparameterizedHsmSessionTest, keepAlive)
 {
     auto client = std::make_unique<HsmSessionTestClient>();
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
     auto session = HsmSession(*client, *blobCache, std::shared_ptr<HsmRawSession>());
 
     // Call getRndBytes (via the session object) to set the lastHsmCall time.

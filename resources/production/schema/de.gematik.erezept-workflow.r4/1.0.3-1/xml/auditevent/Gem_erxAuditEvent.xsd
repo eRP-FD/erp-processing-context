@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../identifier/Identifier.xsd"/>
+  <xs:element name="AuditEvent" type="Gem_erxAuditEvent"/>
+  <xs:complexType name="Gem_erxAuditEvent">
+    <xs:complexContent>
+      <xs:extension base="Resource">
+        <xs:sequence>
+          <xs:element name="text" type="Narrative" minOccurs="0"/>
+          <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="type" type="Gem_erxAuditEvent.Coding"/>
+          <xs:element name="subtype" type="Coding"/>
+          <xs:element name="action" type="Gem_erxAuditEvent.Action"/>
+          <xs:element name="period" minOccurs="0" type="Period"/>
+          <xs:element name="recorded" type="instant"/>
+          <xs:element name="outcome" type="Gem_erxAuditEvent.Outcome"/>
+          <xs:element name="outcomeDesc" minOccurs="0" type="string"/>
+          <xs:element name="purposeOfEvent" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept"/>
+          <xs:element name="agent" type="Gem_erxAuditEvent.Agent" maxOccurs="unbounded"/>
+          <xs:element name="source" type="Gem_erxAuditEvent.Source"/>
+          <xs:element name="entity" type="Gem_erxAuditEvent.Entity" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Agent">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="type" type="CodeableConcept"/>
+          <xs:element name="role" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept"/>
+          <xs:element name="who" minOccurs="0" type="KVID_TelematikID.Reference"/>
+          <xs:element name="altId" minOccurs="0" type="string"/>
+          <xs:element name="name" type="string"/>
+          <xs:element name="requestor" type="boolean"/>
+          <xs:element name="location" minOccurs="0" type="Reference"/>
+          <xs:element name="policy" minOccurs="0" maxOccurs="unbounded" type="uri"/>
+          <xs:element name="media" minOccurs="0" type="Coding"/>
+          <xs:element name="network" type="Gem_erxAuditEvent.Network" minOccurs="0"/>
+          <xs:element name="purposeOfUse" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Network">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="address" minOccurs="0" type="string"/>
+          <xs:element name="type" minOccurs="0" type="Gem_erxAuditEvent.AgentNetworkType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Source">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="site" type="Gem_erxAuditEvent.Source.site.fixed"/>
+          <xs:element name="observer" type="Gem_erxAuditEvent.Observer"/>
+          <xs:element name="type" minOccurs="0" maxOccurs="unbounded" type="Coding"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Source.site.fixed">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="string-primitive" fixed="E-Rezept Fachdienst"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Observer">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string"/>
+          <xs:element name="type" type="Gem_erxAuditEvent.Observer.type" minOccurs="0"/>
+          <xs:element name="identifier" type="Identifier" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Observer.type">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://hl7.org/fhir/StructureDefinition/Device"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Entity">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="what" type="Gem_erxAuditEvent.Entity.Reference"/>
+          <xs:element name="type" minOccurs="0" type="Coding"/>
+          <xs:element name="role" minOccurs="0" type="Coding"/>
+          <xs:element name="lifecycle" minOccurs="0" type="Coding"/>
+          <xs:element name="securityLabel" minOccurs="0" maxOccurs="unbounded" type="Coding"/>
+          <xs:element name="name" type="string"/>
+          <xs:element name="description" type="string"/>
+          <xs:element name="query" minOccurs="0" type="base64Binary"/>
+          <xs:element name="detail" type="Gem_erxAuditEvent.Detail" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Entity.Reference">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="Gem_erxAuditEvent.Entity.Reference.type" minOccurs="0"/>
+          <xs:element name="identifier" type="Identifier" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Entity.Reference.type">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxAuditEvent.Entity.Reference.type-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxAuditEvent.Entity.Reference.type-list">
+    <xs:restriction base="uri-primitive">
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"/>
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent"/>
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxCommunication"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Gem_erxAuditEvent.Detail">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="type" type="string"/>
+          <xs:choice>
+            <xs:element name="valueString" type="string"/>
+            <xs:element name="valueBase64Binary" type="base64Binary"/>
+          </xs:choice>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxAuditEvent.Outcome-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="8"/>
+      <xs:enumeration value="12"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Gem_erxAuditEvent.Outcome">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxAuditEvent.Outcome-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxAuditEvent.Action-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="C"/>
+      <xs:enumeration value="R"/>
+      <xs:enumeration value="U"/>
+      <xs:enumeration value="D"/>
+      <xs:enumeration value="E"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Gem_erxAuditEvent.Action">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxAuditEvent.Action-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxAuditEvent.AgentNetworkType-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+      <xs:enumeration value="4"/>
+      <xs:enumeration value="5"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Gem_erxAuditEvent.AgentNetworkType">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxAuditEvent.AgentNetworkType-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="Gem_erxAuditEvent.Coding.uri"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="Gem_erxAuditEvent.Coding.code"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Coding.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://terminology.hl7.org/CodeSystem/audit-event-type"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxAuditEvent.Coding.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="rest"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

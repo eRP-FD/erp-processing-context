@@ -135,6 +135,7 @@ public:
     static const std::string VAUErrorCode;
     static const std::string InnerRequestRole;
     static const std::string InnerRequestOperation;
+    static const std::string InnerRequestFlowtype;
     static const std::string InnerResponseCode;
 
     // Values for selected header fiels.

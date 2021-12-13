@@ -25,6 +25,7 @@ const std::string Header::Host = "Host";
 const std::string Header::KeepAlive = "Keep-Alive";
 const std::string Header::InnerRequestOperation = "Inner-Request-Operation";
 const std::string Header::InnerRequestRole = "Inner-Request-Role";
+const std::string Header::InnerRequestFlowtype = "Inner-Request-Flowtype";
 const std::string Header::InnerResponseCode = "Inner-Response-Code";
 const std::string Header::Location = "Location";
 const std::string Header::Server = "Server";

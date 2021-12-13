@@ -33,7 +33,7 @@ public:
     SafeString& operator= (SafeString&& other) noexcept;
 
     /// @brief move construct from anything, that has a data and a size member (string, vector, array)
-    template <typename InputT, decltype(std::declval<InputT>().data(), std::declval<InputT>().size())* = nullptr>
+    template <typename InputT, decltype((void)std::declval<InputT>().data(), std::declval<InputT>().size())* = nullptr>
     explicit SafeString(InputT&& in);
 
     /// @brief move from anything, that has a data and a size member (string, vector, array)
@@ -109,7 +109,7 @@ SafeString& SafeString::operator=(InputT&& in)
     return *this;
 }
 
-template<typename InputT, decltype(std::declval<InputT>().data() , std::declval<InputT>().size()) *>
+template<typename InputT, decltype((void)std::declval<InputT>().data() , std::declval<InputT>().size()) *>
 SafeString::SafeString(InputT&& in)
     : SafeString(in.data(), in.size())
 {

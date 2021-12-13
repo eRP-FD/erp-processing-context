@@ -1,6 +1,6 @@
 <SupplyRequest xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_PracticeSupply|1.0.1" />
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_PracticeSupply|1.0.2" />
   </meta>
   <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_PracticeSupply_Payor">
     <extension url="ik">

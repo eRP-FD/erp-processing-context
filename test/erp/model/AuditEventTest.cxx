@@ -72,7 +72,7 @@ TEST(AuditEventTest, ConstructFromJson)
     const std::string_view language = "de";
     const std::string_view whatIdentifierValue = "160.100.000.000.000.42";
     const std::string textDiv =
-        "<div xmlns=\"http://www.w3.org/1999/xhtml\">Praxis Dr. Frankenstein hat ein E-Rezept " + std::string(whatIdentifierValue) + " eingestellt.</div>";
+        "<div xmlns=\"http://www.w3.org/1999/xhtml\">Praxis Dr. Frankenstein hat das Rezept mit der ID " + std::string(whatIdentifierValue) + " eingestellt.</div>";
     const auto subTypeCode = model::AuditEvent::SubType::update;
     const auto action = model::AuditEvent::Action::update;
     const auto recorded = model::Timestamp::fromXsDateTime("2021-03-15T15:24:38.396+00:00");
@@ -88,7 +88,7 @@ TEST(AuditEventTest, ConstructFromJson)
     const auto entityDescription = whatIdentifierValue;
 
     const auto json = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/audit_event.json");
-    const auto auditEvent = model::AuditEvent::fromJson(json);
+    const auto auditEvent = model::AuditEvent::fromJsonNoValidation(json);
 
     EXPECT_EQ(auditEvent.id(), id);
     EXPECT_EQ(auditEvent.language(), language);

@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_DATABASE_POSTGRESBACKEND_HXX
 
 #include "erp/database/DatabaseBackend.hxx"
+#include "erp/database/PostgresBackendTask.hxx"
 #include "erp/database/PostgresConnection.hxx"
 
 #include <memory>
@@ -28,7 +29,8 @@ public:
 
     void healthCheck() override;
 
-    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::Task::Status taskStatus,
+    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
+                                                                   model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,
                                                                    const model::Timestamp& created) override;
 
@@ -57,7 +59,7 @@ public:
                                              const model::Timestamp& lastModified,
                                              const db_model::EncryptedBlob& medicationDispense,
                                              BlobId medicationDispenseBlobId,
-                                             const db_model::HashedTelematikId& telematicId,
+                                             const db_model::HashedTelematikId& telematikId,
                                              const model::Timestamp& whenHandedOver,
                                              const std::optional<model::Timestamp>& whenPrepared,
                                              const db_model::EncryptedBlob& receipt) override;
@@ -78,8 +80,9 @@ public:
         const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]
-    std::optional<db_model::Task> retrieveTaskBasics (const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) override;
+    [[nodiscard]] ::std::optional<::db_model::Task>
+    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
 
     [[nodiscard]]
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
@@ -99,7 +102,7 @@ public:
         const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]
-    CmacKey acquireCmac(const date::sys_days& validDate, RandomSource& randomSource) override;
+    CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
     [[nodiscard]]
     std::optional<Uuid> insertCommunication(const model::PrescriptionId& prescriptionId,
                                             const model::Timestamp& timeSent,
@@ -148,6 +151,11 @@ public:
                                                             BlobId blobId,
                                                             const db_model::Blob& salt) override;
 
+    void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
+    std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr& kvnr) override;
+    [[nodiscard]] bool clearConsent(const db_model::HashedKvnr& kvnr) override;
+
+
     [[nodiscard]]
     static std::string defaultConnectString();
     [[nodiscard]]
@@ -156,24 +164,14 @@ public:
     struct QueryDefinition;
 
 private:
-    struct TaskQueryIndexes;
-    [[nodiscard]]
-    static db_model::Task taskFromQueryResultRow(const pqxx::row& resultRow, const TaskQueryIndexes& indexes);
     void checkCommonPreconditions();
+    PostgresBackendTask& getTaskBackend(const model::PrescriptionType prescriptionType);
 
-    [[nodiscard]] uint64_t executeCountQuery(
-         const std::string_view& query,
-         const db_model::Blob& paramValue,
-         const std::optional<UrlArguments>& search,
-         const std::string_view& context);
-
-    #ifndef _WIN32
     thread_local static PostgresConnection mConnection;
-    #else
-    // Please see comment in cxx file why on Windows "mConnection" is not used as a static variable.
-    PostgresConnection mConnection;
-    #endif
     std::unique_ptr<pqxx::work> mTransaction;
+
+    PostgresBackendTask mBackendTask;
+    PostgresBackendTask mBackendTask169;
 };
 
 

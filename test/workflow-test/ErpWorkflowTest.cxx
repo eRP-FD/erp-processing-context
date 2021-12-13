@@ -7,6 +7,7 @@
 
 #include "erp/erp-serverinfo.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/fhir/Fhir.hxx"
 #include "test/util/StaticData.hxx"
 #include "tools/ResourceManager.hxx"
@@ -68,12 +69,12 @@ TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
     }
 }
 
-TEST_F(ErpWorkflowTest, MultipleTaskCloseError)
+TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)
 {
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     // Activate.
     const std::string kvnr{"X987654321"};
@@ -113,14 +114,14 @@ TEST_F(ErpWorkflowTest, MultipleTaskCloseError)
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Forbidden);
 }
 
-TEST_F(ErpWorkflowTest, TaskLifecycleNormal)// NOLINT
+TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
 {
     model::Timestamp startTime = model::Timestamp::now();
 
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -162,12 +163,10 @@ TEST_F(ErpWorkflowTest, TaskLifecycleNormal)// NOLINT
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "de", startTime,
-        { kvnr, telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr, kvnr }, { 1, 3, 4, 5, 6 }, { 0, 8 },
-        { model::AuditEvent::SubType::read,
+        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr }, { 0, 2, 3, 4, 5 }, { },
+        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::read});
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read });
 }
 
 TEST_F(ErpWorkflowTest, TaskLifecycleAbortByInsurantProxy) // NOLINT
@@ -201,10 +200,8 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByInsurantProxy) // NOLINT
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "en", startTime,
-        { kvnr, telematicIdDoctor, kvnr, kvnrRepresentative }, { 1 }, { 0 },
-        { model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::del});
+        { telematicIdDoctor, kvnr, kvnrRepresentative }, { 0 }, { },
+        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del});
 }
 
 TEST_F(ErpWorkflowTest, TaskLifecycleAbortByInsurant) // NOLINT
@@ -237,18 +234,17 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByInsurant) // NOLINT
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "de", startTime,
-        { kvnr, telematicIdDoctor, kvnr, kvnr, kvnr }, { 1 }, { 0, 4 },
-        { model::AuditEvent::SubType::read, model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::del, model::AuditEvent::SubType::read });
+        { telematicIdDoctor, kvnr, kvnr }, { 0 }, { },
+        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del });
 }
 
-TEST_F(ErpWorkflowTest, TaskLifecycleAbortByPharmacy) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByPharmacy) // NOLINT
 {
     model::Timestamp startTime = model::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -268,20 +264,18 @@ TEST_F(ErpWorkflowTest, TaskLifecycleAbortByPharmacy) // NOLINT
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "de", startTime,
-        { kvnr, telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy }, { 1, 3, 4, 5 }, { 0 },
-        { model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::del });
+        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy }, { 0, 2, 3, 4 }, { },
+        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del });
 }
 
-TEST_F(ErpWorkflowTest, TaskLifecycleReject) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskLifecycleReject) // NOLINT
 {
     model::Timestamp startTime = model::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -307,10 +301,9 @@ TEST_F(ErpWorkflowTest, TaskLifecycleReject) // NOLINT
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         *prescriptionId, kvnr, "de", startTime,
-        { kvnr, telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr,
-          telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr}, { 1, 3, 4, 5, 7, 8, 9, 10 }, { 0 },
-        { model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr,
+          telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr}, { 0, 2, 3, 4, 6, 7, 8, 9 }, { },
+        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
@@ -318,7 +311,7 @@ TEST_F(ErpWorkflowTest, TaskLifecycleReject) // NOLINT
           model::AuditEvent::SubType::read });
 }
 
-TEST_F(ErpWorkflowTest, TaskSearchStatus) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskSearchStatus) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -330,9 +323,9 @@ TEST_F(ErpWorkflowTest, TaskSearchStatus) // NOLINT
     std::string accessCode1;
     std::string accessCode2;
     std::string accessCode3;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3, GetParam()));
 
     std::string qesBundle1;
     std::string qesBundle2;
@@ -391,7 +384,7 @@ TEST_F(ErpWorkflowTest, TaskSearchStatus) // NOLINT
     std::string secret2;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret2, lastModifiedDate, *prescriptionId2, kvnr, accessCode2, qesBundle2));
     ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId2, kvnr, secret2, *lastModifiedDate, communications2));
-    ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId3, jwtVersicherter(), kvnr, accessCode3, {}, communications3));
+    ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId3, jwtArzt(), kvnr, accessCode3, {}, communications3));
 
     {
         const auto bundle = taskGet(kvnr, "status=ready").value();
@@ -436,7 +429,7 @@ TEST_F(ErpWorkflowTest, TaskSearchStatusERP4627) // NOLINT
         "Parsing the HTTP message header failed.");
 }
 
-TEST_F(ErpWorkflowTest, TaskSearchLastModified) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskSearchLastModified) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -448,9 +441,9 @@ TEST_F(ErpWorkflowTest, TaskSearchLastModified) // NOLINT
     std::string accessCode1;
     std::string accessCode2;
     std::string accessCode3;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3, GetParam()));
 
     std::string qesBundle1;
     std::string qesBundle2;
@@ -487,7 +480,7 @@ TEST_F(ErpWorkflowTest, TaskSearchLastModified) // NOLINT
     }
 }
 
-TEST_F(ErpWorkflowTest, TaskSearchAuthoredOn ) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskSearchAuthoredOn ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -499,12 +492,12 @@ TEST_F(ErpWorkflowTest, TaskSearchAuthoredOn ) // NOLINT
     std::string accessCode1;
     std::string accessCode2;
     std::string accessCode3;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1, GetParam()));
     using namespace std::chrono_literals;
     std::this_thread::sleep_for(1s);
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2, GetParam()));
     std::this_thread::sleep_for(1s);
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3, GetParam()));
 
     std::string qesBundle1;
     std::string qesBundle2;
@@ -554,7 +547,7 @@ TEST_F(ErpWorkflowTest, TaskSearchAuthoredOn ) // NOLINT
     }
 }
 
-TEST_F(ErpWorkflowTest, TaskGetPaging ) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskGetPaging ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -566,9 +559,9 @@ TEST_F(ErpWorkflowTest, TaskGetPaging ) // NOLINT
     std::string accessCode1;
     std::string accessCode2;
     std::string accessCode3;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3, GetParam()));
 
     std::string qesBundle1;
     std::string qesBundle2;
@@ -602,7 +595,7 @@ TEST_F(ErpWorkflowTest, TaskGetPaging ) // NOLINT
     }
 }
 
-TEST_F(ErpWorkflowTest, TaskGetSorting ) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskGetSorting ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -614,9 +607,9 @@ TEST_F(ErpWorkflowTest, TaskGetSorting ) // NOLINT
     std::string accessCode1;
     std::string accessCode2;
     std::string accessCode3;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2));
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2, GetParam()));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId3, accessCode3, GetParam()));
 
     std::string qesBundle1;
     std::string qesBundle2;
@@ -652,7 +645,7 @@ TEST_F(ErpWorkflowTest, TaskGetSorting ) // NOLINT
     }
 }
 
-TEST_F(ErpWorkflowTest, TaskGetPagingAndSearch) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskGetPagingAndSearch) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -663,7 +656,7 @@ TEST_F(ErpWorkflowTest, TaskGetPagingAndSearch) // NOLINT
     {
         std::optional<model::PrescriptionId> prescriptionId;
         std::string accessCode;
-        ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+        ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
         if(i % 2 == 0)
         {
             std::string qesBundle;
@@ -746,7 +739,7 @@ TEST_F(ErpWorkflowTest, AuditEventFilterInsurantKvnr) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkAuditEventsFrom(kvnr3));
 }
 
-TEST_F(ErpWorkflowTest, TaskGetRevinclude ) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskGetRevinclude ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -754,7 +747,7 @@ TEST_F(ErpWorkflowTest, TaskGetRevinclude ) // NOLINT
 
     std::optional<model::PrescriptionId> prescriptionId1;
     std::string accessCode1;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId1, accessCode1, GetParam()));
 
     std::string qesBundle1;
     std::vector<model::Communication> communications1;
@@ -762,7 +755,7 @@ TEST_F(ErpWorkflowTest, TaskGetRevinclude ) // NOLINT
 
     std::optional<model::PrescriptionId> prescriptionId2;
     std::string accessCode2;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId2, accessCode2, GetParam()));
 
     std::string qesBundle2;
     std::vector<model::Communication> communications2;
@@ -783,11 +776,11 @@ TEST_F(ErpWorkflowTest, TaskGetRevinclude ) // NOLINT
     }
 }
 
-TEST_F(ErpWorkflowTest, AuditEventSearchSortPaging) // NOLINT
+TEST_P(ErpWorkflowTestP, AuditEventSearchSortPaging) // NOLINT
 {
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     // Create some audit events
     std::string kvnr;
@@ -857,10 +850,10 @@ TEST_F(ErpWorkflowTest, AuditEventSearchSortPaging) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkAuditEventSearchSubType(kvnr));
 
     // Check paging:
-    ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, 10, 4));
+    ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, 9, 4));
 
     // Check paging with additional search:
-    ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, 5, 3, "subtype=R"));
+    ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, 4, 3, "subtype=R"));
 }
 
 TEST_F(ErpWorkflowTest, GetMetaData)
@@ -879,7 +872,8 @@ TEST_F(ErpWorkflowTest, GetMetaData)
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    auto expectedMetaData = model::MetaData::fromJson(FileHelper::readFileAsString(dataPath + "/metadata.json"));
+    auto expectedMetaData =
+        model::MetaData::fromJsonNoValidation(FileHelper::readFileAsString(dataPath + "/metadata.json"));
     expectedMetaData.setVersion(version);
     expectedMetaData.setDate(now);
     expectedMetaData.setReleaseDate(now);
@@ -922,11 +916,11 @@ TEST_F(ErpWorkflowTest, GetDevice)
 }
 
 // Test for https://dth01.ibmgcloud.net/jira/browse/ERP-5387
-TEST_F(ErpWorkflowTest, TaskEmptyOutput)// NOLINT
+TEST_P(ErpWorkflowTestP, TaskEmptyOutput)// NOLINT
 {
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     const std::string kvnr{"X987654321"};
     std::string qesBundle;
@@ -979,10 +973,7 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)
 {
     using namespace std::string_literals;
     auto& resourceManager = ResourceManager::instance();
-    auto qesXMLString = resourceManager.getStringResource("test/issues/ERP-5723_ERP-5750/InputKbvBundle.xml");
-    auto qesBundle =
-            model::Bundle::fromXml(qesXMLString, *StaticData::getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle);
-    std::string qesBundleSigned = toCadesBesSignature(qesXMLString);
+
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -990,7 +981,12 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)
     ASSERT_TRUE(prescriptionId.has_value());
 
     const std::string kvnr{"K220645129"};
-       // repare QES-Bundle for invokation of POST /task/<id>/$activate
+    // prepare QES-Bundle for invocation of POST /task/<id>/$activate
+    auto qesXMLString = resourceManager.getStringResource("test/issues/ERP-5723_ERP-5750/InputKbvBundle.xml");
+    qesXMLString = String::replaceAll(qesXMLString, "160.100.000.000.024.67", prescriptionId->toString());
+    auto qesBundle = model::KbvBundle::fromXml(qesXMLString, *StaticData::getXmlValidator(),
+                                               *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle);
+    std::string qesBundleSigned = toCadesBesSignature(qesXMLString);
 
     std::optional<model::Task> task;
     // invoke /task/<id>/$activate
@@ -1094,7 +1090,8 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(RequestArguments{HttpMethod::POST, "/Task/$create", create, "application/fhir+xml"}.withJwt(jwt)
                                                                          .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
-    ASSERT_NO_THROW(task = Task::fromXml(serverResponse.getBody(), *getXmlValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW(task = Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
+                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
     // Get results from the service call.
     prescriptionId.emplace(task->prescriptionId());
     accessCode = task->accessCode();
@@ -1123,31 +1120,32 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
                 .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
                 .withHeader("X-AccessCode", accessCode)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-    ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *getXmlValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
+                                                *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
     ASSERT_TRUE(task);
     EXPECT_NO_THROW(EXPECT_EQ(task->prescriptionId().toString(), (*prescriptionId).toString()));
     ASSERT_TRUE(task->kvnr());
     EXPECT_EQ(*task->kvnr(), kvnr);
     EXPECT_EQ(task->status(), model::Task::Status::ready);
 
-    // Check that agentName is "<null>".
+    // Check that agentName is "unbekannt".
     std::optional<model::Bundle> auditEventBundle;
     ASSERT_NO_FATAL_FAILURE(auditEventBundle = auditEventGet(kvnr, "de", "date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=date"));
     ASSERT_TRUE(auditEventBundle);
-    ASSERT_EQ(auditEventBundle->getResourceCount(), 2); // the first auditevent comes from generateNewRandomKVNR
+    ASSERT_EQ(auditEventBundle->getResourceCount(), 1);
     const auto auditEvents = auditEventBundle->getResourcesByType<model::AuditEvent>("AuditEvent");
-    const auto &auditEvent = auditEvents[1];
-    EXPECT_EQ("<null>", auditEvent.agentName());
+    const auto &auditEvent = auditEvents[0];
+    EXPECT_EQ("unbekannt", auditEvent.agentName());
 }
 
 // Test cases of
 // 1. POST /Task/$close where the prescription id of the received medication dispense is invalid (see also ticket ERP-5805).
 // 2. POST /Task/$close with invalid field "whenHandedOver" to verify the diagnostics data contained in the OperationOutcome
 //    resource of the error response.
-TEST_F(ErpWorkflowTest, TaskClose_MedicationDispense_invalidPrescriptionIdAndWhenHandedOver) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWhenHandedOver) // NOLINT
 {
     std::optional<model::Task> task;
-    ASSERT_NO_FATAL_FAILURE(task = taskCreate());
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
     ASSERT_TRUE(task);
     std::string accessCode(task->accessCode());
 
@@ -1184,10 +1182,10 @@ TEST_F(ErpWorkflowTest, TaskClose_MedicationDispense_invalidPrescriptionIdAndWhe
         task->prescriptionId(), std::string(secret.value()), kvnr, "2021-14-12"));
 }
 
-TEST_F(ErpWorkflowTest, TaskAbort_NewlyCreated) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskAbort_NewlyCreated) // NOLINT
 {
     std::optional<model::Task> task;
-    ASSERT_NO_FATAL_FAILURE(task = taskCreate());
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
     ASSERT_TRUE(task);
     const std::string accessCode(task->accessCode());
     ASSERT_NO_FATAL_FAILURE(
@@ -1195,10 +1193,10 @@ TEST_F(ErpWorkflowTest, TaskAbort_NewlyCreated) // NOLINT
                   HttpStatus::Forbidden, model::OperationOutcome::Issue::Type::forbidden));
 }
 
-TEST_F(ErpWorkflowTest, TaskCancelled) // NOLINT
+TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
 {
     std::optional<model::Task> task;
-    ASSERT_NO_FATAL_FAILURE(task = taskCreate());
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
     ASSERT_TRUE(task);
     const std::string accessCode(task->accessCode());
     const auto prescriptionId = task->prescriptionId();
@@ -1313,12 +1311,12 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
     ASSERT_EQ(messagePointer.Get(outerErrorResponseDocument), nullptr); // field "message" does not exist;
 }
 
-TEST_F(ErpWorkflowTest, ErrorResponseNoInnerRequest) // NOLINT
+TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
 {
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     const std::string kvnr{"X987654321"};
     const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20");
@@ -1364,3 +1362,61 @@ TEST_F(ErpWorkflowTest, ErrorResponseNoInnerRequest) // NOLINT
         innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
         "HTTP parser did not finish correctly, Content-Length field is too large.");
 }
+
+TEST_P(ErpWorkflowTestP, InnerRequestFlowtype) // NOLINT
+{
+    std::string accessCode;
+    ClientResponse outerResponse;
+
+    const model::PrescriptionId prescriptionId_apothekenpflichigeArzneimittel =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 999999);
+    const std::string activePath = "/Task/" + prescriptionId_apothekenpflichigeArzneimittel.toString() + "/$activate";
+    RequestArguments args{HttpMethod::POST, activePath, {}};
+
+    // Send request with PrescriptionType =  apothekenpflichigeArzneimittel
+    ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
+    EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
+        std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(model::PrescriptionType::apothekenpflichigeArzneimittel)));
+
+
+    // Send request with PrescriptionType =  direkteZuweisung
+    const model::PrescriptionId prescriptionId_direkteZuweisung =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 999999);
+    args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString() + "/$activate";
+
+    ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
+    EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
+        std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(model::PrescriptionType::direkteZuweisung)));
+
+    // Send request with operation $reject
+    args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString() + "/$reject";
+    ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
+    EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
+              std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(model::PrescriptionType::direkteZuweisung)));
+
+    // Send request with HttpMethod::GET
+    args.vauPath = "/MedicationDispense/" + prescriptionId_direkteZuweisung.toString();
+    args.method = HttpMethod::GET;
+    ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
+    EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value_or("XXX"),"XXX");
+}
+
+TEST_P(ErpWorkflowTestP, OperationOutcomeIncodeValidation)// NOLINT
+{
+    std::optional<model::PrescriptionId> prescriptionId;
+    std::string accessCode;
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
+    std::string kvnr;
+    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
+    auto bundle =
+        ResourceManager::instance().getStringResource("test/validation/xml/kbv/bundle/Bundle_invalid_erp_8431.xml");
+    bundle = String::replaceAll(bundle, "REPLACE_ME_taskId", prescriptionId->toString());
+    const auto& qes = toCadesBesSignature(bundle);
+    ASSERT_NO_FATAL_FAILURE(taskActivate(*prescriptionId, accessCode, qes, HttpStatus::BadRequest,
+                                         model::OperationOutcome::Issue::Type::invalid, "mandatory identifier.value not set"));
+}
+
+
+INSTANTIATE_TEST_SUITE_P(ErpWorkflowTestPInst, ErpWorkflowTestP,
+                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                         model::PrescriptionType::direkteZuweisung));

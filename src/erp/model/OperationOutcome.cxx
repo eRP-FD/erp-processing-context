@@ -77,10 +77,13 @@ OperationOutcome::Issue::Type OperationOutcome::Issue::stringToType(std::string 
 
 
 OperationOutcome::OperationOutcome(Issue&& primaryIssue)
-    : Resource<OperationOutcome>()
+    : Resource<OperationOutcome>(Resource::NoProfile,
+                                 []() {
+                                     std::call_once(onceFlag, initTemplates);
+                                     return operationOutcomeTemplate;
+                                 }()
+                                     .instance())
 {
-    std::call_once(onceFlag, initTemplates);
-    initFromTemplate(*operationOutcomeTemplate);
     addIssue(std::move(primaryIssue));
 }
 

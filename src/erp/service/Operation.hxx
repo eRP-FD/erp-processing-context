@@ -31,11 +31,23 @@ enum class Operation
     GET_AuditEvent_id,
     GET_Device,
     GET_metadata,
+    // PKV specific:  ->
+    DELETE_ChargeItem_id,
+    GET_ChargeItem,
+    GET_ChargeItem_id,
+    POST_ChargeItem,
+    PUT_ChargeItem_id,
+    DELETE_Consent_id,
+    GET_Consent,
+    POST_Consent,
+    // <-
     GET_notifications_opt_in,
     GET_notifications_opt_out,
 
     POST_VAU_up,
-    GET_Health
+    GET_Health,
+
+    POST_Subscription
 };
 
 const std::string_view& toString (Operation operation);

@@ -11,7 +11,7 @@
 #include "erp/hsm/production/HsmProductionClient.hxx"
 
 #include "mock/hsm/HsmMockClient.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/HsmTestBase.hxx"
 
 
@@ -45,7 +45,7 @@ TEST_F(HsmSessionReconnectTest, triggerReconnect_fail)
     };
 
     TestClient client;
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
     auto session = HsmSession (client, *blobCache, {});
 
     ASSERT_EQ(client.reconnectCallCount, 0u);
@@ -82,7 +82,7 @@ TEST_F(HsmSessionReconnectTest, triggerReconnect_successAfterReconnect)
     };
 
     TestClient client;
-    auto blobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
     auto session = HsmSession (client, *blobCache, {});
 
     ASSERT_EQ(client.reconnectCallCount, 0u);

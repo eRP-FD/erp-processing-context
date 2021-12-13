@@ -89,7 +89,7 @@ namespace
      * An expired session should happen seldodmly enough so that using an exception to notify it to the caller is
      * an acceptable overhead.
      */
-    void handleExpiredSession (const int status)
+    void handleExpiredSession(const uint32_t status)
     {
         switch(status)
         {

@@ -6,6 +6,7 @@
 #include "erp/server/response/ServerResponseWriter.hxx"
 
 #include "erp/beast/BoostBeastStringWriter.hxx"
+#include "erp/server/AccessLog.hxx"
 #include "erp/server/response/ValidatedServerResponse.hxx"
 #include "erp/server/SslStream.hxx"
 
@@ -14,7 +15,7 @@
 #include <boost/beast/http/write.hpp>
 
 namespace {
-    auto convertResponse (ValidatedServerResponse&& input)
+    auto convertResponse (ValidatedServerResponse&& input, AccessLog* accessLog)
     {
         auto response = std::make_shared<boost::beast::http::response<boost::beast::http::string_body>>();
 
@@ -32,6 +33,11 @@ namespace {
         for (const auto& field : input.getHeader().headers())
             response->set(field.first, field.second);
 
+        if (accessLog)
+        {
+            accessLog->keyValue("response-body-length", response->body().size());
+        }
+
         return response;
     }
 }
@@ -44,9 +50,10 @@ ServerResponseWriter::ServerResponseWriter(void)
 
 void ServerResponseWriter::write (
     SslStream& stream,
-    ValidatedServerResponse&& validatedResponse)
+    ValidatedServerResponse&& validatedResponse,
+    AccessLog* accessLog)
 {
-    auto response = convertResponse(std::move(validatedResponse));
+    auto response = convertResponse(std::move(validatedResponse), accessLog);
 
     boost::beast::http::response_serializer<boost::beast::http::string_body> serializer(*response);
     serializer.limit(Constants::DefaultBufferSize);
@@ -58,10 +65,11 @@ void ServerResponseWriter::write (
 void ServerResponseWriter::writeAsynchronously (
     SslStream& stream,
     ValidatedServerResponse&& validatedResponse,
-    Callback callback)
+    Callback callback,
+    AccessLog* accessLog)
 {
     // Set up a boost::beast response object.
-    auto response = convertResponse(std::move(validatedResponse));
+    auto response = convertResponse(std::move(validatedResponse), accessLog);
 
     // Set up a serializer for the response.
     auto serializer = std::make_shared<boost::beast::http::response_serializer<boost::beast::http::string_body>>(*response);

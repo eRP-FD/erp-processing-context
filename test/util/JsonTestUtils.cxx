@@ -129,7 +129,7 @@ CommunicationJsonStringBuilder& CommunicationJsonStringBuilder::setAbout(const s
 std::string CommunicationJsonStringBuilder::createJsonString() const
 {
     static constexpr const char* fmtSpecProfile = R"(
-            "meta": {"profile": ["https://gematik.de/fhir/StructureDefinition/ErxCommunication%1%"]})";
+            "meta": {"profile": ["%1%"]})";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
             "basedOn": [{"reference": "Task/%1%"}])";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
@@ -147,7 +147,9 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     static constexpr const char* fmtSpecPayloadContentString = R"(
             "payload": [{ "contentString": "%1%" }])";
     std::string body = R"({"resourceType": "Communication",)";
-    body += boost::str(boost::format(fmtSpecProfile) % Communication::messageTypeToString(mMessageType));
+    body += boost::str(
+        boost::format(fmtSpecProfile) % ::model::ResourceVersion::versionizeProfile(::std::string{"https://gematik.de/fhir/StructureDefinition/ErxCommunication"} +
+                                                                                    ::std::string{Communication::messageTypeToString(mMessageType)}));
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += "," + boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
     else if (mPrescriptionId.has_value())
@@ -176,7 +178,7 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
 std::string CommunicationJsonStringBuilder::createXmlString() const
 {
     static constexpr const char* fmtSpecProfile = R"(
-            <meta> <profile value="https://gematik.de/fhir/StructureDefinition/ErxCommunication%1%" /></meta>)";
+            <meta> <profile value="%1%" /></meta>)";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
             <basedOn> <reference value="Task/%1%"/> </basedOn>)";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
@@ -194,7 +196,7 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
     static constexpr const char* fmtSpecPayloadContentString = R"(
             <payload> <contentString value="%1%"/> </payload>)";
     std::string body = R"(<Communication xmlns="http://hl7.org/fhir">)";
-    body += boost::str(boost::format(fmtSpecProfile) % Communication::messageTypeToString(mMessageType));
+    body += boost::str(boost::format(fmtSpecProfile) % ::model::ResourceVersion::versionizeProfile(::std::string{"https://gematik.de/fhir/StructureDefinition/ErxCommunication"} +  ::std::string{Communication::messageTypeToString(mMessageType)}));
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
     else if (mPrescriptionId.has_value())

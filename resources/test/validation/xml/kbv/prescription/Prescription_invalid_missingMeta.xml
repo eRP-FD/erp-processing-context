@@ -73,10 +73,6 @@
     <patientInstruction value="morgens und nachmittags einnehmen"/>
   </dosageInstruction>
   <dispenseRequest>
-    <validityPeriod>
-      <start value="2021-03-01"/>
-      <end value="2021-03-31"/>
-    </validityPeriod>
     <quantity>
       <value value="1" />
       <system value="http://unitsofmeasure.org" />

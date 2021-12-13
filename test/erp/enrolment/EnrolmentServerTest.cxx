@@ -5,24 +5,33 @@
 
 #include "erp/enrolment/EnrolmentServer.hxx"
 #include "erp/client/HttpsClient.hxx"
+#include "erp/database/DatabaseFrontend.hxx"
+#include "erp/database/PostgresBackend.hxx"
 #include "erp/enrolment/EnrolmentModel.hxx"
 #include "erp/enrolment/EnrolmentRequestHandler.hxx"
 #include "erp/erp-serverinfo.hxx"
+#include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "erp/hsm/TeeTokenUpdater.hxx"
 #include "erp/tpm/Tpm.hxx"
 #if !defined __APPLE__ && !defined _WIN32
 #include "erp/tpm/TpmProduction.hxx"
 #endif
 #include "erp/util/Base64.hxx"
 #include "erp/util/Hash.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
+#include "mock/hsm/HsmMockFactory.hxx"
+#include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
 #include "mock/tpm/TpmTestData.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/MockAndProductionTestBase.hxx"
+#include "test/util/TestConfiguration.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 
 #include <gtest/gtest.h>
 
@@ -51,6 +60,9 @@ public:
     {
         MockAndProductionTestBase<Tpm::Factory>::SetUp();
 
+        // Clear the database.
+        BlobDatabaseHelper::removeUnreferencedBlobs();
+
         blobCache = createBlobCache();
 
         // If the tpm factory (stored in `parameter`) is missing or does produce an empty reference
@@ -62,9 +74,6 @@ public:
             GTEST_SKIP();
             return;
         }
-
-        // Clear the database.
-        BlobDatabaseHelper::clearBlobDatabase();
 
         if (mServer == nullptr)
         {
@@ -87,6 +96,8 @@ public:
 
     virtual void TearDown (void) override
     {
+        BlobDatabaseHelper::removeUnreferencedBlobs();
+
         if (mServer != nullptr)
         {
             mServer->shutDown();
@@ -115,7 +126,10 @@ public:
     void checkResponseHeader (const ClientResponse& response, const HttpStatus expectedStatus)
     {
         ASSERT_EQ(response.getHeader().status(), expectedStatus);
-        ASSERT_EQ(response.getHeader().header(Header::ContentType), MimeType::json);
+        if (!response.getBody().empty())
+        {
+            ASSERT_EQ(response.getHeader().header(Header::ContentType), MimeType::json);
+        }
     }
 
     std::string createPutBody (
@@ -178,18 +192,241 @@ public:
         return std::chrono::duration_cast<std::chrono::seconds>(t.time_since_epoch()).count();
     }
 
-private:
-    std::unique_ptr<HttpsServer<EnrolmentServiceContext>> mServer;
+    const bool usePostgres = TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false);
 
+    std::unique_ptr<Database> database();
+
+    class UseKeyBlobGuard
+    {
+    public:
+
+        class DummyDerivation {
+        public:
+            DummyDerivation() : DummyDerivation{{"TEST_USE_POSTGRES", "false"}} {};
+            std::shared_ptr<BlobCache> cache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+            HsmPool mPool{std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), cache),
+                          TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
+            KeyDerivation derivation{mPool};
+        private:
+            DummyDerivation(const EnvironmentVariableGuard&) {}
+        };
+
+        static db_model::HashedKvnr dummyHashedKvnr()
+        {
+            return DummyDerivation{}.derivation.hashKvnr("X081547110");
+        }
+
+        static db_model::HashedTelematikId dummyHashedTelematikId()
+        {
+            return DummyDerivation{}.derivation.hashTelematikId("X-XY-MyDoc");
+        }
+
+        static void deleteTask(EnrolmentServerTest& parent, model::PrescriptionId prescriptionId)
+        {
+            if (parent.usePostgres)
+            {
+                pqxx::connection conn{PostgresBackend::defaultConnectString()};
+                pqxx::work txn{conn};
+                txn.exec_params0("DELETE FROM erp.task WHERE prescription_id = $1", prescriptionId.toDatabaseId());
+                txn.commit();
+            }
+            else
+            {
+                auto db = parent.database();
+                dynamic_cast<MockDatabaseProxy&>(db->getBackend()).deleteTask(prescriptionId);
+                db->commitTransaction();
+            }
+        }
+
+        static void deleteAuditEvent(EnrolmentServerTest& parent, const Uuid& eventId)
+        {
+            if (parent.usePostgres)
+            {
+                pqxx::connection conn{PostgresBackend::defaultConnectString()};
+                pqxx::work txn{conn};
+                txn.exec_params0("DELETE FROM erp.auditevent WHERE id = $1", std::string{eventId});
+                txn.commit();
+            }
+            else
+            {
+                auto db = parent.database();
+                dynamic_cast<MockDatabaseProxy&>(db->getBackend()).deleteAuditEvent(eventId);
+                db->commitTransaction();
+            }
+        }
+
+        void useTaskDerivationKey(EnrolmentServerTest& parent, BlobId blobId)
+        {
+            auto db = parent.database();
+            auto& backend = db->getBackend();
+            auto now = model::Timestamp::now();
+            auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                           model::Task::Status::draft, now, now);
+            backend.updateTask(std::get<0>(task), {}, blobId, {});
+            backend.commitTransaction();
+            releaseKeyBlob = [&parent, id = std::get<model::PrescriptionId>(task)]
+                             { deleteTask(parent, id); };
+        }
+
+        void useCommunicationDerivationKey(EnrolmentServerTest& parent, BlobId blobId)
+        {
+            auto db = parent.database();
+            auto& backend = db->getBackend();
+            auto now = model::Timestamp::now();
+            auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                           model::Task::Status::draft, now, now);
+            auto comm = backend.insertCommunication(std::get<model::PrescriptionId>(task),
+                                                    now, model::Communication::MessageType::DispReq,
+                                                    dummyHashedKvnr(),
+                                                    dummyHashedTelematikId(),
+                                                    std::nullopt, blobId, {}, blobId, {});
+            backend.commitTransaction();
+            Expect3(comm.has_value(), "Failed to create Communication message.", std::logic_error);
+            releaseKeyBlob = [&parent, id = std::get<model::PrescriptionId>(task), commId = *comm]
+                {
+                    auto db = parent.database();
+                    auto& backend = db->getBackend();
+                    backend.deleteCommunication(commId , dummyHashedKvnr());
+                    backend.commitTransaction();
+                    deleteTask(parent, id);
+                };
+        }
+
+        void useAuditLogDerivationKey(EnrolmentServerTest& parent, BlobId blobId)
+        {
+            auto db = parent.database();
+            auto& backend = db->getBackend();
+            auto now = model::Timestamp::now();
+            auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                           model::Task::Status::draft, now, now);
+            db_model::AuditData auditEvent(model::AuditEvent::AgentType::machine,model::AuditEventId::GET_Task, {{}},model::AuditEvent::Action::read, dummyHashedKvnr(),
+                                           4711, std::get<model::PrescriptionId>(task), blobId);
+            Uuid auditId{backend.storeAuditEventData(auditEvent)};
+            backend.commitTransaction();
+            releaseKeyBlob = [&parent, id = std::get<model::PrescriptionId>(task), auditId]
+                {
+                    deleteAuditEvent(parent, auditId);
+                    deleteTask(parent, id);
+                };
+        }
+
+
+        UseKeyBlobGuard(EnrolmentServerTest& parent, BlobType type, BlobId blobId)
+        {
+            switch (type)
+            {
+                case BlobType::TaskKeyDerivation:
+                    useTaskDerivationKey(parent, blobId);
+                    return;
+                case BlobType::CommunicationKeyDerivation:
+                    useCommunicationDerivationKey(parent, blobId);
+                    return;
+                case BlobType::AuditLogKeyDerivation:
+                    useAuditLogDerivationKey(parent, blobId);
+                    return;
+                case BlobType::KvnrHashKey:
+                case BlobType::TelematikIdHashKey:
+                case BlobType::VauSigPrivateKey:
+                case BlobType::EndorsementKey:
+                case BlobType::AttestationPublicKey:
+                case BlobType::AttestationKeyPair:
+                case BlobType::Quote:
+                case BlobType::EciesKeypair:
+                    Fail2("BlobType not supported by UseKeyBlobGuard", std::logic_error);
+                    break;
+            }
+            Fail2("BlobType unknown: " + std::to_string(int(type)), std::logic_error);
+        }
+        ~UseKeyBlobGuard()
+        {
+            try
+            {
+                releaseKeyBlob();
+            }
+            catch (const std::exception& ex)
+            {
+                TLOG(ERROR) << "Failed to release KeyBlob." << ex.what() ;
+            }
+        }
+
+        std::function<void(void)> releaseKeyBlob;
+
+    };
+
+
+private:
+
+    std::unique_ptr<HsmPool> mHsmPool;
+    std::unique_ptr<HttpsServer<EnrolmentServiceContext>> mServer;
+    std::unique_ptr<KeyDerivation> mKeyDerivation;
+    std::unique_ptr<MockDatabase> mMockDatabase;
+
+    HsmPool& hsmPool();
+    KeyDerivation& keyDerivation();
+    bool isBlobUsed(BlobId blobId);
     std::shared_ptr<BlobCache> createBlobCache (void)
     {
-        if (MockConfiguration::instance().getOptionalBoolValue(MockConfigurationKey::MOCK_USE_BLOB_DATABASE_MOCK, true))
-            return std::make_shared<BlobCache>(std::make_unique<MockBlobDatabase>());
-        else
+        if (usePostgres)
+        {
             return std::make_shared<BlobCache>(std::make_unique<ProductionBlobDatabase>());
+        }
+        else
+        {
+            auto mockBlobDatabase = std::make_unique<MockBlobDatabase>();
+            mockBlobDatabase->setBlobInUseTest( [this](BlobId blobId)
+                {
+                    return isBlobUsed(blobId);
+                });
+            return std::make_shared<BlobCache>(std::move(mockBlobDatabase));
+        }
     }
 };
 
+inline bool EnrolmentServerTest::isBlobUsed(BlobId blobId)
+{
+    auto db = database();
+    auto& backend = db->getBackend();
+    auto* mockBackend = dynamic_cast<const MockDatabaseProxy*>(&backend);
+    Expect3(mockBackend, "isBlobUsed should only be called with MockDatabase", std::logic_error);
+    return mockBackend->isBlobUsed(blobId);
+}
+
+inline KeyDerivation & EnrolmentServerTest::keyDerivation()
+{
+    if (!mKeyDerivation)
+    {
+        mKeyDerivation.reset(new KeyDerivation(hsmPool()));
+    }
+    return *mKeyDerivation;
+}
+
+inline std::unique_ptr<Database> EnrolmentServerTest::database()
+{
+    if (usePostgres)
+    {
+        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool(), keyDerivation());
+    }
+    else
+    {
+        if (!mMockDatabase)
+        {
+            mMockDatabase.reset(new MockDatabase{hsmPool()});
+        }
+        return std::make_unique<DatabaseFrontend>(
+            std::make_unique<MockDatabaseProxy>(*mMockDatabase), hsmPool(), keyDerivation());
+    }
+}
+
+inline HsmPool & EnrolmentServerTest::hsmPool()
+{
+    if (!mHsmPool)
+    {
+        mHsmPool.reset(new HsmPool(
+                           std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), blobCache),
+                           TeeTokenUpdater::createMockTeeTokenUpdaterFactory()));
+    }
+    return *mHsmPool;
+}
 
 TEST_P(EnrolmentServerTest, GetEnclaveStatus)
 {
@@ -699,10 +936,75 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)
     const auto endSeconds = toSecondsSinceEpoch(end);
 
     struct Descriptor {std::string name; BlobType type;};
-    for (const Descriptor resource : {Descriptor{"Task",          BlobType::TaskKeyDerivation},
-                                      Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
-                                      Descriptor{"AuditLog",      BlobType::AuditLogKeyDerivation}})
+    for (const Descriptor& resource : {Descriptor{"Task",          BlobType::TaskKeyDerivation},
+                                       Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
+                                       Descriptor{"AuditLog",      BlobType::AuditLogKeyDerivation}})
     {
+        std::string blobName = resource.name + "PostAndDeleteDerivationKey_success";
+        std::optional<BlobId> initialBlobId;
+        try
+        {
+            initialBlobId = blobCache->getBlob(resource.type).id;
+        }
+        catch (const ErpException&)
+        { // if there is no initial blob, `initialId` will remain empty
+        }
+
+        // Upload the resource
+        {
+            auto response = createClient().send(
+                ClientRequest(
+                    createHeader(HttpMethod::PUT, "/Enrolment/" + resource.name + "/DerivationKey"),
+                    createPutBody(blobName, "black box blob data", 11, {},startSeconds,endSeconds, {},{})));
+            checkResponseHeader(response, HttpStatus::Created);
+            ASSERT_EQ(response.getBody(), "");
+
+            const auto entry = blobCache->getBlob(resource.type);
+            ASSERT_EQ(entry.name, ErpVector::create(blobName));
+            ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
+            ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
+            ASSERT_TRUE(entry.startDateTime.has_value());
+            ASSERT_EQ(toSecondsSinceEpoch(entry.startDateTime.value()), startSeconds);
+            ASSERT_TRUE(entry.endDateTime.has_value());
+            ASSERT_EQ(toSecondsSinceEpoch(entry.endDateTime.value()), endSeconds);
+        }
+
+        // And delete it.
+        {
+            auto response = createClient().send(
+                ClientRequest(
+                    createHeader(HttpMethod::DELETE, "/Enrolment/" + resource.name + "/DerivationKey"),
+                    createDeleteBody(blobName)));
+            checkResponseHeader(response, HttpStatus::NoContent);
+            ASSERT_EQ(response.getBody(), "");
+            std::optional<BlobId> finalBlobId;
+            try
+            {
+                finalBlobId = blobCache->getBlob(resource.type).id;
+            }
+            catch (const ErpException&)
+            { // if there is no initial blob, `finalBlobId` will remain empty
+            }
+            ASSERT_EQ(initialBlobId, finalBlobId);
+        }
+    }
+}
+
+
+
+TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)
+{
+    const auto start = std::chrono::system_clock::now() - std::chrono::seconds(60);
+    const auto end = std::chrono::system_clock::now() + std::chrono::seconds(60);
+    const auto startSeconds = toSecondsSinceEpoch(start);
+    const auto endSeconds = toSecondsSinceEpoch(end);
+
+    struct Descriptor {std::string name; BlobType type;};
+    for (const Descriptor& resource : {Descriptor{"Task",          BlobType::TaskKeyDerivation},
+                                       Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
+                                       Descriptor{"AuditLog",      BlobType::AuditLogKeyDerivation}})
+    {
+        BlobId blobId;
         // Upload the resource
         {
             auto response = createClient().send(
@@ -720,6 +1022,20 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)
             ASSERT_EQ(toSecondsSinceEpoch(entry.startDateTime.value()), startSeconds);
             ASSERT_TRUE(entry.endDateTime.has_value());
             ASSERT_EQ(toSecondsSinceEpoch(entry.endDateTime.value()), endSeconds);
+            blobId = entry.id;
+        }
+
+        // Try to delete used Blob
+        {
+            UseKeyBlobGuard useBlob{*this, resource.type, blobId};
+            auto response = createClient().send(
+                ClientRequest(
+                    createHeader(HttpMethod::DELETE, "/Enrolment/" + resource.name + "/DerivationKey"),
+                    createDeleteBody(resource.name + "123")));
+
+            checkResponseHeader(response, HttpStatus::Conflict);
+            EXPECT_EQ(response.getBody(), "");
+            EXPECT_NO_THROW(blobCache->getBlob(resource.type, blobId));
         }
 
         // And delete it.
@@ -730,8 +1046,8 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)
                     createDeleteBody(resource.name + "123")));
 
             checkResponseHeader(response, HttpStatus::NoContent);
-            ASSERT_EQ(response.getBody(), "");
-            ASSERT_ANY_THROW(blobCache->getBlob(resource.type));
+            EXPECT_EQ(response.getBody(), "");
+            EXPECT_ANY_THROW(blobCache->getBlob(resource.type, blobId));
         }
     }
 }

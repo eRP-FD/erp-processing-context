@@ -10,7 +10,7 @@
 #include "erp/hsm/BlobCache.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
-#include "mock/hsm/MockBlobDatabase.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockRandom.hxx"
 
 
@@ -26,7 +26,7 @@ PostgresDatabaseTest::PostgresDatabaseTest() :
     mHsmPool(nullptr),
     mKeyDerivation(nullptr)
 {
-    mBlobCache = MockBlobCache::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    mBlobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
 
     auto blobCache = mBlobCache;
     mHsmPool = std::make_unique<HsmPool>(
@@ -70,7 +70,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)
 
         mockRng.SetRandomBytesOffset(0);
 
-        ASSERT_NO_THROW( cmac1st = db.acquireCmac(today, mockRng));
+        ASSERT_NO_THROW( cmac1st = db.acquireCmac(today, CmacKeyCategory::user, mockRng));
         db.commitTransaction();
         ASSERT_TRUE( cmac1st );
         {
@@ -92,7 +92,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)
         mockRng.SetRandomBytesOffset(1);
 
         std::optional<CmacKey> cmac2nd;
-        ASSERT_NO_THROW(cmac2nd = db.acquireCmac(today, mockRng));
+        ASSERT_NO_THROW(cmac2nd = db.acquireCmac(today, CmacKeyCategory::user, mockRng));
         db.commitTransaction();
         ASSERT_TRUE(cmac2nd);
         EXPECT_EQ(toHex(*cmac2nd), toHex(*cmac1st));

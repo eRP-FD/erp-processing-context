@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
+  <xs:element name="MedicationRequest" type="KBV_PR_ERP_Prescription"/>
+  <xs:complexType name="KBV_PR_ERP_Prescription">
+    <xs:sequence>
+      <xs:element name="id" type="id"/>
+      <xs:element name="meta" type="KBV_PR_ERP_Prescription.Meta"/>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="status" type="KBV_PR_ERP_Prescription.Status"/>
+      <xs:element name="intent" type="KBV_PR_ERP_Prescription.Intent"/>
+      <xs:element name="medicationReference" type="KBV_PR_ERP_Generics.SimpleReference"/>
+      <xs:element name="subject" type="KBV_PR_ERP_Generics.SimpleReference"/>
+      <xs:element name="authoredOn" type="KBV_PR_ERP_Prescription.date"/>
+      <xs:element name="requester" type="KBV_PR_ERP_Generics.SimpleReference"/>
+      <xs:element name="insurance" type="KBV_PR_ERP_Generics.SimpleReference"/>
+      <xs:element name="note" minOccurs="0" type="KBV_PR_ERP_Prescription.Annotation"/>
+      <xs:element name="dosageInstruction" minOccurs="0" type="KBV_PR_ERP_Prescription.Dosage"/>
+      <xs:element name="dispenseRequest" type="KBV_PR_ERP_Prescription.DispenseRequest"/>
+      <xs:element name="substitution" type="KBV_PR_ERP_Prescription.Substitution"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.date">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="KBV_PR_ERP_Prescription.date-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="KBV_PR_ERP_Prescription.date-primitive">
+    <xs:restriction base="string-primitive">
+      <xs:length value="10"/>
+      <xs:pattern value="\d{4}-\d{2}-\d{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="profile" type="KBV_PR_ERP_Prescription.Meta.profile"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Meta.profile">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Status">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="active"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Intent">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="order"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Annotation">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="text" type="markdown"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="KBV_PR_ERP_Prescription.Dosage.string-primitive">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="60"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Dosage.string">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="KBV_PR_ERP_Prescription.Dosage.string-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Dosage">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="text" type="KBV_PR_ERP_Prescription.Dosage.string" minOccurs="0"/>
+          <xs:element name="patientInstruction" type="KBV_PR_ERP_Prescription.Dosage.string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.DispenseRequest">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+           <xs:element name="validityPeriod" minOccurs="0" type="KBV_PR_ERP_Prescription.Period"/>
+          <xs:element name="quantity" type="KBV_PR_ERP_Generics.Quantity"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Period">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="start" type="dateTime"/>
+          <xs:element name="end" type="dateTime" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Substitution">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="allowedBoolean" type="boolean"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>
