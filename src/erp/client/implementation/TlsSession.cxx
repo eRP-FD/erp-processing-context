@@ -41,12 +41,12 @@ namespace
                 boost::asio::error::connection_reset      != ex.code() &&
                 boost::asio::error::not_connected         != ex.code())
             {
-                LOG(ERROR) << "Beast ex: " << ex.what();
+                TLOG(ERROR) << "Beast ex: " << ex.what();
             }
         }
         catch (const std::exception& ex)
         {
-            LOG(ERROR) << "Std ex: " << ex.what();
+            TLOG(ERROR) << "Std ex: " << ex.what();
         }
     }
 
@@ -61,7 +61,7 @@ namespace
 
         X509* cert = X509_STORE_CTX_get_current_cert(context.native_handle());
         X509_NAME_oneline(X509_get_subject_name(cert), subjectName, sizeof subjectName);
-        VLOG(1) << "verifying certificate " << subjectName << ", " << (succeded ? " has succeeded" : " has failed");
+        TVLOG(1) << "verifying certificate " << subjectName << ", " << (succeded ? " has succeeded" : " has failed");
 
         if ( ! succeded)
         {
@@ -70,20 +70,20 @@ namespace
             X509* errCert = X509_STORE_CTX_get_current_cert(context.native_handle());
             char buffer[256];
             X509_NAME_oneline(X509_get_subject_name(errCert), buffer, sizeof buffer);
-            VLOG(1) << "error " << error << " (" <<  X509_verify_cert_error_string(error)
+            TVLOG(1) << "error " << error << " (" <<  X509_verify_cert_error_string(error)
                     << " at depth " << errorDepth << " in " << buffer;
 
             auto certificateMemory = shared_BIO::make();
             if (!PEM_write_bio_X509(certificateMemory, errCert))
             {
-                VLOG(1) << "can not convert certificate to PEM string";
+                TVLOG(1) << "can not convert certificate to PEM string";
             }
             else
             {
                 char* data = nullptr;
                 const size_t length = BIO_get_mem_data(certificateMemory, &data);
                 std::string errCertPem(data, length);
-                VLOG(1) << "problem certificate:\n" << errCertPem << "\n\n";
+                TVLOG(1) << "problem certificate:\n" << errCertPem << "\n\n";
             }
         }
 
@@ -209,14 +209,6 @@ TlsSession::TlsSession(
     Expect(mConnectionTimeoutSeconds > 0, "Connection timeout must be greater than 0.");
 
     configureContext(enforceServerAuthentication, caCertificates, clientCertificate, clientPrivateKey, forcedCiphers);
-
-    /* BEWARE: do not use `mSslStream` prior to its creation point below. */
-
-    /* The creation is delayed on purpose such that `mSslContext`
-       is configured correctly before any session could depend on it. */
-    mSslStream = SslStream::create(mIoContext, mSslContext);
-
-    mTicket = std::make_unique<TlsSessionTicketImpl>(mSslStream);
 }
 
 
@@ -232,6 +224,9 @@ void TlsSession::establish (const bool trustCn)
     {
         try
         {
+            mSslStream = SslStream::create(mIoContext, mSslContext);
+            mTicket = std::make_unique<TlsSessionTicketImpl>(mSslStream);
+
             configureSession(trustCn);
 
             mTicket->use();
@@ -239,33 +234,37 @@ void TlsSession::establish (const bool trustCn)
             mSslStream.handshake(boost::asio::ssl::stream_base::client);
 
             mTicket->save();
+
+            break;
         }
         catch(const boost::system::system_error& e)
         {
-            if (e.code().value() == static_cast<int>(boost::beast::error::timeout))
+            if (e.code() == boost::beast::error::timeout)
             {
-                TLOG(ERROR) << "timeout in TLS handshake";
+                TLOG(ERROR) << "timeout in TLS handshake (" << mHostName << ":" << mPort << ")";
                 throw; // No retry for timeouts.
             }
             else if (index+1 == tryCount)
             {
-                TLOG(ERROR) << "caught exception in TLS handshake";
+                TLOG(ERROR) << "caught exception in TLS handshake (" << mHostName << ":" << mPort << ")";
                 throw;
             }
             else
             {
-                TLOG(WARNING) << "caught exception " << e.what() << " in TLS handshake; ignoring it and trying again";
+                TLOG(WARNING) << "caught exception " << e.what() << " in TLS handshake; ignoring it and trying again  ("
+                              << mHostName << ":" << mPort << ")";
             }
         }
         catch(...)
         {
             if (index+1 == tryCount)
             {
-                TLOG(ERROR) << "caught exception in TLS handshake";
+                TLOG(ERROR) << "caught exception in TLS handshake (" << mHostName << ":" << mPort << ")";
                 throw;
             }
             else
-                TLOG(WARNING) << "caught exception in TLS handshake; ignoring it and trying again";
+                TLOG(WARNING) << "caught exception in TLS handshake; ignoring it and trying again (" << mHostName << ":"
+                              << mPort << ")";
         }
     }
 }
@@ -284,8 +283,6 @@ void TlsSession::teardown ()
                                                  boost::asio::ip::tcp::socket::shutdown_both);
                                             socket.close();
                                         });
-
-//    mTicket.reset();
 }
 
 
@@ -371,7 +368,7 @@ void TlsSession::configureContext(
     {
         if (context & SSL_CB_ALERT)
         {
-            VLOG(3) << ((context & SSL_CB_WRITE) ? "wrote" : "read")
+            TVLOG(3) << ((context & SSL_CB_WRITE) ? "wrote" : "read")
                     << " TLS alert = "
                     << SSL_alert_desc_string_long(value)
                     << ", of type = "

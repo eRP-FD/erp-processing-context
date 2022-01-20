@@ -91,7 +91,8 @@ void EnrolmentRequestHandlerBase::handleRequest (EnrolmentSession& session)
 {
     try
     {
-        handleBasicAuthentication(session);
+        handleBasicAuthentication(session, ConfigurationKey::ENROLMENT_API_CREDENTIALS,
+                                  ConfigurationKey::DEBUG_DISABLE_ENROLMENT_API_AUTH);
 
         const auto document = doHandleRequest(session);
         session.response.setBody(document.serializeToString());
@@ -121,26 +122,6 @@ void EnrolmentRequestHandlerBase::handleRequest (EnrolmentSession& session)
         session.accessLog.error("caught exception in EnrolmentRequestHandlerBase::handleRequest");
         session.response.setStatus(HttpStatus::InternalServerError);
         session.response.withoutBody();
-    }
-}
-
-
-void EnrolmentRequestHandlerBase::handleBasicAuthentication(const EnrolmentSession& session)
-{
-    if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_ENROLMENT_API_AUTH, false) == false)
-    {
-        SafeString secret(Configuration::instance().getSafeStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS));
-        ErpExpect(session.request.header().hasHeader(Header::Authorization), HttpStatus::Unauthorized, "Authorization required.");
-        auto parts = String::split(session.request.header().header(Header::Authorization).value_or(""), " ");
-        if (parts.size() == 2)
-        {
-            SafeString authSecret(std::move(parts[1]));
-            ErpExpect(String::toLower(parts[0]) == "basic" && authSecret == secret, HttpStatus::Unauthorized, "Unauthorized");
-        }
-        else
-        {
-            ErpExpect(false, HttpStatus::Unauthorized, "Unauthorized (unsupported authorization content.)");
-        }
     }
 }
 

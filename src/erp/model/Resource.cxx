@@ -640,23 +640,27 @@ ResourceVersion::DeGematikErezeptWorkflowR4 getOldestVersion<ResourceVersion::De
 template<class TDerivedModel, typename SchemaVersionType>
 SchemaVersionType Resource<TDerivedModel, SchemaVersionType>::getSchemaVersion() const
 {
-    static const rj::Pointer profileArrayPtr("/meta/profile");
-    static const rj::Pointer profilePtr("/meta/profile/0");
-    const auto* metaArray = getValue(profileArrayPtr);
-    ModelExpect(metaArray && metaArray->IsArray(), "/meta/profile array not found");
-    ModelExpect(metaArray->Size() == 1, "/meta/profile array must have size 1");
-    const auto profileString = getStringValue(profilePtr);
-    const auto parts = String::split(profileString, '|');
-    if (parts.size() == 2)
+    if constexpr (!std::is_same_v<SchemaVersionType, ResourceVersion::NotProfiled>)
     {
-        return getSchemaVersionT<SchemaVersionType>(parts[1]);
+        static const rj::Pointer profileArrayPtr("/meta/profile");
+        static const rj::Pointer profilePtr("/meta/profile/0");
+        const auto* metaArray = getValue(profileArrayPtr);
+        ModelExpect(metaArray && metaArray->IsArray(), "/meta/profile array not found");
+        ModelExpect(metaArray->Size() == 1, "/meta/profile array must have size 1");
+        const auto profileString = getStringValue(profilePtr);
+        const auto parts = String::split(profileString, '|');
+        if (parts.size() == 2)
+        {
+            return getSchemaVersionT<SchemaVersionType>(parts[1]);
+        }
+        else
+        {
+            // assume oldest supported version.
+            // TODO ERP-7953: remove this when unversionized profiles are no longer supported.
+            return getOldestVersion<SchemaVersionType>();
+        }
     }
-    else
-    {
-        // assume oldest supported version.
-        // TODO ERP-7953: remove this when unversionized profiles are no longer supported.
-        return getOldestVersion<SchemaVersionType>();
-    }
+    return {};
 }
 
 UnspecifiedResource::UnspecifiedResource(NumberAsStringParserDocument&& document)
@@ -691,7 +695,7 @@ template class Resource<KbvPracticeSupply, ResourceVersion::KbvItaErp>;
 template class Resource<MedicationDispense>;
 template class Resource<MetaData>;
 template class Resource<OperationOutcome>;
-template class Resource<Parameters>;
+template class Resource<Parameters, ResourceVersion::NotProfiled>;
 template class Resource<Patient, ResourceVersion::KbvItaErp>;
 template class Resource<Reference>;
 template class Resource<Signature>;

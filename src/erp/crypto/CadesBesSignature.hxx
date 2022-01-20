@@ -39,8 +39,12 @@ public:
     CadesBesSignature(const std::list<Certificate>& trustedCertificates, const std::string& base64Data);
 
     /// @brief initialize from plain payload data, that shall be signed using cert and privateKey.
-    CadesBesSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey, const std::string& payload,
-                      const std::optional<model::Timestamp>& signingTime = std::nullopt);
+    CadesBesSignature(
+        const Certificate& cert,
+        const shared_EVP_PKEY& privateKey,
+        const std::string& payload,
+        const std::optional<model::Timestamp>& signingTime = std::nullopt,
+        OcspResponsePtr ocspResponse = {});
 
     /// @brief returns the the signature as CMS file.
     std::string get();

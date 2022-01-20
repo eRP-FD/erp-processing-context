@@ -27,6 +27,22 @@ public:
     {
     }
 
+    TrustStore::OcspResponseData
+    getCertificateOcspResponse(
+        const TslMode tslMode,
+        X509Certificate &certificate,
+        const std::unordered_set<CertificateType> &typeRestrictions,
+        const bool forceOcspRequest) override
+    {
+        if (failOcspRetrieval)
+            throw std::runtime_error("OCSP RETRIEVAL FAILURE");
+        return TslManager::getCertificateOcspResponse(
+            tslMode,
+            certificate,
+            typeRestrictions,
+            forceOcspRequest);
+    }
+
     void healthCheckTsl() const override
     {
         if (failTsl)
@@ -39,7 +55,9 @@ public:
             throw std::runtime_error("BNA FAILURE");
         TslManager::healthCheckBna();
     }
+
     static bool failTsl;
     static bool failBna;
+    static bool failOcspRetrieval;
 };
 #endif

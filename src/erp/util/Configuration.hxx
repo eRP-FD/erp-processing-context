@@ -128,11 +128,18 @@ enum class ConfigurationKey
     // Feature related configuration
     FEATURE_PKV,
 
+    // Admin interface settings
+    ADMIN_SERVER_INTERFACE,
+    ADMIN_SERVER_PORT,
+    ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS,
+    ADMIN_CREDENTIALS,
+
     // Debug related configuration
     DEBUG_DISABLE_REGISTRATION,
     DEBUG_DISABLE_DOS_CHECK,
     DEBUG_ENABLE_HSM_MOCK,
     DEBUG_DISABLE_ENROLMENT_API_AUTH,
+    DEBUG_DISABLE_ADMIN_AUTH,
     DEBUG_DISABLE_QES_ID_CHECK
 };
 

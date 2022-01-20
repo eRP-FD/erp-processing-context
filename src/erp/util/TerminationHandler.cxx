@@ -3,14 +3,49 @@
  * (C) Copyright IBM Corp. 2021
  */
 
+#include "erp/util/PeriodicTimer.hxx"
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/SignalHandler.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/ThreadNames.hxx"
+#include "Expect.hxx"
 
 #include <iostream>
 #include <memory>
 
+class TerminationHandler::ShutdownDelayTimer : public OneShotTimer
+{
+public:
+    using OneShotTimer::OneShotTimer;
+
+protected:
+    void timerHandler() override
+    {
+        SignalHandler::gracefulShutdown();
+    }
+};
+
+class TerminationHandler::CountDownTimer : public PeriodicTimer
+{
+public:
+    explicit CountDownTimer(int countDownSecondsStart)
+        : PeriodicTimer(std::chrono::seconds(1))
+        , secondsLeft(countDownSecondsStart)
+    {
+        TLOG(WARNING) << "shutdown in " << secondsLeft;
+    }
+
+protected:
+    void timerHandler() override
+    {
+        TLOG(WARNING) << "shutdown in " << --secondsLeft;
+    }
+
+private:
+    int secondsLeft;
+};
+
+TerminationHandler::~TerminationHandler() = default;
 
 std::unique_ptr<TerminationHandler>& TerminationHandler::rawInstance (void)
 {
@@ -23,7 +58,8 @@ TerminationHandler::TerminationHandler (void)
     : mMutex(),
       mCallbacks(),
       mState(State::Running),
-      mHasError(false)
+      mHasError(false),
+      mShutdownDelayTimer(std::make_unique<ShutdownDelayTimer>())
 {
 }
 
@@ -54,7 +90,7 @@ void TerminationHandler::notifyTerminationCallbacks(bool hasError)
         mHasError = mHasError || hasError;
     }
 
-    if (setState(State::Terminating) != State::Running)
+    if (setState(State::Terminating) == State::Terminated)
     {
         // This is another request for termination. That should not occur. But as throwing an exception in this
         // situation would not help anyone and would probably terminate the application hard (with crash to desktop)
@@ -68,6 +104,21 @@ void TerminationHandler::notifyTerminationCallbacks(bool hasError)
 void TerminationHandler::terminate()
 {
     SignalHandler::manualTermination();
+}
+
+void TerminationHandler::gracefulShutdown(boost::asio::io_context& ioContext, int delaySeconds)
+{
+    setState(State::Terminating);
+    if (delaySeconds <= 0)
+    {
+        SignalHandler::gracefulShutdown();
+    }
+    else
+    {
+        mShutdownDelayTimer->start(ioContext, std::chrono::seconds(delaySeconds));
+        mCountDownTimer = std::make_unique<CountDownTimer>(delaySeconds);
+        mCountDownTimer->start(ioContext, std::chrono::seconds(1));
+    }
 }
 
 TerminationHandler::State TerminationHandler::setState (const State newState)
@@ -133,4 +184,18 @@ void TerminationHandler::callTerminationCallbacks (void)
 void TerminationHandler::setRawInstance (std::unique_ptr<TerminationHandler>&& newInstance)
 {
     rawInstance() = std::move(newInstance);
+}
+
+
+bool TerminationHandler::isShuttingDown() const
+{
+    switch(mState)
+    {
+        case State::Running:
+            return false;
+        case State::Terminating:
+        case State::Terminated:
+            return true;
+    }
+    Fail("TerminationHandler invalid state: " + std::to_string(static_cast<uintmax_t>(mState.load())));
 }

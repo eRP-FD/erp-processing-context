@@ -26,19 +26,16 @@
 #include "test/util/TestConfiguration.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
+#include "test/erp/pc/CFdSigErpTestHelper.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 #include <csignal>
 
 /**
- *  The tests in this file take some time to finish (about 5 seconds) and only one of them can run successfully per
- *  test run. That is caused by the processing context application not being designed to be restarted after it has
- *  shut down.
- *  Therefore all test are disabled by default. Run tests that you are interested in manually.
+ *  The tests in this file take some time to finish.
  *
  *  All tests start the application, wait until it has initialized and is listening for incoming requests and then
- *  stop the application.
- *  They differ only in *how* they stop the application. One calls TerminationHandler.notifyTerminationCallbacks() while the
- *  others raise different signals.
+ *  stop the application in different ways, e.g. by signal, or admin/shutdown request.
  */
 
 #ifdef _WINNT_
@@ -67,14 +64,6 @@ public:
         mCaDerPathGuard.reset();
     }
 
-    static std::unique_ptr<RegistrationInterface> createMockRegistration (void)
-    {
-        return std::make_unique<RegistrationManager>(
-            "tee-host",
-            static_cast<uint16_t>(1234),
-            std::make_unique<MockRedisStore>());
-    }
-
     /**
      * Start the application with all servers and asynchronous services.
      * Wait until they are all initialized and running.
@@ -91,7 +80,6 @@ public:
                 // Run the processing context in a thread so that it does not block the test.
                 ThreadNames::instance().setCurrentThreadName("pc-main");
                 ErpMain::Factories factories;
-                factories.registrationFactory = [](const uint16_t, const Configuration&){return createMockRegistration();};
                 factories.databaseFactory =
                 [] (HsmPool& hsmPool, KeyDerivation& keyDerivation) -> std::unique_ptr<Database>
                 {
@@ -114,12 +102,13 @@ public:
                 };
                 factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
 
-                factories.tslManagerFactory =
-                    [] (auto)
-                    {
-                    //  return std::shared_ptr<TslManager>();
-                        return TslTestHelper::createTslManager<TslManager>();
-                    };
+                factories.tslManagerFactory = [](auto) {
+                    auto cert = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErp);
+                    auto certCA = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErpSigner);
+                    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
+                    return TslTestHelper::createTslManager<TslManager>(
+                        {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+                };
 
                 factories.redisClientFactory =
                     []
@@ -226,7 +215,7 @@ public:
 
 TEST_F(ErpMainTest, runProcessingContext_manualTermination)
 {
-#ifndef DEBUG
+#ifdef NDEBUG
     GTEST_SKIP_("disabled in release build");
 #endif
     runApplication(
@@ -237,11 +226,59 @@ TEST_F(ErpMainTest, runProcessingContext_manualTermination)
 
 TEST_F(ErpMainTest, runProcessingContext_SIGTERM)
 {
-#ifndef DEBUG
+#ifdef NDEBUG
     GTEST_SKIP_("disabled in release build");
 #endif
     runApplication(
         []{std::raise(SIGTERM);});
+    SUCCEED();
+}
+
+TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
+{
+    EnvironmentVariableGuard disableAdminApiAuth{"DEBUG_DISABLE_ADMIN_AUTH", "true"};
+    runApplication(
+        []
+        {
+            auto& config = Configuration::instance();
+            HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                               std::stoi(config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
+            const auto response = client.send(
+                ClientRequest(
+                    Header(HttpMethod::POST, "/admin/shutdown", 11,
+                           {
+                               {Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
+                           },
+                           HttpStatus::Unknown),
+                    "delay-seconds=1"));
+
+            ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
+        });
+    SUCCEED();
+}
+
+TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
+{
+    EnvironmentVariableGuard disableAdminApiAuth{"DEBUG_DISABLE_ADMIN_AUTH", "true"};
+    runApplication(
+        []
+        {
+            auto& config = Configuration::instance();
+            HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                               std::stoi(config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
+            const auto response = client.send(
+                ClientRequest(
+                    Header(HttpMethod::POST, "/admin/shutdown", 11,
+                           {
+                               {Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
+                           },
+                           HttpStatus::Unknown),
+                    "delay-seconds=1"));
+
+            ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
+
+            std::raise(SIGTERM);
+        });
     SUCCEED();
 }
 

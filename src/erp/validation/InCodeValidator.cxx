@@ -19,6 +19,7 @@
 #include "erp/validation/KbvPatientValidator.hxx"
 #include "erp/validation/KbvPractitionerValidator.hxx"
 #include "erp/validation/KbvPracticeSupplyValidator.hxx"
+#include "erp/validation/XmlValidator.hxx"
 
 
 InCodeValidator::InCodeValidator()
@@ -123,4 +124,11 @@ void InCodeValidator::validate(const model::ResourceBase& resource, SchemaType s
         Expect(candidate->second, "nullptr registered as resource validator");
         candidate->second->validate(resource, xmlValidator, *this);
     }
+}
+
+void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType,
+                               model::ResourceVersion::NotProfiled, const XmlValidator&) const
+{
+    Expect(mMandatoryValidation.count(schemaType) == 0,
+           "In-code validation not supported for un-profiled resources.");
 }

@@ -66,7 +66,7 @@
       <xs:extension base="Element">
         <xs:sequence>
           <xs:element name="identifier" type="PayorIdentifier.Identifier" minOccurs="0"/>
-          <xs:element name="display" type="string"/>
+          <xs:element name="display" type="string-45"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -78,7 +78,7 @@
           <xs:element name="use" type="IdentifierUse.restricted" minOccurs="0"/>
           <xs:element name="type" type="PayorIdentifier.CodeableConcept" minOccurs="0"/>
           <xs:element name="system" type="IKNR.Identifier.uri"/>
-          <xs:element name="value" type="string"/>
+          <xs:element name="value" type="string-9"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>

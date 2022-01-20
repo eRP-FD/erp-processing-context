@@ -15,6 +15,7 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 #include <shared_mutex>
 
@@ -73,6 +74,7 @@ public:
                                           MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
                                       TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
             StaticData::getJsonValidator(), StaticData::getXmlValidator(), StaticData::getInCodeValidator(),
+            std::make_unique<RegistrationMock>(),
             TslTestHelper::createTslManager<TslManager>());
     }
 

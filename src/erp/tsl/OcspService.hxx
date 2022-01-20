@@ -99,7 +99,8 @@ public:
         const OcspUrl& ocspUrl,
         TrustStore& trustStore,
         const bool validateHashExtension,
-        const OcspResponsePtr& ocspResponse = {});
+        const OcspResponsePtr& ocspResponse = {},
+        const bool forceOcspRequest = false);
 
     /**
      * Gets the OCSP status for the TSL signer certificate.

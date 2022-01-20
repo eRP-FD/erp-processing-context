@@ -17,6 +17,7 @@
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test_config.h"
+#include "test/mock/RegistrationMock.hxx"
 
 #include <gtest/gtest.h>
 
@@ -39,6 +40,7 @@ public:
               StaticData::getJsonValidator(),
               StaticData::getXmlValidator(),
               StaticData::getInCodeValidator(),
+              std::make_unique<RegistrationMock>(),
               TslTestHelper::createTslManager<TslManager>())
     {
     }
@@ -81,6 +83,8 @@ public:
             case SchemaType::Gem_erxMedicationDispense:
                 testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, schemaType, expectFail);
                 break;
+            case SchemaType::ActivateTaskParameters:
+            case SchemaType::CreateTaskParameters:
             case SchemaType::Gem_erxOrganizationElement:
             case SchemaType::Gem_erxReceiptBundle:
             case SchemaType::Gem_erxTask:

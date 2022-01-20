@@ -6,6 +6,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_REGISTRATION_REGISTRATIONINTERFACE_HXX
 #define ERP_PROCESSING_CONTEXT_REGISTRATION_REGISTRATIONINTERFACE_HXX
 
+class ApplicationHealth;
 
 class RegistrationInterface
 {
@@ -15,6 +16,8 @@ public:
     virtual void registration() = 0;
     virtual void deregistration() = 0;
     virtual void heartbeat() = 0;
+    virtual bool registered() const = 0;
+    virtual void updateRegistrationBasedOnApplicationHealth(const ApplicationHealth& applicationHealth) = 0;
 };
 
 

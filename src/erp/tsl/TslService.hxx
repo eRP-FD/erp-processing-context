@@ -91,6 +91,8 @@ public:
      * @param trustStore                where to look for the certificate; may be updated
      *                                  during this call
      * @param ocspResponse              optional ocsp response that should be used for OCSP check if present
+     * @param forceOcspRequest          if true, the OCSP request must be done, provided OCSP-Response and OCSP-cache
+     *                                  are ignored
      *
      * @throws TslError                 in case of problems
      */
@@ -99,7 +101,9 @@ public:
         const std::unordered_set<CertificateType>& typeRestrictions,
         const UrlRequestSender& requestSender,
         TrustStore& trustStore,
-        const OcspResponsePtr& ocspResponse = {});
+        const OcspResponsePtr& ocspResponse = {},
+        const bool forceOcspRequest = false);
+
 
     /**
      * Allows to initialise TI trust space and to update it.

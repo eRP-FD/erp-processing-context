@@ -10,6 +10,7 @@
 #include "erp/database/RedisClient.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
+#include "erp/util/health/ApplicationHealth.hxx"
 
 using namespace std::chrono;
 
@@ -18,20 +19,10 @@ namespace {
 constexpr std::string_view teeInstanceKey = "ERP_VAU_INSTANCE";
 constexpr std::string_view eventFieldName = "event";
 constexpr std::string_view timestampFieldName =  "timestamp";
+constexpr std::string_view startupValue = "startup";
+constexpr std::string_view heartbeatValue = "heartbeat";
+constexpr std::string_view unregisterValue = "unregister";
 
-}
-
-
-//static
-std::unique_ptr<RegistrationInterface>
-RegistrationManager::createFromConfig(
-    const std::uint16_t aTeePort,
-    const Configuration& configuration)
-{
-    return std::make_unique<RegistrationManager>(
-        configuration.serverHost(),
-        aTeePort,
-        std::make_unique<RedisClient>());
 }
 
 
@@ -55,10 +46,11 @@ RegistrationManager::RegistrationManager(RegistrationManager&& other) noexcept
 
 void RegistrationManager::registration()
 {
+    std::lock_guard<std::mutex> guard(mMutex);
     TVLOG(1) << "Registration of TEE instance." << std::endl;
 
     const auto now = time_point_cast<seconds>(system_clock::now());
-    mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, "startup");
+    mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, startupValue);
     mRedisInterface->setKeyFieldValue(mRedisKey, timestampFieldName, std::to_string(now.time_since_epoch().count()));
 
     TVLOG(1) << "Registration TEE instance successful." << std::endl;
@@ -67,10 +59,11 @@ void RegistrationManager::registration()
 
 void RegistrationManager::deregistration()
 {
+    std::lock_guard<std::mutex> guard(mMutex);
     TVLOG(1) << "Deregistration of TEE instance." << std::endl;
 
     const auto now = time_point_cast<seconds>(system_clock::now());
-    mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, "unregister");
+    mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, unregisterValue);
     mRedisInterface->setKeyFieldValue(mRedisKey, timestampFieldName, std::to_string(now.time_since_epoch().count()));
 
     TVLOG(1) << "Deregistration of TEE instance successful." << std::endl;
@@ -79,12 +72,32 @@ void RegistrationManager::deregistration()
 
 void RegistrationManager::heartbeat()
 {
+    std::lock_guard<std::mutex> guard(mMutex);
     TVLOG(3) << "Heartbeat from TEE instance." << std::endl;
 
     const auto now = time_point_cast<seconds>(system_clock::now());
-    mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, "heartbeat");
+    mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, heartbeatValue);
     mRedisInterface->setKeyFieldValue(mRedisKey, timestampFieldName, std::to_string(now.time_since_epoch().count()));
 
     TVLOG(1) << "Heartbeat from TEE instance successful." << std::endl;
 }
+bool RegistrationManager::registered() const
+{
+    std::lock_guard<std::mutex> guard(mMutex);
+    const auto fieldValue = mRedisInterface->fieldValueForKey(mRedisKey, eventFieldName);
+    return fieldValue == heartbeatValue || fieldValue == startupValue;
+}
 
+void RegistrationManager::updateRegistrationBasedOnApplicationHealth(const ApplicationHealth& applicationHealth)
+{
+    const bool isRegistered = registered();
+    const bool appUp = applicationHealth.isUp();
+    if (appUp && !isRegistered)
+    {
+        registration();
+    }
+    else if (!appUp && isRegistered)
+    {
+        deregistration();
+    }
+}

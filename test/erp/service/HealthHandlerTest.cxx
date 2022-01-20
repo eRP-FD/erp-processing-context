@@ -12,11 +12,13 @@
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/tsl/TslManager.hxx"
+#include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/erp/service/HealthHandlerTestTslManager.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
@@ -29,6 +31,8 @@
 #include "erp/erp-serverinfo.hxx"
 
 #include "test_config.h"
+#include "test/mock/RegistrationMock.hxx"
+#include "erp/registration/RegistrationManager.hxx"
 
 using namespace std::chrono_literals;
 
@@ -80,6 +84,7 @@ bool HealthHandlerTestMockRedisStore::fail = false;
 
 bool HealthHandlerTestTslManager::failTsl = false;
 bool HealthHandlerTestTslManager::failBna = false;
+bool HealthHandlerTestTslManager::failOcspRetrieval = false;
 
 class HealthHandlerTestSeedTimerMock : public SeedTimer
 {
@@ -155,6 +160,9 @@ public:
         , seedTimerRootCausePointer("/checks/6/data/rootCause")
         , teeTokenUpdaterStatusPointer("/checks/7/status")
         , teeTokenUpdaterRootCausePointer("/checks/7/data/rootCause")
+        , cFdSigErpPointer("/checks/8/status")
+        , cFdSigErpRootCausePointer("/checks/8/data/rootCause")
+        , cFdSigErpTimestampPointer("/checks/8/data/timestamp")
         , buildPointer("/version/build")
         , buildTypePointer("/version/buildType")
         , releasePointer("/version/release")
@@ -163,6 +171,10 @@ public:
         , mGuardERP_TSL_INITIAL_CA_DER_PATH("ERP_TSL_INITIAL_CA_DER_PATH",
                                             std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der")
     {
+        const auto cert = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErp);
+        const auto certCA = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErpSigner);
+        const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
+
         mServiceContext = std::make_unique<PcServiceContext>(
             Configuration::instance(),
             [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
@@ -175,7 +187,11 @@ public:
                                                  MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
                 HealthHandlerTestTeeTokenUpdaterFactory::createHealthHandlerTestMockTeeTokenUpdaterFactory()),
             StaticData::getJsonValidator(), StaticData::getXmlValidator(), StaticData::getInCodeValidator(),
-                TslTestHelper::createTslManager<HealthHandlerTestTslManager>());
+            std::make_unique<RegistrationManager>("localhost", 9090, std::make_unique<MockRedisStore>()),
+            TslTestHelper::createTslManager<HealthHandlerTestTslManager>(
+                CFdSigErpTestHelper::createRequestSender<UrlRequestSenderMock>(),
+                {},
+                {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}}));
         mContext = std::make_unique<SessionContext<PcServiceContext>>(*mServiceContext, request, response, mAccessLog);
 
         mPool.setUp(1);
@@ -233,6 +249,9 @@ protected:
     rapidjson::Pointer seedTimerRootCausePointer;
     rapidjson::Pointer teeTokenUpdaterStatusPointer;
     rapidjson::Pointer teeTokenUpdaterRootCausePointer;
+    rapidjson::Pointer cFdSigErpPointer;
+    rapidjson::Pointer cFdSigErpRootCausePointer;
+    rapidjson::Pointer cFdSigErpTimestampPointer;
     rapidjson::Pointer buildPointer;
     rapidjson::Pointer buildTypePointer;
     rapidjson::Pointer releasePointer;
@@ -263,6 +282,8 @@ TEST_F(HealthHandlerTest, healthy)
     EXPECT_EQ(std::string(tslStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(bnaStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(idpStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_EQ(std::string(cFdSigErpPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
     EXPECT_EQ(std::string(seedTimerStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()),
               std::string(model::Health::up));
@@ -270,6 +291,8 @@ TEST_F(HealthHandlerTest, healthy)
     EXPECT_EQ(std::string(ErpServerInfo::BuildType), std::string(buildTypePointer.Get(healthDocument)->GetString()));
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion), std::string(releasePointer.Get(healthDocument)->GetString()));
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate), std::string(releasedatePointer.Get(healthDocument)->GetString()));
+
+    EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 
@@ -288,6 +311,7 @@ TEST_F(HealthHandlerTest, DatabaseDown)
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(postgresStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     verifyRootCause(healthDocument, postgresRootCausePointer, "CONNECTION FAILURE");
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 TEST_F(HealthHandlerTest, HsmDown)
@@ -305,6 +329,7 @@ TEST_F(HealthHandlerTest, HsmDown)
     verifyRootCause(healthDocument, hsmRootCausePointer, "FAILURE");
     EXPECT_EQ(std::string(hsmIpPointer.Get(healthDocument)->GetString()),
               Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 TEST_F(HealthHandlerTest, RedisDown)
@@ -320,6 +345,7 @@ TEST_F(HealthHandlerTest, RedisDown)
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(redisStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     verifyRootCause(healthDocument, redisRootCausePointer, "REDIS FAILURE");
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 TEST_F(HealthHandlerTest, TslDown)
@@ -336,6 +362,7 @@ TEST_F(HealthHandlerTest, TslDown)
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(tslStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     verifyRootCause(healthDocument, tslRootCausePointer, "TSL FAILURE");
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 TEST_F(HealthHandlerTest, BnaDown)
@@ -352,6 +379,7 @@ TEST_F(HealthHandlerTest, BnaDown)
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(bnaStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     verifyRootCause(healthDocument, bnaRootCausePointer, "BNA FAILURE");
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 TEST_F(HealthHandlerTest, IdpDown)
@@ -365,6 +393,26 @@ TEST_F(HealthHandlerTest, IdpDown)
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(idpStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     verifyRootCause(healthDocument, idpRootCausePointer, "never updated");
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
+}
+
+TEST_F(HealthHandlerTest, CFdSigErpDown)
+{
+    HealthHandlerTestTslManager::failOcspRetrieval = true;
+    ASSERT_THROW(mServiceContext->getCFdSigErpManager().getOcspResponseData(true), std::runtime_error);
+    ASSERT_NO_THROW(handleRequest());
+    HealthHandlerTestTslManager::failOcspRetrieval = false;
+
+    rapidjson::Document healthDocument;
+    auto body = mContext->response.getBody();
+    healthDocument.Parse(body);
+
+    // sub-status DOWN does not cause the application health to go down.
+    EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_EQ(std::string(cFdSigErpPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
+    EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
+    verifyRootCause(healthDocument, cFdSigErpRootCausePointer, "last validation has failed");
+    EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 TEST_F(HealthHandlerTest, SeedTimerDown)
@@ -380,6 +428,7 @@ TEST_F(HealthHandlerTest, SeedTimerDown)
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(seedTimerStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     verifyRootCause(healthDocument, seedTimerRootCausePointer, "SEEDTIMER FAILURE");
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)
@@ -398,4 +447,5 @@ TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)
     EXPECT_EQ(std::string(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()),
               std::string(model::Health::down));
     verifyRootCause(healthDocument, teeTokenUpdaterRootCausePointer, "last update is too old");
+    EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }

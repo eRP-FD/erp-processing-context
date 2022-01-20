@@ -47,6 +47,9 @@ public:
     std::unique_ptr<XmlValidatorContext> getSchemaValidationContext(SchemaType schemaType,
                                                                     model::ResourceVersion::KbvItaErp version) const;
 
+    std::unique_ptr<XmlValidatorContext> getSchemaValidationContext(SchemaType schemaType,
+                                                                    model::ResourceVersion::NotProfiled = {}) const;
+
     std::unique_ptr<XmlValidatorContext> getSchemaValidationContextNoVer(SchemaType schemaType) const;
 
     static void checkValidityTime(const std::optional<model::Timestamp>& validFrom,

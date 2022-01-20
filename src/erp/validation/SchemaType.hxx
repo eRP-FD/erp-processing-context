@@ -9,6 +9,8 @@
 // these enum names must be in line with the schema filenames.
 enum class SchemaType
 {
+    ActivateTaskParameters,
+    CreateTaskParameters,
     Gem_erxAuditEvent,
     Gem_erxBinary,
     fhir, // general FHIR schema

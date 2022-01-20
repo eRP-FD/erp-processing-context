@@ -180,7 +180,7 @@ namespace {
             {HttpStatus::BadRequest,              // 400
                 allOperations},
             {HttpStatus::Unauthorized,            // 401
-                manyOperations},
+                allOperations},
             {HttpStatus::Forbidden,               // 403
                 manyOperations},
 

@@ -36,6 +36,15 @@ public:
         TslParser::ExtensionOidList extensionOidList;
     };
 
+    class OcspResponseData
+    {
+    public:
+        OcspService::Status status;
+        std::chrono::seconds gracePeriod;
+        std::chrono::system_clock::time_point timeStamp;
+        std::string response;
+    };
+
     explicit TrustStore(const TslMode mode, std::vector<std::string> initialTslUrls = {});
     virtual ~TrustStore() = default;
 
@@ -122,15 +131,14 @@ public:
     void distrustCertificates ();
 
     /**
-     * Caches ocsp result status with fingerprint, grace period and timestamp
+     * Caches ocsp result status with fingerprint, grace period, timestamp and response
      */
-    void setCacheOcspStatus (const std::string& fingerprint, const OcspService::Status& status,
-                             const std::chrono::seconds& gracePeriod, const std::chrono::system_clock::time_point& timeStamp);
+    void setCacheOcspData (const std::string& fingerprint, OcspResponseData ocspCacheData);
 
     /**
-     * Returns cached OcspService::Status, if any.
+     * Returns cached OcspCacheData, if any.
      */
-    std::optional<OcspService::Status> getCachedOcspStatus (const std::string& fingerprint);
+    std::optional<OcspResponseData> getCachedOcspData (const std::string& fingerprint);
 
     /**
      * get OCSP service endpoint uri for a certificate CA.
@@ -158,12 +166,8 @@ private:
     /// {subjectDN, subjectKeyIdentifier} -> TSL service information
     TslParser::ServiceInformationMap mServiceInformationMap;
 
-    /// fingerprint -> { OCSP status (i.e. status + revocation time), grace period seconds as defined by gematik,
-    ///                time point when the OCSP response was signed }
-    std::map<std::string,
-        std::tuple<OcspService::Status,
-                   std::chrono::seconds,
-                   std::chrono::system_clock::time_point>> mOcspCache;
+    /// fingerprint -> OcspCacheData
+    std::map<std::string, OcspResponseData> mOcspCache;
 
     /**
      * Removes cached OcspService results if they are older than 4 hours. (A_15873)

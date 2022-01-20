@@ -3,7 +3,8 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "OcspHelper.hxx"
+#include "erp/tsl/OcspHelper.hxx"
+#include "erp/util/Gsl.hxx"
 
 
 namespace
@@ -83,4 +84,29 @@ OcspHelper::getCertHashValueFromExtension (ASN1_SEQUENCE_ANY* extensionData)
         return nullptr;
     }
     return certHashValue->value.octet_string;
+}
+
+
+std::string OcspHelper::ocspResponseToString(OCSP_RESPONSE& ocspResponse)
+{
+    unsigned char* buffer = nullptr;
+    const int bufferLength = i2d_OCSP_RESPONSE(&ocspResponse, &buffer);
+    Expect(bufferLength > 0, "Could not create OCSP response buffer!");
+
+    std::unique_ptr<unsigned char, void(*)(unsigned char*)> bufferPtr(
+        buffer,
+        [](unsigned char* pointer) -> void {OPENSSL_free(pointer);});
+
+    return std::string{reinterpret_cast<char*>(buffer), gsl::narrow<size_t>(bufferLength)};
+}
+
+
+OcspResponsePtr OcspHelper::stringToOcspResponse(const std::string& responseString)
+{
+    if (responseString.empty())
+    {
+        return {};
+    }
+    const unsigned char* buffer = reinterpret_cast<const unsigned char*>(responseString.data());
+    return OcspResponsePtr(d2i_OCSP_RESPONSE(nullptr, &buffer, gsl::narrow_cast<int>(responseString.size())));
 }

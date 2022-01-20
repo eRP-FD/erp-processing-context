@@ -19,6 +19,7 @@
 #include "mock/tpm/TpmTestData.hxx"
 
 #include "test/util/BlobDatabaseHelper.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/HsmTestBase.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 
@@ -30,6 +31,7 @@
 
 #include <functional>
 #include <gtest/gtest.h>
+#include <hsmclient/ERP_Error.h>
 
 class ParameterSet
 {
@@ -446,6 +448,21 @@ TEST_F(UnparameterizedHsmSessionTest, keepAlive)
     ASSERT_EQ(client->callCount, 2u);
 }
 
+TEST_F(UnparameterizedHsmSessionTest, throwsHsmException)
+{
+    auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+    class TestClient : public HsmMockClient
+    {
+    public:
+        ErpVector getRndBytes(const HsmRawSession&, size_t) override
+        {
+            throw HsmException{"Test Exception", ERP_ERR_NO_CONNECTION};
+        }
+    };
+    TestClient client;
+    HsmSession session{client, *blobCache, std::shared_ptr<HsmRawSession>()};
+    ASSERT_THROW(session.getRandomData(0), HsmException);
+}
 
 INSTANTIATE_TEST_SUITE_P(
     SimulatedHsm,

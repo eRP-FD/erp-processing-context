@@ -7,40 +7,35 @@
 #include "erp/registration/RegistrationManager.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TerminationHandler.hxx"
+#include "erp/util/health/ApplicationHealth.hxx"
 
 #include <chrono>
 #include <iostream>
 
 
-std::unique_ptr<HeartbeatSender> HeartbeatSender::create(const uint16_t teePort, const Configuration& configuration,
-                                                         RegistrationFactory&& registrationFactory)
+std::unique_ptr<HeartbeatSender> HeartbeatSender::create(const Configuration& configuration,
+                                                         const ApplicationHealth& applicationHealth,
+                                                         std::shared_ptr<RegistrationInterface> registrationInterface)
 {
-    Expect(registrationFactory, "can not create HeartbeatSender without registration factory");
-    auto registration = registrationFactory(teePort, configuration);
+    Expect(registrationInterface, "can not create HeartbeatSender without registration");
     const auto interval = std::chrono::seconds(
         configuration.getOptionalIntValue(ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC, 30));
     // Conceptually the time between two retry calls is different from the time between two successful
     // heartbeat calls. But as long as we have not agreed on a different value, we will use the same.
     const auto retryInterval = interval;
 
-    return std::make_unique<HeartbeatSender>(std::move(registration), interval, retryInterval);
+    return std::make_unique<HeartbeatSender>(std::move(registrationInterface), interval, retryInterval, applicationHealth);
 }
 
 
-HeartbeatSender::RegistrationFactory HeartbeatSender::createDefaultRegistrationFactory(void)
-{
-    return [](const uint16_t teePort, const Configuration& configuration) {
-        return RegistrationManager::createFromConfig(teePort, configuration);
-    };
-}
-
-
-HeartbeatSender::HeartbeatSender(std::unique_ptr<RegistrationInterface> registration,
+HeartbeatSender::HeartbeatSender(std::shared_ptr<RegistrationInterface> registration,
                                  const std::chrono::steady_clock::duration interval,
-                                 const std::chrono::steady_clock::duration retryInterval)
+                                 const std::chrono::steady_clock::duration retryInterval,
+                                 const ApplicationHealth& applicationHealth)
     : TimerJobBase("heartbeat", interval)
     , mRegistration(std::move(registration))
     , mRetryInterval(retryInterval)
+    , mApplicationHealth(applicationHealth)
 {
     Expect(mRegistration, "can not create HeartbeatSender without registration");
 }
@@ -48,12 +43,24 @@ HeartbeatSender::HeartbeatSender(std::unique_ptr<RegistrationInterface> registra
 
 void HeartbeatSender::onStart(void)
 {
-    mRegistration->registration();
+    mRegistration->updateRegistrationBasedOnApplicationHealth(mApplicationHealth);
+
+    if (mRegistration->registered())
+    {
+        // first execution is done immediately
+        executeJob();
+    }
 }
 
 
 void HeartbeatSender::executeJob(void)
 {
+    mRegistration->updateRegistrationBasedOnApplicationHealth(mApplicationHealth);
+    if (!mRegistration->registered())
+    {
+        return;
+    }
+
     size_t tryCount = 0;
     while (! isAborted())
     {

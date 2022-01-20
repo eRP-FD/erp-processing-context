@@ -7,6 +7,7 @@
 
 #include <thread>
 
+MockTerminationHandler::~MockTerminationHandler() = default;
 
 void MockTerminationHandler::setupForTesting (void)
 {
@@ -34,4 +35,9 @@ void MockTerminationHandler::waitForTerminated(void)
         using namespace std::chrono_literals;
         std::this_thread::sleep_for(100ms);
     }
+}
+
+void MockTerminationHandler::gracefulShutdown(boost::asio::io_context& , int )
+{
+
 }

@@ -39,7 +39,7 @@
       <xs:extension base="Element">
         <xs:sequence>
           <xs:element name="coding" type="KBV_PR_ERP_Medication_FreeText.Code.Coding"/>
-          <xs:element name="text" type="string"/>
+          <xs:element name="text" type="string-500"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>

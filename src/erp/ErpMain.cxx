@@ -6,6 +6,9 @@
 #include "erp/ErpMain.hxx"
 
 #include "ErpRequirements.hxx"
+#include "erp/admin/AdminServiceContext.hxx"
+#include "erp/admin/AdminServer.hxx"
+#include "erp/admin/AdminRequestHandler.hxx"
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
@@ -17,6 +20,7 @@
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/registration/RegistrationManager.hxx"
 #include "erp/tpm/Tpm.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/health/HealthCheck.hxx"
@@ -32,6 +36,7 @@
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
+
 
 #if WITH_HSM_MOCK > 0
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -68,15 +73,14 @@ namespace
 }
 
 
-std::unique_ptr<HeartbeatSender> ErpMain::setupHeartbeatSender(
-    const uint16_t port,
-    HeartbeatSender::RegistrationFactory&& registrationFactory)
+std::unique_ptr<HeartbeatSender> ErpMain::setupHeartbeatSender(PcServiceContext& serviceContext)
 {
     std::unique_ptr<HeartbeatSender> sender;
     if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_REGISTRATION, false))
     {
         LOG(WARNING) << "Initializing Registration Heartbeating.";
-        sender = HeartbeatSender::create(port, Configuration::instance(), std::move(registrationFactory));
+        sender = HeartbeatSender::create(Configuration::instance(), serviceContext.applicationHealth(),
+                                         serviceContext.registrationInterface());
         sender->start();
     }
     else
@@ -116,7 +120,7 @@ std::unique_ptr<ErpProcessingContext> ErpMain::setupTeeServer (
     Database::Factory&& databaseFactory,
     HsmPool::TeeTokenUpdaterFactory&& teeTokenUpdaterFactory,
     TslManager::TslManagerFactory&& tslManagerFactory,
-    std::unique_ptr<RedisInterface> redisClient)
+    std::function<std::unique_ptr<RedisInterface>()>&& redisClientFactory)
 {
     const auto& configuration = Configuration::instance();
     auto jsonValidator = std::make_shared<JsonValidator>();
@@ -131,31 +135,22 @@ std::unique_ptr<ErpProcessingContext> ErpMain::setupTeeServer (
 
     auto tslManager = tslManagerFactory(xmlValidator);
 
+    auto registrationInterface =
+        std::make_unique<RegistrationManager>(configuration.serverHost(), port, redisClientFactory());
+
     // There is only one service context for the whole runtime of the service
     auto serviceContext = std::make_unique<PcServiceContext>(
         configuration,
         std::move(databaseFactory),
-        std::move(redisClient),
+        redisClientFactory(),
         std::make_unique<HsmPool>(
             std::move(hsmFactory),
             std::move(teeTokenUpdaterFactory)),
         std::move(jsonValidator),
         std::move(xmlValidator),
         std::move(inCodeValidator),
+        std::move(registrationInterface),
         std::move(tslManager));
-
-    if (serviceContext->getTslManager() != nullptr)
-    {
-        X509Certificate cFdSigErp = X509Certificate::createFromBase64(serviceContext->getCFdSigErp().toDerBase64String());
-        serviceContext->getTslManager()->addPostUpdateHook(
-            [tslManager = serviceContext->getTslManager(), cFdSigErp] (void) mutable -> void
-            {
-                // failure by verification of ERP C.FD.SIG means that the application is not functional any more
-                // so the exception can be thrown further by the hook ( that would lead to application termination )
-                tslManager->verifyCertificate(
-                    TslMode::TSL, cFdSigErp, {CertificateType::C_FD_SIG});
-            });
-    }
 
     RequestHandlerManager<PcServiceContext> teeHandlers;
     ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
@@ -192,6 +187,18 @@ std::unique_ptr<EnrolmentServer> ErpMain::setupEnrolmentServer (
     return enrolmentServer;
 }
 
+std::unique_ptr<AdminServer> ErpMain::setupAdminServer(const std::string_view& interface, const uint16_t port)
+{
+    RequestHandlerManager<AdminServiceContext> handlers;
+    AdminServer::addEndpoints(handlers);
+
+    auto adminServer =
+        std::make_unique<AdminServer>(interface, port, std::move(handlers), std::make_unique<AdminServiceContext>());
+    adminServer->getServer().serviceContext()->setIoContext(&adminServer->getServer().getThreadPool().ioContext());
+    adminServer->getServer().serve(1);
+    return adminServer;
+}
+
 
 int ErpMain::runApplication (
     uint16_t defaultEnrolmentServerPort,
@@ -223,10 +230,15 @@ int ErpMain::runApplication (
         std::move(factories.databaseFactory),
         std::move(factories.teeTokenUpdaterFactory),
         std::move(factories.tslManagerFactory),
-        factories.redisClientFactory());
+        std::move(factories.redisClientFactory));
 
     SignalHandler signalHandler(processingContext->getServer().getThreadPool().ioContext());
     signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
+
+    log << "starting admin server";
+    auto adminServer = setupAdminServer(configuration.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                                        configuration.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT));
+
 
     // Setup the IDP updater. As this triggers a first, synchronous update, the IDP updater has to be started
     // before the TEE server accepts connections.
@@ -277,7 +289,7 @@ int ErpMain::runApplication (
 
         // Advertise the tee server as available via redis at the vau proxy.
         log << "setting up heartbeat sender";
-        heartbeatSender = setupHeartbeatSender(pcPort, std::move(factories.registrationFactory));
+        heartbeatSender = setupHeartbeatSender(serviceContext);
     }
     state = State::WaitingForTermination;
     processingContext->getServer().waitForShutdown();
@@ -286,6 +298,7 @@ int ErpMain::runApplication (
         // Because the enrolment server runs in its own io context, it has to be terminated separately.
         enrolmentServer->getServer().shutDown();
     }
+    adminServer->getServer().shutDown();
 
     // According to glibc documentation SIGTERM "is the normal way to politely ask a program to terminate."
     // Therefore it is not treated as error.
@@ -320,7 +333,6 @@ ErpMain::Factories ErpMain::createProductionFactories()
              << "OUT";
 #endif
 
-    factories.registrationFactory = HeartbeatSender::createDefaultRegistrationFactory();
     factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation)
         {
             return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool, keyDerivation);

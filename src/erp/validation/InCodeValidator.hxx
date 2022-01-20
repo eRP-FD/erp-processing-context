@@ -36,6 +36,8 @@ public:
                   const XmlValidator& xmlValidator) const;
     void validate(const model::ResourceBase& resource, SchemaType schemaType,
                   model::ResourceVersion::DeGematikErezeptWorkflowR4 version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::NotProfiled version, const XmlValidator& xmlValidator) const;
 
 private:
     std::set<SchemaType> mMandatoryValidation;

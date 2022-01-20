@@ -81,6 +81,7 @@ const std::string_view& toString (Operation operation)
         case Operation::GET_notifications_opt_out:
         case Operation::POST_VAU_up:
         case Operation::GET_Health:
+        case Operation::POST_Admin_restart:
             throw std::logic_error("Operation value is not supported");
     }
     throw std::logic_error("Uninitialized operation enum");

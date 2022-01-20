@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_SERVER_HANDLER_REQUESTHANDLERINTERFACE_HXX
 
 #include "erp/service/Operation.hxx"
+#include "erp/util/Configuration.hxx"
 
 #include <string_view>
 
@@ -32,6 +33,16 @@ class UnconstrainedRequestHandler : public RequestHandlerInterface<ServiceContex
 {
 public:
     [[nodiscard]] bool allowedForProfessionOID (std::string_view) const override {return true;}
+};
+
+template<class ServiceContextType>
+class RequestHandlerBasicAuthentication : public UnconstrainedRequestHandler<ServiceContextType>
+{
+public:
+    using Type = RequestHandlerBasicAuthentication<ServiceContextType>;
+
+    void handleBasicAuthentication(const SessionContext<ServiceContextType>& session, ConfigurationKey credentialsKey,
+                                   ConfigurationKey debugDisableAuthenticationKey) const;
 };
 
 

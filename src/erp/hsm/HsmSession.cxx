@@ -34,7 +34,9 @@ namespace
         HsmSession& session,
         std::function<ResultType()>&& action)
     {
+        using namespace std::string_literals;
         size_t retryCount = 0; // 0 being the original run, i.e. a try, not a re-try.
+        std::exception_ptr lastException;
         while(retryCount <= maxRetryCount)
         {
             try
@@ -45,9 +47,9 @@ namespace
             {
                 // Failure due to an expired HSM connection. Try again.
                 JsonLog(LogId::HSM_WARNING)
-                    .message("HSM connection expired: "
+                    .message("HSM connection expired: "s + e.what()
 #if WITH_HSM_TPM_PRODUCTION > 0
-                             + HsmProductionClient::hsmErrorDetails(e.errorCode)
+                             + " (" + HsmProductionClient::hsmErrorDetails(e.errorCode) + ")"
 #endif
                              )
                     .keyValue("retry", retryCount);
@@ -55,15 +57,16 @@ namespace
 
                 // The actual reconnect.
                 session.reconnect();
+                lastException = std::current_exception();
             }
             catch(const HsmException& e)
             {
                 // Some other failure (not an expired HSM connection). Try again.
                 // This catch may be removed later.
                 JsonLog(LogId::HSM_WARNING)
-                    .message("HSM error: "
+                    .message("HSM error: "s + e.what()
 #if WITH_HSM_TPM_PRODUCTION > 0
-                             + HsmProductionClient::hsmErrorDetails(e.errorCode)
+                             + " (" + HsmProductionClient::hsmErrorDetails(e.errorCode) + ")"
 #endif
                              )
                     .keyValue("retry", retryCount);
@@ -71,11 +74,16 @@ namespace
 
                 // The actual reconnect.
                 session.reconnect();
+                lastException = std::current_exception();
             }
         }
         JsonLog(LogId::HSM_CRITICAL)
             .message("HSM connection expired, all retries failed")
-            .keyValue("retry", retryCount);
+            .keyValue("maxRetryCount", maxRetryCount);
+        if (lastException)
+        {
+            rethrow_exception(lastException);
+        }
         Fail("HSM action failed due to expired session, retry count exceeded");
     }
 }

@@ -35,14 +35,22 @@ void PeriodicTimer::timerHandlerInternal(const boost::system::error_code& errorC
     }
 
     timerHandler();
-    auto now = std::chrono::steady_clock::now();
-    auto newExpire = mTimer->expiry() + mInterval;
-    if (newExpire < now)
+    if (mInterval != decltype(mInterval){})
     {
-        TLOG(WARNING) << "Periodic timer skipped interval.";
-        newExpire = now + mInterval;
+        auto now = std::chrono::steady_clock::now();
+        auto newExpire = mTimer->expiry() + mInterval;
+        if (newExpire < now)
+        {
+            TLOG(WARNING) << "Periodic timer skipped interval.";
+            newExpire = now + mInterval;
+        }
+        mTimer->expires_at(newExpire);
+        mTimer->async_wait(
+            [this](auto errCode){timerHandlerInternal(errCode);});
     }
-    mTimer->expires_at(newExpire);
-    mTimer->async_wait(
-        [this](auto errCode){timerHandlerInternal(errCode);});
+}
+
+OneShotTimer::OneShotTimer()
+    : PeriodicTimer({})
+{
 }

@@ -52,6 +52,8 @@
       ],
       "xml-schema": [
         "@ERP_SCHEMA_DIR@hl7.fhir.r4.core/4.0.1/xml/fhir.xsd",
+        "@ERP_SCHEMA_DIR@not-profiled/parameters/ActivateTaskParameters.xsd",
+        "@ERP_SCHEMA_DIR@not-profiled/parameters/CreateTaskParameters.xsd",
         "@ERP_SCHEMA_DIR@tsl/BNA_tsl.xsd",
         "@ERP_SCHEMA_DIR@tsl/Gematik_tsl.xsd"
       ],
@@ -155,6 +157,14 @@
       "httpClientConnectTimeoutSeconds": "60",
       "feature": {
         "pkv": "false"
+      },
+      "admin": {
+        "server": {
+          "interface": "0.0.0.0",
+          "port": "9999"
+        },
+        "defaultShutdownDelaySeconds": "5",
+        "credentials": ""
       }
     }
   }

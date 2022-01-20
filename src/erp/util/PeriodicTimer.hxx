@@ -33,4 +33,10 @@ private:
     std::chrono::steady_clock::duration mInterval;
 };
 
+class OneShotTimer : public PeriodicTimer
+{
+public:
+    explicit OneShotTimer();
+};
+
 #endif// ERP_PROCESSING_CONTEXT_PERIODICTIMER_HXX

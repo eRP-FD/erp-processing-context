@@ -13,6 +13,6 @@
     <valueBoolean value="false" />
   </extension>
   <form>
-    <text value="1 mal täglich mittags einnehmen"/>
+    <text value="1 mal täglich mittags"/>
   </form>
 </Medication>

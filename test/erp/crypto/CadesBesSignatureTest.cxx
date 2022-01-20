@@ -9,6 +9,7 @@
 #include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "erp/tsl/OcspHelper.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/util/Base64.hxx"
@@ -16,6 +17,7 @@
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
 #include "erp/util/SafeString.hxx"
+#include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/UrlRequestSenderMock.hxx"
 #include "test/util/CertificateDirLoader.h"
@@ -53,15 +55,6 @@ public:
         "y9pDyX6omWi8Qf1TV2+CwD76fWAbn6ysKyk=\n"
         "-----END EC PRIVATE KEY-----\n";
 
-    // c.fd.sig-erp-erpserverReferenz.prv.pem
-    static constexpr char cFdSigErpPrivateKey[] =
-        "-----BEGIN PRIVATE KEY-----\n"
-        "MIGVAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwR6MHgCAQEEIKd3WtkUFC5Z0NZl\n"
-        "4MAjxjh69DnnYV5e03WbLFQoq9qDoAsGCSskAwMCCAEBB6FEA0IABEldYn6CK9ft\n"
-        "8L8HMpJBRLSG852LwqbmFUkhbdsK1G4oBDYhAqB0IMyo+PJ3fUluggoAOHRDTPT0\n"
-        "GR0WhqTFkFs=\n"
-        "-----END PRIVATE KEY-----\n";
-
     std::unique_ptr<EnvironmentVariableGuard> mCaDerPathGuard;
 
     void SetUp()
@@ -81,7 +74,7 @@ public:
 TEST_F(CadesBesSignatureTest, roundtrip)
 {
     std::string_view myText = "The text to be signed";
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{cFdSigErpPrivateKey});
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
     auto cert = Certificate::fromPemString(Configuration::instance().getStringValue(ConfigurationKey::C_FD_SIG_ERP));
     std::string signedText;
     {
@@ -147,6 +140,7 @@ TEST_F(CadesBesSignatureTest, getSigningTime)
     ASSERT_TRUE(signingTime.has_value());
     ASSERT_EQ(signingTime.value(), referenceTime);
 }
+
 
 TEST_F(CadesBesSignatureTest, getMessageDigest)
 {
@@ -430,3 +424,60 @@ TEST_F(CadesBesSignatureTest, invalidSignatureInCMSBundle)
                  CadesBesSignature::VerificationException);
 }
 #endif
+
+
+TEST_F(CadesBesSignatureTest, validateOcspResponseInGeneratedCMS)
+{
+    std::string_view myText = "The text to be signed";
+    auto cert = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErp);
+    X509Certificate certX509 = X509Certificate::createFromBase64(cert.toDerBase64String());
+    auto certCA = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErpSigner);
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
+    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
+    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
+        {},
+        {},
+        {
+            {ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    auto ocspResponseData =
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false);
+
+    std::string signedText;
+    {
+        CadesBesSignature cadesBesSignature{
+            cert,
+            privKey,
+            std::string{myText},
+            std::nullopt,
+            OcspHelper::stringToOcspResponse(ocspResponseData.response)};
+        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+    }
+
+    const auto plain = Base64::decode(signedText);
+    auto bioIndata = shared_BIO::make();
+    ASSERT_TRUE(plain.size() <= static_cast<size_t>(std::numeric_limits<int>::max()));
+    ASSERT_TRUE(BIO_write(bioIndata.get(), plain.data(), static_cast<int>(plain.size())) ==
+                  static_cast<int>(plain.size()));
+    shared_CMS_ContentInfo contentInfo = shared_CMS_ContentInfo::make(d2i_CMS_bio(bioIndata.get(), nullptr));
+    ASSERT_NE(nullptr, contentInfo);
+
+    const int nidOcspResponseRevocationContainer = OBJ_txt2nid("1.3.6.1.5.5.7.16.2");
+    ASSERT_NE(nidOcspResponseRevocationContainer, NID_undef);
+
+    ASN1_OBJECT* formatObject = OBJ_nid2obj(nidOcspResponseRevocationContainer);
+    ASSERT_NE(formatObject, nullptr);
+    int index = CMS_get_anotherRevocationInfo_by_format(contentInfo, formatObject, -1);
+    ASSERT_TRUE(index >= 0);
+    ASN1_TYPE* ocspResponseAny = CMS_get0_anotherRevocationInfo(contentInfo, index);
+    ASSERT_NE(ocspResponseAny, nullptr);
+    int objectType = ASN1_TYPE_get(ocspResponseAny);
+    ASSERT_EQ(objectType, V_ASN1_SEQUENCE);
+    OcspResponsePtr ocspResponseFromCms(
+        reinterpret_cast<OCSP_RESPONSE*>(
+            ASN1_TYPE_unpack_sequence(ASN1_ITEM_rptr(OCSP_RESPONSE), ocspResponseAny)));
+    ASSERT_NE(ocspResponseFromCms, nullptr);
+
+    const std::string bioOcspResponseFromCms = OcspHelper::ocspResponseToString(*ocspResponseFromCms);
+    ASSERT_EQ(ocspResponseData.response, bioOcspResponseFromCms);
+}

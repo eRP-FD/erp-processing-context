@@ -133,7 +133,12 @@ void CloseTaskHandler::handleRequest (PcSessionContext& session)
     A_19233.start("Sign the receipt with ID.FD.SIG using [RFC5652] with profile CAdES-BES ([CAdES]) ");
     std::string serialized = responseReceipt.serializeToXmlString();
     std::string signatureData =
-        CadesBesSignature(session.serviceContext.getCFdSigErp(), session.serviceContext.getCFdSigErpPrv(), serialized).get();
+        CadesBesSignature(
+            session.serviceContext.getCFdSigErp(),
+            session.serviceContext.getCFdSigErpPrv(),
+            serialized,
+            std::nullopt,
+            session.serviceContext.getCFdSigErpManager().getOcspResponse()).get();
     A_19233.finish();
 
     A_19233.start("Set signature");

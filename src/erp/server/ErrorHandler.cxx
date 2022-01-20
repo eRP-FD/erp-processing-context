@@ -55,14 +55,9 @@ void ErrorHandler::reportServerError (const std::string& message)
     // Therefore, if we see a short read here, it has occurred
     // after the message has been completed, so it is safe to ignore it.
 
-    switch (ec.value())
+    if (ec.failed() && ec != boost::asio::ssl::error::stream_truncated)
     {
-        case boost::asio::ssl::error::stream_truncated:
-        case 0:
-            return;
-        default:
-            TLOG(ERROR) << message.c_str() << ": " << ec.message().c_str();
-            break;
+        TLOG(ERROR) << message.c_str() << ": " << ec.message().c_str();
     }
 }
 

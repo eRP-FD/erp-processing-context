@@ -17,6 +17,7 @@ public:
 private:
     static void checkBna             (SessionContext<PcServiceContext>& session);
     static void checkHsm             (SessionContext<PcServiceContext>& session);
+    static void checkCFdSigErp       (SessionContext<PcServiceContext>& session);
     static void checkIdp             (SessionContext<PcServiceContext>& session);
     static void checkPostgres        (SessionContext<PcServiceContext>& session);
     static void checkRedis           (SessionContext<PcServiceContext>& session);

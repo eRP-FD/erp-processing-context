@@ -89,7 +89,12 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, linkBase + "/$accept/");
     responseBundle.addResource(linkBase, {}, {}, task->jsonDocument());
-    responseBundle.addResource({}, {}, {}, healthCareProviderPrescription->jsonDocument());
+    std::string uuid{};
+    if (healthCareProviderPrescription->id().has_value())
+    {
+        uuid = Uuid{healthCareProviderPrescription->id().value()}.toUrn();
+    }
+    responseBundle.addResource(uuid, {}, {}, healthCareProviderPrescription->jsonDocument());
 
     A_19514.start("HttpStatus 200 for successful POST");
     makeResponse(session, HttpStatus::OK, &responseBundle);

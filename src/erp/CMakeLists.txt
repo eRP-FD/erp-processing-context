@@ -11,6 +11,13 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/erp-serverinfo.hxx.in" "${CMAKE_CURR
 
 set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
 
+# Use gethostbyname() in boost for hostname lookups because
+# the default case with getaddrinfo() causes pending open
+# sockets within gramine which are not cleaned up. Sooner or
+# later this behaviour consumes all available fds in the process
+# and leads to failing lookups.
+
+add_compile_definitions(BOOST_ASIO_DISABLE_GETADDRINFO)
 
 #
 # Define how to build the eRP executable.
@@ -20,6 +27,9 @@ list(
         ErpConstants.hxx
         ErpMain.cxx
         ErpProcessingContext.cxx
+        admin/AdminRequestHandler.cxx
+        admin/AdminServer.cxx
+        admin/AdminServiceContext.cxx
         beast/BoostBeastHeader.cxx
         beast/BoostBeastStringReader.cxx
         beast/BoostBeastStringWriter.cxx
@@ -152,6 +162,7 @@ list(
         model/Task.cxx
         model/TimePeriod.cxx
         model/Timestamp.cxx
+        pc/CFdSigErpManager.cxx
         pc/PcServiceContext.cxx
         pc/SeedTimer.cxx
         pc/PcTemplateInstantiations.cxx

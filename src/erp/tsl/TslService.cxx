@@ -712,7 +712,8 @@ namespace
                                       const X509Certificate& issueCertificate,
                                       const UrlRequestSender& requestSender,
                                       TrustStore& trustStore,
-                                      const OcspResponsePtr& ocspResponse)
+                                      const OcspResponsePtr& ocspResponse,
+                                      const bool forceOcspRequest)
     {
         const auto ocspUrl = getOcspUrl(certificate, certificateType, issueCertificate, trustStore);
 
@@ -725,7 +726,8 @@ namespace
                 ocspUrl,
                 trustStore,
                 hashExtensionMustBeValidated(certificateType),
-                ocspResponse),
+                ocspResponse,
+                forceOcspRequest),
             trustStore);
     }
 
@@ -1073,7 +1075,8 @@ TslService::checkCertificate(
     const std::unordered_set<CertificateType>& typeRestrictions,
     const UrlRequestSender& requestSender,
     TrustStore& trustStore,
-    const OcspResponsePtr& ocspResponse)
+    const OcspResponsePtr& ocspResponse,
+    const bool forceOcspRequest)
 {
     VLOG(2) << "Checking Certificate: [" << certificate.toBase64() << "]";
     const CertificateType certificateType = getCertificateType(certificate);
@@ -1142,5 +1145,6 @@ TslService::checkCertificate(
         caInfo->certificate,
         requestSender,
         trustStore,
-        ocspResponse);
+        ocspResponse,
+        forceOcspRequest);
 }

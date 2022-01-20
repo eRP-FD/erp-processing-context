@@ -112,6 +112,12 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)
                                 type, ::model::ResourceVersion::current<::model::ResourceVersion::KbvItaErp>()) !=
                             nullptr);
                 break;
+            case SchemaType::ActivateTaskParameters:
+            case SchemaType::CreateTaskParameters:
+                ASSERT_TRUE(getXmlValidator()->getSchemaValidationContext(
+                                type, ::model::ResourceVersion::NotProfiled{}) !=
+                            nullptr);
+                break;
             default:
                 ASSERT_TRUE(false) << "unhandled SchemaType";
                 break;

@@ -9,6 +9,7 @@
 #include "erp/crypto/CMAC.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/Database.hxx"
+#include "erp/hsm/HsmException.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/OperationOutcome.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
@@ -306,6 +307,12 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
         session.accessLog.locationFromException(e);
         errorStatus = HttpStatus::Unauthorized;
         errorText = std::string("vau decryption failed: JwtException ") + e.what();
+    }
+    catch (const HsmException& e)
+    {
+        session.accessLog.locationFromException(e);
+        errorStatus = HttpStatus::InternalServerError;
+        errorText = std::string("vau decryption failed: HsmException ") + e.what();
     }
     catch (const std::exception& e)
     {

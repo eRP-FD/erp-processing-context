@@ -15,7 +15,7 @@ using EnrolmentSession = SessionContext<EnrolmentServiceContext>;
 
 
 class EnrolmentRequestHandlerBase
-    : public UnconstrainedRequestHandler<EnrolmentServiceContext>
+    : public RequestHandlerBasicAuthentication<EnrolmentServiceContext>
 
 {
 public:
@@ -53,8 +53,6 @@ public:
     virtual Operation getOperation (void) const override;
 
     virtual void handleRequest (EnrolmentSession& session) override;
-
-    void handleBasicAuthentication(const EnrolmentSession& session);
 
 protected:
     virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) = 0;

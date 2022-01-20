@@ -19,6 +19,7 @@
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 
 EndpointTestClient::EndpointTestClient()
@@ -41,7 +42,8 @@ EndpointTestClient::EndpointTestClient()
         std::move(hsmPool),
         StaticData::getJsonValidator(),
         StaticData::getXmlValidator(),
-        StaticData::getInCodeValidator());
+        StaticData::getInCodeValidator(),
+        std::make_unique<RegistrationMock>());
 
     if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_IDP_UPDATER_MOCK, false))
         IdpUpdater::create<MockIdpUpdater>(serviceContext->idp, serviceContext->getTslManager());

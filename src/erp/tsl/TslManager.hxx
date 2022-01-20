@@ -73,6 +73,24 @@ public:
                                    const OcspResponsePtr& ocspResponse = {});
 
     /**
+     * Allows to get OCSP-response for the provided certificate.
+     * In case there is still not outdated cached OCSP-response, it is returned.
+     * Otherwise an OCSP-request is done.
+     *
+     * @param tslMode                   specifies which trust store should be provided TSL or BNetzA-VL
+     * @param certificate               the certificate to get OCSP-Response for
+     * @param typeRestrictions          if provided, the certificate type must be in the set
+     * @param forceOcspRequest          if true the OCSP-cache should be ignored and OCSP-request must be done
+     *
+     * @throws TslError in case of problems
+     */
+    virtual TrustStore::OcspResponseData getCertificateOcspResponse(
+        const TslMode tslMode,
+        X509Certificate& certificate,
+        const std::unordered_set<CertificateType>& typeRestrictions,
+        const bool forceOcspRequest);
+
+    /**
      * Checks whether the trust stores have to be update and does the update if necessary.
      */
     virtual void updateTrustStoresOnDemand();
@@ -118,7 +136,7 @@ protected:
 
 private:
     TrustStore& getTrustStore(const TslMode tslMode);
-    void internalUpdate(const bool onlyOutdated);
+    TslService::UpdateResult internalUpdate(const bool onlyOutdated);
     void notifyPostUpdateHooks();
 
     const std::shared_ptr<UrlRequestSender> mRequestSender;

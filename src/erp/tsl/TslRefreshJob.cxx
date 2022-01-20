@@ -14,7 +14,6 @@ TslRefreshJob::TslRefreshJob(
     const std::chrono::steady_clock::duration interval)
         : TimerJobBase("TslRefreshJob", interval)
         , mTslManager(tslManager)
-        , mFirstIterationDone(false)
 {
     Expect(tslManager != nullptr, "The refresh job must be initialized with TslManager");
 }
@@ -33,16 +32,8 @@ void TslRefreshJob::executeJob()
     // and if it fails, then the related action will fail as well
     try
     {
-        if (mFirstIterationDone)
-        {
-            VLOG(2) << "Executing TSL refresh job";
-            mTslManager->updateTrustStoresOnDemand();
-        }
-        else
-        {
-            // ignore the first iteration that happens immediately
-            mFirstIterationDone = true;
-        }
+        VLOG(2) << "Executing TSL refresh job";
+        mTslManager->updateTrustStoresOnDemand();
     }
     catch(const TslError& e)
     {

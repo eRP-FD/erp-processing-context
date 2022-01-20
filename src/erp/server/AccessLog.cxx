@@ -16,7 +16,7 @@ AccessLog::AccessLog (void)
       mLog(LogId::ACCESS, JsonLog::makeWarningLogReceiver(), false)
 {
     mLog.keyValue(
-        "log-type",
+        "log_type",
         "access");
     mLog.keyValue(
         "timestamp",
@@ -29,7 +29,7 @@ AccessLog::AccessLog (std::ostream& os)
       mLog(LogId::ACCESS, os, false)
 {
     mLog.keyValue(
-        "log-type",
+        "log_type",
         "access");
     mLog.keyValue(
         "timestamp",
@@ -55,7 +55,7 @@ void AccessLog::markEnd (void)
     if (mStartTime.has_value())
     {
         mLog.keyValue(
-            "response-time",
+            "response_time",
             static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endTime - mStartTime.value()).count())/1000.0,
             3);
         mStartTime = std::nullopt;
@@ -80,7 +80,7 @@ void AccessLog::locationFromException(const boost::exception& ex)
 void AccessLog::setInnerRequestOperation (const std::string_view& operation)
 {
     mLog.keyValue(
-        "inner-request-operation",
+        "inner_request_operation",
         operation);
 
     TVLOG(1) << "starting to process " << operation;
@@ -90,9 +90,15 @@ void AccessLog::setInnerRequestOperation (const std::string_view& operation)
 void AccessLog::updateFromOuterRequest (const ServerRequest& request)
 {
     const auto optionalRequestId = request.header().header(Header::XRequestId);
-    mLog.keyValue(
-        "x-request-id",
-        optionalRequestId.value_or("<not-set>"));
+    if(optionalRequestId)
+    {
+        const auto RequestId = String::removeEnclosing("[", "]", optionalRequestId.value());
+        mLog.keyValue("x_request_id", RequestId);
+    }
+    else
+    {
+        mLog.keyValue("x_request_id", "<not-set>");
+    }
 }
 
 
@@ -105,7 +111,7 @@ void AccessLog::updateFromInnerRequest (const ServerRequest& request)
 void AccessLog::updateFromInnerResponse (const ServerResponse& response)
 {
     mLog.keyValue(
-        "inner-response-code",
+        "inner_response_code",
         static_cast<size_t>(response.getHeader().status()));
 }
 
@@ -113,7 +119,7 @@ void AccessLog::updateFromInnerResponse (const ServerResponse& response)
 void AccessLog::updateFromOuterResponse (const ServerResponse& response)
 {
     mLog.keyValue(
-        "response-code",
+        "response_code",
         static_cast<size_t>(response.getHeader().status()));
 }
 
@@ -153,5 +159,5 @@ void AccessLog::discard (void)
 
 void AccessLog::prescriptionId(const std::string_view id)
 {
-    keyValue("prescription-id", id);
+    keyValue("prescription_id", id);
 }

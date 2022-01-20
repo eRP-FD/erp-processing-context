@@ -36,11 +36,11 @@ void TaskHandlerBase::addToPatientBundle(model::Bundle& bundle, const model::Tas
 
     if (patientConfirmation.has_value())
     {
-        bundle.addResource({}, {}, {}, patientConfirmation->jsonDocument());
+        bundle.addResource(patientConfirmation->getId().toUrn(), {}, {}, patientConfirmation->jsonDocument());
     }
     if (receipt.has_value())
     {
-        bundle.addResource({}, {}, {}, receipt->jsonDocument());
+        bundle.addResource(receipt->getId().toUrn(), {}, {}, receipt->jsonDocument());
     }
 }
 
@@ -155,7 +155,11 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
     A_19115.finish();
 
     model::Bundle responseBundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
-    const auto links = arguments->getBundleLinks(getLinkBase(), "/Task");
+    std::size_t totalSearchMatches =
+        responseIsPartOfMultiplePages(arguments->pagingArgument(), resultSet.size()) ?
+        databaseHandle->countAllTasksForPatient(kvnr.value(), arguments) : resultSet.size();
+
+    const auto links = arguments->getBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
     for (const auto& link : links)
     {
         responseBundle.setLink(link.first, link.second);
@@ -174,9 +178,6 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
         }
     }
 
-    std::size_t totalSearchMatches =
-        responseIsPartOfMultiplePages(arguments->pagingArgument(), resultSet.size()) ?
-        databaseHandle->countAllTasksForPatient(kvnr.value(), arguments) : resultSet.size();
     responseBundle.setTotalSearchMatches(totalSearchMatches);
 
     A_19514.start("HttpStatus 200 for successful GET");
@@ -287,7 +288,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
                 auditData, language, session.serviceContext.auditEventTextTemplates(),
                 session.request.getAccessToken());
 
-            responseBundle.addResource({}, {}, {}, auditEvent.jsonDocument());
+            responseBundle.addResource(Uuid{auditEvent.id()}.toUrn(), {}, {}, auditEvent.jsonDocument());
         }
     }
     A_19569_02.finish();
@@ -323,7 +324,7 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
 
     if (task->status() == model::Task::Status::completed && receipt.has_value())
     {
-        responseBundle.addResource({}, {}, {}, receipt->jsonDocument());
+        responseBundle.addResource(receipt->getId().toUrn(), {}, {}, receipt->jsonDocument());
     }
 
     A_19514.start("HttpStatus 200 for successful GET");

@@ -64,6 +64,8 @@ public:
      * Return a timer that measures how long it takes until its destructor is called.
      */
     DurationTimer getTimer (const std::string& description);
+    // variant for a timer with a custom receiver/log level
+    DurationTimer getTimer (const std::string& description, DurationTimer::Receiver& receiver) const;
 
 private:
     bool mIsInitialized = false;

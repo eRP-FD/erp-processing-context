@@ -195,6 +195,18 @@
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
+  <xs:simpleType name="markdown-primitive-160">
+    <xs:restriction base="markdown-primitive">
+      <xs:maxLength value="160"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="markdown-160">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="markdown-primitive-160"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
   <xs:simpleType name="positiveInt-primitive">
     <xs:restriction base="xs:positiveInteger">
       <xs:pattern value="[1-9][0-9]*"/>
@@ -248,6 +260,19 @@
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
+  <xs:simpleType name="decimal-primitive-999">
+    <xs:restriction base="xs:decimal">
+      <xs:maxInclusive value="999"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="double-primitive-999">
+    <xs:restriction base="xs:double">
+      <xs:maxInclusive value="999.0"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="fhir-decimal-primitive-999">
+    <xs:union memberTypes="decimal-primitive-999 double-primitive-999"/>
+  </xs:simpleType>
   <xs:simpleType name="decimal-primitive">
     <xs:union memberTypes="xs:decimal xs:double"/>
   </xs:simpleType>
@@ -255,6 +280,13 @@
     <xs:complexContent>
       <xs:extension base="Element">
         <xs:attribute name="value" type="decimal-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="decimal-999">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="fhir-decimal-primitive-999"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

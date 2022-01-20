@@ -73,21 +73,8 @@
     <xs:complexContent>
       <xs:extension base="Element">
         <xs:sequence>
-          <xs:element name="text" type="markdown"/>
+          <xs:element name="text" type="markdown-160"/>
         </xs:sequence>
-      </xs:extension>
-    </xs:complexContent>
-  </xs:complexType>
-  <xs:simpleType name="KBV_PR_ERP_Prescription.Dosage.string-primitive">
-    <xs:restriction base="xs:string">
-      <xs:minLength value="1"/>
-      <xs:maxLength value="60"/>
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:complexType name="KBV_PR_ERP_Prescription.Dosage.string">
-    <xs:complexContent>
-      <xs:extension base="Element">
-        <xs:attribute name="value" type="KBV_PR_ERP_Prescription.Dosage.string-primitive"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -95,8 +82,8 @@
     <xs:complexContent>
       <xs:extension base="BackboneElement">
         <xs:sequence>
-          <xs:element name="text" type="KBV_PR_ERP_Prescription.Dosage.string" minOccurs="0"/>
-          <xs:element name="patientInstruction" type="KBV_PR_ERP_Prescription.Dosage.string" minOccurs="0"/>
+          <xs:element name="text" type="string-60" minOccurs="0"/>
+          <xs:element name="patientInstruction" type="string-60" minOccurs="0"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -105,7 +92,7 @@
     <xs:complexContent>
       <xs:extension base="BackboneElement">
         <xs:sequence>
-          <xs:element name="quantity" type="KBV_PR_ERP_Generics.Quantity"/>
+          <xs:element name="quantity" type="KBV_PR_ERP_Prescription.Quantity"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -115,6 +102,17 @@
       <xs:extension base="BackboneElement">
         <xs:sequence>
           <xs:element name="allowedBoolean" type="boolean"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Prescription.Quantity">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="value" type="decimal-999"/>
+          <xs:element name="system" type="KBV_PR_ERP_PracticeSupply.Quantity.system"/>
+          <xs:element name="code" type="KBV_PR_ERP_PracticeSupply.Quantity.code"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>

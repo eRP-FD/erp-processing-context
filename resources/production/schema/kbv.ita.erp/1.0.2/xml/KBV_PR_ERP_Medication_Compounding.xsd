@@ -41,7 +41,7 @@
       <xs:extension base="Element">
         <xs:sequence>
           <xs:element name="coding" type="KBV_PR_ERP_Medication_Compounding.Code.Coding"/>
-          <xs:element name="text" type="KBV_PR_ERP_Medication_Compounding.Code.text" minOccurs="0"/>
+          <xs:element name="text" type="string-70" minOccurs="0"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -85,7 +85,7 @@
       <xs:extension base="Element">
         <xs:sequence>
           <xs:element name="coding" type="KBV_PR_ERP_Medication_Compounding.Ingredient.CodeableConcept.Coding" minOccurs="0"/>
-          <xs:element name="text" type="string"/>
+          <xs:element name="text" type="string-60"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -117,18 +117,4 @@
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
-  <xs:simpleType name="KBV_PR_ERP_Medication_Compounding.Code.text-primitive">
-    <xs:restriction base="string-primitive">
-      <xs:minLength value="1"/>
-      <xs:maxLength value="70"/>
-    </xs:restriction>
-  </xs:simpleType>
-  <xs:complexType name="KBV_PR_ERP_Medication_Compounding.Code.text">
-    <xs:complexContent>
-      <xs:extension base="Element">
-        <xs:attribute name="value" type="KBV_PR_ERP_Medication_Compounding.Code.text-primitive"/>
-      </xs:extension>
-    </xs:complexContent>
-  </xs:complexType>
-
 </xs:schema>

@@ -17,7 +17,7 @@
 
 namespace model
 {
-class Parameters : public Resource<Parameters>
+class Parameters : public Resource<Parameters, ResourceVersion::NotProfiled>
 {
 public:
     size_t count() const;
@@ -27,7 +27,7 @@ public:
     std::optional<model::PrescriptionType> getPrescriptionType() const;
 
 private:
-    friend Resource<Parameters>;
+    friend Resource;
     explicit Parameters (NumberAsStringParserDocument&& document);
 
 };

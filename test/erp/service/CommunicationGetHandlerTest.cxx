@@ -997,12 +997,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_nextPage)
     EXPECT_TRUE(prevLink.has_value());
     EXPECT_EQ(extractPathAndArguments(prevLink.value()), "/Communication?_sort=-sent&_count=2&__offset=0");
 
-    // For the test setup with four entries, there does not have to be a 'next' link as that would return
-    // an empty result. But as determining whether or not that is the case is somewhat expensive for Postgres,
-    // it is currently not implemented. Hence the 'next' link.
+    // For the test setup with four entries, there does not have to be a 'next' link.
     const auto nextLink = bundle->getLink(model::Link::Type::Next);
-    EXPECT_TRUE(nextLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(nextLink.value()), "/Communication?_sort=-sent&_count=2&__offset=4");
+    EXPECT_FALSE(nextLink.has_value());
+
     EXPECT_EQ(bundle->getTotalSearchMatches(), givenCommunicationIds.size());
 }
 

@@ -24,7 +24,7 @@ namespace model
 
 
 Parameters::Parameters(NumberAsStringParserDocument&& document)
-    : Resource<Parameters>(std::move(document))
+    : Resource(std::move(document))
 {
 }
 

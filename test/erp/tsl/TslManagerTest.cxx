@@ -267,7 +267,24 @@ namespace
         "/C=DE/O=gematik GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=GEM.EGK-ALVI-CA41 TEST-ONLY",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=GEM.EGK-ALVI-CA51 TEST-ONLY",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA41 TEST-ONLY",
-        "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA51 TEST-ONLY"
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA51 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.HBA-OCSP5 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP23 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP24 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.SMCB-OCSP5 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP206 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=GEM.KOMP-CA54 TEST-ONLY",
+        "/C=DE/O=achelos GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=ACHELOS.KOMP-CA20 TEST-ONLY",
+        "/C=DE/O=gematik GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=GEM.VPNK-CA54 TEST-ONLY",
+        "/C=DE/O=achelos GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=ACHELOS.HBA-CA20 TEST-ONLY",
+        "/C=DE/O=achelos GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=ACHELOS.VPNK-CA20 TEST-ONLY",
+        "/C=DE/O=achelos GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ACHELOS.EGK-CA20 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=ATOS.HBA-CA5 TEST-ONLY",
+        "/C=DE/O=achelos GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=ACHELOS.SMCB-CA20 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA23 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA24 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA206 TEST-ONLY",
+        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=ATOS.SMCB-CA5 TEST-ONLY"
     };
 }
 

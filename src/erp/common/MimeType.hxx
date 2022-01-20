@@ -26,6 +26,7 @@ public:
     static const MimeType jose;
     static const MimeType fhirJson;
     static const MimeType fhirXml;
+    static const MimeType xWwwFormUrlEncoded;
 
 
     explicit MimeType(std::string_view stringRepresentation);

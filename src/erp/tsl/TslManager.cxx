@@ -6,6 +6,7 @@
 #include "erp/tsl/TslManager.hxx"
 
 #include "erp/ErpRequirements.hxx"
+#include "erp/tsl/OcspHelper.hxx"
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/TslService.hxx"
 #include "erp/tsl/X509Store.hxx"
@@ -23,6 +24,7 @@ namespace
     }
 
 
+    [[noreturn]]
     void handleException(std::exception_ptr exception,
                          const char* logPrefix,
                          const FileNameAndLineNumber& fileNameAndLineNumber)
@@ -170,6 +172,55 @@ void TslManager::verifyCertificate(const TslMode tslMode,
     }
 }
 
+
+TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
+    const TslMode tslMode,
+    X509Certificate& certificate,
+    const std::unordered_set<CertificateType>& typeRestrictions,
+    const bool forceOcspRequest)
+{
+    // no mutex is necessary because trust store is thread safe
+    try
+    {
+        std::optional<TrustStore::OcspResponseData> ocspResponse;
+
+        GS_A_4898.start("Minimize TSL-Grace-Period, check TSL-validity and try to update if invalid each time a certificate is validated.");
+        const TslService::UpdateResult updateResult = internalUpdate(true);
+        GS_A_4898.finish();
+
+        if (updateResult == TslService::UpdateResult::NotUpdated && ! forceOcspRequest)
+        {
+            // the cached OCSP-Response still can be used, if it exists and is still valid
+            ocspResponse = getTrustStore(tslMode).getCachedOcspData(certificate.getSha256FingerprintHex());
+        }
+
+        if ( ! ocspResponse.has_value())
+        {
+            TslService::checkCertificate(
+                certificate,
+                typeRestrictions,
+                *mRequestSender,
+                getTrustStore(tslMode),
+                {},
+                forceOcspRequest);
+
+            ocspResponse = getTrustStore(tslMode).getCachedOcspData(certificate.getSha256FingerprintHex());
+
+            TslExpect4(ocspResponse.has_value(),
+                       "OCSP response - can not parse provided in cache OCSP response",
+                       TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
+                       tslMode);
+        }
+
+        return *ocspResponse;
+    }
+    catch(...)
+    {
+        HANDLE_EXCEPTION("ocsp response retrieval failed");
+    }
+}
+
+
 void TslManager::updateTrustStoresOnDemand()
 {
     // no mutex is necessary because trust store and TslService are thread safe
@@ -238,7 +289,7 @@ TrustStore & TslManager::getTrustStore(const TslMode tslMode)
 }
 
 
-void TslManager::internalUpdate(const bool onlyOutdated)
+TslService::UpdateResult TslManager::internalUpdate(const bool onlyOutdated)
 {
     const auto updateResult = TslService::triggerTslUpdateIfNecessary(
         *mRequestSender,
@@ -264,6 +315,8 @@ void TslManager::internalUpdate(const bool onlyOutdated)
     {
         notifyPostUpdateHooks();
     }
+
+    return updateResult;
 }
 
 

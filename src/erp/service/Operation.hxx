@@ -47,7 +47,9 @@ enum class Operation
     POST_VAU_up,
     GET_Health,
 
-    POST_Subscription
+    POST_Subscription,
+
+    POST_Admin_restart
 };
 
 const std::string_view& toString (Operation operation);

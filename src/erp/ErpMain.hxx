@@ -17,6 +17,7 @@
 #include <memory>
 #include <optional>
 
+class AdminServer;
 class ApplicationHealth;
 class BlobCache;
 class BlobDatabase;
@@ -43,7 +44,6 @@ public:
      */
     struct Factories
     {
-        HeartbeatSender::RegistrationFactory registrationFactory;
         Database::Factory databaseFactory;
 
         std::function<std::shared_ptr<BlobCache>()> blobCacheFactory;
@@ -76,9 +76,7 @@ public:
         StateCondition& state,
         std::function<void(PcServiceContext&)> postInitializationCallback = {});
 
-    static std::unique_ptr<HeartbeatSender> setupHeartbeatSender(
-        const uint16_t port,
-        HeartbeatSender::RegistrationFactory&& registrationFactory);
+    static std::unique_ptr<HeartbeatSender> setupHeartbeatSender(PcServiceContext& serviceContext);
 
     static std::unique_ptr<SeedTimer> setupPrngSeeding (
         ThreadPool& threadpool,
@@ -91,11 +89,13 @@ public:
         Database::Factory&& database,
         HsmPool::TeeTokenUpdaterFactory&& teeTokenUpdaterFactory,
         TslManager::TslManagerFactory&& tslManagerFactory,
-        std::unique_ptr<RedisInterface> redisClient);
+        std::function<std::unique_ptr<RedisInterface>()>&& redisClientFactory);
 
     static std::unique_ptr<EnrolmentServer> setupEnrolmentServer (
         const uint16_t enrolmentPort,
         const std::shared_ptr<BlobCache>& blobCache);
+
+    static std::unique_ptr<AdminServer> setupAdminServer(const std::string_view& interface, const uint16_t port);
 
     static std::shared_ptr<TslManager> setupTslManager (const std::shared_ptr<XmlValidator>& xmlValidator);
 

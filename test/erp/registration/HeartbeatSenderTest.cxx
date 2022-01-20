@@ -6,80 +6,13 @@
 #include "erp/registration/HeartbeatSender.hxx"
 #include "erp/util/TLog.hxx"
 #include "test/mock/MockTerminationHandler.hxx"
+#include "erp/util/health/ApplicationHealth.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 #include <gtest/gtest.h>
 
 #include <thread> // for std::this_thread::sleep_for
 #include <string>
-
-
-class RegistrationMock : public RegistrationInterface
-{
-public:
-    enum class State
-    {
-        initialized,
-        registered,
-        deregistered
-    };
-
-    State currentState() const
-    {
-        return mCurrentState;
-    }
-
-    unsigned int heartbeatRetryNum() const
-    {
-        return mHeartbeatRetryNum;
-    }
-
-    bool deregistrationCalled() const
-    {
-        return mDeregistrationCalled;
-    }
-
-    void registration() override
-    {
-        TVLOG(1) << "registration";
-        ASSERT_TRUE(mCurrentState == State::initialized || mCurrentState == State::deregistered);
-        if(mSimulateServerDown)
-            throw std::runtime_error("Connection refused");
-        mCurrentState = State::registered;
-    }
-
-    void deregistration() override
-    {
-        TVLOG(1) << "deregistration";
-        mDeregistrationCalled = true;
-        ASSERT_EQ(mCurrentState, State::registered);
-        if(mSimulateServerDown)
-            throw std::runtime_error("Connection closed");
-        mCurrentState = State::deregistered;
-    }
-
-    void heartbeat() override
-    {
-        TVLOG(1) << "heartbeat";
-        ASSERT_EQ(mCurrentState, State::registered);
-        if(mSimulateServerDown)
-        {
-            ++mHeartbeatRetryNum;
-            throw std::runtime_error("Connection closed");
-        }
-        mHeartbeatRetryNum = 0;
-    }
-
-    void setSimulateServerDown(bool flag)
-    {
-        mSimulateServerDown = flag;
-    }
-
-private:
-    State mCurrentState = State::initialized;
-    bool mSimulateServerDown = false;
-    unsigned int mHeartbeatRetryNum = 0;
-    bool mDeregistrationCalled = false;
-};
 
 
 class HeartbeatSenderTest : public testing::Test
@@ -89,14 +22,22 @@ public:
     {
         MockTerminationHandler::setupForTesting();
     }
+
+protected:
+    void TearDown() override
+    {
+        MockTerminationHandler::setupForTesting();
+    }
 };
 
 TEST_F(HeartbeatSenderTest, Success)
 {
-    auto uniqueRegistrationManager = std::make_unique<RegistrationMock>();
+    auto uniqueRegistrationManager = std::make_shared<RegistrationMock>();
     auto& registrationManager = *uniqueRegistrationManager;
-    auto sender = std::make_unique<HeartbeatSender>(
-        std::move(uniqueRegistrationManager), std::chrono::milliseconds(1500), std::chrono::seconds(1));
+    ApplicationHealth applicationHealth;
+    auto sender =
+        std::make_unique<HeartbeatSender>(std::move(uniqueRegistrationManager), std::chrono::milliseconds(1500),
+                                          std::chrono::seconds(1), applicationHealth);
 
     sender->start();
     std::this_thread::sleep_for(std::chrono::seconds(4));
@@ -108,10 +49,11 @@ TEST_F(HeartbeatSenderTest, Success)
 
 TEST_F(HeartbeatSenderTest, FailStartup)
 {
-    auto uniqueRegistrationManager = std::make_unique<RegistrationMock>();
+    auto uniqueRegistrationManager = std::make_shared<RegistrationMock>();
     auto& registrationManager = *uniqueRegistrationManager;
+    ApplicationHealth applicationHealth;
     auto sender = std::make_unique<HeartbeatSender>(
-        std::move(uniqueRegistrationManager), std::chrono::seconds(1), std::chrono::seconds(1));
+        std::move(uniqueRegistrationManager), std::chrono::seconds(1), std::chrono::seconds(1), applicationHealth);
 
     registrationManager.setSimulateServerDown(true);
     sender->start();
@@ -122,10 +64,11 @@ TEST_F(HeartbeatSenderTest, FailStartup)
 
 TEST_F(HeartbeatSenderTest, FailDeregistration)
 {
-    auto uniqueRegistrationManager = std::make_unique<RegistrationMock>();
+    auto uniqueRegistrationManager = std::make_shared<RegistrationMock>();
     auto& registrationManager = *uniqueRegistrationManager;
+    ApplicationHealth applicationHealth;
     auto sender = std::make_unique<HeartbeatSender>(
-        std::move(uniqueRegistrationManager), std::chrono::seconds(20), std::chrono::seconds(10));
+        std::move(uniqueRegistrationManager), std::chrono::seconds(20), std::chrono::seconds(10), applicationHealth);
 
     sender->start();
     std::this_thread::sleep_for(std::chrono::seconds(2));

@@ -66,8 +66,8 @@
         <xs:sequence>
           <xs:element name="type" type="KBV_PR_FOR_Organization.AddressType"/>
           <xs:element name="line" type="KBV_PR_FOR.Address.street" maxOccurs="2"/>
-          <xs:element name="city" type="string" minOccurs="0" />
-          <xs:element name="postalCode" type="string" minOccurs="0" />
+          <xs:element name="city" type="string-40" minOccurs="0" />
+          <xs:element name="postalCode" type="string-10" minOccurs="0" />
           <xs:element name="country" type="CountryListType" minOccurs="0"/>
         </xs:sequence>
       </xs:extension>

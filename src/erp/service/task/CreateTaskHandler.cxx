@@ -28,7 +28,7 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     A_19021.finish();
 
     A_19257.start("validate against schema");
-    const auto parameters = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::fhir);
+    const auto parameters = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::CreateTaskParameters);
     A_19257.finish();
 
     A_19112.start("extract and check workFlowType parameter for the prescription type of the task");

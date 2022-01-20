@@ -19,6 +19,7 @@ const MimeType MimeType::json("application/json");
 const MimeType MimeType::jose("application/jose");
 const MimeType MimeType::fhirJson("application/fhir+json");
 const MimeType MimeType::fhirXml("application/fhir+xml");
+const MimeType MimeType::xWwwFormUrlEncoded("application/x-www-form-urlencoded");
 
 const ContentMimeType ContentMimeType::fhirJsonUtf8("application/fhir+json;charset=utf-8");
 const ContentMimeType ContentMimeType::fhirXmlUtf8("application/fhir+xml;charset=utf-8");

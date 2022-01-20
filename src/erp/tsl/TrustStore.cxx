@@ -366,20 +366,14 @@ bool TrustStore::isTslTooOld () const
 }
 
 
-void TrustStore::setCacheOcspStatus (
-    const std::string& fingerprint,
-    const OcspService::Status& status,
-    const std::chrono::seconds& gracePeriod,
-    const std::chrono::system_clock::time_point& timeStamp)
+void TrustStore::setCacheOcspData (const std::string& fingerprint, OcspResponseData ocspCacheData)
 {
     std::lock_guard guard(mMutex);
-
-    mOcspCache[fingerprint] = std::make_tuple(status, gracePeriod, timeStamp);
+    mOcspCache[fingerprint] = std::move(ocspCacheData);
 }
 
 
-std::optional<OcspService::Status> TrustStore::getCachedOcspStatus (
-    const std::string& fingerprint)
+std::optional<TrustStore::OcspResponseData> TrustStore::getCachedOcspData (const std::string& fingerprint)
 {
     std::lock_guard guard(mMutex);
 
@@ -388,7 +382,7 @@ std::optional<OcspService::Status> TrustStore::getCachedOcspStatus (
     auto it = mOcspCache.find(fingerprint);
     if (it != mOcspCache.end())
     {
-        return std::get<OcspService::Status>(it->second);
+        return it->second;
     }
 
     return {};
@@ -404,9 +398,7 @@ void TrustStore::cleanupOcspCache ()
 
     for (auto it = mOcspCache.begin(), ite = mOcspCache.end(); it != ite;)
     {
-        const auto& [status, gracePeriod, cachedAt] = it->second;
-        (void)status;
-        const bool olderThanGracePeriod = ((now - cachedAt) >= gracePeriod);
+        const bool olderThanGracePeriod = ((now - it->second.timeStamp) > it->second.gracePeriod);
         if (olderThanGracePeriod)
             it = mOcspCache.erase(it);
         else

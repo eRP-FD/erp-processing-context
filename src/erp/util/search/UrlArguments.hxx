@@ -46,11 +46,12 @@ public:
      * Note that order is maintained from the original URL between arguments of the same type (sorting vs searching vs paging) but not
      * between these groups.
      */
-    std::string getLinkPathArguments (model::Link::Type linkType) const;
+    std::string getLinkPathArguments (const model::Link::Type linkType, const std::size_t& totalSearchMatches = 50) const;
 
     std::unordered_map<model::Link::Type, std::string> getBundleLinks (
         const std::string& linkBase,
-        const std::string& pathHead) const;
+        const std::string& pathHead,
+        const std::size_t& totalSearchMatches) const;
 
     /**
      * Return a string that can be appended to a query that ends in a WHERE clause.
@@ -120,7 +121,7 @@ private:
 
     void appendLinkSearchArguments (std::ostream& os) const;
     void appendLinkSortArguments (std::ostream& os) const;
-    void appendLinkPagingArguments (std::ostream& os, model::Link::Type type) const;
+    void appendLinkPagingArguments (std::ostream& os, const model::Link::Type type, const std::size_t& totalSearchMatches) const;
     void appendLinkSeparator (std::ostream& os) const;
 
     std::optional<SearchParameter::Type> getParameterType (const std::string& argumentName) const;

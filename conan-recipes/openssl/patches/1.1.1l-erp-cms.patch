@@ -1,9 +1,12 @@
---- include/openssl/cms.h	2021-11-17 10:55:39.000000000 +0100
-+++ include/openssl/cms.h	2021-11-17 11:02:02.000000000 +0100
-@@ -216,6 +216,11 @@
+--- include/openssl/cms.h	2021-12-22 10:55:39.000000000 +0100
++++ include/openssl/cms.h	2021-12-22 11:02:02.000000000 +0100
+@@ -216,6 +216,14 @@
  int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl);
  STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms);
  
++int CMS_add0_otherRevocationInfoChoice(CMS_ContentInfo *cms,
++                                       ASN1_OBJECT* formatObject,
++                                       ASN1_TYPE* data);
 +int CMS_get_anotherRevocationInfo_by_format(CMS_ContentInfo *cms,
 +                                            ASN1_OBJECT* formatObject,
 +                                            int lastpos);
@@ -12,9 +15,47 @@
  int CMS_SignedData_init(CMS_ContentInfo *cms);
  CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
                                  X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
---- crypto/cms/cms_lib.c	2021-11-17 10:54:43.000000000 +0100
-+++ crypto/cms/cms_lib.c	2021-11-17 11:02:02.000000000 +0100
-@@ -504,6 +504,57 @@
+--- crypto/cms/cms_asn1.c	2021-12-22 10:54:43.000000000 +0100
++++ crypto/cms/cms_asn1.c	2021-12-22 11:02:02.000000000 +0100
+@@ -68,7 +68,7 @@
+ ASN1_SEQUENCE(CMS_OtherRevocationInfoFormat) = {
+         ASN1_SIMPLE(CMS_OtherRevocationInfoFormat, otherRevInfoFormat, ASN1_OBJECT),
+         ASN1_OPT(CMS_OtherRevocationInfoFormat, otherRevInfo, ASN1_ANY)
+-} static_ASN1_SEQUENCE_END(CMS_OtherRevocationInfoFormat)
++} ASN1_SEQUENCE_END(CMS_OtherRevocationInfoFormat)
+ 
+ ASN1_CHOICE(CMS_RevocationInfoChoice) = {
+         ASN1_SIMPLE(CMS_RevocationInfoChoice, d.crl, X509_CRL),
+--- crypto/cms/cms_lib.c	2021-12-22 10:54:43.000000000 +0100
++++ crypto/cms/cms_lib.c	2021-12-22 11:02:02.000000000 +0100
+@@ -476,6 +476,26 @@
+     return r;
+ }
+
++int CMS_add0_otherRevocationInfoChoice(CMS_ContentInfo *cms,
++                                       ASN1_OBJECT* formatObject,
++                                       ASN1_TYPE* data)
++{
++    CMS_RevocationInfoChoice *rch;
++    rch = CMS_add0_RevocationInfoChoice(cms);
++    if (!rch)
++        return 0;
++
++    rch->type = CMS_REVCHOICE_OTHER;
++    rch->d.other = M_ASN1_new_of(CMS_OtherRevocationInfoFormat);
++    if (!rch->d.other)
++        return 0;
++
++    rch->d.other->otherRevInfoFormat = formatObject;
++    rch->d.other->otherRevInfo = data;
++
++    return 1;
++}
++
+ STACK_OF(X509) *CMS_get1_certs(CMS_ContentInfo *cms)
+ {
+     STACK_OF(X509) *certs = NULL;
+@@ -504,6 +524,57 @@
  
  }
  
@@ -38,7 +79,7 @@
 +    for (i = startIndex; i < sk_CMS_RevocationInfoChoice_num(*pcrls); i++) {
 +        rch = sk_CMS_RevocationInfoChoice_value(*pcrls, i);
 +        if (rch
-+            && rch->type == 1
++            && rch->type == CMS_REVCHOICE_OTHER
 +            && rch->d.other
 +            && rch->d.other->otherRevInfoFormat
 +            && OBJ_cmp(rch->d.other->otherRevInfoFormat, formatObject) == 0) {
@@ -72,3 +113,13 @@
  STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms)
  {
      STACK_OF(X509_CRL) *crls = NULL;
+--- crypto/cms/cms_local.h	2021-12-22 10:54:43.000000000 +0100
++++ crypto/cms/cms_local.h	2021-12-22 11:02:02.000000000 +0100
+@@ -427,6 +427,7 @@
+ DECLARE_ASN1_ITEM(CMS_KeyTransRecipientInfo)
+ DECLARE_ASN1_ITEM(CMS_OriginatorPublicKey)
+ DECLARE_ASN1_ITEM(CMS_OtherKeyAttribute)
++DECLARE_ASN1_ITEM(CMS_OtherRevocationInfoFormat)
+ DECLARE_ASN1_ITEM(CMS_Receipt)
+ DECLARE_ASN1_ITEM(CMS_ReceiptRequest)
+ DECLARE_ASN1_ITEM(CMS_RecipientEncryptedKey)

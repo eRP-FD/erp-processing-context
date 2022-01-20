@@ -44,7 +44,7 @@ class ErpProcessingContext(ConanFile):
                 'glog/0.4.0',
                 'gsl-lite/0.39.0',
                 'libxml2/2.9.12',
-                'openssl/1.1.1l@erp/stable',
+                'openssl/1.1.1l@erp/stable-1',
                 'rapidjson/cci.20211112',
                 'magic_enum/0.7.3',
                 'zlib/1.2.11',  # Enforce new version of zlib (not the previous @conan/stable one)

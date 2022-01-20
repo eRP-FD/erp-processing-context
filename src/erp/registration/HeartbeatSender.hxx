@@ -15,6 +15,7 @@
 #include <mutex>
 #include <thread>
 
+class ApplicationHealth;
 
 // Administration of Heartbeat sender thread.
 
@@ -22,19 +23,16 @@ class HeartbeatSender : public TimerJobBase
 {
 public:
     HeartbeatSender(
-        std::unique_ptr<RegistrationInterface> registration,
+        std::shared_ptr<RegistrationInterface> registration,
         const std::chrono::steady_clock::duration interval,
-        const std::chrono::steady_clock::duration retryInterval);
+        const std::chrono::steady_clock::duration retryInterval,
+        const ApplicationHealth& applicationHealth);
     ~HeartbeatSender() noexcept override = default;
 
-    using RegistrationFactory = std::function<std::unique_ptr<RegistrationInterface>(const uint16_t, const Configuration&)>;
-
     static std::unique_ptr<HeartbeatSender> create (
-        uint16_t teePort,
         const Configuration& configuration,
-        RegistrationFactory&& registrationFactory = createDefaultRegistrationFactory());
-
-    static RegistrationFactory createDefaultRegistrationFactory (void);
+        const ApplicationHealth& applicationHealth,
+        std::shared_ptr<RegistrationInterface> registrationInterface);
 
 protected:
     void onStart(void) override;
@@ -42,8 +40,9 @@ protected:
     void onFinish(void) override;
 
 private:
-    std::unique_ptr<RegistrationInterface> mRegistration;
+    std::shared_ptr<RegistrationInterface> mRegistration;
     const std::chrono::steady_clock::duration mRetryInterval;
+    const ApplicationHealth& mApplicationHealth;
 };
 
 

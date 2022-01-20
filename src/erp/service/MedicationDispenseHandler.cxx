@@ -61,8 +61,8 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
         databaseHandle->countAllMedicationDispenses(kvnr.value(), arguments) : medicationDispenses.size();
 
     auto bundle = createBundle(medicationDispenses);
-    bundle.setTotalSearchMatches(totalSearchMatches);
-    const auto links = arguments->getBundleLinks(getLinkBase(), "/MedicationDispense");
+    bundle.setTotalSearchMatches(totalSearchMatches);    
+    const auto links = arguments->getBundleLinks(getLinkBase(), "/MedicationDispense", totalSearchMatches);
     for (const auto& link : links)
     {
         bundle.setLink(link.first, link.second);

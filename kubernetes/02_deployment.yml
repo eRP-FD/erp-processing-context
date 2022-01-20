@@ -67,8 +67,6 @@ spec:
               value: "9085"
             - name: ERP_ENROLMENT_ACTIVATE_FOR_PORT
               value: "9085"
-            - name: DEBUG_DISABLE_ENROLMENT_API_AUTH
-              value: "false"
             - name: ERP_SERVER_THREAD_COUNT
               value: "10"
             - name: ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC
@@ -83,8 +81,6 @@ spec:
               value: "/erp/tsl/tsl-ca.der"
             - name: ERP_TSL_DOWNLOAD_CIPHERS
               value: "DHE-RSA-AES256-SHA:DHE-RSA-AES128-GCM-SHA256"
-            - name: DEBUG_ENABLE_HSM_MOCK
-              value: "false"
             - name: MOCK_USE_MOCK_TPM
               value: "false"
             - name: TPM_INTERFACE_TYPE
@@ -97,6 +93,16 @@ spec:
               value: "mssim"
             - name: TPM_SERVER_NAME
               value: tpm-simulator-1.%NAMESPACE%.svc.cluster.local
+            - name: ERP_E_PRESCRIPTION_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: secret-erp-pc-srv
+                  key: E_PRESCRIPTION_SERVICE_URL
+            - name: ERP_IDP_REGISTERED_FD_URI
+              valueFrom:
+                secretKeyRef:
+                  name: secret-erp-pc-srv
+                  key: IDP_REGISTERED_FD_URI
             - name: ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY
               valueFrom:
                 secretKeyRef:

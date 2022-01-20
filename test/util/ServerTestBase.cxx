@@ -33,6 +33,7 @@
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 
 #ifdef _WINNT_
@@ -109,7 +110,8 @@ void ServerTestBase::startServer (void)
         std::move(hsmPool),
         StaticData::getJsonValidator(),
         StaticData::getXmlValidator(),
-        StaticData::getInCodeValidator());
+        StaticData::getInCodeValidator(),
+        std::make_unique<RegistrationMock>());
     initializeIdp(serviceContext->idp);
     mServer = std::make_unique<HttpsServer<PcServiceContext>>(
         "0.0.0.0",

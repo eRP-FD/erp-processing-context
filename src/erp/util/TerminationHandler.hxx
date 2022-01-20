@@ -13,6 +13,11 @@
 #include <optional>
 #include <vector>
 
+namespace boost::asio
+{
+class io_context;
+}
+
 
 /**
  * The purpose of the termination handler is to call registered callbacks right before the application exits
@@ -38,6 +43,7 @@ class TerminationHandler
 {
 public:
     static inline TerminationHandler& instance (void) {return *rawInstance();}
+    virtual ~TerminationHandler();
 
     enum class State
     {
@@ -63,12 +69,16 @@ public:
     /// @brief trigger a process termination from anywhere
     virtual void terminate();
 
+    virtual void gracefulShutdown(boost::asio::io_context& ioContext, int delaySeconds);
+
     State getState (void) const;
 
     /**
      * Return whether `notifyTerminationCallbacks(bool hasError)` has been called with `hasError==true`.
      */
     bool hasError (void) const;
+
+    bool isShuttingDown() const;
 
 protected:
     /**
@@ -81,6 +91,10 @@ private:
     std::vector<std::function<void(bool)>> mCallbacks;
     std::atomic<State> mState;
     std::atomic_bool mHasError;
+    class ShutdownDelayTimer;
+    std::unique_ptr<ShutdownDelayTimer> mShutdownDelayTimer;
+    class CountDownTimer;
+    std::unique_ptr<CountDownTimer> mCountDownTimer;
 
     static std::unique_ptr<TerminationHandler>& rawInstance (void);
 

@@ -28,6 +28,7 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp6590Test.cxx
         workflow-test/Erp6619Test.cxx
         workflow-test/Erp8538Test.cxx
+        workflow-test/Erp8545Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
         workflow-test/ErpWorkflow169Test.cxx
@@ -75,6 +76,7 @@ list(
         erp-test.cxx
         erp/ErpMainTest.cxx
         erp/ErpProcessingContextTest.cxx
+        erp/admin/AdminRequestHandlerTest.cxx
         erp/beast/BoostBeastHeaderTest.cxx
         erp/beast/BoostBeastStringReaderTest.cxx
         erp/beast/BoostBeastStringWriterTest.cxx
@@ -154,6 +156,8 @@ list(
         erp/model/TaskTest.cxx
         erp/model/TimePeriodTest.cxx
         erp/model/TimestampTest.cxx
+        erp/pc/CFdSigErpManagerTest.cxx
+        erp/pc/CFdSigErpTestHelper.hxx
         erp/pc/PcServiceContextTest.cxx
         erp/requirements/A_19714_SecureTransportChannel.cxx
         erp/registration/HeartbeatSenderTest.cxx
@@ -179,6 +183,7 @@ list(
         erp/service/ErpRequestHandlerTest.cxx
         erp/service/HealthHandlerTest.cxx
         erp/service/MedicationDispenseGetHandlerTest.cxx
+        erp/service/RequestHandlerBasicAuthenticationTest.cxx
         erp/service/SubscriptionHandlerTest.cxx
         erp/service/TaskAbortHandlerTest.cxx
         erp/service/VauRequestHandlerExternalInterfaceTest.cxx
@@ -245,6 +250,7 @@ list(
         mock/MockRedisStore.cxx
         mock/MockTaskTable.cxx
         mock/MockTerminationHandler.cxx
+        mock/RegistrationMock.cxx
         mock/TestUrlArguments.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx

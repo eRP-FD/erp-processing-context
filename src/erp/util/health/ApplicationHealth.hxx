@@ -30,7 +30,8 @@ public:
         PrngSeed,
         Redis,
         TeeToken,
-        Tsl
+        Tsl,
+        CFdSigErp
     };
     enum class Status
     {
@@ -72,7 +73,6 @@ public:
 private:
     mutable std::mutex mMutex;
     std::unordered_map<Service, State> mStates;
-    bool mIsUp = false;
 
     /// Helper function to retrieve a status in a format suitable as second argument for one of the Health::set*Status() functions.
     std::string_view getUpDownStatus (Service service) const;
@@ -83,9 +83,10 @@ private:
     /// Helper function to retrieve a details in a format suitable as third argument for one of the Health::set*Status() functions.
     std::optional<std::string_view> getDetails (Service service) const;
 
-    bool isUp_noLock (void) const;
+    std::string_view status_noLock() const;
     bool isUp_noLock (Service service) const;
     std::string downServicesString_noLock (void) const;
+    bool servicesUp_noLock() const;
 };
 
 

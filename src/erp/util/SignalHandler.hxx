@@ -27,6 +27,8 @@ public:
     /// @brief trigger a process termination from anywhere
     static void manualTermination();
 
+    static void gracefulShutdown();
+
     int mSignal = 0;
 private:
     boost::asio::io_context& mIoContext;

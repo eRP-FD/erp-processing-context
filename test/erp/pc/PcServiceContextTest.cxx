@@ -16,6 +16,7 @@
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 #include <gtest/gtest.h>
 
@@ -51,7 +52,8 @@ TEST_F(ServiceContextTest, init)
             TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
         StaticData::getJsonValidator(),
         StaticData::getXmlValidator(),
-        StaticData::getInCodeValidator());
+        StaticData::getInCodeValidator(),
+        std::make_unique<RegistrationMock>());
     ASSERT_TRUE(serviceContext.databaseFactory());
 }
 
@@ -69,6 +71,7 @@ TEST_F(ServiceContextTest, initWithTsl)
         StaticData::getJsonValidator(),
         StaticData::getXmlValidator(),
         StaticData::getInCodeValidator(),
+        std::make_unique<RegistrationMock>(),
         TslTestHelper::createTslManager<TslManager>());
 
     ASSERT_TRUE(serviceContext.databaseFactory());

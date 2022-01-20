@@ -9,6 +9,7 @@
 #include "erp/util/ErpException.hxx"
 #include "erp/util/JwtException.hxx"
 
+#include <sw/redis++/redis++.h>
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/exception/exception.hpp>
 #include <sstream>
@@ -99,6 +100,11 @@ void ExceptionHelper::extractInformationAndRethrow (
                      + "," + HsmProductionClient::hsmErrorDetails(e.errorCode)
 #endif
                      + ")", getLocationString(e));
+        throw;
+    }
+    catch (const sw::redis::Error& e)
+    {
+        consumer("sw::redis::Error(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::runtime_error& e)

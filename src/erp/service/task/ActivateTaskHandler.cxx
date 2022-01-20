@@ -60,7 +60,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
               "Task not in status draft but in status " + std::string(model::Task::StatusNames.at(taskStatus)));
     A_19024_01.finish();
 
-    const auto parameterResource = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::fhir);
+    const auto parameterResource = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::ActivateTaskParameters);
     const auto* ePrescriptionValue = parameterResource.findResourceParameter("ePrescription");
     ErpExpect(ePrescriptionValue != nullptr, HttpStatus::BadRequest, "Failed to get ePrescription from requestBody");
     const auto& ePrescriptionParameter = model::Binary::fromJson(*ePrescriptionValue);

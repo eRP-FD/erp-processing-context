@@ -85,6 +85,12 @@ void TimerJobBase::run (void)
     {
         onStart();
 
+        // wait before the first job execution
+        if ( ! isAborted())
+        {
+            waitFor(mInterval);
+        }
+
         while ( ! isAborted())
         {
             executeJob();

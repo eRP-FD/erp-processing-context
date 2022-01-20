@@ -18,6 +18,7 @@
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 
 static auto todaysKey = CmacKey::fromBin("--Today's Key!--"); // NOLINT
@@ -77,6 +78,7 @@ public:
             StaticData::getJsonValidator(),
             StaticData::getXmlValidator(),
             StaticData::getInCodeValidator(),
+            std::make_unique<RegistrationMock>(),
             TslTestHelper::createTslManager<TslManager>());
     }
 

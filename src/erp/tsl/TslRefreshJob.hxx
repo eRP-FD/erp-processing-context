@@ -26,7 +26,6 @@ protected:
 
 private:
     const std::shared_ptr<TslManager> mTslManager;
-    std::atomic_bool mFirstIterationDone;
 };
 
 

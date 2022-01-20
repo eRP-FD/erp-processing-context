@@ -15,6 +15,7 @@ namespace model
 {
 namespace ResourceVersion
 {
+enum class NotProfiled {};
 
 enum class DeGematikErezeptWorkflowR4
 {
@@ -33,6 +34,7 @@ enum class KbvItaErp
 
 std::string_view v_str(const KbvItaErp& v);
 KbvItaErp str_vKbv(const std::string_view& versionString);
+
 
 [[nodiscard]] ::std::tuple<DeGematikErezeptWorkflowR4, KbvItaErp> current();
 template<typename VersionType>

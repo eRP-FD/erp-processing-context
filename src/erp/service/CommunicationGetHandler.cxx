@@ -118,7 +118,7 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
 
     auto bundle = createBundle(communications);
     bundle.setTotalSearchMatches(totalSearchMatches);
-    const auto links = arguments->getBundleLinks(getLinkBase(), "/Communication");
+    const auto links = arguments->getBundleLinks(getLinkBase(), "/Communication", totalSearchMatches);
     for (const auto& link : links)
         bundle.setLink(link.first, link.second);
 

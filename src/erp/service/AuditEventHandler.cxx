@@ -98,8 +98,8 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
 
     A_19397.start("Return audit events as bundle");
     auto bundle = createBundle(session.serviceContext, session.request, auditEvents);
-    bundle.setTotalSearchMatches(totalSearchMatches);
-    const auto links = arguments->getBundleLinks(getLinkBase(), "/AuditEvent");
+    bundle.setTotalSearchMatches(totalSearchMatches);    
+    const auto links = arguments->getBundleLinks(getLinkBase(), "/AuditEvent", totalSearchMatches);
     for (const auto& link : links)
     {
         bundle.setLink(link.first, link.second);

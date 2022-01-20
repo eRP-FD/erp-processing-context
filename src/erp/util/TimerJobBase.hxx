@@ -53,6 +53,7 @@ protected:
 
     /**
      * Job implementation, it will be triggered with specified interval.
+     * The first job is started after specified interval ( not immediately ).
      *
      * It must not throw any exception, otherwise it would trigger application termination.
      */

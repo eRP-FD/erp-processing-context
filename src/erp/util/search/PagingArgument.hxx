@@ -53,12 +53,9 @@ public:
      */
     bool hasPreviousPage (void) const;
     /**
-     * Return whether there is a 'next' page.
-     * At the moment the result is hard coded to `true`.  The reason is that for finding out whether or not there
-     * is a next page, we need additional information from the database. This is somewhat expensive to obtain.
-     * The cost does not seem to be worth the effect at the moment.
+     * Return whether there is a 'next' page.     
      */
-    bool hasNextPage (void) const;
+    bool hasNextPage (const std::size_t& totalSearchMatches) const;
 
 private:
     size_t mCount;

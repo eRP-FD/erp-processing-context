@@ -22,7 +22,7 @@
 #include <gtest/gtest.h>
 
 
-class VauRequestHandlerProblematicJwtsTest : public ServerTestBase
+class VauRequestHandlerProblematicJwtsTest : public ServerTestBase, public ::testing::WithParamInterface<std::string>
 {
 public:
     shared_EVP_PKEY mPublicKey;
@@ -45,8 +45,9 @@ public:
     ClientResponse sendRequest(JWT& jwt)
     {
         auto client = createClient();
+        auto ep = GetParam();
         ClientRequest request(
-            Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(jwt)}, HttpStatus::Unknown),
+            Header(HttpMethod::GET, std::move(ep), Header::Version_1_1, { getAuthorizationHeaderForJwt(jwt)}, HttpStatus::Unknown),
             "");
         ClientRequest encryptedRequest(
             Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
@@ -84,7 +85,7 @@ public:
     ClientTeeProtocol teeProtocol;
 };
 
-TEST_F(VauRequestHandlerProblematicJwtsTest, acrUnsupportedContent)
+TEST_P(VauRequestHandlerProblematicJwtsTest, acrUnsupportedContent)
 {
     rapidjson::Document claims;
     ASSERT_NO_THROW(claims.Parse(claimsFromTestFile("/jwt/claims_patient.json")));
@@ -108,7 +109,7 @@ TEST_F(VauRequestHandlerProblematicJwtsTest, acrUnsupportedContent)
     A_19439.finish();
 }
 
-TEST_F(VauRequestHandlerProblematicJwtsTest, acrValidContent)
+TEST_P(VauRequestHandlerProblematicJwtsTest, acrValidContent)
 {
     rapidjson::Document claims;
     ASSERT_NO_THROW(claims.Parse(claimsFromTestFile("/jwt/claims_patient.json")));
@@ -135,11 +136,12 @@ TEST_F(VauRequestHandlerProblematicJwtsTest, acrValidContent)
     A_19439.finish();
 }
 
-TEST_F(VauRequestHandlerProblematicJwtsTest, UnsupportedSignatureAlgorithm)
+TEST_P(VauRequestHandlerProblematicJwtsTest, UnsupportedSignatureAlgorithm)
 {
     auto client = createClient();
     JWT invalidJwt{jwtWithSignatureAlgorithm("none") };
-    ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown), "");
+    auto ep = GetParam();
+    ClientRequest request(Header(HttpMethod::GET, std::move(ep), Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown), "");
     A_19131.test("Handle unsupported signature algorithm - 'none' in this case.");
     ClientRequest encryptedRequest(
         Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
@@ -154,11 +156,12 @@ TEST_F(VauRequestHandlerProblematicJwtsTest, UnsupportedSignatureAlgorithm)
     A_19131.finish();
 }
 
-TEST_F(VauRequestHandlerProblematicJwtsTest, ValidSignatureAlgorithmWithInvalidSignature)
+TEST_P(VauRequestHandlerProblematicJwtsTest, ValidSignatureAlgorithmWithInvalidSignature)
 {
     auto client = createClient();
     JWT invalidJwt{jwtWithSignatureAlgorithm("BP256R1") };
-    ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown), "");
+    auto ep = GetParam();
+    ClientRequest request(Header(HttpMethod::GET, std::move(ep), Header::Version_1_1, { getAuthorizationHeaderForJwt(invalidJwt) }, HttpStatus::Unknown), "");
     ClientRequest encryptedRequest(
         Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
         teeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, jwtWithSignatureAlgorithm("BP256R1")));
@@ -174,13 +177,14 @@ TEST_F(VauRequestHandlerProblematicJwtsTest, ValidSignatureAlgorithmWithInvalidS
     A_19131.finish();
 }
 
-TEST_F(VauRequestHandlerProblematicJwtsTest, InvalidB64EncodedToken)
+TEST_P(VauRequestHandlerProblematicJwtsTest, InvalidB64EncodedToken)
 {
     A_19131.test("Handle invalid B64 encoding.");
     const std::string jwt = "HalloToken:eyJhbGciOiJCUDI1NlIxIiwidHlwIjoiSldUIiwia2lNIjoiUHJrX3Rva2VuIn0.eyJhY3IiOiJlaWRhcy1sb2EtaGlnaCIsImF1ZCI6Imh0dHBzOi8vZXJwLnRlbGVtYXRpay5kZS9sb2dpbiIsImV4cCI6MTYxNzExODI3NiwiZmFtaWx5X25hbWUiOiJkZXIgTmFjaG5hbWUiLCJnaXZlbl9uYW1lIjoiZGVyIFZvcm5hbWUiLCJpYXQiOjE2MTcxMTc5MTYsIm5iZiI6MTYxNzExNzk2NiwiaWROdW1tZXIiOiIxLUhCQS1UZXN0a2FydGUtODgzMTEwMDAwMTIwMzMwIiwiaXNzIjoiaHR0cHM6Ly9pZHAxLnRlbGVtYXRpay5kZS9qd3QiLCJqdGkiOiI2NmZhY2FjOS0xZTJiLTQ3NTAtOTAxNC0xM2M0YmY1Yjc3M2QiLCJub25jZSI6ImZ1dSBiYXIgYmF6Iiwib3JnYW5pemF0aW9uTmFtZSI6Ikluc3RpdHV0aW9ucy0gb2Rlci1PcmdhbmlzYXRpb25zLU5lemVpY2hudW5nIiwicHJvZmVzc2lvbk9JRCI6IjEuMi4yNzYuMC43Ni40LjMwIiwic3ViIjoiUmFiY1VTdXVXS0taRUVIbXJjTm1fa1VET1cxM3VhR1U1Wms4T29Cd2lOayJ9.XmokF3O5BZ7LtI4vftuCCVjz3Di9LH711oUinUrM4d8dBzw7IcfvTm4rNbWvNcjat0nzP8K3jatx0FekzuG_WA";
 
     auto client = createClient();
-    ClientRequest request(Header(HttpMethod::GET, "/Task", Header::Version_1_1, { getAuthorizationHeaderForJwt(jwt) }, HttpStatus::Unknown), "");
+    auto ep = GetParam();
+    ClientRequest request(Header(HttpMethod::GET, std::move(ep), Header::Version_1_1, { getAuthorizationHeaderForJwt(jwt) }, HttpStatus::Unknown), "");
     ClientRequest encryptedRequest(
         Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
         teeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, jwt));
@@ -195,3 +199,7 @@ TEST_F(VauRequestHandlerProblematicJwtsTest, InvalidB64EncodedToken)
     ASSERT_TRUE( innerResponse.getHeader().header(Header::WWWAuthenticate).value() == std::string{VauRequestHandler::wwwAuthenticateErrorInvalidToken()} );
     A_19131.finish();
 }
+
+INSTANTIATE_TEST_SUITE_P(ForAllGETEndpoints, VauRequestHandlerProblematicJwtsTest,
+                         testing::Values("/Task", "/metadata", "/Device", "/Communication", "/MedicationDispense",
+                                         "/AuditEvent"));

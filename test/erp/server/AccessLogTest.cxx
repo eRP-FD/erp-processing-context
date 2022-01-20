@@ -68,13 +68,13 @@ TEST_F(AccessLogTest, logAfterConstruction)
     EXPECT_TRUE(getStringValue(document, "/timestamp").has_value());
     EXPECT_TRUE(getIntegerValue(document, "/port").has_value());
 
-    EXPECT_TRUE(getDoubleValue(document, "/response-time").has_value());
+    EXPECT_TRUE(getDoubleValue(document, "/response_time").has_value());
 
     // x-request-id is not set by default as it is extracted from the outer request.
-    EXPECT_FALSE(getStringValue(document, "/x-request-id").has_value());
+    EXPECT_FALSE(getStringValue(document, "/x_request_id").has_value());
 
-    ASSERT_TRUE(getStringValue(document, "/log-type").has_value());
-    EXPECT_EQ(getStringValue(document, "/log-type"), "access");
+    ASSERT_TRUE(getStringValue(document, "/log_type").has_value());
+    EXPECT_EQ(getStringValue(document, "/log_type"), "access");
 
     // Verify that no "detail" has been added.
     ASSERT_FALSE(getStringValue(document, "/detail").has_value());
@@ -141,7 +141,7 @@ TEST_F(AccessLogTest, setInnerRequestOperation)
     }
 
     const auto document = parseJsonLog(os.str());
-    const auto value = getStringValue(document, "/inner-request-operation");
+    const auto value = getStringValue(document, "/inner_request_operation");
     ASSERT_TRUE(value.has_value());
     ASSERT_EQ(value.value(), "GET /The/Operation");
 }
@@ -153,17 +153,16 @@ TEST_F(AccessLogTest, updateFromOuterRequest)
     {
         AccessLog log (os);
         auto outerRequest = ServerRequest(Header());
-        outerRequest.header().addHeaderField("X-REQUEST-ID", "123");
+        outerRequest.header().addHeaderField("X-REQUEST-ID", "[f0f055a0-6338-47fc-8c09-91ff72fa398b]");
         log.updateFromOuterRequest(outerRequest);
         log.markEnd();
     }
 
     const auto document = parseJsonLog(os.str());
-    const auto value = getStringValue(document, "/x-request-id");
+    const auto value = getStringValue(document, "/x_request_id");
     ASSERT_TRUE(value.has_value());
-    ASSERT_EQ(value.value(), "123");
+    ASSERT_EQ(value.value(), "f0f055a0-6338-47fc-8c09-91ff72fa398b");
 }
-
 
 // updateFromInnerRequest does not yet do anything that could be tested
 
@@ -179,7 +178,7 @@ TEST_F(AccessLogTest, updateFromInnerResponse)
     }
 
     const auto document = parseJsonLog(os.str());
-    const auto value = getIntegerValue(document, "/inner-response-code");
+    const auto value = getIntegerValue(document, "/inner_response_code");
     ASSERT_TRUE(value.has_value());
     ASSERT_EQ(value.value(), 400);
 }
@@ -196,7 +195,7 @@ TEST_F(AccessLogTest, updateFromOuterResponse)
     }
 
     const auto document = parseJsonLog(os.str());
-    const auto value = getIntegerValue(document, "/response-code");
+    const auto value = getIntegerValue(document, "/response_code");
     ASSERT_TRUE(value.has_value());
     ASSERT_EQ(value.value(), 204);
 }

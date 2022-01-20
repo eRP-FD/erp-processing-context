@@ -111,6 +111,12 @@ XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceV
     return getContext(schema.get());
 }
 
+std::unique_ptr<XmlValidatorContext>
+XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::NotProfiled) const
+{
+    return getSchemaValidationContextNoVer(schemaType);
+}
+
 std::unique_ptr<XmlValidatorContext> XmlValidator::getSchemaValidationContextNoVer(SchemaType schemaType) const
 {
     auto candidate = mMiscSchemaPtrs.find(schemaType);

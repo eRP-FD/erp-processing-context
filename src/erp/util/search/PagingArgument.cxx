@@ -98,7 +98,7 @@ bool PagingArgument::hasPreviousPage (void) const
 }
 
 
-bool PagingArgument::hasNextPage (void) const
+bool PagingArgument::hasNextPage (const std::size_t& totalSearchMatches) const
 {
-    return true;
+        return totalSearchMatches > mOffset + mCount;
 }

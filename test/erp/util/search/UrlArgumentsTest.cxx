@@ -112,7 +112,7 @@ TEST_F(UrlArgumentsTest, parseWithBundleLinks)
         });
     arguments.parse(request, mKeyDerivation);
 
-    const auto links = arguments.getBundleLinks("base", "/Resource");
+    const auto links = arguments.getBundleLinks("base", "/Resource", 50);
 
     EXPECT_EQ(links.size(), 3);
 

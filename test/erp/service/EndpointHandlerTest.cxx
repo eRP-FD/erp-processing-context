@@ -46,6 +46,7 @@
 #include "test_config.h"
 #include "tools/jwt/JwtBuilder.hxx"
 #include "tools/ResourceManager.hxx"
+#include "test/mock/RegistrationMock.hxx"
 
 #include <gtest/gtest.h>
 #include <regex>
@@ -132,7 +133,8 @@ public:
                   TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
               StaticData::getJsonValidator(),
               StaticData::getXmlValidator(),
-              StaticData::getInCodeValidator())
+              StaticData::getInCodeValidator(),
+              std::make_unique<RegistrationMock>())
     {
         mJwtBuilder = std::make_unique<JwtBuilder>(MockCryptography::getIdpPrivateKey());
     }
@@ -662,9 +664,8 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
             model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
         ASSERT_EQ(bundle.getResourceCount(), 3);
         ASSERT_TRUE(bundle.getLink(model::Link::Self).has_value());
-        // Next ist set, even if there is no next page.
-        ASSERT_TRUE(bundle.getLink(model::Link::Next).has_value());
-        ASSERT_EQ(std::string(bundle.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
+        ASSERT_FALSE(bundle.getLink(model::Link::Next).has_value());
+        //ASSERT_EQ(std::string(bundle.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
         ASSERT_FALSE(bundle.getLink(model::Link::Prev).has_value());
     }
 
@@ -747,8 +748,8 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
             model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
         ASSERT_EQ(bundle3.getResourceCount(), 13);
         ASSERT_TRUE(bundle3.getLink(model::Link::Self).has_value());
-        ASSERT_TRUE(bundle3.getLink(model::Link::Next).has_value());
-        ASSERT_EQ(std::string(bundle3.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=150");
+        ASSERT_FALSE(bundle3.getLink(model::Link::Next).has_value());
+        //ASSERT_EQ(std::string(bundle3.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=150");
         ASSERT_TRUE(bundle3.getLink(model::Link::Prev).has_value());
         ASSERT_EQ(std::string(bundle3.getLink(model::Link::Prev).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
     }

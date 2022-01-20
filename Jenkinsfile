@@ -306,7 +306,7 @@ pipeline {
                 script {
                     if (env.BRANCH_NAME == 'master') {
                         triggerDeployment('targetEnvironment': 'dev2')
-                    } else if (env.BRANCH_NAME.startsWith('release/1.0.')) {
+                    } else if (env.BRANCH_NAME.startsWith('release/1.4.')) {
                         triggerDeployment('targetEnvironment': 'dev')
                     }
                 }
@@ -318,20 +318,16 @@ pipeline {
         failure {
             script {
                 if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME.startsWith("release/")) {
-                    slackSend (channel: '#erp-cpp',
-                               teamDomain: 'ibm-m9wx',
-                               tokenCredentialId: 'jenkins-erp-slack-token',
-                               message: "Build ${env.BUILD_DISPLAY_NAME} failed for branch `${env.BRANCH_NAME}`:rotating_light: \nFor more details visit <${env.BUILD_URL}|the build page>")
+                    slackSendClient(message: "Build ${env.BUILD_DISPLAY_NAME} failed for branch `${env.BRANCH_NAME}`:rotating_light: \nFor more details visit <${env.BUILD_URL}|the build page>",
+                                    channel: '#erp-cpp')
                 }
             }
         }
         fixed {
             script {
                 if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME.startsWith("release/")) {
-                    slackSend (channel: '#erp-cpp',
-                               teamDomain: 'ibm-m9wx',
-                               tokenCredentialId: 'jenkins-erp-slack-token',
-                               message: "Build is now successful again on branch `${env.BRANCH_NAME}`:green_heart:")
+                    slackSendClient(message: "Build is now successful again on branch `${env.BRANCH_NAME}`:green_heart:",
+                                    channel: '#erp-cpp')
                 }
             }
         }

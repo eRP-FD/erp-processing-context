@@ -4,9 +4,10 @@
  */
 
 #include "erp/util/health/ApplicationHealth.hxx"
-
+#include "erp/model/Health.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
+#include "erp/util/TerminationHandler.hxx"
 
 
 namespace {
@@ -27,14 +28,15 @@ std::string_view ApplicationHealth::toString (const Service service)
 {
     switch(service)
     {
-        case Service::Bna:      return model::Health::bna;
-        case Service::Hsm:      return model::Health::hsm;
-        case Service::Idp:      return model::Health::idp;
-        case Service::Postgres: return model::Health::postgres;
-        case Service::PrngSeed: return model::Health::seedTimer;
-        case Service::Redis:    return model::Health::redis;
-        case Service::TeeToken: return model::Health::teeTokenUpdater;
-        case Service::Tsl:      return model::Health::tsl;
+        case Service::Bna:       return model::Health::bna;
+        case Service::Hsm:       return model::Health::hsm;
+        case Service::Idp:       return model::Health::idp;
+        case Service::Postgres:  return model::Health::postgres;
+        case Service::PrngSeed:  return model::Health::seedTimer;
+        case Service::Redis:     return model::Health::redis;
+        case Service::TeeToken:  return model::Health::teeTokenUpdater;
+        case Service::Tsl:       return model::Health::tsl;
+        case Service::CFdSigErp: return model::Health::cFdSigErp;
     }
     Fail("unhandled health service");
 }
@@ -64,7 +66,6 @@ void ApplicationHealth::up (Service service)
                               << ")";
 
         mStates[service] = {Status::Up, std::nullopt, std::nullopt};
-        mIsUp = isUp_noLock();
 
         showUpdatedStatus(downServicesString_noLock());
     }
@@ -83,7 +84,6 @@ void ApplicationHealth::down (Service service, std::optional<std::string_view> r
             << "; " << rootCause.value_or("unknown root cause") << ")";
 
         mStates[service] = {Status::Down, std::nullopt, std::string(rootCause.value_or(""))};
-        mIsUp = isUp_noLock();
 
         showUpdatedStatus(downServicesString_noLock());
     }
@@ -102,7 +102,6 @@ void ApplicationHealth::skip (Service service, std::string_view reason)
                               << "; " << reason << ")";
 
         mStates[service] = {Status::Skipped, std::nullopt, "Skipped: " + std::string(reason)};
-        mIsUp = isUp_noLock();
 
         showUpdatedStatus(downServicesString_noLock());
     }
@@ -113,20 +112,30 @@ bool ApplicationHealth::isUp (void) const
 {
     std::lock_guard lock (mMutex);
 
-    return mIsUp;
+    return status_noLock() == model::Health::up;
 }
 
 
-bool ApplicationHealth::isUp_noLock (void) const
+std::string_view ApplicationHealth::status_noLock() const
+{
+    const bool& isShuttingDown = TerminationHandler::instance().isShuttingDown();
+    if (isShuttingDown)
+    {
+        return model::Health::shutdown;
+    }
+    return servicesUp_noLock() ? model::Health::up : model::Health::down;
+}
+
+bool ApplicationHealth::servicesUp_noLock() const
 {
     return isUp_noLock(Service::Bna)
-        && isUp_noLock(Service::Hsm)
-        && isUp_noLock(Service::Idp)
-        && isUp_noLock(Service::Postgres)
-        && isUp_noLock(Service::Redis)
-        && isUp_noLock(Service::PrngSeed)
-        && isUp_noLock(Service::TeeToken)
-        && isUp_noLock(Service::Tsl);
+            && isUp_noLock(Service::Hsm)
+            && isUp_noLock(Service::Idp)
+            && isUp_noLock(Service::Postgres)
+            && isUp_noLock(Service::Redis)
+            && isUp_noLock(Service::PrngSeed)
+            && isUp_noLock(Service::TeeToken)
+            && isUp_noLock(Service::Tsl);
 }
 
 
@@ -184,11 +193,9 @@ model::Health ApplicationHealth::model (void) const
     health.setSeedTimerStatus(getUpDownStatus(Service::PrngSeed), getDetails(Service::PrngSeed));
     health.setTeeTokenUpdaterStatus(getUpDownStatus(Service::TeeToken), getDetails(Service::TeeToken));
     health.setTslStatus(getUpDownStatus(Service::Tsl), getDetails(Service::Tsl));
+    health.setCFdSigErpStatus(getUpDownStatus(Service::CFdSigErp), getServiceDetails(Service::CFdSigErp), getDetails(Service::CFdSigErp));
 
-    health.setOverallStatus(
-        isUp_noLock()
-        ? model::Health::up
-        : model::Health::down);
+    health.setOverallStatus(status_noLock());
 
     return health;
 }

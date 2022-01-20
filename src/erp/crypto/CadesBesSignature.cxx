@@ -98,7 +98,7 @@ namespace
 
 
     void addCertificateToSignerInfo(
-        CMS_ContentInfo& cmsContentInfo, BIO& data,  const Certificate& certificate, unsigned int flags)
+        CMS_ContentInfo& cmsContentInfo, const Certificate& certificate)
     {
         auto* signerInfos = CMS_get0_SignerInfos(&cmsContentInfo);
         OpenSslExpect(signerInfos != nullptr, "No signer infos is provided.");
@@ -118,9 +118,44 @@ namespace
                 EssCertificateHelper::setSigningCertificateInSignedData(*signerInfo, *certificate.toX509().removeConst());
             }
         }
+    }
 
-        OpenSslExpect(1 == CMS_final(&cmsContentInfo, &data, nullptr, flags),
-                      "Can not finalise CMS signature");
+
+    int getOcspResponseRevocationNid()
+    {
+        static const int nidOcspResponseRevocationContainer =
+            OBJ_create("1.3.6.1.5.5.7.16.2", "OCSP container", "OCSP response revocation container");
+        return nidOcspResponseRevocationContainer;
+    }
+
+
+    void addOcspToSignerInfo(
+        CMS_ContentInfo& cmsContentInfo, const OCSP_RESPONSE& ocspResponse)
+    {
+        const int nidOcspResponseRevocationContainer = getOcspResponseRevocationNid();
+        Expect(nidOcspResponseRevocationContainer != NID_undef, "Could not create OCSP container NID");
+        ASN1_OBJECT* formatObject = OBJ_nid2obj(nidOcspResponseRevocationContainer);
+        OpenSslExpect(formatObject != nullptr, "Can not get OCSP format object.");
+
+        Asn1ObjectPtr copyFormatObject(OBJ_dup(formatObject));
+        OpenSslExpect(copyFormatObject != nullptr, "Can not get copy OCSP format object.");
+
+        ASN1_TYPE* data = nullptr;
+        ASN1_TYPE_pack_sequence(
+            ASN1_ITEM_rptr(OCSP_RESPONSE),
+            const_cast<void*>(static_cast<const void*>(&ocspResponse)),
+            &data);
+        OpenSslExpect(data != nullptr, "Can not create ASN1_TYPE for OCSP_RESPOSE");
+        Asn1TypePtr dataPtr(data);
+        OpenSslExpect(
+            CMS_add0_otherRevocationInfoChoice(
+                &cmsContentInfo,
+                copyFormatObject.get(),
+                data) != 0,
+            "Can not create OCSP revocation info choice in CMS");
+
+        dataPtr.release();
+        copyFormatObject.release();
     }
 
 
@@ -139,8 +174,7 @@ namespace
 
     OcspResponsePtr getOcspResponse(CMS_ContentInfo& cmsContentInfo)
     {
-        static const int nidOcspResponseRevocationContainer =
-            OBJ_create("1.3.6.1.5.5.7.16.2", "OCSP container", "OCSP response revocation container");
+        const int nidOcspResponseRevocationContainer = getOcspResponseRevocationNid();
 
         if (nidOcspResponseRevocationContainer != NID_undef)
         {
@@ -322,21 +356,36 @@ CadesBesSignature::CadesBesSignature(const std::list<Certificate>& trustedCertif
 
 }
 
-CadesBesSignature::CadesBesSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey,
-                                     const std::string& payload, const std::optional<model::Timestamp>& signingTime)
+CadesBesSignature::CadesBesSignature(
+    const Certificate& cert,
+    const shared_EVP_PKEY& privateKey,
+    const std::string& payload,
+    const std::optional<model::Timestamp>& signingTime,
+    OcspResponsePtr ocspResponse)
     : mPayload(payload)
 {
     auto bio = shared_BIO::make();
     auto written = BIO_write(bio.get(), payload.data(), gsl::narrow<int>(payload.size()));
     OpenSslExpect(written == gsl::narrow<int>(payload.size()), "BIO_write failed." + std::to_string(written));
+
     mCmsHandle = shared_CMS_ContentInfo::make(
         CMS_sign(cert.toX509().removeConst(), privateKey.removeConst(), nullptr, bio.get(), CMS_BINARY | CMS_STREAM | CMS_PARTIAL));
     OpenSslExpect(mCmsHandle.isSet(), "Failed to sign with CMS");
+
     if (signingTime.has_value())
     {
         setSigningTime(*signingTime);
     }
-    addCertificateToSignerInfo(*mCmsHandle, *bio.get(), cert, EVP_PKEY_base_id(privateKey.removeConst()));
+
+    addCertificateToSignerInfo(*mCmsHandle, cert);
+
+    if (ocspResponse != nullptr)
+    {
+        addOcspToSignerInfo(*mCmsHandle, *ocspResponse);
+    }
+
+    // finalise CMS
+    OpenSslExpect(1 == CMS_final(mCmsHandle, bio.get(), nullptr, CMS_BINARY), "Can not finalise CMS signature");
 }
 
 

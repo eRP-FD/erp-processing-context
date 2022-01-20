@@ -84,7 +84,7 @@
       <xs:extension base="Element">
         <xs:sequence>
           <xs:element name="coding" type="KBV_PR_ERP_Medication_Ingredient.Ingredient.CodeableConcept.Coding" minOccurs="0"/>
-          <xs:element name="text" type="string"/>
+          <xs:element name="text" type="string-80"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>

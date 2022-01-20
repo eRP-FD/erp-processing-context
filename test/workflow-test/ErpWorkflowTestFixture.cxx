@@ -481,6 +481,10 @@ void ErpWorkflowTestBase::checkAuditEventPaging(
         ASSERT_TRUE(auditEventBundle);
         EXPECT_EQ(auditEventBundle->getResourceCount(), i < numCalls ? pageSize : rest);
         EXPECT_EQ(auditEventBundle->getTotalSearchMatches(), numEventsExpected);
+        if(i < numCalls)
+            ASSERT_TRUE(auditEventBundle->getLink(model::Link::Type::Next).has_value());
+        else
+            ASSERT_FALSE(auditEventBundle->getLink(model::Link::Type::Next).has_value());
     }
 }
 

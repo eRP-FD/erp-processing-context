@@ -21,8 +21,10 @@ class MockTerminationHandler : public TerminationHandler
 public:
     static void setupForTesting (void);
     static void setupForProduction (void);
+    ~MockTerminationHandler() override;
 
     void terminate() override;
+    void gracefulShutdown(boost::asio::io_context& ioContext, int delaySeconds) override;
     void waitForTerminated (void);
 };
 

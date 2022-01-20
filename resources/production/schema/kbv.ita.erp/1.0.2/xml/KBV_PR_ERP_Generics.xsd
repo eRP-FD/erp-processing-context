@@ -5,11 +5,12 @@
 
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
   <xs:include schemaLocation="../../../shared/xml/GenericTypes.xsd"/>
+  <xs:include schemaLocation="../../../shared/xml/constrained-strings.xsd"/>
   <xs:complexType name="KBV_PR_ERP_Medication_Generics.Form">
     <xs:complexContent>
       <xs:extension base="Element">
         <xs:sequence>
-          <xs:element name="text" type="string"/>
+          <xs:element name="text" type="string-30"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
@@ -29,7 +30,7 @@
       <xs:extension base="Element">
         <xs:sequence>
           <xs:element name="value" type="decimal"/>
-          <xs:element name="unit" type="string"/>
+          <xs:element name="unit" type="string-12"/>
           <xs:element name="system" type="KBV_PR_ERP_Medication_Generics.Ratio.Numerator.System" minOccurs="0"/>
           <xs:element name="code" type="code" minOccurs="0"/>
         </xs:sequence>

@@ -7,17 +7,19 @@
 
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/util/ExceptionHelper.hxx"
+#include "erp/registration/RegistrationInterface.hxx"
 
 
 void HealthCheck::update (SessionContext<PcServiceContext>& session)
 {
-    check(ApplicationHealth::Service::Bna,      session, &checkBna);
-    check(ApplicationHealth::Service::Hsm,      session, &checkHsm);
-    check(ApplicationHealth::Service::Idp,      session, &checkIdp);
-    check(ApplicationHealth::Service::Postgres, session, &checkPostgres);
-    check(ApplicationHealth::Service::PrngSeed, session, &checkSeedTimer);
-    check(ApplicationHealth::Service::TeeToken, session, &checkTeeTokenUpdater);
-    check(ApplicationHealth::Service::Tsl,      session, &checkTsl);
+    check(ApplicationHealth::Service::Bna,          session, &checkBna);
+    check(ApplicationHealth::Service::Hsm,          session, &checkHsm);
+    check(ApplicationHealth::Service::Idp,          session, &checkIdp);
+    check(ApplicationHealth::Service::Postgres,     session, &checkPostgres);
+    check(ApplicationHealth::Service::PrngSeed,     session, &checkSeedTimer);
+    check(ApplicationHealth::Service::TeeToken,     session, &checkTeeTokenUpdater);
+    check(ApplicationHealth::Service::Tsl,          session, &checkTsl);
+    check(ApplicationHealth::Service::CFdSigErp,    session, &checkCFdSigErp);
 
     if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false))
         session.serviceContext.applicationHealth().skip(
@@ -26,7 +28,15 @@ void HealthCheck::update (SessionContext<PcServiceContext>& session)
     else
         check(ApplicationHealth::Service::Redis, session, &checkRedis);
 
-    session.serviceContext.applicationHealth().setServiceDetails(ApplicationHealth::Service::Hsm, Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
+    session.serviceContext.applicationHealth().setServiceDetails(
+        ApplicationHealth::Service::Hsm, Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
+
+    session.serviceContext.applicationHealth().setServiceDetails(
+        ApplicationHealth::Service::CFdSigErp,
+        "last success " + session.serviceContext.getCFdSigErpManager().getLastValidationTimestamp());
+
+    session.serviceContext.registrationInterface()->updateRegistrationBasedOnApplicationHealth(
+        session.serviceContext.applicationHealth());
 }
 
 
@@ -41,6 +51,12 @@ void HealthCheck::checkHsm (SessionContext<PcServiceContext>& session)
 {
     auto hsmSession = session.serviceContext.getHsmPool().acquire();
     (void) hsmSession.session().getRandomData(1);
+}
+
+
+void HealthCheck::checkCFdSigErp (SessionContext<PcServiceContext>& session)
+{
+    session.serviceContext.getCFdSigErpManager().healthCheck();
 }
 
 

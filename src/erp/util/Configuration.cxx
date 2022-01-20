@@ -358,7 +358,11 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::TEE_TOKEN_RETRY_SECONDS                        , {"ERP_TEE_TOKEN_RETRY_SECONDS"                        , "/erp/hsm/tee-token/retry-seconds"}},
     {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir"}},
     {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds"}},
-    {ConfigurationKey::FEATURE_PKV                                    , {"ERP_FEATURE_PKV"                                    , "/erp/feature/pkv"}}
+    {ConfigurationKey::FEATURE_PKV                                    , {"ERP_FEATURE_PKV"                                    , "/erp/feature/pkv"}},
+    {ConfigurationKey::ADMIN_SERVER_INTERFACE                         , {"ERP_ADMIN_SERVER_INTERFACE"                         , "/erp/admin/server/interface"}},
+    {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port"}},
+    {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds"}},
+    {ConfigurationKey::ADMIN_CREDENTIALS                              , {"ERP_ADMIN_CREDENTIALS"                              , "/erp/admin/credentials"}},
     });
     // clang-format on
 }
@@ -370,6 +374,7 @@ DevConfigKeyNames::DevConfigKeyNames()
     mNamesByKey.insert({
     {ConfigurationKey::DEBUG_ENABLE_HSM_MOCK,                 {"DEBUG_ENABLE_HSM_MOCK",             "/debug/enable-hsm-mock"}},
     {ConfigurationKey::DEBUG_DISABLE_ENROLMENT_API_AUTH,      {"DEBUG_DISABLE_ENROLMENT_API_AUTH",  "/debug/disable-enrolment-api-auth"}},
+    {ConfigurationKey::DEBUG_DISABLE_ADMIN_AUTH,              {"DEBUG_DISABLE_ADMIN_AUTH",          "/debug/disable-admin-auth"}},
     {ConfigurationKey::DEBUG_DISABLE_REGISTRATION,            {"DEBUG_DISABLE_REGISTRATION",        "/debug/disable-registration"}},
     {ConfigurationKey::DEBUG_DISABLE_DOS_CHECK,               {"DEBUG_DISABLE_DOS_CHECK",           "/debug/disable-dos-check"}},
     {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check"}}

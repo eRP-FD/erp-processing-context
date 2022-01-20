@@ -7,6 +7,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
 #include "erp/erp-serverinfo.hxx"
+#include "Timestamp.hxx"
 
 #include <rapidjson/document.h>
 
@@ -53,6 +54,13 @@ constexpr std::string_view health_template = R"--(
     {
       "name": "TeeTokenUpdater",
       "status": "DOWN"
+    },
+    {
+      "name": "C.FD.SIG-eRP",
+      "status": "DOWN",
+      "data": {
+        "timestamp": ""
+      }
     }
   ],
   "version": {
@@ -69,10 +77,13 @@ const rapidjson::Pointer namePointer("/name");
 const rapidjson::Pointer checksPointer("/checks");
 const rapidjson::Pointer rootCausePointer("/data/rootCause");
 const rapidjson::Pointer ipPointer("/data/ip");
+const rapidjson::Pointer timestampPointer("/data/timestamp");
 const rapidjson::Pointer buildPointer("/version/build");
 const rapidjson::Pointer buildTypePointer("/version/buildType");
 const rapidjson::Pointer releasePointer("/version/release");
 const rapidjson::Pointer releasedatePointer("/version/releasedate");
+const rapidjson::Pointer startupPointer("/startup");
+const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 }
 
 Health::Health()
@@ -86,6 +97,7 @@ Health::Health()
                    }()
                        .instance())
 {
+    setValue(startupPointer, startupTimestamp);
     setValue(buildPointer, ErpServerInfo::BuildVersion);
     setValue(buildTypePointer, ErpServerInfo::BuildType);
     setValue(releasePointer, ErpServerInfo::ReleaseVersion);
@@ -126,6 +138,17 @@ void Health::setTslStatus(const std::string_view& status, std::optional<std::str
 void Health::setBnaStatus(const std::string_view& status, std::optional<std::string_view> message)
 {
     setStatusInChecksArray(bna, status, rootCausePointer, message);
+}
+
+void Health::setCFdSigErpStatus(const std::string_view& status, const std::string_view& timestamp,
+                                std::optional<std::string_view> message)
+{
+    std::map<rapidjson::Pointer, std::string_view> data{{timestampPointer, timestamp}};
+    if (message)
+    {
+        data.emplace(rootCausePointer, *message);
+    }
+    setStatusInChecksArray(cFdSigErp, status, data);
 }
 
 void Health::setIdpStatus(const std::string_view& status, std::optional<std::string_view> message)

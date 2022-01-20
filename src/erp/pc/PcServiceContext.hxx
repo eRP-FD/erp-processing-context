@@ -12,6 +12,7 @@
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/KeyDerivation.hxx"
 #include "erp/idp/Idp.hxx"
+#include "erp/pc/CFdSigErpManager.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
@@ -34,6 +35,7 @@ class InCodeValidator;
 class JsonValidator;
 class XmlValidator;
 class SeedTimer;
+class RegistrationInterface;
 
 
 /**
@@ -54,6 +56,7 @@ public:
                    std::shared_ptr<JsonValidator> jsonValidator,
                    std::shared_ptr<XmlValidator> xmlValidator,
                    std::shared_ptr<InCodeValidator> inCodeValidator,
+                   std::unique_ptr<RegistrationInterface> registrationInterface,
                    std::shared_ptr<TslManager> tslManager = {});
     ~PcServiceContext(void);
 
@@ -70,6 +73,7 @@ public:
     const XmlValidator& getXmlValidator() const;
     const InCodeValidator& getInCodeValidator() const;
 
+    CFdSigErpManager& getCFdSigErpManager() const;
     const Certificate& getCFdSigErp() const;
     const shared_EVP_PKEY& getCFdSigErpPrv() const;
 
@@ -84,6 +88,8 @@ public:
 
     Idp idp;
     ApplicationHealth& applicationHealth ();
+
+    std::shared_ptr<RegistrationInterface> registrationInterface() const;
 
     PcServiceContext(const PcServiceContext& other) = delete;
     PcServiceContext& operator=(const PcServiceContext& other) = delete;
@@ -106,7 +112,7 @@ private:
     const std::shared_ptr<InCodeValidator> mInCodeValidator;
     std::unique_ptr<PreUserPseudonymManager> mPreUserPseudonymManager;
     std::unique_ptr<TelematicPseudonymManager> mTelematicPseudonymManager;
-    Certificate mCFdSigErp;
+    std::unique_ptr<CFdSigErpManager> mCFdSigErpManager;
     mutable shared_EVP_PKEY mCFdSigErpPrivateKey;
     AuditEventTextTemplates mAuditEventTextTemplates;
 
@@ -118,6 +124,7 @@ private:
     std::unique_ptr<TslRefreshJob> mTslRefreshJob;
     std::unique_ptr<SeedTimer> mPrngSeeder;
     ApplicationHealth mApplicationHealth;
+    std::shared_ptr<RegistrationInterface> mRegistrationInterface;
 };
 
 template<class ServiceContextType> class SessionContext;

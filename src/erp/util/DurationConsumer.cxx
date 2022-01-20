@@ -54,6 +54,11 @@ DurationTimer DurationConsumer::getTimer (const std::string& description)
     return DurationTimer(mReceiver, description, mSessionIdentifier.value_or("unknown"));
 }
 
+DurationTimer DurationConsumer::getTimer(const std::string& description, DurationTimer::Receiver& receiver) const
+{
+    return DurationTimer(receiver, description, mSessionIdentifier.value_or("unknown"));
+}
+
 
 DurationConsumer& DurationConsumer::getCurrent (void)
 {

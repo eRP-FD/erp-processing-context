@@ -259,13 +259,13 @@ void UrlArguments::addSortArguments (const std::string& argumentsString)
 }
 
 
-std::string UrlArguments::getLinkPathArguments (const model::Link::Type linkType) const
+std::string UrlArguments::getLinkPathArguments (const model::Link::Type linkType, const std::size_t& totalSearchMatches) const
 {
     std::ostringstream s;
 
     appendLinkSearchArguments(s);
     appendLinkSortArguments(s);
-    appendLinkPagingArguments(s, linkType);
+    appendLinkPagingArguments(s, linkType, totalSearchMatches);
 
     return s.str();
 }
@@ -302,7 +302,8 @@ void UrlArguments::appendLinkSortArguments (std::ostream& os) const
 
 void UrlArguments::appendLinkPagingArguments (
     std::ostream& os,
-    const model::Link::Type type) const
+    const model::Link::Type type,
+    const std::size_t& totalSearchMatches) const
 {
     switch(type)
     {
@@ -332,7 +333,7 @@ void UrlArguments::appendLinkPagingArguments (
             break;
 
         case model::Link::Next:
-            if (mPagingArgument.hasNextPage())
+            if (mPagingArgument.hasNextPage(totalSearchMatches))
             {
                 appendLinkSeparator(os);
                 os << PagingArgument::countKey << "=" << mPagingArgument.getCount()
@@ -347,17 +348,18 @@ void UrlArguments::appendLinkPagingArguments (
 
 std::unordered_map<model::Link::Type, std::string> UrlArguments::getBundleLinks (
     const std::string& linkBase,
-    const std::string& pathHead) const
+    const std::string& pathHead,
+    const std::size_t& totalSearchMatches) const
 {
     std::unordered_map<model::Link::Type, std::string> links;
 
-    links.emplace(model::Link::Type::Self, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Self));
+    links.emplace(model::Link::Type::Self, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Self, totalSearchMatches));
 
     if (mPagingArgument.hasPreviousPage())
-        links.emplace(model::Link::Type::Prev, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Prev));
+        links.emplace(model::Link::Type::Prev, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Prev, totalSearchMatches));
 
-    if (mPagingArgument.hasNextPage())
-        links.emplace(model::Link::Type::Next, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Next));
+    if (mPagingArgument.hasNextPage(totalSearchMatches))
+        links.emplace(model::Link::Type::Next, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Next, totalSearchMatches));
 
     return links;
 }
@@ -757,6 +759,7 @@ bool UrlArguments::hasReverseIncludeAuditEventArgument() const
 {
     return mReverseIncludeAuditEventArgument;
 }
+
 
 const PagingArgument& UrlArguments::pagingArgument() const
 {

@@ -17,9 +17,11 @@ class Health : public ResourceBase
 public:
     static constexpr std::string_view down = "DOWN";
     static constexpr std::string_view up = "UP";
+    static constexpr std::string_view shutdown = "SHUTTING_DOWN";
 
     static constexpr std::string_view postgres = "postgres";
     static constexpr std::string_view redis = "redis";
+    static constexpr std::string_view cFdSigErp = "C.FD.SIG-eRP";
     static constexpr std::string_view hsm = "hsm";
     static constexpr std::string_view tsl = "TSL.xml";
     static constexpr std::string_view bna = "BNetzA.xml";
@@ -36,6 +38,8 @@ public:
     void setRedisStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setTslStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setBnaStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setCFdSigErpStatus(const std::string_view& status, const std::string_view& timestamp,
+                            std::optional<std::string_view> message = std::nullopt);
     void setIdpStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setSeedTimerStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setTeeTokenUpdaterStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);

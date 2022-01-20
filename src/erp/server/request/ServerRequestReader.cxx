@@ -143,7 +143,7 @@ void ServerRequestReader::closeConnection (const bool expectError)
             // the stream and proper shutdown protocol may impossible to perform.
             //
             // As a result we expect an exception being thrown. And ignore it.
-            LOG(ERROR) << e.what();
+            TLOG(ERROR) << e.what();
         }
         else
         {

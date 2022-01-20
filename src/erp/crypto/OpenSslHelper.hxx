@@ -3,8 +3,8 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#ifndef E_LIBRARY_CRYPTO_OPENSSLHELPER_HXX
-#define E_LIBRARY_CRYPTO_OPENSSLHELPER_HXX
+#ifndef ERP_CRYPTO_OPENSSLHELPER_HXX
+#define ERP_CRYPTO_OPENSSLHELPER_HXX
 
 #include <iostream>
 
@@ -27,6 +27,7 @@ public:
 };
 
 using Asn1ObjectPtr = OpensslUniquePtr<ASN1_OBJECT, &ASN1_OBJECT_free>;
+using Asn1TypePtr = OpensslUniquePtr<ASN1_TYPE, &ASN1_TYPE_free>;
 using OcspBasicRespPtr = OpensslUniquePtr<OCSP_BASICRESP, &OCSP_BASICRESP_free>;
 using OcspCertidPtr = OpensslUniquePtr<OCSP_CERTID, &OCSP_CERTID_free>;
 using OcspRequestPtr = OpensslUniquePtr<OCSP_REQUEST, &OCSP_REQUEST_free>;

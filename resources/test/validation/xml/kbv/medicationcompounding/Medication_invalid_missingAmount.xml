@@ -26,7 +26,7 @@
     <text value="code text"/>
   </code>
   <form>
-    <text value="1 mal täglich mittags einnehmen"/>
+    <text value="1 mal täglich mittags"/>
   </form>
   <ingredient>
     <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Ingredient_Form">

@@ -42,6 +42,12 @@ void SignalHandler::manualTermination()
     std::raise(internalTerminationSignal);
 }
 
+void SignalHandler::gracefulShutdown()
+{
+    TLOG(WARNING) << "SignalHandler::gracefulShutdown() called, raising SIGTERM";
+    std::raise(SIGTERM);
+}
+
 
 SignalHandler::SignalHandler (boost::asio::io_context& ioContext)
     : mIoContext(ioContext),

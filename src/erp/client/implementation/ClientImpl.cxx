@@ -80,12 +80,13 @@ ClientResponse ClientImpl<StreamClass>::send (const ClientRequest& clientRequest
     }
     catch(const boost::system::system_error& e)
     {
-        LOG(ERROR) << "caught exception in ClientImpl::send(): boost system_error " << e.code() << " " << e.what();
+        TLOG(ERROR) << "caught exception in ClientImpl::send(): boost system_error " << e.code() << " " << e.what()
+                   << " (" << mHostName << ")";
         throw;
     }
     catch(const std::exception& e)
     {
-        LOG(ERROR) << "caught exception in ClientImpl()::send(): " << e.what();
+        TLOG(ERROR) << "caught exception in ClientImpl()::send(): " << e.what() << " (" << mHostName << ")";
         throw;
     }
 }

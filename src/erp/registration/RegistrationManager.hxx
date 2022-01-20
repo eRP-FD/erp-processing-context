@@ -10,14 +10,11 @@
 #include "erp/service/RedisInterface.hxx"
 #include "erp/util/Configuration.hxx"
 
+class ApplicationHealth;
 
 class RegistrationManager : public RegistrationInterface
 {
 public:
-    static std::unique_ptr<RegistrationInterface> createFromConfig(
-        const std::uint16_t aTeePort,
-        const Configuration& configuration);
-
     RegistrationManager(
         const std::string& aTeeHost,
         const std::uint16_t aTeePort,
@@ -31,7 +28,12 @@ public:
 
     void heartbeat() override;
 
+    bool registered() const override;
+
+    void updateRegistrationBasedOnApplicationHealth(const ApplicationHealth& applicationHealth) override;
+
 private:
+    mutable std::mutex mMutex;
     const std::string mRedisKey;
     std::unique_ptr<RedisInterface> mRedisInterface;
 };
