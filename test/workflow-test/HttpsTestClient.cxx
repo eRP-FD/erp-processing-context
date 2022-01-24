@@ -14,7 +14,7 @@
 #include "mock/crypto/MockCryptography.hxx"
 
 
-std::unique_ptr< TestClient > HttpsTestClient::Factory()
+std::unique_ptr< TestClient > HttpsTestClient::Factory(std::shared_ptr<XmlValidator>)
 {
     const std::string serverHost = Environment::getString("ERP_SERVER_HOST", defaultCloudServer);
     const int         serverPort = Environment::getInt("ERP_SERVER_PORT", defaultCloudPort);

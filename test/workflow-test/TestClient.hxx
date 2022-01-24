@@ -13,6 +13,7 @@
 
 class ClientRequest;
 class Certificate;
+class XmlValidator;
 
 /// @brief Implements backend for workflow tests
 ///
@@ -25,10 +26,10 @@ class Certificate;
 class TestClient
 {
 public:
-    using Factory = std::function<std::unique_ptr<TestClient>(void)>;
+    using Factory = std::function<std::unique_ptr<TestClient>(std::shared_ptr<XmlValidator>)>;
 
     static void setFactory(Factory&& factory);
-    static std::unique_ptr<TestClient> create();
+    static std::unique_ptr<TestClient> create(std::shared_ptr<XmlValidator> xmlValidator);
 
     TestClient() = default;
     virtual ~TestClient() = default;

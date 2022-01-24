@@ -10,16 +10,16 @@
 #include "mock/crypto/MockCryptography.hxx"
 
 
-std::function<std::unique_ptr<TestClient>(void)> TestClient::mFactory;
+TestClient::Factory TestClient::mFactory;
 
 void TestClient::setFactory(TestClient::Factory&& factory)
 {
     mFactory = std::move(factory);
 }
 
-std::unique_ptr<TestClient> TestClient::create()
+std::unique_ptr<TestClient> TestClient::create(std::shared_ptr<XmlValidator> xmlValidator)
 {
-    return mFactory();
+    return mFactory(std::move(xmlValidator));
 }
 
 Certificate TestClient::getEciesCertificate (void)

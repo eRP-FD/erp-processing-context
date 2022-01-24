@@ -36,6 +36,7 @@
 #include "erp/util/Uuid.hxx"
 #include "erp/common/MimeType.hxx"
 #include "test_config.h"
+#include "test/util/StaticData.hxx"
 #include "tools/jwt/JwtBuilder.hxx"
 
 #include <gtest/gtest.h>
@@ -429,7 +430,7 @@ public:
 
     std::string userPseudonym{"0"};
     UserPseudonymType userPseudonymType{UserPseudonymType::None};
-    std::unique_ptr<TestClient> client = TestClient::create();
+    std::unique_ptr<TestClient> client = TestClient::create(StaticData::getXmlValidator());
 
     void writeCurrentTestOutputFile(
         const std::string& testOutput,

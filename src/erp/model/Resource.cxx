@@ -622,18 +622,18 @@ ResourceVersion::KbvItaErp getSchemaVersionT<ResourceVersion::KbvItaErp>(const s
 }
 
 template<typename SchemaVersionType>
-SchemaVersionType getOldestVersion();
+SchemaVersionType getFallbackVersion();
 
 template<>
-ResourceVersion::KbvItaErp getOldestVersion<ResourceVersion::KbvItaErp>()
+ResourceVersion::KbvItaErp getFallbackVersion<ResourceVersion::KbvItaErp>()
 {
     return ResourceVersion::KbvItaErp::v1_0_1;
 }
 
 template<>
-ResourceVersion::DeGematikErezeptWorkflowR4 getOldestVersion<ResourceVersion::DeGematikErezeptWorkflowR4>()
+ResourceVersion::DeGematikErezeptWorkflowR4 getFallbackVersion<ResourceVersion::DeGematikErezeptWorkflowR4>()
 {
-    return ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1;
+    return ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>();
 }
 }
 
@@ -655,9 +655,8 @@ SchemaVersionType Resource<TDerivedModel, SchemaVersionType>::getSchemaVersion()
         }
         else
         {
-            // assume oldest supported version.
             // TODO ERP-7953: remove this when unversionized profiles are no longer supported.
-            return getOldestVersion<SchemaVersionType>();
+            return getFallbackVersion<SchemaVersionType>();
         }
     }
     return {};

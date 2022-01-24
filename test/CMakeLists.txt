@@ -263,6 +263,7 @@ list(
         workflow-test/Erp5822Test.cxx # contains invalid KBV bundle, can only run in erp-test
         workflow-test/Erp5899Test.cxx # contains invalid KBV bundle, can only run in erp-test
         workflow-test/Erp8090Test.cxx # contains environment changes, can only run in erp-test
+        workflow-test/Erp9008Test.cxx # contains environment changes, can only run in erp-test
 )
 
 if(ERP_WITH_HSM_TPM_PRODUCTION)

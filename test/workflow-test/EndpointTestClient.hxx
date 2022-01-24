@@ -19,7 +19,9 @@ public:
     static constexpr uint16_t mPort = 9999u;
     static constexpr char mLocalHost[] = "127.0.0.1";
 
-    EndpointTestClient();
+    static std::unique_ptr<TestClient> factory(std::shared_ptr<XmlValidator> xmlValidator);
+
+    EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidator);
 
     ClientResponse send(const ClientRequest & clientRequest) override;
 

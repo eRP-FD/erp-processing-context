@@ -16,7 +16,7 @@ class HttpsTestClient
     : public TestClient
 {
 public:
-    static std::unique_ptr<TestClient> Factory();
+    static std::unique_ptr<TestClient> Factory(std::shared_ptr<XmlValidator> xmlValidator);
 
     ~HttpsTestClient() override;
 

@@ -22,7 +22,7 @@
 #include "test/mock/RegistrationMock.hxx"
 
 
-EndpointTestClient::EndpointTestClient()
+EndpointTestClient::EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidator)
     : mMockDatabase()
 {
     RequestHandlerManager<PcServiceContext> handlers;
@@ -41,7 +41,7 @@ EndpointTestClient::EndpointTestClient()
         std::make_unique<MockRedisStore>(),
         std::move(hsmPool),
         StaticData::getJsonValidator(),
-        StaticData::getXmlValidator(),
+        std::move(xmlValidator),
         StaticData::getInCodeValidator(),
         std::make_unique<RegistrationMock>());
 
@@ -104,4 +104,9 @@ uint16_t EndpointTestClient::getPort() const
 EndpointTestClient::~EndpointTestClient()
 {
     mServer->shutDown();
+}
+
+std::unique_ptr<TestClient> EndpointTestClient::factory(std::shared_ptr<XmlValidator> xmlValidator)
+{
+    return std::make_unique<EndpointTestClient>(std::move(xmlValidator));
 }

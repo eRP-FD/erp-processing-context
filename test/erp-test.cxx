@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     Environment::set("ERP_FHIR_PROFILE_VALID_FROM", yesterday);
     Environment::set("ERP_FHIR_PROFILE_RENDER_FROM", yesterday);
 
-    TestClient::setFactory([] { return std::make_unique<EndpointTestClient>(); });
+    TestClient::setFactory(&EndpointTestClient::factory);
     GLogConfiguration::init_logging(argv[0]);
     ThreadNames::instance().setCurrentThreadName("test");
     ::testing::InitGoogleTest(&argc, argv);
