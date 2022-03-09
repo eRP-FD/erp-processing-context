@@ -90,6 +90,16 @@ ErpBlob& ErpBlob::operator= (const ErpBlob& other)
     return *this;
 }
 
+bool ErpBlob::operator==(const ErpBlob& rhs) const
+{
+    return data == rhs.data && generation == rhs.generation;
+}
+
+bool ErpBlob::operator!=(const ErpBlob& rhs) const
+{
+    return ! (rhs == *this);
+}
+
 
 ErpVector ErpVector::create (const std::string_view data)
 {

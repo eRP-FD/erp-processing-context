@@ -11,6 +11,7 @@
 #include "erp/crypto/OpenSslHelper.hxx"
 #include "erp/util/SafeString.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/crypto/Certificate.hxx"
 
 #include <functional>
 #include <memory>
@@ -112,7 +113,10 @@ public:
      */
     ErpArray<Aes128Length> vauEcies128 (const ErpVector& clientPublicKey);
 
-    shared_EVP_PKEY getVauSigPrivateKey (void);
+    std::tuple<shared_EVP_PKEY, ErpBlob> getVauSigPrivateKey(const shared_EVP_PKEY& cachedKey,
+                                                             const ErpBlob& cachedBlob);
+
+    [[nodiscard]] Certificate getVauSigCertificate() const;
 
     /**
      * Return a 256 Bit salt that is to be used in HMAC calculations of KVNRs.

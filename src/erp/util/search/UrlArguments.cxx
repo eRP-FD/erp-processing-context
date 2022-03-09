@@ -9,6 +9,7 @@
 #include "erp/model/Task.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/TLog.hxx"
+#include "erp/util/UrlHelper.hxx"
 
 #include <date/date.h>
 #include <pqxx/nontransaction>
@@ -267,7 +268,7 @@ std::string UrlArguments::getLinkPathArguments (const model::Link::Type linkType
     appendLinkSortArguments(s);
     appendLinkPagingArguments(s, linkType, totalSearchMatches);
 
-    return s.str();
+    return UrlHelper::escapeUrl(s.str());
 }
 
 

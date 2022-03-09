@@ -29,7 +29,7 @@ namespace
     {
         try
         {
-            return Certificate::fromDerBase64String(derBase64String);
+            return Certificate::fromBase64Der(derBase64String);
         }
         catch(const std::runtime_error& e)
         {
@@ -68,7 +68,7 @@ std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::Url
 
 IdpUpdater::IdpUpdater (
     Idp& certificateHolder,
-    TslManager* tslManager,
+    const std::shared_ptr<TslManager>& tslManager,
     const std::shared_ptr<UrlRequestSender>& urlRequestSender)
     : mUpdateFailureCount(),
       mCertificateHolder(certificateHolder),

@@ -65,7 +65,7 @@ public:
     std::unique_ptr<Database> databaseFactory();
     const DosHandler& getDosHandler();
     std::shared_ptr<RedisInterface> getRedisClient();
-    HsmPool& getHsmPool();
+    std::shared_ptr<HsmPool> getHsmPool();
     KeyDerivation& getKeyDerivation();
     PreUserPseudonymManager& getPreUserPseudonymManager();
     TelematicPseudonymManager& getTelematicPseudonymManager();
@@ -74,15 +74,15 @@ public:
     const InCodeValidator& getInCodeValidator() const;
 
     CFdSigErpManager& getCFdSigErpManager() const;
-    const Certificate& getCFdSigErp() const;
-    const shared_EVP_PKEY& getCFdSigErpPrv() const;
+    [[nodiscard]] Certificate getCFdSigErp() const;
+    shared_EVP_PKEY getCFdSigErpPrv() const;
 
     const AuditEventTextTemplates& auditEventTextTemplates() const;
 
     /**
      * The ownership over the object stays by PcServiceContext ( and its refresh job ).
      */
-    TslManager* getTslManager();
+    const std::shared_ptr<TslManager>& getTslManager();
 
     const SeedTimer* getPrngSeeder() const;
 
@@ -96,7 +96,6 @@ public:
     PcServiceContext& operator=(PcServiceContext&& other) = delete;
 
 private:
-    mutable std::mutex mMutex;
     /**
      * As database connections to "real" databases are a precious commodity, we are not supposed to hold
      * one for a longer time. Therefore Database objects, which represent (the connection to) an external database
@@ -105,7 +104,7 @@ private:
     Database::Factory mDatabaseFactory;
     std::shared_ptr<RedisInterface> mRedisClient;
     std::unique_ptr<DosHandler> mDosHandler;
-    std::unique_ptr<HsmPool> mHsmPool;
+    std::shared_ptr<HsmPool> mHsmPool;
     KeyDerivation mKeyDerivation;
     const std::shared_ptr<JsonValidator> mJsonValidator;
     const std::shared_ptr<XmlValidator> mXmlValidator;
@@ -113,7 +112,6 @@ private:
     std::unique_ptr<PreUserPseudonymManager> mPreUserPseudonymManager;
     std::unique_ptr<TelematicPseudonymManager> mTelematicPseudonymManager;
     std::unique_ptr<CFdSigErpManager> mCFdSigErpManager;
-    mutable shared_EVP_PKEY mCFdSigErpPrivateKey;
     AuditEventTextTemplates mAuditEventTextTemplates;
 
     /**

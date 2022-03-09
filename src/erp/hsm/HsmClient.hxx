@@ -32,6 +32,7 @@ struct DeriveKeyInput
     bool initialDerivation = true;
     ErpVector derivationData;
     BlobId blobId;
+    ::BlobType blobType;
 };
 
 struct OptionalDeriveKeyData

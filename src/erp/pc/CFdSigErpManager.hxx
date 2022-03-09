@@ -2,12 +2,16 @@
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_PC_CFDSIGERPMANAGER_HXX
 
 #include "erp/crypto/Certificate.hxx"
+#include "erp/hsm/ErpTypes.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/util/TimerJobBase.hxx"
 #include "erp/util/Timer.hxx"
 
 #include <mutex>
 
+class HsmPool;
+enum class CertificateType;
+class ErpBlob;
 
 /**
  * This class allows to manage C.FD.SIG certificate of eRP processing context
@@ -18,15 +22,18 @@ class CFdSigErpManager : public TimerJobBase
 public:
     CFdSigErpManager(
         const Configuration& configuration,
-        std::shared_ptr<TslManager> tslManager);
+        std::shared_ptr<TslManager> tslManager,
+        HsmPool& hsmPool);
 
-    ~CFdSigErpManager();
+    ~CFdSigErpManager() override;
 
     /**
      * Returns C.FD.SIG eRP certificate if the last validation was successful,
      * otherwise TslException is thrown.
      */
-    const Certificate& getCertificate();
+    [[nodiscard]] Certificate getCertificate();
+
+    [[nodiscard]] shared_EVP_PKEY getPrivateKey();
 
     /**
      * If no tsl manager is provided (a special case for test scenarios), then an empty optional is returned.
@@ -61,24 +68,33 @@ public:
      */
     std::string getLastValidationTimestamp();
 
+    [[nodiscard]] CertificateType getCertificateType() const;
+
+    [[nodiscard]] std::string getCertificateNotAfterTimestamp() const;
+
 protected:
     void onStart(void) override;
     void executeJob(void) override;
     void onFinish(void) override;
 
 private:
-    std::optional<TrustStore::OcspResponseData> internalGetOcspResponseData(const bool forceOcspRequest);
+    std::optional<TrustStore::OcspResponseData> internalGetOcspResponseData(const Certificate& certificate,
+                                                                            const bool forceOcspRequest);
 
     std::mutex mMutex;
-    const Certificate mCFdSigErp;
-    X509Certificate mX509Certificate;
 
     const std::shared_ptr<TslManager> mTslManager;
     std::optional<size_t> mValidationHookId;
+    HsmPool& mHsmPool;
 
     std::chrono::system_clock::duration mOcspRequestGracePeriod;
     std::chrono::system_clock::time_point mLastSuccess;
     bool mLastCheckSuccessfull;
+
+    // private key cache
+    shared_EVP_PKEY mCFdSigErpKey;
+    ErpBlob mPkBlob;
+    std::mutex mMutexPkCache;
 };
 
 

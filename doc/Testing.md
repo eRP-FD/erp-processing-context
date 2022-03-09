@@ -19,3 +19,11 @@ that `erp/postgres/useSsl` is set `"false"` and that `erp/postgres/certificatePa
   
 This configuration can be overruled in test classes by calling `ServerTestBase(bool forceMockDatabase = false)`
 with a `true` argument.
+
+## Manual derivation key update tests
+This test verifies both the workflow and the handling of derivation key updates.
+
+It should be run against a cloud installation, i. e. `ERP_SERVER_HOST`, `ERP_SERVER_PORT`, `ERP_IDP_REGISTERED_FD_URI`
+and `TEST_QES_PEM_FILE_NAME` must be set. The test itself can be run with `erp-integration-test
+--gtest_also_run_disabled_tests --gtest_filter="DISABLED_KeyUpdateManual/DerivationKeyUpdateTest.TaskWorkflows/Manual`
+and will prompt for any manual actions that need be done. You will also need to be able to enrol and delete derivation keys.

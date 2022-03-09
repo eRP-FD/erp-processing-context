@@ -8,9 +8,10 @@
 #include "erp/util/FileHelper.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "tools/jwt/JwtBuilder.hxx"
+#include "tools/ResourceManager.hxx"
+#include "test_config.h"
 
-#include <test_config.h>
-
+#include <regex>
 
 std::string MockIdpUpdater::doDownloadWellknown (void)
 {
@@ -20,5 +21,10 @@ std::string MockIdpUpdater::doDownloadWellknown (void)
 
 std::string MockIdpUpdater::doDownloadDiscovery (const UrlHelper::UrlParts&)
 {
-    return FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
+    auto& resMgr = ResourceManager::instance();
+    const auto idpResponse = resMgr.getStringResource("test/tsl/X509Certificate/idpResponse.json");
+    auto idpCertificate = Certificate::fromPem(
+        resMgr.getStringResource("test/tsl/X509Certificate/IDP-Wansim.pem"));
+    return std::regex_replace(idpResponse, std::regex{"###CERTIFICATE##"}, idpCertificate.toBase64Der());
 }
+

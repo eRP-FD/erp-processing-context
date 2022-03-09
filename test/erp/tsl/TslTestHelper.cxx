@@ -67,7 +67,7 @@ Certificate TslTestHelper::getDefaultOcspCertificate()
     static const std::string ocspCertificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/DefaultOcsp.pem");
-    return Certificate::fromPemString(ocspCertificatePem);
+    return Certificate::fromPem(ocspCertificatePem);
 }
 
 
@@ -76,7 +76,7 @@ Certificate TslTestHelper::getDefaultOcspCertificateCa()
     static const std::string ocspCertificateBase64Der =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/DefaultOcspIssuer.base64.der");
-    return Certificate::fromDerBase64String(ocspCertificateBase64Der);
+    return Certificate::fromBase64Der(ocspCertificateBase64Der);
 }
 
 
@@ -85,7 +85,7 @@ Certificate TslTestHelper::getTslSignerCertificate()
     static const std::string tslSignerCertificateString =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificate.der");
-    return Certificate::fromDerString(tslSignerCertificateString);
+    return Certificate::fromBinaryDer(tslSignerCertificateString);
 }
 
 
@@ -94,7 +94,7 @@ Certificate TslTestHelper::getTslSignerCACertificate()
     static const std::string tslSignerCertificateIssuerString =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
-    return Certificate::fromDerString(tslSignerCertificateIssuerString);
+    return Certificate::fromBinaryDer(tslSignerCertificateIssuerString);
 }
 
 
@@ -137,7 +137,7 @@ void TslTestHelper::setOcspUslRequestHandlerTslSigner(UrlRequestSenderMock& requ
 
 void TslTestHelper::addOcspCertificateToTrustStore(const Certificate& certificate, TrustStore& trustStore)
 {
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
     trustStore.mServiceInformationMap.emplace(
         CertificateId{x509Certificate.getSubject(), x509Certificate.getSubjectKeyIdentifier()},
         TslParser::ServiceInformation{
@@ -170,7 +170,7 @@ void TslTestHelper::addCaCertificateToTrustStore(
 
     Expect(trustStore != nullptr, "TrustStore must be set to use the method.");
 
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
     TslParser::ExtensionOidList extensionOidList =
         (mode == TslMode::TSL
              ? TslParser::ExtensionOidList{
@@ -213,7 +213,7 @@ void TslTestHelper::setCaCertificateTimestamp(
 
     Expect(trustStore != nullptr, "TrustStore must be set to use the method.");
 
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
     auto iterator = trustStore->mServiceInformationMap.find(
         {x509Certificate.getSubject(), x509Certificate.getSubjectKeyIdentifier()});
     Expect(iterator != trustStore->mServiceInformationMap.end(), "Unknown Certificate is provided.");
@@ -241,7 +241,7 @@ void TslTestHelper::removeCertificateFromTrustStore(
 
     Expect(trustStore != nullptr, "TrustStore must be set to use the method.");
 
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
     trustStore->mServiceInformationMap.erase({x509Certificate.getSubject(), x509Certificate.getSubjectKeyIdentifier()});
 }
 

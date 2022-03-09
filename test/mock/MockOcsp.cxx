@@ -24,9 +24,9 @@ namespace
     std::unique_ptr<OCSP_CERTID, decltype(&OCSP_CERTID_free)>
     createUnexpectedCertId()
     {
-        const Certificate certificate = Certificate::fromDerBase64String(FileHelper::readFileAsString(
+        const Certificate certificate = Certificate::fromBase64Der(FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-noType.base64.der"));
-        const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
+        const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-noTypeCA.base64.der"));
         return std::unique_ptr<OCSP_CERTID, decltype(&OCSP_CERTID_free)>(
             OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()), OCSP_CERTID_free);

@@ -207,7 +207,7 @@ TEST_F(SearchArgumentTest, getSelfLinkPathParameters)
     // - the 'recipient' is prefixed with the default "eq:".
     // - the second 'sent' timestamp is normalized to UTC.
     // - the 'to-be-ignored' argument is ignored and not included in the self link.
-    ASSERT_EQ(search.getLinkPathArguments(model::Link::Type::Self),
+    ASSERT_EQ(UrlHelper::unescapeUrl(search.getLinkPathArguments(model::Link::Type::Self)),
         "?sent=lt2021-09-08&recipient=KVNR123456&sent=lt2021-09-08T10:58:58+00:00");
 }
 

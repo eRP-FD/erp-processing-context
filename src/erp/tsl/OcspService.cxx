@@ -684,3 +684,24 @@ OcspService::CertificateStatus OcspService::toCertificateStatus (const std::stri
     }
     return CertificateStatus::unknown;
 }
+
+
+void OcspService::checkOcspStatus (const OcspService::Status& status, const TrustStore& trustStore)
+{
+    TslExpect6(
+        status.certificateStatus != OcspService::CertificateStatus::unknown,
+        "OCSP Check failed, certificate is unknown.",
+        TslErrorCode::CERT_UNKNOWN,
+        trustStore.getTslMode(),
+        trustStore.getIdOfTslInUse(),
+        trustStore.getSequenceNumberOfTslInUse());
+
+    TslExpect6(
+        status.certificateStatus != OcspService::CertificateStatus::revoked
+        || std::chrono::system_clock::now() < status.revocationTime,
+        "OCSP Check failed, certificate is revoked.",
+        TslErrorCode::CERT_REVOKED,
+        trustStore.getTslMode(),
+        trustStore.getIdOfTslInUse(),
+        trustStore.getSequenceNumberOfTslInUse());
+}

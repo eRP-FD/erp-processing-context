@@ -32,6 +32,7 @@ enum class CertificateType
     C_CH_AUT_ALT,
     C_FD_AUT,
     C_FD_SIG,
+    C_FD_OSIG,
     C_HCI_ENC,
     C_HCI_AUT,
     C_HCI_OSIG,
@@ -63,6 +64,7 @@ public:
     static constexpr const char* oid_epa_vau                           {"1.2.276.0.76.4.209"};
     // C.FD.SIG
     static constexpr const char* oid_fd_sig                            {"1.2.276.0.76.4.203"};
+    static constexpr const char* oid_fd_osig                           {"1.2.276.0.76.4.283"};
     static constexpr const char* oid_epa_authn                         {"1.2.276.0.76.4.204"};
     static constexpr const char* oid_epa_authz                         {"1.2.276.0.76.4.205"};
     static constexpr const char* oid_wadg                              {"1.2.276.0.76.4.198"};
@@ -136,6 +138,8 @@ public:
         const bool onlyOutdated,
         const std::vector<X509Certificate>& expectedSignerCertificates = {});
     // GEMREQ-end A_15874
+
+    static CertificateType getCertificateType(const X509Certificate& certificate);
 
 private:
 

@@ -3,7 +3,7 @@
     <meta>
         <lastUpdated value="2021-06-08T13:44:53.012475+02:00"></lastUpdated>
         <profile
-                value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.1"></profile>
+                value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2"></profile>
     </meta>
     <identifier>
         <system
@@ -20,7 +20,7 @@
                 <id value="1560e505-3862-4162-9f8f-9a88157e0905"></id>
                 <meta>
                     <profile
-                            value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.1"></profile>
+                            value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2"></profile>
                 </meta>
                 <extension
                         url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
@@ -236,7 +236,7 @@
                 <id value="4980b470-e8e5-44bf-a53a-47ade2561cdb"></id>
                 <meta>
                     <profile
-                            value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.1"></profile>
+                            value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2"></profile>
                 </meta>
                 <extension
                         url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
@@ -352,7 +352,7 @@
                 <id value="005cd690-7473-4bf4-a502-30a32f2e7623"></id>
                 <meta>
                     <profile
-                            value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.1"></profile>
+                            value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2"></profile>
                 </meta>
                 <extension
                         url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee">

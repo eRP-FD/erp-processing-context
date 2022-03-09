@@ -22,6 +22,7 @@ int main(int argc, char** argv)
     const auto yesterday = (::model::Timestamp::now() + -24h).toXsDateTime();
     Environment::set("ERP_FHIR_PROFILE_VALID_FROM", yesterday);
     Environment::set("ERP_FHIR_PROFILE_RENDER_FROM", yesterday);
+    Environment::set("ERP_FHIR_PROFILE_OLD_VALID_UNTIL", yesterday);
 
     TestClient::setFactory(&EndpointTestClient::factory);
     GLogConfiguration::init_logging(argv[0]);

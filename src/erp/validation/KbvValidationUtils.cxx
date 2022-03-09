@@ -10,6 +10,7 @@
 #include "erp/model/Resource.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/String.hxx"
 
 
 namespace
@@ -147,7 +148,7 @@ void KbvValidationUtils::checkKbvExtensionValueString(const std::string_view& ur
                   "missing valueString.value in extension " + std::string(url));
         if (maxStringLength)
         {
-            ErpExpectWithDiagnostics(value->length() <= *maxStringLength, HttpStatus::BadRequest,
+            ErpExpectWithDiagnostics(String::utf8Length(*value) <= *maxStringLength, HttpStatus::BadRequest,
                                      "max length of " + std::to_string(*maxStringLength) +
                                          " exceeded by value in extension: " + std::string(url),
                                      std::string(*value));
@@ -227,7 +228,7 @@ void KbvValidationUtils::checkKbvExtensionValueIdentifier(const std::string_view
                                  "Wrong system in extension: " + std::string(url), std::string(system.value_or("")));
         ErpExpect(value, HttpStatus::BadRequest,
                   "missing mandatory valueIdentifier.value in extension " + std::string(url));
-        ErpExpectWithDiagnostics(value->length() <= maxValueLength, HttpStatus::BadRequest,
+        ErpExpectWithDiagnostics(String::utf8Length(*value) <= maxValueLength, HttpStatus::BadRequest,
                                  "max length of " + std::to_string(maxValueLength) +
                                      " exceeded by value in extension: " + std::string(url),
                                  std::string(*value));

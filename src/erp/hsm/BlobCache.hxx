@@ -89,6 +89,7 @@ public:
     Entry getBlob (
         BlobType type);
 
+    Entry getBlob(BlobId id);
 
     /**
      * Return an entry that contains the attestation key pair blob or throw an exception.
@@ -137,7 +138,8 @@ private:
 
     void rebuildCache (void);
     template<class KeyType, class ValueType>
-    BlobCache::Entry getBlob (const KeyType key, std::unordered_map<KeyType, ValueType>& map);
+    BlobCache::Entry getBlob(const KeyType key, std::unordered_map<KeyType, ValueType>& map,
+                             const bool allowInvalidBlobs = false);
 };
 
 

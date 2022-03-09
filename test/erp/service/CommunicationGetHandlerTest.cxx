@@ -122,6 +122,26 @@ public:
             return std::string(url.substr(pathStart));
     }
 
+    std::optional<model::Bundle> getBundle (const ClientResponse& outerResponse,
+                                           const std::string& expectedMimeType = ContentMimeType::fhirJsonUtf8)
+    {
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        verifyGenericInnerResponse(innerResponse, HttpStatus::OK, expectedMimeType);
+
+        // Verify the returned bundle.
+        model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+        if (expectedMimeType == std::string(ContentMimeType::fhirJsonUtf8))
+        {
+            bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
+        }
+        else
+        {
+            bundle = model::Bundle::fromXmlNoValidation(innerResponse.getBody());
+        }
+        return bundle;
+    }
+
 private:
     bool mIsInitialCleanupRequired;
 };
@@ -296,7 +316,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySent)
     const auto bundle = expectGetCommunicationResponse(outerResponse, {givenCommunication2.id().value()});
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eq2022-01-23T12:34:00+00:00");
+    EXPECT_EQ(UrlHelper::unescapeUrl(extractPathAndArguments(selfLink.value())), "/Communication?sent=eq2022-01-23T12:34:00+00:00");
 }
 
 
@@ -718,7 +738,8 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipientAndRec
     const auto bundle = expectGetCommunicationResponse(outerResponse, {givenCommunication3.id().value()});
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?recipient=")+InsurantH+"&received=sa2022-01-03T12:34:56+00:00");
+    EXPECT_EQ(UrlHelper::unescapeUrl(extractPathAndArguments(selfLink.value())), 
+            std::string("/Communication?recipient=")+InsurantH+"&received=sa2022-01-03T12:34:56+00:00");
 }
 
 
@@ -1392,3 +1413,88 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
     verifyGenericInnerResponse(innerResponse, HttpStatus::NotFound);
 }
 
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
+{
+    std::string kvnrInsurant = InsurantA;
+    std::string pharmacy1 = "3-SMC-B-Testkarte-883110000120312";
+
+    const auto task = addTaskToDatabase({ model::Task::Status::ready, InsurantA });
+
+
+    model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
+    for (size_t idxPatient = 0; idxPatient < 18; ++idxPatient)
+    {
+         const auto communication = addCommunicationToDatabase({
+            task.prescriptionId(), model::Communication::MessageType::Representative,
+            {ActorRole::Insurant, InsurantA}, {ActorRole::Pharmacists, pharmacy1},
+            std::string(task.accessCode()),
+            RepresentativeMessageByInsurant, timestamp + std::chrono::hours(-24 * idxPatient) });
+    }
+
+    {
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(pharmacy1) };
+        std::string pathAndArguments = UrlHelper::escapeUrl("/Communication?sent=le2021-09-25T12:34:56+01:00&_count=10&__offset=0");
+        ClientRequest request(createGetHeader(pathAndArguments, jwtPharmacy), "");
+        auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
+        auto bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+        auto nextLink = bundle->getLink(model::Link::Type::Next);
+        EXPECT_TRUE(nextLink.has_value());
+        auto nextPathAndArguments = extractPathAndArguments(nextLink.value());
+        EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_count=10&__offset=10");
+
+        // Get next request
+        ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
+        outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
+        bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+        nextLink = bundle->getLink(model::Link::Type::Next);
+        EXPECT_FALSE(nextLink.has_value());
+    }
+
+   {
+       const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(pharmacy1) };
+       std::string pathAndArguments = UrlHelper::escapeUrl("/Communication?sent=le2021-09-25T12:34:56+01:00&_count=9&__offset=0");
+       ClientRequest request(createGetHeader(pathAndArguments, jwtPharmacy), "");
+       auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
+       auto bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       auto nextLink = bundle->getLink(model::Link::Type::Next);
+       EXPECT_TRUE(nextLink.has_value());
+       auto nextPathAndArguments = extractPathAndArguments(nextLink.value());
+       EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_count=9&__offset=9");
+
+       // Get next request
+       ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
+       outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
+       bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       nextLink = bundle->getLink(model::Link::Type::Next);
+       EXPECT_FALSE(nextLink.has_value());
+   }
+
+   {
+       const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(pharmacy1) };
+       std::string pathAndArguments = UrlHelper::escapeUrl("/Communication?sent=le2021-09-25T12:34:56+01:00&_count=4&__offset=0");
+       ClientRequest request(createGetHeader(pathAndArguments, jwtPharmacy), "");
+       auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
+       auto bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       auto nextLink = bundle->getLink(model::Link::Type::Next);
+       EXPECT_TRUE(nextLink.has_value());
+       auto nextPathAndArguments =  extractPathAndArguments(nextLink.value());
+       EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_count=4&__offset=4");
+
+       // Get next request
+       for (size_t idxPatient = 0; idxPatient < 3; ++idxPatient)
+       {
+           ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
+           outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
+           bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+           nextLink = bundle->getLink(model::Link::Type::Next);
+           EXPECT_TRUE(nextLink.has_value());
+           nextPathAndArguments = extractPathAndArguments(nextLink.value());
+       }
+
+       ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
+       outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
+       bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       nextLink = bundle->getLink(model::Link::Type::Next);
+       EXPECT_FALSE(nextLink.has_value());
+   }
+}

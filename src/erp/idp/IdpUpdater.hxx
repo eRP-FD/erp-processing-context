@@ -44,11 +44,11 @@ public:
      */
     template<class IdpUpdaterType = IdpUpdater>
     static std::unique_ptr<IdpUpdaterType> create (Idp& certificateHolder,
-               TslManager* tslManager,
+               const std::shared_ptr<TslManager>& tslManager,
                bool runFirstUpdateSynchronously = true,
                const std::shared_ptr<UrlRequestSender>& urlRequestSender = {});
     IdpUpdater (Idp& certificateHolder,
-               TslManager* tslManager,
+               const std::shared_ptr<TslManager>& tslManager,
                const std::shared_ptr<UrlRequestSender>& urlRequestSender);
     virtual ~IdpUpdater (void);
 
@@ -77,7 +77,7 @@ protected:
 private:
     size_t mUpdateFailureCount;
     Idp& mCertificateHolder;
-    TslManager* mTslManager;
+    std::shared_ptr<TslManager> mTslManager;
     std::shared_ptr<UrlRequestSender> mRequestSender;
     std::unique_ptr<UrlHelper::UrlParts> mUpdateUrl;
     Timer::JobToken mTimerJobToken;
@@ -95,10 +95,10 @@ private:
 };
 
 
-template<class IdpUpdaterType = IdpUpdater>
+template<class IdpUpdaterType>
 std::unique_ptr<IdpUpdaterType> IdpUpdater::create (
     Idp& certificateHolder,
-    TslManager* tslManager,
+    const std::shared_ptr<TslManager>& tslManager,
     bool runFirstUpdateSynchronously,
     const std::shared_ptr<UrlRequestSender>& urlRequestSender)
 {

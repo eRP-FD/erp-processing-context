@@ -304,10 +304,15 @@ public:
     std::optional<Certificate> retrieveEciesRemoteCertificate();
     Certificate getEciesCertificate (void);
 
+    void resetClient();
+
 protected:
     virtual std::string medicationDispense(const std::string& kvnr,
                                            const std::string& prescriptionIdForMedicationDispense,
                                            const std::string& whenHandedOver);
+
+    // some tests must know if they run with proxy in between, because the proxy modifies the Http Response.
+    bool runsInCloudEnv() const;
 
 private:
     void sendInternal(

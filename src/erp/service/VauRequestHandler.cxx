@@ -284,7 +284,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
         Expect3(upParam.has_value(), "Missing Pre-User-Pseudonym in Path.", std::logic_error);
 
         auto innerTeeRequest = std::make_unique<InnerTeeRequest>(
-            ErpTeeProtocol::decrypt(session.request.getBody(), session.serviceContext.getHsmPool()));
+            ErpTeeProtocol::decrypt(session.request.getBody(), *session.serviceContext.getHsmPool()));
         handleInnerRequest(session, upParam.value(), std::move(innerTeeRequest));
         return;
     }

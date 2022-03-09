@@ -373,6 +373,17 @@ TslError::TslError(
 }
 
 
+TslError::TslError(const TslError& original, HttpStatus newHttpStatus)
+    : std::runtime_error(original.what())
+    , mErrorData(original.mErrorData)
+    , mTslMode(original.mTslMode)
+    , mTslId(original.mTslId)
+    , mTslSequenceNumber(original.mTslSequenceNumber)
+    , mStatus(newHttpStatus)
+{
+}
+
+
 const std::vector<TslError::ErrorData>& TslError::getErrorData() const
 {
     return mErrorData;

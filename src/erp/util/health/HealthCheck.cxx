@@ -29,14 +29,37 @@ void HealthCheck::update (SessionContext<PcServiceContext>& session)
         check(ApplicationHealth::Service::Redis, session, &checkRedis);
 
     session.serviceContext.applicationHealth().setServiceDetails(
-        ApplicationHealth::Service::Hsm, Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
+        ApplicationHealth::Service::Hsm, ApplicationHealth::ServiceDetail::HsmDevice,
+        Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
 
-    session.serviceContext.applicationHealth().setServiceDetails(
-        ApplicationHealth::Service::CFdSigErp,
-        "last success " + session.serviceContext.getCFdSigErpManager().getLastValidationTimestamp());
+    try
+    {
+        session.serviceContext.applicationHealth().setServiceDetails(
+            ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpTimestamp,
+            "last success " + session.serviceContext.getCFdSigErpManager().getLastValidationTimestamp());
+        session.serviceContext.applicationHealth().setServiceDetails(
+            ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpPolicy,
+            String::replaceAll(
+                std::string(magic_enum::enum_name(session.serviceContext.getCFdSigErpManager().getCertificateType())),
+                "_", "."));
+        session.serviceContext.applicationHealth().setServiceDetails(
+            ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpExpiry,
+            session.serviceContext.getCFdSigErpManager().getCertificateNotAfterTimestamp());
+    }
+    catch (const std::exception& err)
+    {
+        TLOG(WARNING) << "Could not retrieve C.FD.SIG health service details due to exception: " << err.what();
+    }
 
-    session.serviceContext.registrationInterface()->updateRegistrationBasedOnApplicationHealth(
-        session.serviceContext.applicationHealth());
+    try
+    {
+        session.serviceContext.registrationInterface()->updateRegistrationBasedOnApplicationHealth(
+            session.serviceContext.applicationHealth());
+    }
+    catch (const std::exception& err)
+    {
+        TLOG(WARNING) << "Could not update registration status due to exception: " << err.what();
+    }
 }
 
 
@@ -49,7 +72,7 @@ void HealthCheck::checkBna (SessionContext<PcServiceContext>& session)
 
 void HealthCheck::checkHsm (SessionContext<PcServiceContext>& session)
 {
-    auto hsmSession = session.serviceContext.getHsmPool().acquire();
+    auto hsmSession = session.serviceContext.getHsmPool()->acquire();
     (void) hsmSession.session().getRandomData(1);
 }
 
@@ -87,7 +110,7 @@ void HealthCheck::checkSeedTimer (SessionContext<PcServiceContext>& session)
 
 void HealthCheck::checkTeeTokenUpdater (SessionContext<PcServiceContext>& session)
 {
-    session.serviceContext.getHsmPool().getTokenUpdater().healthCheck();
+    session.serviceContext.getHsmPool()->getTokenUpdater().healthCheck();
 }
 
 

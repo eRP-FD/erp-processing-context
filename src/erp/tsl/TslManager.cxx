@@ -212,6 +212,8 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
                        tslMode);
         }
 
+        OcspService::checkOcspStatus(ocspResponse->status, getTrustStore(tslMode));
+
         return *ocspResponse;
     }
     catch(...)

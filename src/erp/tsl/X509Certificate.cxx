@@ -951,6 +951,19 @@ std::vector<std::string> X509Certificate::getRoles () const
     return roleOids;
 }
 
+tm X509Certificate::getNotAfter() const
+{
+    Expect(pCert, "pCert is null");
+    const auto* notAfter = X509_get0_notAfter(pCert.get());
+    if (!notAfter)
+    {
+        throw CryptoFormalError("Unable to retrieve Not Valid After time from certificate.");
+    }
+    tm notAfterTm{};
+    OpenSslExpect(ASN1_TIME_to_tm(notAfter, &notAfterTm), "ASN1_TIME_to_tm failed for notAfter");
+    return notAfterTm;
+}
+
 
 bool X509Certificate::operator==(const X509Certificate& rhs) const
 {

@@ -69,7 +69,7 @@ class ContentMimeType : public MimeType
 public:
     static const ContentMimeType fhirJsonUtf8;
     static const ContentMimeType fhirXmlUtf8;
-
+    static const ContentMimeType jsonUtf8;
 
     /// @param stringRepresentation the string representation of the mime type, e.g. "text/html;charset=utf-8"
     explicit ContentMimeType(std::string_view stringRepresentation);

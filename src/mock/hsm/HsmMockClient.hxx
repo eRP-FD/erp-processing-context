@@ -64,7 +64,9 @@ public:
 private:
     ErpBlob mTeeToken;
 
-    DeriveKeyOutput derivePersistenceKey (DeriveKeyInput&& input);
+    // The second parameter is used to create different results for derive...Key() calls
+    // in order to simulate the real HSM behaviour.
+    DeriveKeyOutput derivePersistenceKey (DeriveKeyInput&& input, ::BlobType expectedBlobType);
     void verifyTeeToken (const ErpBlob& teeToken) const;
 };
 

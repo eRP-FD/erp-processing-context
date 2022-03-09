@@ -169,12 +169,13 @@ void MockBlobCache::setupBlobCacheForSimulatedHsm (BlobCache& blobCache)
     }
 
     // VAU SIG aka ID.FD.SIG
-    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauSigPrivateKey))
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauSig))
     {
         BlobDatabase::Entry entry;
-        entry.type = BlobType::VauSigPrivateKey;
+        entry.type = BlobType::VauSig;
         entry.name = ErpVector::create("vau-sig");
         entry.blob = ErpBlob::fromCDump(tpm::vauSigKeupair_blob_base64);
+        entry.certificate = tpm::vauSigCertificate_base64;
         blobCache.storeBlob(std::move(entry));
     }
 }
@@ -237,12 +238,13 @@ void MockBlobCache::setupBlobCacheForMockedHsm (BlobCache& blobCache)
     }
 
     // VAU SIG aka ID.FD.SIG
-    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauSigPrivateKey))
+    if (! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauSig))
     {
         BlobDatabase::Entry entry;
-        entry.type = BlobType::VauSigPrivateKey;
+        entry.type = BlobType::VauSig;
         entry.name = ErpVector::create("vau-sig");
         entry.blob = ErpBlob(std::string_view(MockCryptography::getIdFdSigPrivateKeyPkcs8()), 11);
+        entry.certificate = tpm::vauSigCertificate_base64;
         blobCache.storeBlob(std::move(entry));
     }
 }

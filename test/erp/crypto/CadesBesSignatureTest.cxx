@@ -75,7 +75,7 @@ TEST_F(CadesBesSignatureTest, roundtrip)
 {
     std::string_view myText = "The text to be signed";
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
-    auto cert = Certificate::fromPemString(Configuration::instance().getStringValue(ConfigurationKey::C_FD_SIG_ERP));
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
     std::string signedText;
     {
         CadesBesSignature cms{cert, privKey, std::string{myText}};
@@ -115,7 +115,7 @@ TEST_F(CadesBesSignatureTest, roundtripWithoutTsl)
 {
     std::string_view myText = "The text to be signed";
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
-    auto cert = Certificate::fromPemString(certificate);
+    auto cert = Certificate::fromPem(certificate);
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}};
@@ -161,7 +161,7 @@ TEST_F(CadesBesSignatureTest, setSigningTime)
     std::string_view myText = "The text to be signed";
     auto signingTime = model::Timestamp::fromXsDateTime("2019-02-25T08:05:05Z");
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
-    auto cert = Certificate::fromPemString(certificate);
+    auto cert = Certificate::fromPem(certificate);
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}, signingTime};
@@ -170,9 +170,9 @@ TEST_F(CadesBesSignatureTest, setSigningTime)
     {
         CadesBesSignature cadesBesSignature{signedText, nullptr};
         EXPECT_EQ(cadesBesSignature.payload(), myText);
-        auto signingTime = cadesBesSignature.getSigningTime();
-        ASSERT_TRUE(signingTime.has_value());
-        ASSERT_EQ(signingTime.value(), signingTime);
+        auto signingTime1 = cadesBesSignature.getSigningTime();
+        ASSERT_TRUE(signingTime1.has_value());
+        ASSERT_EQ(signingTime1.value(), signingTime1);
     }
 }
 
@@ -185,10 +185,10 @@ TEST_F(CadesBesSignatureTest, validateWithBna)
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.prv.pem")});
 
-    auto cert = Certificate::fromPemString(FileHelper::readFileAsString(
+    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem"));
 
-    auto certCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
+    auto certCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -249,10 +249,10 @@ TEST_F(CadesBesSignatureTest, validateGematik)
     //       Hopefully we can obtain non-sensitive replacements from Achelos. If that
     //       is not possible then remove the certificates and also this test before making
     //       the source code publicly accessible.
-    auto cert = Certificate::fromDerBase64String(FileHelper::readFileAsString(
+    auto cert = Certificate::fromBase64Der(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-noType.base64.der"));
 
-    auto certCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
+    auto certCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-noTypeCA.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -275,7 +275,7 @@ TEST_F(CadesBesSignatureTest, validateRequiredSignedFields)
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.prv.pem")});
 
-    auto cert = Certificate::fromPemString(FileHelper::readFileAsString(
+    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem"));
 
     std::string signedText;
@@ -340,10 +340,10 @@ TEST_F(CadesBesSignatureTest, validateQesG0NoOcspProxy)
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-Certificate.prv.pem")});
 
-    auto cert = Certificate::fromPemString(FileHelper::readFileAsString(
+    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-Certificate.pem"));
 
-    auto certCA = Certificate::fromPemString(FileHelper::readFileAsString(
+    auto certCA = Certificate::fromPem(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-CertificateCA.pem"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -374,10 +374,10 @@ TEST_F(CadesBesSignatureTest, validateQesG0WithOcspProxy)
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-Certificate.prv.pem")});
 
-    auto cert = Certificate::fromPemString(FileHelper::readFileAsString(
+    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-Certificate.pem"));
 
-    auto certCA = Certificate::fromPemString(FileHelper::readFileAsString(
+    auto certCA = Certificate::fromPem(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-G0-CertificateCA.pem"));
 
     // if proxy URL is set, it must be used for the certificate OCSP request,
@@ -429,9 +429,9 @@ TEST_F(CadesBesSignatureTest, invalidSignatureInCMSBundle)
 TEST_F(CadesBesSignatureTest, validateOcspResponseInGeneratedCMS)
 {
     std::string_view myText = "The text to be signed";
-    auto cert = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErp);
-    X509Certificate certX509 = X509Certificate::createFromBase64(cert.toDerBase64String());
-    auto certCA = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErpSigner);
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
+    X509Certificate certX509 = X509Certificate::createFromBase64(cert.toBase64Der());
+    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
     const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(

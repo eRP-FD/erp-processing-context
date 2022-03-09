@@ -30,7 +30,7 @@ namespace
         const std::string ocspCertificatePem =
             FileHelper::readFileAsString(
                 std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-        return Certificate::fromPemString(ocspCertificatePem);
+        return Certificate::fromPem(ocspCertificatePem);
     }
 
     shared_EVP_PKEY createOcspPrivateKey()

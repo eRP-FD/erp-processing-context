@@ -15,6 +15,7 @@
 
 #include "tools/ResourceManager.hxx"
 
+#include <regex>
 
 TEST(JwtBuilderTest, testBuilder)
 {
@@ -24,12 +25,12 @@ TEST(JwtBuilderTest, testBuilder)
         "ERP_TSL_INITIAL_CA_DER_PATH",
         std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
 
-    auto idpCertificate = Certificate::fromDerBase64String(
+    auto idpCertificate = Certificate::fromPem(
         FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim.base64.der"));
-    auto idpCertificateCa = Certificate::fromDerBase64String(
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim.pem"));
+    auto idpCertificateCa = Certificate::fromPem(
         FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.base64.der"));
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
     auto tslManager = TslTestHelper::createTslManager<TslManager>(
         {},
@@ -45,8 +46,11 @@ TEST(JwtBuilderTest, testBuilder)
         *tslManager,
         TslMode::TSL);
 
-    const std::string idpResponseJson = FileHelper::readFileAsString(
+    std::string idpResponseJson = FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
+    idpResponseJson = std::regex_replace(idpResponseJson, std::regex{"###CERTIFICATE##"},
+                                         idpCertificate.toBase64Der());
+
     const std::string idpResponseJwk = FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponseJwk.txt");
     std::shared_ptr<UrlRequestSenderMock> idpRequestSender = std::make_shared<UrlRequestSenderMock>(
@@ -56,7 +60,7 @@ TEST(JwtBuilderTest, testBuilder)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager.get(),
+        tslManager,
         true,
         idpRequestSender);
 

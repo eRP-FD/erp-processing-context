@@ -8,6 +8,7 @@
 #include "erp/util/Hash.hxx"
 #include "erp/util/PeriodicTimer.hxx"
 
+#include <algorithm>
 #include <vector>
 
 
@@ -58,7 +59,8 @@ private:
 
 
 template<class KeyType, class ValueType>
-BlobCache::Entry BlobCache::getBlob (const KeyType key, std::unordered_map<KeyType, ValueType>& map)
+BlobCache::Entry BlobCache::getBlob(const KeyType key, std::unordered_map<KeyType, ValueType>& map,
+                                    const bool allowInvalidBlobs)
 {
     // First attempt.
     {
@@ -66,7 +68,7 @@ BlobCache::Entry BlobCache::getBlob (const KeyType key, std::unordered_map<KeyTy
         std::shared_lock lock (mMutex);
 
         const auto iterator = map.find(key);
-        if (iterator != map.end() && unwrap(iterator->second).isBlobValid())
+        if (iterator != map.end() && (allowInvalidBlobs || unwrap(iterator->second).isBlobValid()))
         {
             return unwrap(iterator->second);
         }
@@ -83,7 +85,7 @@ BlobCache::Entry BlobCache::getBlob (const KeyType key, std::unordered_map<KeyTy
         const auto iterator = map.find(key);
         if (iterator != map.end())
         {
-            ErpExpect(unwrap(iterator->second).isBlobValid(), HttpStatus::InternalServerError,
+            ErpExpect(allowInvalidBlobs || unwrap(iterator->second).isBlobValid(), HttpStatus::InternalServerError,
                       "blob " + keyToString(key) + " is not valid");
             return unwrap(iterator->second);
         }
@@ -107,16 +109,44 @@ BlobCache::Entry BlobCache::getBlob (
     const BlobType type,
     const BlobId id)
 {
-    return getBlob(CacheKey(type, id), mEntries);
+    // blob was already used, also allow blobs going invalid in the meantime
+    return getBlob(CacheKey(type, id), mEntries, true);
 }
 
 
 BlobCache::Entry BlobCache::getBlob (
     const BlobType type)
 {
-    return getBlob(type, mNewestEntries);
+    // blob for new entry, do not allow invalid blobs
+    return getBlob(type, mNewestEntries, false);
 }
 
+BlobCache::Entry BlobCache::getBlob(BlobId id)
+{
+    const auto hasBlobId = [id](auto& entry) {
+        return (id == entry.second.id);
+    };
+
+    auto entry = mEntries.cend();
+
+    {
+        ::std::shared_lock lock{mMutex};
+        entry = ::std::find_if(mEntries.cbegin(), mEntries.cend(), hasBlobId);
+    }
+
+    if (entry == mEntries.cend())
+    {
+        rebuildCache();
+
+        ::std::shared_lock lock{mMutex};
+        entry = ::std::find_if(mEntries.cbegin(), mEntries.cend(), hasBlobId);
+    }
+
+    ErpExpect(entry != mEntries.cend(), ::HttpStatus::InternalServerError,
+              "did not find blob with id " + ::std::to_string(id) + " in blob database");
+
+    return entry->second;
+}
 
 BlobCache::Entry BlobCache::getAttestationKeyPairBlob (
     const std::function<ErpBlob()>& blobProvider,

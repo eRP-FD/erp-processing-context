@@ -9,7 +9,10 @@
 #include "erp/hsm/HsmSessionExpiredException.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/util/Base64.hxx"
+#include "erp/util/Configuration.hxx"
+#include "erp/util/Expect.hxx"
 #include "erp/util/JsonLog.hxx"
+#include "erp/util/String.hxx"
 
 #if WITH_HSM_TPM_PRODUCTION > 0
 #include "erp/hsm/production/HsmProductionClient.hxx"
@@ -129,7 +132,18 @@ DeriveKeyOutput HsmSession::deriveCommunicationPersistenceKey (
         DeriveKeyInput input = makeDeriveKeyInput(BlobType::CommunicationKeyDerivation, derivationData, secondCallData);
 
         markHsmCallTime();
-        return mClient.deriveCommsKey(*mRawSession, std::move(input));
+
+        // Support for old entries with task derivation keys REQUIRES that exactly the same derivation method
+        // is used as at creation time.
+        switch(input.blobType)
+        {
+        case ::BlobType::CommunicationKeyDerivation:
+            return mClient.deriveCommsKey(*mRawSession, std::move(input));
+        case ::BlobType::TaskKeyDerivation:
+            return mClient.deriveTaskKey(*mRawSession, std::move(input));
+        default:
+            ErpFail(::HttpStatus::InternalServerError, ::std::string{"communication key has unexpected type "}.append(::magic_enum::enum_name(input.blobType)));
+        }
     });
 }
 
@@ -194,12 +208,18 @@ ErpArray<Aes128Length> HsmSession::vauEcies128 (const ErpVector& clientPublicKey
 }
 
 
-shared_EVP_PKEY HsmSession::getVauSigPrivateKey (void)
+std::tuple<shared_EVP_PKEY, ErpBlob> HsmSession::getVauSigPrivateKey (const shared_EVP_PKEY& cachedKey,
+                                                                      const ErpBlob& cachedBlob)
 {
-    return guardedRun<shared_EVP_PKEY>(*this, [&]{
+    auto blob = mBlobCache.getBlob(BlobType::VauSig).blob;
+    if (cachedKey.isSet() && cachedBlob == blob)
+    {
+        return std::make_tuple(cachedKey, cachedBlob);
+    }
+    return guardedRun<std::tuple<shared_EVP_PKEY, ErpBlob>>(*this, [&]{
         GetVauSigPrivateKeyInput input;
         input.teeToken = getTeeToken();
-        input.vauSigPrivateKey = mBlobCache.getBlob(BlobType::VauSigPrivateKey).blob;
+        input.vauSigPrivateKey = blob;
 
         markHsmCallTime();
         auto privateKeyPkcs8Der = mClient.getVauSigPrivateKey(
@@ -215,8 +235,21 @@ shared_EVP_PKEY HsmSession::getVauSigPrivateKey (void)
             gsl::narrow<long>(privateKeyPkcs8Der.size()));
         ErpExpect(privateKeyPointer != nullptr, HttpStatus::InternalServerError, "conversion of VAU SIG private key failed");
 
-        return privateKey;
+        return std::make_tuple(privateKey, blob);
     });
+}
+
+Certificate HsmSession::getVauSigCertificate() const
+{
+    auto cert = mBlobCache.getBlob(BlobType::VauSig).certificate;
+    if (! cert.has_value() || cert.value().empty())
+    {
+        cert = Configuration::instance().getOptionalStringValue(ConfigurationKey::C_FD_SIG_ERP);
+        TLOG(WARNING) << "using C.FD.SIG VauSig Certificate from configuration file/environment";
+    }
+    Expect(cert.has_value() && ! cert.value().empty(),
+           "VauSig Certificate neither in blob cache nor in configuration file/environment");
+    return Certificate::fromBase64(*cert);
 }
 
 
@@ -259,13 +292,34 @@ DeriveKeyInput HsmSession::makeDeriveKeyInput(
 
     DeriveKeyInput input;
     input.teeToken = getTeeToken();
+    input.blobType = blobType;
     auto ak = mBlobCache.getBlob(BlobType::AttestationPublicKey);
     Expect(ak.name.size() == TpmObjectNameLength, "ak name has the wrong size");
     std::copy(ak.name.begin(), ak.name.end(), input.akName.begin());
     if (secondCallData.has_value())
     {
         input.initialDerivation = false;
-        input.derivationKey = mBlobCache.getBlob(blobType, secondCallData->blobId).blob;
+        if (blobType == ::BlobType::CommunicationKeyDerivation)
+        {
+            // The special handling of communication keys is due to bug ERP-9023.
+            // Some databases may still use task keys for older communication entries, so
+            // we use a generic lookup by id, ignoring the exact key type.
+
+            const auto key = mBlobCache.getBlob(secondCallData->blobId);
+
+            ErpExpect(
+                (key.type == ::BlobType::CommunicationKeyDerivation) || (key.type == ::BlobType::TaskKeyDerivation),
+                HttpStatus::InternalServerError,
+                ::std::string{"communication key has unexpected type "}.append(::magic_enum::enum_name(key.type)));
+
+            input.derivationKey = key.blob;
+            input.blobType = key.type;
+        }
+        else
+        {
+            input.derivationKey = mBlobCache.getBlob(blobType, secondCallData->blobId).blob;
+        }
+
         input.derivationData = concat(derivationData, secondCallData.value());
         input.blobId = secondCallData->blobId;
     }

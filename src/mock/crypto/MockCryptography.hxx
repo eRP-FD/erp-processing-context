@@ -28,6 +28,8 @@ class SafeString;
 class MockCryptography
 {
 public:
+    static SafeString pemToPkcs8 (const SafeString& pem);
+
     static shared_EVP_PKEY getIdpPublicKey (void);
     static const Certificate& getIdpPublicKeyCertificate (void);
     static shared_EVP_PKEY getIdpPrivateKey (void);

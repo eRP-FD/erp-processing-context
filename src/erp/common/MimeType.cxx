@@ -23,6 +23,7 @@ const MimeType MimeType::xWwwFormUrlEncoded("application/x-www-form-urlencoded")
 
 const ContentMimeType ContentMimeType::fhirJsonUtf8("application/fhir+json;charset=utf-8");
 const ContentMimeType ContentMimeType::fhirXmlUtf8("application/fhir+xml;charset=utf-8");
+const ContentMimeType ContentMimeType::jsonUtf8("application/json;charset=utf-8");
 
 MimeType::MimeType(std::string_view stringRepresentation)
     :  mMimeType(), mMimeSubtype(), mOptions()

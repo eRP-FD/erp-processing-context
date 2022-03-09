@@ -112,6 +112,7 @@ list(
         erp/database/PostgresDatabaseTest.cxx
         erp/database/RedisClientTest.cxx
         erp/database/TransactionTest.cxx
+        erp/enrolment/EnrolmentModelTest.cxx
         erp/enrolment/EnrolmentServerTest.cxx
         erp/fhir/FhirConverterTest.cxx
         erp/fhir/FhirElementTest.cxx
@@ -325,6 +326,7 @@ add_test(
 set(ERP_CLOUD_TEST_SOURCES
     #contains main:
     erp-integration-test.cxx
+    erp/enrolment/DerivationKeyUpdateTest.cxx
 )
 
 add_executable(erp-integration-test ${ERP_CLOUD_TEST_SOURCES})
@@ -338,6 +340,7 @@ target_link_libraries(erp-integration-test
         erp-test-lib
         erp-tool-lib
         erp-processing-context-files
+        enrolment-api-client
     )
 
 target_include_directories(erp-integration-test

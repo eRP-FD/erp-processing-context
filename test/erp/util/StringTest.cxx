@@ -185,6 +185,23 @@ TEST_F(StringTest, concatenateItems)
     ASSERT_EQ(String::concatenateItems(), std::string(""));
 }
 
+TEST_F(StringTest, contains)
+{
+    const auto string = ::std::string{"abc012345def"};
+
+    for (const auto& character : string)
+    {
+        EXPECT_TRUE(::String::contains(string, ::std::string_view{&character}));
+    }
+
+    EXPECT_TRUE(::String::contains(string, "ab"));
+    EXPECT_TRUE(::String::contains(string, "abc0"));
+    EXPECT_TRUE(::String::contains(string, "0123"));
+    EXPECT_TRUE(::String::contains(string, "5de"));
+    EXPECT_TRUE(::String::contains(string, "def"));
+
+    EXPECT_FALSE(::String::contains(string, "a01"));
+}
 
 TEST_F(StringTest, removeTrailingChar)
 {

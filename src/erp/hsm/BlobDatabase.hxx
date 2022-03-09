@@ -12,6 +12,7 @@
 
 #include <mutex>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -38,6 +39,8 @@ public:
         std::optional<ErpArray<TpmObjectNameLength>> metaAkName;
         // The PCR set of TPM registers is only expected to be set for type==BlobType::Quote.
         std::optional<PcrSet> metaPcrSet;
+        // The certificate is only expected to be set for type==BlobType::VauSig.
+        ::std::optional<::std::string> certificate;
 
         bool isBlobValid (std::chrono::system_clock::time_point now = std::chrono::system_clock::now()) const;
 

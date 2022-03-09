@@ -43,10 +43,10 @@ JoseHeader& JoseHeader::setX509Certificate(const Certificate& x509Certificate)
 {
     for (const Certificate* cert = &x509Certificate; cert != nullptr; cert = cert->getNextCertificate())
     {
-        mX509Certificate.value.push_back(cert->toDerBase64String());
+        mX509Certificate.value.push_back(cert->toBase64Der());
     }
     mX509CertificateSha265Thumbprint.value =
-        Base64::toBase64Url(Base64::encode(Sha256::fromBin(x509Certificate.toDerString())));
+        Base64::toBase64Url(Base64::encode(Sha256::fromBin(x509Certificate.toBinaryDer())));
     return *this;
 }
 JoseHeader& JoseHeader::setType(const MimeType& type)

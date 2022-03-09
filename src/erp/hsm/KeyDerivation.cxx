@@ -186,8 +186,8 @@ KeyDerivation::initialCommunicationKey(const std::string_view& identity, const d
 {
     A_19700.start("initial key derivation for communication.");
     auto hsmPoolSession = mHsmPool.acquire();
-    auto keyData = hsmPoolSession.session().deriveTaskPersistenceKey(
-            communicationKeyDerivationData(identity, IdentityHashed));
+    auto keyData = hsmPoolSession.session().deriveCommunicationPersistenceKey(
+        communicationKeyDerivationData(identity, IdentityHashed));
     SafeString key{std::move(keyData.derivedKey)};//NOLINT[hicpp-move-const-arg,performance-move-const-arg]
     A_19700.finish();
     return {std::move(key), std::move(*keyData.optionalData)};
@@ -203,8 +203,8 @@ SafeString KeyDerivation::communicationKey(const std::string_view& identity,
     secondCallData.blobId = blobId;
     secondCallData.salt.assign(salt.begin(), salt.end());
     auto hsmPoolSession = mHsmPool.acquire();
-    auto keyData = hsmPoolSession.session().deriveTaskPersistenceKey(
-            communicationKeyDerivationData(identity, identityHashed), secondCallData);
+    auto keyData = hsmPoolSession.session().deriveCommunicationPersistenceKey(
+        communicationKeyDerivationData(identity, identityHashed), secondCallData);
     SafeString key{std::move(keyData.derivedKey)};//NOLINT[hicpp-move-const-arg,performance-move-const-arg]
     A_19700.finish();
     return key;

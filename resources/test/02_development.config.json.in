@@ -1,5 +1,12 @@
 {
   "common": {
+    "erp": {
+      "enrolment": {
+        "api": {
+          "credentials": "test"
+        }
+      }
+    },
     "debug": {
       "enable-hsm-mock": "true",
       "disable-registration": "false",

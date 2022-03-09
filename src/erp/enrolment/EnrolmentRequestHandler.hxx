@@ -22,6 +22,7 @@ public:
     static constexpr std::string_view requestAkName = "/akName";
     static constexpr std::string_view requestBlobData = "/blob/data";
     static constexpr std::string_view requestBlobGeneration = "/blob/generation";
+    static constexpr std::string_view requestCertificate = "/certificate";
     static constexpr std::string_view requestCredential = "/credential";
     static constexpr std::string_view requestEndDateTime = "/metadata/endDateTime";
     static constexpr std::string_view requestExpiryDateTime = "/metadata/expiryDateTime";
@@ -31,6 +32,7 @@ public:
     static constexpr std::string_view requestPcrSet = "/pcrSet";
     static constexpr std::string_view requestSecret = "/secret";
     static constexpr std::string_view requestStartDateTime = "/metadata/startDateTime";
+    static constexpr std::string_view requestValidFrom = "/valid-from";
 
     static constexpr std::string_view responseAkName = "/akName";
     static constexpr std::string_view responseCertificate = "/certificate";
@@ -71,6 +73,7 @@ private:
     const std::string mEndpointDisplayname;
 };
 
+using PostBlobHandler = PutBlobHandler;
 
 class DeleteBlobHandler : public EnrolmentRequestHandlerBase
 {
@@ -224,17 +227,20 @@ namespace enrolment
         DeleteTelematikIdHashKey (void);
     };
 
-    class PutVauSigPrivateKey : public PutBlobHandler
-    {
-    public:
-        PutVauSigPrivateKey (void);
-    };
+class PostVauSig : public PostBlobHandler
+{
+public:
+    PostVauSig();
 
-    class DeleteVauSigPrivateKey : public DeleteBlobHandler
-    {
-    public:
-        DeleteVauSigPrivateKey (void);
-    };
+protected:
+    ::EnrolmentModel doHandleRequest(::EnrolmentSession& session) override;
+};
+
+class DeleteVauSig : public DeleteBlobHandler
+{
+public:
+    DeleteVauSig();
+};
 }
 
 

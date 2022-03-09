@@ -58,6 +58,16 @@ target_link_libraries(make_task_id
         erp-processing-context-files
 )
 
+add_library(enrolment-api-client OBJECT
+    EnrolmentApiClient.cxx)
+
+target_link_libraries(enrolment-api-client
+    PUBLIC
+    erp-processing-context-files)
+
+target_include_directories(erp-processing-context-files
+    PUBLIC ${PROJECT_SOURCE_DIR}/..)
+
 # The blob-db-initialization relies on HSM and TPM support. On platforms where they are not supported, the tool can
 # not be built.
 if(ERP_WITH_HSM_TPM_PRODUCTION)
@@ -69,7 +79,9 @@ if(ERP_WITH_HSM_TPM_PRODUCTION)
         blob-db-initialization
         PRIVATE
             erp-mock-enrollmentmanager
+            enrolment-api-client
             erp-processing-context-files
+            CONAN_PKG::magic_enum
     )
     target_include_directories(
         blob-db-initialization

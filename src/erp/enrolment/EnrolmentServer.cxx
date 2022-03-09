@@ -81,12 +81,12 @@ void EnrolmentServer::addEndpoints (RequestHandlerManager<EnrolmentServiceContex
     handlers.onDeleteDo(
         "/Enrolment/TelematikIdHashKey",
         std::make_unique<enrolment::DeleteTelematikIdHashKey>());
-    handlers.onPutDo(
-        "/Enrolment/VauSigPrivateKey",
-        std::make_unique<enrolment::PutVauSigPrivateKey>());
+    handlers.onPostDo(
+        "/Enrolment/VauSig",
+        std::make_unique<enrolment::PostVauSig>());
     handlers.onDeleteDo(
-        "/Enrolment/VauSigPrivateKey",
-        std::make_unique<enrolment::DeleteVauSigPrivateKey>());
+        "/Enrolment/VauSig",
+        std::make_unique<enrolment::DeleteVauSig>());
 }
 
 

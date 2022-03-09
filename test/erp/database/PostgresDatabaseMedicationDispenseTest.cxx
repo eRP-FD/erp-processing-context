@@ -311,7 +311,7 @@ void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
     const auto& pemFilename = TestConfiguration::instance().getOptionalStringValue(
         TestConfigurationKey::TEST_QES_PEM_FILE_NAME ).value_or(std::string{TEST_DATA_DIR} + "/qes.pem");
     auto pem_str = ResourceManager::instance().getStringResource(pemFilename);
-    auto cert = Certificate::fromPemString(pem_str);
+    auto cert = Certificate::fromPem(pem_str);
     SafeString pem{std::move(pem_str)};
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(pem);
     CadesBesSignature cadesBesSignature{ cert, privKey, prescriptionBundleXmlString };

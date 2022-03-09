@@ -39,10 +39,13 @@ public:
     void setTslStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setBnaStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setCFdSigErpStatus(const std::string_view& status, const std::string_view& timestamp,
+                            const std::string_view& policy, const std::string_view& expiry,
                             std::optional<std::string_view> message = std::nullopt);
     void setIdpStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setSeedTimerStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setTeeTokenUpdaterStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    // the health check itself had an unexpected error:
+    void setHealthCheckError(const std::string_view& errorMessage);
 
 private:
     void setStatusInChecksArray(const std::string_view& name, const std::string_view& status, const rapidjson::Pointer& messagePointer, std::optional<std::string_view> message);
