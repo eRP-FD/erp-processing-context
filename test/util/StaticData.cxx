@@ -1,7 +1,7 @@
 #include "test/util/StaticData.hxx"
 
 
-const Certificate StaticData::idpCertificate = Certificate::fromPem(R"(-----BEGIN CERTIFICATE-----
+const Certificate StaticData::idpCertificate = Certificate::fromPemString(R"(-----BEGIN CERTIFICATE-----
 MIICsTCCAligAwIBAgIHAbssqQhqOzAKBggqhkjOPQQDAjCBhDELMAkGA1UEBhMC
 REUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMjAwBgNVBAsMKUtv
 bXBvbmVudGVuLUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMSAwHgYDVQQD

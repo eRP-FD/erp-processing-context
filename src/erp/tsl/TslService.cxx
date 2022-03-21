@@ -73,6 +73,26 @@ namespace
         TslFail("Download failed for URL " + url.toString(), TslErrorCode::TSL_DOWNLOAD_ERROR);
     }
 
+    void checkOcspStatus (const OcspService::Status& status, const TrustStore& trustStore)
+    {
+        TslExpect6(
+            status.certificateStatus != OcspService::CertificateStatus::unknown,
+            "OCSP Check failed, certificate is unknown.",
+            TslErrorCode::CERT_UNKNOWN,
+            trustStore.getTslMode(),
+            trustStore.getIdOfTslInUse(),
+            trustStore.getSequenceNumberOfTslInUse());
+
+        TslExpect6(
+            status.certificateStatus != OcspService::CertificateStatus::revoked
+            || std::chrono::system_clock::now() < status.revocationTime,
+            "OCSP Check failed, certificate is revoked.",
+            TslErrorCode::CERT_REVOKED,
+            trustStore.getTslMode(),
+            trustStore.getIdOfTslInUse(),
+            trustStore.getSequenceNumberOfTslInUse());
+    }
+
     bool checkC_HP_QES(const X509Certificate& certificate)
     {
         return certificate.checkCertificatePolicy(TslService::oid_hba_qes);
@@ -151,12 +171,6 @@ namespace
                && certificate.checkRoles(getTechnicalRolesOIDs());
     }
 
-    bool checkC_FD_OSIG(const X509Certificate& certificate)
-    {
-        return certificate.checkCertificatePolicy(TslService::oid_fd_osig) &&
-               certificate.checkRoles(getTechnicalRolesOIDs());
-    }
-
     bool checkC_HCI_ENC(const X509Certificate& certificate)
     {
         return certificate.checkCertificatePolicy(TslService::oid_smc_b_enc);
@@ -194,8 +208,6 @@ namespace
                 return checkC_FD_AUT(certificate);
             case CertificateType::C_FD_SIG:
                 return checkC_FD_SIG(certificate);
-            case CertificateType::C_FD_OSIG:
-                return checkC_FD_OSIG(certificate);
             case CertificateType::C_HCI_ENC:
                 return checkC_HCI_ENC(certificate);
             case CertificateType::C_HCI_AUT:
@@ -213,6 +225,36 @@ namespace
         }
     }
 
+    CertificateType getCertificateType(const X509Certificate& certificate)
+    {
+        TslExpect(certificate.hasCertificatePolicy(),
+                  "All supported certificate types must have policy set",
+                  TslErrorCode::CERT_TYPE_INFO_MISSING);
+
+        std::vector<CertificateType> certificateTypes = {
+            CertificateType::C_HP_QES,
+            CertificateType::C_CH_QES,
+            CertificateType::C_CH_AUT,
+            CertificateType::C_CH_AUT_ALT,
+            CertificateType::C_FD_AUT,
+            CertificateType::C_FD_SIG,
+            CertificateType::C_HCI_ENC,
+            CertificateType::C_HCI_AUT,
+            CertificateType::C_HCI_OSIG,
+            CertificateType::C_HP_ENC
+        };
+
+        for (const CertificateType certificateType : certificateTypes)
+        {
+            if (isCertificateOfType(certificate, certificateType))
+            {
+                return certificateType;
+            }
+        }
+
+        TslFail("Unexpected certificate type", TslErrorCode::CERT_TYPE_MISMATCH);
+    }
+
 
     // Data here taken from gemspec_PKI_V2.10.2.pdf
     std::vector<ExtendedKeyUsage> expectedExtendedKeyUsage(const CertificateType certificateType)
@@ -226,7 +268,6 @@ namespace
 
             case CertificateType::C_FD_AUT:
             case CertificateType::C_FD_SIG:
-            case CertificateType::C_FD_OSIG:
             case CertificateType::C_HCI_ENC:
             case CertificateType::C_HCI_OSIG:
             case CertificateType::C_HP_QES:
@@ -277,8 +318,6 @@ namespace
                 }
             case CertificateType::C_FD_SIG:
                 return {KeyUsage::digitalSignature};
-            case CertificateType::C_FD_OSIG:
-                return {KeyUsage::nonRepudiation};
             case CertificateType::C_HCI_ENC:
                 if (certificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
                 {
@@ -330,8 +369,6 @@ namespace
                 return "C_FD_AUT";
             case CertificateType::C_FD_SIG:
                 return "C_FD_SIG";
-            case CertificateType::C_FD_OSIG:
-                return "C_FD_OSIG";
             case CertificateType::C_HCI_ENC:
                 return "C_HCI_ENC";
             case CertificateType::C_HCI_AUT:
@@ -363,8 +400,6 @@ namespace
                 return TslService::oid_fd_aut;
             case CertificateType::C_FD_SIG:
                 return TslService::oid_fd_sig;
-            case CertificateType::C_FD_OSIG:
-                return TslService::oid_fd_osig;
             case CertificateType::C_HCI_ENC:
                 return TslService::oid_smc_b_enc;
             case CertificateType::C_HCI_AUT:
@@ -392,7 +427,6 @@ namespace
             case CertificateType::C_CH_AUT_ALT:
             case CertificateType::C_FD_AUT:
             case CertificateType::C_FD_SIG:
-            case CertificateType::C_FD_OSIG:
             case CertificateType::C_HCI_ENC:
             case CertificateType::C_HCI_AUT:
             case CertificateType::C_HCI_OSIG:
@@ -685,7 +719,7 @@ namespace
 
         VLOG(2) << "Performing ocsp check with url " << ocspUrl.url << ".";
 
-        OcspService::checkOcspStatus(
+        checkOcspStatus(
             OcspService::getCurrentStatus(
                 certificate,
                 requestSender,
@@ -1034,37 +1068,6 @@ TslService::UpdateResult TslService::triggerTslUpdateIfNecessary(
 }
 // GEMREQ-end A_15874
 
-
-CertificateType TslService::getCertificateType(const X509Certificate& certificate)
-{
-    TslExpect(certificate.hasCertificatePolicy(),
-              "All supported certificate types must have policy set",
-              TslErrorCode::CERT_TYPE_INFO_MISSING);
-
-    std::vector<CertificateType> certificateTypes = {
-        CertificateType::C_HP_QES,
-        CertificateType::C_CH_QES,
-        CertificateType::C_CH_AUT,
-        CertificateType::C_CH_AUT_ALT,
-        CertificateType::C_FD_AUT,
-        CertificateType::C_FD_SIG,
-        CertificateType::C_FD_OSIG,
-        CertificateType::C_HCI_ENC,
-        CertificateType::C_HCI_AUT,
-        CertificateType::C_HCI_OSIG,
-        CertificateType::C_HP_ENC
-    };
-
-    for (const CertificateType certificateType : certificateTypes)
-    {
-        if (isCertificateOfType(certificate, certificateType))
-        {
-            return certificateType;
-        }
-    }
-
-    TslFail("Unexpected certificate type", TslErrorCode::CERT_TYPE_MISMATCH);
-}
 
 void
 TslService::checkCertificate(

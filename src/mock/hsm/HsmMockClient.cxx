@@ -58,7 +58,7 @@ DeriveKeyOutput HsmMockClient::deriveTaskKey(
 {
     verifyTeeToken(input.teeToken);
 
-    return derivePersistenceKey(std::move(input), ::BlobType::TaskKeyDerivation);
+    return derivePersistenceKey(std::move(input));
 }
 
 
@@ -68,7 +68,7 @@ DeriveKeyOutput HsmMockClient::deriveAuditKey(
 {
     verifyTeeToken(input.teeToken);
 
-    return derivePersistenceKey(std::move(input), ::BlobType::AuditLogKeyDerivation);
+    return derivePersistenceKey(std::move(input));
 }
 
 
@@ -78,7 +78,7 @@ DeriveKeyOutput HsmMockClient::deriveCommsKey(
 {
     verifyTeeToken(input.teeToken);
 
-    return derivePersistenceKey(std::move(input), ::BlobType::CommunicationKeyDerivation);
+    return derivePersistenceKey(std::move(input));
 }
 
 
@@ -153,7 +153,7 @@ ErpArray<Aes256Length> HsmMockClient::unwrapHashKey(
 }
 
 
-DeriveKeyOutput HsmMockClient::derivePersistenceKey(DeriveKeyInput&& input, ::BlobType expectedBlobType)
+DeriveKeyOutput HsmMockClient::derivePersistenceKey (DeriveKeyInput&& input)
 {
     if (input.initialDerivation)
     {
@@ -163,8 +163,6 @@ DeriveKeyOutput HsmMockClient::derivePersistenceKey(DeriveKeyInput&& input, ::Bl
         input.derivationData.reserve(input.derivationData.size() + defaultRandomData.size());
         std::copy(defaultRandomData.begin(), defaultRandomData.end(), std::back_inserter(input.derivationData));
     }
-
-    input.derivationData.push_back(static_cast<decltype(input.derivationData)::value_type>(expectedBlobType));
 
     const std::string symmetricKey = DiffieHellman::hkdf(
         input.derivationKey.data,

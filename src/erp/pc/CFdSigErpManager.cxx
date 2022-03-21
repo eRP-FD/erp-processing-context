@@ -4,7 +4,6 @@
 #include "erp/tsl/TslManager.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/hsm/HsmPool.hxx"
 
 
 namespace
@@ -33,21 +32,25 @@ namespace
 
 CFdSigErpManager::CFdSigErpManager(
     const Configuration& configuration,
-    std::shared_ptr<TslManager> mTslManager,
-    HsmPool& hsmPool)
+    std::shared_ptr<TslManager> mTslManager)
     : TimerJobBase("CFdSigErpManager job", getOcspRequestInterval(configuration))
     , mMutex()
+    , mCFdSigErp(Certificate::fromPemString(configuration.getStringValue(ConfigurationKey::C_FD_SIG_ERP)))
+    , mX509Certificate()
     , mTslManager(std::move(mTslManager))
     , mValidationHookId()
-    , mHsmPool(hsmPool)
     , mOcspRequestGracePeriod(std::chrono::seconds(
           configuration.getOptionalIntValue(ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD,
                                             OcspHelper::DEFAULT_OCSP_GRACEPERIOD_SECONDS)))
     , mLastSuccess()
     , mLastCheckSuccessfull(false)
-    , mCFdSigErpKey()
-    , mPkBlob()
 {
+    Expect(mCFdSigErp.toX509() != nullptr, "Valid C.FD.SIG eRP Certificate must be provided.");
+
+    // after the Certificate and X509Certificate classes refactored to one class this workaround will no more be necessary,
+    // it could be possible to share X509 pointer between classes, but this approach looks to be more safe
+    mX509Certificate = X509Certificate::createFromBase64(mCFdSigErp.toDerBase64String());
+
     // trigger the first execution synchronously
     executeJob();
 
@@ -72,42 +75,30 @@ CFdSigErpManager::~CFdSigErpManager()
 }
 
 
-[[nodiscard]] Certificate CFdSigErpManager::getCertificate()
+const Certificate& CFdSigErpManager::getCertificate()
 {
-    auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
-
     std::lock_guard lock(mMutex);
 
     // triggers certificate validation if necessary
-    internalGetOcspResponseData(cFdSigErp, false);
+    internalGetOcspResponseData(false);
 
-    return cFdSigErp;
-}
-
-
-shared_EVP_PKEY CFdSigErpManager::getPrivateKey()
-{
-    std::lock_guard lock(mMutexPkCache);
-    std::tie(mCFdSigErpKey, mPkBlob) = mHsmPool.acquire().session().getVauSigPrivateKey(mCFdSigErpKey, mPkBlob);
-    return mCFdSigErpKey;
+    return mCFdSigErp;
 }
 
 
 std::optional<TrustStore::OcspResponseData> CFdSigErpManager::getOcspResponseData(const bool forceOcspRequest)
 {
-    auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
     std::lock_guard lock(mMutex);
-    return internalGetOcspResponseData(cFdSigErp, forceOcspRequest);
+    return internalGetOcspResponseData(forceOcspRequest);
 }
 
 
 
 OcspResponsePtr CFdSigErpManager::getOcspResponse()
 {
-    auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
     std::lock_guard lock(mMutex);
 
-    const std::optional<TrustStore::OcspResponseData> responseData = internalGetOcspResponseData(cFdSigErp, false);
+    const std::optional<TrustStore::OcspResponseData> responseData = internalGetOcspResponseData(false);
     if (responseData.has_value())
     {
         return OcspHelper::stringToOcspResponse(responseData->response);
@@ -117,33 +108,14 @@ OcspResponsePtr CFdSigErpManager::getOcspResponse()
 }
 
 
-std::optional<TrustStore::OcspResponseData>
-CFdSigErpManager::internalGetOcspResponseData(const Certificate& certificate, const bool forceOcspRequest)
+std::optional<TrustStore::OcspResponseData> CFdSigErpManager::internalGetOcspResponseData(const bool forceOcspRequest)
 {
     // internal implementation call, it has to be guarded by mutex in caller public/protected methods
     if (mTslManager != nullptr)
     {
         mLastCheckSuccessfull = false;
-        std::optional<TrustStore::OcspResponseData> responseData;
-        try
-        {
-            // after the Certificate and X509Certificate classes refactored to one class this workaround will no more be necessary,
-            // it could be possible to share X509 pointer between classes, but this approach looks to be more safe
-            auto x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-            responseData =
-                mTslManager->getCertificateOcspResponse(
-                    TslMode::TSL,
-                    x509Certificate,
-                    {CertificateType::C_FD_SIG, CertificateType::C_FD_OSIG},
-                    forceOcspRequest);
-        }
-        catch(const TslError& tslError)
-        {
-            // in this context TslError always means internal server error
-            throw TslError(tslError, HttpStatus::InternalServerError);
-        }
-
+        const std::optional<TrustStore::OcspResponseData> responseData =
+            mTslManager->getCertificateOcspResponse(TslMode::TSL, mX509Certificate, {CertificateType::C_FD_SIG}, forceOcspRequest);
         if (responseData.has_value() && responseData->status.certificateStatus == OcspService::CertificateStatus::good)
         {
             mLastCheckSuccessfull = true;
@@ -193,20 +165,6 @@ std::string CFdSigErpManager::getLastValidationTimestamp()
     return model::Timestamp(mLastSuccess).toXsDateTime();
 }
 
-CertificateType CFdSigErpManager::getCertificateType() const
-{
-    const auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
-    const auto x509Certificate = X509Certificate::createFromBase64(cFdSigErp.toBase64Der());
-    return TslService::getCertificateType(x509Certificate);
-}
-
-std::string CFdSigErpManager::getCertificateNotAfterTimestamp() const
-{
-    const auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
-    const auto x509Certificate = X509Certificate::createFromBase64(cFdSigErp.toBase64Der());
-    return model::Timestamp::fromTmInUtc(x509Certificate.getNotAfter()).toXsDateTime();
-}
-
 
 void CFdSigErpManager::onStart()
 {
@@ -217,12 +175,10 @@ void CFdSigErpManager::executeJob()
 {
     try
     {
-        auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
         std::lock_guard lock(mMutex);
-
-        internalGetOcspResponseData(cFdSigErp, true);
+        internalGetOcspResponseData(true);
     }
-    catch (const ::std::exception& e)
+    catch (const TslError& e)
     {
         TLOG(ERROR) << "Error during planned validation of C.FD.SIG eRp Certificate: " << e.what();
     }

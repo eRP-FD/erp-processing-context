@@ -465,8 +465,8 @@ TEST_F(X509CertificateTests, ReadQesCertificate)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate cert = Certificate::fromPem(certificatePem);
-    const X509Certificate x509Certificate = X509Certificate::createFromBase64(cert.toBase64Der());
+    const Certificate cert = Certificate::fromPemString(certificatePem);
+    const X509Certificate x509Certificate = X509Certificate::createFromBase64(cert.toDerBase64String());
 
     EXPECT_TRUE(x509Certificate.checkQcStatement(TslService::id_etsi_qcs_QcCompliance));
 

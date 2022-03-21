@@ -164,7 +164,7 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob (
     const pqxx::result result = transaction->exec_params(
         "SELECT blob_id, type, name, data, generation,"
         "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), EXTRACT(EPOCH FROM end_date_time),"
-        "       meta, vau_certificate "
+        "       meta "
         "FROM erp.blob "
         "WHERE (type = $1 AND blob_id = $2)"
         "  AND (host_ip IS NULL OR host_ip = $3)"
@@ -190,7 +190,7 @@ std::vector<BlobDatabase::Entry> ProductionBlobDatabase::getAllBlobsSortedById (
     const pqxx::result result = transaction->exec_params(
         "SELECT blob_id, type, name, data, generation,"
         "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), EXTRACT(EPOCH FROM end_date_time),"
-        "       meta, vau_certificate "
+        "       meta "
         "FROM erp.blob "
         "WHERE (host_ip IS NULL OR host_ip = $1)"
         "  AND (build IS NULL OR build = $2)"
@@ -219,8 +219,8 @@ BlobId ProductionBlobDatabase::storeBlob (Entry&& entry)
         auto transaction = createTransaction();
 
         const pqxx::result result = transaction->exec_params(
-            "INSERT INTO erp.blob (type, host_ip, build, name, data, generation, expiry_date_time, start_date_time, end_date_time, meta, vau_certificate) "
-            "VALUES ($1,$2,$3,$4,$5,$6, TO_TIMESTAMP($7), TO_TIMESTAMP($8), TO_TIMESTAMP($9), $10, $11) "
+            "INSERT INTO erp.blob (type, host_ip, build, name, data, generation, expiry_date_time, start_date_time, end_date_time, meta) "
+            "VALUES ($1,$2,$3,$4,$5,$6, TO_TIMESTAMP($7), TO_TIMESTAMP($8), TO_TIMESTAMP($9), $10) "
             "RETURNING blob_id",
             static_cast<int16_t>(entry.type),
             hostIp,
@@ -231,8 +231,7 @@ BlobId ProductionBlobDatabase::storeBlob (Entry&& entry)
             toOptionalSecondsSinceEpoch(entry.expiryDateTime),
             toOptionalSecondsSinceEpoch(entry.startDateTime),
             toOptionalSecondsSinceEpoch(entry.endDateTime),
-            createMeta(entry.metaAkName, entry.metaPcrSet),
-            entry.certificate
+            createMeta(entry.metaAkName, entry.metaPcrSet)
             );
         Expect(result.size() == 1, "insertion of new blob failed");
 
@@ -334,7 +333,7 @@ std::vector<bool> ProductionBlobDatabase::hasValidBlobsOfType (std::vector<BlobT
 
 BlobDatabase::Entry ProductionBlobDatabase::convertEntry (const pqxx::row& dbEntry)
 {
-    Expect(dbEntry.size() == 10, "Got unexpected number of columns");
+    Expect(dbEntry.size() == 9, "Got unexpected number of columns");
     Entry entry;
     entry.id = getInteger(dbEntry, 0, "blob_id");
     entry.type = getBlobType(dbEntry, 1, "type");
@@ -372,7 +371,6 @@ BlobDatabase::Entry ProductionBlobDatabase::convertEntry (const pqxx::row& dbEnt
             entry.metaPcrSet = PcrSet::fromJson(json, std::string(pcrSetKey));
         }
     }
-    entry.certificate = getOptionalString(dbEntry, 9);
 
     return entry;
 }
@@ -431,11 +429,6 @@ void ProductionBlobDatabase::processStoreBlobException (void)
             std::rethrow_exception(exception);
         else
             Fail("unknown error");
-    }
-    catch (::pqxx::unique_violation& e)
-    {
-        TVLOG(1) << "unique_violation: " << e.what();
-        ErpFail(::HttpStatus::Conflict, " A Blob with that ID already exists");
     }
     catch(pqxx::integrity_constraint_violation& e)
     {

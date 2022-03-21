@@ -63,7 +63,7 @@ EndpointTestClient::EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidato
 
     using namespace std::chrono_literals;
     mServer->serviceContext()->setPrngSeeder(std::make_unique<SeedTimer>(
-        mServer->getThreadPool(), *mServer->serviceContext()->getHsmPool(),
+        mServer->getThreadPool(), mServer->serviceContext()->getHsmPool(),
         Configuration::instance().getIntValue(ConfigurationKey::SERVER_THREAD_COUNT), 200ms, [](const SafeString&) {}));
     const_cast<SeedTimer*>(mServer->serviceContext()->getPrngSeeder())->refreshSeeds();
 

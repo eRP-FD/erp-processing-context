@@ -4,22 +4,30 @@
  */
 
 #include "erp/crypto/Jws.hxx"
+
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/crypto/Sha256.hxx"
 #include "erp/util/Base64.hxx"
-#include "erp/util/String.hxx"
 #include "mock/crypto/MockCryptography.hxx"
-#include "test/erp/pc/CFdSigErpTestHelper.hxx"
-#include "test/util/StaticData.hxx"
 #include "test/util/TestConfiguration.hxx"
+#include "erp/util/String.hxx"
 
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
+#include <rapidjson/pointer.h>
+
 
 
 class JwsTest : public testing::Test
 {
 public:
+    // c.fd.sig-erp-erpserverReferenz.prv.pem
+    static constexpr char privateKey[] = "-----BEGIN PRIVATE KEY-----\n"
+                                         "MIGVAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwR6MHgCAQEEIKd3WtkUFC5Z0NZl\n"
+                                         "4MAjxjh69DnnYV5e03WbLFQoq9qDoAsGCSskAwMCCAEBB6FEA0IABEldYn6CK9ft\n"
+                                         "8L8HMpJBRLSG852LwqbmFUkhbdsK1G4oBDYhAqB0IMyo+PJ3fUluggoAOHRDTPT0\n"
+                                         "GR0WhqTFkFs=\n"
+                                         "-----END PRIVATE KEY-----\n";
 };
 
 TEST_F(JwsTest, Roundtrip)// NOLINT
@@ -27,12 +35,12 @@ TEST_F(JwsTest, Roundtrip)// NOLINT
     JoseHeader header(JoseHeader::Algorithm::ES256);
     header.setContentType(MimeType::fhirJson);
     header.setType(MimeType::jose);
-    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
+    auto cert = Certificate::fromPemString(Configuration::instance().getStringValue(ConfigurationKey::C_FD_SIG_ERP));
     header.setX509Certificate(cert);
     header.setCritical({"alg", "x5c"});
 
     std::string payload("the payload");
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
 
     Jws jws(header, payload, privKey);
     auto serialized = jws.compactSerialized();
@@ -57,12 +65,12 @@ TEST_F(JwsTest, Roundtrip)// NOLINT
     ASSERT_TRUE(rapidjson::Pointer("/x5c").Get(headerDocument)->IsArray());
     ASSERT_EQ(rapidjson::Pointer("/x5c").Get(headerDocument)->GetArray().Size(), static_cast<rapidjson::SizeType>(1));
     ASSERT_EQ(std::string(rapidjson::Pointer("/x5c").Get(headerDocument)->GetArray()[0].GetString()),
-              cert.toBase64Der());
+              cert.toDerBase64String());
 
     ASSERT_EQ(rapidjson::Pointer("/x5t").Get(headerDocument), nullptr);
     ASSERT_NE(rapidjson::Pointer("/x5t#S256").Get(headerDocument), nullptr);
     ASSERT_EQ(std::string(rapidjson::Pointer("/x5t#S256").Get(headerDocument)->GetString()),
-              Base64::toBase64Url(Base64::encode(Sha256::fromBin(cert.toBinaryDer()))));
+              Base64::toBase64Url(Base64::encode(Sha256::fromBin(cert.toDerString()))));
     ASSERT_NE(rapidjson::Pointer("/typ").Get(headerDocument), nullptr);
     ASSERT_EQ(std::string(rapidjson::Pointer("/typ").Get(headerDocument)->GetString()), "application/jose");
     ASSERT_NE(rapidjson::Pointer("/cty").Get(headerDocument), nullptr);

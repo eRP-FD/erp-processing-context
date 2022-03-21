@@ -93,9 +93,7 @@ public:
 
     static std::unique_ptr<EnrolmentServer> setupEnrolmentServer (
         const uint16_t enrolmentPort,
-        const std::shared_ptr<BlobCache>& blobCache,
-        const std::shared_ptr<TslManager>& tslManager,
-        const std::shared_ptr<HsmPool>& hsmPool);
+        const std::shared_ptr<BlobCache>& blobCache);
 
     static std::unique_ptr<AdminServer> setupAdminServer(const std::string_view& interface, const uint16_t port);
 

@@ -15,7 +15,7 @@ std::string CryptoHelper::toCadesBesSignature(const std::string& content,
                                               const std::optional<model::Timestamp>& signingTime)
 {
     auto pem_str = qesCertificatePem();
-    auto cert = Certificate::fromPem(pem_str);
+    auto cert = Certificate::fromPemString(pem_str);
     SafeString pem{std::move(pem_str)};
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(pem);
     CadesBesSignature cadesBesSignature{cert, privKey, content, signingTime};

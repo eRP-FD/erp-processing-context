@@ -59,8 +59,6 @@ public:
     static bool ends_with (const std::string& s, const std::string_view& tail);
     static bool ends_with(const std::string_view s, const std::string_view tail);
 
-    [[nodiscard]] static bool contains(::std::string_view string, ::std::string_view substring);
-
     /* Used to strip a final character from the [in/out] argument str
     * Will only strip the token if it is the last token in the string
     */
@@ -162,7 +160,8 @@ public:
      *
      * Reference: https://gematik.atlassian.net/servicedesk/customer/portal/2/ANFEPA-469
      */
-    static std::size_t utf8Length (const std::string_view& s);
+    // Currently unused, remove if not needed in future:
+    static std::size_t utf8Length (const std::string& s);
 
     /**
      * Truncates a string so that it is at most maxLength code points in size.

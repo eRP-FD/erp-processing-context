@@ -40,18 +40,10 @@ public:
         Skipped,
         Unknown
     };
-    enum class ServiceDetail
-    {
-        HsmDevice,
-        CFdSigErpTimestamp,
-        CFdSigErpPolicy,
-        CFdSigErpExpiry
-    };
-
     struct State
     {
         Status status;
-        std::map<ServiceDetail, std::string> serviceDetails; // Details like HSM device.
+        std::optional<std::string> serviceDetails; // Details like HSM device.
         std::optional<std::string> details; // Details like reason for being down or being skipped.
     };
 
@@ -68,7 +60,7 @@ public:
     bool isUp (void) const;
     bool isUp (Service service) const;
 
-    void setServiceDetails (Service service, ServiceDetail key, const std::string& details);
+    void setServiceDetails (Service service, std::optional<std::string> details);
     std::vector<Service> getDownServices (void) const;
 
     model::Health model (void) const;
@@ -86,7 +78,7 @@ private:
     std::string_view getUpDownStatus (Service service) const;
 
     /// Helper function to retrieve the service details in a format suitable as third argument for one of the Health::setHsmStatus() functions.
-    [[nodiscard]] std::string getServiceDetail(Service service, ServiceDetail key) const;
+    std::string_view getServiceDetails (Service service) const;
 
     /// Helper function to retrieve a details in a format suitable as third argument for one of the Health::set*Status() functions.
     std::optional<std::string_view> getDetails (Service service) const;

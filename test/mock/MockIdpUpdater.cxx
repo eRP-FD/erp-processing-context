@@ -23,8 +23,8 @@ std::string MockIdpUpdater::doDownloadDiscovery (const UrlHelper::UrlParts&)
 {
     auto& resMgr = ResourceManager::instance();
     const auto idpResponse = resMgr.getStringResource("test/tsl/X509Certificate/idpResponse.json");
-    auto idpCertificate = Certificate::fromPem(
+    auto idpCertificate = Certificate::fromPemString(
         resMgr.getStringResource("test/tsl/X509Certificate/IDP-Wansim.pem"));
-    return std::regex_replace(idpResponse, std::regex{"###CERTIFICATE##"}, idpCertificate.toBase64Der());
+    return std::regex_replace(idpResponse, std::regex{"###CERTIFICATE##"}, idpCertificate.toDerBase64String());
 }
 

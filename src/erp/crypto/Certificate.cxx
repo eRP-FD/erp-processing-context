@@ -6,18 +6,14 @@
 #include "erp/crypto/Certificate.hxx"
 
 #include "erp/util/Base64.hxx"
-#include "erp/util/String.hxx"
 
 #include <cstddef>
 #include <functional>
 #include <stdexcept>
-#include <string_view>
 
 
 namespace
 {
-    constexpr std::string_view PEM_CERTIFICATE_BEGIN_TAG = "-----BEGIN CERTIFICATE-----";
-
     using Asn1PrintableStringPtr = const std::unique_ptr<
                                                         ASN1_PRINTABLESTRING,
                                                         std::function<void(ASN1_PRINTABLESTRING*)>>;
@@ -184,62 +180,7 @@ Certificate::Certificate (shared_X509 x509Certificate)
 }
 
 
-Certificate Certificate::fromBinaryDer(const std::string& binaryDer)
-{
-    auto derData = reinterpret_cast<const unsigned char*>(binaryDer.data());
-    auto certificate = shared_X509::make(
-        d2i_X509(nullptr, &derData, static_cast<int>(binaryDer.size())));
-    throwIfNot(
-        certificate.isSet(),
-        "invalid DER certificate string");
-
-    return Certificate(std::move(certificate));
-}
-
-
-Certificate Certificate::fromBase64(const std::string& base64)
-{
-    if (String::contains(base64, PEM_CERTIFICATE_BEGIN_TAG))
-    {
-        return Certificate::fromPem(base64);
-    }
-
-    return Certificate::fromBase64Der(base64);
-}
-
-
-Certificate Certificate::fromPem (const std::string& pem)
-{
-    auto mem = shared_BIO::make();
-    const auto trimmedPem = ::String::trim(pem);
-    const int written = BIO_write(mem, trimmedPem.data(), static_cast<int>(trimmedPem.size()));
-    throwIfNot(written>=0 && static_cast<size_t>(written) == trimmedPem.size(),
-               "attempt to write bytes has failed");
-
-    auto certificate = shared_X509::make(PEM_read_bio_X509(mem, nullptr, nullptr, nullptr));
-    throwIfNot(
-        certificate.isSet(),
-        "can not convert PEM string to certificate");
-
-    return Certificate(std::move(certificate));
-}
-
-
-Certificate Certificate::fromBase64Der (const std::string& base64Der)
-{
-    const std::string derString = Base64::decodeToString(Base64::cleanupForDecoding(base64Der));
-
-    auto mem = shared_BIO::make();
-    const int written = BIO_write(mem, derString.data(), static_cast<int>(derString.size()));
-    throwIfNot(
-        static_cast<int>(derString.size()) == written,
-        "can not fill internal buffer");
-
-    return fromBinaryDer(derString);
-}
-
-
-std::string Certificate::toPem(void) const
+std::string Certificate::toPemString (void) const
 {
     auto certificateMemory = shared_BIO::make();
     const int status = PEM_write_bio_X509(certificateMemory,
@@ -258,13 +199,13 @@ std::string Certificate::toPem(void) const
 }
 
 
-std::string Certificate::toBase64Der(void) const
+std::string Certificate::toDerBase64String (void) const
 {
-    return Base64::encode(toBinaryDer());
+    return Base64::encode(toDerString());
 }
 
 
-std::string Certificate::toBinaryDer(void) const
+std::string Certificate::toDerString (void) const
 {
     auto certificateMemory = shared_BIO::make();
     const int status = i2d_X509_bio(certificateMemory, mX509Certificate.removeConst());
@@ -277,6 +218,50 @@ std::string Certificate::toBinaryDer(void) const
     throwIfNot(data != nullptr && length != 0, "can not get data from certificate");
 
     return std::string(data, length);
+}
+
+
+Certificate Certificate::fromPemString (const std::string& pemString)
+{
+    auto mem = shared_BIO::make();
+    const int written = BIO_write(mem, pemString.data(), static_cast<int>(pemString.size()));
+    throwIfNot(written>=0 && static_cast<size_t>(written) == pemString.size(),
+               "attempt to write bytes has failed");
+
+    auto certificate = shared_X509::make(PEM_read_bio_X509(mem, nullptr, nullptr, nullptr));
+    throwIfNot(
+        certificate.isSet(),
+        "can not convert PEM string to certificate");
+
+    return Certificate(std::move(certificate));
+}
+
+
+Certificate Certificate::fromDerBase64String (const std::string& derBase64String)
+{
+    const std::string derString = Base64::decodeToString(
+        Base64::cleanupForDecoding(derBase64String));
+
+    auto mem = shared_BIO::make();
+    const int written = BIO_write(mem, derString.data(), static_cast<int>(derString.size()));
+    throwIfNot(
+        static_cast<int>(derString.size()) == written,
+        "can not fill internal buffer");
+
+    return fromDerString(derString);
+}
+
+
+Certificate Certificate::fromDerString(const std::string& derString)
+{
+    auto derData = reinterpret_cast<const unsigned char*>(derString.data());
+    auto certificate = shared_X509::make(
+        d2i_X509(nullptr, &derData, static_cast<int>(derString.size())));
+    throwIfNot(
+        certificate.isSet(),
+        "invalid DER certificate string");
+
+    return Certificate(std::move(certificate));
 }
 
 

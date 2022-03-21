@@ -179,11 +179,6 @@ bool String::ends_with(const std::string_view s, const std::string_view tail)
     return boost::ends_with(s, tail);
 }
 
-bool String::contains(::std::string_view string, ::std::string_view substring)
-{
-    return ::boost::contains(string, substring);
-}
-
 std::string String::quoteNewlines (const std::string& in)
 {
     std::ostringstream out;
@@ -324,7 +319,7 @@ bool String::toBool (const std::string& s)
 }
 
 
-std::size_t String::utf8Length (const std::string_view& s)
+std::size_t String::utf8Length (const std::string& s)
 {
     size_t codePoints = 0;
     for (char ch : s)

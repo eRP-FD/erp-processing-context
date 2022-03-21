@@ -72,7 +72,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_20704.start("Set VAU-Error-Code header field to invalid_prescription when an invalid "
                   "prescription has been transmitted");
     const CadesBesSignature cadesBesSignature = unpackCadesBesSignature(
-        cadesBesSignatureFile, session.serviceContext.getTslManager().get());
+        cadesBesSignatureFile, session.serviceContext.getTslManager());
     A_20704.finish();
     A_19020.finish();
 

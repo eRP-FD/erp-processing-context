@@ -26,7 +26,7 @@ CC=gcc-9
 Make sure to use the patched openssl, provided in this repository.
 Export the recipe, that will apply the patch, from within the folder `conan-recipes/openssl`:
 ```
-conan export . openssl/1.1.1l@erp/stable-1
+conan export . openssl/1.1.1n@erp/stable-1
 ```
 
 Afterwards enter the erp-processing-context folder, and roughly follow these steps:

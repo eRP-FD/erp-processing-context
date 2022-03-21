@@ -125,12 +125,6 @@ public:
                                  TrustStore& oldTrustStore,
                                  const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
                                  const bool validateHashExtension);
-
-
-    /**
-     * Checks OCSP status and throws related TslError in case it is not CertificateStatus::good
-     */
-    static void checkOcspStatus (const OcspService::Status& status, const TrustStore& trustStore);
 };
 
 #endif

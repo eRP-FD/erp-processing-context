@@ -15,13 +15,8 @@
 #include "erp/util/GLog.hxx"
 #include "mock/enrolment/MockEnrolmentManager.hxx"
 
-#include <date/date.h>
 #include <iostream>
-#include <filesystem>
 #include <unordered_set>
-#include <magic_enum.hpp>
-
-#include "tools/EnrolmentApiClient.hxx"
 
 class DummyBlobDatabase : public BlobDatabase
 {
@@ -82,7 +77,7 @@ Blob types:
     audit|auditLogDerivationKey
     kvnr|kvnrHashKey
     tid|telematikIdHashKey
-    vausig
+    vausig|vauSigPrivateKey
 )";
 
     if (message.empty())
@@ -115,25 +110,28 @@ struct BlobDescriptor
     BlobType type;
     std::string shortName;
     std::string longName;
+    std::string endpoint;
     std::string staticFilename;
     std::string staticFilenameRu;
     bool isDynamic;
-    bool hasBegin;
-    bool hasEnd;
+    bool hasExpiry;
+    bool hasStartEnd;
 };
 
+
 static std::vector<BlobDescriptor> blobDescriptors = {
-    {BlobType::EndorsementKey,             "ek",     "knownEk",                    "trustedEKSaved.blob",      "trustedEKSaved.blob",          true,  false, false},
-    {BlobType::AttestationPublicKey,       "ak",     "knownAk",                    "AKPub.bin",                "AKPub.bin",                    true,  false, false},
-    {BlobType::AttestationKeyPair,         "akpair", "knownAkKeyPair",             "",                         "",                             false, false, false},
-    {BlobType::Quote,                      "quote",  "knownQuote",                 "trustedQuoteSaved.blob",   "trustedQuoteSaved.blob",       true,  false, false},
-    {BlobType::EciesKeypair,               "ecies",  "eciesKeypair",               "ECIESKeyPairSaved.blob",   "eciesKeyPairSaved.blob",       false, false, true },
-    {BlobType::TaskKeyDerivation,          "task",   "taskDerivationKey",          "StaticDerivationKey.blob", "taskDerivationKeySaved.blob",  false, false, false},
-    {BlobType::CommunicationKeyDerivation, "comm",   "communicationDerivationKey", "StaticDerivationKey.blob", "commDerivationKeySaved.blob",  false, false, false},
-    {BlobType::AuditLogKeyDerivation,      "audit",  "auditLogDerivationKey",      "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
-    {BlobType::KvnrHashKey,                "kvnr",   "kvnrHashKey",                "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
-    {BlobType::TelematikIdHashKey,         "tid",    "telematikIdHashKey",         "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
-    {BlobType::VauSig,                     "vausig", "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false}};
+    {BlobType::EndorsementKey,             "ek",     "knownEk",                    "KnownEndorsementKey",         "trustedEKSaved.blob",      "trustedEKSaved.blob",          true,  false, false},
+    {BlobType::AttestationPublicKey,       "ak",     "knownAk",                    "KnownAttestationKey",         "AKPub.bin",                "AKPub.bin",                    true,  false, false},
+    {BlobType::AttestationKeyPair,         "akpair", "knownAkKeyPair",             "",                            "",                         "",                             false, false, false},
+    {BlobType::Quote,                      "quote",  "knownQuote",                 "KnownQuote",                  "trustedQuoteSaved.blob",   "trustedQuoteSaved.blob",       true,  false, false},
+    {BlobType::EciesKeypair,               "ecies",  "eciesKeypair",               "EciesKeypair",                "ECIESKeyPairSaved.blob",   "eciesKeyPairSaved.blob",       false, true,  false},
+    {BlobType::TaskKeyDerivation,          "task",   "taskDerivationKey",          "Task/DerivationKey",          "StaticDerivationKey.blob", "taskDerivationKeySaved.blob",  false, false, true },
+    {BlobType::CommunicationKeyDerivation, "comm",   "communicationDerivationKey", "Communication/DerivationKey", "StaticDerivationKey.blob", "commDerivationKeySaved.blob",  false, false, true },
+    {BlobType::AuditLogKeyDerivation,      "audit",  "auditLogDerivationKey",      "AuditLog/DerivationKey",      "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, true },
+    {BlobType::KvnrHashKey,                "kvnr",   "kvnrHashKey",                "KvnrHashKey",                 "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
+    {BlobType::TelematikIdHashKey,         "tid",    "telematikIdHashKey",         "TelematikIdHashKey",          "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
+    {BlobType::VauSigPrivateKey,           "vausig", "vauSigPrivateKey",           "VauSigPrivateKey",            "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false}
+};
 
 
 void expectArgument (const std::string name, const int index, const int argc, const char* argv[])
@@ -214,7 +212,7 @@ CommandLineArguments processCommandLine (const int argc, const char* argv[])
                     BlobType::AuditLogKeyDerivation,
                     BlobType::KvnrHashKey,
                     BlobType::TelematikIdHashKey,
-                    BlobType::VauSig});
+                    BlobType::VauSigPrivateKey});
             else if (argument == "static")
                 arguments.blobTypes.insert({
                     BlobType::EciesKeypair,
@@ -223,7 +221,7 @@ CommandLineArguments processCommandLine (const int argc, const char* argv[])
                     BlobType::AuditLogKeyDerivation,
                     BlobType::KvnrHashKey,
                     BlobType::TelematikIdHashKey,
-                    BlobType::VauSig});
+                    BlobType::VauSigPrivateKey});
             else if (argument == "dynamic")
                 arguments.blobTypes.insert({
                     BlobType::EndorsementKey,
@@ -273,58 +271,132 @@ const BlobDescriptor& getDescriptor (const BlobType type)
         [type](const auto& descriptor){return descriptor.type == type;});
 }
 
-struct StaticData
-{
-    ErpBlob blob;
-    ::std::optional<::std::string> certificate;
-};
 
-StaticData readStaticData (const BlobDescriptor& descriptor, const CommandLineArguments& arguments)
+Header createHeader (
+    const HttpMethod method,
+    std::string&& target)
 {
-    ::std::filesystem::path path = arguments.staticDirectory;
+    return Header(
+        method,
+        std::move(target),
+        Header::Version_1_1,
+        {
+            {Header::Authorization, "Basic " + Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS)}
+        },
+        HttpStatus::Unknown);
+}
+
+
+std::string createPutBody (
+    const std::string_view id,
+    const std::string_view data,
+    const size_t generation,
+    const bool hasExpiry,
+    const bool hasStartEnd)
+{
+    std::string request = R"({"id":")"
+           + Base64::encode(id)
+           + R"(","blob":{"data":")"
+           + Base64::encode(data)
+           + R"(","generation":)"
+           + std::to_string(generation)
+           + R"(})";
+    if (hasExpiry || hasStartEnd)
+    {
+        request += R"(,"metadata":{)";
+
+        const auto now = std::chrono::system_clock::now();
+        const auto endOffset = std::chrono::hours(24 * 365);
+        if (hasExpiry)
+        {
+            request += R"("expiryDateTime":)" + std::to_string(std::chrono::duration_cast<std::chrono::seconds>((now + endOffset).time_since_epoch()).count());
+        }
+        else
+        {
+            request +=  R"("startDateTime":)" + std::to_string(std::chrono::duration_cast<std::chrono::seconds>((now).time_since_epoch()).count());
+            request +=  R"(,"endDateTime":)" + std::to_string(std::chrono::duration_cast<std::chrono::seconds>((now + endOffset).time_since_epoch()).count());
+        }
+        request += "}";
+    }
+    request += "}";
+    return request;
+}
+
+
+std::string createDeleteBody (
+    const std::string_view id)
+{
+    return R"({"id":")"
+           + Base64::encode(id)
+           + R"("})";
+}
+
+
+void deleteBlob (HttpsClient& client, const BlobDescriptor& descriptor, const std::string_view& name)
+{
+    std::cout << "deleting " << descriptor.endpoint << std::endl;
+    client.send(
+        ClientRequest(
+            createHeader(HttpMethod::DELETE, "/Enrolment/" + descriptor.endpoint),
+            createDeleteBody(name)));
+}
+
+
+void deleteBlob (HttpsClient& client, const BlobDescriptor& descriptor)
+{
+    deleteBlob(client, descriptor, descriptor.shortName);
+}
+
+
+void storeBlob (
+    HttpsClient& client,
+    const BlobDescriptor& descriptor,
+    const std::string_view& name,
+    const std::string_view& data,
+    const size_t generation)
+{
+    std::cout << "uploading " << descriptor.endpoint << std::endl;
+    auto response = client.send(
+        ClientRequest(
+            createHeader(HttpMethod::PUT, "/Enrolment/" + descriptor.endpoint),
+            createPutBody(
+                name,
+                data,
+                generation,
+                descriptor.hasExpiry,
+                descriptor.hasStartEnd)));
+    if (response.getHeader().status() != HttpStatus::Created)
+        std::cerr << "    upload of " + descriptor.endpoint + " failed with " << toNumericalValue(response.getHeader().status()) << " " << response.getHeader().status() << std::endl;
+}
+
+
+void storeBlob (
+    HttpsClient& client,
+    const BlobDescriptor& descriptor,
+    const std::string_view& data,
+    const size_t generation)
+{
+    storeBlob(client, descriptor, descriptor.shortName, data, generation);
+}
+
+
+ErpBlob readStaticData (const BlobDescriptor& descriptor, const CommandLineArguments& arguments)
+{
+    std::string path = arguments.staticDirectory;
     // TODO: check if static blob types are to be uploaded and if directory is specified where the command line arguments are parsed.
     if (path.empty())
         usage("", "directory for static data has not been specified");
+    if (path[path.size()-1] != '/')
+        path += '/';
     switch (arguments.environment)
     {
-        case TargetEnvironment::DEV: path /= descriptor.staticFilename;   break;
-        case TargetEnvironment::RU:  path /= descriptor.staticFilenameRu; break;
+        case TargetEnvironment::DEV: path += descriptor.staticFilename;   break;
+        case TargetEnvironment::RU:  path += descriptor.staticFilenameRu; break;
     }
-
-    Expect(::FileHelper::exists(path), "No blob file found for " + ::std::string{::magic_enum::enum_name(descriptor.type)} + " (expected " + path.string() +")");
-
-    StaticData result;
-    result.blob = ErpBlob::fromCDump(Base64::encode(FileHelper::readFileAsString(path)));
-    if(descriptor.type == BlobType::VauSig)
-    {
-        path.replace_extension(".pem");
-
-        Expect(::FileHelper::exists(path), "No certificate file found for VauSig (expected " + path.string() +")");
-
-        result.certificate = ::FileHelper::readFileAsString(path);
-    }
-
-    return result;
+    const auto content = FileHelper::readFileAsString(path);
+    return ErpBlob::fromCDump(Base64::encode(content));
 }
 
-EnrolmentApiClient::ValidityPeriod createValidity(const BlobDescriptor& descriptor)
-{
-    const auto now = ::std::chrono::system_clock::now();
-    const auto endOffset = ::std::chrono::hours{24 * 365};
-
-    ::EnrolmentApiClient::ValidityPeriod validityPeriod;
-    if (descriptor.hasBegin)
-    {
-        validityPeriod.begin = now;
-    }
-
-    if (descriptor.hasEnd)
-    {
-        validityPeriod.end = now + endOffset;
-    }
-
-    return validityPeriod;
-}
 
 int main (const int argc, const char* argv[])
 {
@@ -354,17 +426,15 @@ int main (const int argc, const char* argv[])
             2);
     }
 
-    EnrolmentApiClient client{arguments.hostname, arguments.portnumber, Constants::httpTimeoutInSeconds, false};
+    HttpsClient client (arguments.hostname, arguments.portnumber, Constants::httpTimeoutInSeconds, false);
 
     // The "dynamic" blobs require special handling that can not easily be expressed in the BlobDescriptor.
     if (arguments.hasBlobType(BlobType::EndorsementKey))
     {
         const auto descriptor = getDescriptor(BlobType::EndorsementKey);
         if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor.type, descriptor.shortName);
-        }
-        client.storeBlob(descriptor.type, descriptor.shortName, dynamicBlobs.trustedEk, createValidity(descriptor));
+            deleteBlob(client, descriptor);
+        storeBlob(client, descriptor, dynamicBlobs.trustedEk.data, dynamicBlobs.trustedEk.generation);
     }
 
     if (arguments.hasBlobType(BlobType::AttestationPublicKey))
@@ -372,11 +442,8 @@ int main (const int argc, const char* argv[])
         const auto descriptor = getDescriptor(BlobType::AttestationPublicKey);
         const auto akname = std::string_view(reinterpret_cast<const char*>(dynamicBlobs.akName.data()), dynamicBlobs.akName.size());
         if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor.type, akname);
-        }
-
-        client.storeBlob(descriptor.type, akname, dynamicBlobs.trustedAk, createValidity(descriptor));
+            deleteBlob(client, descriptor, akname);
+        storeBlob(client, descriptor, akname, dynamicBlobs.trustedAk.data, dynamicBlobs.trustedAk.generation);
     }
 
     if (arguments.hasBlobType(BlobType::Quote))
@@ -389,15 +456,11 @@ int main (const int argc, const char* argv[])
         // possible anymore but it not critical for this sepcial use case to enrol via this helper.
         // Alternative we could create a "real" name by calculating the SHA2 but that would make deletion of the blobs more difficult.
         if (descriptor.type == BlobType::Quote)
-        {
             descriptor.shortName += "-" + Uuid().toString();
-        }
 
         if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor.type, descriptor.shortName);
-        }
-        client.storeBlob(descriptor.type, descriptor.shortName, dynamicBlobs.trustedQuote, createValidity(descriptor));
+            deleteBlob(client, descriptor);
+        storeBlob(client, descriptor, dynamicBlobs.trustedQuote.data, dynamicBlobs.trustedQuote.generation);
     }
 
     // The handling of the "static" blobs is easier and does not require special handling that could not be expressed by BlobDescriptor.
@@ -411,12 +474,9 @@ int main (const int argc, const char* argv[])
             continue; // dynamic types have already been handled.
 
         if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor->type, descriptor->shortName);
-        }
-
-        const auto staticData = readStaticData(*descriptor, arguments);
-        client.storeBlob(descriptor->type, descriptor->shortName, staticData.blob, createValidity(*descriptor), staticData.certificate);
+            deleteBlob(client, *descriptor);
+        const auto blob = readStaticData(*descriptor, arguments);
+        storeBlob(client, *descriptor, blob.data, blob.generation);
     }
 
     return EXIT_SUCCESS;

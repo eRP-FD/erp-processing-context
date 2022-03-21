@@ -18,7 +18,7 @@ std::list<Certificate> CertificateDirLoader::loadDir(const std::filesystem::path
     {
         if (dir.is_regular_file())
         {
-            result.emplace_back(Certificate::fromPem(resMgr.getStringResource(dir.path().string())));
+            result.emplace_back(Certificate::fromPemString(resMgr.getStringResource(dir.path().string())));
         }
     }
     return result;

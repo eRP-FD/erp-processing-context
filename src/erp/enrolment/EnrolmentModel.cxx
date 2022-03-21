@@ -51,11 +51,6 @@ void EnrolmentModel::set (std::string_view key, std::int64_t numberValue)
             mDocument.GetAllocator());
 }
 
-bool EnrolmentModel::hasValue(std::string_view key) const
-{
-    const auto pointer = ::rapidjson::Pointer(::rapidjson::StringRef(key.data(), key.size()));
-    return (pointer.Get(mDocument) != nullptr);
-}
 
 const rapidjson::Value& EnrolmentModel::getValue (std::string_view key) const
 {
@@ -116,18 +111,6 @@ int64_t EnrolmentModel::getInt64 (std::string_view key) const
     const auto& value = getValue(key);
     ErpExpect(value.IsInt64(), HttpStatus::BadRequest, "value is not an int64");
     return value.GetInt64();
-}
-
-::std::optional<int64_t> EnrolmentModel::getOptionalInt64(::std::string_view key) const
-{
-    const auto* value = getOptionalValue(key);
-    if (value)
-    {
-        ErpExpect(value->IsInt64(), ::HttpStatus::BadRequest, "value is not an int64");
-        return value->GetInt64();
-    }
-
-    return {};
 }
 
 

@@ -59,8 +59,6 @@ public:
 
     ErpBlob& operator= (const ErpBlob& other);
     ErpBlob& operator= (ErpBlob&& other) noexcept = default;
-    bool operator==(const ErpBlob& rhs) const;
-    bool operator!=(const ErpBlob& rhs) const;
 };
 
 
@@ -125,7 +123,7 @@ enum class BlobType : int8_t
     AuditLogKeyDerivation      =  8,
     KvnrHashKey                =  9,
     TelematikIdHashKey         = 10,
-    VauSig                     = 11
+    VauSigPrivateKey           = 11
 };
 
 using BlobId = uint32_t;

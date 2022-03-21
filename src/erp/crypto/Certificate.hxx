@@ -23,10 +23,9 @@ class Certificate
 {
 public:
     explicit Certificate (shared_X509 x509Certificate);
-    static Certificate fromBinaryDer(const std::string& binaryDer);
-    static Certificate fromBase64(const std::string& base64);
-    static Certificate fromPem (const std::string& pem);
-    static Certificate fromBase64Der (const std::string& base64Der);
+    static Certificate fromPemString (const std::string& pemString);
+    static Certificate fromDerBase64String (const std::string& derBase64String);
+    static Certificate fromDerString (const std::string& derString);
 
     Certificate (const Certificate& other);
     Certificate& operator=(const Certificate&) = delete;
@@ -36,9 +35,9 @@ public:
 
     ~Certificate() = default;
 
-    std::string toPem(void) const;
-    std::string toBinaryDer(void) const;
-    std::string toBase64Der(void) const;
+    std::string toPemString (void) const;
+    std::string toDerString (void) const;
+    std::string toDerBase64String (void) const;
 
     shared_EVP_PKEY getPublicKey (void) const;
     const X509_NAME* getSubjectName (void) const;

@@ -59,7 +59,8 @@ PcServiceContext::PcServiceContext(const Configuration& configuration,
     , mInCodeValidator(inCodeValidator)
     , mPreUserPseudonymManager(PreUserPseudonymManager::create(this))
     , mTelematicPseudonymManager(TelematicPseudonymManager::create(*this))
-    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, tslManager, *mHsmPool))
+    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, tslManager))
+    , mCFdSigErpPrivateKey()
     , mTslManager(std::move(tslManager))
     , mTslRefreshJob(setupTslRefreshJob(mTslManager, configuration))
     , mRegistrationInterface(std::move(registrationInterface))
@@ -107,9 +108,9 @@ std::shared_ptr<RedisInterface> PcServiceContext::getRedisClient()
     return mRedisClient;
 }
 
-std::shared_ptr<HsmPool> PcServiceContext::getHsmPool()
+HsmPool& PcServiceContext::getHsmPool()
 {
-    return mHsmPool;
+    return *mHsmPool;
 }
 
 KeyDerivation & PcServiceContext::getKeyDerivation()
@@ -132,14 +133,17 @@ CFdSigErpManager& PcServiceContext::getCFdSigErpManager() const
     return *mCFdSigErpManager;
 }
 
-Certificate PcServiceContext::getCFdSigErp() const
+const Certificate& PcServiceContext::getCFdSigErp() const
 {
     return mCFdSigErpManager->getCertificate();
 }
 
-shared_EVP_PKEY PcServiceContext::getCFdSigErpPrv() const
+const shared_EVP_PKEY& PcServiceContext::getCFdSigErpPrv() const
 {
-    return mCFdSigErpManager->getPrivateKey();
+    std::lock_guard lock (mMutex);
+    if ( ! mCFdSigErpPrivateKey.isSet())
+        mCFdSigErpPrivateKey = mHsmPool->acquire().session().getVauSigPrivateKey();
+    return mCFdSigErpPrivateKey;
 }
 
 const AuditEventTextTemplates& PcServiceContext::auditEventTextTemplates() const
@@ -147,9 +151,9 @@ const AuditEventTextTemplates& PcServiceContext::auditEventTextTemplates() const
     return mAuditEventTextTemplates;
 }
 
-const std::shared_ptr<TslManager>& PcServiceContext::getTslManager()
+TslManager* PcServiceContext::getTslManager()
 {
-    return mTslManager;
+    return mTslManager.get();
 }
 
 void PcServiceContext::setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer)

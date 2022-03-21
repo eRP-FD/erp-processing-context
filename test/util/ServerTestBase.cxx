@@ -272,7 +272,7 @@ Database::Factory ServerTestBase::createDatabaseFactory (void)
 std::unique_ptr<Database> ServerTestBase::createDatabase()
 {
     auto serviceContext = mServer->serviceContext();
-    return createDatabaseFactory()(*serviceContext->getHsmPool(), serviceContext->getKeyDerivation());
+    return createDatabaseFactory()(serviceContext->getHsmPool(), serviceContext->getKeyDerivation());
 }
 
 

@@ -85,7 +85,7 @@ std::unique_ptr<Certificate> HttpsTestClient::retrieveEciesRemoteCertificate()
     }
     if (!remoteCertificate.empty())
     {
-        result = std::make_unique<Certificate>(Certificate::fromBinaryDer(remoteCertificate));
+        result = std::make_unique<Certificate>(Certificate::fromDerString(remoteCertificate));
         TVLOG(0) << "Using remote Certificate from: " + getHostAddress();
         return result;
     }

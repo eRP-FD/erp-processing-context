@@ -25,10 +25,10 @@ TEST(JwtBuilderTest, testBuilder)
         "ERP_TSL_INITIAL_CA_DER_PATH",
         std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
 
-    auto idpCertificate = Certificate::fromPem(
+    auto idpCertificate = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim.pem"));
-    auto idpCertificateCa = Certificate::fromPem(
+    auto idpCertificateCa = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
@@ -49,7 +49,7 @@ TEST(JwtBuilderTest, testBuilder)
     std::string idpResponseJson = FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
     idpResponseJson = std::regex_replace(idpResponseJson, std::regex{"###CERTIFICATE##"},
-                                         idpCertificate.toBase64Der());
+                                         idpCertificate.toDerBase64String());
 
     const std::string idpResponseJwk = FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponseJwk.txt");
@@ -60,7 +60,7 @@ TEST(JwtBuilderTest, testBuilder)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager,
+        tslManager.get(),
         true,
         idpRequestSender);
 

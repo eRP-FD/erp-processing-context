@@ -17,6 +17,7 @@
 
 #include <regex>
 
+
 class IdpUpdaterTest : public testing::Test
 {
 public:
@@ -25,7 +26,7 @@ public:
     std::shared_ptr<TslManager> createAndSetupTslManager (
         const std::map<std::string, const std::vector<MockOcsp::CertificatePair>>& additionalOcspResponderKnownCertificateCaPairs = {})
     {
-        auto idpCertificateCa = Certificate::fromPem(
+        auto idpCertificateCa = Certificate::fromPemString(
             FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
         std::map<std::string, const std::vector<MockOcsp::CertificatePair>> ocspResponderKnownCertificateCaPairs
@@ -57,12 +58,12 @@ public:
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
             std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
-        mIdpCertificate.emplace(Certificate::fromPem(
+        mIdpCertificate.emplace(Certificate::fromPemString(
             resMgr.getStringResource("test/tsl/X509Certificate/IDP-Wansim.pem")));
 
         mIdpResponseJson = resMgr.getStringResource("test/tsl/X509Certificate/idpResponse.json");
         mIdpResponseJson = std::regex_replace(mIdpResponseJson, std::regex{"###CERTIFICATE##"},
-                                         mIdpCertificate.value().toBase64Der());
+                                         mIdpCertificate.value().toDerBase64String());
 
     }
 
@@ -85,7 +86,7 @@ namespace
 class IdpTestUpdater : public IdpUpdater
 {
 public:
-    IdpTestUpdater (Idp& certificateHolder, const std::shared_ptr<TslManager>& tslManager)
+    IdpTestUpdater (Idp& certificateHolder, TslManager* tslManager)
         : IdpUpdater(certificateHolder, tslManager, {})
     {
     }
@@ -119,8 +120,7 @@ protected:
 class IdpErrorUpdater : public IdpUpdater
 {
 public:
-    IdpErrorUpdater (Idp& certificateHolder, const std::shared_ptr<TslManager>& tslManager,
-                     const UpdateStatus mockStatus)
+    IdpErrorUpdater (Idp& certificateHolder, TslManager* tslManager, const UpdateStatus mockStatus)
         : IdpUpdater(certificateHolder, tslManager, {}),
           mMockStatus(mockStatus)
     {
@@ -178,7 +178,7 @@ class IdpBrokenCertificateUpdater : public IdpUpdater
 public:
     IdpBrokenCertificateUpdater(
         Idp& certificateHolder,
-        const std::shared_ptr<TslManager>& tslManager,
+        TslManager* tslManager,
         const std::shared_ptr<UrlRequestSender>& urlRequestSender)
         : IdpUpdater(certificateHolder, tslManager, urlRequestSender)
     {
@@ -227,7 +227,7 @@ TEST_F(IdpUpdaterTest, update)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager,
+        tslManager.get(),
         true,
         idpRequestSender);
 
@@ -259,7 +259,7 @@ TEST_F(IdpUpdaterTest, updateWithBrokenResponse)
 
     auto updater = IdpUpdater::create<IdpBrokenCertificateUpdater>(
         idp,
-        tslManager,
+        tslManager.get(),
         false,
         idpRequestSender);
 
@@ -288,7 +288,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge)
     // A missing successful update, i.e. directly after the application starts, is treated like it was
     // on the start of the epoch. That means it is more than 24 hours in the past and as a result the IDP
     // certificate is reset.
-    IdpErrorUpdater updater (idp, tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed);
+    IdpErrorUpdater updater (idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed);
     updater.update();
 
     // The failed update is expected to trigger the 24 hours maximum age of the certificate.
@@ -309,7 +309,7 @@ TEST_F(IdpUpdaterTest, update_noResetForMaxAge)
     ASSERT_NO_THROW(idp.getCertificate());
 
     // One successful update to set the lastSuccessfulUpdateTime to "now".
-    IdpErrorUpdater updater (idp, tslManager, IdpErrorUpdater::UpdateStatus::Success);
+    IdpErrorUpdater updater (idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::Success);
     updater.update();
 
     // Now a failed one. As the last successful update is not 2h hours in the past the IDP certificate is not reset...
@@ -342,7 +342,7 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager,
+        tslManager.get(),
         true,
         idpRequestSender);
 
@@ -359,10 +359,10 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate)
 TEST_F(IdpUpdaterTest, updateStaticCertificate2)
 {
     Idp idp;
-    auto idpCertificateErp5948 = Certificate::fromPem(
+    auto idpCertificateErp5948 = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/erp-5948-certificate.pem"));
-    auto idpCertificateGemKompCa10 = Certificate::fromPem(
+    auto idpCertificateGemKompCa10 = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-GEM.KOMP-CA10.pem"));
     auto tslManager = createAndSetupTslManager(
@@ -388,7 +388,7 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate2)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager,
+        tslManager.get(),
         true,
         idpRequestSender);
 
@@ -403,7 +403,7 @@ TEST_F(IdpUpdaterTest, update_failForWellknownConfigurationFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed)
+    IdpErrorUpdater(idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed)
         .update();
 }
 
@@ -412,7 +412,7 @@ TEST_F(IdpUpdaterTest, update_failForDiscoveryDownloadFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, tslManager, IdpErrorUpdater::UpdateStatus::DiscoveryDownloadFailed)
+    IdpErrorUpdater(idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::DiscoveryDownloadFailed)
         .update();
 }
 
@@ -422,7 +422,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_failForVerificationFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, tslManager, IdpErrorUpdater::UpdateStatus::VerificationFailed)
+    IdpErrorUpdater(idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::VerificationFailed)
         .update();
 }
 
@@ -437,7 +437,7 @@ TEST_F(IdpUpdaterTest, DISABLED_IdpUpdateAfterTslUpdate)
     Idp idp;
     auto tslManager = createAndSetupTslManager();
 
-    IdpTestUpdater updater (idp, tslManager);
+    IdpTestUpdater updater (idp, tslManager.get());
 
     // The IdpTestUpdater does not update in its constructor.
     ASSERT_EQ(updater.updateCount, 0);
@@ -488,7 +488,7 @@ TEST_F(IdpUpdaterTest, initializeWithForcedRetries)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager,
+        tslManager.get(),
         true,
         idpRequestSender);
 
@@ -528,7 +528,7 @@ TEST_F(IdpUpdaterTest, initializeFailedWithForcedRetries)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager,
+        tslManager.get(),
         true,
         idpRequestSender);
 

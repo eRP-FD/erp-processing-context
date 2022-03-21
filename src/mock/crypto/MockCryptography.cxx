@@ -12,10 +12,12 @@
 #include "mock/util/MockConfiguration.hxx"
 
 
+namespace
+{
 /**
  * This is a simple version of pem to Pkcs8 that does not check that `pem` has the correct format.
  */
-SafeString MockCryptography::pemToPkcs8 (const SafeString& pem)
+SafeString pemToPkcs8 (const SafeString& pem)
 {
     const auto pemView = std::string_view(pem);
     const auto firstNewLine = pemView.find("-----\n");
@@ -26,7 +28,7 @@ SafeString MockCryptography::pemToPkcs8 (const SafeString& pem)
                 pemView.substr(firstNewLine+6, lastNewLine-firstNewLine-6))));
     return SafeString(std::move(pkcs8));
 }
-
+}
 
 const SafeString& MockCryptography::getEciesPublicKeyPem (void)
 {

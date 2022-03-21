@@ -78,14 +78,11 @@ const rapidjson::Pointer checksPointer("/checks");
 const rapidjson::Pointer rootCausePointer("/data/rootCause");
 const rapidjson::Pointer ipPointer("/data/ip");
 const rapidjson::Pointer timestampPointer("/data/timestamp");
-const rapidjson::Pointer policyPointer("/data/policy");
-const rapidjson::Pointer expiryPointer("/data/certificate_expiry");
 const rapidjson::Pointer buildPointer("/version/build");
 const rapidjson::Pointer buildTypePointer("/version/buildType");
 const rapidjson::Pointer releasePointer("/version/release");
 const rapidjson::Pointer releasedatePointer("/version/releasedate");
 const rapidjson::Pointer startupPointer("/startup");
-const rapidjson::Pointer healthCheckErrorPointer("/healthCheckError");
 const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 }
 
@@ -144,11 +141,9 @@ void Health::setBnaStatus(const std::string_view& status, std::optional<std::str
 }
 
 void Health::setCFdSigErpStatus(const std::string_view& status, const std::string_view& timestamp,
-                                const std::string_view& policy, const std::string_view& expiry,
                                 std::optional<std::string_view> message)
 {
-    std::map<rapidjson::Pointer, std::string_view> data{{timestampPointer, timestamp},
-                                                        {policyPointer, policy}, {expiryPointer, expiry}};
+    std::map<rapidjson::Pointer, std::string_view> data{{timestampPointer, timestamp}};
     if (message)
     {
         data.emplace(rootCausePointer, *message);
@@ -169,11 +164,6 @@ void Health::setSeedTimerStatus(const std::string_view& status, std::optional<st
 void Health::setTeeTokenUpdaterStatus(const std::string_view& status, std::optional<std::string_view> message)
 {
     setStatusInChecksArray(teeTokenUpdater, status, rootCausePointer, message);
-}
-
-void Health::setHealthCheckError(const std::string_view& errorMessage)
-{
-    setValue(healthCheckErrorPointer, errorMessage);
 }
 
 void Health::setStatusInChecksArray(const std::string_view& name, const std::string_view& status,

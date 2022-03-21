@@ -14,15 +14,12 @@ namespace {
     constexpr size_t updateLogLevel = 2;
     constexpr size_t newStatusLogLevel = 1;
 
-    void showUpdatedStatus (const std::string_view& status, std::string&& downServicesString)
+    void showUpdatedStatus (std::string&& downServicesString)
     {
-        std::stringstream sMessage;
-        sMessage << "updated health check status is " << status;
-        if (!downServicesString.empty())
-        {
-            sMessage << ", list of DOWN services: " << downServicesString;
-        }
-        TVLOG(newStatusLogLevel) << sMessage.str();
+        if (downServicesString.empty())
+            TVLOG(newStatusLogLevel) << "updated health check status is UP";
+        else
+            TVLOG(newStatusLogLevel) << "updated health check status is DOWN, list of DOWN services: " << downServicesString;
     }
 }
 
@@ -68,9 +65,9 @@ void ApplicationHealth::up (Service service)
                               << (iterator == mStates.end() ? "not set" : toString(iterator->second.status))
                               << ")";
 
-        mStates[service] = {Status::Up, {}, std::nullopt};
+        mStates[service] = {Status::Up, std::nullopt, std::nullopt};
 
-        showUpdatedStatus(status_noLock(), downServicesString_noLock());
+        showUpdatedStatus(downServicesString_noLock());
     }
 }
 
@@ -86,9 +83,9 @@ void ApplicationHealth::down (Service service, std::optional<std::string_view> r
             << (iterator == mStates.end() ? "not set" : toString(iterator->second.status))
             << "; " << rootCause.value_or("unknown root cause") << ")";
 
-        mStates[service] = {Status::Down, {}, std::string(rootCause.value_or(""))};
+        mStates[service] = {Status::Down, std::nullopt, std::string(rootCause.value_or(""))};
 
-        showUpdatedStatus(status_noLock(), downServicesString_noLock());
+        showUpdatedStatus(downServicesString_noLock());
     }
 }
 
@@ -104,9 +101,9 @@ void ApplicationHealth::skip (Service service, std::string_view reason)
                               << (iterator == mStates.end() ? "not set" : toString(iterator->second.status))
                               << "; " << reason << ")";
 
-        mStates[service] = {Status::Skipped, {}, "Skipped: " + std::string(reason)};
+        mStates[service] = {Status::Skipped, std::nullopt, "Skipped: " + std::string(reason)};
 
-        showUpdatedStatus(status_noLock(), downServicesString_noLock());
+        showUpdatedStatus(downServicesString_noLock());
     }
 }
 
@@ -159,12 +156,14 @@ bool ApplicationHealth::isUp_noLock (Service service) const
 }
 
 
-void ApplicationHealth::setServiceDetails(Service service, ServiceDetail key, const std::string& details)
+void ApplicationHealth::setServiceDetails (Service service, std::optional<std::string> serviceDetails)
 {
-    std::lock_guard lock(mMutex);
-    TVLOG(2) << "health-check " << toString(service) << ": key=" << magic_enum::enum_name(key)
-             << ", details: " << details;
-    mStates[service].serviceDetails[key] = details;
+    std::lock_guard lock (mMutex);
+    if (serviceDetails.has_value())
+    {
+        TVLOG(2) << "health-check " << toString(service) << ": details: "<< serviceDetails.value();
+        mStates[service].serviceDetails = serviceDetails;
+    }
 }
 
 
@@ -187,18 +186,14 @@ model::Health ApplicationHealth::model (void) const
     model::Health health;
 
     health.setBnaStatus(getUpDownStatus(Service::Bna), getDetails(Service::Bna));
-    health.setHsmStatus(getUpDownStatus(Service::Hsm), getServiceDetail(Service::Hsm, ServiceDetail::HsmDevice),
-                        getDetails(Service::Hsm));
+    health.setHsmStatus(getUpDownStatus(Service::Hsm), getServiceDetails(Service::Hsm), getDetails(Service::Hsm));
     health.setIdpStatus(getUpDownStatus(Service::Idp), getDetails(Service::Idp));
     health.setPostgresStatus(getUpDownStatus(Service::Postgres), getDetails(Service::Postgres));
     health.setRedisStatus(getUpDownStatus(Service::Redis), getDetails(Service::Redis));
     health.setSeedTimerStatus(getUpDownStatus(Service::PrngSeed), getDetails(Service::PrngSeed));
     health.setTeeTokenUpdaterStatus(getUpDownStatus(Service::TeeToken), getDetails(Service::TeeToken));
     health.setTslStatus(getUpDownStatus(Service::Tsl), getDetails(Service::Tsl));
-    health.setCFdSigErpStatus(
-        getUpDownStatus(Service::CFdSigErp), getServiceDetail(Service::CFdSigErp, ServiceDetail::CFdSigErpTimestamp),
-        getServiceDetail(Service::CFdSigErp, ServiceDetail::CFdSigErpPolicy),
-        getServiceDetail(Service::CFdSigErp, ServiceDetail::CFdSigErpExpiry), getDetails(Service::CFdSigErp));
+    health.setCFdSigErpStatus(getUpDownStatus(Service::CFdSigErp), getServiceDetails(Service::CFdSigErp), getDetails(Service::CFdSigErp));
 
     health.setOverallStatus(status_noLock());
 
@@ -241,20 +236,15 @@ std::string_view ApplicationHealth::getUpDownStatus (const Service service) cons
 }
 
 
-std::string ApplicationHealth::getServiceDetail(const ApplicationHealth::Service service,
-                                                     const ApplicationHealth::ServiceDetail key) const
+std::string_view ApplicationHealth::getServiceDetails (const Service service) const
 {
     const auto iterator = mStates.find(service);
     if (iterator == mStates.end())
-    {
         return {};
-    }
-    auto candidate = iterator->second.serviceDetails.find(key);
-    if (candidate != iterator->second.serviceDetails.end())
-    {
-        return candidate->second;
-    }
-    return {};
+    else if (iterator->second.serviceDetails.has_value())
+        return iterator->second.serviceDetails.value();
+    else
+        return {};
 }
 
 std::optional<std::string_view> ApplicationHealth::getDetails (const Service service) const

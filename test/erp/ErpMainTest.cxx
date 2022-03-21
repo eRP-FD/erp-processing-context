@@ -103,8 +103,8 @@ public:
                 factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
 
                 factories.tslManagerFactory = [](auto) {
-                    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-                    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
+                    auto cert = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErp);
+                    auto certCA = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErpSigner);
                     const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
                     return TslTestHelper::createTslManager<TslManager>(
                         {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});

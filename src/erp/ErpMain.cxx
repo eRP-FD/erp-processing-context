@@ -164,9 +164,7 @@ std::unique_ptr<ErpProcessingContext> ErpMain::setupTeeServer (
 
 std::unique_ptr<EnrolmentServer> ErpMain::setupEnrolmentServer (
     const uint16_t enrolmentPort,
-    const std::shared_ptr<BlobCache>& blobCache,
-    const std::shared_ptr<TslManager>& tslManager,
-    const std::shared_ptr<HsmPool>& hsmPool)
+    const std::shared_ptr<BlobCache>& blobCache)
 {
     RequestHandlerManager<EnrolmentServiceContext> handlers;
     EnrolmentServer::addEndpoints(handlers);
@@ -175,9 +173,9 @@ std::unique_ptr<EnrolmentServer> ErpMain::setupEnrolmentServer (
         enrolmentPort,
         std::move(handlers),
 #if WITH_HSM_TPM_PRODUCTION > 0
-        std::make_unique<EnrolmentServiceContext>(TpmProduction::createFactory(), blobCache, tslManager, hsmPool));
+        std::make_unique<EnrolmentServiceContext>(TpmProduction::createFactory(), blobCache));
 #else
-        std::make_unique<EnrolmentServiceContext>(TpmMock::createFactory(), blobCache, tslManager, hsmPool));
+        std::make_unique<EnrolmentServiceContext>(TpmMock::createFactory(), blobCache));
 #endif
 
     // Number of requests is expected to be very low with days between small groups of requests.
@@ -253,13 +251,9 @@ int ErpMain::runApplication (
     log << "starting enrolment server";
     std::unique_ptr<EnrolmentServer> enrolmentServer;
     const auto enrolmentPort = getEnrolementServerPort(pcPort, defaultEnrolmentServerPort);
-    auto hsmPool = serviceContext.getHsmPool();
-    Expect3(hsmPool != nullptr, "HsmPool not initialized", std::logic_error);
     if (enrolmentPort.has_value())
-    {
-        enrolmentServer =
-                setupEnrolmentServer(enrolmentPort.value(), blobCache, serviceContext.getTslManager(), hsmPool);
-    }
+        enrolmentServer = setupEnrolmentServer(enrolmentPort.value(), blobCache);
+
     log << "starting the TEE server";
     const int threadCount = configuration.getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 10);
     Expect(threadCount>0, "thread count is negative or zero");
@@ -273,7 +267,8 @@ int ErpMain::runApplication (
     // Started after the TEE server because a) it runs asynchronously anyway and b) it will access the thread pool which
     // therefore has to be initialized first.
     log << "starting PRNG seeder";
-    auto prngSeeder = setupPrngSeeding(processingContext->getServer().getThreadPool(), threadCount, *hsmPool);
+    auto& hsmPool = serviceContext.getHsmPool();
+    auto prngSeeder = setupPrngSeeding(processingContext->getServer().getThreadPool(), threadCount, hsmPool);
     serviceContext.setPrngSeeder(std::move(prngSeeder));
 
     if (postInitializationCallback)

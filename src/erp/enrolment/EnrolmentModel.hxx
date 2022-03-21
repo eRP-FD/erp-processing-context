@@ -24,14 +24,11 @@ public:
     void set (std::string_view key, std::string_view stringValue);
     void set (std::string_view key, int64_t numberValue);
 
-    bool hasValue(std::string_view key) const;
-
     std::string getString (std::string_view key) const;
     std::optional<std::string> getOptionalDecodedString (std::string_view key) const;
     std::string getDecodedString (std::string_view key) const;
     SafeString getSafeString (std::string_view key) const;
     int64_t getInt64 (std::string_view key) const;
-    ::std::optional<int64_t> getOptionalInt64(::std::string_view key) const;
     std::vector<size_t> getSizeTVector (std::string_view key) const;
     std::optional<std::vector<size_t>> getOptionalSizeTVector (std::string_view key) const;
     ErpVector getErpVector (std::string_view key) const;

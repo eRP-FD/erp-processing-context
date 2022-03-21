@@ -252,7 +252,7 @@ TEST_P(BlobDatabaseTest, hasValidBlobOfTypes)
 
     // Call hasValidBlobsOfTypes with a duplicate and a type that is not in the database.
     const std::vector<bool> flags = databaseFactory()->hasValidBlobsOfType(
-        std::vector{BlobType::EciesKeypair, BlobType::VauSig, BlobType::EciesKeypair});
+        std::vector{BlobType::EciesKeypair, BlobType::VauSigPrivateKey, BlobType::EciesKeypair});
 
     // Check the result.
     ASSERT_TRUE(flags[0]);
@@ -280,7 +280,7 @@ TEST_P(BlobDatabaseTest, hasValidBlobOfTypes_withExpiry)
 
     // Call hasValidBlobsOfTypes with a duplicate and a type that is not in the database.
     const std::vector<bool> flags = databaseFactory()->hasValidBlobsOfType(
-        std::vector{BlobType::EciesKeypair, BlobType::VauSig, BlobType::EciesKeypair});
+        std::vector{BlobType::EciesKeypair, BlobType::VauSigPrivateKey, BlobType::EciesKeypair});
 
     // Check the result.
     ASSERT_TRUE(flags[0]);

@@ -225,100 +225,6 @@ TEST_P(HsmSessionTest, deriveCommunicationKey_second)
     ASSERT_FALSE(response.optionalData.has_value());
 }
 
-TEST_P(HsmSessionTest, deriveCommunicationOrTaskKey)
-{
-    BlobDatabase::Entry taskEntry;
-    taskEntry.type = BlobType::TaskKeyDerivation;
-    taskEntry.name = ErpVector::create("task key");
-    taskEntry.blob = ErpBlob("task derivation key", 1);
-    const auto taskId = parameters.blobCache->storeBlob(std::move(taskEntry));
-
-    const auto input = ErpVector::create("hello");
-    EXPECT_NO_THROW(parameters.session->deriveCommunicationPersistenceKey(
-        input,
-        OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                              ErpVector::create("the salt"), taskId}));
-
-    BlobDatabase::Entry communicationEntry;
-    communicationEntry.type = BlobType::CommunicationKeyDerivation;
-    communicationEntry.name = ErpVector::create("communication key");
-    communicationEntry.blob = ErpBlob("communication derivation key", 1);
-    const auto communicationId = parameters.blobCache->storeBlob(std::move(communicationEntry));
-
-    EXPECT_NO_THROW(parameters.session->deriveCommunicationPersistenceKey(
-        input,
-        OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                              ErpVector::create("the salt"), communicationId}));
-
-    BlobDatabase::Entry auditEntry;
-    auditEntry.type = BlobType::AuditLogKeyDerivation;
-    auditEntry.name = ErpVector::create("audit key");
-    auditEntry.blob = ErpBlob("audit log derivation key", 1);
-    const auto auditId = parameters.blobCache->storeBlob(std::move(auditEntry));
-
-    {
-        // Make sure a task key derived via the communication call has the same result as a regular task key.
-        // This is necessary to make old communication entries usable.
-        const auto taskDerivation = parameters.session->deriveTaskPersistenceKey(
-            input,
-            OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                                  ErpVector::create("the salt"), taskId});
-        const auto communicationDerivation = parameters.session->deriveCommunicationPersistenceKey(
-            input,
-            OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                                  ErpVector::create("the salt"), taskId});
-
-        EXPECT_EQ(taskDerivation.derivedKey, communicationDerivation.derivedKey);
-    }
-
-    EXPECT_THROW(parameters.session->deriveCommunicationPersistenceKey(
-                     input,
-                     OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                                           ErpVector::create("the salt"), auditId}),
-                 ErpException);
-}
-
-TEST_P(HsmSessionTest, differentDerivations)
-{
-    BlobDatabase::Entry taskEntry;
-    taskEntry.type = BlobType::TaskKeyDerivation;
-    taskEntry.name = ErpVector::create("task key");
-    taskEntry.blob = ErpBlob("derivation key", 1);
-    const auto taskId = parameters.blobCache->storeBlob(std::move(taskEntry));
-
-    BlobDatabase::Entry communicationEntry;
-    communicationEntry.type = BlobType::CommunicationKeyDerivation;
-    communicationEntry.name = ErpVector::create("communication key");
-    communicationEntry.blob = ErpBlob("derivation key", 1);
-    const auto communicationId = parameters.blobCache->storeBlob(std::move(communicationEntry));
-
-    BlobDatabase::Entry auditEntry;
-    auditEntry.type = BlobType::AuditLogKeyDerivation;
-    auditEntry.name = ErpVector::create("audit key");
-    auditEntry.blob = ErpBlob("derivation key", 1);
-    const auto auditId = parameters.blobCache->storeBlob(std::move(auditEntry));
-
-    const auto input = ErpVector::create("hello");
-
-    const auto taskDerivation = parameters.session->deriveTaskPersistenceKey(
-        input,
-        OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                              ErpVector::create("the salt"), taskId});
-
-    const auto communicationDerivation = parameters.session->deriveCommunicationPersistenceKey(
-        input,
-        OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                              ErpVector::create("the salt"), communicationId});
-
-    EXPECT_NE(taskDerivation.derivedKey, communicationDerivation.derivedKey);
-
-    const auto auditDerivation = parameters.session->deriveAuditLogPersistenceKey(
-        input,
-        OptionalDeriveKeyData{// Not the initial call, simulate salt and blob id.
-                              ErpVector::create("the salt"), auditId});
-
-    EXPECT_NE(taskDerivation.derivedKey, auditDerivation.derivedKey);
-}
 
 TEST_P(HsmSessionTest, deriveAuditLogKey_first)
 {
@@ -396,12 +302,9 @@ TEST_P(HsmSessionTest, vauEcies128_forSimulatedHsm)
 
 TEST_P(HsmSessionTest, getVauSigPrivateKey)
 {
-    shared_EVP_PKEY cachedKey{};
-    ErpBlob cachedBlob{};
-    const auto [privateKey, blob] = parameters.session->getVauSigPrivateKey(cachedKey, cachedBlob);
+    const auto privateKey = parameters.session->getVauSigPrivateKey();
 
     ASSERT_NE(privateKey, nullptr);
-    ASSERT_NE(blob, ErpBlob{});
 }
 
 
@@ -409,60 +312,13 @@ TEST_P(HsmSessionTest, getVauSigPrivateKey_failForInvalidBlob)
 {
     std::vector<uint8_t> invalid = { 0x00, 0x01, 0x02, 0x03 };
     BlobDatabase::Entry entry;
-    entry.type = BlobType::VauSig;
+    entry.type = BlobType::VauSigPrivateKey;
     entry.name = ErpVector::create("vausig private key");
     entry.blob = ErpBlob(std::move(invalid), 2);
     parameters.blobCache->storeBlob(std::move(entry));
 
-    shared_EVP_PKEY cachedKey{};
-    ErpBlob cachedBlob{};
     ASSERT_ANY_THROW(
-        parameters.session->getVauSigPrivateKey(cachedKey, cachedBlob));
-}
-
-TEST_P(HsmSessionTest, getVauSigPrivateKeyCached)
-{
-    shared_EVP_PKEY cachedKey{};
-    ErpBlob cachedBlob{};
-    std::tie(cachedKey, cachedBlob) = parameters.session->getVauSigPrivateKey(cachedKey, cachedBlob);
-
-    ASSERT_NE(cachedKey, nullptr);
-    ASSERT_NE(cachedBlob, ErpBlob{});
-
-    const auto [privateKey, blob] = parameters.session->getVauSigPrivateKey(cachedKey, cachedBlob);
-    ASSERT_EQ(cachedKey, privateKey);
-    ASSERT_EQ(cachedBlob, blob);
-}
-
-
-TEST_P(HsmSessionTest, getVauSigPrivateKeyNotCached)
-{
-    if (parameters.name == "simulated")
-    {
-        GTEST_SKIP();
-    }
-    shared_EVP_PKEY cachedKey{};
-    ErpBlob cachedBlob{};
-    std::tie(cachedKey, cachedBlob) = parameters.session->getVauSigPrivateKey(cachedKey, cachedBlob);
-
-    ASSERT_NE(cachedKey, nullptr);
-    ASSERT_NE(cachedBlob, ErpBlob{});
-
-    BlobDatabase::Entry entry;
-    entry.type = BlobType::VauSig;
-    entry.name = ErpVector::create("vau-osig");
-    std::string pkey = "-----BEGIN PRIVATE KEY-----\nMIGIAgEAMBQGByqGSM49AgEGCSskAwMCCAEBCARtMGsCAQEEICYfRlJuQlVJx5KB\nhr8nzziMsmaDug1Y29KqQ1Hnb59goUQDQgAEAbRby7L918RBdr8hYHY39tlyJNlN\nfhiaRddfr2nvtic2O0SxYqpzt1OQcysb+vh0XpOf+Cij9SszRH5cpCG5ng==\n-----END PRIVATE KEY-----";
-    entry.blob = ErpBlob(std::string_view(MockCryptography::pemToPkcs8(SafeString{std::move(pkey)})), 20);
-    entry.certificate = tpm::vauSigCertificate_base64;
-    parameters.blobCache->storeBlob(std::move(entry));
-
-    const auto [privateKey, blob] = parameters.session->getVauSigPrivateKey(cachedKey, cachedBlob);
-    ASSERT_NE(cachedKey, privateKey);
-    ASSERT_NE(cachedBlob, blob);
-
-    std::tie(cachedKey, cachedBlob) = parameters.session->getVauSigPrivateKey(privateKey, blob);
-    ASSERT_EQ(cachedKey, privateKey);
-    ASSERT_EQ(cachedBlob, blob);
+        parameters.session->getVauSigPrivateKey());
 }
 
 

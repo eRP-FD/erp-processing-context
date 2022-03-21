@@ -3,15 +3,11 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/hsm/HsmPool.hxx"
 #include "erp/pc/CFdSigErpManager.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Configuration.hxx"
-#include "mock/hsm/HsmMockClient.hxx"
-#include "mock/hsm/HsmMockFactory.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/TestUtils.hxx"
 
@@ -112,17 +108,12 @@ public:
     {
         mCaDerPathGuard.reset();
     }
-
-    HsmPool mHsmPool{
-        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
-                                         MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
 };
 
 
 TEST_F(CFdSigErpManagerTest, noTslManager)
 {
-   CFdSigErpManager cFdSigErpManager(Configuration::instance(), nullptr, mHsmPool);
+   CFdSigErpManager cFdSigErpManager(Configuration::instance(), nullptr);
 
    EXPECT_FALSE(cFdSigErpManager.getOcspResponseData(true).has_value());
    EXPECT_FALSE(cFdSigErpManager.getOcspResponseData(false).has_value());
@@ -139,9 +130,9 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_NoOcspConnection_fail)
     // default mocking does not support C.FD.SIG eRP Certificate OCSP request
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>();
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager);
     EXPECT_TSL_ERROR_THROW(
-        (void)cFdSigErpManager.getCertificate(),
+        cFdSigErpManager.getCertificate(),
         {TslErrorCode::OCSP_NOT_AVAILABLE},
         HttpStatus::InternalServerError);
     EXPECT_TSL_ERROR_THROW(
@@ -166,8 +157,8 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
 
-    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
+    auto cert = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErp);
+    auto certCA = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErpSigner);
     const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
         requestSender,
@@ -175,7 +166,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)
         {
             {ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager);
     const auto responseData = cFdSigErpManager.getOcspResponseData(false);
     ASSERT_TRUE(responseData.has_value());
     EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
@@ -201,15 +192,15 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_success)
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
 
-    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
+    auto cert = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErp);
+    auto certCA = Certificate::fromPemString(CFdSigErpTestHelper::cFdSigErpSigner);
     const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
         requestSender,
         {},
         {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager);
 
     // 2 URLs for TSL + 2 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
     ASSERT_EQ(requestSender->getCounterMapSize(), 6);
@@ -217,33 +208,4 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_success)
 
     // wait two seconds, the timer must do the validation again during this time
     waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
-}
-
-
-TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)
-{
-    std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
-        CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
-
-    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
-    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
-    // let the OCSP-Response Status for C.FD.SIG certificate be set to unknown
-    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
-        requestSender,
-        {},
-        {{ocspUrl, {}}});
-
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
-
-    EXPECT_TSL_ERROR_THROW(
-        cFdSigErpManager.getOcspResponseData(false),
-        {TslErrorCode::CERT_UNKNOWN},
-        HttpStatus::InternalServerError);
-
-    // the second call is done to test handling of the OCSP-Response from cache
-    EXPECT_TSL_ERROR_THROW(
-        cFdSigErpManager.getOcspResponseData(false),
-        {TslErrorCode::CERT_UNKNOWN},
-        HttpStatus::InternalServerError);
 }

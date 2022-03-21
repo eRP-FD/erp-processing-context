@@ -52,10 +52,6 @@ public:
         TslErrorCode errorCode,
         const TslError& previous);
 
-    TslError(
-        const TslError& original,
-        HttpStatus newHttpStatus);
-
     virtual ~TslError() = default;
 
     const std::vector<ErrorData>& getErrorData() const;

@@ -118,8 +118,8 @@ TEST_F(TslServiceTest, verifyCertificateRevokedCAFailing)
     TslTestHelper::setOcspUrlRequestHandler(
         requestSender,
         "http://ehca-testref.sig-test.telematik-test:8080/status/ocsp",
-        {{Certificate::fromBase64Der(userCertificate),
-          Certificate::fromBase64Der(iterator->second.certificate.toBase64()),
+        {{Certificate::fromDerBase64String(userCertificate),
+          Certificate::fromDerBase64String(iterator->second.certificate.toBase64()),
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_TSL_ERROR_THROW(
@@ -145,8 +145,8 @@ TEST_F(TslServiceTest, verifyCertificateValidThenRevokedCASuccess)
     TslTestHelper::setOcspUrlRequestHandler(
         requestSender,
         "http://ehca-testref.sig-test.telematik-test:8080/status/ocsp",
-        {{Certificate::fromBase64Der(userCertificate),
-          Certificate::fromBase64Der(iterator->second.certificate.toBase64()),
+        {{Certificate::fromDerBase64String(userCertificate),
+          Certificate::fromDerBase64String(iterator->second.certificate.toBase64()),
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_NO_THROW(
@@ -166,8 +166,8 @@ TEST_F(TslServiceTest, verifyCertificatePolicyNoRestrictionsSuccessful)
     TslTestHelper::setOcspUrlRequestHandler(
         requestSender,
         "http://ehca-testref.sig-test.telematik-test:8080/status/ocsp",
-        {{Certificate::fromBase64Der(userCertificate),
-          Certificate::fromBase64Der(iterator->second.certificate.toBase64()),
+        {{Certificate::fromDerBase64String(userCertificate),
+          Certificate::fromDerBase64String(iterator->second.certificate.toBase64()),
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_NO_THROW(
@@ -187,8 +187,8 @@ TEST_F(TslServiceTest, verifyCertificatePolicySuccessful)
     TslTestHelper::setOcspUrlRequestHandler(
         requestSender,
         "http://ehca-testref.sig-test.telematik-test:8080/status/ocsp",
-        {{Certificate::fromBase64Der(userCertificate),
-          Certificate::fromBase64Der(iterator->second.certificate.toBase64()),
+        {{Certificate::fromDerBase64String(userCertificate),
+          Certificate::fromDerBase64String(iterator->second.certificate.toBase64()),
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_NO_THROW(

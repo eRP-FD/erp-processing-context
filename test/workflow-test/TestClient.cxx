@@ -28,5 +28,5 @@ Certificate TestClient::getEciesCertificate (void)
     if (pemString.empty())
         return Certificate::build().withPublicKey(MockCryptography::getEciesPublicKey()).build();
     else
-        return Certificate::fromPem(pemString);
+        return Certificate::fromPemString(pemString);
 }

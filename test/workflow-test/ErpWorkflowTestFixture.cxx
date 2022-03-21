@@ -957,12 +957,6 @@ std::string ErpWorkflowTestBase::medicationDispense(const std::string& kvnr,
 }
 
 
-bool ErpWorkflowTestBase::runsInCloudEnv() const
-{
-    const auto hostaddress = client->getHostAddress();
-    return hostaddress != "localhost" && hostaddress != "127.0.0.1";
-}
-
 void ErpWorkflowTestBase::taskCloseInternal(std::optional<model::ErxReceipt>& receipt,
                                         const model::PrescriptionId& prescriptionId,
                                         const std::string& secret,
@@ -1858,11 +1852,6 @@ std::shared_ptr<XmlValidator> ErpWorkflowTestBase::getXmlValidator()
 std::shared_ptr<JsonValidator> ErpWorkflowTestBase::getJsonValidator()
 {
     return StaticData::getJsonValidator();
-}
-
-void ErpWorkflowTestBase::resetClient()
-{
-    client = TestClient::create(getXmlValidator());
 }
 
 void ErpWorkflowTestBase::writeCurrentTestOutputFile(

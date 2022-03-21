@@ -123,7 +123,7 @@ INSTANTIATE_TEST_CASE_P(
              std::tuple<BlobType, bool, bool>{BlobType::AuditLogKeyDerivation,      false, false},
              std::tuple<BlobType, bool, bool>{BlobType::KvnrHashKey,                false, false},
              std::tuple<BlobType, bool, bool>{BlobType::TelematikIdHashKey,         false, false},
-             std::tuple<BlobType, bool, bool>{BlobType::VauSig,                     false, false}
+             std::tuple<BlobType, bool, bool>{BlobType::VauSigPrivateKey,           false, false}
 ));
 
 // Pretty names for individual test cases.

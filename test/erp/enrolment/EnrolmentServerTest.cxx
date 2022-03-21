@@ -25,7 +25,6 @@
 #include "mock/tpm/TpmTestData.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
-#include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
@@ -59,17 +58,6 @@ public:
 
     virtual void SetUp (void) override
     {
-        MockAndProductionTestBase::SetUp();
-        // If the tpm factory (stored in `parameter`) is missing or does produce an empty reference
-        // (because it is a factory that creates a "real" tpm client but that is not currently supported)
-        // then skip the test.
-        if (IsSkipped() || (*parameter)(*blobCache)==nullptr)
-        {
-            // TPM is not configured to run in this mode.
-            GTEST_SKIP();
-            return;
-        }
-
         MockAndProductionTestBase<Tpm::Factory>::SetUp();
 
         // Clear the database.
@@ -77,6 +65,15 @@ public:
 
         blobCache = createBlobCache();
 
+        // If the tpm factory (stored in `parameter`) is missing or does produce an empty reference
+        // (because it is a factory that creates a "real" tpm client but that is not currently supported)
+        // then skip the test.
+        if (parameter == nullptr || (*parameter)(*blobCache)==nullptr)
+        {
+            // TPM is not configured to run in this mode.
+            GTEST_SKIP();
+            return;
+        }
 
         if (mServer == nullptr)
         {
@@ -91,7 +88,7 @@ public:
                 std::move(handlers),
                 std::make_unique<EnrolmentServiceContext>(
                     std::move(tpmFactory),
-                    blobCache, TslTestHelper::createTslManager<TslManager>(), hsmPool()));
+                    blobCache));
             mServer->serve(1);
         }
     }
@@ -131,7 +128,7 @@ public:
         ASSERT_EQ(response.getHeader().status(), expectedStatus);
         if (!response.getBody().empty())
         {
-            ASSERT_EQ(response.getHeader().header(Header::ContentType), ContentMimeType::jsonUtf8);
+            ASSERT_EQ(response.getHeader().header(Header::ContentType), MimeType::json);
         }
     }
 
@@ -329,7 +326,7 @@ public:
                     return;
                 case BlobType::KvnrHashKey:
                 case BlobType::TelematikIdHashKey:
-                case BlobType::VauSig:
+                case BlobType::VauSigPrivateKey:
                 case BlobType::EndorsementKey:
                 case BlobType::AttestationPublicKey:
                 case BlobType::AttestationKeyPair:
@@ -358,15 +355,13 @@ public:
 
 
 private:
-    EnvironmentVariableGuard mainCaDerPathGuard{
-        "ERP_TSL_INITIAL_CA_DER_PATH", std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der"};
 
-    std::shared_ptr<HsmPool> mHsmPool;
+    std::unique_ptr<HsmPool> mHsmPool;
     std::unique_ptr<HttpsServer<EnrolmentServiceContext>> mServer;
     std::unique_ptr<KeyDerivation> mKeyDerivation;
     std::unique_ptr<MockDatabase> mMockDatabase;
 
-    std::shared_ptr<HsmPool> hsmPool();
+    HsmPool& hsmPool();
     KeyDerivation& keyDerivation();
     bool isBlobUsed(BlobId blobId);
     std::shared_ptr<BlobCache> createBlobCache (void)
@@ -400,7 +395,7 @@ inline KeyDerivation & EnrolmentServerTest::keyDerivation()
 {
     if (!mKeyDerivation)
     {
-        mKeyDerivation.reset(new KeyDerivation(*hsmPool()));
+        mKeyDerivation.reset(new KeyDerivation(hsmPool()));
     }
     return *mKeyDerivation;
 }
@@ -409,20 +404,20 @@ inline std::unique_ptr<Database> EnrolmentServerTest::database()
 {
     if (usePostgres)
     {
-        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), *hsmPool(), keyDerivation());
+        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool(), keyDerivation());
     }
     else
     {
         if (!mMockDatabase)
         {
-            mMockDatabase.reset(new MockDatabase{*hsmPool()});
+            mMockDatabase.reset(new MockDatabase{hsmPool()});
         }
         return std::make_unique<DatabaseFrontend>(
-            std::make_unique<MockDatabaseProxy>(*mMockDatabase), *hsmPool(), keyDerivation());
+            std::make_unique<MockDatabaseProxy>(*mMockDatabase), hsmPool(), keyDerivation());
     }
 }
 
-inline std::shared_ptr<HsmPool> EnrolmentServerTest::hsmPool()
+inline HsmPool & EnrolmentServerTest::hsmPool()
 {
     if (!mHsmPool)
     {
@@ -430,7 +425,7 @@ inline std::shared_ptr<HsmPool> EnrolmentServerTest::hsmPool()
                            std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), blobCache),
                            TeeTokenUpdater::createMockTeeTokenUpdaterFactory()));
     }
-    return mHsmPool;
+    return *mHsmPool;
 }
 
 TEST_P(EnrolmentServerTest, GetEnclaveStatus)
@@ -1142,43 +1137,43 @@ TEST_P(EnrolmentServerTest, DeleteTelematikIdHashKey_success)
 
 
 
-TEST_P(EnrolmentServerTest, PutVauSig_success)
+TEST_P(EnrolmentServerTest, PutVauSigPrivateKey_success)
 {
     auto response = createClient().send(
         ClientRequest(
-            createHeader(HttpMethod::PUT, "/Enrolment/VauSig"),
+            createHeader(HttpMethod::PUT, "/Enrolment/VauSigPrivateKey"),
             createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
     checkResponseHeader(response, HttpStatus::Created);
     ASSERT_EQ(response.getBody(), "");
-    const auto entry = blobCache->getBlob(BlobType::VauSig);
+    const auto entry = blobCache->getBlob(BlobType::VauSigPrivateKey);
     ASSERT_EQ(entry.name, ErpVector::create("123"));
     ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteVauSig_success)
+TEST_P(EnrolmentServerTest, DeleteVauSigPrivateKey_success)
 {
     // Set up a hash key that can be deleted.
     {
         auto response = createClient().send(
             ClientRequest(
-                createHeader(HttpMethod::PUT, "/Enrolment/VauSig"),
+                createHeader(HttpMethod::PUT, "/Enrolment/VauSigPrivateKey"),
             createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
         checkResponseHeader(response, HttpStatus::Created);
         ASSERT_EQ(response.getBody(), "");
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::VauSig));
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::VauSigPrivateKey));
     }
 
     // And delete it.
     auto response = createClient().send(
         ClientRequest(
-            createHeader(HttpMethod::DELETE, "/Enrolment/VauSig"),
+            createHeader(HttpMethod::DELETE, "/Enrolment/VauSigPrivateKey"),
             createDeleteBody("123")));
 
     checkResponseHeader(response, HttpStatus::NoContent);
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::VauSig));
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::VauSigPrivateKey));
 }
 
 

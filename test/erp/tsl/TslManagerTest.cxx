@@ -7,7 +7,6 @@
 
 #include "erp/tsl/TslManager.hxx"
 #include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/TslService.hxx"
@@ -16,7 +15,6 @@
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
-#include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslParsingExpectations.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockOcsp.hxx"
@@ -71,7 +69,6 @@ namespace
         R"(/C=DE/O=medisign GmbH/OU=Testumgebung/CN=DEMDS CA f\xC3\xBCr Zahn\xC3\xA4rzte2:PN)",
         "/C=DE/O=Pseudo Federal Network Agency/CN=Pseudo German Trusted List Signer 4",
         "/C=DE/O=dgnservice GmbH/OU=Testumgebung/CN=dgnservice OCSP 7 Type A:PN",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP1 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP2 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP3 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP4 TEST-ONLY",
@@ -189,7 +186,6 @@ namespace
         "/C=DE/O=T-Systems International GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=TSYSI.EGK-CA5 TEST-ONLY",
         "/C=DE/O=T-Systems International GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=TSYSI.EGK-CA7 TEST-ONLY",
         "/C=DE/O=Deutsche Telekom Security GmbH - G2 Los 3 NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=TSYSI.HBA-CA4 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA1 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA2 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA4 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA5 TEST-ONLY",
@@ -218,6 +214,7 @@ namespace
         "/C=DE/O=T-Systems International GmbH - G2 Los 3 NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=TSYSI.SMCB-CA1 TEST-ONLY",
         "/C=DE/O=T-Systems International GmbH - G2 Los 3 NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=TSYSI.SMCB-CA2 TEST-ONLY",
         "/C=DE/O=T-Systems International GmbH - G2 Los 3 NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=TSYSI.SMCB-CA3 TEST-ONLY",
+        "/C=DE/O=Deutsche Telekom Security GmbH - G2 Los 3 NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=TSYSI.EGK-CA8 TEST-ONLY",
         "/C=DE/O=Deutsche Telekom Security GmbH - G2 Los 3 NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=TSYSI.SMCB-CA4 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/serialNumber=00000-0001000000/CN=ATOS.EGK-CA3 TEST-ONLY",
         "/CN=ACLOS.SMCB-CA015 TEST-ONLY/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/O=achelos GmbH NOT-VALID/C=DE",
@@ -386,7 +383,7 @@ public:
         // but there are withdrawn certificates
         // and the test version contains some duplicate certificates,
         // so there are only 185 unique not withdrawn certificates
-        ASSERT_EQ(194, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
+        ASSERT_EQ(186, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
     }
 };
 
@@ -516,10 +513,10 @@ TEST_F(TslManagerTest, validateQesCertificate_Success)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -540,8 +537,8 @@ TEST_F(TslManagerTest, validateQesCertificate_UnexpectedCA_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-CertificateWithUnexpectedCA.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
                            {TslErrorCode::CA_CERT_MISSING},
@@ -556,8 +553,8 @@ TEST_F(TslManagerTest, validateQesCertificate_UnexpectedCriticalExtension_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-CertificateWithUnexpectedCritical.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
                            {TslErrorCode::CERT_TYPE_MISMATCH},
@@ -587,10 +584,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspRevoked_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -611,10 +608,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMissing_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -635,10 +632,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMismatch_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -659,10 +656,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongCertId_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -683,10 +680,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongProducedAt_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -707,10 +704,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongThisUpdate_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -731,8 +728,8 @@ TEST_F(TslManagerTest, validateQesCertificateOcspUnknown_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
@@ -752,10 +749,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspNotAvailable_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
@@ -771,10 +768,10 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateUnknown_Fail)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -797,17 +794,17 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateSignedByBnaCa_Succes
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     const Certificate wansimOcspSigner =
-        Certificate::fromPem(FileHelper::readFileAsString(
+        Certificate::fromPemString(FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/OcspWansimCertificate.pem"));
     const Certificate wansimOcspSignerCA =
-        Certificate::fromBase64Der(FileHelper::readFileAsString(
+        Certificate::fromDerBase64String(FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/OcspWansimCertificateCA.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -828,10 +825,10 @@ TEST_F(TslManagerTest, validateQesCertificateNoHistoryIgnoreTimestamp_Success)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -856,9 +853,9 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     const std::string tslContent =
@@ -900,9 +897,9 @@ TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)
     const std::string certificatePem =
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+    const Certificate certificate = Certificate::fromPemString(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toDerBase64String());
+    const Certificate certificateCA = Certificate::fromDerBase64String(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     const std::string tslContent =
@@ -955,11 +952,11 @@ TEST_F(TslManagerTest, validateIdpCertificateWrongType_Fail)
 TEST_F(TslManagerTest, validateIdpCertificateExpired_Fail)
 {
     Certificate idpCertificate =
-        Certificate::fromPem(
+        Certificate::fromPemString(
                 FileHelper::readFileAsString(
                     std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Expired.pem"));
 
-    Certificate idpCertificateCa = Certificate::fromPem(
+    Certificate idpCertificateCa = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
@@ -977,7 +974,7 @@ TEST_F(TslManagerTest, validateIdpCertificateExpired_Fail)
         *manager,
         TslMode::TSL);
 
-    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toBase64Der());
+    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toDerBase64String());
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                TslMode::TSL,
                                x509Idp,
@@ -990,11 +987,11 @@ TEST_F(TslManagerTest, validateIdpCertificateExpired_Fail)
 TEST_F(TslManagerTest, validateIdpCertificateMissingPolicy_Fail)
 {
     Certificate idpCertificate =
-        Certificate::fromPem(
+        Certificate::fromPemString(
             FileHelper::readFileAsString(
                 std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-MissingPolicy.pem"));
 
-    Certificate idpCertificateCa = Certificate::fromPem(
+    Certificate idpCertificateCa = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
@@ -1012,7 +1009,7 @@ TEST_F(TslManagerTest, validateIdpCertificateMissingPolicy_Fail)
         *manager,
         TslMode::TSL);
 
-    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toBase64Der());
+    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toDerBase64String());
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
@@ -1025,11 +1022,11 @@ TEST_F(TslManagerTest, validateIdpCertificateMissingPolicy_Fail)
 TEST_F(TslManagerTest, validateIdpCertificateUnknownCaKnownDn_Fail)
 {
     Certificate idpCertificate =
-        Certificate::fromPem(
+        Certificate::fromPemString(
             FileHelper::readFileAsString(
                 std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim.pem"));
 
-    Certificate idpCertificateCa = Certificate::fromPem(
+    Certificate idpCertificateCa = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
@@ -1049,7 +1046,7 @@ TEST_F(TslManagerTest, validateIdpCertificateUnknownCaKnownDn_Fail)
         TslMode::TSL,
         "differentSubjectKeyIdentifier");
 
-    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toBase64Der());
+    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toDerBase64String());
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
@@ -1062,11 +1059,11 @@ TEST_F(TslManagerTest, validateIdpCertificateUnknownCaKnownDn_Fail)
 TEST_F(TslManagerTest, validateIdpCertificateCAUnsupportedType_Fail)
 {
     Certificate idpCertificate =
-        Certificate::fromPem(
+        Certificate::fromPemString(
             FileHelper::readFileAsString(
                 std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim.pem"));
 
-    Certificate idpCertificateCa = Certificate::fromPem(
+    Certificate idpCertificateCa = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
@@ -1087,7 +1084,7 @@ TEST_F(TslManagerTest, validateIdpCertificateCAUnsupportedType_Fail)
         std::nullopt,
         TslService::oid_egk_aut);
 
-    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toBase64Der());
+    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toDerBase64String());
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
@@ -1100,11 +1097,11 @@ TEST_F(TslManagerTest, validateIdpCertificateCAUnsupportedType_Fail)
 TEST_F(TslManagerTest, validateIdpCertificateCaNotAuthorized_Fail)
 {
     Certificate idpCertificate =
-        Certificate::fromPem(
+        Certificate::fromPemString(
             FileHelper::readFileAsString(
                 std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim.pem"));
 
-    Certificate idpCertificateCa = Certificate::fromPem(
+    Certificate idpCertificateCa = Certificate::fromPemString(
         FileHelper::readFileAsString(
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-CA.pem"));
 
@@ -1124,61 +1121,11 @@ TEST_F(TslManagerTest, validateIdpCertificateCaNotAuthorized_Fail)
         TslMode::TSL,
         "differentSubjectKeyIdentifier");
 
-    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toBase64Der());
+    X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toDerBase64String());
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
                                 {CertificateType::C_FD_SIG}),
                            {TslErrorCode::AUTHORITYKEYID_DIFFERENT},
                            HttpStatus::BadRequest);
-}
-
-
-TEST_F(TslManagerTest, revokedOcspResponseStatus_Fail)
-{
-    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-    X509Certificate certX509 = X509Certificate::createFromBase64(cert.toBase64Der());
-    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
-    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
-
-    // trigger revoked status in OCSP-Responder for the certificate
-    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
-        {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
-
-    EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
-        {TslErrorCode::CERT_REVOKED},
-        HttpStatus::BadRequest);
-
-    // the second call is done to test handling of the OCSP-Response from cache
-    EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
-        {TslErrorCode::CERT_REVOKED},
-        HttpStatus::BadRequest);
-}
-
-
-TEST_F(TslManagerTest, unknownOcspResponseStatus_Fail)
-{
-    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-    X509Certificate certX509 = X509Certificate::createFromBase64(cert.toBase64Der());
-    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
-    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
-
-    // trigger unknown status in OCSP-Responder for the certificate
-    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
-        {}, {}, {{ocspUrl, {}}});
-
-    EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
-        {TslErrorCode::CERT_UNKNOWN},
-        HttpStatus::BadRequest);
-
-    // the second call is done to test handling of the OCSP-Response from cache
-    EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
-        {TslErrorCode::CERT_UNKNOWN},
-        HttpStatus::BadRequest);
 }

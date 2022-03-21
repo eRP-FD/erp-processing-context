@@ -3,22 +3,18 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/crypto/Certificate.hxx"
 #include "erp/enrolment/EnrolmentRequestHandler.hxx"
 #include "erp/erp-serverinfo.hxx"
-#include "erp/hsm/HsmPool.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/tpm/PcrSet.hxx"
 #include "erp/tpm/Tpm.hxx"
-#include "erp/tsl/TslManager.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Hash.hxx"
 #include "erp/util/TLog.hxx"
 
-using namespace ::std::literals;
 
 namespace
 {
@@ -63,25 +59,6 @@ namespace
             ErpFail(HttpStatus::BadRequest, e.what());
         }
     }
-
-
-    bool isCertificateValid(const std::string& certificate, TslManager& tslManager)
-    {
-        try
-        {
-            // TODO: get rid of the back and forth once X509Certificate is merged with Certificate
-            const auto base64DerCertificate = Certificate::fromBase64(certificate).toBase64Der();
-            auto x509Certificate = X509Certificate::createFromBase64(base64DerCertificate);
-            tslManager.verifyCertificate(TslMode::TSL, x509Certificate, {CertificateType::C_FD_OSIG});
-
-            return true;
-        }
-        catch (const std::exception& exception)
-        {
-            TVLOG(1) << "unable to check certificate received in PostVauSig: " << exception.what();
-            return false;
-        }
-    }
 }
 
 enum ResourceType
@@ -122,7 +99,7 @@ void EnrolmentRequestHandlerBase::handleRequest (EnrolmentSession& session)
         if (session.response.getHeader().status() == HttpStatus::Unknown)
             session.response.setStatus(HttpStatus::OK);
         // else don't overwrite if status has already been set explicitly.
-        session.response.setHeader(::Header::ContentType,::ContentMimeType::jsonUtf8);
+        session.response.setHeader(Header::ContentType, MimeType::json);
     }
     catch (const ErpException& e)
     {
@@ -427,11 +404,15 @@ EnrolmentModel PutDerivationKey::doHandleRequest (EnrolmentSession& session)
     auto blobId = requestData.getDecodedErpVector(requestId);
     auto blobData = requestData.getDecodedString(requestBlobData);
     const auto blobGeneration = requestData.getInt64(requestBlobGeneration);
+    const auto startDateTime = requestData.getInt64(requestStartDateTime);
+    const auto endDateTime = requestData.getInt64(requestEndDateTime);
 
     BlobDatabase::Entry entry;
     entry.type = getBlobTypeForResourceType(resourceType.value());
     entry.name = blobId;
     entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
+    entry.startDateTime = std::chrono::system_clock::time_point(std::chrono::seconds(startDateTime));
+    entry.endDateTime = std::chrono::system_clock::time_point(std::chrono::seconds(endDateTime));
     session.serviceContext.blobCache->storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
@@ -483,97 +464,14 @@ DeleteTelematikIdHashKey::DeleteTelematikIdHashKey (void)
 }
 
 
-PostVauSig::PostVauSig()
-    : PostBlobHandler(BlobType::VauSig, "/Enrolment/VauSig")
+PutVauSigPrivateKey::PutVauSigPrivateKey (void)
+    : PutBlobHandler(BlobType::VauSigPrivateKey, "/Enrolment/VauSigPrivateKey")
 {
 }
 
 
-EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
-{
-    session.accessLog.setInnerRequestOperation("POST /Enrolment/VauSig");
-
-    try
-    {
-        ::EnrolmentModel requestData{session.request.getBody()};
-
-        ::BlobDatabase::Entry entry;
-        entry.type = ::BlobType::VauSig;
-        entry.name = requestData.getDecodedErpVector(requestId);
-        entry.blob =
-            ::ErpBlob(requestData.getDecodedString(requestBlobData),
-                      ::gsl::narrow_cast<::ErpBlob::GenerationId>(requestData.getInt64(requestBlobGeneration)));
-
-        entry.certificate = requestData.getDecodedString(requestCertificate);
-
-        const auto& tslManager = session.serviceContext.tslManager;
-        Expect(tslManager != nullptr, "TslManager must not be null");
-        if (!isCertificateValid(*entry.certificate, *tslManager))
-        {
-            session.response.setStatus(HttpStatus::BadRequest);
-            EnrolmentModel response{};
-            response.set("/code", "CERTIFICATE_INVALID");
-            response.set("/description", "The certificate's details could not be verified for an OSIG certificate.");
-            return response;
-        }
-
-        try
-        {
-            const auto validFrom = requestData.getOptionalInt64(requestValidFrom);
-            // Allow a grace period when checking for start dates in the past.
-            if (validFrom.has_value())
-            {
-                ErpExpect(::std::chrono::system_clock::time_point{::std::chrono::seconds{*validFrom}} >=
-                              (::std::chrono::system_clock::now() - 5min),
-                          ::HttpStatus::BadRequest, "timestamp lies in the past");
-
-                entry.startDateTime = ::std::chrono::system_clock::time_point{::std::chrono::seconds{*validFrom}};
-            }
-            else
-            {
-                entry.startDateTime = ::std::chrono::system_clock::now();
-            }
-        }
-        catch (ErpException& exception)
-        {
-            session.accessLog.error("caught ErpException in PutVauSig::doHandleRequest");
-            TVLOG(1) << "exception details: " << exception.what();
-
-            session.response.setStatus(::HttpStatus::BadRequest);
-            ::EnrolmentModel response;
-            response.set("/code", "START_NOT_VALID");
-            response.set("/description", "The value for valid-from is invalid or in the past.");
-            return response;
-        }
-
-        session.serviceContext.blobCache->storeBlob(std::move(entry));
-
-        session.response.setStatus(HttpStatus::Created);
-
-        return {};
-    }
-    catch (ErpException& exception)
-    {
-        if (exception.status() == ::HttpStatus::BadRequest)
-        {
-            session.accessLog.error("caught ErpException in PutVauSig::doHandleRequest");
-            TVLOG(1) << "exception details: " << exception.what();
-
-            session.response.setStatus(exception.status());
-            ::EnrolmentModel response;
-            response.set("/code", "INVALID");
-            response.set("/description", "The input could not be parsed or input validation failed.");
-            return response;
-        }
-        else
-        {
-            throw;
-        }
-    }
-}
-
-DeleteVauSig::DeleteVauSig()
-    : DeleteBlobHandler(BlobType::VauSig, "/Enrolment/VauSig")
+DeleteVauSigPrivateKey::DeleteVauSigPrivateKey (void)
+    : DeleteBlobHandler(BlobType::VauSigPrivateKey, "/Enrolment/VauSigPrivateKey")
 {
 }
 
