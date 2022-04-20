@@ -5,6 +5,7 @@
 
 #include "test/erp/database/PostgresDatabaseMedicationDispenseTest.hxx"
 
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/KbvBundle.hxx"
@@ -14,7 +15,7 @@
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/StaticData.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <chrono>
 
@@ -72,7 +73,7 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
     std::set<std::string>& patients,
     std::set<std::string>& pharmacies,
     std::map<std::string, Task>& tasksByPrescriptionIds,
-    std::map<std::string, MedicationDispense>& medicationDispensesByPrescriptionIds,
+    std::map<std::string, std::vector<MedicationDispense>>& medicationDispensesByPrescriptionIds,
     std::map<std::string, std::vector<std::string>>& prescriptionIdsByPatients,
     std::map<std::string, std::vector<std::string>>& prescriptionIdsByPharmacies,
     std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
@@ -87,11 +88,13 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
         std::optional<Timestamp> whenPrepared = std::get<2>(patientAndPharmacy);
 
         Task task = createAcceptedTask(kvnrPatient, prescriptionType);
-        MedicationDispense medicationDispense = closeTask(task, pharmacy, whenPrepared);
+        auto medicationDispenses = closeTask(task, pharmacy, whenPrepared);
+        EXPECT_GT(medicationDispenses.size(), 0);
+        const auto& medicationDispense = medicationDispenses[0];
 
         PrescriptionId prescriptionId = task.prescriptionId();
 
-        PrescriptionId medicationDispenseId = medicationDispense.id();
+        PrescriptionId medicationDispenseId = medicationDispense.prescriptionId();
         ASSERT_EQ(medicationDispenseId, prescriptionId);
 
         std::string_view medicationDispenseKvnr = medicationDispense.kvnr();
@@ -107,14 +110,17 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
         std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispense.whenPrepared();
         ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);
 
-        std::string xmlString = medicationDispense.serializeToXmlString();
-        medicationDispensesInputXmlStrings.insert(std::make_pair(prescriptionId.toString(), xmlString));
+        for (const auto& item : medicationDispenses)
+        {
+            std::string xmlString = item.serializeToXmlString();
+            medicationDispensesInputXmlStrings.insert(std::make_pair(item.id().toString(), xmlString));
+        }
 
         patients.insert(kvnrPatient);
         pharmacies.insert(pharmacy);
 
         tasksByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(task)));
-        medicationDispensesByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(medicationDispense)));
+        medicationDispensesByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(medicationDispenses)));
 
         if (prescriptionIdsByPatients.find(kvnrPatient) == prescriptionIdsByPatients.end())
         {
@@ -140,7 +146,8 @@ UrlArguments PostgresDatabaseMedicationDispenseTest::createSearchArguments(Serve
     std::vector<SearchParameter> searchParameters = {
         { "performer", "performer", SearchParameter::Type::HashedIdentity },
         { "whenhandedover", "when_handed_over", SearchParameter::Type::Date },
-        { "whenprepared", "when_prepared", SearchParameter::Type::Date }
+        { "whenprepared", "when_prepared", SearchParameter::Type::Date },
+        { "identifier", "prescription_id", SearchParameter::Type::PrescriptionId}
     };
 
     UrlArguments searchArgs = UrlArguments(std::move(searchParameters));
@@ -157,10 +164,9 @@ void PostgresDatabaseMedicationDispenseTest::checkMedicationDispensesXmlStrings(
     for (const auto& medicationDispense : medicationDispenses)
     {
         std::string medicationDispenseResponseXmlString = medicationDispense.serializeToXmlString();
-        std::optional<PrescriptionId> medicationDispenseId = medicationDispense.id();
-        ASSERT_TRUE(medicationDispenseId.has_value());
+        std::string medicationDispenseId(medicationDispense.id().toString());
 
-        auto dispenseInput = medicationDispensesInputXmlStrings.find(medicationDispenseId.value().toString());
+        auto dispenseInput = medicationDispensesInputXmlStrings.find(medicationDispenseId);
         if (dispenseInput != medicationDispensesInputXmlStrings.end())
         {
             EXPECT_EQ(medicationDispenseResponseXmlString, dispenseInput->second);
@@ -195,7 +201,7 @@ Task PostgresDatabaseMedicationDispenseTest::createAcceptedTask(const std::strin
     return task;
 }
 
-MedicationDispense PostgresDatabaseMedicationDispenseTest::closeTask(
+std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTest::closeTask(
     Task& task,
     const std::string_view& telematicIdPharmacy,
     const std::optional<Timestamp>& medicationWhenPrepared)
@@ -215,17 +221,22 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::closeTask(
     task.setReceiptUuid();
     task.updateLastUpdate();
 
-    MedicationDispense medicationDispense =
-        createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared);
+    std::vector<model::MedicationDispense> medicationDispenses;
+    for(size_t i = 0; i < GetParam().numMedications; ++i)
+    {
+        medicationDispenses.emplace_back(
+            createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared));
+        medicationDispenses.back().setId(model::MedicationDispenseId(medicationDispenses.back().prescriptionId(), i));
+    }
 
     ErxReceipt responseReceipt(
         Uuid(task.receiptUuid().value()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/", prescriptionId,
         compositionResource, authorIdentifier, deviceResource, "TestDigest", prescriptionDigestResource);
 
-    database().updateTaskMedicationDispenseReceipt(task, medicationDispense, responseReceipt);
+    database().updateTaskMedicationDispenseReceipt(task, medicationDispenses, responseReceipt);
     database().commitTransaction();
 
-    return medicationDispense;
+    return medicationDispenses;
 }
 
 MedicationDispense PostgresDatabaseMedicationDispenseTest::createMedicationDispense(
@@ -246,7 +257,7 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::createMedicationDispe
     PrescriptionId prescriptionId = task.prescriptionId();
     std::string_view kvnrPatient = task.kvnr().value();
 
-    medicationDispense.setId(prescriptionId);
+    medicationDispense.setPrescriptionId(prescriptionId);
     medicationDispense.setKvnr(kvnrPatient);
     medicationDispense.setTelematicId(telematicIdPharmacy);
     medicationDispense.setWhenHandedOver(whenHandedOver);
@@ -361,7 +372,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -374,10 +385,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
     // GET Medication Dispenses
     //-------------------------
 
-    const std::vector<MedicationDispense> medicationDispenses =
-        database().retrieveAllMedicationDispenses(kvnrPatient, {}, {});
+    const auto [medicationDispenses, _] =
+        database().retrieveAllMedicationDispenses(kvnrPatient, std::optional<UrlArguments>{});
     database().commitTransaction();
-    EXPECT_EQ(medicationDispenses.size(), 1);
+    EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
     checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
 }
 
@@ -400,7 +411,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -418,10 +429,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -430,8 +441,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
@@ -441,10 +452,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -453,8 +464,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
@@ -464,10 +475,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -476,8 +487,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
@@ -487,10 +498,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -499,8 +510,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
@@ -508,18 +519,18 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
     {
         ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
     {
         ServerRequest::QueryParametersType queryParameters{ {"performer", "3-SMC-B-Ungueltig-123455678909876"} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
@@ -534,10 +545,22 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
             {"whenhandedover", "gt" + whenHandedOver},
             {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+    }
+
+    {
+        const auto& prescriptionId = prescriptionIdsByPatients[kvnrPatient].at(0);
+        ServerRequest::QueryParametersType queryParameters{
+            {"identifier", "https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}};
+        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
+        database().commitTransaction();
+        EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 }
@@ -566,7 +589,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -583,10 +606,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
     {
         std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
 
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, {});
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, std::optional<UrlArguments>{});
         database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), prescriptionIds.size());
+        EXPECT_EQ(medicationDispenses.size(), prescriptionIds.size() * GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 }
@@ -615,7 +638,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -634,9 +657,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 3;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        size_t expectedCount = 3 * GetParam().numMedications;
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -649,8 +672,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
     }
@@ -661,9 +684,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        size_t expectedCount = GetParam().numMedications;
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -676,8 +699,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
     }
@@ -687,9 +710,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         std::string pharmacy = pharmacyA;
         ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 2;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        size_t expectedCount = 2 * GetParam().numMedications;
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -701,8 +724,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
     }
@@ -712,9 +735,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         std::string pharmacy = pharmacyB;
         ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        size_t expectedCount = GetParam().numMedications;
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -732,9 +755,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
             {"whenhandedover", "gt" + whenHandedOver},
             {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        size_t expectedCount = GetParam().numMedications;
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -753,10 +776,25 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
             {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] =
+            database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
+    }
+
+    {
+        const auto& prescriptionIds = prescriptionIdsByPatients[InsurantA];
+        for (const auto& prescriptionId : prescriptionIds)
+        {
+            ServerRequest::QueryParametersType queryParameters{
+                {"identifier", "https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}};
+            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
+            const auto [medicationDispenses, _] =
+                database().retrieveAllMedicationDispenses(InsurantA, searchArgs);
+            database().commitTransaction();
+            EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
+            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+        }
     }
 }
 
@@ -803,7 +841,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -835,12 +873,12 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
             }
         }
 
-        expectedCountAll *= 2;
+        expectedCountAll *= 2 * GetParam().numMedications;
 
         // Paging.
         ASSERT_TRUE(expectedCountAll > 50);
 
-        size_t expectedCount = 50;
+        size_t expectedCount = 50 * GetParam().numMedications;
         size_t receivedCount = 0;
 
         while (receivedCount < expectedCountAll)
@@ -855,10 +893,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
                 {"whenprepared", "gt" + whenPrepared},
                 {"_sort", "-whenhandedover"},
                 {"_count", std::to_string(50)},
-                {"__offset", std::to_string(receivedCount)}};
+                {"__offset", std::to_string(receivedCount/GetParam().numMedications)}};
             UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+            const auto [medicationDispenses, _] =
+                database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
             database().commitTransaction();
             // ASSERT to avoid endless loop if less than expected count is returned.
             ASSERT_EQ(medicationDispenses.size(), expectedCount);
@@ -873,11 +911,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
                 }
             }
             receivedCount += medicationDispenses.size();
-            expectedCount = expectedCountAll - receivedCount;
-            if (expectedCount > 50)
-            {
-                expectedCount = 50;
-            }
+            expectedCount = std::min(expectedCountAll - receivedCount, 50*GetParam().numMedications);
         }
     }
 
@@ -895,7 +929,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
             {"whenhandedover", "gt" + whenHandedOver},
             {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses = database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] = database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
@@ -914,7 +948,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
             {"whenhandedover", "gt" + whenHandedOver},
             {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses = database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] = database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
@@ -932,9 +966,24 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
             {"whenhandedover", "gt" + whenHandedOver},
             {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        const std::vector<MedicationDispense> medicationDispenses = database().retrieveAllMedicationDispenses(kvnrPatient, {}, searchArgs);
+        const auto [medicationDispenses, _] = database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
+    }
+
+    {
+        const auto& prescriptionIds = prescriptionIdsByPatients[InsurantA];
+        for (const auto& prescriptionId : prescriptionIds)
+        {
+            ServerRequest::QueryParametersType queryParameters{
+                {"identifier", "https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}};
+            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
+            const auto [medicationDispenses, _] =
+                database().retrieveAllMedicationDispenses(InsurantA, searchArgs);
+            database().commitTransaction();
+            EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
+            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+        }
     }
 }
 
@@ -958,7 +1007,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -975,177 +1024,14 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
 
     for (const std::string& prescriptionId : prescriptionIds)
     {
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), {});
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), 1);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-    }
-}
-
-TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdSeveralFilters)
-{
-    if (!usePostgres())
-    {
-        GTEST_SKIP();
-    }
-
-    // Insert task into database
-    //--------------------------
-
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
-
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {kvnrPatient, pharmacy, Timestamp::now()}
-    };
-
-    std::set<std::string> patients;
-    std::set<std::string> pharmacies;
-    std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
-    std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
-    std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
-    std::map<std::string, std::string> medicationDispensesInputXmlStrings;
-
-    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
-        tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
-        prescriptionIdsByPatients, prescriptionIdsByPharmacies,
-        medicationDispensesInputXmlStrings);
-
-    // GET Medication Dispenses
-    //-------------------------
-
-    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
-
-    for (const std::string& prescriptionId : prescriptionIds)
-    {
+        for (size_t i = 0; i < GetParam().numMedications; ++i)
         {
-            Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
+            model::MedicationDispenseId id(model::PrescriptionId::fromString(prescriptionId), i);
+            const auto medicationDispense = database().retrieveMedicationDispense(kvnrPatient, id);
             database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 1);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-        }
-
-        {
-            Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 0);
-        }
-
-        {
-            Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 1);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-        }
-
-        {
-            Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 0);
-        }
-
-        {
-            Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 1);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-        }
-
-        {
-            Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 0);
-        }
-
-        {
-            Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 1);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-        }
-
-        {
-            Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 0);
-        }
-
-        {
-            ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 1);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-        }
-
-        {
-            ServerRequest::QueryParametersType queryParameters{ {"performer", "3-SMC-B-Ungueltig-123455678909876"} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 0);
-        }
-
-        {
-            Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-            Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-            ServerRequest::QueryParametersType queryParameters{
-                {"performer", pharmacy},
-                {"whenhandedover", "gt" + whenHandedOver},
-                {"whenprepared", "gt" + whenPrepared} };
-            UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 1);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+            EXPECT_TRUE(medicationDispense.has_value());
+            EXPECT_EQ(medicationDispense->serializeToXmlString(),
+                      medicationDispensesInputXmlStrings[std::string(medicationDispense->id().toString())]);
         }
     }
 }
@@ -1174,7 +1060,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -1193,310 +1079,26 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)
 
         for (const std::string& prescriptionId : prescriptionIds)
         {
-            const std::vector<MedicationDispense> medicationDispenses =
-                database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), {});
-            database().commitTransaction();
-            EXPECT_EQ(medicationDispenses.size(), 1);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+            for (size_t i = 0; i < GetParam().numMedications; ++i)
+            {
+                model::MedicationDispenseId id(model::PrescriptionId::fromString(prescriptionId), i);
+                const auto medicationDispense = database().retrieveMedicationDispense(kvnrPatient, id);
+                database().commitTransaction();
+                EXPECT_TRUE(medicationDispense.has_value());
+                EXPECT_EQ(medicationDispense->serializeToXmlString(),
+                          medicationDispensesInputXmlStrings[std::string(medicationDispense->id().toString())]);
+            }
         }
     }
 }
 
-TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdSeveralFilters)
-{
-    if (!usePostgres())
-    {
-        GTEST_SKIP();
-    }
-
-    // Insert tasks into database
-    //---------------------------
-
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
-
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, Timestamp::now()},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, Timestamp::now()},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, Timestamp::now()}
-    };
-
-    std::set<std::string> patients;
-    std::set<std::string> pharmacies;
-    std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
-    std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
-    std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
-    std::map<std::string, std::string> medicationDispensesInputXmlStrings;
-
-    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
-        tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
-        prescriptionIdsByPatients, prescriptionIdsByPharmacies,
-        medicationDispensesInputXmlStrings);
-
-    // GET Medication Dispenses
-    //-------------------------
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        std::string pharmacy = pharmacyA;
-        ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantC;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        std::string pharmacy = pharmacyA;
-        ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        std::string pharmacy = pharmacyB;
-        ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0; // The first prescription id for Insurant A was for pharmacyA
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
-        ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        std::string pharmacy = pharmacyA;
-        Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-        Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{
-            {"performer", pharmacy},
-            { "whenhandedover", "gt" + whenHandedOver},
-            { "whenprepared", "gt" + whenPrepared} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 1;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-
-    {
-        std::string kvnrPatient = InsurantA;
-        std::string prescriptionId = prescriptionIdsByPatients[kvnrPatient].front();
-        std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
-        Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
-        Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
-        ServerRequest::QueryParametersType queryParameters{
-            {"performer", pharmacy},
-            { "whenhandedover", "gt" + whenHandedOver},
-            { "whenprepared", "gt" + whenPrepared} };
-        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-        size_t expectedCount = 0;
-        const std::vector<MedicationDispense> medicationDispenses =
-            database().retrieveAllMedicationDispenses(kvnrPatient, PrescriptionId::fromString(prescriptionId), searchArgs);
-        database().commitTransaction();
-        EXPECT_EQ(medicationDispenses.size(), expectedCount);
-    }
-}
-
-TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdUnknownId)
-{
-    if (!usePostgres())
-    {
-        GTEST_SKIP();
-    }
-
-    // Insert tasks into database
-    //---------------------------
-
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
-
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, std::nullopt}
-    };
-
-    std::set<std::string> patients;
-    std::set<std::string> pharmacies;
-    std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
-    std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
-    std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
-    std::map<std::string, std::string> medicationDispensesInputXmlStrings;
-
-    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
-        tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
-        prescriptionIdsByPatients, prescriptionIdsByPharmacies,
-        medicationDispensesInputXmlStrings);
-
-    // GET Medication Dispenses
-    //-------------------------
-
-    std::string kvnrPatient = InsurantA;
-
-    PrescriptionId prescriptionId = PrescriptionId::fromString("160.000.000.004.711.86");
-
-    ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacyA} };
-    UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
-    const std::vector<MedicationDispense> medicationDispenses =
-        database().retrieveAllMedicationDispenses(kvnrPatient, prescriptionId, searchArgs);
-    database().commitTransaction();
-    EXPECT_EQ(medicationDispenses.size(), 0);
-}
-
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseMedicationDispenseTestInst, PostgresDatabaseMedicationDispenseTest,
-                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                         model::PrescriptionType::direkteZuweisung));
+                         testing::Values(PostgresDatabaseMedicationDispenseTestParams{1, model::PrescriptionType::apothekenpflichigeArzneimittel},
+                                         PostgresDatabaseMedicationDispenseTestParams{4, model::PrescriptionType::direkteZuweisung},
+                                         PostgresDatabaseMedicationDispenseTestParams{10, model::PrescriptionType::apothekenpflichigeArzneimittel}));
+
+std::ostream& operator<<(std::ostream& os, const PostgresDatabaseMedicationDispenseTestParams& params)
+{
+    os << "numMedications: " << params.numMedications << " type: " << params.type;
+    return os;
+}

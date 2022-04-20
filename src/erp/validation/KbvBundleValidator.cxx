@@ -103,7 +103,7 @@ void KbvBundleValidator_V1_0_1::validateEntries(const model::KbvBundle& kbvBundl
 {
     try
     {
-        validateMedicationProfiles(kbvBundle, xmlValidator, inCodeValidator);
+        validateMedicationProfiles(kbvBundle, xmlValidator, inCodeValidator, version);
 
         validateEntry<model::KbvCoverage>(kbvBundle, xmlValidator, inCodeValidator, SchemaType::KBV_PR_FOR_Coverage,
                                           version);
@@ -380,7 +380,8 @@ void KbvBundleValidator_V1_0_1::ikKostentraegerBgUkPflicht(const model::KbvBundl
 
 void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundle& kbvBundle,
                                                            const XmlValidator& xmlValidator,
-                                                           const InCodeValidator& inCodeValidator) const
+                                                           const InCodeValidator& inCodeValidator,
+                                                           const model::ResourceVersion::KbvItaErp& version) const
 {
     // there are four different profiles for the Medication Resource, which cannot be distinguished in xsd.
     const auto& medications = kbvBundle.getResourcesByType<model::KbvMedicationModelHelper>();
@@ -391,19 +392,19 @@ void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundl
         {
             case SchemaType::KBV_PR_ERP_Medication_Compounding:
                 (void) model::KbvMedicationCompounding::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                                inCodeValidator, profile);
+                                                                inCodeValidator, profile, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_FreeText:
                 (void) model::KbvMedicationFreeText::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                             inCodeValidator, profile);
+                                                             inCodeValidator, profile, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_Ingredient:
                 (void) model::KbvMedicationIngredient::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                               inCodeValidator, profile);
+                                                               inCodeValidator, profile, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_PZN:
                 (void) model::KbvMedicationPzn::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                        inCodeValidator, profile);
+                                                        inCodeValidator, profile, version);
                 break;
             default:
                 ErpFail(HttpStatus::BadRequest, "Unsupported medication profile");

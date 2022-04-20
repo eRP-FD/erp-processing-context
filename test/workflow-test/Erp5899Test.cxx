@@ -7,8 +7,8 @@
 
 #include "erp/util/Base64.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <fstream>
 

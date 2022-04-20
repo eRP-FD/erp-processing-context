@@ -54,7 +54,9 @@ CFdSigErpManager::CFdSigErpManager(
     // If TSL is updated the validation has to be done again
     if (mTslManager != nullptr)
     {
-        mValidationHookId = mTslManager->addPostUpdateHook([this]{getOcspResponseData(true);});
+        mValidationHookId = mTslManager->addPostUpdateHook([this] {
+            getOcspResponseData(true);
+        });
     }
 
     start();

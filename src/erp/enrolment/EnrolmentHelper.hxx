@@ -96,7 +96,7 @@ public:
 
 
     EnrolmentHelper::Blobs createBlobs (TpmProxy& tpm);
-    ErpBlob createTeeToken (BlobCache& blobCache);
+    ErpBlob createTeeToken(BlobCache& blobCache, ::std::optional<::BlobCache::Entry> trustedQuote = {});
 
     static ErpVector getBlobName (const ErpBlob& blob);
 

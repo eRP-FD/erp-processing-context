@@ -5,7 +5,7 @@
 
 #include "erp/util/Base64.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 

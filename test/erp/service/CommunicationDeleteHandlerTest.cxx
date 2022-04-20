@@ -19,7 +19,7 @@
 #include "test/util/ServerTestBase.hxx"
 #include "test_config.h"
 
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 
 using namespace model;
 

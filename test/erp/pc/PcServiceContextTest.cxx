@@ -4,7 +4,6 @@
  */
 
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/enrolment/EnrolmentServiceContext.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/tpm/Tpm.hxx"
@@ -27,7 +26,7 @@ class ServiceContextTest : public ::testing::Test
     {
         tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
     }
 
     virtual void TearDown() override
@@ -40,40 +39,19 @@ class ServiceContextTest : public ::testing::Test
 
 
 
-TEST_F(ServiceContextTest, init)
+TEST_F(ServiceContextTest, initWithoutTsl)
 {
-    PcServiceContext serviceContext(
-        Configuration::instance(),
-        &MockDatabase::createMockDatabase,
-        std::make_unique<MockRedisStore>(),
-        std::make_unique<HsmPool>(
-            std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
-                                             MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-            TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
-        StaticData::getJsonValidator(),
-        StaticData::getXmlValidator(),
-        StaticData::getInCodeValidator(),
-        std::make_unique<RegistrationMock>());
-    ASSERT_TRUE(serviceContext.databaseFactory());
+    ASSERT_TRUE(PcServiceContext(Configuration::instance(), StaticData::makeMockFactories()).databaseFactory());
 }
 
 
 TEST_F(ServiceContextTest, initWithTsl)
 {
-    PcServiceContext serviceContext(
-        Configuration::instance(),
-        &MockDatabase::createMockDatabase,
-        std::make_unique<MockRedisStore>(),
-        std::make_unique<HsmPool>(
-            std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
-                                             MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-            TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
-        StaticData::getJsonValidator(),
-        StaticData::getXmlValidator(),
-        StaticData::getInCodeValidator(),
-        std::make_unique<RegistrationMock>(),
-        TslTestHelper::createTslManager<TslManager>());
-
+    auto factories = StaticData::makeMockFactories();
+    factories.tslManagerFactory = [](auto) {
+        return TslTestHelper::createTslManager<TslManager>();
+    };
+    PcServiceContext serviceContext(Configuration::instance(), std::move(factories));
     ASSERT_TRUE(serviceContext.databaseFactory());
     ASSERT_NE(nullptr,serviceContext.getTslManager());
     ASSERT_NE(nullptr, serviceContext.getTslManager()->getTslTrustedCertificateStore(TslMode::TSL, std::nullopt).getStore());

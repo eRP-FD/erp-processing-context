@@ -26,7 +26,7 @@ CC=gcc-9
 Make sure to use the patched openssl, provided in this repository.
 Export the recipe, that will apply the patch, from within the folder `conan-recipes/openssl`:
 ```
-conan export . openssl/1.1.1l@erp/stable-1
+conan export . openssl/1.1.1n@erp/stable-1
 ```
 
 Afterwards enter the erp-processing-context folder, and roughly follow these steps:
@@ -85,15 +85,29 @@ You may also have to configure some values in you conan profile (under ~/.conan/
 compiler.libcxx=libstdc++11
 compiler.cppstd=17
 ```
-## Outdated TSL
-In case you are running into a problem with an outdated TSL you can download a new one with following command
+
+## Updating TSL.xml for the tests
+
+Some tests require a TSL.xml file with a special set of CAs that is not expired. Since the specification explicitly requires that a TSL-file may not be valid longer than 30 days, a regular update of TSL-test-data is necessary.
+
+The TSL files are commited in git-repository and is available by the path `resources/test/generated_pki/tsl/TSL*.xml`.
+In case an adjustment or just an update of TSL.xml is necessary, the following script can be used `scripts/generate_pki_test_data.sh`, that has to be executed manually.
+
+Important for running of the scipt on Mac:
+- bash version 4 or later is necessary (`brew install bash`) to execute the script successfully, after that either the bash should be referenced in the first line of the script or the original mac bash should be replaced with the new version
+- coreutils package must be installed (`brew install coreutils`) to support `realpath` utility
+- libxmlsec1 package must be installed (`brew install libxmlsec1`)
+
+More details can be found [here](resources/test/generated_pki_input/README.txt).
+
+## Gematik TSL
+The Gematik testing TSL can be downloaded using the following command
 ```
 curl https://download-ref.tsl.ti-dienste.de/ECC/ECC-RSA_TSL-ref.xml -o ECC-RSA_TSL-ref.xml
 ```
-and simply replace the `./resources/test/tsl/TSL_valid.xml`.
 
 ## BNetzA-VL update
-BNetzA-VL must be in sync with TSL. In some rare cases the BNetzA-VL is updated along with TSL,
+BNetzA-VL must be in sync with TSL. In some rare cases the BNetzA-VL should be updated,
 in this case the new version of BNetzA-VL should also be downloaded with the following command
 ```
 curl https://download-testref.tsl.ti-dienste.de/P-BNetzA/Pseudo-BNetzA-VL.xml -o Pseudo-BNetzA-VL.xml

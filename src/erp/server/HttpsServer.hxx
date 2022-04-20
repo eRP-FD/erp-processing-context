@@ -20,10 +20,7 @@
 #include <optional>
 #include <string>
 
-
-class ServiceContext;
-
-template<class ServiceContextType>
+class PcServiceContext;
 class HttpsServer
 {
 public:
@@ -35,11 +32,10 @@ public:
     HttpsServer (
         const std::string_view address,
         uint16_t port,
-        RequestHandlerManager<ServiceContextType>&& requestHandlers,
-        std::shared_ptr<ServiceContextType> serviceContext,
+        RequestHandlerManager&& requestHandlers,
+        PcServiceContext& serviceContext,
         bool enforceClientAuthentication = false,
         const SafeString& caCertificates = SafeString());
-    ~HttpsServer (void);
 
     /**
      * Start to serve requests in a thread pool of the given size.
@@ -50,13 +46,13 @@ public:
     void shutDown (void);
     bool isStopped() const;
     ThreadPool& getThreadPool();
-    std::shared_ptr<ServiceContextType> serviceContext();
+    PcServiceContext& serviceContext();
 
 private:
     ThreadPool mThreadPool;
     boost::asio::ssl::context mSslContext;
-    RequestHandlerManager<ServiceContextType> mRequestHandlers;
-    std::shared_ptr<ServiceContextType> mServiceContext;
+    RequestHandlerManager mRequestHandlers;
+    PcServiceContext& mServiceContext;
 };
 
 #endif

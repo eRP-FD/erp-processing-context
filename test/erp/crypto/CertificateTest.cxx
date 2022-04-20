@@ -7,7 +7,7 @@
 #include "erp/crypto/EllipticCurve.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/String.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 
@@ -54,7 +54,7 @@ TEST_F(CertificateTest, fromBase64Der)
     EXPECT_ANY_THROW(Certificate::fromBase64Der(certificateBase64Pem));
 
     const auto certificateBase64Der =
-        ::Base64::encode(::ResourceManager::instance().getStringResource("test/CertificateTest/erezept.der"));
+        ::Base64::encode(::ResourceManager::instance().getStringResource("test/generated_pki/root_ca_ec/ca.der"));
 
     EXPECT_NO_THROW(Certificate::fromBase64Der(certificateBase64Der));
     EXPECT_ANY_THROW(Certificate::fromBase64Der(""));
@@ -63,7 +63,7 @@ TEST_F(CertificateTest, fromBase64Der)
 TEST_F(CertificateTest, fromBinaryDer)
 {
     const auto certificateBinaryDer =
-        ::ResourceManager::instance().getStringResource("test/CertificateTest/erezept.der");
+        ::ResourceManager::instance().getStringResource("test/generated_pki/root_ca_ec/ca.der");
 
     EXPECT_NO_THROW(Certificate::fromBinaryDer(certificateBinaryDer));
 

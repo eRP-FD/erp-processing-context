@@ -50,6 +50,7 @@ RUN cmake \
 RUN cmake --build . --target blob-db-initialization -j 6
 RUN cmake --install . --component blob-db-initialization
 RUN cp ../scripts/enrolment-helper.sh /erp/bin
+RUN cp ../scripts/auto-enrolment.sh /erp/bin
 
 WORKDIR /build/vau-hsm
 RUN git clone --depth 1 git@github.ibmgcloud.net:eRp/vau-hsm.git .
@@ -63,5 +64,4 @@ RUN apt-get update --fix-missing && \
 WORKDIR /erp
 COPY --from=build /erp .
 WORKDIR /erp/bin
-# keep container running
-CMD exec /bin/bash -c "trap : TERM INT; sleep infinity & wait"
+CMD ./auto-enrolment.sh

@@ -9,7 +9,7 @@
 #include "test/util/StaticData.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 TEST_F(ErpWorkflowTest, WF169PatientAbortOnlyCompletedTasks)
 {

@@ -1,0 +1,98 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021
+ * (C) Copyright IBM Corp. 2021
+ */
+
+pipeline {
+    agent {
+        node {
+            label 'dockerstage'
+        }
+    }
+
+    options {
+        disableConcurrentBuilds()
+        skipDefaultCheckout()
+    }
+
+    stages {
+        stage('CleanWs') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Run integration tests') {
+            agent {
+                docker {
+                    label 'dockerstage'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.10'
+                    registryUrl 'https://de.icr.io/v2'
+                    registryCredentialsId 'icr_image_puller_erp_dev_api_key'
+                    reuseNode true
+                    args '-u root:sudo -v $HOME/tools:$HOME/tools'
+                }
+            }
+            steps {
+                copyArtifacts(
+                    projectName: "/eRp/eRp/erp-processing-context/${env.BRANCH_NAME_COPY_ARTIFACTS}",
+                    selector: specific("${env.BRANCH_NAME_COPY_ARTIFACTS_BUILD_NUMBER}"),
+                    filter: 'erp-tests.tar.gz',
+                    flatten: true,
+                    optional: false,
+                    fingerprintArtifacts: true,
+                )
+
+                script {
+                    sh """
+                        sleep 120
+                        for ATTEMPT in `seq 1 20`; do
+                            echo "Detecting processing context availability (attempt \$ATTEMPT)"
+                            if curl --fail --silent --output /dev/null https://\$ERP_SERVER_HOSTNAME/VAUCertificate; then
+                                break
+                            fi
+                            sleep 10
+                        done
+                       """
+                }
+
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'erp-build-bot', usernameVariable: 'NEXUS_USERNAME', passwordVariable: 'NEXUS_PASSWORD')]) {
+                        def buildNumber = Jenkins.instance.getItemByFullName('eRp/eRp/erp-processing-context').getItem("${env.BRANCH_NAME}").lastSuccessfulBuild.displayName.split('v-')[1]
+                        echo buildNumber
+                        echo "running integration tests against ${env.ERP_SERVER_HOSTNAME}:${env.ERP_SERVER_PORT}"
+                        sh """
+                            tar -xf erp-tests.tar.gz
+                            rm erp-tests.tar.gz
+                            mkdir erp-processing-context
+                            wget --user="${env.NEXUS_USERNAME}" --password="${env.NEXUS_PASSWORD}" "https://nexus.epa-dev.net/repository/erp-raw-releases/com/ibm/erp/erp-processing-context/${buildNumber}/erp-processing-context-${buildNumber}.tar.gz"
+                            tar -xf "erp-processing-context-${buildNumber}.tar.gz" -C ./erp-processing-context
+                            rm "erp-processing-context-${buildNumber}.tar.gz"
+                            mv erp-processing-context/erp/lib jenkins-build-debug/lib
+                            rm -rf erp-processing-context
+                            export TEST_RESOURCE_MANAGER_PATH=`pwd`"/resources"
+                            cd jenkins-build-debug/bin
+                            sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./01_production.config.json
+                            sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./02_development.config.json
+                            LD_LIBRARY_PATH="../lib" ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:erp-integration-test.xml
+                        """
+                    }
+                }
+            }
+
+            post {
+                always {
+                    junit "jenkins-build-debug/bin/erp-integration-test.xml"
+                }
+                failure {
+                    script {
+                        slackSendClient(
+                            message: "${env.JOB_NAME} (<${env.BUILD_URL}/console|${currentBuild.displayName}>) failed",
+                            channel: '#erp-its-alerts-dev-envs', color: 'danger'
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

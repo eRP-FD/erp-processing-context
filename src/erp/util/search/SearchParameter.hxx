@@ -55,6 +55,7 @@ public:
 
         HashedIdentity,
 
+        PrescriptionId
     };
 
     std::string nameUrl;

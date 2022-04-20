@@ -5,6 +5,10 @@
 
 #include "erp/tpm/TpmProduction.hxx"
 #include "erp/util/Base64.hxx"
+#include "erp/common/HttpStatus.hxx"
+#include "erp/util/Expect.hxx"
+#include "erp/hsm/ErpTypes.hxx"
+#include "erp/hsm/BlobCache.hxx"
 
 #include <tpmclient/Client.h>
 #include <tpmclient/Session.h>

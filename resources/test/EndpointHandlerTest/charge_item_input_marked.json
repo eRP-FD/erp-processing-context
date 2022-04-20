@@ -10,6 +10,14 @@
       }
     ]
   },
+  "contained": [
+    {
+      "resourceType": "Binary",
+      "id": "dispense-1",
+      "contentType": "application/pkcs7-mime",
+      "data": "UEtWIGRpc3BlbnNlIGl0ZW0gYnVuZGxl"
+    }
+  ],
   "extension": [
     {
       "url": "https://gematik.de/fhir/StructureDefinition/MarkingFlag",

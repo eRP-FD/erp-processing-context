@@ -3,9 +3,6 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_VALIDATION_KBVBUNDLEVALIDATIONTEST_HXX
-#define ERP_PROCESSING_CONTEXT_TEST_ERP_VALIDATION_KBVBUNDLEVALIDATIONTEST_HXX
-
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/Base64.hxx"
@@ -286,6 +283,3 @@ INSTANTIATE_TEST_SUITE_P(
         false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/prescription/", "Prescription_invalid",
         SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
         fs::path(TEST_DATA_DIR) / "validation/xml/kbv/bundle/Bundle_placeholder_MedicationRequest.xml")));
-
-
-#endif//ERP_PROCESSING_CONTEXT_TEST_ERP_VALIDATION_KBVBUNDLEVALIDATIONTEST_HXX

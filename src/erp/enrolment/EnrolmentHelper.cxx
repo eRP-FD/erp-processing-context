@@ -327,20 +327,26 @@ EnrolmentHelper::Blobs EnrolmentHelper::createBlobs (
 }
 
 
-ErpBlob EnrolmentHelper::createTeeToken (
-    BlobCache& blobCache)
+ErpBlob EnrolmentHelper::createTeeToken(BlobCache& blobCache, ::std::optional<::BlobCache::Entry> trustedQuote)
 {
     const uint32_t teeGeneration = 0;
 
     TpmProxyDirect tpm (blobCache);
 
-    const auto trustedAk = blobCache.getBlob(BlobType::AttestationPublicKey);
-    const auto trustedQuote = blobCache.getBlob(BlobType::Quote);
     const auto [teeTokenNonceVector, teeTokenNonceBlob] = getNonce(teeGeneration);
-    const auto teeQuote = getQuote(tpm, teeTokenNonceVector, trustedQuote.getPcrSet().toPcrList(), "ERP_ATTESTATION");
-          auto teeToken = getTeeToken(trustedAk.getAkName(), teeQuote, trustedAk.blob, teeTokenNonceBlob, trustedQuote.blob);
 
-    return teeToken;
+    const auto teeQuote =
+        getQuote(tpm, teeTokenNonceVector, getConfiguredOrDefaultPcrSet().toPcrList(), "ERP_ATTESTATION");
+
+    const auto quote = ::ErpVector{::Base64::decode(teeQuote.quotedDataBase64)};
+    blobCache.setPcrHash(::HsmProductionClient{}.parseQuote(quote).pcrHash);
+    if (! trustedQuote)
+    {
+        trustedQuote = blobCache.getBlob(::BlobType::Quote);
+    }
+
+    const auto trustedAk = blobCache.getBlob(BlobType::AttestationPublicKey);
+    return getTeeToken(trustedAk.getAkName(), teeQuote, trustedAk.blob, teeTokenNonceBlob, trustedQuote->blob);
 }
 
 

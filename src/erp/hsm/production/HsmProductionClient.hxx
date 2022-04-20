@@ -41,6 +41,8 @@ class HsmProductionClient
     : public HsmClient
 {
 public:
+    ::Nonce getNonce(const ::HsmRawSession& session, uint32_t input) override;
+
     virtual ErpBlob getTeeToken(
         const HsmRawSession& session,
         TeeTokenRequestInput&& input) override;
@@ -72,6 +74,8 @@ public:
     virtual ErpArray<Aes256Length> unwrapHashKey(
         const HsmRawSession& session,
         UnwrapHashKeyInput&& input) override;
+
+    ::ParsedQuote parseQuote(const ::ErpVector& quote) const override;
 
     virtual void reconnect (HsmRawSession& session) override;
 

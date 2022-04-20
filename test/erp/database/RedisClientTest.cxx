@@ -13,8 +13,8 @@
 #include "test_config.h"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/TestConfiguration.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 #include <chrono>

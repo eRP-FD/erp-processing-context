@@ -39,7 +39,7 @@
         <xs:attribute name="value" type="uri-primitive"/>
       </xs:extension>
     </xs:complexContent>
-  </xs:complexType>
+  </xs:complexType>  
   <xs:complexType name="uri-fixed-kvid-10">
     <xs:complexContent>
       <xs:extension base="Element">
@@ -70,6 +70,7 @@
   <xs:simpleType name="code-primitive">
     <xs:restriction base="xs:token">
       <xs:minLength value="1"/>
+      <xs:whiteSpace value="preserve"/>
       <xs:pattern value="[^\s]+(\s[^\s]+)*"/>
     </xs:restriction>
   </xs:simpleType>
@@ -98,12 +99,14 @@
     <xs:restriction base="xs:string">
       <xs:enumeration value="160" />
       <xs:enumeration value="169" />
+      <xs:enumeration value="200"/>
     </xs:restriction>
   </xs:simpleType>
   <xs:simpleType name="WorkflowTypeDisplayEnum" final="restriction" >
     <xs:restriction base="xs:string">
       <xs:enumeration value="Muster 16 (Apothekenpflichtige Arzneimittel)" />
       <xs:enumeration value="Muster 16 (Direkte Zuweisung)" />
+      <xs:enumeration value="PKV (Apothekenpflichtige Arzneimittel)" />
     </xs:restriction>
   </xs:simpleType>
   <xs:simpleType name="string-primitive">
@@ -473,13 +476,25 @@
           <xs:element name="use" type="IdentifierUse-fixed-official" minOccurs="0"/>
           <xs:element name="type" type="CodeableConcept.KVID-10" minOccurs="0"/>
           <xs:element name="system" type="uri-fixed-kvid-10"/>
-          <xs:element name="value" type="string" />
+          <xs:element name="value" type="id-kvid10" />
           <xs:element name="period" type="Period" minOccurs="0"/>
           <xs:element name="assigner" type="Reference" minOccurs="0"/>
         </xs:sequence>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
+  <xs:complexType name="id-kvid10">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="id-kvid10-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="id-kvid10-primitive">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Z][0-9]{9}"/>
+    </xs:restriction>
+  </xs:simpleType>
   <xs:complexType name="IdentifierUse">
     <xs:complexContent>
       <xs:extension base="Element">
@@ -1117,6 +1132,16 @@
     <xs:complexContent>
       <xs:extension base="Element">
         <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/NamingSystem/arge-ik/iknr"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Money">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="value" type="decimal" minOccurs="0"/>
+          <xs:element name="currency" type="code" minOccurs="0"/>
+        </xs:sequence>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

@@ -25,7 +25,8 @@ private:
         const std::string& pkcs7File, TslManager* tslManager);
 
     static void checkMultiplePrescription(const model::KbvBundle& bundle);
-    static void checkValidCoverage(const model::KbvBundle& bundle);
+    static void checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType);
+    static void checkNarcoticsMatches(const model::KbvBundle& bundle);
 };
 
 

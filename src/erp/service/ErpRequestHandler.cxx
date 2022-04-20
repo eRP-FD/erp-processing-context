@@ -146,7 +146,7 @@ std::string ErpRequestHandler::getLanguageFromHeader(const Header& requestHeader
 {
     return requestHeader.header(Header::AcceptLanguage).value_or("de");  // Default: German
 }
-void ErpRequestHandler::preHandleRequestHook(SessionContext<PcServiceContext>& session)
+void ErpRequestHandler::preHandleRequestHook(SessionContext& session)
 {
     session.callerWantsJson = callerWantsJson(session.request);
 }

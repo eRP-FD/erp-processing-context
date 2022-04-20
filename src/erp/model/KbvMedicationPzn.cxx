@@ -9,7 +9,7 @@
 namespace model
 {
 KbvMedicationPzn::KbvMedicationPzn(NumberAsStringParserDocument&& document)
-    : Resource<KbvMedicationPzn, ResourceVersion::KbvItaErp>(std::move(document))
+    : KbvMedicationBase<KbvMedicationPzn, ResourceVersion::KbvItaErp>(std::move(document))
 {
 }
 

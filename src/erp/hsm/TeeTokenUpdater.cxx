@@ -35,11 +35,13 @@ namespace
 TeeTokenUpdater::TeeTokenUpdater (
     std::function<void(ErpBlob&&)>&& teeTokenConsumer,
     HsmFactory& hsmFactory,
-    TokenProvider&& tokenProvider)
+    TokenProvider&& tokenProvider,
+    std::shared_ptr<Timer> timerManager)
     : TeeTokenUpdater(
           std::move(teeTokenConsumer),
           hsmFactory,
           std::move(tokenProvider),
+          timerManager,
           std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS, 1200)),
           std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_RETRY_SECONDS, 60)))
 {
@@ -50,6 +52,7 @@ TeeTokenUpdater::TeeTokenUpdater (
     std::function<void(ErpBlob&&)>&& teeTokenConsumer,
     HsmFactory& hsmFactory,
     TokenProvider&& tokenProvider,
+    std::shared_ptr<Timer> timerManager,
     std::chrono::system_clock::duration updateInterval,
     std::chrono::system_clock::duration retryInterval)
     : mTeeTokenConsumer(std::move(teeTokenConsumer)),
@@ -59,9 +62,11 @@ TeeTokenUpdater::TeeTokenUpdater (
       mUpdateFailureCount(0),
       mUpdateInterval(updateInterval),
       mRetryInterval(retryInterval),
-      mLastUpdate(decltype(mLastUpdate)::value_type())
+      mLastUpdate(decltype(mLastUpdate)::value_type()),
+      mTimerManager(timerManager)
 {
     Expect(mTokenProvider!=nullptr, "can not create TeeTokenUpdater without token provider");
+    Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);
     TVLOG(0) << "TeeTokenUpdater will update every " << std::chrono::duration_cast<std::chrono::seconds>(mUpdateInterval).count() << " seconds";
     TVLOG(0) << "TeeTokenUpdater will retry  every " << std::chrono::duration_cast<std::chrono::seconds>(mRetryInterval).count() << " seconds";
 }
@@ -69,7 +74,7 @@ TeeTokenUpdater::TeeTokenUpdater (
 
 TeeTokenUpdater::~TeeTokenUpdater (void)
 {
-    Timer::instance().cancel(mUpdateJobToken);
+    mTimerManager->cancel(mUpdateJobToken);
 }
 
 
@@ -107,7 +112,7 @@ void TeeTokenUpdater::update (void)
 
 void TeeTokenUpdater::requestUpdate (void)
 {
-    mUpdateJobToken = Timer::instance().runIn(
+    mUpdateJobToken = mTimerManager->runIn(
         mUpdateInterval,
         [this]{update();});
 }
@@ -115,7 +120,7 @@ void TeeTokenUpdater::requestUpdate (void)
 
 void TeeTokenUpdater::requestRetry (void)
 {
-    mUpdateJobToken = Timer::instance().runIn(
+    mUpdateJobToken = mTimerManager->runIn(
         mRetryInterval,
         [this]{update();});
 }
@@ -137,7 +142,7 @@ void TeeTokenUpdater::healthCheck() const
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeTokenUpdaterFactory (void)
 {
 #if WITH_HSM_TPM_PRODUCTION > 0
-    return [](auto&& tokenConsumer, auto& hsmFactory)
+    return [](auto&& tokenConsumer, auto& hsmFactory, std::shared_ptr<Timer> timerManager)
     {
         return std::make_unique<TeeTokenUpdater>(
             std::forward<decltype(tokenConsumer)>(tokenConsumer),
@@ -145,7 +150,8 @@ TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeToke
             [](HsmFactory& factory)
             {
                 return TeeTokenProductionUpdater::provideTeeToken(factory);
-            });
+            },
+            timerManager);
     };
 #else
     Fail2("production HSM/TPM not compiled in.", std::logic_error);
@@ -154,7 +160,7 @@ TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeToke
 
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createMockTeeTokenUpdaterFactory (void)
 {
-    return [](auto&& tokenConsumer, auto& hsmFactory)
+    return [](auto&& tokenConsumer, auto& hsmFactory, std::shared_ptr<Timer> timerManager)
     {
         return std::make_unique<TeeTokenUpdater>(
             std::forward<decltype(tokenConsumer)>(tokenConsumer),
@@ -163,6 +169,7 @@ TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createMockTeeTokenUpdat
             {
                 // Tests that use a mock HSM don't need a TEE token. An empty blob is enough.
                 return ErpBlob();
-            });
+            },
+            timerManager);
     };
 }

@@ -25,7 +25,7 @@ public:
         : hsmPool(
               std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
                                                MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-              TeeTokenUpdater::createMockTeeTokenUpdaterFactory())
+              TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>())
     {
     }
 
@@ -188,7 +188,7 @@ TEST_F(HsmPoolTest, keepAlive)
         std::make_unique<HsmMockFactory>(
             std::move(client),
             MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
 
     ASSERT_EQ(clientReference.callCount, 0);
 
@@ -211,7 +211,7 @@ TEST_F(HsmPoolTest, keepAliveJob)
         std::make_unique<HsmMockFactory>(
             std::make_unique<::HsmSessionTestClient>(),
             MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
 
     ASSERT_TRUE(pool.isKeepAliveJobRunning());
 

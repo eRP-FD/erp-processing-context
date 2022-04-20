@@ -7,8 +7,25 @@
 
 #include "erp/model/Timestamp.hxx"
 
+namespace
+{
+bool hasCorrectPcrHash(const ::BlobDatabase::Entry& entry, const ::ErpVector& currentPcrHash)
+{
+    if ((entry.type == ::BlobType::Quote) && ! currentPcrHash.empty() && entry.pcrHash)
+    {
+        if (entry.pcrHash.value() != currentPcrHash)
+        {
+            return false;
+        }
+    }
 
-bool BlobDatabase::Entry::isBlobValid (std::chrono::system_clock::time_point now) const
+    return true;
+}
+
+}
+
+bool BlobDatabase::Entry::isBlobValid(::std::chrono::system_clock::time_point now,
+                                      const ::ErpVector& currentPcrHash) const
 {
     if (expiryDateTime.has_value())
     {
@@ -34,7 +51,7 @@ bool BlobDatabase::Entry::isBlobValid (std::chrono::system_clock::time_point now
             }
     }
 
-    return true;
+    return hasCorrectPcrHash(*this, currentPcrHash);
 }
 
 
@@ -47,6 +64,6 @@ const ErpArray<TpmObjectNameLength>& BlobDatabase::Entry::getAkName (void) const
 
 const PcrSet& BlobDatabase::Entry::getPcrSet (void) const
 {
-    Expect(metaPcrSet.has_value(), "blob entry does not have a metaPcrSet value");
-    return metaPcrSet.value();
+    Expect(pcrSet.has_value(), "blob entry does not have a pcrSet value");
+    return pcrSet.value();
 }

@@ -10,7 +10,7 @@
 #include "erp/registration/RegistrationInterface.hxx"
 
 
-void HealthCheck::update (SessionContext<PcServiceContext>& session)
+void HealthCheck::update (SessionContext& session)
 {
     check(ApplicationHealth::Service::Bna,          session, &checkBna);
     check(ApplicationHealth::Service::Hsm,          session, &checkHsm);
@@ -63,58 +63,58 @@ void HealthCheck::update (SessionContext<PcServiceContext>& session)
 }
 
 
-void HealthCheck::checkBna (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkBna (SessionContext& session)
 {
     Expect(session.serviceContext.getTslManager() != nullptr, "TslManager must be set.");
     session.serviceContext.getTslManager()->healthCheckBna();
 }
 
 
-void HealthCheck::checkHsm (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkHsm (SessionContext& session)
 {
-    auto hsmSession = session.serviceContext.getHsmPool()->acquire();
+    auto hsmSession = session.serviceContext.getHsmPool().acquire();
     (void) hsmSession.session().getRandomData(1);
 }
 
 
-void HealthCheck::checkCFdSigErp (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkCFdSigErp (SessionContext& session)
 {
     session.serviceContext.getCFdSigErpManager().healthCheck();
 }
 
 
-void HealthCheck::checkIdp (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkIdp (SessionContext& session)
 {
     session.serviceContext.idp.healthCheck();
 }
 
 
-void HealthCheck::checkPostgres (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkPostgres (SessionContext& session)
 {
     session.database()->healthCheck();
     session.database()->commitTransaction();
 }
 
 
-void HealthCheck::checkRedis (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkRedis (SessionContext& session)
 {
     session.serviceContext.getDosHandler().healthCheck();
 }
 
 
-void HealthCheck::checkSeedTimer (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkSeedTimer (SessionContext& session)
 {
     session.serviceContext.getPrngSeeder()->healthCheck();
 }
 
 
-void HealthCheck::checkTeeTokenUpdater (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkTeeTokenUpdater (SessionContext& session)
 {
-    session.serviceContext.getHsmPool()->getTokenUpdater().healthCheck();
+    session.serviceContext.getHsmPool().getTokenUpdater().healthCheck();
 }
 
 
-void HealthCheck::checkTsl (SessionContext<PcServiceContext>& session)
+void HealthCheck::checkTsl (SessionContext& session)
 {
     Expect(session.serviceContext.getTslManager() != nullptr, "TslManager must be set.");
     session.serviceContext.getTslManager()->healthCheckTsl();
@@ -123,8 +123,8 @@ void HealthCheck::checkTsl (SessionContext<PcServiceContext>& session)
 
 void HealthCheck::check (
     const ApplicationHealth::Service service,
-    SessionContext<PcServiceContext>& session,
-    void (* checkAction)(SessionContext<PcServiceContext>&))
+    SessionContext& session,
+    void (* checkAction)(SessionContext&))
 {
     try
     {
@@ -141,7 +141,7 @@ void HealthCheck::check (
 
 void HealthCheck::handleException(
     ApplicationHealth::Service service,
-    SessionContext<PcServiceContext>& session)
+    SessionContext& session)
 {
     ExceptionHelper::extractInformation(
         [service, &session]

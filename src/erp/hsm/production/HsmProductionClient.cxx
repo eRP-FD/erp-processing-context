@@ -75,7 +75,7 @@ namespace
     }
 
     template<size_t L>
-    ErpArray<L> createErpArray (const char data[L])
+    ErpArray<L> createErpArray (const uint8_t data[L])
     {
         ErpArray<L> array;
         std::copy(data, data+L, array.data());
@@ -136,7 +136,7 @@ namespace
 
         DeriveKeyOutput output;
         const auto derivationData = createErpVector(response.derivationDataLength, response.derivationData);
-        output.derivedKey = createErpArray<Aes256Length>(reinterpret_cast<const char*>(response.derivedKey));
+        output.derivedKey = createErpArray<Aes256Length>(response.derivedKey);
 
         if (arguments.initialDerivation)
         {
@@ -156,6 +156,19 @@ namespace
     }
 }
 
+::Nonce HsmProductionClient::getNonce(const ::HsmRawSession& session, uint32_t input)
+{
+    auto timer = ::DurationConsumer::getCurrent().getTimer("Hsm:ERP_GenerateNONCE");
+
+    const auto nonceOutput = ::hsmclient::ERP_GenerateNONCE(session.rawSession, ::hsmclient::UIntInput{input});
+
+    HsmExpectSuccess(nonceOutput, "ERP_GenerateNONCE failed", timer);
+
+    return {{nonceOutput.NONCE, nonceOutput.NONCE + NONCE_LEN},
+            ::ErpBlob{::std::vector<uint8_t>{nonceOutput.BlobOut.BlobData,
+                                             nonceOutput.BlobOut.BlobData + nonceOutput.BlobOut.BlobLength},
+                      nonceOutput.BlobOut.BlobGeneration}};
+}
 
 ErpBlob HsmProductionClient::getTeeToken(
     const HsmRawSession& session,
@@ -235,7 +248,7 @@ ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
     handleExpiredSession(response.returnCode);
     HsmExpectSuccess(response, "ERP_DoVAUECIES128 failed", timer);
 
-    return createErpArray<Aes128Length>(response.AESKey);
+    return createErpArray<Aes128Length>(reinterpret_cast<const uint8_t*>(response.AESKey));
 }
 
 
@@ -297,6 +310,27 @@ ErpArray<Aes256Length> HsmProductionClient::unwrapHashKey(
     return createErpArray<Aes256Length>(response.Key);
 }
 
+::ParsedQuote HsmProductionClient::parseQuote(const ::ErpVector& quote) const
+{
+    Expect(quote.size() == TPM_QUOTE_LENGTH, "Quote data size is not as expected.");
+
+    auto timer = ::DurationConsumer::getCurrent().getTimer("Hsm:ERP_ParseTPMQuote");
+
+    ::hsmclient::TPMQuoteInput input;
+    ::std::copy(::std::begin(quote), ::std::end(quote), ::std::begin(input.QuoteData));
+
+    const auto parsedQuote = ::hsmclient::ERP_ParseTPMQuote(input);
+
+    HsmExpectSuccess(parsedQuote, "ERP_ParseTPMQuote failed", timer);
+
+    ::ParsedQuote result;
+    result.qualifiedSignerName = createErpVector(TPM_NAME_LEN, parsedQuote.qualifiedSignerName);
+    result.qualifyingInformation = createErpVector(NONCE_LEN, parsedQuote.qualifyingInformation);
+    result.pcrSetFlags = createErpVector(TPM_PCRSET_LENGTH, parsedQuote.PCRSETFlags);
+    result.pcrHash = createErpVector(TPM_PCR_DIGESTHASH_LENGTH, parsedQuote.PCRHash);
+
+    return result;
+}
 
 void HsmProductionClient::reconnect (HsmRawSession& session)
 {

@@ -4,6 +4,7 @@
  */
 
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
@@ -61,15 +62,13 @@ const rapidjson::Pointer whenPreparedPointer(ElementName::path(elements::whenPre
 
 }  // anonymous namespace
 
-} // namespace model
-
 
 MedicationDispense::MedicationDispense (NumberAsStringParserDocument&& jsonTree)
     : Resource<MedicationDispense>(std::move(jsonTree))
 {
 }
 
-PrescriptionId MedicationDispense::id() const
+PrescriptionId MedicationDispense::prescriptionId() const
 {
     std::string_view id = getStringValue(prescriptionIdValuePointer);
     return PrescriptionId::fromString(id);
@@ -99,11 +98,18 @@ std::optional<Timestamp> MedicationDispense::whenPrepared() const
     return {};
 }
 
-void MedicationDispense::setId(const PrescriptionId& prescriptionId)
+MedicationDispenseId MedicationDispense::id() const
 {
-    setValue(idPointer, prescriptionId.toString());
+    return MedicationDispenseId::fromString(getStringValue(idPointer));
+}
 
-    // Please note that the prescriptionId of the task is also used as the id of the medication dispense resource.
+void MedicationDispense::setId(const MedicationDispenseId& id)
+{
+    setValue(idPointer, id.toString());
+}
+
+void MedicationDispense::setPrescriptionId(const PrescriptionId& prescriptionId)
+{
     setValue(prescriptionIdValuePointer, prescriptionId.toString());
 }
 
@@ -126,3 +132,6 @@ void MedicationDispense::setWhenPrepared(const model::Timestamp& whenPrepared)
 {
     setValue(whenPreparedPointer, whenPrepared.toXsDateTime());
 }
+
+
+} // namespace model

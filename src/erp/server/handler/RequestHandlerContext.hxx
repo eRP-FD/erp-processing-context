@@ -17,17 +17,15 @@
 #include <regex>
 
 
-template<class ServiceContext>
 class SessionContext;
 
-template<class ServiceContext>
 class RequestHandlerInterface;
 
-template<class ServiceContextType>
+
 class RequestHandlerContext
 {
 public:
-    using HandlerType = RequestHandlerInterface<ServiceContextType>;
+    using HandlerType = RequestHandlerInterface;
 
     const HttpMethod method;
     const std::string path;
@@ -39,11 +37,11 @@ public:
         HttpMethod method,
         const std::string& url,
         std::unique_ptr<HandlerType>&& handler);
-    RequestHandlerContext (RequestHandlerContext<ServiceContextType>&& other) noexcept = default;
+    RequestHandlerContext (RequestHandlerContext&& other) noexcept = default;
     RequestHandlerContext (void) = delete;
-    RequestHandlerContext (const RequestHandlerContext<ServiceContextType>& other) = delete;
-    RequestHandlerContext& operator= (RequestHandlerContext<ServiceContextType>&& other) noexcept = default;
-    RequestHandlerContext& operator= (const RequestHandlerContext<ServiceContextType>& other) = delete;
+    RequestHandlerContext (const RequestHandlerContext& other) = delete;
+    RequestHandlerContext& operator= (RequestHandlerContext&& other) noexcept = default;
+    RequestHandlerContext& operator= (const RequestHandlerContext& other) = delete;
     ~RequestHandlerContext (void);
 
     /** Match a concrete path against the path regex.
@@ -61,18 +59,16 @@ public:
 };
 
 
-template<class ServiceContextType>
 class RequestHandlerContainer
 {
 public:
     RequestHandlerContainer(void) = default;
     RequestHandlerContainer(const RequestHandlerContainer& other) = delete;
     RequestHandlerContainer(RequestHandlerContainer&& other) noexcept = default;
-    ~RequestHandlerContainer (void);
     RequestHandlerContainer& operator=(const RequestHandlerContainer& other) = delete;
     RequestHandlerContainer& operator=(RequestHandlerContainer&& other) noexcept = delete;
 
-    using ItemType = RequestHandlerContext<ServiceContextType>;
+    using ItemType = RequestHandlerContext;
     using ContainerType = std::unordered_map<std::string, std::unique_ptr<ItemType>>;
 
     /**
@@ -94,9 +90,8 @@ private:
 };
 
 
-template<class ServiceContextType>
 template<typename ... Arguments>
-typename RequestHandlerContainer<ServiceContextType>::ItemType& RequestHandlerContainer<ServiceContextType>::addHandler (
+typename RequestHandlerContainer::ItemType& RequestHandlerContainer::addHandler (
     std::string_view key,
     Arguments&&... arguments)
 {

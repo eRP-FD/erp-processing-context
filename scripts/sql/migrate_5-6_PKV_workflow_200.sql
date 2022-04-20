@@ -129,5 +129,11 @@ CREATE OR REPLACE VIEW erp.task_view AS (
             FROM erp.task_200
 );
 
+alter view erp.task_view owner to role_proc_admin;
+revoke all on erp.task_view from role_proc_admin;
+revoke all on erp.task_view from role_proc_user;
+grant select on erp.task_view to role_proc_admin, role_proc_user;
+
+
 
 COMMIT;

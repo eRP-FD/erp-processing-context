@@ -13,6 +13,18 @@ pipeline {
     options {
         disableConcurrentBuilds()
         skipDefaultCheckout()
+        copyArtifactPermission(
+            '/eRp/Integration/erp_processing_context_dev, ' +
+            '/eRp/Integration/erp_processing_context_dev2, ' +
+            '/eRp/Integration/erp_processing_context_box, ' +
+            '/eRp/Integration/erp_processing_context_box2, ' +
+            '/eRp/Integration/erp_processing_context_lu, ' +
+            '/eRp/Integration/erp_processing_context_lu2'
+        )
+    }
+
+    environment {
+        GIT_SOURCE_CREDS = credentials('jenkins-github-erp')
     }
 
     stages {
@@ -39,7 +51,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.9'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.10'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -56,7 +68,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.4.1"
+                                    def erp_release_version = "1.5.0"
                                     sh """
                                         # Temporary workaround for SSH host verification for GitHub. TODO: include this into the docker image build
                                         mkdir -p ~/.ssh && ssh-keyscan github.ibmgcloud.net >> ~/.ssh/known_hosts
@@ -157,6 +169,7 @@ pipeline {
                         sh """
                             # Run the unit and integration tests
                             cd jenkins-build-debug/bin
+                            ls -al
                             ./erp-test --gtest_output=xml:erp-test.xml
                         """
                     }
@@ -216,7 +229,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.4.1"
+                                def release_version = "1.5.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -252,7 +265,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.4.1"
+                                def release_version = "1.5.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -267,6 +280,27 @@ pipeline {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        stage('Create Artifact For Integration Tests') {
+            when {
+                anyOf {
+                    branch 'master'
+                    branch 'release/*'
+                }
+            }
+            steps{
+                script {
+                    sh """
+                        git clone --depth=1 https://${GIT_SOURCE_CREDS_USR}:${GIT_SOURCE_CREDS_PSW}@github.ibmgcloud.net/eRp/erp-performancetest.git
+                        cat erp-performancetest/config-templates/TestKarten-achelos/QES.pem > resources/integration-test/QES.pem
+                        echo >> resources/integration-test/QES.pem
+                        cat erp-performancetest/config-templates/TestKarten-achelos/QES_prv.pem >> resources/integration-test/QES.pem
+                        tar czf erp-tests.tar.gz jenkins-build-debug resources/test resources/integration-test
+                    """
+                    archiveArtifacts artifacts: 'erp-tests.tar.gz', fingerprint: true
                 }
             }
         }
@@ -306,10 +340,21 @@ pipeline {
                 script {
                     if (env.BRANCH_NAME == 'master') {
                         triggerDeployment('targetEnvironment': 'dev2')
-                    } else if (env.BRANCH_NAME.startsWith('release/1.4.')) {
+                    } else if (env.BRANCH_NAME.startsWith('release/')) {
                         triggerDeployment('targetEnvironment': 'dev')
                     }
                 }
+            }
+        }
+        stage('Integration tests against dev') {
+             when {
+                 anyOf {
+                     branch 'master'
+                     //branch 'release/*'
+                 }
+             }
+            steps {
+                build wait: false, job: '/eRp/Integration/erp_processing_context_dev2', parameters: [string(name: 'BRANCH_NAME_COPY_ARTIFACTS_BUILD_NUMBER', value: env.BUILD_NUMBER), string(name: 'ERP_BUILD_ROOT', value: env.WORKSPACE)]
             }
         }
     }

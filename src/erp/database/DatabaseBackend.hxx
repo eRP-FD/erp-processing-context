@@ -28,8 +28,9 @@ namespace db_model
 enum class MasterKeyType: int8_t;
 
 class Blob;
-class EncryptedBlob;
+class ChargeItem;
 class Communication;
+class EncryptedBlob;
 class HashedId;
 class HashedKvnr;
 class HashedTelematikId;
@@ -111,17 +112,15 @@ public:
 
     virtual std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
+    virtual std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                                                    const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                              const std::optional<UrlArguments>& search) = 0;
 
-    virtual std::vector<db_model::MedicationDispense> retrieveAllMedicationDispenses(
+    virtual std::tuple<std::vector<db_model::MedicationDispense>, bool> retrieveAllMedicationDispenses(
         const db_model::HashedKvnr& kvnr,
         const std::optional<model::PrescriptionId>& prescriptionId,
-        const std::optional<UrlArguments>& search) = 0;
-    virtual uint64_t countAllMedicationDispenses(
-        const db_model::HashedKvnr& kvnr,
         const std::optional<UrlArguments>& search) = 0;
 
     virtual CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) = 0;
@@ -202,8 +201,38 @@ public:
 
     virtual void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) = 0;
 
-    virtual std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr& kvnr) = 0;
+    virtual std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) = 0;
     [[nodiscard]] virtual bool clearConsent(const db_model::HashedKvnr& kvnr) = 0;
+
+
+    virtual void storeChargeInformation(const db_model::HashedTelematikId& pharmacyId, model::PrescriptionId id,
+                                        const model::Timestamp& enteredDate,
+                                        const db_model::EncryptedBlob& chargeItem,
+                                        const db_model::EncryptedBlob& dispenseItem) = 0;
+
+    virtual std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
+                                      const std::optional<UrlArguments>& search) const = 0;
+    virtual std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& kvnr,
+                                      const std::optional<UrlArguments>& search) const = 0;
+
+    /// @returns: ChargeItem, DispenseItem
+    virtual std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformation(const model::PrescriptionId& id) const = 0;
+    /// @returns: ChargeItem, DispenseItem
+    virtual std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const = 0;
+
+    virtual void deleteChargeInformation(const model::PrescriptionId& id) = 0;
+
+    virtual void clearAllChargeInformation(const db_model::HashedKvnr& kvnr) = 0;
+
+    virtual uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
+                                             const std::optional<UrlArguments>& search) = 0;
+
+    virtual uint64_t countChargeInformationForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
+                                             const std::optional<UrlArguments>& search) = 0;
 
 
 

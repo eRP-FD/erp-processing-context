@@ -29,7 +29,6 @@ list(
         ErpProcessingContext.cxx
         admin/AdminRequestHandler.cxx
         admin/AdminServer.cxx
-        admin/AdminServiceContext.cxx
         beast/BoostBeastHeader.cxx
         beast/BoostBeastStringReader.cxx
         beast/BoostBeastStringWriter.cxx
@@ -73,7 +72,6 @@ list(
         crypto/SecureRandomGenerator.cxx
         crypto/Seeder.cxx
         crypto/Sha256.cxx
-        database/Data.cxx
         database/Database.cxx
         database/DatabaseCodec.cxx
         database/DatabaseFrontend.cxx
@@ -89,8 +87,6 @@ list(
         enrolment/EnrolmentModel.cxx
         enrolment/EnrolmentRequestHandler.cxx
         enrolment/EnrolmentServer.cxx
-        enrolment/EnrolmentServiceContext.cxx
-        enrolment/EnrolmentTemplateInstantiations.cxx
         fhir/Fhir.cxx
         fhir/FhirCanonicalizer.cxx
         fhir/FhirConverter.cxx
@@ -128,6 +124,7 @@ list(
         model/Device.cxx
         model/ErxReceipt.cxx
         model/Extension.cxx
+        model/extensions/ChargeItemMarkingFlag.cxx
         model/extensions/KBVEXERPAccident.cxx
         model/extensions/KBVEXFORLegalBasis.cxx
         model/extensions/KBVMultiplePrescription.cxx
@@ -135,6 +132,7 @@ list(
         model/KbvBundle.cxx
         model/KbvComposition.cxx
         model/KbvCoverage.cxx
+        model/KbvMedicationBase.cxx
         model/KbvMedicationCompounding.cxx
         model/KbvMedicationFreeText.cxx
         model/KbvMedicationIngredient.cxx
@@ -145,6 +143,7 @@ list(
         model/KbvPracticeSupply.cxx
         model/Link.cxx
         model/MedicationDispense.cxx
+        model/MedicationDispenseId.cxx
         model/MetaData.cxx
         model/ModelException.cxx
         model/NumberAsStringParserDocument.cxx
@@ -154,6 +153,7 @@ list(
         model/Parameters.cxx
         model/Patient.cxx
         model/PrescriptionId.cxx
+        model/PrescriptionType.cxx
         model/Reference.cxx
         model/Resource.cxx
         model/ResourceVersion.cxx
@@ -165,7 +165,6 @@ list(
         pc/CFdSigErpManager.cxx
         pc/PcServiceContext.cxx
         pc/SeedTimer.cxx
-        pc/PcTemplateInstantiations.cxx
         pc/pre_user_pseudonym/PreUserPseudonym.cxx
         pc/pre_user_pseudonym/PreUserPseudonymManager.cxx
         pc/telematic_pseudonym/TelematicPseudonymManager.cxx
@@ -211,8 +210,10 @@ list(
         service/RedisInterface.hxx
         service/SubscriptionPostHandler.cxx
         service/VauRequestHandler.cxx
+        service/chargeitem/ChargeItemBodyHandlerBase.cxx
         service/chargeitem/ChargeItemDeleteHandler.cxx
         service/chargeitem/ChargeItemGetHandler.cxx
+        service/chargeitem/ChargeItemHandlerBase.cxx
         service/chargeitem/ChargeItemPostHandler.cxx
         service/chargeitem/ChargeItemPutHandler.cxx
         service/consent/ConsentDeleteHandler.cxx

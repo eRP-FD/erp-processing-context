@@ -39,7 +39,8 @@ protected:
     void erp_angabeRechtsgrundlage(const model::KbvBundle& kbvBundle) const;
     void ikKostentraegerBgUkPflicht(const model::KbvBundle& kbvBundle) const;
     void validateMedicationProfiles(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
-                                    const InCodeValidator& inCodeValidator) const;
+                                    const InCodeValidator& inCodeValidator,
+                                    const model::ResourceVersion::KbvItaErp& version) const;
     void validateEntries(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
                          const InCodeValidator& inCodeValidator,
                          const model::ResourceVersion::KbvItaErp& version) const;

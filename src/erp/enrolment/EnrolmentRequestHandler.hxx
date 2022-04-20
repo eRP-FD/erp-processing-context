@@ -6,16 +6,16 @@
 #ifndef ERP_PROCESSING_CONTEXT_ENROLMENTREQUESTHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_ENROLMENTREQUESTHANDLER_HXX
 
-#include "erp/enrolment/EnrolmentServiceContext.hxx"
+#include "erp/pc/PcServiceContext.hxx"
 #include "erp/enrolment/EnrolmentModel.hxx"
 #include "erp/server/handler/RequestHandlerInterface.hxx"
 
 
-using EnrolmentSession = SessionContext<EnrolmentServiceContext>;
+using EnrolmentSession = SessionContext;
 
 
 class EnrolmentRequestHandlerBase
-    : public RequestHandlerBasicAuthentication<EnrolmentServiceContext>
+    : public RequestHandlerBasicAuthentication
 
 {
 public:
@@ -40,6 +40,8 @@ public:
     static constexpr std::string_view responseEnclaveId = "/enclaveId";
     static constexpr std::string_view responseEnclaveTime = "/enclaveTime";
     static constexpr std::string_view responseEnrolmentStatus = "/enrolmentStatus";
+    static constexpr std::string_view responsePcrHash = "/pcrHash";
+    static constexpr std::string_view responsePcrSet = "/pcrSet";
     static constexpr std::string_view responsePlainTextCredential = "/plainTextCredential";
     static constexpr std::string_view responsePublicKey = "/publicKey";
     static constexpr std::string_view responseQuoteSignature = "/quoteSignature";

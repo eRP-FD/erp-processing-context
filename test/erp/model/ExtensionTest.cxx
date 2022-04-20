@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 
 class MyTestExtension : public model::Extension

@@ -11,6 +11,9 @@
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "test/util/TestConfiguration.hxx"
+#include "erp/pc/PcServiceContext.hxx"
+#include "EnvironmentVariableGuard.hxx"
+#include "test_config.h"
 
 #include <memory>
 
@@ -69,6 +72,10 @@ public:
     }
 
     static const Certificate idpCertificate;
+
+    static Factories makeMockFactories();
+    static Factories makeMockFactoriesWithServers();
+    static PcServiceContext makePcServiceContext(std::optional<decltype(Factories::databaseFactory)> cutomDatabaseFactory = {});
 };
 
 #endif

@@ -3,15 +3,11 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/hsm/HsmPool.hxx"
 #include "erp/pc/CFdSigErpManager.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Configuration.hxx"
-#include "mock/hsm/HsmMockClient.hxx"
-#include "mock/hsm/HsmMockFactory.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/TestUtils.hxx"
 
@@ -104,7 +100,7 @@ public:
             CFdSigErpTestHelper::cFdSigErp);
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
     }
 
 
@@ -113,16 +109,13 @@ public:
         mCaDerPathGuard.reset();
     }
 
-    HsmPool mHsmPool{
-        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
-                                         MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
+    PcServiceContext mContext{StaticData::makePcServiceContext()};
 };
 
 
 TEST_F(CFdSigErpManagerTest, noTslManager)
 {
-   CFdSigErpManager cFdSigErpManager(Configuration::instance(), nullptr, mHsmPool);
+   CFdSigErpManager cFdSigErpManager(Configuration::instance(), nullptr, mContext.getHsmPool());
 
    EXPECT_FALSE(cFdSigErpManager.getOcspResponseData(true).has_value());
    EXPECT_FALSE(cFdSigErpManager.getOcspResponseData(false).has_value());
@@ -139,7 +132,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_NoOcspConnection_fail)
     // default mocking does not support C.FD.SIG eRP Certificate OCSP request
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>();
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mContext.getHsmPool());
     EXPECT_TSL_ERROR_THROW(
         (void)cFdSigErpManager.getCertificate(),
         {TslErrorCode::OCSP_NOT_AVAILABLE},
@@ -175,7 +168,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)
         {
             {ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mContext.getHsmPool());
     const auto responseData = cFdSigErpManager.getOcspResponseData(false);
     ASSERT_TRUE(responseData.has_value());
     EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
@@ -209,7 +202,7 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_success)
         {},
         {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mContext.getHsmPool());
 
     // 2 URLs for TSL + 2 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
     ASSERT_EQ(requestSender->getCounterMapSize(), 6);
@@ -234,7 +227,7 @@ TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)
         {},
         {{ocspUrl, {}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mHsmPool);
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), tslManager, mContext.getHsmPool());
 
     EXPECT_TSL_ERROR_THROW(
         cFdSigErpManager.getOcspResponseData(false),

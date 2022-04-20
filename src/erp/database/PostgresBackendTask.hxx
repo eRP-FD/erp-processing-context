@@ -19,6 +19,7 @@ public:
 
     static constexpr const char* TASK_160_TABLE_NAME = "erp.task";
     static constexpr const char* TASK_169_TABLE_NAME = "erp.task_169";
+    static constexpr const char* TASK_200_TABLE_NAME = "erp.task_200";
 
     explicit PostgresBackendTask(model::PrescriptionType prescriptionType);
 
@@ -63,11 +64,38 @@ public:
     [[nodiscard]] std::optional<db_model::Task>
     retrieveTaskAndPrescription(pqxx::work& transaction, const model::PrescriptionId& taskId);
 
+    [[nodiscard]] std::optional<db_model::Task>
+    retrieveTaskAndPrescriptionAndReceipt(pqxx::work& transaction, const model::PrescriptionId& taskId);
+
     [[nodiscard]] uint64_t countAllTasksForPatient(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
                                                    const std::optional<UrlArguments>& search);
 
-    [[nodiscard]] uint64_t countAllMedicationDispenses(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
-                                                       const std::optional<UrlArguments>& search);
+    void storeChargeInformation(::pqxx::work& transaction, const db_model::HashedTelematikId& pharmacyTelematikId,
+                                model::PrescriptionId id, const model::Timestamp& enteredDate,
+                                const db_model::EncryptedBlob& chargeItem, const db_model::EncryptedBlob& dispenseItem);
+
+    [[nodiscard]] std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(::pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
+                                      const std::optional<UrlArguments>& search) const;
+
+    [[nodiscard]] std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(::pqxx::work& transaction, const db_model::HashedTelematikId& pharmacyTelematikId,
+                                      const std::optional<UrlArguments>& search) const;
+
+    [[nodiscard]] std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformation(::pqxx::work& transaction, const model::PrescriptionId& id) const;
+    [[nodiscard]] std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformationForUpdate(::pqxx::work& transaction, const model::PrescriptionId& id) const;
+
+    void deleteChargeInformation(::pqxx::work& transaction, const model::PrescriptionId& id);
+    void clearAllChargeInformation(::pqxx::work& transaction, const db_model::HashedKvnr& kvnr);
+
+    [[nodiscard]] uint64_t countChargeInformationForInsurant(pqxx::work& transaction,
+                                                             const db_model::HashedKvnr& kvnr,
+                                                             const std::optional<UrlArguments>& search);
+    [[nodiscard]] uint64_t countChargeInformationForPharmacy(pqxx::work& transaction,
+                                                             const db_model::HashedTelematikId& pharmacyTelematikId,
+                                                             const std::optional<UrlArguments>& search);
 
     struct TaskQueryIndexes {
         pqxx::row::size_type prescriptionIdIndex = 0;
@@ -88,24 +116,36 @@ public:
     [[nodiscard]] static db_model::Task taskFromQueryResultRow(const pqxx::row& resultRow, const TaskQueryIndexes& indexes,
                                                                model::PrescriptionType prescriptionType);
 
-protected:
+private:
     std::string taskTableName() const;
+    [[nodiscard]] std::vector<db_model::ChargeItem>
+    retrieveAllChargeItems(pqxx::work& transaction, const QueryDefinition& baseQuery, const db_model::HashedId& Id,
+                           const std::optional<UrlArguments>& search) const;
+    [[nodiscard]] db_model::ChargeItem chargeItemFromQueryResultRow(const pqxx::row& row) const;
 
 
     struct Queries {
-        QueryDefinition countAllMedicationDispensesByKvnr;
+        QueryDefinition clearAllChargeInformation;
         QueryDefinition createTask;
+        QueryDefinition deleteChargeInformation;
         QueryDefinition updateTask;
         QueryDefinition updateTask_secret;
         QueryDefinition updateTask_medicationDispenseReceipt;
         QueryDefinition updateTask_activateTask;
         QueryDefinition updateTask_deletePersonalData;
+        QueryDefinition updateTask_storeChargeInformation;
+        QueryDefinition retrieveAllChargeItemsForInsurant;
+        QueryDefinition retrieveAllChargeItemsForPharmacy;
+        QueryDefinition retrieveChargeInformation;
         QueryDefinition retrieveTaskById;
         QueryDefinition retrieveTaskByIdPlusReceipt;
         QueryDefinition retrieveTaskByIdForUpdatePlusPrescription;
         QueryDefinition retrieveTaskByIdPlusPrescription;
+        QueryDefinition retrieveTaskByIdPlusPrescriptionPlusReceipt;
         QueryDefinition countAllTasksByKvnr;
         QueryDefinition getTaskKeyData;
+        QueryDefinition countChargeInformationForInsurant;
+        QueryDefinition countChargeInformationForPharmacy;
     };
     Queries mQueries;
     model::PrescriptionType mPrescriptionType;

@@ -97,6 +97,7 @@
   </xs:complexType>
   <xs:simpleType name="KBV_PR_ERP_Medication_PZN.Form.Coding.code-list">
     <xs:restriction base="code-primitive">
+      <xs:enumeration value="---"/>
       <xs:enumeration value="AEO"/>
       <xs:enumeration value="AMP"/>
       <xs:enumeration value="APA"/>
@@ -119,6 +120,7 @@
       <xs:enumeration value="BTA"/>
       <xs:enumeration value="CRE"/>
       <xs:enumeration value="DFL"/>
+      <xs:enumeration value="DIG"/>
       <xs:enumeration value="DIL"/>
       <xs:enumeration value="DIS"/>
       <xs:enumeration value="DKA"/>

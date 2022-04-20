@@ -45,6 +45,8 @@ template<typename VersionType>
 
 [[nodiscard]] ::std::string versionizeProfile(::std::string_view profile);
 
+std::string_view v_str(const NotProfiled&);
+
 }
 }
 

@@ -21,6 +21,7 @@ struct OptionalDeriveKeyData;
 namespace db_model
 {
 class Blob;
+class ChargeItem;
 class Task;
 }
 
@@ -46,7 +47,7 @@ public:
     void updateTaskStatusAndSecret(const model::Task& task) override;
     void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) override;
     void updateTaskMedicationDispenseReceipt(const model::Task& task,
-                                             const model::MedicationDispense& medicationDispense,
+                                             const std::vector<model::MedicationDispense>& medicationDispenses,
                                              const model::ErxReceipt& receipt) override;
     void updateTaskClearPersonalData(const model::Task& task) override;
 
@@ -66,17 +67,19 @@ public:
     retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Binary>>
     retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
+    [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
+    retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::vector<model::Task>
     retrieveAllTasksForPatient(const std::string& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t
     countAllTasksForPatient (const std::string& kvnr, const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] std::vector<model::MedicationDispense>
-    retrieveAllMedicationDispenses(const std::string& kvnr, const std::optional<model::PrescriptionId>& prescriptionId,
+    [[nodiscard]] std::tuple<std::vector<model::MedicationDispense>, bool>
+    retrieveAllMedicationDispenses(const std::string& kvnr,
                                    const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] uint64_t
-    countAllMedicationDispenses(const std::string& kvnr,
-                                const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] std::optional<model::MedicationDispense>
+    retrieveMedicationDispense(const std::string& kvnr, const model::MedicationDispenseId& id) override;
+
 
     [[nodiscard]] CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
     [[nodiscard]] std::optional<Uuid> insertCommunication(model::Communication& communication) override;
@@ -96,8 +99,33 @@ public:
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId) override;
 
     void storeConsent(const model::Consent& consent) override;
-    std::optional<model::Consent> getConsent(const std::string_view& kvnr) override;
+    std::optional<model::Consent> retrieveConsent(const std::string_view& kvnr) override;
     [[nodiscard]] bool clearConsent(const std::string_view& kvnr) override;
+
+    void storeChargeInformation(const std::string_view& pharmacyId, const model::ChargeItem& chargeItem,
+                                const model::Bundle& dispenseItem) override;
+
+    std::vector<model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(const std::string_view& pharmacyTelematikId,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::vector<model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::tuple<model::ChargeItem, model::Bundle>
+    retrieveChargeInformation(const model::PrescriptionId& id) const override;
+    std::tuple<model::ChargeItem, model::Bundle>
+    retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const override;
+
+    void deleteChargeInformation(const model::PrescriptionId& id) override;
+    void clearAllChargeInformation(const std::string_view& kvnr) override;
+
+    [[nodiscard]] uint64_t countChargeInformationForInsurant(const std::string& kvnr,
+                                                             const std::optional<UrlArguments>& search) override;
+
+    [[nodiscard]] uint64_t countChargeInformationForPharmacy(const std::string& pharmacyTelematikId,
+                                                             const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]] DatabaseBackend& getBackend() override;
 
@@ -123,6 +151,7 @@ private:
     [[nodiscard]] std::tuple<SafeString, BlobId> medicationDispenseKey(const db_model::HashedKvnr& kvnrHashed);
     [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& kvnrHashed);
 
+    std::vector<model::ChargeItem> decryptChargeItems(const std::vector<db_model::ChargeItem>& dbChargeItems) const;
 
     std::unique_ptr<DatabaseBackend> mBackend;
     HsmPool& mHsmPool;

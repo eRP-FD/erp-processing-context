@@ -127,6 +127,7 @@ enum class ConfigurationKey
 
     // Feature related configuration
     FEATURE_PKV,
+    FEATURE_WORKFLOW_200,
 
     // Admin interface settings
     ADMIN_SERVER_INTERFACE,
@@ -138,8 +139,6 @@ enum class ConfigurationKey
     DEBUG_DISABLE_REGISTRATION,
     DEBUG_DISABLE_DOS_CHECK,
     DEBUG_ENABLE_HSM_MOCK,
-    DEBUG_DISABLE_ENROLMENT_API_AUTH,
-    DEBUG_DISABLE_ADMIN_AUTH,
     DEBUG_DISABLE_QES_ID_CHECK
 };
 
@@ -240,9 +239,9 @@ public:
 
     std::filesystem::path getPathValue(Key key) const            {return ConfigurationBase::getPathValue(names_.strings(key));}
 
-    const char* getEnvironmentVariableName (Key key)             {return names_.strings(key).environmentVariable.data();}
+    const char* getEnvironmentVariableName (Key key) const       {return names_.strings(key).environmentVariable.data();}
 
-private:
+protected:
     ConfigurationTemplate()
         : ConfigurationBase(Names().allStrings())
     {
@@ -350,11 +349,28 @@ public:
 };
 
 #ifdef NDEBUG
-using Configuration = ConfigurationTemplate<ConfigurationKey, OpsConfigKeyNames>;
+using ConfigurationKeyNames = OpsConfigKeyNames;
 #else
-using Configuration = ConfigurationTemplate<ConfigurationKey, DevConfigKeyNames>;
+using ConfigurationKeyNames = DevConfigKeyNames;
 #endif
+
+class Configuration : public ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>
+{
+public:
+    static const Configuration& instance();
+    void check() const;
+
+    [[nodiscard]] bool featureWf200Enabled() const;
+    [[nodiscard]] bool featurePkvEnabled() const;
+};
+
 
 extern void configureXmlValidator(XmlValidator& xmlValidator);
+/**
+ * Return the optional port for the enrolment service.
+ * If the enrolment service is not active in the current configuration then the returned optional remains empty.
+ */
+extern std::optional<uint16_t> getEnrolementServerPort(const uint16_t pcPort,
+                                                       const uint16_t defaultEnrolmentServerPort);
 
-#endif
+#endif // ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX

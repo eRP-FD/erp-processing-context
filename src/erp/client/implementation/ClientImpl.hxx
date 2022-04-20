@@ -25,7 +25,6 @@ class ClientRequestTemplate;
 
 template <class StreamClass>
 class ClientImpl
-        : public std::enable_shared_from_this<ClientImpl<StreamClass>>
 {
 public:
     ClientImpl (

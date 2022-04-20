@@ -24,6 +24,7 @@ public:
     explicit SafeString (size_t size);
     explicit SafeString (const char* value);
     explicit SafeString(char* value, size_t size);
+    explicit SafeString (unsigned char* value, size_t size);
     explicit SafeString (const NoZeroFillTag&, size_t size);
 
     SafeString (const SafeString& other) = delete;
@@ -77,7 +78,6 @@ public:
     [[nodiscard]] bool operator >= (const SafeString& other) const;
     [[nodiscard]] bool operator <= (const SafeString& other) const;
 private:
-    explicit SafeString(unsigned char* value, size_t size);
     void assignAndCleanse(char* value, size_t size);
 
     std::unique_ptr<char[]> mValue;

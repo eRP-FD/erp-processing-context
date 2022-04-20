@@ -109,7 +109,7 @@ public:
             ErpBlob{"blob-data", 3},
             {},{},{},
             blobId,
-            {}, {}, {}});
+            {}, {}, {}, {}});
     }
 
     TestBlobDatabase* database;
@@ -163,7 +163,7 @@ TEST_F(BlobCacheTest, getBlob_failForInvalidBlob)
             {},
             {},
             2,
-            {}, {}, {}}));
+            {}, {}, {}, {}}));
 
     EXPECT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation, 2));
     EXPECT_NO_THROW(cache->getBlob(2));
@@ -256,7 +256,7 @@ TEST_F(BlobCacheTest, updateAfterKeyExpired)
             {},
             {},
             2,
-            {}, {}, {}}));
+            {}, {}, {}, {}}));
     ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
     waitFor([&]{ return system_clock::now() > expiresAt;});
     ASSERT_ANY_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
@@ -270,7 +270,7 @@ TEST_F(BlobCacheTest, updateAfterKeyExpired)
             {},
             {},
             3,
-            {}, {}, {}}));
+            {}, {}, {}, {}}));
     ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
 }
 
@@ -289,7 +289,7 @@ TEST_F(BlobCacheTest, updateBeforeKeyExpired)
             {},
             {},
             2,
-            {}, {}, {}}));
+            {}, {}, {}, {}}));
     ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
     expiresAt = system_clock::now() + 5s;
     database->mEntries.emplace_back(
@@ -301,7 +301,7 @@ TEST_F(BlobCacheTest, updateBeforeKeyExpired)
             {},
             {},
             3,
-            {},{}, {}}));
+            {},{}, {}, {}}));
     boost::asio::io_context ioContext;
     cache->startRefresher(ioContext, 500ms);
     std::thread contextThread{[&]{ ioContext.run();}};
@@ -313,6 +313,32 @@ TEST_F(BlobCacheTest, updateBeforeKeyExpired)
     );
     ioContext.stop();
     contextThread.join();
+}
+
+TEST_F(BlobCacheTest, filterPcrHash)
+{
+    const auto name = ::ErpVector::create("blob-key");
+    cache->storeBlob(
+        ::BlobDatabase::Entry{::BlobType::Quote, name, ::ErpBlob{"blob-data", 3}, {}, {}, {}, 2, {}, {}, {}, {}});
+
+    EXPECT_NO_THROW(cache->getBlob(::BlobType::Quote));
+
+    cache->deleteBlob(::BlobType::Quote, name);
+    EXPECT_ANY_THROW(cache->getBlob(::BlobType::Quote));
+
+    const auto pcrHash = ::ErpVector::create("123456");
+    cache->storeBlob(
+        ::BlobDatabase::Entry{::BlobType::Quote, name, ::ErpBlob{"blob-data", 3}, {}, {}, {}, 2, {}, {}, pcrHash, {}});
+
+    EXPECT_NO_THROW(cache->getBlob(::BlobType::Quote));
+
+    cache->setPcrHash(pcrHash);
+
+    EXPECT_NO_THROW(cache->getBlob(::BlobType::Quote));
+
+    cache->setPcrHash(::ErpVector::create("abcdef"));
+
+    EXPECT_ANY_THROW(cache->getBlob(::BlobType::Quote));
 }
 
 // There is not much sense in testing hasValidBlobsOfType() as that is just forwarding to the database without any

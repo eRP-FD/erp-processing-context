@@ -13,30 +13,11 @@
 #include <boost/asio/system_timer.hpp>
 
 
-std::mutex Timer::mInstanceMutex;
-std::unique_ptr<Timer> Timer::mInstance;
-std::atomic_bool Timer::mIsInstanceActive = false;
-
-
 class Timer::TimerJob : public boost::asio::system_timer
 {
 public:
     using boost::asio::system_timer::system_timer;
 };
-
-
-Timer& Timer::instance (void)
-{
-    std::lock_guard lock (mInstanceMutex);
-    if (mInstance == nullptr)
-    {
-        // Note that the instance is created only when there was none before. But if the instance is merely
-        // inactive, it has to be explicitly reset before it does anything useful again.
-        mInstance = std::make_unique<Timer>();
-        mIsInstanceActive = true;
-    }
-    return *mInstance;
-}
 
 
 Timer::Timer (void)
@@ -70,6 +51,10 @@ Timer::JobToken Timer::runAt (std::chrono::system_clock::time_point absoluteTime
             if ( ! error)
             {
                 job();
+            }
+            else
+            {
+                TLOG(ERROR) << "error during Timer::runAt: " << error;
             }
             removeJob(token);
         });
@@ -133,20 +118,6 @@ void Timer::shutDown (void)
         mIoContext.stop();
     if (mTimerThread.joinable())
         mTimerThread.join();
-
-    // Mark the instance as non-active, so that it can be restarted in tests.
-    mIsInstanceActive = false;
-}
-
-
-void Timer::restart (void)
-{
-    if (mIsInstanceActive.exchange(true) == true)
-        return; // The instance is still active and does not have to be replaced.
-
-    std::lock_guard lock (mInstanceMutex);
-    mInstance = std::make_unique<Timer>();
-    mIsInstanceActive = true;
 }
 
 

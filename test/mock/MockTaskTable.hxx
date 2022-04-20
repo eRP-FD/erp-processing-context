@@ -41,6 +41,10 @@ public:
         std::optional<db_model::HashedTelematikId> performer = std::nullopt;
         std::optional<int32_t> medicationDispenseKeyBlobId = std::nullopt;
         std::optional<db_model::EncryptedBlob> medicationDispenseBundle = std::nullopt;
+        std::optional<db_model::EncryptedBlob> chargeItem = std::nullopt;
+        std::optional<db_model::EncryptedBlob> dispenseItem = std::nullopt;
+        std::optional<model::Timestamp> chargeItemEnteredDate = std::nullopt;
+        std::optional<db_model::HashedTelematikId> chargeItemEnterer = std::nullopt;
     };
 
     explicit MockTaskTable(MockAccountTable& accountTable, const model::PrescriptionType& prescriptionType);
@@ -92,22 +96,46 @@ public:
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId);
     ::std::optional<::db_model::Task> retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId);
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId);
+    std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId);
     std::vector<db_model::Task> retrieveAllTasksForPatient (const db_model::HashedKvnr& kvnrHashed,
                                                             const std::optional<UrlArguments>& search,
-                                                            bool applyOnlySearch = false);
+                                                            bool applyOnlySearch = false) const;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
-                                     const std::optional<UrlArguments>& search);
+                                     const std::optional<UrlArguments>& search) const;
 
     std::vector<TestUrlArguments::SearchMedicationDispense>
     retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
-                                   const std::optional<model::PrescriptionId>& prescriptionId,
-                                   const std::optional<UrlArguments>& search,
-                                   bool applyOnlySearch = false);
-    uint64_t countAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
-                                         const std::optional<UrlArguments>& search);
+                                   const std::optional<model::PrescriptionId>& prescriptionId) const;
 
     void deleteTask(const model::PrescriptionId& taskId);
 
+    void storeChargeInformation(const db_model::HashedTelematikId& pharmacyId, model::PrescriptionId id,
+                                const model::Timestamp& enteredDate,
+                                const db_model::EncryptedBlob& chargeItem,
+                                const db_model::EncryptedBlob& dispenseItem);
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                      const std::optional<UrlArguments>& search,
+                                      const bool applyPaging = true) const;
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
+                                      const std::optional<UrlArguments>& search,
+                                      const bool applyPaging = true) const;
+
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformation(const model::PrescriptionId & id) const;
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformationForUpdate(const model::PrescriptionId & id) const;
+
+    void deleteChargeInformation(const model::PrescriptionId& id);
+    void clearAllChargeInformation(const db_model::HashedKvnr& insurant);
+
+    uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
+                                     const std::optional<UrlArguments>& search) const;
+    uint64_t countChargeInformationForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                     const std::optional<UrlArguments>& search) const;
     bool isBlobUsed(BlobId blobId) const;
 
 private:
@@ -135,6 +163,8 @@ private:
     };
 
     std::optional<db_model::Task> select(int64_t databaseId, const std::set<FieldName>& fields) const;
+    void clearChargeInformation(Row& row);
+
 
     MockAccountTable& mAccounts;
 
@@ -145,3 +175,4 @@ private:
 
 
 #endif// ERP_PROCESSING_CONTEXT_MOCKTASKTABLE_HXX
+

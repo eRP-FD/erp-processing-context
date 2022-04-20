@@ -22,6 +22,7 @@
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/KbvComposition.hxx"
 #include "erp/model/KbvCoverage.hxx"
+#include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationCompounding.hxx"
 #include "erp/model/KbvMedicationFreeText.hxx"
 #include "erp/model/KbvMedicationIngredient.hxx"
@@ -47,6 +48,7 @@
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/KbvMedicationModelHelper.hxx"
 #include "erp/xml/SaxHandler.hxx"
+#include "MedicationDispenseBundle.hxx"
 
 #include <boost/format.hpp>
 #include <rapidjson/ostreamwrapper.h>
@@ -514,7 +516,8 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXmlNoValidation(st
 template<class TDerivedModel, typename SchemaVersionType>
 TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(std::string_view xml, const XmlValidator& validator,
                                                                   const InCodeValidator& inCodeValidator,
-                                                                  SchemaType schemaType)
+                                                                  SchemaType schemaType,
+                                                                  std::optional<SchemaVersionType> enforcedVersion)
 {
     try
     {
@@ -523,7 +526,7 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(std::string_vi
         auto model = fromXmlNoValidation(xml);
         if (schemaType != SchemaType::fhir)
         {
-            model.doValidation(xml, validator, inCodeValidator, schemaType);
+            model.doValidation(xml, validator, inCodeValidator, schemaType, enforcedVersion);
         }
         return model;
     }
@@ -541,9 +544,14 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(std::string_vi
 template<class TDerivedModel, typename SchemaVersionType>
 void Resource<TDerivedModel, SchemaVersionType>::doValidation(std::string_view xml, const XmlValidator& validator,
                                                               const InCodeValidator& inCodeValidator,
-                                                              SchemaType schemaType) const
+                                                              SchemaType schemaType,
+                                                              std::optional<SchemaVersionType> enforcedVersion) const
 {
     const auto schemaVersion = getSchemaVersion();
+    ModelExpect(! enforcedVersion || enforcedVersion == schemaVersion,
+                "profile version missmatch, expected=" +
+                    std::string(ResourceVersion::v_str(enforcedVersion.value_or(SchemaVersionType{}))) +
+                    " found=" + std::string(ResourceVersion::v_str(schemaVersion)));
 
     auto schemaValidationContext = validator.getSchemaValidationContext(schemaType, schemaVersion);
     FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), xml, *schemaValidationContext);
@@ -667,6 +675,12 @@ UnspecifiedResource::UnspecifiedResource(NumberAsStringParserDocument&& document
 {
 }
 
+std::string_view UnspecifiedResource::getResourceType() const
+{
+    static const rapidjson::Pointer resourceTypePointer(resource::ElementName::path(resource::elements::resourceType));
+    return getStringValue(resourceTypePointer);
+}
+
 template class Resource<AuditEvent>;
 template class Resource<AuditMetaData>;
 template class Resource<Binary>;
@@ -682,6 +696,7 @@ template class Resource<Extension>;
 template class Resource<KbvBundle, ResourceVersion::KbvItaErp>;
 template class Resource<KbvComposition, ResourceVersion::KbvItaErp>;
 template class Resource<KbvCoverage, ResourceVersion::KbvItaErp>;
+template class Resource<KbvMedicationGeneric, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationCompounding, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationFreeText, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationIngredient, ResourceVersion::KbvItaErp>;
@@ -692,6 +707,7 @@ template class Resource<KbvOrganization, ResourceVersion::KbvItaErp>;
 template class Resource<KbvPractitioner, ResourceVersion::KbvItaErp>;
 template class Resource<KbvPracticeSupply, ResourceVersion::KbvItaErp>;
 template class Resource<MedicationDispense>;
+template class Resource<MedicationDispenseBundle, ResourceVersion::NotProfiled>;
 template class Resource<MetaData>;
 template class Resource<OperationOutcome>;
 template class Resource<Parameters, ResourceVersion::NotProfiled>;

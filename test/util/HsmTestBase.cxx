@@ -78,7 +78,8 @@ public:
         TokenProvider&& tokenProvider,
         std::chrono::system_clock::duration updateInterval,
         std::chrono::system_clock::duration retryInterval)
-        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), updateInterval, retryInterval)
+        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), std::make_shared<Timer>(),
+                          updateInterval, retryInterval)
     {
     }
 };

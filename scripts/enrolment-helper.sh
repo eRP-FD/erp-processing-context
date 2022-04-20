@@ -6,7 +6,7 @@
 #
 
 usage() {
-  echo -e "\nUsage: $0 pc1|pc2|health1|health2 [<blob_type>]\n       <blob_type> only required for pc1/pc2"
+  echo -e "\nUsage: $0 version|pc1|pc2|health1|health2 [<blob_type>]\n       <blob_type> only required for pc1/pc2"
 }
 
 if [  $# -lt 1 ] 
@@ -31,41 +31,45 @@ IFS=' '
 NAMESPACE=${PARTS[1]}
 
 command="./blob-db-initialization -c /erp/vau-hsm/client/test/resources/saved/cacertecc.crt -s /erp/vau-hsm/client/test/resources/saved $*"
-healthpc1="curl https://erp-processing-context-1.${NAMESPACE}.svc.cluster.local:9085/health -k | jq"
-healthpc2="curl https://erp-processing-context-2.${NAMESPACE}.svc.cluster.local:9086/health -k | jq"
+healthpc1="curl https://erp-processing-context-1.${NAMESPACE}.svc.cluster.local:9085/health -k --silent | jq"
+healthpc2="curl https://erp-processing-context-2.${NAMESPACE}.svc.cluster.local:9086/health -k --silent | jq"
 
 case $PC in
 
   pc1)
-    echo "Running enrolment for erp-processing-context-1\n"
+    echo "Running enrolment for erp-processing-context-1\n" >&2
     export ERP_SERVER_HOST=erp-processing-context-1.${NAMESPACE}.svc.cluster.local
     export TPM_SERVER_NAME=tpm-simulator-1.${NAMESPACE}.svc.cluster.local
-    echo "$command"
+    echo "$command" >&2
     eval $command
     ;;
 
   pc2)
-    echo "Running enrolment for erp-processing-context-2\n"
+    echo "Running enrolment for erp-processing-context-2\n" >&2
     export ERP_SERVER_HOST=erp-processing-context-2.${NAMESPACE}.svc.cluster.local
     export TPM_SERVER_NAME=tpm-simulator-2.${NAMESPACE}.svc.cluster.local
-    echo "$command"
+    echo "$command" >&2
     eval $command
     ;;
 
   health1)
-    echo "Running health check against erp-processing-context-1\n"
-    echo "$healthpc1"
+    echo "Running health check against erp-processing-context-1\n" >&2
+    echo "$healthpc1" >&2
     eval $healthpc1
     ;;
 
   health2)
-    echo "Running health check against erp-processing-context-2\n"
-    echo "$healthpc2"
+    echo "Running health check against erp-processing-context-2\n" >&2
+    echo "$healthpc2" >&2
     eval $healthpc2
     ;;
 
+  version)
+      ./blob-db-initialization --version
+      ;;
+  
   *)
-    echo "ERROR: unknown command"
+    echo "ERROR: unknown command" >&2
     exit 1
     ;;
 esac

@@ -8,7 +8,7 @@
 #include "erp/ErpConstants.hxx"
 #include "test_config.h"
 #include "test/util/EnvironmentVariableGuard.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 

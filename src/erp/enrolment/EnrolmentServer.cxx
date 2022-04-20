@@ -4,25 +4,13 @@
  */
 
 #include "erp/enrolment/EnrolmentServer.hxx"
-#include "erp/enrolment/EnrolmentServiceContext.hxx"
 #include "erp/enrolment/EnrolmentRequestHandler.hxx"
 #include "erp/server/handler/RequestHandlerManager.hxx"
 
-
-EnrolmentServer::EnrolmentServer(
-    const uint16_t enrolmentPort,
-    RequestHandlerManager<EnrolmentServiceContext>&& handlerManager,
-    std::unique_ptr<EnrolmentServiceContext> serviceContext)
-    : mServer(
-        HttpsServer<EnrolmentServiceContext>::defaultHost,
-        enrolmentPort,
-        std::move(handlerManager),
-        std::move(serviceContext) )
+namespace EnrolmentServer
 {
-}
 
-
-void EnrolmentServer::addEndpoints (RequestHandlerManager<EnrolmentServiceContext>& handlers)
+void addEndpoints (RequestHandlerManager& handlers)
 {
     handlers.onGetDo(
         "/Enrolment/EnclaveStatus",
@@ -88,9 +76,4 @@ void EnrolmentServer::addEndpoints (RequestHandlerManager<EnrolmentServiceContex
         "/Enrolment/VauSig",
         std::make_unique<enrolment::DeleteVauSig>());
 }
-
-
-HttpsServer<EnrolmentServiceContext>& EnrolmentServer::getServer (void)
-{
-    return mServer;
 }

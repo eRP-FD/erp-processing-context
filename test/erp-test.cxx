@@ -18,6 +18,7 @@ int main(int argc, char** argv)
 {
     Environment::set("ERP_VLOG_MAX_VALUE", "1");
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
+    Environment::set("ERP_FEATURE_PKV", "true");
 
     const auto yesterday = (::model::Timestamp::now() + -24h).toXsDateTime();
     Environment::set("ERP_FHIR_PROFILE_VALID_FROM", yesterday);

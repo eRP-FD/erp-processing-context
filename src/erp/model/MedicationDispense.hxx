@@ -17,23 +17,28 @@
 namespace model
 {
 
+class MedicationDispenseId;
+
 // Reduced version of Medication Dispense resource, contains only functionality currently needed;
 
 class MedicationDispense : public Resource<MedicationDispense>
 {
 public:
-    [[nodiscard]] model::PrescriptionId id() const;
+    [[nodiscard]] model::PrescriptionId prescriptionId() const;
     [[nodiscard]] std::string_view kvnr() const;
     [[nodiscard]] std::string_view telematikId() const;
     [[nodiscard]] model::Timestamp whenHandedOver() const;
     [[nodiscard]] std::optional<model::Timestamp> whenPrepared() const;
+    [[nodiscard]] MedicationDispenseId id() const;
 
-    // Please note that the prescriptionId of the task is also used as the id of the medication dispense resource.
-    void setId(const model::PrescriptionId& prescriptionId);
+    void setId(const MedicationDispenseId& id);
+    void setPrescriptionId(const model::PrescriptionId& prescriptionId);
     void setKvnr(const std::string_view& kvnr);
     void setTelematicId(const std::string_view& telematicId);
     void setWhenHandedOver(const model::Timestamp& whenHandedOver);
     void setWhenPrepared(const model::Timestamp& whenPrepared);
+
+    static constexpr auto resourceTypeName = "MedicationDispense";
 
 private:
     friend Resource<MedicationDispense>;

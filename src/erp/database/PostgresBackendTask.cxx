@@ -16,11 +16,6 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
     : mPrescriptionType(prescriptionType)
 {
 #define QUERY(name, query) mQueries.name = {#name, query};
-    QUERY(countAllMedicationDispensesByKvnr, R"--(
-        SELECT COUNT(*)
-        FROM )--" + taskTableName() + R"--( t
-        WHERE t.kvnr_hashed = $1
-        AND medication_dispense_bundle IS NOT NULL)--")
 
     QUERY(retrieveTaskById, R"--(
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
@@ -51,6 +46,15 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
             EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id,
             access_code, healthcare_provider_prescription
+        FROM )--" + taskTableName() + R"--(
+        WHERE prescription_id = $1
+        FOR UPDATE
+        )--")
+
+    QUERY(retrieveTaskByIdPlusPrescriptionPlusReceipt, R"--(
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
+            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id,
+            access_code, secret, healthcare_provider_prescription, receipt
         FROM )--" + taskTableName() + R"--(
         WHERE prescription_id = $1
         FOR UPDATE
@@ -100,6 +104,70 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
             when_handed_over = NULL, when_prepared = NULL, performer = NULL, medication_dispense_bundle = NULL
         WHERE prescription_id = $1
         )--")
+
+    QUERY(updateTask_storeChargeInformation, R"--(
+        UPDATE )--" + taskTableName() + R"--(
+        SET charge_item_enterer = $2, charge_item_entered_date = $3, charge_item = $4, dispense_item = $5
+        WHERE prescription_id = $1
+        )--")
+
+    QUERY(retrieveAllChargeItemsForInsurant, R"--(
+        SELECT prescription_id, task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on), charge_item
+        FROM )--" + taskTableName() + R"--(
+        WHERE kvnr_hashed = $1
+            AND charge_item_enterer IS NOT NULL
+            AND charge_item_entered_date IS NOT NULL
+            AND charge_item IS NOT NULL
+        )--")
+
+    QUERY(retrieveAllChargeItemsForPharmacy, R"--(
+        SELECT prescription_id, task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on), charge_item
+        FROM )--" + taskTableName() + R"--(
+        WHERE charge_item_enterer = $1
+            AND charge_item_enterer IS NOT NULL
+            AND charge_item_entered_date IS NOT NULL
+            AND charge_item IS NOT NULL
+        )--")
+
+    QUERY(retrieveChargeInformation, R"--(
+        SELECT prescription_id, task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on), charge_item, dispense_item
+        FROM )--" + taskTableName() + R"--(
+        WHERE prescription_id = $1
+            AND charge_item_enterer IS NOT NULL
+            AND charge_item_entered_date IS NOT NULL
+            AND charge_item IS NOT NULL
+            AND dispense_item IS NOT NULL
+        )--")
+
+    QUERY(deleteChargeInformation, R"--(
+        UPDATE )--" + taskTableName() + R"--(
+        SET charge_item_enterer = NULL, charge_item_entered_date = NULL, charge_item = NULL, dispense_item = NULL, receipt = NULL
+        WHERE prescription_id = $1
+        )--")
+
+    QUERY(clearAllChargeInformation,R"--(
+        UPDATE )--" + taskTableName() + R"--(
+        SET charge_item_enterer = NULL, charge_item_entered_date = NULL, charge_item = NULL, dispense_item = NULL
+        WHERE kvnr_hashed = $1
+    )--")
+
+    QUERY(countChargeInformationForInsurant, R"--(
+        SELECT COUNT(*)
+        FROM )--" + taskTableName() + R"--(
+        WHERE kvnr_hashed = $1
+            AND charge_item_enterer IS NOT NULL
+            AND charge_item_entered_date IS NOT NULL
+            AND charge_item IS NOT NULL
+    )--")
+
+    QUERY(countChargeInformationForPharmacy, R"--(
+        SELECT COUNT(*)
+        FROM )--" + taskTableName() + R"--(
+        WHERE charge_item_enterer = $1
+            AND charge_item_enterer IS NOT NULL
+            AND charge_item_entered_date IS NOT NULL
+            AND charge_item IS NOT NULL
+    )--")
 #undef QUERY
 }
 
@@ -112,6 +180,8 @@ std::string PostgresBackendTask::taskTableName() const
             return TASK_160_TABLE_NAME;
         case model::PrescriptionType::direkteZuweisung:
             return TASK_169_TABLE_NAME;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            return TASK_200_TABLE_NAME;
     }
     Fail("invalid mPrescriptionType type : " + std::to_string(uintmax_t(mPrescriptionType)));
 }
@@ -242,6 +312,7 @@ void PostgresBackendTask::updateTaskClearPersonalData(pqxx::work& transaction, c
                                                       model::Task::Status taskStatus,
                                                       const model::Timestamp& lastModified)
 {
+    // TODO: ERP-8162: also clear ChargeInformation
     TVLOG(2) << mQueries.updateTask_deletePersonalData.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:updateTaskClearPersnalData");
 
@@ -351,6 +422,36 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndPrescription(p
 }
 
 
+::std::optional<::db_model::Task>
+PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::work& transaction,
+                                                           const ::model::PrescriptionId& taskId)
+{
+    TVLOG(2) << mQueries.retrieveTaskByIdPlusPrescriptionPlusReceipt.query;
+
+    const auto timerKeepAlive =
+        ::DurationConsumer::getCurrent().getTimer("PostgreSQL:retrieveTaskByIdPlusPrescriptionPlusReceipt");
+
+    const auto result =
+        transaction.exec_params(mQueries.retrieveTaskByIdPlusPrescriptionPlusReceipt.query, taskId.toDatabaseId());
+
+    TVLOG(2) << "got " << result.size() << " results";
+    Expect(result.size() <= 1, "Too many results in result set.");
+    if (! result.empty())
+    {
+        Expect(result.front().size() == 13,
+               "Invalid number of fields in result row: " + std::to_string(result.front().size()));
+        TaskQueryIndexes indexes;
+        indexes.secretIndex = 10;
+        indexes.healthcareProviderPrescriptionIndex = 11;
+        indexes.receiptIndex = 12;
+
+        return taskFromQueryResultRow(result.front(), indexes, mPrescriptionType);
+    }
+
+    return {};
+}
+
+
 uint64_t PostgresBackendTask::countAllTasksForPatient(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
                                                       const std::optional<UrlArguments>& search)
 {
@@ -358,12 +459,155 @@ uint64_t PostgresBackendTask::countAllTasksForPatient(pqxx::work& transaction, c
     return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countAllTasksByKvnr.query, kvnr, search, "tasks");
 }
 
-uint64_t PostgresBackendTask::countAllMedicationDispenses(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
-                                                          const std::optional<UrlArguments>& search)
+void PostgresBackendTask::storeChargeInformation(::pqxx::work& transaction,
+                                                 const db_model::HashedTelematikId& pharmacyTelematikId,
+                                                 model::PrescriptionId id, const model::Timestamp& enteredDate,
+                                                 const db_model::EncryptedBlob& chargeItem,
+                                                 const db_model::EncryptedBlob& dispenseItem)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:countAllMedicationDispenses");
-    return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countAllMedicationDispensesByKvnr.query, kvnr, search,
-                                                    "medication dispenses");
+    TVLOG(2) << mQueries.updateTask_storeChargeInformation.query;
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:storeChargeInformation");
+    Expect(id.type() == mPrescriptionType, "storeChargeInformation: Invalid prescription type for: " + id.toString());
+    const pqxx::result result =
+        transaction.exec_params(mQueries.updateTask_storeChargeInformation.query,
+                                id.toDatabaseId(),
+                                pharmacyTelematikId.binarystring(),
+                                enteredDate.toXsDateTime(),
+                                chargeItem.binarystring(),
+                                dispenseItem.binarystring());
+    TVLOG(2) << "got " << result.size() << " results";
+    Expect(result.empty(), "Expected an empty result");
+}
+
+
+std::vector<db_model::ChargeItem>
+PostgresBackendTask::retrieveAllChargeItems(::pqxx::work& transaction, const QueryDefinition& queryDef,
+                                            const db_model::HashedId& hashedId,
+                                            const std::optional<UrlArguments>& search) const
+{
+    std::string query{queryDef.query};
+    if (search.has_value())
+    {
+        query.append(search->getSqlExpression(transaction.conn(), "                "));
+    }
+    TVLOG(2) << query;
+    TVLOG(2) << "hashedId = " << hashedId.toHex();
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:retrieveAllChargeItems");
+
+    const pqxx::result dbResult =
+        transaction.exec_params(query, hashedId.binarystring());
+
+    TVLOG(2) << "got " << dbResult.size() << " results";
+    std::vector<db_model::ChargeItem> result;
+    result.reserve(dbResult.size());
+    for (const auto& row : dbResult)
+    {
+        Expect3(row.size() == 5, "Unexpected number of columns.", std::logic_error);
+        result.emplace_back(chargeItemFromQueryResultRow(row));
+    }
+    return result;
+}
+
+std::vector<db_model::ChargeItem>
+PostgresBackendTask::retrieveAllChargeItemsForInsurant(::pqxx::work& transaction,
+                                                       const db_model::HashedKvnr& kvnr,
+                                                       const std::optional<UrlArguments>& search) const
+{
+    return retrieveAllChargeItems(transaction, mQueries.retrieveAllChargeItemsForInsurant, kvnr, search);
+}
+
+std::vector<db_model::ChargeItem>
+PostgresBackendTask::retrieveAllChargeItemsForPharmacy(::pqxx::work& transaction,
+                                                       const db_model::HashedTelematikId& pharmacyTelematikId,
+                                                       const std::optional<UrlArguments>& search) const
+{
+    return retrieveAllChargeItems(transaction, mQueries.retrieveAllChargeItemsForPharmacy, pharmacyTelematikId, search);
+}
+
+std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+PostgresBackendTask::retrieveChargeInformation(::pqxx::work& transaction, const model::PrescriptionId& id) const
+{
+    TVLOG(2) << mQueries.retrieveChargeInformation.query;
+    Expect(id.type() == mPrescriptionType,
+           "retrieveChargeInformation: Invalid prescription type for: " + id.toString());
+
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:retrieveChargeInformation");
+
+    const pqxx::result dbResult =
+        transaction.exec_params(mQueries.retrieveChargeInformation.query, id.toDatabaseId());
+
+    TVLOG(2) << "got " << dbResult.size() << " results";
+    ErpExpectWithDiagnostics(dbResult.size() == 1, HttpStatus::NotFound, "no such task", id.toString());
+    const auto& row = dbResult[0];
+    Expect3(row.size() == 6, "Unexpected number of columns.", std::logic_error);
+    return {chargeItemFromQueryResultRow(row), db_model::EncryptedBlob{row[5].as<pqxx::binarystring>()}};
+}
+
+std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+PostgresBackendTask::retrieveChargeInformationForUpdate(::pqxx::work& transaction, const model::PrescriptionId& id) const
+{
+    std::string query = mQueries.retrieveChargeInformation.query;
+    query.append("    FOR UPDATE");
+
+    TVLOG(2) << query;
+    Expect(id.type() == mPrescriptionType,
+           "retrieveChargeInformationForUpdate: Invalid prescription type for: " + id.toString());
+
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:retrieveChargeInformationForUpdate");
+
+    const pqxx::result dbResult = transaction.exec_params(query, id.toDatabaseId());
+
+    TVLOG(2) << "got " << dbResult.size() << " results";
+    ErpExpectWithDiagnostics(dbResult.size() == 1, HttpStatus::NotFound, "no such task", id.toString());
+    const auto& row = dbResult[0];
+    Expect3(row.size() == 6, "Unexpected number of columns.", std::logic_error);
+    return {chargeItemFromQueryResultRow(row), db_model::EncryptedBlob{row[5].as<pqxx::binarystring>()}};
+}
+
+db_model::ChargeItem PostgresBackendTask::chargeItemFromQueryResultRow(const pqxx::row& row) const
+{
+    return db_model::ChargeItem{
+            model::PrescriptionId::fromDatabaseId(mPrescriptionType, row[0].as<int64_t>()),
+            row[1].as<BlobId>(),
+            db_model::Blob{row[2].as<pqxx::binarystring>()},
+            model::Timestamp{row[3].as<double>()},
+            db_model::EncryptedBlob{row[4].as<pqxx::binarystring>()}
+        };
+}
+
+void PostgresBackendTask::clearAllChargeInformation(::pqxx::work& transaction, const db_model::HashedKvnr& kvnr)
+{
+    TVLOG(2) << mQueries.clearAllChargeInformation.query;
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:clearAllChargeInformation");
+    transaction.exec_params0(mQueries.clearAllChargeInformation.query, kvnr.binarystring());
+}
+
+void PostgresBackendTask::deleteChargeInformation(::pqxx::work& transaction, const model::PrescriptionId& id)
+{
+    TVLOG(2) << mQueries.deleteChargeInformation.query;
+    Expect(id.type() == mPrescriptionType,
+           "deleteChargeInformation: Invalid prescription type for: " + id.toString());
+
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:deleteChargeInformation");
+    transaction.exec_params0(mQueries.deleteChargeInformation.query, id.toDatabaseId());
+}
+
+uint64_t PostgresBackendTask::countChargeInformationForInsurant(pqxx::work& transaction,
+                                                                const db_model::HashedKvnr& kvnr,
+                                                                const std::optional<UrlArguments>& search)
+{
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:countChargeInformationForInsurant");
+    return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countChargeInformationForInsurant.query,
+                                                    kvnr, search, "ChargeItem for insurant");
+}
+
+uint64_t PostgresBackendTask::countChargeInformationForPharmacy(pqxx::work& transaction,
+                                                                const db_model::HashedTelematikId& pharmacyTelematikId,
+                                                                const std::optional<UrlArguments>& search)
+{
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:countChargeInformationForPharmacy");
+    return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countChargeInformationForPharmacy.query,
+                                                    pharmacyTelematikId, search,"ChargeItem for pharmacy");
 }
 
 namespace taskFromQueryResultRowHelper

@@ -30,8 +30,11 @@ const rapidjson::Pointer typePointer(ElementName::path(elements::type));
 const rapidjson::Pointer referencePointer(ElementName::path(elements::reference));
 const rapidjson::Pointer displayPointer(ElementName::path(elements::display));
 
-const rapidjson::Pointer extensionPointer(ElementName::path(elements::extension));
+const rapidjson::Pointer extensionArrayPointer(ElementName::path(elements::extension));
 const rapidjson::Pointer urlPointer(ElementName::path(elements::url));
+
+const rapidjson::Pointer containedBinaryArrayPointer(ElementName::path("contained"));
+const rapidjson::Pointer resourceTypePointer(ElementName::path(elements::resourceType));
 
 }  // anonymous namespace
 
@@ -50,8 +53,14 @@ ChargeItem::ChargeItem (NumberAsStringParserDocument&& jsonTree)
 
 PrescriptionId ChargeItem::id() const
 {
-    std::string_view id = getStringValue(prescriptionIdValuePointer);
+    std::string_view id = getStringValue(idPointer);
     return PrescriptionId::fromString(id);
+}
+
+PrescriptionId ChargeItem::prescriptionId() const
+{
+    std::string_view identifier = getStringValue(prescriptionIdValuePointer);
+    return PrescriptionId::fromString(identifier);
 }
 
 std::string_view ChargeItem::subjectKvnr() const
@@ -80,19 +89,22 @@ std::optional<std::string_view> ChargeItem::supportingInfoReference(SupportingIn
 
 bool ChargeItem::isMarked() const
 {
-    const auto* extensionElem = findMemberInArray(extensionPointer, urlPointer, structure_definition::markingFlag);
-    bool result = false;
-    if(extensionElem)
+    const auto marking = markingFlag();
+    return marking && ChargeItemMarkingFlag::isMarked(marking->getAllMarkings());
+}
+
+std::optional<model::ChargeItemMarkingFlag> ChargeItem::markingFlag() const
+{
+    return getExtension<ChargeItemMarkingFlag>();
+}
+
+std::optional<model::Binary> ChargeItem::containedBinary() const
+{
+    std::optional<model::Binary> result;
+    const auto* containedBinaryResource = findMemberInArray(containedBinaryArrayPointer, resourceTypePointer, "Binary");
+    if(containedBinaryResource)
     {
-        for(auto pos = 0; !result; ++pos)
-        {
-            const rapidjson::Pointer markingPointer(ElementName::path(elements::extension, pos, elements::valueBoolean));
-            const auto* markingValue = getValue(*extensionElem, markingPointer);
-            if(!markingValue)
-                break;
-            ModelExpect(markingValue->IsBool(), ResourceBase::pointerToString(markingPointer) + ": element must be of type boolean");
-            result = markingValue->GetBool();
-        }
+        result.emplace(model::Binary::fromJson(*containedBinaryResource));
     }
     return result;
 }
@@ -100,12 +112,9 @@ bool ChargeItem::isMarked() const
 void ChargeItem::setId(const PrescriptionId& prescriptionId)
 {
     setValue(idPointer, prescriptionId.toString());
-
-    // Please note that the prescriptionId of the task is also used as the id of the resource.
-    setIdentifier(prescriptionId);
 }
 
-void ChargeItem::setIdentifier(const PrescriptionId& prescriptionId)
+void ChargeItem::setPrescriptionId(const PrescriptionId& prescriptionId)
 {
     setValue(prescriptionIdValuePointer, prescriptionId.toString());
 }
@@ -143,16 +152,58 @@ void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoTyp
     }
 }
 
+void ChargeItem::setMarkingFlag(const model::ChargeItemMarkingFlag& markingFlag)
+{
+    const auto containedMarkingFlagAndPos = findMemberInArray(
+            extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
+    if (containedMarkingFlagAndPos)
+    {
+        removeFromArray(extensionArrayPointer, std::get<1>(containedMarkingFlagAndPos.value()));
+    }
+    auto entry = this->copyValue(markingFlag.jsonDocument());
+    addToArray(extensionArrayPointer, std::move(entry));
+}
+
 void ChargeItem::deleteSupportingInfoElement(SupportingInfoType supportingInfoType)
 {
     const auto supportInfoRefAndPos = findMemberInArray(
         supportingInformationPointer, typePointer, SupportingInfoTypeNames.at(supportingInfoType).first, referencePointer);
-    if (supportInfoRefAndPos) {
+    if (supportInfoRefAndPos)
+    {
         removeFromArray(supportingInformationPointer, std::get<1>(supportInfoRefAndPos.value()));
         if(valueSize(supportingInformationPointer) == 0) // array empty => remove it
+        {
             removeElement(supportingInformationPointer);
+        }
     }
 }
 
+void ChargeItem::deleteContainedBinary()
+{
+    const auto containedBinaryResourceAndPos = findMemberInArray(
+        containedBinaryArrayPointer, resourceTypePointer, "Binary", resourceTypePointer);
+    if (containedBinaryResourceAndPos)
+    {
+        removeFromArray(containedBinaryArrayPointer, std::get<1>(containedBinaryResourceAndPos.value()));
+        if(valueSize(containedBinaryArrayPointer) == 0) // array empty => remove it
+        {
+            removeElement(containedBinaryArrayPointer);
+        }
+    }
+}
+
+void ChargeItem::deleteMarkingFlag()
+{
+    const auto containedMarkingFlagAndPos = findMemberInArray(
+        extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
+    if (containedMarkingFlagAndPos)
+    {
+        removeFromArray(extensionArrayPointer, std::get<1>(containedMarkingFlagAndPos.value()));
+        if(valueSize(extensionArrayPointer) == 0) // array empty => remove it
+        {
+            removeElement(extensionArrayPointer);
+        }
+    }
+}
 
 } // namespace model

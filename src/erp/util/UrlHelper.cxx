@@ -148,28 +148,58 @@ std::string UrlHelper::unescapeUrl (const std::string_view& url)
     }
 }
 
-
-std::string UrlHelper::escapeUrl (const std::string_view& url)
+// Implementation adapted from cpp-netlib (Boost Software License - Version 1.0 - August 17th, 2003)
+std::string UrlHelper::escapeUrl (const std::string_view& str)
 {
-    std::string s;
+    std::string result;
     // As a heuristic reserve space for 5 escaped characters.
-    s.reserve(url.size() + 5*2);
-    for (const char c : url)
-    {
-        const auto b = static_cast<uint8_t>(c);
-        // For now escape only the "unprintable" characters. And spaces.
-        if (b <= 0x20 || c=='%' || c =='+' || b > 0x79)
-        {
-            s.append(1, '%');
-            s.append(1, ByteHelper::nibbleToChar((b>>4) & 0x0f));
-            s.append(1, ByteHelper::nibbleToChar(b & 0x0f));
+    result.reserve(str.size() + 5*2);
+
+  for (size_t pos = 0; pos < str.size(); ++pos) {
+    switch (str[pos]) {
+      default:
+        if (str[pos] >= 32 && str[pos] < 127) {
+          // character does not need to be escaped
+          result += str[pos];
+          break;
         }
-        else
-        {
-            s.append(1, c);
-        }
+      // else pass through to next case
+    [[fallthrough]];
+      case '$':
+      case '&':
+      case '+':
+      case ',':
+      case '/':
+      case ':':
+      case ';':
+      case '=':
+      case '?':
+      case '@':
+      case '"':
+      case '<':
+      case '>':
+      case '#':
+      case '%':
+      case '{':
+      case '}':
+      case '|':
+      case '\\':
+      case '^':
+      case '~':
+      case '[':
+      case ']':
+      case '`':
+      case ' ':
+        // the character needs to be encoded
+        const auto b = static_cast<uint8_t>(str[pos]);
+        result.append(1, '%');
+        result.append(1, ByteHelper::nibbleToChar((b>>4) & 0x0f));
+        result.append(1, ByteHelper::nibbleToChar(b & 0x0f));
+        break;
     }
-    return s;
+  };
+
+  return result;
 }
 
 

@@ -6,10 +6,10 @@
 
 
 namespace {
-    class ErrorHandler : public RequestHandlerInterface<PcServiceContext>
+    class ErrorHandler : public RequestHandlerInterface
     {
     public:
-        virtual void handleRequest (SessionContext<PcServiceContext>&) override
+        virtual void handleRequest (SessionContext&) override
         {
             throw std::runtime_error("simulated error in request handler implementation");
         }
@@ -35,7 +35,7 @@ public:
     {
     }
 
-    virtual void addAdditionalPrimaryHandlers (RequestHandlerManager<PcServiceContext>& manager) override
+    virtual void addAdditionalPrimaryHandlers (RequestHandlerManager& manager) override
     {
         manager.addRequestHandler(
                 HttpMethod::GET,

@@ -18,7 +18,9 @@
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Bundle.hxx"
+#include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
+#include "erp/model/Consent.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/MetaData.hxx"
 #include "erp/model/MedicationDispense.hxx"
@@ -37,7 +39,7 @@
 #include "erp/common/MimeType.hxx"
 #include "test_config.h"
 #include "test/util/StaticData.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 
 #include <gtest/gtest.h>
 #include <rapidjson/error/en.h>
@@ -86,7 +88,6 @@ public:
     };
 
 
-
     class RequestArguments
     {
     public:
@@ -104,6 +105,16 @@ public:
             headerFields.emplace(name, value);
             return std::move(*this);
         }
+        RequestArguments&& withExpectedInnerStatus(HttpStatus innerStatus)
+        {
+            expectedInnerStatus = innerStatus;
+            return std::move(*this);
+        }
+        RequestArguments&& withExpectedInnerFlowType(const std::string& innerFlowType)
+        {
+            expectedInnerFlowType = innerFlowType;
+            return std::move(*this);
+        }
 
         HttpMethod method;
         std::string vauPath;
@@ -114,9 +125,12 @@ public:
         Header::keyValueMap_t headerFields = {{Header::UserAgent, std::string{"vau-cpp-it-test"}}};
         std::string overrideExpectedInnerOperation;
         std::string overrideExpectedInnerRole;
+        std::string overrideExpectedInnerClientId;
+        std::string expectedInnerFlowType = "XXX";
+        HttpStatus expectedInnerStatus = HttpStatus::Unknown;
 
-        RequestArguments(const RequestArguments&) = delete;
-        RequestArguments(RequestArguments&&) = delete;
+        RequestArguments(const RequestArguments&) = default;
+        RequestArguments(RequestArguments&&) = default;
         RequestArguments& operator= (const RequestArguments&) = delete;
         RequestArguments& operator= (RequestArguments&&) = delete;
     };
@@ -146,7 +160,7 @@ public:
 
     std::optional<model::ErxReceipt> taskClose(const model::PrescriptionId& prescriptionId,
         const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::OK,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {}, size_t numMedicationDispenses = 1);
 
     void taskClose_MedicationDispense_invalidPrescriptionId(
         const model::PrescriptionId& prescriptionId,
@@ -174,7 +188,8 @@ public:
     void taskReject(const std::string& prescriptionIdString,
         const std::string& secret,
         HttpStatus expectedInnerStatus = HttpStatus::NoContent,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
+        const std::string& expectedFlowType = "160");
 
     std::optional<model::Bundle> taskGetId(const model::PrescriptionId& prescriptionId,
         const std::string& kvnrOrTid,
@@ -195,7 +210,7 @@ public:
 
     std::optional<model::MedicationDispense> medicationDispenseGet(
         const std::string& kvnr,
-        const model::PrescriptionId& prescriptionId);
+        const std::string& medicationDispenseId);
 
     std::optional<model::Bundle> medicationDispenseGetAll(const std::string_view& searchArguments = {},
                                                           const std::optional<JWT>& jwt = std::nullopt);
@@ -224,6 +239,60 @@ public:
     std::optional<model::MetaData> metaDataGet(const ContentMimeType& acceptContentType);
     std::optional<model::Device> deviceGet(const ContentMimeType& acceptContentType);
 
+    std::optional<model::Consent> consentPost(
+        const std::string& kvnr,
+        const model::Timestamp& dateTime,
+        const HttpStatus expectedStatus = HttpStatus::Created,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    std::optional<model::Consent> consentGet(
+        const std::string& kvnr,
+        const HttpStatus expectedStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    void consentDelete(
+        const std::string& consentId,
+        const std::string& kvnr,
+        const HttpStatus expectedStatus = HttpStatus::NoContent,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    std::optional<model::ChargeItem> chargeItemPost(
+        const model::PrescriptionId& prescriptionId,
+        const std::string& kvnr,
+        const std::string& telematikId,
+        const std::string& secret,
+        const HttpStatus expectedStatus = HttpStatus::Created,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    std::optional<model::ChargeItem> chargeItemPut(
+        const JWT& jwt,
+        const ContentMimeType& contentType,
+        const model::ChargeItem& inputChargeItem,
+        const std::optional<std::string>& newMedicationDispenseString,
+        const std::optional<std::tuple<bool, bool, bool>>& newMarking,
+        const HttpStatus expectedStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    std::optional<model::Bundle> chargeItemsGet(
+        const JWT& jwt,
+        const ContentMimeType& contentType,
+        const std::string_view& searchArguments = "",
+        const HttpStatus expectedStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    void chargeItemDelete(
+        const model::PrescriptionId& prescriptionId,
+        const JWT& jwt,
+        const HttpStatus expectedStatus = HttpStatus::NoContent,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    void createClosedTask(
+        std::optional<model::PrescriptionId>& createdId,
+        std::string& createdAccessCodee,
+        std::string& createdSecret,
+        const model::PrescriptionType prescriptionType,
+        const std::string& kvnr);
+
     void checkTaskCreate(
         std::optional<model::PrescriptionId>& createdId,
         std::string& createdAccessCode,
@@ -242,14 +311,16 @@ public:
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
         const std::string& accessCode,
-        const std::string& qesBundle);
+        const std::string& qesBundle,
+        bool withConsent = false);
 
     void checkTaskClose(
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
         const std::string& secret,
         const model::Timestamp& lastModified,
-        const std::vector<model::Communication>& communications);
+        const std::vector<model::Communication>& communications,
+        size_t numMedicationDispenses = 1);
 
     void checkTaskAbort(
         const model::PrescriptionId& prescriptionId,
@@ -271,13 +342,13 @@ public:
         const std::vector<model::Communication>& communications);
 
     void checkAuditEvents(
-        const model::PrescriptionId& prescriptionId,
+        // if only a single prescription id is provided in the following vector, it is used for all elements:
+        std::vector<std::optional<model::PrescriptionId>> prescriptionIds,
         const std::string& insurantKvnr,
         const std::string& language,
         const model::Timestamp& startTime,
         const std::vector<std::string>& actorIdentifiers,
         const std::unordered_set<std::size_t>& actorTelematicIdIndices,
-        const std::unordered_set<std::size_t>& noPrescriptionIdIndices,
         const std::vector<model::AuditEvent::SubType>& expectedActions);
 
     void checkAuditEventsFrom(const std::string& insurantKvnr);
@@ -295,7 +366,7 @@ public:
         const std::size_t pageSize,
         const std::string& addSearch = "");
 
-    /// @note this already generates one audit event with the generated KVNR
+    std::string generateNewRandomKVNR();
     void generateNewRandomKVNR(std::string& kvnr);
 
     static std::shared_ptr<XmlValidator> getXmlValidator();
@@ -310,9 +381,16 @@ protected:
     virtual std::string medicationDispense(const std::string& kvnr,
                                            const std::string& prescriptionIdForMedicationDispense,
                                            const std::string& whenHandedOver);
+    virtual std::string medicationDispenseBundle(const std::string& kvnr,
+                                                 const std::string& prescriptionIdForMedicationDispense,
+                                                 const std::string& whenHandedOver, size_t numMedicationDispenses);
+
+    static std::string patchVersionsInBundle(const std::string& bundle);
 
     // some tests must know if they run with proxy in between, because the proxy modifies the Http Response.
     bool runsInCloudEnv() const;
+
+    static bool isUnsupportedFlowtype(const model::PrescriptionType workflowType);
 
 private:
     void sendInternal(
@@ -357,7 +435,8 @@ private:
         const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
         const std::optional<std::string>& expectedErrorText,
         const std::optional<std::string>& expectedDiagnostics,
-        const std::string& whenHandedOver);
+        const std::string& whenHandedOver,
+        size_t numMedicationDispenses);
 
     void taskGetIdInternal(std::optional<model::Bundle>& taskBundle,
         const model::PrescriptionId& prescriptionId,
@@ -377,7 +456,7 @@ private:
     void medicationDispenseGetInternal(
         std::optional<model::MedicationDispense>& medicationDispense,
         const std::string& kvnr,
-        const model::PrescriptionId& prescriptionId);
+        const std::string& medicationDispenseId);
 
     void medicationDispenseGetAllInternal(
         std::optional<model::Bundle>& medicationDispenseBundle,
@@ -410,6 +489,46 @@ private:
         std::optional<model::Device>& device,
         const ContentMimeType& acceptContentType);
 
+    void consentPostInternal(
+        std::optional<model::Consent>& consent,
+        const std::string& kvnr,
+        const model::Timestamp& dateTime,
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
+    void consentGetInternal(
+        std::optional<model::Consent>& consent,
+        const std::string& kvnr,
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
+    void chargeItemPostInternal(
+        std::optional<model::ChargeItem>& resultChargeItem,
+        const model::PrescriptionId& prescriptionId,
+        const std::string& kvnr,
+        const std::string& telematikId,
+        const std::string& secret,
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
+    void chargeItemPutInternal(
+        std::optional<model::ChargeItem>& resultChargeItem,
+        const JWT& jwt,
+        const ContentMimeType& contentType,
+        const model::ChargeItem& inputChargeItem,
+        const std::optional<std::string>& newMedicationDispenseString,
+        const std::optional<std::tuple<bool, bool, bool>>& newMarking,
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
+    void chargeItemsGetInternal(
+        std::optional<model::Bundle>& chargeItemsBundle,
+        const JWT& jwt,
+        const ContentMimeType& contentType,
+        const std::string_view& searchArguments,
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
     void getMedicationDispenseForTask(
         std::optional<model::MedicationDispense>& medicationDispenseForTask,
         const model::PrescriptionId& prescriptionId,
@@ -418,6 +537,8 @@ private:
     static std::string toExpectedOperation(const RequestArguments& args);
 
     std::string toExpectedRole(const RequestArguments& args) const;
+
+    std::string toExpectedClientId(const ErpWorkflowTestBase::RequestArguments& args) const;
 
 public:
 
@@ -449,7 +570,10 @@ class ErpWorkflowTestTemplate : public TestClass, public ErpWorkflowTestBase {
 };
 
 using ErpWorkflowTest = ErpWorkflowTestTemplate<::testing::Test>;
-using ErpWorkflowTestP = ErpWorkflowTestTemplate<::testing::TestWithParam<model::PrescriptionType>>;
+class ErpWorkflowTestP : public ErpWorkflowTestTemplate<::testing::TestWithParam<model::PrescriptionType>>
+{
+    using Base_t = ErpWorkflowTestTemplate<::testing::TestWithParam<model::PrescriptionType>>;
+};
 
 
 #endif//ERP_PROCESSING_CONTEXT_ERPWORKFLOWTESTFIXTURE_HXX

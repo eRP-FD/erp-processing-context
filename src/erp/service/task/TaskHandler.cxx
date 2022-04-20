@@ -198,6 +198,7 @@ void GetTaskHandler::handleRequest(PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
+    checkFeatureWf200(prescriptionId.type());
 
     const auto& accessToken = session.request.getAccessToken();
 

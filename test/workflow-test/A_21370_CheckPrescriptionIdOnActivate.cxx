@@ -7,7 +7,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <boost/algorithm/string.hpp>
 
@@ -24,7 +24,8 @@ public:
 
     std::string getBundleWithId(const std::string& id)
     {
-        const auto& bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
+        auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
+        bundle = patchVersionsInBundle(bundle);
         auto kbvBundle = model::KbvBundle::fromXml(bundle, *StaticData::getXmlValidator(),
                                                 *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle);
         const auto bundlePrescriptionId = kbvBundle.getIdentifier().toString();
@@ -52,6 +53,14 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
         {
             continue;
         }
+        if (! Configuration ::instance().featureWf200Enabled())
+        {
+            if (wrongWorkflow == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+            {
+                continue;
+            }
+        }
+
         {
             A_21370.test("Abweichender Workflow-Typ (korrigierte prüfsumme)");
             // construct a new PrescriptionId with a different workflow type
@@ -63,6 +72,7 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
                                                 "Flowtype mismatch between Task and QES-Bundle"));
             A_21370.finish();
         }
+
         {
             A_21370.test("Abweichender Workflow-Typ (falsche prüfsumme)");
             // replace workflow-type without fixing the checksum:
@@ -100,4 +110,5 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
 }
 
 INSTANTIATE_TEST_SUITE_P(WorkflowTypes, A_21370_CheckPrescriptionIdOnActivate,
-                         ::testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         ::testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                           model::PrescriptionType::direkteZuweisung)); // TODO add apothekenpflichtigeArzneimittelPkv

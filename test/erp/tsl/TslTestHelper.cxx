@@ -84,7 +84,7 @@ Certificate TslTestHelper::getTslSignerCertificate()
 {
     static const std::string tslSignerCertificateString =
         FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificate.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");
     return Certificate::fromBinaryDer(tslSignerCertificateString);
 }
 
@@ -93,7 +93,7 @@ Certificate TslTestHelper::getTslSignerCACertificate()
 {
     static const std::string tslSignerCertificateIssuerString =
         FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
     return Certificate::fromBinaryDer(tslSignerCertificateIssuerString);
 }
 
@@ -254,7 +254,7 @@ std::unique_ptr<TrustStore> TslTestHelper::createTslTrustStore(const std::option
     const std::string tslContentToUse =
         (tslContent.has_value()
              ? *tslContent
-             : FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml"));
+             : FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml"));
 
     Certificate ocspCertificate = getDefaultOcspCertificate();
     shared_EVP_PKEY ocspPrivateKey = getDefaultOcspPrivateKey();
@@ -290,7 +290,7 @@ std::unique_ptr<TrustStore> TslTestHelper::createOutdatedTslTrustStore(
             std::vector<std::string>{url});
 
     const std::string tslContentToUse =
-         FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_outdated.xml");
+         FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_outdated.xml");
 
     Certificate ocspCertificate = getDefaultOcspCertificate();
     shared_EVP_PKEY ocspPrivateKey = getDefaultOcspPrivateKey();
@@ -334,7 +334,7 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
     const std::optional<Certificate>& ocspCertificate,
     std::unique_ptr<TrustStore> tslTrustStore)
 {
-    const std::string tslContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml");
+    const std::string tslContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
     const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = customRequestSender;
     if (requestSender == nullptr)

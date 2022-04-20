@@ -10,7 +10,11 @@
 #include "test/util/StaticData.hxx"
 
 #include "erp/database/DatabaseFrontend.hxx"
+#include "erp/model/Bundle.hxx"
 #include "erp/model/Communication.hxx"
+#include "erp/model/ChargeItem.hxx"
+#include "erp/model/Consent.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/Parameters.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -29,19 +33,7 @@ class ErpRequestHandlerUnderTest : public ErpRequestHandler
 public:
     ErpRequestHandlerUnderTest()
         : ErpRequestHandler(Operation::UNKNOWN, {}),
-          serviceContext(
-              Configuration::instance(),
-              &MockDatabase::createMockDatabase,
-              std::make_unique<MockRedisStore>(),
-              std::make_unique<HsmPool>(
-                  std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
-                                                   MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-                  TeeTokenUpdater::createMockTeeTokenUpdaterFactory()),
-              StaticData::getJsonValidator(),
-              StaticData::getXmlValidator(),
-              StaticData::getInCodeValidator(),
-              std::make_unique<RegistrationMock>(),
-              TslTestHelper::createTslManager<TslManager>())
+          serviceContext(Configuration::instance(), StaticData::makeMockFactories())
     {
     }
 
@@ -53,7 +45,7 @@ public:
         serverRequest.setBody(std::move(body));
         ServerResponse serverResponse;
         AccessLog accessLog;
-        SessionContext<PcServiceContext> sessionContext(serviceContext, serverRequest, serverResponse, accessLog);
+        SessionContext sessionContext(serviceContext, serverRequest, serverResponse, accessLog);
         if (expectFail)
         {
             ASSERT_ANY_THROW((void)parseAndValidateRequestBody<TModel>(sessionContext, schemaType))
@@ -83,6 +75,9 @@ public:
             case SchemaType::Gem_erxMedicationDispense:
                 testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, schemaType, expectFail);
                 break;
+            case SchemaType::MedicationDispenseBundle:
+                testParseAndValidateRequestBodyT<model::MedicationDispenseBundle>(body, contentMimeType, schemaType, expectFail);
+                break;
             case SchemaType::ActivateTaskParameters:
             case SchemaType::CreateTaskParameters:
             case SchemaType::Gem_erxOrganizationElement:
@@ -111,10 +106,16 @@ public:
 
                 ASSERT_TRUE(false) << "wrong SchemaType for this test";
                 break;
+            case SchemaType::Gem_erxChargeItem:
+                testParseAndValidateRequestBodyT<model::ChargeItem>(body, contentMimeType, schemaType, expectFail);
+                break;
+            case SchemaType::Gem_erxConsent:
+                testParseAndValidateRequestBodyT<model::Consent>(body, contentMimeType, schemaType, expectFail);
+                break;
         }
     }
 
-    void handleRequest(SessionContext<PcServiceContext>&) override
+    void handleRequest(SessionContext&) override
     {
     }
 
@@ -150,7 +151,7 @@ public:
     {
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
         mErpRequestHandlerUnderTest = std::make_unique<ErpRequestHandlerUnderTest>();
     }
 
@@ -207,5 +208,7 @@ INSTANTIATE_TEST_SUITE_P(
         SampleFile{"communication_reply.xml", "communication_reply.json", SchemaType::Gem_erxCommunicationReply},
         SampleFile{"medication_dispense.xml", "medication_dispense.json", SchemaType::Gem_erxMedicationDispense},
         SampleFile{"task_activate_parameters.xml", "task_activate_parameters.json", SchemaType::fhir},
-        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::fhir}
+        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::fhir},
+        SampleFile{"chargeItem_simplifier.xml", "chargeItem_simplifier.json", SchemaType::Gem_erxChargeItem},
+        SampleFile{"consent_simplifier.xml", "consent_simplifier.json", SchemaType::Gem_erxConsent}
 ));

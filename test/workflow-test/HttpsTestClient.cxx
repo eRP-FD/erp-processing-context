@@ -14,13 +14,13 @@
 #include "mock/crypto/MockCryptography.hxx"
 
 
-std::unique_ptr< TestClient > HttpsTestClient::Factory(std::shared_ptr<XmlValidator>)
+std::unique_ptr<TestClient> HttpsTestClient::factory(std::shared_ptr<XmlValidator>, Target target)
 {
     const std::string serverHost = Environment::getString("ERP_SERVER_HOST", defaultCloudServer);
-    const int         serverPort = Environment::getInt("ERP_SERVER_PORT", defaultCloudPort);
-    Expect(serverPort > 0 && serverPort <= 65535, "Environment variable ERP_SERVER_PORT is out of range");
+    uint16_t serverPort = getTargetPort(target);
+    Expect(serverPort > 0, "Environment variable ERP_SERVER_PORT is out of range");
     std::unique_ptr<HttpsTestClient> testClient{
-        new HttpsTestClient(serverHost, gsl::narrow<uint16_t>(serverPort), Constants::httpTimeoutInSeconds, false)};
+        new HttpsTestClient(serverHost, serverPort, Constants::httpTimeoutInSeconds, false)};
     VLOG(1) << "using: https://" << serverHost << ":" << serverPort;
     testClient->mRemoteCertificate = testClient->retrieveEciesRemoteCertificate();
     return testClient;
@@ -92,6 +92,20 @@ std::unique_ptr<Certificate> HttpsTestClient::retrieveEciesRemoteCertificate()
     return nullptr;
 }
 
+uint16_t HttpsTestClient::getTargetPort(TestClient::Target target)
+{
+    const auto& config = Configuration::instance();
+    switch (target)
+    {
+        case Target::ADMIN:
+            return config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT);
+        case Target::VAU:
+            return config.serverPort();
+        case Target::ENROLMENT:
+            return config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT);
+    }
+    Fail2("Invalid value for target: " + std::to_string(static_cast<intmax_t>(target)), std::logic_error);
+}
 
 Certificate HttpsTestClient::getEciesCertificate (void)
 {

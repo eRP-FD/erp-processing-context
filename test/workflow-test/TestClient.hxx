@@ -9,11 +9,13 @@
 #include "erp/client/response/ClientResponse.hxx"
 
 #include <functional>
+#include <iosfwd>
 #include <memory>
 
 class ClientRequest;
 class Certificate;
 class XmlValidator;
+class PcServiceContext;
 
 /// @brief Implements backend for workflow tests
 ///
@@ -26,10 +28,21 @@ class XmlValidator;
 class TestClient
 {
 public:
-    using Factory = std::function<std::unique_ptr<TestClient>(std::shared_ptr<XmlValidator>)>;
+    enum class Target {
+        ADMIN,
+        ENROLMENT,
+        VAU,
+    };
+
+
+    using Factory = std::function<std::unique_ptr<TestClient>(std::shared_ptr<XmlValidator>, Target target)>;
 
     static void setFactory(Factory&& factory);
-    static std::unique_ptr<TestClient> create(std::shared_ptr<XmlValidator> xmlValidator);
+    /// @brief create a new TestClient
+    /// @param xmlValidator xmlValidator instance to use (usualy StaticData::getXmlValidator())
+    ///                     can be nullptr when @p target == ADMIN
+    /// @param target target to test
+    static std::unique_ptr<TestClient> create(std::shared_ptr<XmlValidator> xmlValidator, Target target = Target::VAU);
 
     TestClient() = default;
     virtual ~TestClient() = default;
@@ -47,10 +60,13 @@ public:
 
     virtual Certificate getEciesCertificate();
 
+    virtual PcServiceContext* getContext() const;
+
 
 private:
     static Factory mFactory;
 };
-
+std::string to_string(TestClient::Target target);
+std::ostream& operator << (std::ostream& out, TestClient::Target target);
 
 #endif // ERP_PROCESSING_CONTEXT_TEST_TESTCLIENT_HXX

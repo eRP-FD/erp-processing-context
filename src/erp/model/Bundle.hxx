@@ -114,10 +114,7 @@ public:
     void setTotalSearchMatches(std::size_t totalSearchMatches);
 
 private:
-    void increaseTotalSearchMatches();
-
     friend Resource<Bundle>;
-
 };
 
 
@@ -151,7 +148,14 @@ public:
     using BundleBase<Bundle>::BundleBase;
     using Resource<Bundle>::fromXml;
     using Resource<Bundle>::fromJson;
+
+    static constexpr auto resourceTypeName = "Bundle";
 };
+
+extern template class BundleBase<ErxReceipt>;
+extern template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
+extern template class BundleBase<Bundle>;
+extern template class BundleBase<MedicationDispenseBundle, ResourceVersion::NotProfiled>;
 
 } // end of namespace model
 

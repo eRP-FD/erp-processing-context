@@ -69,7 +69,7 @@ public:
     template<class RequestSenderMock>
     static std::shared_ptr<RequestSenderMock> createRequestSender()
     {
-        const std::string tslContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml");
+        const std::string tslContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
         const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
         return std::make_shared<RequestSenderMock>(
             std::unordered_map<std::string, std::string>{

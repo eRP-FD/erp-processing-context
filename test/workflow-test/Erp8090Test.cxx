@@ -7,7 +7,7 @@
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 class Erp8090Test : public ErpWorkflowTest
 {
@@ -93,7 +93,8 @@ TEST_F(Erp8090Test, invalidCoverage)
                                          toCadesBesSignature(bundle), HttpStatus::BadRequest,
                                          model::OperationOutcome::Issue::Type::invalid, "Kostenträger nicht zulässig"));
 
-    EnvironmentVariableGuard disablePkv{"ERP_FEATURE_PKV", "false"};
+    EnvironmentVariableGuard disablePkv{ConfigurationKey::FEATURE_PKV, "false"};
+    EnvironmentVariableGuard disableWf200{ConfigurationKey::FEATURE_WORKFLOW_200, "false"};
 
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());

@@ -105,12 +105,17 @@ model::AuditEvent AuditEventCreator::fromAuditData(
     else
     {
         // entity.description is mandatory according to the profile. If we don't have a unique prescriptionID
-        // to fill it (for endpoints GET /Task or GET /MedicationDispense), we write a fixed string "+".
-        // See ticket ERP-5081.
-        auditEvent.setEntityDescription("+");
-
-        // TODO Clarify what should be set for the audit events created by the Consent endpoints where no
-        // prescription id is available (see Question ERP-7951).
+        // to fill it (for endpoints GET /Task or GET /MedicationDispense and the /Consent endpoints), we write a
+        // fixed string "+", except for DELETE /Consent, where we write "-".
+        // See ticket ERP-5081 andd question ERP-7951.
+        if(auditData.eventId() == model::AuditEventId::DELETE_Consent_id)
+        {
+            auditEvent.setEntityDescription("-");
+        }
+        else
+        {
+            auditEvent.setEntityDescription("+");
+        }
     }
     auditEvent.setEntityName(auditData.insurantKvnr());
     auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), prescriptionIdStr));

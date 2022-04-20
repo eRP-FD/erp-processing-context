@@ -44,7 +44,12 @@ std::unordered_set<Operation> auditRelevantOperations = {
     Operation::POST_Task_id_close,
     Operation::POST_Task_id_abort,
     Operation::GET_MedicationDispense,
-    Operation::GET_MedicationDispense_id
+    Operation::GET_MedicationDispense_id,
+    Operation::DELETE_ChargeItem_id,
+    Operation::POST_ChargeItem,
+    Operation::PUT_ChargeItem_id,
+    Operation::POST_Consent,
+    Operation::DELETE_Consent_id
 };
 
 
@@ -251,7 +256,7 @@ void runJwtInvalidRfcFormatExceptionHandler(const JwtInvalidRfcFormatException& 
 } // namespace exception_handlers
 
 
-VauRequestHandler::VauRequestHandler(RequestHandlerManager<PcServiceContext>&& handlers)
+VauRequestHandler::VauRequestHandler(RequestHandlerManager&& handlers)
     : mRequestHandlers(std::move(handlers))
 {
 }
@@ -284,7 +289,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
         Expect3(upParam.has_value(), "Missing Pre-User-Pseudonym in Path.", std::logic_error);
 
         auto innerTeeRequest = std::make_unique<InnerTeeRequest>(
-            ErpTeeProtocol::decrypt(session.request.getBody(), *session.serviceContext.getHsmPool()));
+            ErpTeeProtocol::decrypt(session.request.getBody(), session.serviceContext.getHsmPool()));
         handleInnerRequest(session, upParam.value(), std::move(innerTeeRequest));
         return;
     }
@@ -496,6 +501,10 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
 
         if (innerServerRequest)
         {
+            const auto clientId = innerServerRequest->getAccessToken().stringForClaim(JWT::clientIdClaim);
+            if (clientId.has_value()) {
+                outerSession.response.setHeader(Header::InnerRequestClientId, clientId.value());
+            }
             const auto professionOIDClaim =
                 innerServerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim).value_or("");
             outerSession.response.setHeader(Header::InnerRequestRole,

@@ -223,7 +223,8 @@ class Resource : public ResourceBase
 public:
     static TDerivedModel fromXmlNoValidation(std::string_view xml);
     static TDerivedModel fromXml(std::string_view xml, const XmlValidator& validator,
-                                 const InCodeValidator& inCodeValidator, SchemaType schemaType);
+                                 const InCodeValidator& inCodeValidator, SchemaType schemaType,
+                                 std::optional<SchemaVersionType> enforcedVersion = {});
     static TDerivedModel fromJsonNoValidation(std::string_view json);
     static TDerivedModel fromJson(std::string_view json, const JsonValidator& jsonValidator,
                                   const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator,
@@ -238,7 +239,7 @@ protected:
 
 private:
     void doValidation(std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator,
-                         SchemaType schemaType) const;
+                         SchemaType schemaType, std::optional<SchemaVersionType> enforcedVersion = {}) const;
 
     friend class ResourceBase;
 };
@@ -248,6 +249,8 @@ class UnspecifiedResource : public Resource<UnspecifiedResource>
 private:
     friend Resource<UnspecifiedResource>;
     explicit UnspecifiedResource(NumberAsStringParserDocument&& document);
+public:
+    [[nodiscard]] std::string_view getResourceType() const;
 };
 
 template<typename ExtensionT>
@@ -279,6 +282,7 @@ extern template class Resource<class Extension>;
 extern template class Resource<class KbvBundle, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvComposition, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvCoverage, ResourceVersion::KbvItaErp>;
+extern template class Resource<class KbvMedicationGeneric, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvMedicationCompounding, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvMedicationFreeText, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvMedicationIngredient, ResourceVersion::KbvItaErp>;
@@ -289,6 +293,7 @@ extern template class Resource<class KbvOrganization, ResourceVersion::KbvItaErp
 extern template class Resource<class KbvPractitioner, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvPracticeSupply, ResourceVersion::KbvItaErp>;
 extern template class Resource<class MedicationDispense>;
+extern template class Resource<class MedicationDispenseBundle, ResourceVersion::NotProfiled>;
 extern template class Resource<class MetaData>;
 extern template class Resource<class OperationOutcome>;
 extern template class Resource<class Parameters>;

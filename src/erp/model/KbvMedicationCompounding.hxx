@@ -6,17 +6,17 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONCOMPOUNDING_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONCOMPOUNDING_HXX
 
-#include "erp/model/Resource.hxx"
+#include "erp/model/KbvMedicationBase.hxx"
 
 namespace model
 {
 
-class KbvMedicationCompounding : public Resource<KbvMedicationCompounding, ResourceVersion::KbvItaErp>
+class KbvMedicationCompounding : public KbvMedicationBase<KbvMedicationCompounding, ResourceVersion::KbvItaErp>
 {
 public:
     const rapidjson::Value* ingredientArray() const;
+
 private:
-    static constexpr auto resourceTypeName = "Medication";
     friend Resource<KbvMedicationCompounding, ResourceVersion::KbvItaErp>;
     explicit KbvMedicationCompounding(NumberAsStringParserDocument&& document);
 };

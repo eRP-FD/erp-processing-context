@@ -47,6 +47,8 @@ public:
                 return "erp.task";
             case model::PrescriptionType::direkteZuweisung:
                 return "erp.task_169";
+            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+                Fail("Not yet implemented"); // TODO implement
         }
         Fail("invalid prescription type: " + std::to_string(uintmax_t(GetParam())));
     }
@@ -414,7 +416,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)
 
     const auto medicationDispenseJson =
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_output1.json");
-    const model::MedicationDispense medicationDispense =
+    model::MedicationDispense medicationDispense =
         model::MedicationDispense::fromJsonNoValidation(medicationDispenseJson);
 
     const auto receiptJson =
@@ -423,7 +425,9 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)
 
     task.setStatus(model::Task::Status::completed);
 
-    database().updateTaskMedicationDispenseReceipt(task, medicationDispense, receipt);
+    std::vector<model::MedicationDispense> medicationDispenses;
+    medicationDispenses.emplace_back(std::move(medicationDispense));
+    database().updateTaskMedicationDispenseReceipt(task, medicationDispenses, receipt);
     database().commitTransaction();
 
     pqxx::result result;

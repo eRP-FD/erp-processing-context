@@ -22,6 +22,11 @@
 #include "erp/tsl/TslRefreshJob.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/health/ApplicationHealth.hxx"
+#include "erp/enrolment/EnrolmentData.hxx"
+#include "erp/hsm/BlobCache.hxx"
+#include "erp/tpm/Tpm.hxx"
+#include "erp/server/HttpsServer.hxx"
+
 
 #include <functional>
 #include <memory>
@@ -29,6 +34,7 @@
 
 
 class BlobCache;
+class BlobDatabase;
 class PreUserPseudonymManager;
 class TelematicPseudonymManager;
 class InCodeValidator;
@@ -36,6 +42,41 @@ class JsonValidator;
 class XmlValidator;
 class SeedTimer;
 class RegistrationInterface;
+class Tpm;
+class RequestHandlerManager;
+class RegistrationManager;
+
+
+/**
+ * This collection of factories can be extended to allow other classes like database, hsm, etc. to
+ * be created differently for production or for tests.
+ */
+struct Factories
+{
+    Database::Factory databaseFactory;
+
+    std::function<std::shared_ptr<BlobCache>()> blobCacheFactory;
+    std::function<std::unique_ptr<HsmClient>()> hsmClientFactory;
+    std::function<std::unique_ptr<HsmFactory>(std::unique_ptr<HsmClient>,std::shared_ptr<BlobCache>)> hsmFactoryFactory;
+    TeeTokenUpdater::TeeTokenUpdaterFactory teeTokenUpdaterFactory;
+    TslManager::TslManagerFactory tslManagerFactory;
+    std::function<std::unique_ptr<RedisInterface>()> redisClientFactory;
+
+    using HttpsServerFactoryT = std::function<std::unique_ptr<HttpsServer>(
+        const std::string_view address, uint16_t port, RequestHandlerManager&& requestHandlers,
+        PcServiceContext& serviceContext, bool enforceClientAuthentication,
+        const SafeString& caCertificates)>;
+
+    HttpsServerFactoryT teeServerFactory;
+    HttpsServerFactoryT enrolmentServerFactory;
+    HttpsServerFactoryT adminServerFactory;
+
+    Tpm::Factory tpmFactory;
+
+    std::function<std::shared_ptr<JsonValidator>()> jsonValidatorFactory;
+    std::function<std::shared_ptr<XmlValidator>()> xmlValidatorFactory;
+    std::function<std::shared_ptr<InCodeValidator>()> incodeValidatorFactory;
+};
 
 
 /**
@@ -49,15 +90,7 @@ class RegistrationInterface;
 class PcServiceContext
 {
 public:
-    PcServiceContext(const Configuration& configuration,
-                   Database::Factory&& databaseFactory,
-                   std::unique_ptr<RedisInterface>&& redisClient,
-                   std::unique_ptr<HsmPool>&& hsmPool,
-                   std::shared_ptr<JsonValidator> jsonValidator,
-                   std::shared_ptr<XmlValidator> xmlValidator,
-                   std::shared_ptr<InCodeValidator> inCodeValidator,
-                   std::unique_ptr<RegistrationInterface> registrationInterface,
-                   std::shared_ptr<TslManager> tslManager = {});
+    PcServiceContext(const Configuration& configuration, Factories&& factories);
     ~PcServiceContext(void);
 
     void setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer);
@@ -65,7 +98,7 @@ public:
     std::unique_ptr<Database> databaseFactory();
     const DosHandler& getDosHandler();
     std::shared_ptr<RedisInterface> getRedisClient();
-    std::shared_ptr<HsmPool> getHsmPool();
+    HsmPool& getHsmPool();
     KeyDerivation& getKeyDerivation();
     PreUserPseudonymManager& getPreUserPseudonymManager();
     TelematicPseudonymManager& getTelematicPseudonymManager();
@@ -82,7 +115,7 @@ public:
     /**
      * The ownership over the object stays by PcServiceContext ( and its refresh job ).
      */
-    const std::shared_ptr<TslManager>& getTslManager();
+    TslManager* getTslManager();
 
     const SeedTimer* getPrngSeeder() const;
 
@@ -91,11 +124,23 @@ public:
 
     std::shared_ptr<RegistrationInterface> registrationInterface() const;
 
+    const EnrolmentData& getEnrolmentData() const;
+    const Tpm::Factory& getTpmFactory() const;
+
+    HttpsServer& getTeeServer() const;
+    HttpsServer* getEnrolmentServer() const;
+    HttpsServer& getAdminServer() const;
+
+    BlobCache& getBlobCache() const;
+
+    std::shared_ptr<Timer> getTimerManager();
+
     PcServiceContext(const PcServiceContext& other) = delete;
     PcServiceContext& operator=(const PcServiceContext& other) = delete;
     PcServiceContext& operator=(PcServiceContext&& other) = delete;
 
 private:
+    std::shared_ptr<Timer> mTimerManager;
     /**
      * As database connections to "real" databases are a precious commodity, we are not supposed to hold
      * one for a longer time. Therefore Database objects, which represent (the connection to) an external database
@@ -104,29 +149,37 @@ private:
     Database::Factory mDatabaseFactory;
     std::shared_ptr<RedisInterface> mRedisClient;
     std::unique_ptr<DosHandler> mDosHandler;
-    std::shared_ptr<HsmPool> mHsmPool;
+    std::shared_ptr<BlobCache> mBlobCache;
+    std::unique_ptr<HsmPool> mHsmPool;
     KeyDerivation mKeyDerivation;
     const std::shared_ptr<JsonValidator> mJsonValidator;
     const std::shared_ptr<XmlValidator> mXmlValidator;
     const std::shared_ptr<InCodeValidator> mInCodeValidator;
     std::unique_ptr<PreUserPseudonymManager> mPreUserPseudonymManager;
     std::unique_ptr<TelematicPseudonymManager> mTelematicPseudonymManager;
-    std::unique_ptr<CFdSigErpManager> mCFdSigErpManager;
-    AuditEventTextTemplates mAuditEventTextTemplates;
-
     /**
      * The manager can be used to get actual TSL-/BNetzA-VL related information.
      * The refresh-job takes care to hold the manager actual.
      */
     std::shared_ptr<TslManager> mTslManager;
+    std::unique_ptr<CFdSigErpManager> mCFdSigErpManager;
+    AuditEventTextTemplates mAuditEventTextTemplates;
+
     std::unique_ptr<TslRefreshJob> mTslRefreshJob;
     std::unique_ptr<SeedTimer> mPrngSeeder;
     ApplicationHealth mApplicationHealth;
     std::shared_ptr<RegistrationInterface> mRegistrationInterface;
+
+    EnrolmentData mEnrolmentData;
+    Tpm::Factory mTpmFactory;
+
+    std::unique_ptr<HttpsServer> mTeeServer;
+    std::unique_ptr<HttpsServer> mEnrolmentServer;
+    std::unique_ptr<HttpsServer> mAdminServer;
 };
 
-template<class ServiceContextType> class SessionContext;
+class SessionContext;
 
-using PcSessionContext = SessionContext<PcServiceContext>;
+using PcSessionContext = SessionContext;
 
 #endif

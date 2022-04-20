@@ -34,11 +34,10 @@
 class HsmPool
 {
 public:
-    using TeeTokenUpdaterFactory = std::function<std::unique_ptr<TeeTokenUpdater>(std::function<void(ErpBlob&&)>, HsmFactory&)>;
-
     explicit HsmPool (
         std::unique_ptr<HsmFactory>&& hsmFactory,
-        const TeeTokenUpdaterFactory& teeTokenUpdaterFactory);
+        const TeeTokenUpdater::TeeTokenUpdaterFactory& teeTokenUpdaterFactory,
+        std::shared_ptr<Timer> timerManager);
 
     ~HsmPool();
 
@@ -103,6 +102,8 @@ private:
      * is obeyed.
      */
     size_t mMaxUsedSessionCount;
+
+    std::shared_ptr<Timer> mTimerManager;
 
     HsmPoolSession activateSession (void);
     void setTeeToken (ErpBlob&& teeToken);

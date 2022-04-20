@@ -11,9 +11,10 @@
 #include "erp/server/SslStream.hxx"
 
 
-template<class ServiceContextType> class RequestHandlerContext;
-template<class ServiceContextType> class RequestHandlerManager;
+class RequestHandlerContext;
+class RequestHandlerManager;
 class AccessLog;
+class PcServiceContext;
 
 
 class AbstractRequestHandler
@@ -33,12 +34,11 @@ public:
 class ServerSession
 {
 public:
-    template<class ServiceContextType>
     static std::shared_ptr<ServerSession> createShared (
         boost::asio::ip::tcp::socket&& socket,
         boost::asio::ssl::context& context,
-        const RequestHandlerManager<ServiceContextType>& requestHandlers,
-        ServiceContextType& serviceContext);
+        const RequestHandlerManager& requestHandlers,
+        PcServiceContext& serviceContext);
 
     explicit ServerSession(
         boost::asio::ip::tcp::socket&& socket,

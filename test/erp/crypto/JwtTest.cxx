@@ -17,7 +17,7 @@
 #include "erp/util/String.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "test_config.h"
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/TestConfiguration.hxx"
 
 #include <gtest/gtest.h>

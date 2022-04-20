@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 #include "erp/fhir/internal/FhirStructureDefinitionParser.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test_config.h"
 
 TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT

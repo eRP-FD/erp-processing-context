@@ -16,7 +16,6 @@ KbvMedicationRequest::KbvMedicationRequest(NumberAsStringParserDocument&& docume
 {
 }
 
-
 std::optional<std::string_view> KbvMedicationRequest::statusCoPaymentExtension() const
 {
     static const rapidjson::Pointer extensionArrayPointer("/extension");

@@ -121,6 +121,8 @@ public:
         BlobType type,
         const ErpVector& name);
 
+    void setPcrHash(const ::ErpVector& pcrHash);
+
     void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);
 
 private:
@@ -132,6 +134,7 @@ private:
     std::unordered_map<CacheKey, Entry> mEntries;
     /// For the lookup per blob type alone (references the newest blob of its type).
     std::unordered_map<BlobType, std::reference_wrapper<Entry>> mNewestEntries;
+    ::ErpVector mPcrHash;
 
     class Refresher;
     std::unique_ptr<Refresher> mRefresher;

@@ -22,8 +22,6 @@
 
 namespace
 {
-    constexpr uint16_t DefaultEnrolmentServerPort = 9191;
-
     void deactivateLibxmlLoggingToStderr()
     {
         // Silence libxml2 by installing a no-op error handler. Without this, errors are logged
@@ -85,7 +83,6 @@ int main (const int, const char* argv[], char** /*environment*/)
 
         ErpMain::StateCondition state (ErpMain::State::Unknown); // Only used for tests.
         exitCode = ErpMain::runApplication(
-            DefaultEnrolmentServerPort,
             ErpMain::createProductionFactories(),
             state);
     }

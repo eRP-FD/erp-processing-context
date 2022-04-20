@@ -7,6 +7,7 @@
 
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/KbvBundle.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/ResourceVersion.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/Uuid.hxx"
@@ -128,7 +129,6 @@ void BundleBase<DerivedBundle, SchemaVersionType>::addResource(const std::option
         {
             case SearchMode::match:
                 setKeyValue(entry, searchModePointer, "match");
-                increaseTotalSearchMatches();
                 break;
             case SearchMode::include:
                 setKeyValue(entry, searchModePointer, "include");
@@ -305,16 +305,10 @@ void BundleBase<DerivedBundle, SchemaVersionType>::setTotalSearchMatches(std::si
     setValue(totalPointer, rapidjson::Value(totalSearchMatches));
 }
 
-template <class DerivedBundle, typename SchemaVersionType>
-void BundleBase<DerivedBundle, SchemaVersionType>::increaseTotalSearchMatches()
-{
-    auto current = getTotalSearchMatches();
-    setValue(totalPointer, rapidjson::Value(gsl::narrow<uint64_t>(current+1)));
-}
-
 
 template class BundleBase<ErxReceipt>;
 template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
 template class BundleBase<Bundle>;
+template class BundleBase<MedicationDispenseBundle, ResourceVersion::NotProfiled>;
 
 } // end of namespace model

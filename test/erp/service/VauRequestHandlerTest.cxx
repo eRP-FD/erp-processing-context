@@ -21,12 +21,13 @@
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ServerTestBase.hxx"
 
+#include <chrono>
 #include <gtest/gtest.h>
 #include <test/util/EnvironmentVariableGuard.hxx>
 
 #include "test_config.h"
-#include "tools/jwt/JwtBuilder.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 
 
 class VauRequestHandlerTest : public ServerTestBase
@@ -87,7 +88,6 @@ public:
     {
         try
         {
-            Environment::set("ERP_TOKEN_ULIMIT_CALLS", "5");
             startServer();
         }
         catch(...)
@@ -100,13 +100,13 @@ public:
 
     void TearDown (void) override
     {
-        Environment::unset("ERP_IDP_PUBLIC_KEY");
-        Environment::unset("ERP_TOKEN_ULIMIT_CALLS");
-
         mServer->shutDown();
         mServer.reset();
     }
 
+    static constexpr int timespan_ms = 4000;
+    EnvironmentVariableGuard calls{"ERP_TOKEN_ULIMIT_CALLS", "5"};
+    EnvironmentVariableGuard timespan{"ERP_TOKEN_ULIMIT_TIMESPAN_MS", std::to_string(timespan_ms)};
     ClientTeeProtocol mTeeProtocol; // Renamed to avoid compiler warning "C4458: Declaration of "teeProtocol" hides class members"
 };
 
@@ -817,10 +817,8 @@ TEST_F(VauRequestHandlerTest, failForMissingTls)
 
 TEST_F(VauRequestHandlerTest, VerifyTokenBlocklisting)
 {
-    constexpr int timespan_ms = 4000;
     EnvironmentVariableGuard enableDosCheck{"DEBUG_DISABLE_DOS_CHECK", "false"};
-    EnvironmentVariableGuard calls{"TOKEN_ULIMIT_CALLS", "5"};
-    EnvironmentVariableGuard timespan{"TOKEN_ULIMIT_TIMESPAN_MS", std::to_string(timespan_ms)};
+
     auto client = createClient();
     auto encryptedRequest = makeEncryptedRequest(HttpMethod::GET, "/AuditEvent/", *mJwt);
 
@@ -836,10 +834,10 @@ TEST_F(VauRequestHandlerTest, VerifyTokenBlocklisting)
         auto spanVal = tSpan.time_since_epoch().count();
         auto tBucket = nowVal - (nowVal % spanVal);
 
-        // If remaining bucket time is less than 600 ms, wait until next bucket time. This should
+        // If remaining bucket time is less than 2000 ms, wait until next bucket time. This should
         // give the test enough (bucket) time after the sleep call.
         auto jitter = timespan_ms - (nowVal - tBucket);
-        if (jitter < 600)
+        if (jitter < timespan_ms/2)
         {
             std::this_thread::sleep_for(milliseconds(jitter));
         }
@@ -947,4 +945,54 @@ TEST_F(VauRequestHandlerTest, failMessageInvalidPublicKey)
     // Verify the response status
     ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest)
         << "header status was " << toString(response.getHeader().status());
+}
+
+TEST_F(VauRequestHandlerTest, CheckClientId)
+{
+    const auto privateKey = MockCryptography::getIdpPrivateKey();
+    const auto publicKey = MockCryptography::getIdpPublicKey();
+    const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
+    auto client = createClient();
+    rapidjson::Document claim;
+    ASSERT_NO_THROW(claim.Parse(claimString));
+    JwtBuilder builder{privateKey};
+
+    using namespace std::chrono;
+
+    const auto now = system_clock::now();
+    const auto exp = duration_cast<seconds>(now.time_since_epoch() + minutes(5));
+    const auto iat = duration_cast<seconds>(now.time_since_epoch());
+    claim[std::string{JWT::expClaim}].SetInt64(exp.count());
+    claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
+
+    // Test 1 - No client id in token, outer response does not provide InnerRequestClientId.
+    JWT token0;
+    ASSERT_NO_THROW(token0 = builder.getJWT(claim));
+    auto response0 = client.send(makeEncryptedRequest(HttpMethod::GET, "/Task", token0));
+    const ClientResponse innerResponse0 = mTeeProtocol.parseResponse(response0);
+    // Check that the response succeeded.
+    ASSERT_EQ(innerResponse0.getHeader().status(), HttpStatus::OK);
+    ASSERT_FALSE(response0.getHeader().hasHeader(Header::InnerRequestClientId));
+
+    // Test 2 - Empty client id in token, outer response does not provide InnerRequestClientId.
+    JWT token1;
+    claim.AddMember(rapidjson::Value{std::string{JWT::clientIdClaim}, claim.GetAllocator()}, rapidjson::Value{"", claim.GetAllocator()}, claim.GetAllocator());
+    ASSERT_NO_THROW(token1 = builder.getJWT(claim));
+    auto response1 = client.send(makeEncryptedRequest(HttpMethod::GET, "/Task", token0));
+    const ClientResponse innerResponse1 = mTeeProtocol.parseResponse(response1);
+    // Check that the response succeeded.
+    ASSERT_EQ(innerResponse1.getHeader().status(), HttpStatus::OK);
+    ASSERT_FALSE(response0.getHeader().hasHeader(Header::InnerRequestClientId));
+
+    // Test 3 - Provide client id in token, expect InnerRequestClientId in outer response.
+    claim[std::string{JWT::clientIdClaim}].SetString(JwtBuilder::defaultClientId(), claim.GetAllocator());
+    JWT token2;
+    ASSERT_NO_THROW(token2 = builder.getJWT(claim));
+    auto response2 = client.send(makeEncryptedRequest(HttpMethod::GET, "/Task", token2));
+    const ClientResponse innerResponse2 = mTeeProtocol.parseResponse(response2);
+    // Check that the response succeeded.
+    ASSERT_EQ(innerResponse2.getHeader().status(), HttpStatus::OK);
+    // Now check that the header field is present in the outer response with the expected value.
+    ASSERT_TRUE(response2.getHeader().hasHeader(Header::InnerRequestClientId));
+    ASSERT_EQ(response2.getHeader().header(Header::InnerRequestClientId).value(), JwtBuilder::defaultClientId());
 }

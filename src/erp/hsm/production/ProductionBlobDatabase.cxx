@@ -44,6 +44,16 @@ namespace
         return result;
     }
 
+    ::std::optional<::ErpVector> getOptionalErpVector (const ::pqxx::row& row, const size_t columnIndex)
+    {
+        if(! row[::gsl::narrow<::pqxx::row::size_type>(columnIndex)].is_null())
+        {
+            return getErpVector(row, columnIndex, "");
+        }
+
+        return {};
+    }
+
     SafeString getSafeString (const pqxx::row& row, const size_t columnIndex, const std::string& columnName)
     {
         Expect( ! row[gsl::narrow<pqxx::row::size_type>(columnIndex)].is_null(), columnName + " is null");
@@ -164,7 +174,7 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob (
     const pqxx::result result = transaction->exec_params(
         "SELECT blob_id, type, name, data, generation,"
         "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), EXTRACT(EPOCH FROM end_date_time),"
-        "       meta, vau_certificate "
+        "       meta, vau_certificate, pcr_hash "
         "FROM erp.blob "
         "WHERE (type = $1 AND blob_id = $2)"
         "  AND (host_ip IS NULL OR host_ip = $3)"
@@ -187,16 +197,16 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob (
 std::vector<BlobDatabase::Entry> ProductionBlobDatabase::getAllBlobsSortedById (void) const
 {
     auto transaction = createTransaction();
-    const pqxx::result result = transaction->exec_params(
-        "SELECT blob_id, type, name, data, generation,"
-        "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), EXTRACT(EPOCH FROM end_date_time),"
-        "       meta, vau_certificate "
-        "FROM erp.blob "
-        "WHERE (host_ip IS NULL OR host_ip = $1)"
-        "  AND (build IS NULL OR build = $2)"
-        "ORDER BY blob_id",
-        transaction->esc(getHostIp()),
-        transaction->esc(getBuildNumber()));
+    const pqxx::result result =
+        transaction->exec_params("SELECT blob_id, type, name, data, generation,"
+                                 "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), "
+                                 "EXTRACT(EPOCH FROM end_date_time),"
+                                 "       meta, vau_certificate, pcr_hash "
+                                 "FROM erp.blob "
+                                 "WHERE (host_ip IS NULL OR host_ip = $1)"
+                                 "  AND (build IS NULL OR build = $2)"
+                                 "ORDER BY blob_id",
+                                 transaction->esc(getHostIp()), transaction->esc(getBuildNumber()));
 
     std::vector<Entry> entries;
     entries.reserve(result.size());
@@ -219,8 +229,9 @@ BlobId ProductionBlobDatabase::storeBlob (Entry&& entry)
         auto transaction = createTransaction();
 
         const pqxx::result result = transaction->exec_params(
-            "INSERT INTO erp.blob (type, host_ip, build, name, data, generation, expiry_date_time, start_date_time, end_date_time, meta, vau_certificate) "
-            "VALUES ($1,$2,$3,$4,$5,$6, TO_TIMESTAMP($7), TO_TIMESTAMP($8), TO_TIMESTAMP($9), $10, $11) "
+            "INSERT INTO erp.blob (type, host_ip, build, name, data, generation, expiry_date_time, start_date_time, "
+            "end_date_time, meta, vau_certificate, pcr_hash)"
+            "VALUES ($1,$2,$3,$4,$5,$6, TO_TIMESTAMP($7), TO_TIMESTAMP($8), TO_TIMESTAMP($9), $10, $11, $12) "
             "RETURNING blob_id",
             static_cast<int16_t>(entry.type),
             hostIp,
@@ -231,9 +242,11 @@ BlobId ProductionBlobDatabase::storeBlob (Entry&& entry)
             toOptionalSecondsSinceEpoch(entry.expiryDateTime),
             toOptionalSecondsSinceEpoch(entry.startDateTime),
             toOptionalSecondsSinceEpoch(entry.endDateTime),
-            createMeta(entry.metaAkName, entry.metaPcrSet),
-            entry.certificate
-            );
+            createMeta(entry.metaAkName, entry.pcrSet),
+            entry.certificate,
+            entry.pcrHash ? ::pqxx::binarystring(reinterpret_cast<const ::std::byte*>(entry.pcrHash->data()),
+                                                 entry.pcrHash->size())
+                          : ::pqxx::binarystring{::std::string_view{}});
         Expect(result.size() == 1, "insertion of new blob failed");
 
         transaction.commit();
@@ -334,7 +347,7 @@ std::vector<bool> ProductionBlobDatabase::hasValidBlobsOfType (std::vector<BlobT
 
 BlobDatabase::Entry ProductionBlobDatabase::convertEntry (const pqxx::row& dbEntry)
 {
-    Expect(dbEntry.size() == 10, "Got unexpected number of columns");
+    Expect(dbEntry.size() == 11, "Got unexpected number of columns");
     Entry entry;
     entry.id = getInteger(dbEntry, 0, "blob_id");
     entry.type = getBlobType(dbEntry, 1, "type");
@@ -369,10 +382,11 @@ BlobDatabase::Entry ProductionBlobDatabase::convertEntry (const pqxx::row& dbEnt
                         akNameValue->GetString()));
             }
 
-            entry.metaPcrSet = PcrSet::fromJson(json, std::string(pcrSetKey));
+            entry.pcrSet = PcrSet::fromJson(json, std::string(pcrSetKey));
         }
     }
     entry.certificate = getOptionalString(dbEntry, 9);
+    entry.pcrHash = getOptionalErpVector(dbEntry, 10);
 
     return entry;
 }

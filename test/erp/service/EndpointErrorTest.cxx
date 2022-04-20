@@ -11,10 +11,10 @@
 
 
 namespace {
-    class ErrorHandler : public RequestHandlerInterface<PcServiceContext>
+    class ErrorHandler : public RequestHandlerInterface
     {
     public:
-        void handleRequest (SessionContext<PcServiceContext>& session) override
+        void handleRequest (SessionContext& session) override
         {
             const auto requestedResponseStatus = std::stoi(session.request.getPathParameter("status").value_or("200"));
             throw ErpException("test", fromBoostBeastStatus(requestedResponseStatus));
@@ -60,7 +60,7 @@ public:
         errorHandler->setOperation(operation);
     }
 protected:
-    void addAdditionalSecondaryHandlers (RequestHandlerManager<PcServiceContext>& requestManager) override
+    void addAdditionalSecondaryHandlers (RequestHandlerManager& requestManager) override
     {
         mRequestHandler = &requestManager.addRequestHandler(
             HttpMethod::POST,
@@ -71,7 +71,7 @@ protected:
     void testStatusCode (uint32_t statusCode, uint32_t expectedResponseStatus, bool expectResponseBody);
 
 private:
-    RequestHandlerContext<PcServiceContext>* mRequestHandler = nullptr;
+    RequestHandlerContext* mRequestHandler = nullptr;
 };
 
 

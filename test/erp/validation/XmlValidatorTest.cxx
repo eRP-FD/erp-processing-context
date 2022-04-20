@@ -19,6 +19,7 @@
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/String.hxx"
 #include "test_config.h"
+#include "test/util/ResourceManager.hxx"
 
 namespace fs = std::filesystem;
 
@@ -88,11 +89,14 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)
             case SchemaType::Gem_erxOrganizationElement:
             case SchemaType::Gem_erxReceiptBundle:
             case SchemaType::Gem_erxTask:
+            case SchemaType::Gem_erxChargeItem:
+            case SchemaType::Gem_erxConsent:
                 ASSERT_TRUE(
                     getXmlValidator()->getSchemaValidationContext(
                         type,
                         ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()) !=
                     nullptr);
+            
                 break;
             case SchemaType::KBV_PR_ERP_Bundle:
             case SchemaType::KBV_PR_ERP_Composition:
@@ -114,6 +118,7 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)
                 break;
             case SchemaType::ActivateTaskParameters:
             case SchemaType::CreateTaskParameters:
+            case SchemaType::MedicationDispenseBundle:
                 ASSERT_TRUE(getXmlValidator()->getSchemaValidationContext(
                                 type, ::model::ResourceVersion::NotProfiled{}) !=
                             nullptr);
@@ -177,7 +182,46 @@ public:
         return StaticData::getXmlValidator();
     }
 };
-class XmlValidatorTestParamsGematik : public XmlValidatorTestParams, public testing::TestWithParam<TestParamsGematik> {};
+class XmlValidatorTestParamsGematik : public XmlValidatorTestParams, public testing::TestWithParam<TestParamsGematik> {
+public:
+    void checkDocument(const std::string& document, const std::string& filename)
+    {
+        if (GetParam().valid)
+        {
+            if (GetParam().schemaType == SchemaType::fhir ||
+                GetParam().schemaType == SchemaType::MedicationDispenseBundle)
+            {
+                EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
+                                                                                   GetParam().schemaType))
+                    << "Test failed for file: " << filename;
+            }
+            else
+            {
+                EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(
+                    document, *getXmlValidator(), GetParam().schemaType, GetParam().version))
+                    << "Test failed for file: " << filename;
+            }
+        }
+        else
+        {
+            if (GetParam().schemaType == SchemaType::fhir ||
+                GetParam().schemaType == SchemaType::MedicationDispenseBundle)
+            {
+                EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
+                                                                                GetParam().schemaType),
+                             ErpException)
+                    << "Test failed for file: " << filename;
+            }
+            else
+            {
+                EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidation(
+                                 document, *getXmlValidator(), GetParam().schemaType, GetParam().version),
+                             ErpException)
+                    << "Test failed for file: " << filename;
+            }
+        }
+    }
+};
 class XmlValidatorTestParamsKbv : public XmlValidatorTestParams, public testing::TestWithParam<TestParamsKbv> {};
 
 
@@ -189,65 +233,11 @@ TEST_P(XmlValidatorTestParamsGematik, Resources)
             String::starts_with(dirEntry.path().filename().string(), GetParam().startsWith))
         {
             const auto document = FileHelper::readFileAsString(dirEntry.path());
-            if (GetParam().valid)
-            {
-                if (GetParam().schemaType == SchemaType::fhir)
-                {
-                    EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
-                                                                                       GetParam().schemaType))
-                        << "Test failed for file: " << dirEntry.path().filename().string();
-                }
-                else
-                {
-                    EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(
-                        document, *getXmlValidator(), GetParam().schemaType, GetParam().version))
-                        << "Test failed for file: " << dirEntry.path().filename().string();
-                }
-            }
-            else
-            {
-                if (GetParam().schemaType == SchemaType::fhir)
-                {
-                    EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
-                                                                                    GetParam().schemaType),
-                                 ErpException)
-                        << "Test failed for file: " << dirEntry.path().filename().string();
-                }
-                else
-                {
-                    EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidation(
-                                     document, *getXmlValidator(), GetParam().schemaType, GetParam().version),
-                                 ErpException)
-                        << "Test failed for file: " << dirEntry.path().filename().string();
-                }
-            }
+            checkDocument(document, dirEntry.path().filename().string());
         }
     }
 }
 
-
-TEST_P(XmlValidatorTestParamsKbv, Resources)
-{
-    for (const auto& dirEntry : fs::directory_iterator(GetParam().basePath))
-    {
-        if (dirEntry.is_regular_file() && String::starts_with(dirEntry.path().filename().string(), GetParam().startsWith))
-        {
-            const auto document = FileHelper::readFileAsString(dirEntry.path());
-            if (GetParam().valid)
-            {
-                EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(
-                    document, *getXmlValidator(), GetParam().schemaType, GetParam().version))
-                    << "Test failed for file: " << dirEntry.path().filename().string();
-            }
-            else
-            {
-                EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidation(
-                                 document, *getXmlValidator(), GetParam().schemaType, GetParam().version), ErpException)
-                    << "Test failed for file: " << dirEntry.path().filename().string();
-            }
-        }
-    }
-}
 
 INSTANTIATE_TEST_SUITE_P(ValidResources, XmlValidatorTestParamsGematik,
     testing::Values(
@@ -265,6 +255,8 @@ INSTANTIATE_TEST_SUITE_P(ValidResources, XmlValidatorTestParamsGematik,
         TestParamsGematik{true, fs::path(TEST_DATA_DIR) / "validation/xml/parameters/", "createTaskParameters_valid", SchemaType::fhir, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
         TestParamsGematik{true, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/", "ReceiptBundle_valid", SchemaType::Gem_erxReceiptBundle, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
         TestParamsGematik{true, fs::path(TEST_DATA_DIR) / "validation/xml/task/", "Task_valid", SchemaType::Gem_erxTask, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
+        TestParamsGematik{true, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/chargeItem/", "ChargeItem_valid", SchemaType::Gem_erxChargeItem, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
+        TestParamsGematik{true, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/consent/", "Consent_valid", SchemaType::Gem_erxConsent, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
 
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/auditevent/", "AuditEvent_invalid", SchemaType::Gem_erxAuditEvent, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/bundle/", "Bundle_invalid", SchemaType::fhir, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
@@ -279,7 +271,9 @@ INSTANTIATE_TEST_SUITE_P(ValidResources, XmlValidatorTestParamsGematik,
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/parameters/", "activateTaskParameters_invalid", SchemaType::fhir, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/parameters/", "createTaskParameters_invalid", SchemaType::fhir, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/", "ReceiptBundle_invalid", SchemaType::Gem_erxReceiptBundle, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
-        TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/task/", "Task_invalid", SchemaType::Gem_erxTask, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1}
+        TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/task/", "Task_invalid", SchemaType::Gem_erxTask, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
+        TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/chargeItem/", "ChargeItem_invalid", SchemaType::Gem_erxChargeItem, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
+        TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/consent/", "Consent_invalid", SchemaType::Gem_erxConsent, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1}
 ));
 
 TEST_F(XmlValidatorTest, Erp6345)
@@ -294,6 +288,35 @@ TEST_F(XmlValidatorTest, Erp6345)
     EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(
         file2, *getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2));
 }
+
+class MedicationDispenseBundleTest:public XmlValidatorTestParamsGematik{};
+
+TEST_P(MedicationDispenseBundleTest, MedicationDispenseBundle)
+{
+    const auto& placeholderDocument = FileHelper::readFileAsString(
+        fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense_bundle/MedicationDispenseBundle_placeholder.xml");
+    for (const auto& dirEntry : fs::directory_iterator(GetParam().basePath))
+    {
+        if (dirEntry.is_regular_file() &&
+            String::starts_with(dirEntry.path().filename().string(), GetParam().startsWith))
+        {
+            auto document = FileHelper::readFileAsString(dirEntry.path());
+            document = String::replaceAll(document, " xmlns=\"http://hl7.org/fhir\"", "");
+            document = String::replaceAll(document, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "");
+            const auto bundleDocument = String::replaceAll(placeholderDocument, "###PLACEHOLDER###", document);
+            std::cout << bundleDocument << std::endl;
+            checkDocument(bundleDocument, dirEntry.path().filename().string());
+        }
+    }
+}
+INSTANTIATE_TEST_SUITE_P(
+    MedicationDispenseBundle, MedicationDispenseBundleTest,
+    testing::Values(TestParamsGematik{true, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/",
+                                      "MedicationDispense_valid", SchemaType::MedicationDispenseBundle,
+                                      model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
+                    TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/",
+                                      "MedicationDispense_invalid", SchemaType::MedicationDispenseBundle,
+                                      model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1}));
 
 class XmlValidatorTestPeriod : public XmlValidatorTest
 {
@@ -427,4 +450,21 @@ TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalid2Periods)
     const auto begin2 = model::Timestamp::now() + 1min;
     const auto end2 = model::Timestamp::now() + 2min;
     DoTestTwoPeriods(begin, end, begin2, end2, false);
+}
+
+// This test is only possible when two different profile versions are configured.
+TEST_F(XmlValidatorTest, VersionMixup)
+{
+    using namespace ::std::chrono_literals;
+    const auto tomorrow = (::model::Timestamp::now() + 24h).toXsDateTime();
+    EnvironmentVariableGuard varGuard("ERP_FHIR_PROFILE_OLD_VALID_UNTIL", tomorrow);
+    // <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.2" />
+    auto bundle =
+        ResourceManager::instance().getStringResource("test/validation/xml/kbv/bundle/Bundle_valid_MedicationFreeText.xml");
+    bundle = String::replaceAll(bundle, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.2",
+                                "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.1");
+
+    EXPECT_THROW(model::KbvBundle::fromXml(bundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                                           SchemaType::KBV_PR_ERP_Bundle),
+                 ExceptionWrapper<ErpException>);
 }

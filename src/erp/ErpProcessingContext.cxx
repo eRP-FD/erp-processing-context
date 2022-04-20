@@ -32,31 +32,12 @@
 #include "erp/service/consent/ConsentPostHandler.hxx"
 #include "erp/util/Configuration.hxx"
 
-
-ErpProcessingContext::ErpProcessingContext (
-    const uint16_t port,
-    std::shared_ptr<PcServiceContext> serviceContext,
-    RequestHandlerManager<PcServiceContext>&& handlerManager)
-    : mServer(
-        HttpsServer<PcServiceContext>::defaultHost,
-        port,
-        std::move(handlerManager),
-        std::move(serviceContext),
-        false,
-        SafeString(Configuration::instance().getOptionalStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE, "")))
+namespace ErpProcessingContext
 {
-}
 
-
-HttpsServer<PcServiceContext>& ErpProcessingContext::getServer (void)
-{
-    return mServer;
-}
-
-
-void ErpProcessingContext::addPrimaryEndpoints (
-    RequestHandlerManager<PcServiceContext>& primaryManager,
-    RequestHandlerManager<PcServiceContext>&& secondaryManager)
+void addPrimaryEndpoints (
+    RequestHandlerManager& primaryManager,
+    RequestHandlerManager&& secondaryManager)
 {
     addSecondaryEndpoints(secondaryManager);
     primaryManager.onPostDo("/VAU/{UP}",
@@ -65,7 +46,7 @@ void ErpProcessingContext::addPrimaryEndpoints (
 }
 
 
-void ErpProcessingContext::addSecondaryEndpoints (RequestHandlerManager<PcServiceContext>& handlerManager)
+void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
 {
     using namespace profession_oid;
 
@@ -178,7 +159,7 @@ void ErpProcessingContext::addSecondaryEndpoints (RequestHandlerManager<PcServic
             std::make_unique<SubscriptionPostHandler>(oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
     A_22362.finish();
 
-    if(Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false))
+    if(Configuration::instance().featurePkvEnabled())
     {
         // PKV endpoints:
 
@@ -222,4 +203,5 @@ void ErpProcessingContext::addSecondaryEndpoints (RequestHandlerManager<PcServic
         handlerManager.onPostDo("/Consent", std::make_unique<ConsentPostHandler>(consentOIDs));
         A_22161.finish();
     }
+}
 }

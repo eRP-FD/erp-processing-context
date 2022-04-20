@@ -110,31 +110,6 @@ TEST_F(BundleTest, getResourceSize)
     ASSERT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&retrievedResource["this"]), "is a resource");
 }
 
-TEST_F(BundleTest, getTotalSearchMatches)
-{
-    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
-
-    ASSERT_EQ(bundle.getTotalSearchMatches(), 0);
-
-    // Create a simple resource.
-    rapidjson::StringStream s(R"(
-    {
-        "this": "is a resource"
-    }
-    )");
-    model::NumberAsStringParserDocument resource;
-    resource.ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s);
-    ASSERT_FALSE(resource.HasParseError());
-
-    bundle.addResource({}, "this is the resource's self link", model::Bundle::SearchMode::match, resource);
-    bundle.addResource({}, "this is the resource's self link", model::Bundle::SearchMode::include, resource);
-    bundle.addResource({}, "this is the resource's self link", model::Bundle::SearchMode::outcome, resource);
-    bundle.addResource({}, "this is the resource's self link", model::Bundle::SearchMode::match, resource);
-
-    ASSERT_EQ(bundle.getResourceCount(), 4);
-    ASSERT_EQ(bundle.getTotalSearchMatches(), 2);
-}
-
 TEST_F(BundleTest, getResourcesByTypePatient)
 {
     const auto bundleData = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/kbv_bundle1.json");

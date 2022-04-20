@@ -6,6 +6,7 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "erp/model/Health.hxx"
 
+namespace {
 rapidjson::Pointer statusPointer("/status");
 rapidjson::Pointer postgresStatusPointer("/checks/0/status");
 rapidjson::Pointer hsmStatusPointer("/checks/2/status");
@@ -15,42 +16,69 @@ rapidjson::Pointer bnaStatusPointer("/checks/4/status");
 rapidjson::Pointer idpStatusPointer("/checks/5/status");
 rapidjson::Pointer seedTimerStatusPointer("/checks/6/status");
 rapidjson::Pointer teeTokenUpdaterStatusPointer("/checks/7/status");
+}
 
-
-TEST_F(ErpWorkflowTest, HealthCheck)
-{
-    if ( client->getHostAddress() != "localhost")
+class ErpHealthTest : public ::testing::TestWithParam<TestClient::Target> {
+public:
+    void SetUp() override
     {
-        VLOG(2) << "HealthCheck test skipped for cloud or production env";
-        GTEST_SKIP();
+        mClient = TestClient::create(nullptr, GetParam());
     }
+protected:
+    std::unique_ptr<TestClient> mClient;
+};
 
+TEST_P(ErpHealthTest, HealthCheck)
+{
     using namespace std::string_literals;
+    auto hostaddress = mClient->getHostAddress();
+    if (hostaddress != "localhost" && hostaddress != "127.0.0.1")
+    {
+        GTEST_SKIP();
+        return;
+    }
 
     std::string outerPath = "/health";
 
-    ClientRequest outerRequest(Header(HttpMethod::GET, std::move(outerPath), Header::Version_1_1,
-                                      {{Header::Host, client->getHostHttpHeader()},
+    ClientRequest request(Header(HttpMethod::GET, std::move(outerPath), Header::Version_1_1,
+                                      {{Header::Host, mClient->getHostHttpHeader()},
                                        {Header::UserAgent, "vau-cpp-it-test"s},
                                        {Header::ContentType, "application/octet-stream"}},
                                       HttpStatus::Unknown),
                                {});
 
-    auto outerResponse = client->send(outerRequest);
+    auto outerResponse = mClient->send(request);
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
     const auto& body = outerResponse.getBody();
     ASSERT_FALSE(body.empty());
     rapidjson::Document healthDocument;
     healthDocument.Parse(body);
 
+    static std::set healthStates{model::Health::up, model::Health::down};
+
     ASSERT_FALSE(healthDocument.HasParseError());
-    EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(postgresStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(hsmStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(redisStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(tslStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(bnaStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(idpStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(seedTimerStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_EQ(std::string(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_TRUE(healthStates.count(statusPointer.Get(healthDocument)->GetString()))
+                << statusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(postgresStatusPointer.Get(healthDocument)->GetString()))
+                << postgresStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(hsmStatusPointer.Get(healthDocument)->GetString()))
+                << hsmStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(redisStatusPointer.Get(healthDocument)->GetString()))
+                << redisStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(tslStatusPointer.Get(healthDocument)->GetString()))
+                << tslStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(bnaStatusPointer.Get(healthDocument)->GetString()))
+                << bnaStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(idpStatusPointer.Get(healthDocument)->GetString()))
+                << idpStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(seedTimerStatusPointer.Get(healthDocument)->GetString()))
+                << seedTimerStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()))
+                << teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString();
 }
+
+
+INSTANTIATE_TEST_SUITE_P(ports, ErpHealthTest, testing::Values(TestClient::Target::ADMIN, TestClient::Target::VAU),
+                         [](const auto& info) {
+                             return to_string(info.param);
+                         });

@@ -18,7 +18,7 @@
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestConfiguration.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/util/Expect.hxx"
 
@@ -26,6 +26,35 @@
 #include <regex>
 
 #undef DELETE
+
+
+namespace
+{
+
+template<class TModelElem>
+void modelElemfromString(
+    std::optional<TModelElem>& result,
+    const std::string_view& str,
+    const std::string& contentType,
+    SchemaType schemaType)
+{
+    if (contentType == std::string(ContentMimeType::fhirXmlUtf8))
+    {
+        ASSERT_NO_THROW(
+            result = TModelElem::fromXml(
+                str, *ErpWorkflowTestBase::getXmlValidator(), *StaticData::getInCodeValidator(), schemaType));
+    }
+    else
+    {
+        ASSERT_NO_THROW(
+            result = TModelElem::fromJson(
+                str, *ErpWorkflowTestBase::getJsonValidator(),
+                *ErpWorkflowTestBase::getXmlValidator(), *StaticData::getInCodeValidator(), schemaType));
+    }
+}
+
+}
+
 
 ErpWorkflowTestBase::~ErpWorkflowTestBase() = default;
 
@@ -125,15 +154,17 @@ void ErpWorkflowTestBase::checkTaskAccept(
     std::string& createdSecret,
     std::optional<model::Timestamp>& lastModifiedDate,
     const model::PrescriptionId& prescriptionId,
-    const std::string&,
+    const std::string& kvnr,
     const std::string& accessCode,
-    const std::string& qesBundle)
+    const std::string& qesBundle,
+    bool withConsent)
 {
+    const auto expectedResourceCount = withConsent ? 3 : 2;
     // invoke /task/<id>/$accept
     std::optional<model::Bundle> acceptResultBundle;
     ASSERT_NO_FATAL_FAILURE(acceptResultBundle = taskAccept(prescriptionId, accessCode));
     ASSERT_TRUE(acceptResultBundle);
-    ASSERT_EQ(acceptResultBundle->getResourceCount(), 2);
+    ASSERT_EQ(acceptResultBundle->getResourceCount(), expectedResourceCount);
     const auto tasks = acceptResultBundle->getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), prescriptionId.toString());
@@ -158,6 +189,16 @@ void ErpWorkflowTestBase::checkTaskAccept(
     ASSERT_EQ(secret.value(), task->secret().value());
     createdSecret = secret.value();
     lastModifiedDate = task->lastModifiedDate();
+
+    if(withConsent)
+    {
+        // Check consent:
+        const auto consents = acceptResultBundle->getResourcesByType<model::Consent>("Consent");
+        ASSERT_EQ(consents.size(), 1);
+        EXPECT_TRUE(consents[0].isChargingConsent());
+        EXPECT_EQ(consents[0].patientKvnr(), kvnr);
+        EXPECT_EQ(consents[0].id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr));
+    }
 }
 
 void ErpWorkflowTestBase::checkTaskClose(
@@ -165,7 +206,8 @@ void ErpWorkflowTestBase::checkTaskClose(
     const std::string& kvnr,
     const std::string& secret,
     const model::Timestamp& lastModified,
-    const std::vector<model::Communication>& communications)
+    const std::vector<model::Communication>& communications,
+    size_t numMedicationDispenses)
 {
     const auto& testConfig = TestConfiguration::instance();
     const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
@@ -183,7 +225,8 @@ void ErpWorkflowTestBase::checkTaskClose(
 
     // invoke /Task/<id>/$close
     std::optional<model::ErxReceipt> closeReceipt;
-    ASSERT_NO_FATAL_FAILURE(closeReceipt = taskClose(prescriptionId, secret, kvnr));
+    ASSERT_NO_FATAL_FAILURE(closeReceipt =
+                                taskClose(prescriptionId, secret, kvnr, HttpStatus::OK, {}, numMedicationDispenses));
     ASSERT_TRUE(closeReceipt);
     const auto compositionResources = closeReceipt->getResourcesByType<model::Composition>("Composition");
     ASSERT_EQ(compositionResources.size(), 1);
@@ -208,7 +251,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     const auto& cadesBesTrustedCertDir =
     testConfig.getOptionalStringValue(TestConfigurationKey::TEST_CADESBES_TRUSTED_CERT_DIR, "test/cadesBesSignature/certificates");
     auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
-    CadesBesSignature cms(certs, signatureData);
+    auto cms = runsInCloudEnv() ? CadesBesSignature(signatureData, nullptr) : CadesBesSignature(certs, signatureData);
 
     // This cannot be validated using XSD, because the Signature is defined mantatory, but not contained in the receipt
     // from the signature.
@@ -240,7 +283,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     // Check medication dispense saved during /Task/Close
     ASSERT_TRUE(task->kvnr().has_value());
     std::optional<model::MedicationDispense> medicationDispenseForTask;
-    ASSERT_NO_FATAL_FAILURE(getMedicationDispenseForTask(medicationDispenseForTask, prescriptionId, kvnr));
+    ASSERT_NO_FATAL_FAILURE(medicationDispenseGetInternal(medicationDispenseForTask, kvnr, prescriptionId.toString()));
     ASSERT_TRUE(medicationDispenseForTask.has_value());
     EXPECT_EQ(medicationDispenseForTask->telematikId(), telematicId);
 
@@ -271,7 +314,7 @@ void ErpWorkflowTestBase::checkTaskAbort(
 
     // check that no MedicationDispense has been created for the kvnr.
     std::optional<model::MedicationDispense> medicationDispenseForTask;
-    ASSERT_NO_FATAL_FAILURE(getMedicationDispenseForTask(medicationDispenseForTask, prescriptionId, kvnr));
+    ASSERT_NO_FATAL_FAILURE(medicationDispenseGetInternal(medicationDispenseForTask, kvnr, prescriptionId.toString()));
     ASSERT_FALSE(medicationDispenseForTask.has_value());
 
     // Check deletion of task related communication objects:
@@ -351,16 +394,25 @@ void ErpWorkflowTestBase::checkAuditEventsFrom(const std::string& insurantKvnr)
 }
 
 void ErpWorkflowTestBase::checkAuditEvents(
-    const model::PrescriptionId& prescriptionId,
+    std::vector<std::optional<model::PrescriptionId>> prescriptionIds,
     const std::string& insurantKvnr,
     const std::string& language,
     const model::Timestamp& startTime,
     const std::vector<std::string>& actorIdentifiers,
     const std::unordered_set<std::size_t>& actorTelematicIdIndices,
-    const std::unordered_set<std::size_t>& noPrescriptionIdIndices,
     const std::vector<model::AuditEvent::SubType>& expectedActions)
 {
     Expect3(actorIdentifiers.size() == expectedActions.size(), "Invalid parameters", std::logic_error);
+
+    if(prescriptionIds.size() == 1 && !actorIdentifiers.empty())
+    {
+        // if only a single prescription id is provided it is used for all elements
+        const auto id = prescriptionIds[0];
+        prescriptionIds.reserve(actorIdentifiers.size());
+        for(std::size_t i = 1; i < actorIdentifiers.size(); ++i)
+            prescriptionIds.emplace_back(id);
+    }
+    Expect3(prescriptionIds.size() == actorIdentifiers.size(), "Invalid parameters", std::logic_error);
 
     std::optional<model::Bundle> auditEventBundle;
     ASSERT_NO_FATAL_FAILURE(
@@ -394,21 +446,22 @@ void ErpWorkflowTestBase::checkAuditEvents(
         EXPECT_FALSE(auditEvent.sourceObserverReference().empty());
 
         const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
-        if(noPrescriptionIdIndices.count(i))
+        if(!prescriptionIds.at(i).has_value())
         {
             EXPECT_TRUE(!entityWhatIdentifierSystem.has_value());
             EXPECT_TRUE(!entityWhatIdentifierValue.has_value());
 
-            // If no unique prescriptionId is available, the field AuditEvent.entity.description is filled with "+".
-            EXPECT_EQ(auditEvent.entityDescription(), "+");
+            // If no unique prescriptionId is available, the field AuditEvent.entity.description is filled with "+" or "-"
+            const auto expectedDescription = auditEvent.action() == model::AuditEvent::Action::del ? "-" : "+";
+            EXPECT_EQ(auditEvent.entityDescription(), expectedDescription);
         }
         else
         {
-            EXPECT_TRUE(entityWhatIdentifierSystem.has_value());
+            ASSERT_TRUE(entityWhatIdentifierSystem.has_value());
             EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
-            EXPECT_TRUE(entityWhatIdentifierValue.has_value());
-            EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionId.toString());
-            EXPECT_EQ(auditEvent.entityDescription(), prescriptionId.toString());
+            ASSERT_TRUE(entityWhatIdentifierValue.has_value());
+            EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionIds.at(i)->toString());
+            EXPECT_EQ(auditEvent.entityDescription(), prescriptionIds.at(i)->toString());
         }
         EXPECT_FALSE(auditEvent.entityWhatReference().empty());
         EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
@@ -499,6 +552,17 @@ std::string ErpWorkflowTestBase::toCadesBesSignature(const std::string& content,
     return CryptoHelper::toCadesBesSignature(content, signingTime);
 }
 
+std::string ErpWorkflowTestBase::toExpectedClientId(const ErpWorkflowTestBase::RequestArguments& args) const
+{
+    if (!args.overrideExpectedInnerClientId.empty())
+    {
+        return args.overrideExpectedInnerClientId;
+    }
+    const auto& jwt = args.jwt.value_or(defaultJwt());
+    const auto clientid = jwt.stringForClaim(JWT::clientIdClaim);
+    return clientid.value();
+}
+
 std::string ErpWorkflowTestBase::toExpectedRole(const ErpWorkflowTestBase::RequestArguments& args) const
 {
     // outcome pharmacy, doctor, patient
@@ -533,9 +597,11 @@ std::string ErpWorkflowTestBase::toExpectedOperation(const ErpWorkflowTestBase::
     std::tie(vauPath, std::ignore, std::ignore) = UrlHelper::splitTarget(args.vauPath);
     vauPath = UrlHelper::removeTrailingSlash(vauPath);
 
-    if (String::starts_with(vauPath, "/Task") || String::starts_with(vauPath, "/MedicationDispense"))
+    if (String::starts_with(vauPath, "/Task") ||
+        String::starts_with(vauPath, "/MedicationDispense") ||
+        String::starts_with(vauPath, "/ChargeItem"))
     {
-        std::regex matcher(R"--((\d{3}\.){5}\d{2})--");
+        std::regex matcher(R"--((\d{3}\.){5}\d{2}(-\d+)?)--");
         if (std::regex_search(vauPath, matcher))
         {
             vauPath = std::regex_replace(vauPath, matcher, "<id>");
@@ -549,20 +615,17 @@ std::string ErpWorkflowTestBase::toExpectedOperation(const ErpWorkflowTestBase::
             vauPath = std::regex_replace(vauPath, matcher, "<id>");
         }
     }
+    else if (String::starts_with(vauPath, "/Consent"))
+    {
+        std::regex matcher(R"--(CHARGCONS-.{10})--");
+        if (std::regex_search(vauPath, matcher))
+        {
+            vauPath = std::regex_replace(vauPath, matcher, "<id>");
+        }
+    }
     return expectedOperation.append(" ").append(vauPath);
 }
-void ErpWorkflowTestBase::getMedicationDispenseForTask(
-    std::optional<model::MedicationDispense>& medicationDispenseForTask,
-    const model::PrescriptionId& prescriptionId, const std::string& kvnr)
-{
-    try
-    {
-        medicationDispenseForTask = medicationDispenseGet(kvnr, prescriptionId);
-    }
-    catch (const model::ModelException&)
-    {
-    }
-}
+
 void ErpWorkflowTestBase::communicationsGetInternal(std::optional<model::Bundle>& communicationsBundle,
                                                 const JWT& jwt, const std::string_view& requestArgs)
 {
@@ -582,19 +645,13 @@ void ErpWorkflowTestBase::communicationsGetInternal(std::optional<model::Bundle>
             send(RequestArguments{HttpMethod::GET, getPath, ""}
                 .withJwt(jwt)
                 .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                .withHeader(Header::Accept, accept)));
+                .withHeader(Header::Accept, accept).withExpectedInnerStatus(HttpStatus::OK)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-    if (serverResponse.getHeader().contentType() == std::string(ContentMimeType::fhirXmlUtf8))
-    {
-        ASSERT_NO_THROW(communicationsBundle = model::Bundle::fromXml(
-            serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir));
-    }
-    else
-    {
-        ASSERT_NO_THROW(communicationsBundle = model::Bundle::fromJson(
-                            serverResponse.getBody(), *getJsonValidator(),
-                            *getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir));
-    }
+
+    ASSERT_NO_FATAL_FAILURE(
+        modelElemfromString<model::Bundle>(
+            communicationsBundle, serverResponse.getBody(), *serverResponse.getHeader().contentType(), SchemaType::fhir));
+
     if (communicationsBundle->getResourceCount() > 0)
     {
         for (const auto& communication :
@@ -633,18 +690,10 @@ void ErpWorkflowTestBase::communicationGetInternal(std::optional<model::Communic
     }
     else
     {
-        if (serverResponse.getHeader().contentType() == std::string(ContentMimeType::fhirXmlUtf8))
-        {
-            ASSERT_NO_THROW(communication = model::Communication::fromXml(
-                serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir));
-        }
-        else
-        {
-            ASSERT_NO_THROW(communication = model::Communication::fromJson(
-                                serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(),
-                                *StaticData::getInCodeValidator(),
-                                model::Communication::messageTypeToSchemaType(communication->messageType())));
-        }
+        ASSERT_NO_FATAL_FAILURE(
+            modelElemfromString<model::Communication>(
+                communication, serverResponse.getBody(), *serverResponse.getHeader().contentType(),
+                model::Communication::messageTypeToSchemaType(communication->messageType())));
     }
 }
 
@@ -728,28 +777,21 @@ void ErpWorkflowTestBase::communicationPostInternal(
             }
         }
     }
+    requestArguments.expectedInnerStatus = HttpStatus::Created;
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(requestArguments));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
-    if (serverResponse.getHeader().contentType() == std::string(ContentMimeType::fhirXmlUtf8))
-    {
-        ASSERT_NO_THROW(communicationResponse = model::Communication::fromXml(
-            serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(),
+
+    ASSERT_NO_FATAL_FAILURE(
+        modelElemfromString<model::Communication>(
+            communicationResponse, serverResponse.getBody(), *serverResponse.getHeader().contentType(),
             model::Communication::messageTypeToSchemaType(messageType)));
-    }
-    else
-    {
-        communicationResponse = model::Communication::fromJson(
-            serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(), *StaticData::getInCodeValidator(),
-            model::Communication::messageTypeToSchemaType(messageType));
-    }
 }
 void ErpWorkflowTestBase::medicationDispenseGetInternal(
     std::optional<model::MedicationDispense>& medicationDispense,
     const std::string& kvnr,
-    const model::PrescriptionId& prescriptionId)
+    const std::string& medicationDispenseId)
 {
-    std::string getPath = "/MedicationDispense/";
-    getPath += prescriptionId.toString();
+    std::string getPath = "/MedicationDispense/" + medicationDispenseId;
     ClientResponse serverResponse;
     JWT jwt{ JwtBuilder::testBuilder().makeJwtVersicherter(kvnr) };
     ASSERT_NO_FATAL_FAILURE(
@@ -786,7 +828,8 @@ void ErpWorkflowTestBase::medicationDispenseGetAllInternal(std::optional<model::
     ClientResponse serverResponse;
     const auto& theJwt = jwt.value_or(jwtVersicherter());
     ASSERT_NO_FATAL_FAILURE(
-        std::tie(std::ignore, serverResponse) = send(RequestArguments{HttpMethod::GET, getPath, ""}.withJwt(theJwt)));
+        std::tie(std::ignore, serverResponse) = send(
+            RequestArguments{HttpMethod::GET, getPath, ""}.withJwt(theJwt).withExpectedInnerStatus(HttpStatus::OK)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     medicationDispenseBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
     ASSERT_TRUE(medicationDispenseBundle);
@@ -823,6 +866,7 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
 
     args.jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(args.jwt.value()));
+    args.expectedInnerStatus = expectedStatus;
     ClientResponse response;
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(args));
     ASSERT_EQ(response.getHeader().status(), expectedStatus);
@@ -890,6 +934,7 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
     {
         args.vauPath.append(revPfx + "_revinclude=AuditEvent:entity.what");
     }
+    args.expectedInnerStatus = expectedStatus;
     ClientResponse response;
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(args));
     ASSERT_EQ(response.getHeader().status(), expectedStatus);
@@ -945,7 +990,7 @@ std::string ErpWorkflowTestBase::medicationDispense(const std::string& kvnr,
                                                     const std::string& whenHandedOver)
 {
     auto closeBody =
-        FileHelper::readFileAsString(dataPath + "/medication_dispense_input1.xml");
+        ResourceManager::instance().getStringResource("test/EndpointHandlerTest/medication_dispense_input1.xml");
 
     closeBody = String::replaceAll(closeBody, "###PRESCRIPTIONID###", prescriptionIdForMedicationDispense);
     closeBody = String::replaceAll(closeBody, "X234567890", kvnr);
@@ -956,12 +1001,44 @@ std::string ErpWorkflowTestBase::medicationDispense(const std::string& kvnr,
     return closeBody;
 }
 
+std::string ErpWorkflowTestBase::medicationDispenseBundle(const std::string& kvnr,
+                                                          const std::string& prescriptionIdForMedicationDispense,
+                                                          const std::string& whenHandedOver,
+                                                          size_t numMedicationDispenses)
+{
+    model::Bundle closeBody(model::BundleType::collection, model::ResourceBase::NoProfile, Uuid());
+    for (size_t i = 0; i < numMedicationDispenses; ++i)
+    {
+        auto dispense = model::MedicationDispense::fromXmlNoValidation(
+            medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver));
+        closeBody.addResource({}, {}, {}, dispense.jsonDocument());
+    }
+    return closeBody.serializeToXmlString();
+}
+
+
+std::string ErpWorkflowTestBase::patchVersionsInBundle(const std::string& bundle)
+{
+    return String::replaceAll(
+        bundle, "|1.0.2",
+        "|" + std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())));
+}
+
 
 bool ErpWorkflowTestBase::runsInCloudEnv() const
 {
     const auto hostaddress = client->getHostAddress();
     return hostaddress != "localhost" && hostaddress != "127.0.0.1";
 }
+
+
+//static
+bool ErpWorkflowTestBase::isUnsupportedFlowtype(const model::PrescriptionType workflowType)
+{
+    bool featurePkvEnabled = Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false);
+    return workflowType == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv && !featurePkvEnabled;
+}
+
 
 void ErpWorkflowTestBase::taskCloseInternal(std::optional<model::ErxReceipt>& receipt,
                                         const model::PrescriptionId& prescriptionId,
@@ -972,17 +1049,29 @@ void ErpWorkflowTestBase::taskCloseInternal(std::optional<model::ErxReceipt>& re
                                         const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
                                         const std::optional<std::string>& expectedErrorText,
                                         const std::optional<std::string>& expectedDiagnostics,
-                                        const std::string& whenHandedOver)
+                                        const std::string& whenHandedOver,
+                                        size_t numMedicationDispenses)
 {
-    auto closeBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
+    std::string closeBody;
+    if (numMedicationDispenses == 1)
+    {
+        closeBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
+    }
+    else
+    {
+        closeBody =
+            medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+    }
 
     std::string closePath = "/Task/" + prescriptionId.toString() + "/$close?secret=" + secret;
     ClientResponse serverResponse;
     JWT jwt{ jwtApotheke() };
-    ASSERT_NO_FATAL_FAILURE(
-        std::tie(std::ignore, serverResponse) =
-            send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+    ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
+                                send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
+                                         .withJwt(jwt)
+                                         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                         .withExpectedInnerStatus(expectedInnerStatus)
+                                         .withExpectedInnerFlowType(std::to_string(magic_enum::enum_integer(prescriptionId.type())))));
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
@@ -1005,10 +1094,12 @@ void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundl
     std::string acceptPath = "/Task/" + prescriptionId.toString() + "/$accept?ac=" + accessCode;
     ClientResponse serverResponse;
     JWT jwt{ jwtApotheke() };
-    ASSERT_NO_FATAL_FAILURE(
-        std::tie(std::ignore, serverResponse) =
-            send(RequestArguments{HttpMethod::POST, acceptPath, {}}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+    ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
+                                send(RequestArguments{HttpMethod::POST, acceptPath, {}}
+                                         .withJwt(jwt)
+                                         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                         .withExpectedInnerStatus(expectedInnerStatus)
+                                         .withExpectedInnerFlowType(std::to_string(magic_enum::enum_integer(prescriptionId.type())))));
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
@@ -1056,12 +1147,10 @@ void ErpWorkflowTestBase::taskActivateInternal(std::optional<model::Task>& task,
                                   activateBody, "application/fhir+xml"}
                 .withJwt(jwt)
                 .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                .withHeader("X-AccessCode", accessCode)));
+                .withHeader("X-AccessCode", accessCode)
+                .withExpectedInnerStatus(expectedInnerStatus)
+                .withExpectedInnerFlowType(std::to_string(magic_enum::enum_integer(prescriptionId.type())))));
 
-
-    EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
-        std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(prescriptionId.type())));
-    
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
@@ -1081,11 +1170,22 @@ void ErpWorkflowTestBase::makeQESBundleInternal(std::string& qesBundle, const st
                                             const model::PrescriptionId& prescriptionId,
                                             const model::Timestamp& now)
 {
+    std::string kvType = "GKV";
+    std::string patientIdentifierAssigner;
+    if(prescriptionId.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+    {
+        kvType = "PKV";
+        patientIdentifierAssigner = R"(
+                    <assigner>
+                        <display value="Assigning organization"/>
+                    </assigner>)";
+    }
+
     qesBundle = R"(
 <Bundle xmlns="http://hl7.org/fhir">
     <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
     <meta>
-        <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2"/>
+        <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|)" + std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())) + R"("/>
     </meta>
     <identifier>
         <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
@@ -1099,7 +1199,7 @@ void ErpWorkflowTestBase::makeQESBundleInternal(std::string& qesBundle, const st
           <Composition>
             <id value="5e709fc5-c233-456c-bf81-20534cbf9565" />
             <meta>
-              <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2" />
+              <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|)" + std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())) + R"("/>
             </meta>
             <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
               <valueCoding>
@@ -1172,11 +1272,11 @@ void ErpWorkflowTestBase::makeQESBundleInternal(std::string& qesBundle, const st
                     <type>
                         <coding>
                             <system value="http://fhir.de/CodeSystem/identifier-type-de-basis"/>
-                            <code value="GKV"/>
+                            <code value=")" + kvType + R"("/>
                         </coding>
                     </type>
                     <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
-                    <value value=")" + kvnr + R"("/>
+                    <value value=")" + kvnr + R"("/>)" + patientIdentifierAssigner + R"(
                 </identifier>
                 <name>
                     <use value="official"/>
@@ -1204,8 +1304,112 @@ void ErpWorkflowTestBase::makeQESBundleInternal(std::string& qesBundle, const st
             </Patient>
         </resource>
     </entry>
+    <entry>
+        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/Coverage/312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
+        <resource>
+            <Coverage>
+                <id value="312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
+                <meta>
+                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3"/>
+                </meta>
+                <extension url="http://fhir.de/StructureDefinition/gkv/versichertenart">
+                    <valueCoding>
+                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"/>
+                        <code value="1"/>
+                    </valueCoding>
+                </extension>
+                <extension url="http://fhir.de/StructureDefinition/gkv/besondere-personengruppe">
+                    <valueCoding>
+                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"/>
+                        <code value="00"/>
+                    </valueCoding>
+                </extension>
+                <extension url="http://fhir.de/StructureDefinition/gkv/dmp-kennzeichen">
+                    <valueCoding>
+                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"/>
+                        <code value="00"/>
+                    </valueCoding>
+                </extension>
+                <status value="active"/>
+                <type>
+                    <coding>
+                        <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis"/>
+                        <code value=")" + kvType + R"("/>
+                    </coding>
+                </type>
+                <beneficiary>
+                    <reference value="Patient/9774f67f-a238-4daf-b4e6-679deeef3811"/>
+                </beneficiary>
+                <payor>
+                    <identifier>
+                        <system value="http://fhir.de/NamingSystem/arge-ik/iknr"/>
+                        <value value="109500969"/>
+                    </identifier>
+                    <display value="Test KV"/>
+                </payor>
+            </Coverage>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://pvs.praxis.local/fhir/MedicationRequest/005cd690-7473-4bf4-a502-30a32f2e7623"/>
+        <resource>
+            <MedicationRequest>
+                <id value="005cd690-7473-4bf4-a502-30a32f2e7623"/>
+                <meta>
+                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2"/>
+                </meta>
+                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee">
+                    <valueBoolean value="false"/>
+                </extension>
+                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG">
+                    <valueBoolean value="false"/>
+                </extension>
+                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription">
+                    <extension url="Kennzeichen">
+                        <valueBoolean value="false"/>
+                    </extension>
+                </extension>
+                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
+                    <valueCoding>
+                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_StatusCoPayment"/>
+                        <code value="0"/>
+                    </valueCoding>
+                </extension>
+                <status value="active"/>
+                <intent value="order"/>
+                <medicationReference>
+                    <reference value="Medication/4980b470-e8e5-44bf-a53a-47ade2561cdb"/>
+                </medicationReference>
+                <subject>
+                    <reference value="Patient/9774f67f-a238-4daf-b4e6-679deeef3811"/>
+                </subject>
+                <authoredOn value="2021-06-08"/>
+                <requester>
+                    <reference value="Practitioner/6e6c209e-1b86-43e0-9794-f54ec147fc49"/>
+                </requester>
+                <insurance>
+                    <reference value="Converage/312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
+                </insurance>
+                <dosageInstruction>
+                    <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag">
+                        <valueBoolean value="true"/>
+                    </extension>
+                    <text value="1x t&#xE4;glich"/>
+                </dosageInstruction>
+                <dispenseRequest>
+                    <quantity>
+                        <value value="1"/>
+                        <system value="http://unitsofmeasure.org"/>
+                        <code value="{Package}"/>
+                    </quantity>
+                </dispenseRequest>
+                <substitution>
+                    <allowedBoolean value="false"/>
+                </substitution>
+            </MedicationRequest>
+        </resource>
+        </entry>
 </Bundle>
-
 )";
 }
 void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, HttpStatus expectedOuterStatus,
@@ -1232,6 +1436,9 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
         case model::PrescriptionType::direkteZuweisung:
             create += "169";
             break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            create += "200";
+            break;
     }
     create += "\"/>\n"
         "    </valueCoding>\n"
@@ -1246,10 +1453,11 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
                                 send(RequestArguments{HttpMethod::POST, "/Task/$create", create,
                                                       "application/fhir+xml"}
                                     .withJwt(jwt)
-                                    .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+                                    .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                    .withExpectedInnerStatus(expectedInnerStatus)));
 
-    ASSERT_EQ(outerResponse.getHeader().status(), expectedOuterStatus);
-    ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
+    ASSERT_EQ(outerResponse.getHeader().status(), expectedOuterStatus) << outerResponse.getBody();
+    ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus) << serverResponse.getBody();
     if (serverResponse.getHeader().status() == HttpStatus::Created)
     {
         ASSERT_NO_THROW(task = Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
@@ -1279,7 +1487,7 @@ void ErpWorkflowTestBase::auditEventGetInternal(
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(RequestArguments{HttpMethod::GET, vauPath, {}}
          .withHeader(Header::AcceptLanguage, language)
          .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-         .withJwt(jwt)));
+         .withJwt(jwt).withExpectedInnerStatus(HttpStatus::OK)));
     ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
     auto contentType = response.getHeader().header(Header::ContentType);
     ASSERT_TRUE(contentType);
@@ -1311,23 +1519,15 @@ void ErpWorkflowTestBase::metaDataGetInternal(
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(RequestArguments{HttpMethod::GET, "/metadata", {}}
         .withJwt(jwt)
         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-        .withHeader(Header::Accept, acceptContentType)));
+        .withHeader(Header::Accept, acceptContentType).withExpectedInnerStatus(HttpStatus::OK)));
     ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
     auto contentType = response.getHeader().header(Header::ContentType);
     ASSERT_TRUE(contentType);
     EXPECT_EQ(contentType.value(), static_cast<std::string>(acceptContentType));
-    if (static_cast<std::string>(acceptContentType) == static_cast<std::string>(ContentMimeType::fhirJsonUtf8))
-    {
-        metaData = model::MetaData::fromJsonNoValidation(response.getBody());
-        ASSERT_TRUE(metaData);
-        ASSERT_NO_THROW(getJsonValidator()->validate(
-            model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(metaData->jsonDocument()), SchemaType::fhir));
-    }
-    else
-    {
-        ASSERT_NO_THROW(metaData = model::MetaData::fromXml(response.getBody(), *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(), SchemaType::fhir));
-    }
+
+    ASSERT_NO_FATAL_FAILURE(
+        modelElemfromString<model::MetaData>(
+            metaData, response.getBody(), contentType.value(), SchemaType::fhir));
 }
 
 void ErpWorkflowTestBase::deviceGetInternal(
@@ -1339,26 +1539,256 @@ void ErpWorkflowTestBase::deviceGetInternal(
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(RequestArguments{ HttpMethod::GET, "/Device", {} }
         .withJwt(jwt)
         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-        .withHeader(Header::Accept, acceptContentType)));
+        .withHeader(Header::Accept, acceptContentType).withExpectedInnerStatus(HttpStatus::OK)));
     ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
     auto contentType = response.getHeader().header(Header::ContentType);
     ASSERT_TRUE(contentType);
     EXPECT_EQ(contentType.value(), static_cast<std::string>(acceptContentType));
-    if (static_cast<std::string>(acceptContentType) == static_cast<std::string>(ContentMimeType::fhirJsonUtf8))
+
+    ASSERT_NO_FATAL_FAILURE(
+        modelElemfromString<model::Device>(
+            device, response.getBody(), contentType.value(), SchemaType::fhir));
+}
+
+void ErpWorkflowTestBase::consentPostInternal(
+    std::optional<model::Consent>& consent,
+    const std::string& kvnr,
+    const model::Timestamp& dateTime,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    auto consentBody = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_template.json");
+    consentBody = String::replaceAll(String::replaceAll(consentBody, "##KVNR##", kvnr),
+                                     "##DATETIME##", dateTime.toXsDateTimeWithoutFractionalSeconds());
+
+    ClientResponse serverResponse;
+    ClientResponse outerResponse;
+    JWT jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::POST, "/Consent", consentBody, static_cast<std::string>(ContentMimeType::fhirJsonUtf8)}
+                .withJwt(jwt)
+                .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                .withExpectedInnerStatus(expectedStatus)));
+
+    if(expectedStatus == HttpStatus::Created)
     {
-        device = model::Device::fromJsonNoValidation(response.getBody());
-        ASSERT_TRUE(device);
-        ASSERT_NO_THROW(getJsonValidator()->validate(
-            model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(device->jsonDocument()), SchemaType::fhir));
+         ASSERT_NO_THROW(consent = model::Consent::fromJson(serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(), SchemaType::Gem_erxConsent));
     }
     else
     {
-        ASSERT_NO_THROW(device = model::Device::fromXml(response.getBody(),
-                                                        *StaticData::getXmlValidator(),
-                                                        *StaticData::getInCodeValidator(),
-                                                        SchemaType::fhir));
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(serverResponse.getBody(), true/*isJson*/, expectedErrorCode.value()));
     }
 }
+
+void ErpWorkflowTestBase::consentGetInternal(
+    std::optional<model::Consent>& consent,
+    const std::string& kvnr,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    ClientResponse serverResponse;
+    ClientResponse outerResponse;
+    JWT jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::GET, "/Consent", ""}
+                .withJwt(jwt)
+                .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                .withExpectedInnerStatus(expectedStatus)));
+
+    if(expectedStatus == HttpStatus::OK)
+    {
+        std::optional<model::Bundle> consentBundle;
+        ASSERT_NO_THROW(consentBundle = model::Bundle::fromJson(serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(),
+                                                                *StaticData::getInCodeValidator(), SchemaType::fhir));
+        ASSERT_TRUE(consentBundle.has_value());
+        ASSERT_LE(consentBundle->getResourceCount(), 1);
+        if(consentBundle->getResourceCount() == 1)
+        {
+            auto consents = consentBundle->getResourcesByType<model::Consent>("Consent");
+            ASSERT_EQ(consents.size(), 1);
+            consent = std::move(consents.front());
+        }
+    }
+    else
+    {
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(serverResponse.getBody(), true/*isJson*/, expectedErrorCode.value()));
+    }
+}
+
+void ErpWorkflowTestBase::chargeItemPostInternal(
+    std::optional<model::ChargeItem>& resultChargeItem,
+    const model::PrescriptionId& prescriptionId,
+    const std::string& kvnr,
+    const std::string& telematikId,
+    const std::string& secret,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    auto& resourceManager = ResourceManager::instance();
+    const auto dispenseBundleString = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto chargeItemTemplate = resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_POST_template.xml");
+    const auto chargeItemString =
+        String::replaceAll(
+            String::replaceAll(
+                String::replaceAll(chargeItemTemplate, "##PRESCRIPTION_ID##", prescriptionId.toString()),
+                "##KVNR##", kvnr),
+            "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleString)); // TODO only interim solution
+    auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemString);
+    inputChargeItem.setEntererTelematikId(telematikId);
+
+    ClientResponse serverResponse;
+    ClientResponse outerResponse;
+    JWT jwt = JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId()));
+    std::string postChargeItemPath = "/ChargeItem?task=" + prescriptionId.toString() + "&secret=" + secret;
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::POST, postChargeItemPath, inputChargeItem.serializeToXmlString(),
+                                  static_cast<std::string>(ContentMimeType::fhirXmlUtf8)}
+                 .withJwt(jwt)
+                 .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                 .withExpectedInnerStatus(expectedStatus)));
+
+    if(expectedStatus == HttpStatus::Created)
+    {
+        ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromXml(
+            serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem));
+    }
+    else
+    {
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(serverResponse.getBody(), false/*isJson*/, expectedErrorCode.value()));
+    }
+}
+
+void ErpWorkflowTestBase::chargeItemPutInternal(
+    std::optional<model::ChargeItem>& resultChargeItem,
+    //        const model::PrescriptionId& prescriptionId,
+    const JWT& jwt,
+    const ContentMimeType& contentType,
+    //        const std::string& kvnr,
+    //        const std::string& telematikId,
+    const model::ChargeItem& inputChargeItem,
+    const std::optional<std::string>& newMedicationDispenseString,
+    const std::optional<std::tuple<bool, bool, bool>>& newMarking,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    auto chargeItemString = inputChargeItem.serializeToXmlString();
+    if(newMedicationDispenseString.has_value())
+    {
+        chargeItemString = String::replaceAll(
+            chargeItemString, "</meta>",
+            "</meta><contained><Binary><id value=\"dispense-1\"/><contentType value=\"application/pkcs7-mime\"/>"
+            "<data value=\"" + Base64::encode(*newMedicationDispenseString) + "\"/></Binary></contained>");
+    }
+    if(newMarking.has_value())
+    {
+        const auto [insuranceProvider, subsidy, taxOffice] = newMarking.value();
+        chargeItemString = String::replaceAll(
+            chargeItemString, "<extension url=\"insuranceProvider\"><valueBoolean value=\"false\"/>",
+            std::string("<extension url=\"insuranceProvider\"><valueBoolean value=\"") + (insuranceProvider ? "true" : "false") + "\"/>");
+        chargeItemString = String::replaceAll(
+            chargeItemString, "<extension url=\"subsidy\"><valueBoolean value=\"false\"/>",
+            std::string("<extension url=\"subsidy\"><valueBoolean value=\"") + (subsidy ? "true" : "false") + "\"/>");
+        chargeItemString = String::replaceAll(
+            chargeItemString, "<extension url=\"taxOffice\"><valueBoolean value=\"false\"/>",
+            std::string("<extension url=\"taxOffice\"><valueBoolean value=\"") + (taxOffice ? "true" : "false") + "\"/>");
+    }
+    if(std::string(contentType) == std::string(ContentMimeType::fhirJsonUtf8))
+    {
+        chargeItemString = model::ChargeItem::fromXmlNoValidation(chargeItemString).serializeToJsonString();
+    }
+
+    ClientResponse serverResponse;
+    ClientResponse outerResponse;
+    std::string putChargeItemPath = "/ChargeItem/" + inputChargeItem.prescriptionId().toString();
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::PUT, putChargeItemPath, chargeItemString,//inputChargeItem.serializeToXmlString(),
+                                  static_cast<std::string>(contentType)}
+                 .withJwt(jwt)
+                 .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                 .withHeader(Header::Accept, contentType)
+                 .withExpectedInnerStatus(expectedStatus)));
+
+    if(expectedStatus == HttpStatus::OK)
+    {
+        const auto resultContentType = serverResponse.getHeader().header(Header::ContentType);
+        ASSERT_TRUE(resultContentType);
+        EXPECT_EQ(resultContentType.value(), static_cast<std::string>(contentType));
+        ASSERT_NO_FATAL_FAILURE(
+            modelElemfromString<model::ChargeItem>(resultChargeItem, serverResponse.getBody(), *resultContentType, SchemaType::Gem_erxChargeItem));
+    }
+    else
+    {
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(
+            checkOperationOutcome(serverResponse.getBody(), std::string(contentType) == std::string(ContentMimeType::fhirJsonUtf8)/*isJson*/,
+                                  expectedErrorCode.value()));
+    }
+}
+
+
+void ErpWorkflowTestBase::chargeItemsGetInternal(
+    std::optional<model::Bundle>& chargeItemsBundle,
+    const JWT& jwt,
+    const ContentMimeType& contentType,
+    const std::string_view& searchArguments,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::string vauPath = "/ChargeItem";
+    if (!searchArguments.empty())
+    {
+        vauPath.append("?").append(searchArguments);
+    }
+    ClientResponse response;
+    ASSERT_NO_FATAL_FAILURE(
+        tie(std::ignore, response) =
+            send(RequestArguments{HttpMethod::GET, vauPath, {}}
+                     .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                     .withJwt(jwt)
+                     .withHeader(Header::Accept, contentType)
+                     .withExpectedInnerStatus(expectedStatus)));
+
+    if(expectedStatus == HttpStatus::OK)
+    {
+        const auto resultContentType = response.getHeader().header(Header::ContentType);
+        ASSERT_TRUE(resultContentType);
+        EXPECT_EQ(resultContentType.value(), static_cast<std::string>(contentType));
+
+        ASSERT_NO_FATAL_FAILURE(modelElemfromString<model::Bundle>(chargeItemsBundle, response.getBody(),
+                                                                   *resultContentType, SchemaType::fhir));
+
+        if(chargeItemsBundle->getResourceCount() > 0)
+        {
+            const auto chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+            for (const auto& chargeItem : chargeItems)
+            {
+                ASSERT_NO_THROW(model::ChargeItem::fromXml(chargeItem.serializeToXmlString(), *getXmlValidator(),
+                                                           *StaticData::getInCodeValidator(),
+                                                           SchemaType::Gem_erxChargeItem));
+            }
+        }
+    }
+    else
+    {
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(
+            checkOperationOutcome(response.getBody(), std::string(contentType) == std::string(ContentMimeType::fhirJsonUtf8)/*isJson*/,
+                                  expectedErrorCode.value()));
+    }
+}
+
 
 void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse>& result,
                                        const ErpWorkflowTestBase::RequestArguments& args,
@@ -1419,7 +1849,9 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
     // Verify the outer response
     if (!args.skipOuterResponseVerification)
     {
-        ASSERT_EQ(outerResponse.getHeader().status(), HttpStatus::OK) << "header status was " << toString(outerResponse.getHeader().status());
+        ASSERT_EQ(outerResponse.getHeader().status(), HttpStatus::OK)
+            << " header status was: " << toString(outerResponse.getHeader().status())
+            << " OperationOutcome: " << outerResponse.getBody();
         ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
         ASSERT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/octet-stream");
     }
@@ -1434,8 +1866,7 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
         // verify Inner-* headers
         // this check makes only sense when testing without tls-proxy and erp-service
         // and against an erp-processing-context directly
-        auto hostaddress = client->getHostAddress();
-        if (hostaddress == "localhost" || hostaddress == "127.0.0.1")
+        if (!runsInCloudEnv())
         {
             EXPECT_EQ(outerResponse.getHeader().header(Header::InnerResponseCode).value_or("XXX"),
                       std::to_string(static_cast<int>(innerResponse.getHeader().status())));
@@ -1447,10 +1878,24 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
             auto expectedRole = toExpectedRole(args);
             EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestRole).value_or("XXX"),
                       expectedRole);
+            {
+                EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value_or("XXX"),
+                          args.expectedInnerFlowType);
+            }
+
+            if (jwt.stringForClaim(JWT::clientIdClaim).has_value())
+            {
+                // Currently, this header field is optional and appears only when the token claim has a value.
+                EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestClientId).value_or("XXX"), toExpectedClientId(args));
+            }
         }
         if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
         {
             EXPECT_TRUE(regex_search(innerResponse.getBody(), XMLUtf8EncodingRegex));
+        }
+        if (args.expectedInnerStatus != HttpStatus::Unknown)
+        {
+            EXPECT_EQ(args.expectedInnerStatus, innerResponse.getHeader().status()) << innerResponse.getBody();
         }
     }
     catch (std::exception&)
@@ -1602,12 +2047,13 @@ ErpWorkflowTestBase::taskAccept(const model::PrescriptionId& prescriptionId,
 }
 std::optional<model::ErxReceipt>
 ErpWorkflowTestBase::taskClose(const model::PrescriptionId& prescriptionId, const std::string& secret,
-                           const std::string& kvnr, HttpStatus expectedInnerStatus,
-                           const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+                               const std::string& kvnr, HttpStatus expectedInnerStatus,
+                               const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+                               size_t numMedicationDispenses)
 {
     std::optional<model::ErxReceipt> receipt;
     taskCloseInternal(receipt, prescriptionId, secret, kvnr, prescriptionId.toString(),
-                      expectedInnerStatus, expectedErrorCode, {}, {}, "2020-09-21");
+                      expectedInnerStatus, expectedErrorCode, {}, {}, "2020-09-21", numMedicationDispenses);
     return receipt;
 }
 void ErpWorkflowTestBase::taskClose_MedicationDispense_invalidPrescriptionId(
@@ -1618,7 +2064,7 @@ void ErpWorkflowTestBase::taskClose_MedicationDispense_invalidPrescriptionId(
 {
     std::optional<model::ErxReceipt> receipt;
     taskCloseInternal(receipt, prescriptionId, secret, kvnr, invalidPrescriptionId,
-                      HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, {}, {}, "2020-09-21");
+                      HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, {}, {}, "2020-09-21", 1);
     EXPECT_TRUE(!receipt.has_value());
 }
 void ErpWorkflowTestBase::taskClose_MedicationDispense_invalidWhenHandedOver(
@@ -1632,7 +2078,7 @@ void ErpWorkflowTestBase::taskClose_MedicationDispense_invalidWhenHandedOver(
         invalidWhenHandedOver + "' is not a valid value of the union type '{http://hl7.org/fhir}dateTime-primitive'.";
     taskCloseInternal(receipt, prescriptionId, secret, kvnr, prescriptionId.toString(),
                       HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
-                      "XML error on line 0", expectedDiagnostics, invalidWhenHandedOver);
+                      "XML error on line 0", expectedDiagnostics, invalidWhenHandedOver, 1);
     EXPECT_TRUE(!receipt.has_value());
 }
 void ErpWorkflowTestBase::taskAbort(const model::PrescriptionId& prescriptionId, JWT jwt,
@@ -1647,8 +2093,10 @@ void ErpWorkflowTestBase::taskAbort(const model::PrescriptionId& prescriptionId,
     RequestArguments requestArguments{HttpMethod::POST, abortPath, {}};
     requestArguments.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(jwt));
     requestArguments.jwt = std::move(jwt);
+    requestArguments.withExpectedInnerFlowType(std::to_string(magic_enum::enum_integer(prescriptionId.type())));
     if(accessCode.has_value())
         requestArguments.headerFields.emplace("X-AccessCode", accessCode.value());
+    requestArguments.expectedInnerStatus = expectedStatus;
     ClientResponse serverResponse;
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(requestArguments));
     ASSERT_EQ(serverResponse.getHeader().status(), expectedStatus);
@@ -1667,19 +2115,24 @@ void ErpWorkflowTestBase::taskReject(const model::PrescriptionId& prescriptionId
                                  HttpStatus expectedInnerStatus,
                                  const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
 {
-    taskReject(prescriptionId.toString(), secret, expectedInnerStatus, expectedErrorCode);
+    taskReject(prescriptionId.toString(), secret, expectedInnerStatus, expectedErrorCode,
+               std::to_string(magic_enum::enum_integer(prescriptionId.type())));
 }
 void ErpWorkflowTestBase::taskReject(const std::string& prescriptionIdString,
-                                 const std::string& secret,
-                                 HttpStatus expectedInnerStatus,
-                                 const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+                                     const std::string& secret,
+                                     HttpStatus expectedInnerStatus,
+                                     const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+                                     const std::string& expectedFlowType)
 {
     std::string rejectPath = "/Task/" + prescriptionIdString + "/$reject?secret=" + secret;
     ClientResponse serverResponse;
     JWT jwt{ jwtApotheke() };
-    ASSERT_NO_FATAL_FAILURE(
-        std::tie(std::ignore, serverResponse) =
-            send(RequestArguments{HttpMethod::POST, rejectPath, {}}.withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+    ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
+                                send(RequestArguments{HttpMethod::POST, rejectPath, {}}
+                                         .withJwt(jwt)
+                                         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                         .withExpectedInnerStatus(expectedInnerStatus)
+                                         .withExpectedInnerFlowType(expectedFlowType)));
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
 
     if(expectedInnerStatus != HttpStatus::NoContent)
@@ -1720,10 +2173,10 @@ std::string ErpWorkflowTestBase::makeQESBundle(const std::string& kvnr,
     return toCadesBesSignature(qesBundle);
 }
 std::optional<model::MedicationDispense> ErpWorkflowTestBase::medicationDispenseGet(
-    const std::string& kvnr, const model::PrescriptionId& prescriptionId)
+    const std::string& kvnr, const std::string& medicationDispenseId)
 {
     std::optional<model::MedicationDispense> medicationDispense;
-    medicationDispenseGetInternal(medicationDispense, kvnr, prescriptionId);
+    medicationDispenseGetInternal(medicationDispense, kvnr, medicationDispenseId);
     return medicationDispense;
 }
 
@@ -1764,7 +2217,9 @@ void ErpWorkflowTestBase::communicationDelete(const JWT& jwt, const Uuid& commun
 {
     auto commId = communicationId.toString();
     TVLOG(0) << "Delete Communication: " << commId;
-    ASSERT_NO_FATAL_FAILURE(send(RequestArguments{HttpMethod::DELETE, "/Communication/" + commId, {}}.withJwt(jwt)));
+    ASSERT_NO_FATAL_FAILURE(
+        send(RequestArguments{HttpMethod::DELETE, "/Communication/" + commId, {}}.withJwt(jwt).withExpectedInnerStatus(
+            HttpStatus::NoContent)));
 }
 
 void ErpWorkflowTestBase::communicationDeleteAll(const JWT& jwt)
@@ -1830,6 +2285,157 @@ std::optional<model::Device> ErpWorkflowTestBase::deviceGet(const ContentMimeTyp
     return device;
 }
 
+std::optional<model::Consent> ErpWorkflowTestBase::consentPost(
+    const std::string& kvnr,
+    const model::Timestamp& dateTime,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::optional<model::Consent> consent;
+    consentPostInternal(consent, kvnr, dateTime, expectedStatus, expectedErrorCode);
+    return consent;
+}
+
+std::optional<model::Consent> ErpWorkflowTestBase::consentGet(
+    const std::string& kvnr,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::optional<model::Consent> consent;
+    consentGetInternal(consent, kvnr, expectedStatus, expectedErrorCode);
+    return consent;
+}
+
+void ErpWorkflowTestBase::consentDelete(
+    const std::string& consentId,
+    const std::string& kvnr,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    ClientResponse serverResponse;
+    ClientResponse outerResponse;
+    JWT jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::DELETE, "/Consent/" + consentId, ""}
+                     .withJwt(jwt)
+                     .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                     .withExpectedInnerStatus(expectedStatus)));
+
+    if(expectedStatus != HttpStatus::NoContent)
+    {
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(serverResponse.getBody(), true/*isJson*/, expectedErrorCode.value()));
+    }
+}
+
+std::optional<model::ChargeItem> ErpWorkflowTestBase::chargeItemPost(
+    const model::PrescriptionId& prescriptionId,
+    const std::string& kvnr,
+    const std::string& telematikId,
+    const std::string& secret,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::optional<model::ChargeItem> chargeItem;
+    chargeItemPostInternal(chargeItem, prescriptionId, kvnr, telematikId, secret, expectedStatus, expectedErrorCode);
+    return chargeItem;
+}
+
+std::optional<model::ChargeItem> ErpWorkflowTestBase::chargeItemPut(
+    //        const model::PrescriptionId& prescriptionId,
+    const JWT& jwt,
+    const ContentMimeType& contentType,
+    //        const std::string& kvnr,
+    //        const std::string& telematikId,
+    const model::ChargeItem& inputChargeItem,
+    const std::optional<std::string>& newMedicationDispenseString,
+    const std::optional<std::tuple<bool, bool, bool>>& newMarking,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::optional<model::ChargeItem> chargeItem;
+    chargeItemPutInternal(
+        chargeItem, jwt, contentType, inputChargeItem, newMedicationDispenseString, newMarking, expectedStatus, expectedErrorCode);
+    return chargeItem;
+}
+
+std::optional<model::Bundle> ErpWorkflowTestBase::chargeItemsGet(
+    const JWT& jwt,
+    const ContentMimeType& contentType,
+    const std::string_view& searchArguments,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::optional<model::Bundle> chargeItemsBundle;
+    chargeItemsGetInternal(chargeItemsBundle, jwt, contentType, searchArguments, expectedStatus, expectedErrorCode);
+    return chargeItemsBundle;
+}
+
+void ErpWorkflowTestBase::chargeItemDelete(
+    const model::PrescriptionId& prescriptionId,
+    const JWT& jwt,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    ClientResponse serverResponse;
+    ClientResponse outerResponse;
+
+    ASSERT_NO_FATAL_FAILURE(
+        std::tie(std::ignore, serverResponse) =
+            send(RequestArguments{HttpMethod::DELETE, "/ChargeItem/" + prescriptionId.toString(), ""}
+                     .withJwt(jwt)
+                     .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                     .withExpectedInnerStatus(expectedStatus)));
+
+    if(expectedStatus != HttpStatus::NoContent)
+    {
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(serverResponse.getBody(),
+                                                      jwt.stringForClaim(JWT::professionOIDClaim) == profession_oid::oid_versicherter/*isJson*/,
+                                                      expectedErrorCode.value()));
+    }
+}
+
+void ErpWorkflowTestBase::createClosedTask(
+    std::optional<model::PrescriptionId>& createdId,
+    std::string& createdAccessCode,
+    std::string& createdSecret,
+    const model::PrescriptionType prescriptionType,
+    const std::string& kvnr)
+{
+    // Create a closed task:
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(createdId, createdAccessCode, prescriptionType));
+    ASSERT_TRUE(createdId.has_value());
+
+    std::string qesBundle;
+    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, model::Timestamp::now()));
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskActivate(*createdId, createdAccessCode, qesBundle));
+    ASSERT_TRUE(task);
+
+    std::optional<model::Bundle> acceptResultBundle;
+    ASSERT_NO_FATAL_FAILURE(acceptResultBundle = taskAccept(*createdId, createdAccessCode));
+    ASSERT_TRUE(acceptResultBundle);
+    const auto tasks = acceptResultBundle->getResourcesByType<model::Task>("Task");
+    ASSERT_EQ(tasks.size(), 1);
+    const auto secret = tasks[0].secret();
+    ASSERT_TRUE(secret.has_value());
+    createdSecret = *secret;
+
+    std::optional<model::ErxReceipt> closeReceipt;
+    ASSERT_NO_FATAL_FAILURE(closeReceipt = taskClose(*createdId, std::string(*secret), kvnr));
+    ASSERT_TRUE(closeReceipt);
+}
+
+std::string ErpWorkflowTestBase::generateNewRandomKVNR()
+{
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
+    return kvnr;
+}
+
 void ErpWorkflowTestBase::generateNewRandomKVNR(std::string& kvnr)
 {
     std::random_device rd;
@@ -1879,5 +2485,3 @@ void ErpWorkflowTestBase::writeCurrentTestOutputFile(
     fileName += "." + fileExtension;
     FileHelper::writeFile(fileName, testOutput);
 }
-
-

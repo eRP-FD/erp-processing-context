@@ -48,7 +48,7 @@ void MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob (
         entry.type = BlobType::Quote;
         entry.name = EnrolmentHelper::getBlobName(blobs.trustedQuote);
         entry.blob = std::move(blobs.trustedQuote);
-        entry.metaPcrSet = blobs.pcrSet;
+        entry.pcrSet = blobs.pcrSet;
         blobCache.storeBlob(std::move(entry));
     }
 }

@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:include schemaLocation="../identifier/Identifier.xsd"/>
+  <xs:include schemaLocation="../extension/LanguagesExtension.xsd"/>
+  <xs:include schemaLocation="../binary/Gem_erxBinary.xsd"/>
+  <xs:element name="ChargeItem" type="Gem_erxChargeItem"/>
+  <xs:complexType name="Gem_erxChargeItem">
+    <xs:complexContent>
+      <xs:extension base="Resource">
+        <xs:sequence>
+          <xs:element name="text" type="Narrative" minOccurs="0"/>
+          <xs:element name="contained" type="Gem_erxChargeItem.ResourceContainer" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="identifier" type="Gem_erxPrescriptionID.Identifier" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="definitionUri" type="uri" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="definitionCanonical" type="canonical" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="status" type="Gem_erxChargeItem.Status"/>
+          <xs:element name="partOf" type="Reference" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="code" type="Gem_erxChargeItem.Code"/>
+          <xs:element name="subject" type="Gem_erxChargeItem.Subject"/>
+          <xs:element name="context" type="Reference" minOccurs="0"/>
+          <xs:choice minOccurs="0">
+            <xs:element name="occurrenceDateTime" type="dateTime" minOccurs="0"/>
+            <xs:element name="occurrencePeriod" type="Period" minOccurs="0"/>
+            <xs:element name="occurrenceTiming" type="Timing" minOccurs="0"/>
+          </xs:choice>
+          <xs:element name="performer" type="Gem_erxChargeItem.performer" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="performingOrganization" type="Reference" minOccurs="0"/>
+          <xs:element name="requestingOrganization" type="Reference" minOccurs="0"/>
+          <xs:element name="costCenter" type="Reference" minOccurs="0"/>
+          <xs:element name="quantity" type="Quantity" minOccurs="0"/>
+          <xs:element name="bodysite" type="CodeableConcept" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="factorOverride" type="decimal" minOccurs="0"/>
+          <xs:element name="priceOverride" type="Money" minOccurs="0"/>
+          <xs:element name="overrideReason" type="string" minOccurs="0"/>
+          <xs:element name="enterer" type="Gem_erxChargeItem.Enterer"/>
+          <xs:element name="enteredDate" type="dateTime"/>
+          <xs:element name="reason" type="CodeableConcept" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="service" type="Reference" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:choice minOccurs="0">
+            <xs:element name="productCodeableConcept" type="CodeableConcept"/>
+            <xs:element name="productReference" type="Reference"/>
+          </xs:choice>
+          <xs:element name="account" type="Reference" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="note" type="Annotation" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="supportingInformation" type="Gem_erxChargeItem.Information" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxChargeItem.ResourceContainer">
+    <xs:choice>
+      <xs:element ref="Binary"/>
+    </xs:choice>
+  </xs:complexType>
+  
+  <xs:complexType name="Gem_erxChargeItem.Status">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxChargeItem.Status-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxChargeItem.Status-list">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="planned"/>
+      <xs:enumeration value="billable"/>
+      <xs:enumeration value="not-billable"/>
+      <xs:enumeration value="aborted"/>
+      <xs:enumeration value="billed"/>
+      <xs:enumeration value="entered-in-error"/>
+      <xs:enumeration value="unknown"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Gem_erxChargeItem.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="Gem_erxChargeItem.Code.Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxChargeItem.Code.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="Gem_erxChargeItem.Code.Coding.Uri" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="Gem_erxChargeItem.Code.Coding.Code" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxChargeItem.Code.Coding.Uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://terminology.hl7.org/CodeSystem/data-absent-reason"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxChargeItem.Code.Coding.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="not-applicable"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxChargeItem.Subject">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="Gem_erxChargeItem.Subject.Uri" minOccurs="0"/>
+          <xs:element name="identifier" type="Identifier.KVID-10"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxChargeItem.Subject.Uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxChargeItem.Subject.Uri.type-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxChargeItem.Subject.Uri.type-list">
+    <xs:restriction base="url-primitive">
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/Patient"/>
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/Group"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Gem_erxChargeItem.performer">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="function" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="actor" type="Reference"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxChargeItem.Enterer">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="uri" minOccurs="0"/>
+          <xs:element name="identifier" type="TelematikID.Identifier"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxChargeItem.Information">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="Gem_erxChargeItem.Info.type" minOccurs="0"/>
+          <xs:element name="identifier" type="Identifier" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxChargeItem.Info.type">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxChargeItem.Info.type-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxChargeItem.Info.type-list">
+    <xs:restriction base="uri-primitive">
+      <xs:enumeration value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"/>
+      <xs:enumeration value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle"/>
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxReceipt"/>
+    </xs:restriction>
+  </xs:simpleType>    
+</xs:schema>

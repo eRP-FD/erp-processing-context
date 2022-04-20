@@ -17,7 +17,7 @@
 #include "test/util/ServerTestBase.hxx"
 #include "test_config.h"
 #include "mock/crypto/MockCryptography.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 
 #include <gtest/gtest.h>
 

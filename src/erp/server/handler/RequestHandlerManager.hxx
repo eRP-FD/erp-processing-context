@@ -9,14 +9,13 @@
 
 #include "erp/server/handler/RequestHandlerContext.hxx"
 
-template<class ServiceContextType>
 class RequestHandlerManager
 {
 public:
-    using HandlerContext = RequestHandlerContext<ServiceContextType>;
+    using HandlerContext = RequestHandlerContext;
     using HandlerType = typename HandlerContext::HandlerType;
 
-    RequestHandlerContext<ServiceContextType>& addRequestHandler (
+    RequestHandlerContext& addRequestHandler (
         HttpMethod method,
         const std::string& path,
         std::unique_ptr<HandlerType>&& handler);
@@ -39,7 +38,7 @@ public:
         const std::string& target) const;
 
 private:
-    RequestHandlerContainer<ServiceContextType> mRequestHandlers;
+    RequestHandlerContainer mRequestHandlers;
 };
 
 

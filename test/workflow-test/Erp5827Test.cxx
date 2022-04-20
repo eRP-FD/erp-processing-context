@@ -6,8 +6,8 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include "erp/util/Base64.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <fstream>
 

@@ -6,7 +6,7 @@
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 
-SessionContext<PcServiceContext>::SessionContext(
+SessionContext::SessionContext(
     PcServiceContext& serviceContext,
     ServerRequest& request,
     ServerResponse& response,
@@ -19,7 +19,7 @@ SessionContext<PcServiceContext>::SessionContext(
 }
 
 
-AuditDataCollector& SessionContext<PcServiceContext>::auditDataCollector()
+AuditDataCollector& SessionContext::auditDataCollector()
 {
     if(!mAuditDataCollector)
         mAuditDataCollector = std::make_unique<AuditDataCollector>();
@@ -27,14 +27,14 @@ AuditDataCollector& SessionContext<PcServiceContext>::auditDataCollector()
 }
 
 
-Database* SessionContext<PcServiceContext>::database()
+Database* SessionContext::database()
 {
     if (! mDatabase)
         mDatabase = serviceContext.databaseFactory();
     return mDatabase.get();
 }
 
-std::unique_ptr<Database> SessionContext<PcServiceContext>::releaseDatabase()
+std::unique_ptr<Database> SessionContext::releaseDatabase()
 {
     return std::move(mDatabase);
 }

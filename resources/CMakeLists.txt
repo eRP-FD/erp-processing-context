@@ -100,6 +100,8 @@ set(SCHEMA_FILES
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/signature/Gem_erxSignature.xsd"
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/task/Gem_erxTask.xsd"
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/task/PerformerType.Coding.Values.xml"
+        "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/chargeitem/Gem_erxChargeItem.xsd"
+        "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/consent/Gem_erxConsent.xsd"
         "schema/hl7.fhir.r4.core/4.0.1/json/fhir.json"
         "schema/hl7.fhir.r4.core/4.0.1/xml/fhir.xsd"
         "schema/kbv.ita.erp/1.0.1/xml/addresstypes/AddressType.Street.xsd"
@@ -136,6 +138,7 @@ set(SCHEMA_FILES
         "schema/kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Patient.xsd"
         "schema/kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Practitioner.xsd"
         "schema/kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_PractitionerRole.xsd"
+        "schema/not-profiled/MedicationDispenseBundle.xsd"
         "schema/not-profiled/parameters/ActivateTaskParameters.xsd"
         "schema/not-profiled/parameters/CreateTaskParameters.xsd"
         "schema/shared/json/BaseSchema.json"
@@ -239,3 +242,40 @@ if (NOT TARGET production)
     add_custom_target(production)
 endif()
 add_dependencies(production resources)
+
+
+set(SAMPLEDATA_ARCHIVES
+        "test/Konnektathon/7. Konnektathon/#7_Konnektathon_mycare.zip"
+        "test/Konnektathon/7. Konnektathon/ADV_Konnektathon_7.zip"
+        "test/Konnektathon/7. Konnektathon/Data-AL_Konnektathon7.zip"
+        "test/Konnektathon/7. Konnektathon/Data_Vital_Konnektathon-02-11-21.zip"
+        "test/Konnektathon/7. Konnektathon/InterData_Konnektathon.zip"
+        "test/Konnektathon/7. Konnektathon/Konnektathon-7-Shop-Apotheke.zip"
+        "test/Konnektathon/7. Konnektathon/M1_Konnektathon-02-11-21.zip"
+        "test/Konnektathon/7. Konnektathon/M1_Konnektathon-03-11-21.zip"
+        "test/Konnektathon/7. Konnektathon/MEDISTAR_Konnektathon-02-03-11-21.zip"
+        "test/Konnektathon/7. Konnektathon/MedVision_Konnektathon7.zip"
+        "test/Konnektathon/7. Konnektathon/Medatixx2_Konnektathon-02-03-11.zip"
+        "test/Konnektathon/7. Konnektathon/Pharmatechnik_IXOS.7z"
+        "test/Konnektathon/7. Konnektathon/REDMedical.7z"
+        "test/Konnektathon/7. Konnektathon/REDMedicalPharma.zip"
+        "test/Konnektathon/7. Konnektathon/ifa_systems_ag-03-11-21.zip"
+        "test/Konnektathon/8. Konnektathon/8 Konnektathon - medisoftware - Raum1.zip"
+        "test/Konnektathon/8. Konnektathon/Apotechnik.7z"
+        "test/Konnektathon/8. Konnektathon/Konnektathon8.ADV.zip"
+        "test/Konnektathon/8. Konnektathon/Pharmatechnik_IXOS_8_Konnektathon.7z"
+        "test/Konnektathon/8. Konnektathon/konnektathon8_pharmatechnik_XT.7z"
+        "test/Kostbarkeiten_der_Abgabe_Abrechnung/Kostbarkeiten_der_Abgabe_Abrechnung.zip"
+        )
+find_program(BASH_EXECUTABLE NAMES bash REQUIRED)
+
+message(NOTICE "Extracting sample archives ${SAMPLEDATA_ARCHIVES}")
+foreach (archive ${SAMPLEDATA_ARCHIVES})
+    get_filename_component(extension ${archive} LAST_EXT)
+    string(REPLACE ${extension} "" base_name ${archive})
+    file(ARCHIVE_EXTRACT
+            INPUT ${CMAKE_CURRENT_SOURCE_DIR}/${archive}
+            DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${base_name})
+    execute_process(
+        COMMAND "${BASH_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/convert_kbv_bundles_1.0.1-2.sh" "${CMAKE_CURRENT_BINARY_DIR}/${base_name}")
+endforeach ()

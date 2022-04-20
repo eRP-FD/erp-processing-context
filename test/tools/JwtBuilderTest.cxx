@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "erp/idp/Idp.hxx"
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/ProfessionOid.hxx"
@@ -13,9 +13,8 @@
 #include "erp/util/Environment.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
-#include <regex>
 
 TEST(JwtBuilderTest, testBuilder)
 {
@@ -23,7 +22,7 @@ TEST(JwtBuilderTest, testBuilder)
     Idp idp;
     auto tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
         "ERP_TSL_INITIAL_CA_DER_PATH",
-        std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+        std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
 
     auto idpCertificate = Certificate::fromPem(
         FileHelper::readFileAsString(
@@ -60,7 +59,8 @@ TEST(JwtBuilderTest, testBuilder)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager,
+        tslManager.get(),
+        std::make_shared<Timer>(),
         true,
         idpRequestSender);
 

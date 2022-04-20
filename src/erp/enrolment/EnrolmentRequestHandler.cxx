@@ -3,16 +3,16 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/crypto/Certificate.hxx"
 #include "erp/enrolment/EnrolmentRequestHandler.hxx"
+#include "erp/enrolment/EnrolmentHelper.hxx"
 #include "erp/erp-serverinfo.hxx"
-#include "erp/hsm/HsmPool.hxx"
+#include "erp/hsm/ErpTypes.hxx"
+#include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/tpm/PcrSet.hxx"
 #include "erp/tpm/Tpm.hxx"
-#include "erp/tsl/TslManager.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Hash.hxx"
@@ -22,12 +22,14 @@ using namespace ::std::literals;
 
 namespace
 {
+constexpr ::std::string_view hashAlgorithm = "SHA256";
+
     /**
      * Acquire a TPM instance on demand so that the TPM is not blocked longer than necessary.
      */
     std::unique_ptr<Tpm> getTpm (EnrolmentSession& session)
     {
-        auto tpm = session.serviceContext.tpmFactory(*session.serviceContext.blobCache);
+        auto tpm = session.serviceContext.getTpmFactory()(session.serviceContext.getBlobCache());
         Expect(tpm!=nullptr, "TPM factory did not produce TPM instance");
         return tpm;
     }
@@ -64,6 +66,13 @@ namespace
         }
     }
 
+::std::string getBase64PcrHash(::std::string_view base64Quote, ::PcServiceContext& serviceContext)
+{
+    auto hsmPoolSession = serviceContext.getHsmPool().acquire();
+    const auto quoteData = ::ErpVector{::Base64::decode(base64Quote)};
+    const auto pcrHash = hsmPoolSession.session().parseQuote(quoteData).pcrHash;
+    return ::Base64::encode(pcrHash);
+}
 
     bool isCertificateValid(const std::string& certificate, TslManager& tslManager)
     {
@@ -114,8 +123,7 @@ void EnrolmentRequestHandlerBase::handleRequest (EnrolmentSession& session)
 {
     try
     {
-        handleBasicAuthentication(session, ConfigurationKey::ENROLMENT_API_CREDENTIALS,
-                                  ConfigurationKey::DEBUG_DISABLE_ENROLMENT_API_AUTH);
+        handleBasicAuthentication(session, ConfigurationKey::ENROLMENT_API_CREDENTIALS);
 
         const auto document = doHandleRequest(session);
         session.response.setBody(document.serializeToString());
@@ -169,7 +177,7 @@ EnrolmentModel PutBlobHandler::doHandleRequest (EnrolmentSession& session)
     entry.type = mBlobType;
     entry.name = blobId;
     entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
-    session.serviceContext.blobCache->storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -190,7 +198,7 @@ EnrolmentModel DeleteBlobHandler::doHandleRequest (EnrolmentSession& session)
     EnrolmentModel requestData (session.request.getBody());
     auto blobId = requestData.getDecodedErpVector(requestId);
 
-    session.serviceContext.blobCache->deleteBlob(mBlobType, blobId);
+    session.serviceContext.getBlobCache().deleteBlob(mBlobType, blobId);
 
     session.response.setStatus(HttpStatus::NoContent);
     return {};
@@ -207,12 +215,22 @@ EnrolmentModel GetEnclaveStatus::doHandleRequest (EnrolmentSession& session)
     session.accessLog.setInnerRequestOperation("GET /Enrolment/EnclaveStatus");
     ErpExpect(session.request.getBody().empty(), HttpStatus::BadRequest, "no request body expected");
 
-    const auto enrolmentStatus = EnrolmentData::getEnclaveStatus(*session.serviceContext.blobCache);
+    const auto enrolmentStatus = EnrolmentData::getEnclaveStatus(session.serviceContext.getBlobCache());
 
     EnrolmentModel responseData;
-    responseData.set(responseEnclaveId, session.serviceContext.enrolmentData.enclaveId.toString());
+    responseData.set(responseEnclaveId, session.serviceContext.getEnrolmentData().enclaveId.toString());
     responseData.set(responseEnclaveTime, std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     responseData.set(responseEnrolmentStatus, magic_enum::enum_name(enrolmentStatus));
+    const auto pcrSet = ::PcrSet::fromString(::Configuration::instance().getOptionalStringValue(
+        ::ConfigurationKey::PCR_SET, ::PcrSet::defaultSet().toString(false)));
+    responseData.set(responsePcrSet, pcrSet.toString());
+
+    auto hsmPoolSession = session.serviceContext.getHsmPool().acquire();
+    const auto nonce = ::Base64::encode(hsmPoolSession.session().getNonce(0).nonce);
+    const auto quote =
+        getTpm(session)->getQuote(::Tpm::QuoteInput{nonce, pcrSet.toPcrList(), ::std::string{hashAlgorithm}}, true);
+    responseData.set(responsePcrHash, getBase64PcrHash(quote.quotedDataBase64, session.serviceContext));
+
     responseData.set(responseVersionRelease, ErpServerInfo::ReleaseVersion);
     responseData.set(responseVersionReleasedate, ErpServerInfo::ReleaseDate);
     responseData.set(responseVersionBuild, ErpServerInfo::BuildVersion);
@@ -282,6 +300,9 @@ EnrolmentModel PostGetQuote::doHandleRequest (EnrolmentSession& session)
     EnrolmentModel responseData;
     responseData.set(responseQuotedData, output.quotedDataBase64);
     responseData.set(responseQuoteSignature, output.quoteSignatureBase64);
+    responseData.set(responsePcrSet, ::PcrSet::fromList(requestData.getSizeTVector(requestPcrSet)).toString());
+    responseData.set(responsePcrHash, getBase64PcrHash(output.quotedDataBase64, session.serviceContext));
+
     return responseData;
 }
 
@@ -329,7 +350,7 @@ EnrolmentModel PutKnownAttestationKey::doHandleRequest (EnrolmentSession& sessio
         entry.metaAkName = blobId.toArray<TpmObjectNameLength>();
     }
 
-    session.serviceContext.blobCache->storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -346,28 +367,50 @@ EnrolmentModel PutKnownQuote::doHandleRequest (EnrolmentSession& session)
 {
     session.accessLog.setInnerRequestOperation("PUT /Enrolment/KnownQuote");
 
-    EnrolmentModel requestData (session.request.getBody());
-    auto blobId = requestData.getDecodedErpVector(requestId);
-    auto blobData = requestData.getDecodedString(requestBlobData);
-    auto optionalPcrSet = requestData.getOptionalSizeTVector(requestPcrSet);
+    EnrolmentModel requestData(session.request.getBody());
 
-    const auto blobGeneration = requestData.getInt64(requestBlobGeneration);
-
-    BlobDatabase::Entry entry;
-    entry.type = BlobType::Quote;
-    entry.name = blobId;
-    entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
-
-    // The pcrSet field will soon not be optional anymore.
-    // For a transitioning phase use the default set as a fall back.
-    if (optionalPcrSet.has_value())
-        entry.metaPcrSet = PcrSet::fromList(optionalPcrSet.value());
+    auto pcrSet = requestData.getOptionalSizeTVector(requestPcrSet);
+    if (pcrSet)
+    {
+        verifyPcrSet(pcrSet.value());
+    }
     else
-        entry.metaPcrSet = PcrSet::defaultSet();
+    {
+        pcrSet = ::PcrSet::fromString(::Configuration::instance().getOptionalStringValue(
+                                          ::ConfigurationKey::PCR_SET, ::PcrSet::defaultSet().toString(false)))
+                     .toPcrList();
+    }
 
-    session.serviceContext.blobCache->storeBlob(std::move(entry));
+    ::BlobDatabase::Entry entry;
+    entry.type = ::BlobType::Quote;
+    entry.name = requestData.getDecodedErpVector(requestId);
+    const auto blobGeneration =
+        ::gsl::narrow_cast<::ErpBlob::GenerationId>(requestData.getInt64(requestBlobGeneration));
+    entry.blob = ::ErpBlob{requestData.getDecodedString(requestBlobData), blobGeneration};
+    entry.pcrSet = ::PcrSet::fromList(pcrSet.value());
+
+    auto hsmPoolSession = session.serviceContext.getHsmPool().acquire();
+    const auto nonce = ::Base64::encode(hsmPoolSession.session().getNonce(0).nonce);
+    const auto quote =
+        getTpm(session)->getQuote(::Tpm::QuoteInput{nonce, pcrSet.value(), ::std::string{hashAlgorithm}}, true);
+    entry.pcrHash = ::ErpVector{::Base64::decode(getBase64PcrHash(quote.quotedDataBase64, session.serviceContext))};
+    auto& blobCache = session.serviceContext.getBlobCache();
+
+#if WITH_HSM_TPM_PRODUCTION > 0
+    try
+    {
+        ::EnrolmentHelper{HsmIdentity::getWorkIdentity()}.createTeeToken(blobCache, entry);
+    }
+    catch (...)
+    {
+        ErpFail(::HttpStatus::BadRequest, "Unable to create TEE Token for Quote.");
+    }
+#endif
+
+    blobCache.storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
+
     return {};
 }
 
@@ -393,7 +436,7 @@ EnrolmentModel PutEciesKeypair::doHandleRequest (EnrolmentSession& session)
     entry.name = blobId;
     entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
     entry.expiryDateTime = std::chrono::system_clock::time_point(std::chrono::seconds(expiryDateTime));
-    session.serviceContext.blobCache->storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -407,7 +450,7 @@ EnrolmentModel DeleteEciesKeypair::doHandleRequest (EnrolmentSession& session)
     EnrolmentModel requestData (session.request.getBody());
     auto blobId = requestData.getDecodedErpVector(requestId);
 
-    session.serviceContext.blobCache->deleteBlob(BlobType::EciesKeypair, blobId);
+    session.serviceContext.getBlobCache().deleteBlob(BlobType::EciesKeypair, blobId);
 
     session.response.setStatus(HttpStatus::NoContent);
     return {};
@@ -432,7 +475,7 @@ EnrolmentModel PutDerivationKey::doHandleRequest (EnrolmentSession& session)
     entry.type = getBlobTypeForResourceType(resourceType.value());
     entry.name = blobId;
     entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
-    session.serviceContext.blobCache->storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -452,7 +495,7 @@ EnrolmentModel DeleteDerivationKey::doHandleRequest (EnrolmentSession& session)
     const auto blobType = getBlobTypeForResourceType(resourceType.value());
     const auto blobId = requestData.getDecodedErpVector(requestId);
 
-    session.serviceContext.blobCache->deleteBlob(blobType, blobId);
+    session.serviceContext.getBlobCache().deleteBlob(blobType, blobId);
 
     session.response.setStatus(HttpStatus::NoContent);
     return {};
@@ -506,7 +549,7 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
 
         entry.certificate = requestData.getDecodedString(requestCertificate);
 
-        const auto& tslManager = session.serviceContext.tslManager;
+        auto* tslManager = session.serviceContext.getTslManager();
         Expect(tslManager != nullptr, "TslManager must not be null");
         if (!isCertificateValid(*entry.certificate, *tslManager))
         {
@@ -546,7 +589,7 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
             return response;
         }
 
-        session.serviceContext.blobCache->storeBlob(std::move(entry));
+        session.serviceContext.getBlobCache().storeBlob(std::move(entry));
 
         session.response.setStatus(HttpStatus::Created);
 

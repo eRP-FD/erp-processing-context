@@ -89,16 +89,15 @@ public:
     [[nodiscard]]
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
     [[nodiscard]]
+    std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
+    [[nodiscard]]
     std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]
-    std::vector<db_model::MedicationDispense> retrieveAllMedicationDispenses(
+    std::tuple<std::vector<db_model::MedicationDispense>, bool> retrieveAllMedicationDispenses(
         const db_model::HashedKvnr& kvnr,
         const std::optional<model::PrescriptionId>& prescriptionId,
-        const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] uint64_t countAllMedicationDispenses(
-        const db_model::HashedKvnr& kvnr,
         const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]
@@ -152,9 +151,34 @@ public:
                                                             const db_model::Blob& salt) override;
 
     void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
-    std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr& kvnr) override;
+    std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) override;
     [[nodiscard]] bool clearConsent(const db_model::HashedKvnr& kvnr) override;
 
+    void storeChargeInformation(const db_model::HashedTelematikId& pharmacyTelematikId, model::PrescriptionId id,
+                                const model::Timestamp& enteredDate, const db_model::EncryptedBlob& chargeItem,
+                                const db_model::EncryptedBlob& dispenseItem) override;
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& kvnr,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformation(const model::PrescriptionId& id) const override;
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const override;
+
+    void deleteChargeInformation(const model::PrescriptionId& id) override;
+    void clearAllChargeInformation(const db_model::HashedKvnr& kvnr) override;
+
+    [[nodiscard]] uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr, 
+                                                             const std::optional<UrlArguments>& search) override;
+
+    [[nodiscard]] uint64_t countChargeInformationForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId, 
+                                                             const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]
     static std::string defaultConnectString();
@@ -164,7 +188,7 @@ public:
     struct QueryDefinition;
 
 private:
-    void checkCommonPreconditions();
+    void checkCommonPreconditions() const;
     PostgresBackendTask& getTaskBackend(const model::PrescriptionType prescriptionType);
 
     thread_local static PostgresConnection mConnection;
@@ -172,6 +196,7 @@ private:
 
     PostgresBackendTask mBackendTask;
     PostgresBackendTask mBackendTask169;
+    PostgresBackendTask mBackendTask200;
 };
 
 

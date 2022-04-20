@@ -67,7 +67,7 @@ Options:
     -d|--delete                           delete a blob before a new one is stored
     --dev                                 use static data for the DEV environment
     --ru                                  use static data for the RU environment
-
+    -v|--version                          print the build version number
 
 Blob types:
     all              all blobs
@@ -146,8 +146,9 @@ void expectArgument (const std::string name, const int index, const int argc, co
         usage(argv[0], "option " + name + " has no argument");
 }
 
-
-CommandLineArguments processCommandLine (const int argc, const char* argv[])
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
+CommandLineArguments processCommandLine(const int argc,
+                                        const char* argv[])// NOLINT(readability-function-cognitive-complexity)
 {
     CommandLineArguments arguments;
     arguments.hostname = Environment::get("ERP_SERVER_HOST").value_or("localhost");
@@ -195,6 +196,11 @@ CommandLineArguments processCommandLine (const int argc, const char* argv[])
         else if (argument == "--ru")
         {
             arguments.environment = TargetEnvironment::RU;
+        }
+        else if (argument == "-v" || argument == "--version")
+        {
+            ::std::cout << ::ErpServerInfo::BuildVersion << ::std::endl;
+            exit(EXIT_SUCCESS);
         }
         else if (argument[0] == '-')
         {
@@ -326,7 +332,163 @@ EnrolmentApiClient::ValidityPeriod createValidity(const BlobDescriptor& descript
     return validityPeriod;
 }
 
-int main (const int argc, const char* argv[])
+class BlobDbInitializationClient : public EnrolmentApiClient {
+public:
+    using EnrolmentApiClient::EnrolmentApiClient;
+
+    void enroll(const CommandLineArguments& arguments)
+    {
+        if (hasDynamicBlobTypes(arguments))
+        {
+            enrollDynamic(arguments);
+        }
+        enrollStatic(arguments);
+    }
+
+private:
+
+
+    bool hasDynamicBlobTypes(const CommandLineArguments& arguments)
+    {
+        return arguments.hasBlobType(BlobType::AttestationPublicKey) ||
+               arguments.hasBlobType(BlobType::EndorsementKey) ||
+               arguments.hasBlobType(BlobType::Quote);
+    }
+
+    // The "dynamic" blobs require special handling that can not easily be expressed in the BlobDescriptor.
+    void enrollDynamic(const CommandLineArguments& arguments)
+    {
+        // Run the attestation sequence to compute blobs for known attestation key, known endorsement key and known quote.
+        auto blobCache = std::make_shared<BlobCache>(
+            std::make_unique<
+                DummyBlobDatabase>());// We have to provide a blob cache as argument but it should not be used.
+        dynamicBlobs =
+            MockEnrolmentManager::createAndReturnAkEkAndQuoteBlob(*blobCache, arguments.certificateFilename, 2);
+
+        if (arguments.hasBlobType(BlobType::EndorsementKey))
+        {
+            enrollEndorsmentKey(arguments);
+        }
+        if (arguments.hasBlobType(BlobType::AttestationPublicKey))
+        {
+            enrollAttestationPublicKey(arguments);
+        }
+        if (arguments.hasBlobType(BlobType::Quote))
+        {
+            enrollQuote(arguments);
+        }
+    }
+
+    // The handling of the "static" blobs is easier and does not require special handling that could not be expressed by BlobDescriptor.
+    void enrollStatic(const CommandLineArguments& arguments)
+    {
+        for (const auto type : arguments.blobTypes)
+        {
+            enroll(arguments, type);
+        }
+    }
+
+    void enrollEndorsmentKey(const CommandLineArguments& arguments)
+    {
+
+        // The "dynamic" blobs require special handling that can not easily be expressed in the BlobDescriptor.
+        try
+        {
+            const auto& descriptor = getDescriptor(BlobType::EndorsementKey);
+            if (arguments.deleteBeforeStore)
+            {
+                deleteBlob(descriptor.type, descriptor.shortName);
+            }
+            storeBlob(descriptor.type, descriptor.shortName, dynamicBlobs.trustedEk, createValidity(descriptor));
+        }
+        catch (const ::std::exception& exception)
+        {
+            ::std::cerr << "Error while enrolling EndorsementKey: " << exception.what() << ::std::endl;
+        }
+    }
+
+    void enrollAttestationPublicKey(const CommandLineArguments& arguments)
+    {
+        try
+        {
+            const auto& descriptor = getDescriptor(BlobType::AttestationPublicKey);
+            const auto akname =
+                std::string_view(reinterpret_cast<const char*>(dynamicBlobs.akName.data()), dynamicBlobs.akName.size());
+            if (arguments.deleteBeforeStore)
+            {
+                deleteBlob(descriptor.type, akname);
+            }
+
+            storeBlob(descriptor.type, akname, dynamicBlobs.trustedAk, createValidity(descriptor));
+        }
+        catch (const ::std::exception& exception)
+        {
+            ::std::cerr << "Error while enrolling AttestationPublicKey: " << exception.what() << ::std::endl;
+        }
+    }
+
+    void enrollQuote(const CommandLineArguments& arguments)
+    {
+        try
+        {
+            auto descriptor = getDescriptor(BlobType::Quote);
+
+            // Quote blobs are stored per version (including the build type).
+            // To avoid name conflicts we append an uuid to the name. The former solution with appending build type
+            // caused a problem with a second enrolment when a key with the same name already exists. Deletion is now not
+            // possible anymore but it not critical for this sepcial use case to enrol via this helper.
+            // Alternative we could create a "real" name by calculating the SHA2 but that would make deletion of the blobs more difficult.
+            if (descriptor.type == BlobType::Quote)
+            {
+                descriptor.shortName += "-" + Uuid().toString();
+            }
+
+            if (arguments.deleteBeforeStore)
+            {
+                deleteBlob(descriptor.type, descriptor.shortName);
+            }
+            storeBlob(descriptor.type, descriptor.shortName, dynamicBlobs.trustedQuote, createValidity(descriptor));
+        }
+        catch (const ::std::exception& exception)
+        {
+            ::std::cerr << "Error while enrolling Quote: " << exception.what() << ::std::endl;
+        }
+    }
+
+    void enroll(const CommandLineArguments& arguments, BlobType type)
+    {
+        try
+        {
+            // Lookup descriptor by type.
+            const auto descriptor =
+                std::find_if(blobDescriptors.begin(), blobDescriptors.end(), [type](const auto& item) {
+                    return item.type == type;
+                });
+            Expect(descriptor != blobDescriptors.end(), "blob type not handled");
+
+            if (descriptor->isDynamic)
+                return;// dynamic types have already been handled.
+
+            if (arguments.deleteBeforeStore)
+            {
+                deleteBlob(descriptor->type, descriptor->shortName);
+            }
+
+            const auto staticData = readStaticData(*descriptor, arguments);
+            storeBlob(descriptor->type, descriptor->shortName, staticData.blob, createValidity(*descriptor),
+                      staticData.certificate);
+        }
+        catch (const ::std::exception& exception)
+        {
+            ::std::cerr << "Error while enrolling " << ::magic_enum::enum_name(type) << ": " << exception.what()
+                        << ::std::endl;
+        }
+    }
+
+    EnrolmentHelper::Blobs dynamicBlobs;
+};
+
+int main(const int argc, const char* argv[])
 {
     GLogConfiguration::init_logging(argv[0]);
     ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
@@ -339,85 +501,9 @@ int main (const int argc, const char* argv[])
               << " and write blobs via enrolment API at " << arguments.hostname << ":" << arguments.portnumber
               << std::endl;
 
-    const bool hasDynamicBlobTypes = arguments.hasBlobType(BlobType::AttestationPublicKey)
-                                  || arguments.hasBlobType(BlobType::EndorsementKey)
-                                  || arguments.hasBlobType(BlobType::Quote);
-    EnrolmentHelper::Blobs dynamicBlobs;
-    if (hasDynamicBlobTypes)
-    {
-        // Run the attestation sequence to compute blobs for known attestation key, known endorsement key and known quote.
-        auto blobCache = std::make_shared<BlobCache>(std::make_unique<DummyBlobDatabase>()); // We have to provide a blob cache as argument but it should not be used.
-        MockEnrolmentManager enrolmentManager;
-        dynamicBlobs = enrolmentManager.createAndReturnAkEkAndQuoteBlob(
-            *blobCache,
-            arguments.certificateFilename,
-            2);
-    }
 
-    EnrolmentApiClient client{arguments.hostname, arguments.portnumber, Constants::httpTimeoutInSeconds, false};
-
-    // The "dynamic" blobs require special handling that can not easily be expressed in the BlobDescriptor.
-    if (arguments.hasBlobType(BlobType::EndorsementKey))
-    {
-        const auto descriptor = getDescriptor(BlobType::EndorsementKey);
-        if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor.type, descriptor.shortName);
-        }
-        client.storeBlob(descriptor.type, descriptor.shortName, dynamicBlobs.trustedEk, createValidity(descriptor));
-    }
-
-    if (arguments.hasBlobType(BlobType::AttestationPublicKey))
-    {
-        const auto descriptor = getDescriptor(BlobType::AttestationPublicKey);
-        const auto akname = std::string_view(reinterpret_cast<const char*>(dynamicBlobs.akName.data()), dynamicBlobs.akName.size());
-        if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor.type, akname);
-        }
-
-        client.storeBlob(descriptor.type, akname, dynamicBlobs.trustedAk, createValidity(descriptor));
-    }
-
-    if (arguments.hasBlobType(BlobType::Quote))
-    {
-        auto descriptor = getDescriptor(BlobType::Quote);
-
-        // Quote blobs are stored per version (including the build type).
-        // To avoid name conflicts we append an uuid to the name. The former solution with appending build type
-        // caused a problem with a second enrolment when a key with the same name already exists. Deletion is now not
-        // possible anymore but it not critical for this sepcial use case to enrol via this helper.
-        // Alternative we could create a "real" name by calculating the SHA2 but that would make deletion of the blobs more difficult.
-        if (descriptor.type == BlobType::Quote)
-        {
-            descriptor.shortName += "-" + Uuid().toString();
-        }
-
-        if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor.type, descriptor.shortName);
-        }
-        client.storeBlob(descriptor.type, descriptor.shortName, dynamicBlobs.trustedQuote, createValidity(descriptor));
-    }
-
-    // The handling of the "static" blobs is easier and does not require special handling that could not be expressed by BlobDescriptor.
-    for (const auto type : arguments.blobTypes)
-    {
-        // Lookup descriptor by type.
-        const auto descriptor = std::find_if(blobDescriptors.begin(), blobDescriptors.end(), [type](const auto& item){return item.type==type;});
-        Expect(descriptor != blobDescriptors.end(), "blob type not handled");
-
-        if (descriptor->isDynamic)
-            continue; // dynamic types have already been handled.
-
-        if (arguments.deleteBeforeStore)
-        {
-            client.deleteBlob(descriptor->type, descriptor->shortName);
-        }
-
-        const auto staticData = readStaticData(*descriptor, arguments);
-        client.storeBlob(descriptor->type, descriptor->shortName, staticData.blob, createValidity(*descriptor), staticData.certificate);
-    }
+    BlobDbInitializationClient client{arguments.hostname, arguments.portnumber, ::gsl::narrow<uint16_t>(Constants::httpTimeoutInSeconds), false};
+    client.enroll(arguments);
 
     return EXIT_SUCCESS;
 }

@@ -7,7 +7,6 @@
 #define ERP_PROCESSING_CONTEXT_SERVICE_MEDICATIONDISPENSEHANDLER_HXX
 
 #include "erp/service/ErpRequestHandler.hxx"
-#include "erp/database/Data.hxx"
 
 #include <vector>
 #include <string>

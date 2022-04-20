@@ -9,7 +9,7 @@
 #include "erp/util/health/HealthCheck.hxx"
 
 
-void HealthHandler::handleRequest (SessionContext<PcServiceContext>& session)
+void HealthHandler::handleRequest(SessionContext& session)
 {
     session.accessLog.setInnerRequestOperation("/health");
 

@@ -18,6 +18,7 @@ TestConfigKeyNames::TestConfigKeyNames()
          {TestConfigurationKey::TEST_ENABLE_CLIENT_AUTHENTICATON, {"TEST_ENABLE_CLIENT_AUTHENTICATON", "/test/client/enableAuthentication"}},
          {TestConfigurationKey::TEST_CLIENT_CERTIFICATE,          {"TEST_CLIENT_CERTIFICATE",          "/test/client/certificate"}},
          {TestConfigurationKey::TEST_CLIENT_PRIVATE_KEY,          {"TEST_CLIENT_PRIVATE_KEY",          "/test/client/certificateKey"}},
-         {TestConfigurationKey::TEST_QES_PEM_FILE_NAME,           {"TEST_QES_PEM_FILE_NAME",           "/test/qes-pem-file-name"}}});
+         {TestConfigurationKey::TEST_QES_PEM_FILE_NAME,           {"TEST_QES_PEM_FILE_NAME",           "/test/qes-pem-file-name"}},
+         {TestConfigurationKey::TEST_RESOURCE_MANAGER_PATH,       {"TEST_RESOURCE_MANAGER_PATH",       "/test/resource-manager-path"}}});
     // clang-format on
 }

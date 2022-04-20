@@ -1,0 +1,90 @@
+<!-- Contains one valid resource at entry 0, and one placeholder for a second resource to be filled in unit test-->
+<Bundle xmlns="http://hl7.org/fhir">
+    <type value="collection"/>
+    <entry>
+        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/MedicationDispense/ed52c1e3-b700-4497-ae19-b23744e29876"/>
+        <resource>
+            <MedicationDispense>
+                <meta>
+                    <profile value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense|1.1.1" />
+                </meta>
+                <contained>
+                    <Medication>
+                        <id value="med0314" />
+                        <meta>
+                            <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2" />
+                        </meta>
+                        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
+                            <valueCoding>
+                                <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category" />
+                                <code value="00" />
+                            </valueCoding>
+                        </extension>
+                        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine">
+                            <valueBoolean value="false" />
+                        </extension>
+                        <extension url="http://fhir.de/StructureDefinition/normgroesse">
+                            <valueCode value="N1" />
+                        </extension>
+                        <code>
+                            <coding>
+                                <system value="http://fhir.de/CodeSystem/ifa/pzn" />
+                                <code value="06313728" />
+                            </coding>
+                            <text value="Sumatriptan-1a Pharma 100 mg Tabletten" />
+                        </code>
+                        <form>
+                            <coding>
+                                <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM" />
+                                <code value="TAB" />
+                            </coding>
+                        </form>
+                        <amount>
+                            <numerator>
+                                <value value="12" />
+                                <unit value="{tbl}" />
+                                <system value="http://unitsofmeasure.org" />
+                            </numerator>
+                            <denominator>
+                                <value value="1" />
+                            </denominator>
+                        </amount>
+                    </Medication>
+                </contained>
+                <identifier>
+                    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+                    <value value="160.123.456.789.123.58" />
+                </identifier>
+                <status value="completed" />
+                <medicationReference>
+                    <reference value="#med0314" />
+                    <display value="Sumatriptan-1a Pharma 100 mg Tabletten" />
+                </medicationReference>
+                <subject>
+                    <identifier>
+                        <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
+                        <value value="X234567890" />
+                    </identifier>
+                </subject>
+                <performer>
+                    <actor>
+                        <identifier>
+                            <system value="https://gematik.de/fhir/NamingSystem/TelematikID" />
+                            <value value="3-SMC-B-Testkarte-883110000120312" />
+                        </identifier>
+                    </actor>
+                </performer>
+                <whenHandedOver value="2021-09-21" />
+                <dosageInstruction>
+                    <text value="1-0-1-0" />
+                </dosageInstruction>
+            </MedicationDispense>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/MedicationDispense/ed52c1e3-b700-4497-ae19-b23744e29876"/>
+        <resource>
+###PLACEHOLDER###
+        </resource>
+    </entry>
+</Bundle>

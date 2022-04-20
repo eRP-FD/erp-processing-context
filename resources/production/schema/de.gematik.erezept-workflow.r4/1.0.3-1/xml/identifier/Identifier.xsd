@@ -242,5 +242,5 @@
       <xs:enumeration value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
       <xs:enumeration value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
     </xs:restriction>
-  </xs:simpleType>
+  </xs:simpleType>  
 </xs:schema>

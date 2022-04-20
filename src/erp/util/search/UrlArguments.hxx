@@ -40,18 +40,22 @@ public:
     explicit UrlArguments (std::vector<SearchParameter>&& searchParameters);
 
     void parse(const ServerRequest& request, const KeyDerivation& keyDerivation);
+    void parse(const std::vector<std::pair<std::string, std::string>>& queryParams, const KeyDerivation& keyDerivation);
 
     /**
      * Return a string that can be appended to a link prefix that ends in "&".
      * Note that order is maintained from the original URL between arguments of the same type (sorting vs searching vs paging) but not
      * between these groups.
      */
-    std::string getLinkPathArguments (const model::Link::Type linkType, const std::size_t& totalSearchMatches = 50) const;
+    std::string getLinkPathArguments (const model::Link::Type linkType) const;
 
     std::unordered_map<model::Link::Type, std::string> getBundleLinks (
         const std::string& linkBase,
         const std::string& pathHead,
         const std::size_t& totalSearchMatches) const;
+
+    std::unordered_map<model::Link::Type, std::string> getBundleLinks(bool hasNextPage, const std::string& linkBase,
+                                                                      const std::string& pathHead) const;
 
     /**
      * Return a string that can be appended to a query that ends in a WHERE clause.
@@ -73,15 +77,17 @@ public:
      *   string values are still escaped. This is done in appendStringComparison, which is the only use for the `connection`
      *   value.
      */
-    std::string getSqlExpression (const pqxx::connection& connection, const std::string& indentation) const;
+    std::string getSqlExpression(const pqxx::connection& connection, const std::string& indentation,
+                                 bool oneAdditionalItemPerPage = false) const;
 
     std::string getSqlWhereExpression (const pqxx::connection& connection, const std::string& indentation = "") const;
     std::string getSqlSortExpression (void) const;
-    std::string getSqlPagingExpression (void) const;
+    std::string getSqlPagingExpression (bool oneAdditionalItem) const;
 
     bool hasReverseIncludeAuditEventArgument() const;
 
     const PagingArgument& pagingArgument() const;
+    [[nodiscard]] std::optional<SearchArgument> getSearchArgument(const std::string_view& name) const;
 
 private:
     std::vector<SearchParameter> mSupportedParameters;
@@ -100,6 +106,9 @@ private:
                                      const std::string& parameterDbName, const KeyDerivation& keyDerivation);
     void addTaskStatusSearchArguments(const std::string& name, const std::string& rawValues,
                                        const std::string& parameterDbName);
+    void addPrescriptionIdSearchArguments(const std::string& name, const std::string& rawValues,
+                                          const std::string& parameterDbName);
+
 
     /**
      * Add one or more sort arguments.
@@ -118,10 +127,11 @@ private:
     void appendStringComparison (std::ostream& os, const SearchArgument& argument, const pqxx::connection& connection) const;
     void appendIdentityComparison (std::ostream& os, const SearchArgument& argument) const;
     void appendEnumComparison (std::ostream& os, const SearchArgument& argument, const pqxx::connection& connection) const;
+    void appendPrescriptionIdComparison (std::ostream& os, const SearchArgument& argument) const;
 
     void appendLinkSearchArguments (std::ostream& os) const;
     void appendLinkSortArguments (std::ostream& os) const;
-    void appendLinkPagingArguments (std::ostream& os, const model::Link::Type type, const std::size_t& totalSearchMatches) const;
+    void appendLinkPagingArguments (std::ostream& os, const model::Link::Type type) const;
     void appendLinkSeparator (std::ostream& os) const;
 
     std::optional<SearchParameter::Type> getParameterType (const std::string& argumentName) const;

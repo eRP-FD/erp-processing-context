@@ -10,12 +10,6 @@
 #include "erp/hsm/HsmClient.hxx"
 #include "erp/model/Consent.hxx"
 
-Database::Factory MockDatabaseProxy::createFactory(MockDatabase& backend)
-{
-    return [&](HsmPool& hsmPool, KeyDerivation& keyDerivation){
-        return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabaseProxy>(backend), hsmPool, keyDerivation);
-    };
-}
 
 MockDatabaseProxy::MockDatabaseProxy(MockDatabase& database)
     : mDatabase(database)
@@ -96,18 +90,12 @@ void MockDatabaseProxy::markCommunicationsAsRetrieved(const std::vector<Uuid>& c
     return mDatabase.markCommunicationsAsRetrieved(communicationIds, retrieved, recipient);
 }
 
-std::vector<db_model::MedicationDispense>
+std::tuple<std::vector<db_model::MedicationDispense>, bool>
 MockDatabaseProxy::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
                                                   const std::optional<model::PrescriptionId>& prescriptionId,
                                                   const std::optional<UrlArguments>& search)
 {
     return mDatabase.retrieveAllMedicationDispenses(kvnr, prescriptionId, search);
-}
-
-uint64_t MockDatabaseProxy::countAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
-                                                        const std::optional<UrlArguments>& search)
-{
-    return mDatabase.countAllMedicationDispenses(kvnr, search);
 }
 
 std::vector<db_model::Task> MockDatabaseProxy::retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
@@ -162,6 +150,11 @@ uint64_t MockDatabaseProxy::countCommunications(const db_model::HashedId& user,
 std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndPrescription(const model::PrescriptionId& taskId)
 {
     return mDatabase.retrieveTaskAndPrescription(taskId);
+}
+
+std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId)
+{
+    return mDatabase.retrieveTaskAndPrescriptionAndReceipt(taskId);
 }
 
 std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndReceipt(const model::PrescriptionId& taskId)
@@ -253,14 +246,70 @@ void MockDatabaseProxy::storeConsent(const db_model::HashedKvnr& kvnr, const mod
     mDatabase.storeConsent(kvnr, creationTime);
 }
 
-std::optional<model::Timestamp> MockDatabaseProxy::getConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::optional<model::Timestamp> MockDatabaseProxy::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
 {
-    return mDatabase.getConsentDateTime(kvnr);
+    return mDatabase.retrieveConsentDateTime(kvnr);
 }
 
 bool MockDatabaseProxy::clearConsent(const db_model::HashedKvnr& kvnr)
 {
     return mDatabase.clearConsent(kvnr);
+}
+
+void MockDatabaseProxy::storeChargeInformation(const db_model::HashedTelematikId& pharmacyId, model::PrescriptionId id,
+                                               const model::Timestamp& enteredDate,
+                                               const db_model::EncryptedBlob& chargeItem,
+                                               const db_model::EncryptedBlob& dispenseItem)
+{
+    return mDatabase.storeChargeInformation(pharmacyId, id, enteredDate, chargeItem, dispenseItem);
+}
+
+std::vector<db_model::ChargeItem>
+MockDatabaseProxy::retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                                     const std::optional<UrlArguments>& search) const
+{
+    return mDatabase.retrieveAllChargeItemsForPharmacy(requestingPharmacy, search);
+}
+
+std::vector<db_model::ChargeItem>
+MockDatabaseProxy::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
+                                                     const std::optional<UrlArguments>& search) const
+{
+    return mDatabase.retrieveAllChargeItemsForInsurant(requestingInsurant, search);
+}
+
+std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+MockDatabaseProxy::retrieveChargeInformation(const model::PrescriptionId& id) const
+{
+    return mDatabase.retrieveChargeInformation(id);
+}
+
+std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+MockDatabaseProxy::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
+{
+    return mDatabase.retrieveChargeInformationForUpdate(id);
+}
+
+void MockDatabaseProxy::deleteChargeInformation(const model::PrescriptionId& id)
+{
+    mDatabase.deleteChargeInformation(id);
+}
+
+void MockDatabaseProxy::clearAllChargeInformation(const db_model::HashedKvnr& insurant)
+{
+    mDatabase.clearAllChargeInformation(insurant);
+}
+
+uint64_t MockDatabaseProxy::countChargeInformationForInsurant(const db_model::HashedKvnr& insurant,
+                                                              const std::optional<UrlArguments>& search)
+{
+    return mDatabase.countChargeInformationForInsurant(insurant, search);
+}
+
+uint64_t MockDatabaseProxy::countChargeInformationForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                                              const std::optional<UrlArguments>& search)
+{
+    return mDatabase.countChargeInformationForPharmacy(requestingPharmacy, search);
 }
 
 bool MockDatabaseProxy::isBlobUsed(BlobId blobId) const

@@ -9,6 +9,7 @@
 #include "erp/model/Task.hxx"
 
 #include <date/date.h>
+#include <unordered_set>
 
 namespace {
     model::Timestamp timestampFromSuuid(const Uuid& uuid)
@@ -99,6 +100,12 @@ namespace {
                 comparisonResult = compareValues(
                     std::optional<model::Timestamp>{taskA.lastModified},
                     std::optional<model::Timestamp>{taskB.lastModified}, sortArgument.order);
+            }
+            else if (sortArgument.nameDb == "prescription_id")
+            {
+                comparisonResult = compareValues(
+                    std::optional<std::string>{taskA.prescriptionId.toString()},
+                    std::optional<std::string>{taskB.prescriptionId.toString()}, sortArgument.order);
             }
 
             if (comparisonResult != 0)
@@ -247,8 +254,10 @@ bool TestUrlArguments::matches(const std::string& parameterName, const std::opti
         if (argument.originalName == parameterName)
         {
             Expect3(argument.type == SearchParameter::Type::HashedIdentity ||
-                    argument.type == SearchParameter::Type::String ||
-                    argument.type == SearchParameter::Type::TaskStatus, "Invalid parameter type.", std::logic_error);
+                        argument.type == SearchParameter::Type::String ||
+                        argument.type == SearchParameter::Type::TaskStatus ||
+                        argument.type == SearchParameter::Type::PrescriptionId,
+                    "Invalid parameter type.", std::logic_error);
             if (!value.has_value())
             {
                 // The search applies to this parameter but there is no value that the search argument could be
@@ -673,9 +682,12 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applySearch(MedicationDi
 
         for (auto& medicationDispense : initialMedicationDispenses)
         {
-            if (matches("whenhandedover", std::make_optional(medicationDispense.whenHandedOver))
-             && matches("whenprepared", medicationDispense.whenPrepared)
-             && matches("performer", std::make_optional(medicationDispense.performer)))
+            if (matches("whenhandedover", std::make_optional(medicationDispense.whenHandedOver)) &&
+                matches("whenprepared", medicationDispense.whenPrepared) &&
+                matches("performer", std::make_optional(medicationDispense.performer)) &&
+                matches("identifier",
+                        std::optional<std::string>{"https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
+                                                   medicationDispense.prescriptionId.toString()}))
             {
                 medicationDispenses.emplace_back(std::move(medicationDispense));
             }
@@ -722,9 +734,17 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applySort(MedicationDisp
 
 TestUrlArguments::MedicationDispenses TestUrlArguments::applyPaging(MedicationDispenses&& medicationDispenses) const
 {
-    const auto countArg = mUrlArguments.mPagingArgument.getCount();
+    const auto countArg = mUrlArguments.mPagingArgument.getCount() + 1;
     const size_t offset = mUrlArguments.mPagingArgument.getOffset();
-    const ptrdiff_t remaining = medicationDispenses.size() - offset;
+
+    // find unique prescriptionIds, paging is based on prescription IDs, not the medication dispenses
+    std::unordered_set<std::string> prescriptionIds;
+    for (const auto& item : medicationDispenses)
+    {
+        prescriptionIds.insert(item.prescriptionId.toString());
+    }
+
+    const ptrdiff_t remaining = prescriptionIds.size() - offset;
     size_t count = 0;
     if (remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -732,13 +752,41 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applyPaging(MedicationDi
     MedicationDispenses page;
     page.reserve(count);
 
-    for (size_t index = 0; index < count; ++index)
-        page.emplace_back(std::move(medicationDispenses[index + offset]));
+    auto pit = prescriptionIds.begin();
+    std::advance(pit, offset);
+    prescriptionIds.erase(prescriptionIds.begin(), pit);
+    pit = prescriptionIds.begin();
+    std::advance(pit, count);
+    prescriptionIds.erase(pit, prescriptionIds.end());
+
+    for (auto&& item : medicationDispenses)
+    {
+        if (prescriptionIds.find(item.prescriptionId.toString()) != prescriptionIds.end())
+        {
+            page.emplace_back(std::move(item));
+        }
+    }
 
     return page;
 }
 
+TestUrlArguments::ChargeItemContainer TestUrlArguments::applyPaging(ChargeItemContainer&& chargeItems) const
+{
+    const auto countArg = mUrlArguments.mPagingArgument.getCount();
+    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
+    const ptrdiff_t remaining = chargeItems.size() - offset;
+    size_t count = 0;
+    if (remaining > 0)
+        count = std::min(size_t(remaining), countArg);
 
+    ChargeItemContainer page;
+    page.reserve(count);
 
+    for (size_t index = 0; index < count; ++index)
+        page.emplace_back(std::move(chargeItems[index + offset]));
 
+    return page;
+}
 
+template bool TestUrlArguments::matches<db_model::HashedKvnr>(const std::string& parameterName,
+                                                              const std::optional<db_model::HashedKvnr>& value) const;

@@ -32,8 +32,6 @@ spec:
               value: "9085"
             - name: ERP_ENROLMENT_ACTIVATE_FOR_PORT
               value: "9085"
-            - name: DEBUG_DISABLE_ENROLMENT_API_AUTH
-              value: "false"
             - name: ERP_SERVER_THREAD_COUNT
               value: "10"
             - name: ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC

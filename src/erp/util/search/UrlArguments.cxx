@@ -23,10 +23,15 @@ UrlArguments::UrlArguments (std::vector<SearchParameter>&& urlArguments)
 {
 }
 
-
-void UrlArguments::parse (const ServerRequest& request, const KeyDerivation& keyDerivation)
+void UrlArguments::parse(const ServerRequest& request, const KeyDerivation& keyDerivation)
 {
-    for (const auto& entry : request.getQueryParameters())
+    parse(request.getQueryParameters(), keyDerivation);
+}
+
+void UrlArguments::parse(const std::vector<std::pair<std::string, std::string>>& queryParameters,
+                         const KeyDerivation& keyDerivation)
+{
+    for (const auto& entry : queryParameters)
     {
         ErpExpect( ! entry.first.empty(), HttpStatus::BadRequest, "empty arguments are not permitted");
         if (entry.first[0] == '_')
@@ -87,6 +92,9 @@ void UrlArguments::addSearchArguments (const std::string& name,
             return;
         case SearchParameter::Type::TaskStatus:
             addTaskStatusSearchArguments(name, rawValues, * parameterDbName);
+            return;
+        case SearchParameter::Type::PrescriptionId:
+            addPrescriptionIdSearchArguments(name, rawValues, *parameterDbName);
             return;
     }
     ErpFail(HttpStatus::InternalServerError, "check the switch-case above for missing return statement");
@@ -202,6 +210,41 @@ void UrlArguments::addTaskStatusSearchArguments(const std::string& name, const s
     // else missing rawValue is ignored.
 }
 
+void UrlArguments::addPrescriptionIdSearchArguments(const std::string& name, const std::string& rawValues,
+                                                    const std::string& parameterDbName)
+{
+    static constexpr auto* prefix = "https://gematik.de/fhir/NamingSystem/PrescriptionID|";
+    if (!rawValues.empty())
+    {
+        std::vector<model::PrescriptionId> dbValues;
+        std::vector<std::string> originalValues;
+        const std::vector<std::string> strlstRawValues = String::split(rawValues, ',');
+        for (const auto& rawValue : strlstRawValues)
+        {
+            if (!rawValue.empty())
+            {
+                ErpExpectWithDiagnostics(
+                    String::starts_with(rawValue, prefix),
+                    HttpStatus::BadRequest, "bad search parameter", rawValue);
+                auto value =
+                    String::removeEnclosing(prefix, "", rawValue);
+                try
+                {
+                    auto prescriptionId = model::PrescriptionId::fromString(value);
+                    dbValues.emplace_back(prescriptionId);
+                    originalValues.emplace_back(rawValue);
+                }
+                catch (const model::ModelException& exception)
+                {
+                    ErpFailWithDiagnostics(HttpStatus::BadRequest, "bad search parameter", rawValue);
+                }
+            }
+        }
+        mSearchArguments.emplace_back(SearchArgument::Prefix::EQ, parameterDbName, name,
+                                      SearchParameter::Type::PrescriptionId, dbValues, originalValues);
+    }
+}
+
 std::optional<SearchParameter::Type> UrlArguments::getParameterType (const std::string& argumentName) const
 {
     // Look up the parameter by name. With the expected small amount of parameters (<=4) a loop may be the fastest way
@@ -260,15 +303,15 @@ void UrlArguments::addSortArguments (const std::string& argumentsString)
 }
 
 
-std::string UrlArguments::getLinkPathArguments (const model::Link::Type linkType, const std::size_t& totalSearchMatches) const
+std::string UrlArguments::getLinkPathArguments (const model::Link::Type linkType) const
 {
     std::ostringstream s;
 
     appendLinkSearchArguments(s);
     appendLinkSortArguments(s);
-    appendLinkPagingArguments(s, linkType, totalSearchMatches);
+    appendLinkPagingArguments(s, linkType);
 
-    return UrlHelper::escapeUrl(s.str());
+    return s.str();
 }
 
 
@@ -303,8 +346,7 @@ void UrlArguments::appendLinkSortArguments (std::ostream& os) const
 
 void UrlArguments::appendLinkPagingArguments (
     std::ostream& os,
-    const model::Link::Type type,
-    const std::size_t& totalSearchMatches) const
+    const model::Link::Type type) const
 {
     switch(type)
     {
@@ -319,7 +361,6 @@ void UrlArguments::appendLinkPagingArguments (
             break;
 
         case model::Link::Prev:
-            if (mPagingArgument.hasPreviousPage())
             {
                 appendLinkSeparator(os);
                 // Note that the following may produce a page that overlaps with the current one.
@@ -330,18 +371,15 @@ void UrlArguments::appendLinkPagingArguments (
                    << '&'
                    << PagingArgument::offsetKey << '=' << std::max(size_t(0), mPagingArgument.getOffset() - mPagingArgument.getCount());
             }
-            // else we are already at the first page.
             break;
 
         case model::Link::Next:
-            if (mPagingArgument.hasNextPage(totalSearchMatches))
             {
                 appendLinkSeparator(os);
                 os << PagingArgument::countKey << "=" << mPagingArgument.getCount()
                    << '&'
                    << PagingArgument::offsetKey << '=' << mPagingArgument.getOffset() + mPagingArgument.getCount();
             }
-            // else we are already at the last page.
             break;
     }
 }
@@ -352,15 +390,25 @@ std::unordered_map<model::Link::Type, std::string> UrlArguments::getBundleLinks 
     const std::string& pathHead,
     const std::size_t& totalSearchMatches) const
 {
+    return getBundleLinks(mPagingArgument.hasNextPage(totalSearchMatches), linkBase, pathHead);
+}
+
+std::unordered_map<model::Link::Type, std::string>
+UrlArguments::getBundleLinks(bool hasNextPage, const std::string& linkBase, const std::string& pathHead) const
+{
     std::unordered_map<model::Link::Type, std::string> links;
 
-    links.emplace(model::Link::Type::Self, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Self, totalSearchMatches));
+    links.emplace(model::Link::Type::Self, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Self));
 
     if (mPagingArgument.hasPreviousPage())
-        links.emplace(model::Link::Type::Prev, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Prev, totalSearchMatches));
+    {
+        links.emplace(model::Link::Type::Prev, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Prev));
+    }
 
-    if (mPagingArgument.hasNextPage(totalSearchMatches))
-        links.emplace(model::Link::Type::Next, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Next, totalSearchMatches));
+    if (hasNextPage)
+    {
+        links.emplace(model::Link::Type::Next, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Next));
+    }
 
     return links;
 }
@@ -375,7 +423,8 @@ void UrlArguments::appendLinkSeparator (std::ostream& os) const
 }
 
 
-std::string UrlArguments::getSqlExpression (const pqxx::connection& connection, const std::string& indentation) const
+std::string UrlArguments::getSqlExpression(const pqxx::connection& connection, const std::string& indentation,
+                                           bool oneAdditionalItemPerPage) const
 {
     std::string queryTail;
 
@@ -397,7 +446,7 @@ std::string UrlArguments::getSqlExpression (const pqxx::connection& connection, 
             queryTail += "\n" + indentation + order;
     }
 
-    const std::string paging = getSqlPagingExpression();
+    const std::string paging = getSqlPagingExpression(oneAdditionalItemPerPage);
     if ( ! paging.empty())
     {
         if (indentation.empty())
@@ -463,9 +512,9 @@ std::string UrlArguments::getSqlSortExpression (void) const
 }
 
 
-std::string UrlArguments::getSqlPagingExpression (void) const
+std::string UrlArguments::getSqlPagingExpression (bool oneAdditionalItem) const
 {
-    return "LIMIT " + std::to_string(mPagingArgument.getCount())
+    return "LIMIT " + std::to_string(oneAdditionalItem? 1 + mPagingArgument.getCount() : mPagingArgument.getCount())
         + " OFFSET " + std::to_string(mPagingArgument.getOffset());
 }
 
@@ -476,20 +525,22 @@ void UrlArguments::appendComparison(std::ostream& os, const SearchArgument& argu
     {
         case SearchParameter::Type::Date:
             appendDateComparison(os, argument, connection);
-            break;
+            return;
         case SearchParameter::Type::String:
             appendStringComparison(os, argument, connection);
-            break;
+            return;
         case SearchParameter::Type::TaskStatus:
             appendEnumComparison(os, argument, connection);
-            break;
+            return;
         case SearchParameter::Type::HashedIdentity:
             appendIdentityComparison(os, argument);
-            break;
-        default:
-            ErpFail(HttpStatus::InternalServerError,
-                "has a new SearchParameter::Type value been added?");
+            return;
+        case SearchParameter::Type::PrescriptionId:
+            appendPrescriptionIdComparison(os, argument);
+            return;
     }
+    ErpFail(HttpStatus::InternalServerError,
+        "has a new SearchParameter::Type value been added?");
 }
 
 void UrlArguments::appendDateComparison (
@@ -756,6 +807,22 @@ void UrlArguments::appendEnumComparison(std::ostream& os, const SearchArgument& 
     }
 }
 
+void UrlArguments::appendPrescriptionIdComparison(std::ostream& os, const SearchArgument& argument) const
+{
+    ErpExpect(argument.prefix == SearchArgument::Prefix::EQ, HttpStatus::InternalServerError,
+              "search prefixes are not supported for PrescriptionID arguments");
+    for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
+    {
+        if (idx > 0)
+        {
+            os << " OR ";
+        }
+        const auto& value = argument.valueAsPrescriptionId(idx);
+
+        os << "(" << argument.name << " = " << value.toDatabaseId() << ")";
+    }
+}
+
 bool UrlArguments::hasReverseIncludeAuditEventArgument() const
 {
     return mReverseIncludeAuditEventArgument;
@@ -765,4 +832,16 @@ bool UrlArguments::hasReverseIncludeAuditEventArgument() const
 const PagingArgument& UrlArguments::pagingArgument() const
 {
     return mPagingArgument;
+}
+
+std::optional<SearchArgument> UrlArguments::getSearchArgument(const std::string_view& name) const
+{
+    for (const auto& item : mSearchArguments)
+    {
+        if (item.originalName == name)
+        {
+            return item;
+        }
+    }
+    return {};
 }

@@ -24,7 +24,7 @@
 class Timer
 {
 public:
-    static Timer& instance (void);
+    Timer (void);
     ~Timer (void);
 
     using Job = std::function<void(void)>;
@@ -41,22 +41,7 @@ public:
 
     void cancel (JobToken token);
 
-protected:
-    Timer (void);
-
-    /**
-     * This method is only intended to be used in tests where the Timer singleton may have been shut down
-     * in an earlier test.
-     */
-    static void restart (void);
-
 private:
-    static std::mutex mInstanceMutex;
-    static std::unique_ptr<Timer> mInstance;
-    static std::atomic_bool mIsInstanceActive;
-
-    friend std::unique_ptr<Timer> std::make_unique<Timer>();
-
     std::mutex mMutex;
     JobToken mNextToken;
     boost::asio::io_context mIoContext;

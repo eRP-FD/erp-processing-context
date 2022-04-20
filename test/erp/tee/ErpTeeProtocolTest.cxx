@@ -109,7 +109,7 @@ TEST_P(ErpTeeProtocolTest, gematik_ref_key_config) // NOLINT
 
     HsmPool hsm(
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), std::move(blobCache)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
 
     auto innerTeeRequest = ErpTeeProtocol::decrypt(cipher, hsm);
     innerTeeRequest.parseHeaderAndBody();

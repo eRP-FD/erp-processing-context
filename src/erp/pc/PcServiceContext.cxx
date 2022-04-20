@@ -12,7 +12,10 @@
 #include "erp/service/DosHandler.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
-
+#include "erp/ErpProcessingContext.hxx"
+#include "erp/enrolment/EnrolmentServer.hxx"
+#include "erp/admin/AdminServer.hxx"
+#include "erp/registration/RegistrationManager.hxx"
 #include "erp/ErpRequirements.hxx"
 
 
@@ -36,37 +39,55 @@ namespace
 
         return refreshJob;
     }
+
 }
 
 
-PcServiceContext::PcServiceContext(const Configuration& configuration,
-                                   Database::Factory&& databaseFactory,
-                                   std::unique_ptr<RedisInterface>&& redisClient,
-                                   std::unique_ptr<HsmPool>&& hsmPool,
-                                   std::shared_ptr<JsonValidator> jsonValidator,
-                                   std::shared_ptr<XmlValidator> xmlValidator,
-                                   std::shared_ptr<InCodeValidator> inCodeValidator,
-                                   std::unique_ptr<RegistrationInterface> registrationInterface,
-                                   std::shared_ptr<TslManager> tslManager)
+PcServiceContext::PcServiceContext(const Configuration& configuration, Factories&& factories)
     : idp()
-    , mDatabaseFactory(std::move(databaseFactory))
-    , mRedisClient(std::move(redisClient))
+    , mTimerManager(std::make_shared<Timer>())
+    , mDatabaseFactory(std::move(factories.databaseFactory))
+    , mRedisClient(factories.redisClientFactory())
     , mDosHandler(std::make_unique<DosHandler>(mRedisClient))
-    , mHsmPool(std::move(hsmPool))
+    , mBlobCache(factories.blobCacheFactory())
+    , mHsmPool(std::make_unique<HsmPool>(factories.hsmFactoryFactory(factories.hsmClientFactory(), mBlobCache),
+                                        factories.teeTokenUpdaterFactory, mTimerManager))
     , mKeyDerivation(*mHsmPool)
-    , mJsonValidator(std::move(jsonValidator))
-    , mXmlValidator(std::move(xmlValidator))
-    , mInCodeValidator(inCodeValidator)
+    , mJsonValidator(factories.jsonValidatorFactory())
+    , mXmlValidator(factories.xmlValidatorFactory())
+    , mInCodeValidator(factories.incodeValidatorFactory())
     , mPreUserPseudonymManager(PreUserPseudonymManager::create(this))
     , mTelematicPseudonymManager(TelematicPseudonymManager::create(*this))
-    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, tslManager, *mHsmPool))
-    , mTslManager(std::move(tslManager))
+    , mTslManager(factories.tslManagerFactory(mXmlValidator))
+    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, mTslManager, *mHsmPool))
     , mTslRefreshJob(setupTslRefreshJob(mTslManager, configuration))
-    , mRegistrationInterface(std::move(registrationInterface))
+    , mRegistrationInterface(std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(), factories.redisClientFactory()))
+    , mTpmFactory(std::move(factories.tpmFactory))
 {
+    RequestHandlerManager teeHandlers;
+    ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
+    mTeeServer = factories.teeServerFactory(
+        HttpsServer::defaultHost, configuration.serverPort(), std::move(teeHandlers), *this, false,
+        SafeString(configuration.getOptionalStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE, "")));
+
+    auto enrolmentServerPort =
+        getEnrolementServerPort(configuration.serverPort(), EnrolmentServer::DefaultEnrolmentServerPort);
+    if (enrolmentServerPort)
+    {
+        RequestHandlerManager enrolmentHandlers;
+        EnrolmentServer::addEndpoints(enrolmentHandlers);
+        mEnrolmentServer =
+            factories.enrolmentServerFactory(HttpsServer::defaultHost, *enrolmentServerPort,
+                                             std::move(enrolmentHandlers), *this, false, SafeString{});
+    }
+
+    RequestHandlerManager adminHandlers;
+    AdminServer::addEndpoints(adminHandlers);
+    mAdminServer = factories.adminServerFactory(configuration.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                                                configuration.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT),
+                                                std::move(adminHandlers), *this, false, SafeString{});
     Expect3(mDatabaseFactory!=nullptr, "database factory has been passed as nullptr to ServiceContext constructor", std::logic_error);
-    Expect3(mJsonValidator!=nullptr, "jsonValidator has been passed as nullptr to ServiceContext constructor", std::logic_error);
-    Expect3(mXmlValidator!=nullptr, "xmlValidator has been passed as nullptr to ServiceContext constructor", std::logic_error);
+    Expect3(mTpmFactory!=nullptr, "mTpmFactory has been passed as nullptr to ServiceContext constructor", std::logic_error);
 }
 
 PcServiceContext::~PcServiceContext()
@@ -107,9 +128,9 @@ std::shared_ptr<RedisInterface> PcServiceContext::getRedisClient()
     return mRedisClient;
 }
 
-std::shared_ptr<HsmPool> PcServiceContext::getHsmPool()
+HsmPool& PcServiceContext::getHsmPool()
 {
-    return mHsmPool;
+    return *mHsmPool;
 }
 
 KeyDerivation & PcServiceContext::getKeyDerivation()
@@ -147,9 +168,9 @@ const AuditEventTextTemplates& PcServiceContext::auditEventTextTemplates() const
     return mAuditEventTextTemplates;
 }
 
-const std::shared_ptr<TslManager>& PcServiceContext::getTslManager()
+TslManager* PcServiceContext::getTslManager()
 {
-    return mTslManager;
+    return mTslManager.get();
 }
 
 void PcServiceContext::setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer)
@@ -172,4 +193,34 @@ ApplicationHealth& PcServiceContext::applicationHealth ()
 std::shared_ptr<RegistrationInterface> PcServiceContext::registrationInterface() const
 {
     return mRegistrationInterface;
+}
+
+const EnrolmentData& PcServiceContext::getEnrolmentData() const
+{
+    return mEnrolmentData;
+}
+
+const Tpm::Factory& PcServiceContext::getTpmFactory() const
+{
+    return mTpmFactory;
+}
+HttpsServer& PcServiceContext::getTeeServer() const
+{
+    return *mTeeServer;
+}
+HttpsServer* PcServiceContext::getEnrolmentServer() const
+{
+    return mEnrolmentServer.get();
+}
+HttpsServer& PcServiceContext::getAdminServer() const
+{
+    return *mAdminServer;
+}
+BlobCache& PcServiceContext::getBlobCache() const
+{
+    return *mBlobCache;
+}
+std::shared_ptr<Timer> PcServiceContext::getTimerManager()
+{
+    return mTimerManager;
 }

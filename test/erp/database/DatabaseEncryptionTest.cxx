@@ -21,7 +21,7 @@
 #include <erp/compression/ZStd.hxx>
 #include <gtest/gtest.h>
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 class DatabaseEncryptionTest : public PostgresDatabaseTest
 {
@@ -56,12 +56,13 @@ protected:
         db.activateTask(task, model::Binary{binId, binData});
         auto erxReceipt =
             model::ErxReceipt::fromJsonNoValidation(ResourceManager::instance().getStringResource(erxBundleResource));
-        auto medicationDispense = model::MedicationDispense::fromJsonNoValidation(
-            ResourceManager::instance().getStringResource(medicationDispenseResource));
-        db.updateTaskMedicationDispenseReceipt(task, medicationDispense, erxReceipt);
+        std::vector<model::MedicationDispense> medicationDispenses;
+        medicationDispenses.emplace_back(model::MedicationDispense::fromJsonNoValidation(
+            ResourceManager::instance().getStringResource(medicationDispenseResource)));
+        db.updateTaskMedicationDispenseReceipt(task, medicationDispenses, erxReceipt);
         db.updateTaskStatusAndSecret(task);
         db.commitTransaction();
-        return std::make_tuple(std::move(task), std::move(erxReceipt), std::move(medicationDispense));
+        return std::make_tuple(std::move(task), std::move(erxReceipt), std::move(medicationDispenses.at(0)));
     }
 
     db_model::Blob accountSalt(const db_model::HashedId identityHashed, db_model::MasterKeyType keyType, BlobId blobId)
@@ -199,12 +200,15 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     //     not encrypted
     // 18: medication_dispense_bundle bytea
     db_model::EncryptedBlob encryptedMedicationDispense{row[col::medication_dispense_bundle].as<pqxx::binarystring>()};
-    std::optional<model::MedicationDispense> decryptedMedicationDispense;
+    std::optional<model::Bundle> decryptedMedicationDispenseBundle;
     {
         auto key = medicationDispenseKey(kvnrHashed, medicationDispenseBlobId);
-        ASSERT_NO_THROW(decryptedMedicationDispense = model::MedicationDispense::fromJsonNoValidation(
+        ASSERT_NO_THROW(decryptedMedicationDispenseBundle = model::Bundle::fromJsonNoValidation(
                             getDBCodec().decode(encryptedMedicationDispense, key)));
-        EXPECT_EQ(decryptedMedicationDispense->kvnr(), medicationDispense.kvnr());
+        auto decryptedMedicationDispenses =
+            decryptedMedicationDispenseBundle->getResourcesByType<model::MedicationDispense>();
+        ASSERT_FALSE(decryptedMedicationDispenses.empty());
+        EXPECT_EQ(decryptedMedicationDispenses[0].kvnr(), medicationDispense.kvnr());
     }
     A_19688.finish();
 }

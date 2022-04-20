@@ -9,7 +9,7 @@
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/util/Gsl.hxx"
 #include "test/util/JsonTestUtils.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <filesystem>
 #include <regex>
@@ -127,6 +127,7 @@ INSTANTIATE_TEST_SUITE_P(gematikExamples , FhirConverterTest,
     SampleFiles{"audit_event.xml"                   , "audit_event.json"},
     SampleFiles{"capability_statement_both.xml"     , "capability_statement_both.json"},
     SampleFiles{"capability_statement_supplier.xml" , "capability_statement_supplier.json"},
+    SampleFiles{"chargeItem_simplifier.xml"         , "chargeItem_simplifier.json"},
     SampleFiles{"communication_dispense_req.xml"    , "communication_dispense_req.json"},
     SampleFiles{"communication_info_req.xml"        , "communication_info_req.json"},
     SampleFiles{"communication_reply.xml"           , "communication_reply.json"},
@@ -138,6 +139,7 @@ INSTANTIATE_TEST_SUITE_P(gematikExamples , FhirConverterTest,
     SampleFiles{"kbv_bundle.xml"                    , "kbv_bundle.json"},
     SampleFiles{"medication_compounding.xml"        , "medication_compounding.json"},
     SampleFiles{"medication_dispense.xml"           , "medication_dispense.json"},
+    SampleFiles{"medication_dispense_bundle.xml"    , "medication_dispense_bundle.json"},
     SampleFiles{"medication_free_text.xml"          , "medication_free_text.json"},
     SampleFiles{"medication_ingredient.xml"         , "medication_ingredient.json"},
     SampleFiles{"medication_pzn.xml"                , "medication_pzn.json"},

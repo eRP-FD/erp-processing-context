@@ -10,10 +10,10 @@
 #include "erp/server/handler/RequestHandlerInterface.hxx"
 
 
-class HealthHandler : public UnconstrainedRequestHandler<PcServiceContext>
+class HealthHandler : public UnconstrainedRequestHandler
 {
 public:
-    void handleRequest(SessionContext<PcServiceContext>& session) override;
+    void handleRequest(SessionContext& session) override;
     Operation getOperation(void) const override;
 };
 

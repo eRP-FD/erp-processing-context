@@ -15,7 +15,8 @@
 
 HsmPool::HsmPool (
     std::unique_ptr<HsmFactory>&& hsmFactory,
-    const TeeTokenUpdaterFactory& teeTokenUpdaterFactory)
+    const TeeTokenUpdater::TeeTokenUpdaterFactory& teeTokenUpdaterFactory,
+    std::shared_ptr<Timer> timerManager)
     : mMutex(),
       mAvailableHsmSessions(),
       mActiveSessionCount(0),
@@ -27,14 +28,16 @@ HsmPool::HsmPool (
       mTokenUpdater(
           teeTokenUpdaterFactory(
               [this](auto&& token){setTeeToken(std::move(token));},
-              *mHsmFactory)),
+              *mHsmFactory, timerManager)),
       mKeepAliveUpdateToken(Timer::NotAJob),
       mHsmIdleTimeout(std::chrono::seconds(
           Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS, 15 * 60))),
       mMaxSessionCount(Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_MAX_SESSION_COUNT, 5)),
-      mMaxUsedSessionCount(0)
+      mMaxUsedSessionCount(0),
+      mTimerManager(timerManager)
 {
     Expect3(mHsmFactory!=nullptr, "HsmFactory missing", std::logic_error);
+    Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);
 
     TerminationHandler::instance().registerCallback(
         [this]
@@ -57,7 +60,7 @@ HsmPool::HsmPool (
 
     // Use the half of the configured HSM keep alive interval (Shannon) to handle aliasing effects.
     const auto keepAliveJobInterval = mHsmIdleTimeout / 4;
-    mKeepAliveUpdateToken = Timer::instance().runRepeating(
+    mKeepAliveUpdateToken = mTimerManager->runRepeating(
         keepAliveJobInterval,
         keepAliveJobInterval,
         [this]{keepAvailableHsmSessionsAlive();});
@@ -76,7 +79,7 @@ void HsmPool::releasePool (void) noexcept
 {
     std::lock_guard lock (mMutex);
 
-    Timer::instance().cancel(mKeepAliveUpdateToken);
+    mTimerManager->cancel(mKeepAliveUpdateToken);
     mKeepAliveUpdateToken = Timer::NotAJob;
 
     mIsPoolReleased = true;

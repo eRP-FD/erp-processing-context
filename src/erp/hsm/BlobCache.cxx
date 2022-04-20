@@ -225,6 +225,18 @@ void BlobCache::deleteBlob (
     rebuildCache();
 }
 
+void BlobCache::setPcrHash(const ::ErpVector& pcrHash)
+{
+    if (mPcrHash != pcrHash)
+    {
+        ::std::shared_lock lock(mMutex);
+        mPcrHash = pcrHash;
+        lock.unlock();
+
+        rebuildCache();
+    }
+}
+
 void BlobCache::startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval)
 {
     Expect3(mRefresher == nullptr, "refresher already started", std::logic_error);
@@ -255,7 +267,11 @@ void BlobCache::rebuildCache (void)
     {
         const auto result = entries.emplace(CacheKey(entry.type, entry.id), std::move(entry));
         ErpExpect(result.second, HttpStatus::InternalServerError, "rebuilding of blob cache failed");
-        newestEntries.insert_or_assign(result.first->second.type, result.first->second);
+        if ((result.first->second.type != ::BlobType::Quote) ||
+            result.first->second.isBlobValid(::std::chrono::system_clock::now(), mPcrHash))
+        {
+            newestEntries.insert_or_assign(result.first->second.type, result.first->second);
+        }
     }
 
     // Now swap the maps.

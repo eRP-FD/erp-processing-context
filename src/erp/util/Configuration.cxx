@@ -359,6 +359,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir"}},
     {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds"}},
     {ConfigurationKey::FEATURE_PKV                                    , {"ERP_FEATURE_PKV"                                    , "/erp/feature/pkv"}},
+    {ConfigurationKey::FEATURE_WORKFLOW_200                           , {"ERP_FEATURE_WORKFLOW_200"                           , "/erp/feature/workflow-200"}},
     {ConfigurationKey::ADMIN_SERVER_INTERFACE                         , {"ERP_ADMIN_SERVER_INTERFACE"                         , "/erp/admin/server/interface"}},
     {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port"}},
     {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds"}},
@@ -373,8 +374,6 @@ DevConfigKeyNames::DevConfigKeyNames()
     // clang-format off
     mNamesByKey.insert({
     {ConfigurationKey::DEBUG_ENABLE_HSM_MOCK,                 {"DEBUG_ENABLE_HSM_MOCK",             "/debug/enable-hsm-mock"}},
-    {ConfigurationKey::DEBUG_DISABLE_ENROLMENT_API_AUTH,      {"DEBUG_DISABLE_ENROLMENT_API_AUTH",  "/debug/disable-enrolment-api-auth"}},
-    {ConfigurationKey::DEBUG_DISABLE_ADMIN_AUTH,              {"DEBUG_DISABLE_ADMIN_AUTH",          "/debug/disable-admin-auth"}},
     {ConfigurationKey::DEBUG_DISABLE_REGISTRATION,            {"DEBUG_DISABLE_REGISTRATION",        "/debug/disable-registration"}},
     {ConfigurationKey::DEBUG_DISABLE_DOS_CHECK,               {"DEBUG_DISABLE_DOS_CHECK",           "/debug/disable-dos-check"}},
     {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check"}}
@@ -718,4 +717,59 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     xmlValidator.loadKbvSchemas(profileKbvVersion, profileKbvSchemas, profileValidfrom, std::nullopt);
     xmlValidator.loadGematikSchemas(profileGematikVersion, profileGematikSchemas, profileValidfrom, std::nullopt);
 
+}
+
+static std::optional<uint16_t> getPortFromConfiguration (const Configuration& configuration, const ConfigurationKey key)
+{
+    const auto port = configuration.getOptionalIntValue(key);
+    if (port.has_value())
+    {
+        Expect(port.value() > 0 && port.value() <= 65535, "default port number is out of range");
+        return std::optional<uint16_t>(static_cast<uint16_t>(port.value()));
+    }
+    else
+        return {};
+}
+
+std::optional<uint16_t> getEnrolementServerPort (
+    const uint16_t pcPort,
+    const uint16_t defaultEnrolmentServerPort)
+{
+    const auto enrolmentPort = getPortFromConfiguration(Configuration::instance(), ConfigurationKey::ENROLMENT_SERVER_PORT)
+                                   .value_or(defaultEnrolmentServerPort);
+    const auto activeForPcPort = Configuration::instance().getOptionalIntValue(
+        ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT,
+        -1);
+    if (activeForPcPort != pcPort)
+    {
+        LOG(WARNING) << "Enrolment-Server (on port=" << enrolmentPort << ") is disabled (ERP_SERVER_PORT = " << pcPort
+                     <<") != (ENROLMENT_ACTIVATE_FOR_PORT = "<< activeForPcPort << ")";
+    }
+
+    return activeForPcPort == pcPort ? std::optional<uint16_t>(enrolmentPort) : std::nullopt;
+}
+
+const Configuration& Configuration::instance()
+{
+    static const Configuration theInstance;
+    return theInstance;
+}
+
+void Configuration::check() const
+{
+    if (featurePkvEnabled())
+    {
+        Expect3(featureWf200Enabled(), "When FEATURE_PKV is enabled, FEATURE_WORKFLOW_200 must not be disabled.", std::logic_error);
+    }
+}
+
+bool Configuration::featurePkvEnabled() const
+{
+    return getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false);
+}
+
+bool Configuration::featureWf200Enabled() const
+{
+    bool featurePkv = featurePkvEnabled();
+    return getOptionalBoolValue(ConfigurationKey::FEATURE_WORKFLOW_200, featurePkv);
 }

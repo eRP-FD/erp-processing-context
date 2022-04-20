@@ -6,12 +6,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONPZN_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONPZN_HXX
 
-#include "erp/model/Resource.hxx"
+#include "erp/model/KbvMedicationBase.hxx"
 
 namespace model
 {
 
-class KbvMedicationPzn : public Resource<KbvMedicationPzn, ResourceVersion::KbvItaErp>
+class KbvMedicationPzn : public KbvMedicationBase<KbvMedicationPzn, ResourceVersion::KbvItaErp>
 {
 public:
     [[nodiscard]] const std::optional<std::string_view> amountNumeratorValueAsString() const;

@@ -20,7 +20,7 @@
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test_config.h"
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 
 
 #include <boost/format.hpp>

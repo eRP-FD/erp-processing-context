@@ -14,17 +14,16 @@
 #include <boost/beast/ssl.hpp>
 
 
-template<class ServiceContextType>
 class ServerSocketHandler
-    : public std::enable_shared_from_this<ServerSocketHandler<ServiceContextType>>
+    : public std::enable_shared_from_this<ServerSocketHandler>
 {
 public:
     ServerSocketHandler(
         boost::asio::io_context& ioContext,
         boost::asio::ssl::context& sslContext,
         const boost::asio::ip::tcp::endpoint& endpoint,
-        RequestHandlerManager<ServiceContextType>&& requestHandlers,
-        std::shared_ptr<ServiceContextType> serviceContext);
+        RequestHandlerManager&& requestHandlers,
+        PcServiceContext& serviceContext);
 
     // Accept incoming connections on the server socket.
     void run (void);
@@ -34,8 +33,8 @@ private:
     boost::asio::ssl::context& mSslContext;
     boost::asio::ip::tcp::acceptor mAcceptor;
     boost::beast::flat_buffer mBuffer;
-    RequestHandlerManager<ServiceContextType> mRequestHandlers;
-    std::shared_ptr<ServiceContextType> mServiceContext;
+    RequestHandlerManager mRequestHandlers;
+    PcServiceContext& mServiceContext;
 
     void do_accept (void);
     void on_accept (boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);

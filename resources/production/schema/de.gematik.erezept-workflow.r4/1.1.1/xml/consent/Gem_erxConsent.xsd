@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:include schemaLocation="../identifier/Identifier.xsd"/>
+  <xs:include schemaLocation="../extension/LanguagesExtension.xsd"/>
+  <xs:element name="Consent" type="Gem_erxConsent"/>
+  <xs:complexType name="Gem_erxConsent">
+    <xs:complexContent>
+      <xs:extension base="Resource">
+        <xs:sequence>
+          <xs:element name="text" type="Narrative" minOccurs="0"/>
+          <xs:element name="contained" type="Resource" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="identifier" type="Identifier" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="status" type="Gem_erxConsent.Status"/>
+          <xs:element name="scope" type="Gem_erxConsent.Scope"/>
+          <xs:element name="category" type="Gem_erxConsent.Category" maxOccurs="unbounded"/>
+          <xs:element name="patient" type="Gem_erxConsent.Patient"/>
+          <xs:element name="dateTime" type="dateTime"/>
+          <xs:element name="performer" type="Reference" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="organization" type="Reference" minOccurs="0"  maxOccurs="unbounded"/>
+          <xs:choice minOccurs="0">
+            <xs:element name="sourceAttachment" type="Gem_erxConsent.Attachment" minOccurs="0"/>
+            <xs:element name="sourceReference" type="Reference" minOccurs="0"/>
+          </xs:choice>
+          <xs:element name="policy" type="Gem_erxConsent.Policy" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="policyRule" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="verification" type="Gem_erxConsent.Verification" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="provision" type="Gem_erxConsent.Provision" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxConsent.Status">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxConsent.Status-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxConsent.Status-list">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="draft"/>
+      <xs:enumeration value="proposed"/>
+      <xs:enumeration value="active"/>
+      <xs:enumeration value="rejected"/>
+      <xs:enumeration value="inactive"/>
+      <xs:enumeration value="entered-in-error"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Gem_erxConsent.Scope">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="Gem_erxConsent.Scope.Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Scope.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="Gem_erxConsent.Scope.Coding.Uri" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="Gem_erxConsent.Scope.Coding.Code" minOccurs="0"/>
+          <xs:element name="display" type="Gem_erxConsent.Scope.Coding.Display" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Scope.Coding.Uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://terminology.hl7.org/CodeSystem/consentscope"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Scope.Coding.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="patient-privacy"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Scope.Coding.Display">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="string-primitive" fixed="Privacy Consent"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxConsent.Category">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="Gem_erxConsent.Category.Coding" minOccurs="0"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Category.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="Gem_erxConsent.Category.Coding.Uri" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="Gem_erxConsent.Category.Coding.Code" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Category.Coding.Uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/CodeSystem/Consenttype"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Category.Coding.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxConsent.Category.Coding.Code.type-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxConsent.Category.Coding.Code.type-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="CHARGCONS"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Gem_erxConsent.Patient">
+    <xs:complexContent>
+      <xs:extension base="Element">
+          <xs:sequence>
+            <xs:element name="reference" type="string" minOccurs="0"/>
+            <xs:element name="type" type="Gem_erxConsent.Patient.type" minOccurs="0"/>
+            <xs:element name="identifier" type="Identifier.KVID-10" minOccurs="0"/>
+            <xs:element name="display" type="string" minOccurs="0"/>
+          </xs:sequence>
+        </xs:extension>
+      </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxConsent.Patient.type">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxConsent.Patient.type-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxConsent.Patient.type-list">
+    <xs:restriction base="uri-primitive">
+      <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/Patient"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="Gem_erxConsent.Attachment">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="contentType" type="code" minOccurs="0"/>
+          <xs:element name="language" type="Languages.Coding.code" minOccurs="0"/>
+          <xs:element name="data" type="base64Binary" minOccurs="0"/>
+          <xs:element name="url" type="url" minOccurs="0"/>
+          <xs:element name="size" type="unsignedInt" minOccurs="0"/>
+          <xs:element name="hash" type="base64Binary" minOccurs="0"/>
+          <xs:element name="title" type="string" minOccurs="0"/>
+          <xs:element name="creation" type="dateTime" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxConsent.Policy">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="authority" type="uri" minOccurs="0"/>
+          <xs:element name="uri" type="uri" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxConsent.Verification">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>          
+          <xs:element name="verified" type="boolean"/>
+          <xs:element name="verifiedWith" type="Reference" minOccurs="0"/>
+          <xs:element name="verificationDate" type="dateTime" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="Gem_erxConsent.Provision">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="type" type="code" minOccurs="0"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="actor" type="Provision.Actor" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="action" type="CodeableConcept" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="securityLabel" type="Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="purpose" type="Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="class" type="Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="code" type="CodeableConcept" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="dataPeriod" type="Period" minOccurs="0"/>
+          <xs:element name="data" type="Provision.Data" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="provision" type="Gem_erxConsent.Provision" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Provision.Actor">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="role" type="CodeableConcept" />
+          <xs:element name="reference" type="Reference"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Provision.Data">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="meaning" type="code"/>
+          <xs:element name="reference" type="Reference"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

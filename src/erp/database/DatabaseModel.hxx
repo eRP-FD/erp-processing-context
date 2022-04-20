@@ -96,7 +96,6 @@ public:
     std::optional<EncryptedBlob> secret;
     std::optional<EncryptedBlob> receipt;
     std::optional<EncryptedBlob> healthcareProviderPrescription;
-
 };
 
 class MedicationDispense
@@ -143,7 +142,19 @@ public:
     model::Timestamp recorded; // filled after storing in or if loaded from DB;
 };
 
-}
+class ChargeItem {
+public:
+    ChargeItem(model::PrescriptionId initPrescriptionId, BlobId initBlobId, Blob initSalt,
+                      model::Timestamp initAuthoredOn, db_model::EncryptedBlob initChargeItem);
+
+    model::PrescriptionId prescriptionId;
+    BlobId blobId;
+    Blob salt;
+    model::Timestamp authoredOn;
+    db_model::EncryptedBlob chargeItem;
+};
+
+} // namespace db_model
 
 
 

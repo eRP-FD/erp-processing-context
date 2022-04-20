@@ -7,8 +7,8 @@
 
 #include "erp/util/FileHelper.hxx"
 #include "mock/crypto/MockCryptography.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test_config.h"
 
 #include <regex>

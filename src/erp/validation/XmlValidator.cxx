@@ -158,7 +158,7 @@ void XmlValidator::checkValidityTime(const std::optional<model::Timestamp>& vali
     {
         ErpExpect(*validUntil >= now, HttpStatus::BadRequest,
                   "validity period of profile " + schemaNameHint + " is over. Was valid until " +
-                      validFrom->toXsDateTime());
+                      validUntil->toXsDateTime());
     }
 }
 

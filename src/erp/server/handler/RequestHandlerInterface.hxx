@@ -12,37 +12,33 @@
 #include <string_view>
 
 
-template<class ServiceContextType>
 class SessionContext;
 
 
-template<class ServiceContextType>
 class RequestHandlerInterface
 {
 public:
     virtual ~RequestHandlerInterface (void) = default;
 
-    virtual void preHandleRequestHook(SessionContext<ServiceContextType>&) {};
-    virtual void handleRequest (SessionContext<ServiceContextType>& session) = 0;
+    virtual void preHandleRequestHook(SessionContext&) {};
+    virtual void handleRequest (SessionContext& session) = 0;
     [[nodiscard]] virtual bool allowedForProfessionOID(std::string_view professionOid) const = 0;
     virtual Operation getOperation (void) const = 0;
 };
 
-template<class ServiceContextType>
-class UnconstrainedRequestHandler : public RequestHandlerInterface<ServiceContextType>
+class UnconstrainedRequestHandler : public RequestHandlerInterface
 {
 public:
     [[nodiscard]] bool allowedForProfessionOID (std::string_view) const override {return true;}
 };
 
-template<class ServiceContextType>
-class RequestHandlerBasicAuthentication : public UnconstrainedRequestHandler<ServiceContextType>
+class RequestHandlerBasicAuthentication : public UnconstrainedRequestHandler
 {
 public:
-    using Type = RequestHandlerBasicAuthentication<ServiceContextType>;
+    using Type = RequestHandlerBasicAuthentication;
 
-    void handleBasicAuthentication(const SessionContext<ServiceContextType>& session, ConfigurationKey credentialsKey,
-                                   ConfigurationKey debugDisableAuthenticationKey) const;
+    void handleBasicAuthentication(const SessionContext& session,
+                                   ConfigurationKey credentialsKey) const;
 };
 
 

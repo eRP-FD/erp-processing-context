@@ -548,12 +548,11 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsSuccess)
 {
-    // TODO adapt as soon as service is implemented
     A_22118.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem";
-    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::OK);
+    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::OK);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::OK);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsForbidden)
@@ -571,12 +570,11 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetChargeItemSuccess)
 {
-    // TODO adapt as soon as service is implemented
     A_22124.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
-    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetChargeItemForbidden)
@@ -594,11 +592,10 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetChargeItemForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostChargeItemSuccess)
 {
-    // TODO adapt as soon as service is implemented
     A_22129.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem";
-    testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::BadRequest);
+    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::BadRequest);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostChargeItemForbidden)
@@ -617,12 +614,11 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostChargeItemForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemSuccess)
 {
-    // TODO adapt as soon as service is implemented
     A_22144.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
-    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::PUT, endpoint, jwtOeffentliche_apotheke, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::PUT, endpoint, jwtKrankenhausapotheke, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemForbidden)
@@ -640,10 +636,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentSuccess)
 {
-    // TODO adapt as soon as service is implemented
     A_22155.test("Valid professionOID claim in JWT");
     const std::string_view endpoint = "/Consent/47110000-0000-0000-0000-000000000000";
-    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::BadRequest);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentForbidden)
@@ -663,10 +658,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetConsentSuccess)
 {
-    // TODO adapt as soon as service is implemented
     A_22159.test("Valid professionOID claim in JWT");
     const std::string_view endpoint = "/Consent/";
-    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::OK);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetConsentForbidden)
@@ -686,10 +680,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetConsentForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostConsentSuccess)
 {
-    // TODO adapt as soon as service is implemented
     A_22161.test("Valid professionOID claim in JWT");
     const std::string_view endpoint = "/Consent/";
-    testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::BadRequest);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostConsentForbidden)

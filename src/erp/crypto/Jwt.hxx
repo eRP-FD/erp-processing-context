@@ -82,6 +82,7 @@ public:
     constexpr static std::string_view organizationNameClaim = "organizationName";
     constexpr static std::string_view idNumberClaim = "idNummer";
     constexpr static std::string_view jtiClaim = "jti";
+    constexpr static std::string_view clientIdClaim = "client_id";
     constexpr static std::string_view acrContent = "gematik-ehealth-loa-high";
     constexpr static std::chrono::seconds A20373_iatClaimToleranceSeconds = std::chrono::seconds(2);
 
@@ -93,7 +94,6 @@ private:
     std::optional<double> doubleForKey(const rapidjson::Document& doc,
                                       const std::string_view& key) const;
 
-private:
     std::string mJwt{};
     std::string mHeader{};
     std::string mPayload{};

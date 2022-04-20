@@ -30,7 +30,8 @@ TEST(SeederTest, seeds)
     HsmPool mockHsmPool(
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
                                          MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(),
+        std::make_shared<Timer>());
     Seeder seeder(mockHsmPool);
     for (size_t i = 0; i < threads; ++i)
     {

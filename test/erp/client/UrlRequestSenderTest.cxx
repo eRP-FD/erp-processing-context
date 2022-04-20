@@ -8,14 +8,9 @@
 #include "erp/server/handler/RequestHandlerInterface.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
-#include "erp/server/HttpsServer.ixx"
-#include "erp/server/ServerSocketHandler.ixx"
-#include "erp/server/context/SessionContext.ixx"
-#include "erp/server/handler/RequestHandlerContext.ixx"
-#include "erp/server/handler/RequestHandlerManager.ixx"
-#include "erp/server/session/ServerSession.ixx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/Expect.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
 #include <chrono>
@@ -28,22 +23,14 @@ namespace
 }
 
 
-class BlockingTestServiceContext {};
-using BlockingTestSessionContext = SessionContext<BlockingTestServiceContext>;
+using BlockingTestSessionContext = SessionContext;
 
-template class HttpsServer<BlockingTestServiceContext>;
-template class RequestHandlerContainer<BlockingTestServiceContext>;
-template class RequestHandlerContext<BlockingTestServiceContext>;
-template class RequestHandlerManager<BlockingTestServiceContext>;
-template class ServerSocketHandler<BlockingTestServiceContext>;
-template class SessionContext<BlockingTestServiceContext>;
-
-class BlockingTestServerHandler : public UnconstrainedRequestHandler<BlockingTestServiceContext>
+class BlockingTestServerHandler : public UnconstrainedRequestHandler
 {
 public:
     BlockingTestServerHandler(std::function<bool()> isBlockedFunctor,
                               std::function<void(bool)> serverBlockingStatusSetter)
-        : UnconstrainedRequestHandler<BlockingTestServiceContext>()
+        : UnconstrainedRequestHandler()
         , mIsBlockedFunctor(isBlockedFunctor)
         , mServerBlockingStatusSetter(serverBlockingStatusSetter)
     {
@@ -73,44 +60,48 @@ public:
         return Operation::UNKNOWN;
     }
 
+
+
 private:
     std::function<bool()> mIsBlockedFunctor;
     std::function<void(bool)> mServerBlockingStatusSetter;
 };
 
 
-std::unique_ptr<HttpsServer<BlockingTestServiceContext>> createServer(
-    const std::string& hostIp,
-    uint16_t port,
-    std::function<bool()> isBlockedFunctor,
-    std::function<void(bool)> serverBlockingStatusSetter)
-{
-    RequestHandlerManager<BlockingTestServiceContext> handlerManager;
-    std::unique_ptr<RequestHandlerInterface<BlockingTestServiceContext>> requestHandler =
-         std::make_unique<BlockingTestServerHandler>(isBlockedFunctor, serverBlockingStatusSetter);
-    handlerManager.onPostDo("/test_path", std::move(requestHandler));
 
-    std::unique_ptr<BlockingTestServiceContext> serviceContext = std::make_unique<BlockingTestServiceContext>();
-
-    return std::make_unique<HttpsServer<BlockingTestServiceContext>>(
-        hostIp,
-        port,
-        std::move(handlerManager),
-        std::move(serviceContext));
-}
 
 
 class UrlRequestSenderTest : public testing::Test
 {
+public:
+    std::unique_ptr<HttpsServer> createServer(
+        const std::string& hostIp,
+        uint16_t port,
+        std::function<bool()> isBlockedFunctor,
+        std::function<void(bool)> serverBlockingStatusSetter)
+    {
+        RequestHandlerManager handlerManager;
+        std::unique_ptr<RequestHandlerInterface> requestHandler =
+            std::make_unique<BlockingTestServerHandler>(isBlockedFunctor, serverBlockingStatusSetter);
+        handlerManager.onPostDo("/test_path", std::move(requestHandler));
+
+        return std::make_unique<HttpsServer>(
+            hostIp,
+            port,
+            std::move(handlerManager),
+            serviceContext);
+    }
+private:
+    PcServiceContext serviceContext = StaticData::makePcServiceContext();
 };
 
 
 // TODO: create http-blocking-test for issue https://dth01.ibmgcloud.net/jira/browse/ERP-5935
-TEST(UrlRequestSenderTest, testHttpsReadTimeout)
+TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)
 {
     std::atomic_bool blocking = true;
     std::atomic_bool serverBlockingStatus = false;
-    std::unique_ptr<HttpsServer<BlockingTestServiceContext>> server = createServer(
+    std::unique_ptr<HttpsServer> server = createServer(
         HOST_IP,
         PORT,
         [&blocking]() mutable -> bool
@@ -133,7 +124,7 @@ TEST(UrlRequestSenderTest, testHttpsReadTimeout)
 }
 
 
-TEST(UrlRequestSenderTest, ConnectionTimeoutHttps)  // NOLINT
+TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttps)  // NOLINT
 {
     const uint16_t timeoutSeconds = 2;
     UrlRequestSender requestSender({}, timeoutSeconds);
@@ -147,7 +138,7 @@ TEST(UrlRequestSenderTest, ConnectionTimeoutHttps)  // NOLINT
 }
 
 
-TEST(UrlRequestSenderTest, ConnectionTimeoutHttp)  // NOLINT
+TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttp)  // NOLINT
 {
     const uint16_t timeoutSeconds = 5;
     UrlRequestSender requestSender({}, timeoutSeconds);

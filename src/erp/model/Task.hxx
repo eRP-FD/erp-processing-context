@@ -94,6 +94,7 @@ private:
 
     // based on task status set the expected UUIDs in the input/output arrays.
     void setInputOutputUuids();
+    void setAccepDateDependentPrescriptionType(const Timestamp& baseTime);
 };
 
 }

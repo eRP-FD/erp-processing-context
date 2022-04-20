@@ -133,6 +133,8 @@ std::string PostgresDatabaseCommunicationTest::taskFile() const
             return "task1.json";
         case PrescriptionType::direkteZuweisung:
             return "task169.json";
+        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            Fail("Not yet implemented"); // TODO implement
     }
     return "task1.json";
 }

@@ -7,7 +7,7 @@
 
 #include "erp/crypto/Certificate.hxx"
 #include "erp/util/FileHelper.hxx"
-#include "tools/ResourceManager.hxx"
+#include "ResourceManager.hxx"
 
 std::list<Certificate> CertificateDirLoader::loadDir(const std::filesystem::path& dir)
 {

@@ -38,11 +38,14 @@ public:
         // The ak name is only expected to be set for type==BlobType::AttestationPublicKey.
         std::optional<ErpArray<TpmObjectNameLength>> metaAkName;
         // The PCR set of TPM registers is only expected to be set for type==BlobType::Quote.
-        std::optional<PcrSet> metaPcrSet;
+        std::optional<PcrSet> pcrSet;
+        // The PCR hash is only expected to be set for type==BlobType::Quote.
+        std::optional<ErpVector> pcrHash;
         // The certificate is only expected to be set for type==BlobType::VauSig.
         ::std::optional<::std::string> certificate;
 
-        bool isBlobValid (std::chrono::system_clock::time_point now = std::chrono::system_clock::now()) const;
+        bool isBlobValid(::std::chrono::system_clock::time_point now = ::std::chrono::system_clock::now(),
+                         const ::ErpVector& currentPcrHash = {}) const;
 
         const ErpArray<TpmObjectNameLength>& getAkName (void) const;
         const PcrSet& getPcrSet (void) const;

@@ -12,7 +12,7 @@
 int main (int argc, char** argv)
 {
     Environment::set("ERP_VLOG_MAX_VALUE", "1");
-    TestClient::setFactory(&HttpsTestClient::Factory);
+    TestClient::setFactory(&HttpsTestClient::factory);
 
     GLogConfiguration::init_logging(argv[0]);
     ::testing::InitGoogleTest(&argc, argv);

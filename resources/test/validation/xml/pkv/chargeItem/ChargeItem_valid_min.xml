@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ChargeItem xmlns="http://hl7.org/fhir">
+    <status value="billable"/>
+    <code>
+        <coding>
+            <code value="not-applicable"/>
+            <display value="Zusatzpauschale für Beobachtung nach diagnostischer Koronarangiografie"/>
+        </coding>
+    </code>
+    <subject>
+        <reference value="Patient/example"/>
+        <identifier>
+            <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
+            <value value="X123456789"/>
+        </identifier>
+    </subject>
+    <enterer>
+        <identifier>
+            <system value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
+            <value value="CARD_U1"/>
+        </identifier>
+    </enterer>
+    <enteredDate value="2017-01-25T23:55:04+01:00"/>    
+</ChargeItem>

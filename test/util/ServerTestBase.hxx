@@ -24,9 +24,9 @@
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Uuid.hxx"
+#include "test/util/JwtBuilder.hxx"
 
 #include <gtest/gtest.h>
-#include <jwt/JwtBuilder.hxx>
 #include <pqxx/transaction>
 
 template<class T> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const T& jwt);
@@ -91,10 +91,11 @@ public:
     virtual model::Task createTask(const std::string& accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32)));
     virtual void activateTask(model::Task& task, const std::string& kvnrPatient = InsurantE);
     virtual void acceptTask(model::Task& task, const SafeString secret = SecureRandomGenerator::generate(32));
-    virtual model::MedicationDispense closeTask(
+    virtual std::vector<model::MedicationDispense> closeTask(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
-        const std::optional<model::Timestamp>& medicationWhenPrepared = std::nullopt);
+        const std::optional<model::Timestamp>& medicationWhenPrepared = std::nullopt,
+        size_t numMedications = 1);
     virtual void abortTask(model::Task& task);
 
     struct CommunicationAttandee
@@ -117,7 +118,7 @@ public:
     virtual std::vector<Uuid> addCommunicationsToDatabase(const std::vector<CommunicationDescriptor>& descriptors);
     virtual model::Communication addCommunicationToDatabase(const CommunicationDescriptor& descriptor);
 
-    std::unique_ptr<HttpsServer<PcServiceContext>> mServer;
+    std::unique_ptr<HttpsServer> mServer;
 
 protected:
     model::MedicationDispense createMedicationDispense(
@@ -127,8 +128,9 @@ protected:
         const std::optional<model::Timestamp>& whenPrepared = std::nullopt) const;
 
     // Jwt of InsurantF ("X234567890"):
-    std::unique_ptr<JWT> mJwt; // Renamed to avoid compiler warning "C4458: Declaration of "jwt" hides class members"
+    std::unique_ptr<JWT> mJwt;
     std::unique_ptr<MockDatabase> mMockDatabase;
+    std::unique_ptr<HsmPool> mHsmPool;
 
     ClientTeeProtocol mTeeProtocol;
     const bool mHasPostgresSupport;
@@ -162,10 +164,12 @@ protected:
     std::string mPharmacy;
     std::string mDoctor;
 
+    std::unique_ptr<PcServiceContext> mContext;
+
     Database::Factory createDatabaseFactory (void);
     std::unique_ptr<Database> createDatabase (void);
-    virtual void addAdditionalPrimaryHandlers (RequestHandlerManager<PcServiceContext>&) {}
-    virtual void addAdditionalSecondaryHandlers (RequestHandlerManager<PcServiceContext>&) {}
+    virtual void addAdditionalPrimaryHandlers (RequestHandlerManager&) {}
+    virtual void addAdditionalSecondaryHandlers (RequestHandlerManager&) {}
 
     /**
      * At the moment this method is idempotent. That means the server is started once per test suite, not per test.

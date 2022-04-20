@@ -1,6 +1,6 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 

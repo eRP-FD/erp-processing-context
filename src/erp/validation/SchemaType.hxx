@@ -35,11 +35,14 @@ enum class SchemaType
     KBV_PR_FOR_Practitioner,
     KBV_PR_FOR_PractitionerRole,
     Gem_erxMedicationDispense,
+    MedicationDispenseBundle,
     Gem_erxOrganizationElement,
     Gem_erxReceiptBundle,
     Gem_erxTask,
     BNA_tsl,
-    Gematik_tsl
+    Gematik_tsl,
+    Gem_erxChargeItem,
+    Gem_erxConsent
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SCHEMATYPE_HXX

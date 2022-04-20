@@ -7,9 +7,9 @@
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/service/AuditEventTextTemplates.hxx"
 #include "erp/model/ResourceNames.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 
@@ -356,7 +356,54 @@ TEST(AuditEventCreatorTest, createDeleteConsent)
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_FALSE(entityWhatIdentifierSystem.has_value());
     EXPECT_FALSE(entityWhatIdentifierValue.has_value());
-    EXPECT_EQ(auditEvent.entityDescription(), "+");  /// TODO: what shall be put here?
+    EXPECT_EQ(auditEvent.entityDescription(), "-");
+    EXPECT_EQ(auditEvent.entityWhatReference(), "Consent");
+    EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
+}
+
+TEST(AuditEventCreatorTest, createPostConsent)
+{
+    const model::AuditEventId eventId = model::AuditEventId::POST_Consent;
+    const model::AuditEvent::Action action = model::AuditEvent::Action::create;
+    const std::string insurantKvnr = "X123456789";
+    const std::int16_t deviceId = 1234;
+    const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
+    const std::string auditDataId = "audit_data_id";
+    const model::Timestamp recorded = model::Timestamp::now();
+
+    model::AuditData auditData(
+        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {} /*no prescriptionId*/);
+    auditData.setId(auditDataId);
+    auditData.setRecorded(recorded);
+
+    AuditEventTextTemplates textResources;
+    const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(std::string(insurantKvnr)));
+    const auto* language = "de";
+    const auto agentName = jwt->stringForClaim(JWT::givenNameClaim).value() + " " +
+                           jwt->stringForClaim(JWT::familyNameClaim).value();
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
+
+    EXPECT_EQ(auditEvent.id(), auditDataId);
+    EXPECT_EQ(auditEvent.language(), language);
+    const std::string text = std::string(agentName) + " hat die Einwilligung erteilt.";
+    const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + text + "</div>";
+    EXPECT_EQ(auditEvent.textDiv(), textDiv);
+    EXPECT_EQ(auditEvent.subTypeCode(), model::AuditEvent::SubType::create);
+    EXPECT_EQ(auditEvent.action(), action);
+    EXPECT_EQ(auditEvent.recorded(), recorded);
+    EXPECT_EQ(auditEvent.outcome(), model::AuditEvent::Outcome::success);
+    const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
+    EXPECT_TRUE(agentWhoSystem.has_value());
+    EXPECT_EQ(agentWhoSystem.value(), model::resource::naming_system::gkvKvid10);
+    EXPECT_TRUE(agentWhoValue.has_value());
+    EXPECT_EQ(agentWhoValue.value(), insurantKvnr);
+    EXPECT_EQ(auditEvent.agentName(), agentName);
+    EXPECT_EQ(auditEvent.agentType(), agentType);
+    EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
+    const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
+    EXPECT_FALSE(entityWhatIdentifierSystem.has_value());
+    EXPECT_FALSE(entityWhatIdentifierValue.has_value());
+    EXPECT_EQ(auditEvent.entityDescription(), "+");
     EXPECT_EQ(auditEvent.entityWhatReference(), "Consent");
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }

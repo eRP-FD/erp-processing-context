@@ -19,7 +19,7 @@ void BlobDatabaseHelper::removeUnreferencedBlobs (void)
         transaction.exec("DELETE FROM erp.blob WHERE type NOT IN (6,7,8)");
         transaction.exec("DELETE FROM erp.blob AS blob"
                          "  WHERE type = 6"
-                         "  AND NOT EXISTS (SELECT 1 FROM erp.task"
+                         "  AND NOT EXISTS (SELECT 1 FROM erp.task_view"
                          "                  WHERE task_key_blob_id = blob.blob_id OR medication_dispense_blob_id = blob.blob_id)"
                          "  AND NOT EXISTS (SELECT 1 FROM erp.account WHERE blob_id = blob.blob_id)");
         transaction.exec("DELETE FROM erp.blob AS blob"

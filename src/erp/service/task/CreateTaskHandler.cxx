@@ -35,7 +35,7 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     auto prescriptionType = parameters.getPrescriptionType();
     ErpExpect(prescriptionType.has_value(), HttpStatus::BadRequest, "Invalid workFlowType in incoming parameters");
     A_19112.finish();
-
+    checkFeatureWf200(*prescriptionType);
     model::Task task(*prescriptionType, accessCode);
 
     auto databaseHandle = session.database();

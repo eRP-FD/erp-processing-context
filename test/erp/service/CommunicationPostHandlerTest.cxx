@@ -21,7 +21,7 @@
 #include "test/util/ServerTestBase.hxx"
 #include "test/util/StaticData.hxx"
 
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 
 
 using namespace model;

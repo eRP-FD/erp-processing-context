@@ -150,11 +150,12 @@ TEST(UrlHelperTest, escapeUrl_success)
 
     EXPECT_EQ(UrlHelper::escapeUrl("äöüÄÖÜß"), "%c3%a4%c3%b6%c3%bc%c3%84%c3%96%c3%9c%c3%9f");
 
-    // Characters below 0x21 and above 0x79 are escaped.
+    // Characters below 0x20 and above 0x7a are escaped.
     EXPECT_EQ(UrlHelper::escapeUrl("\037\040\041\177\200"), "%1f%20!%7f%80");
 
-    // Special URL characters like '/' or ':' are not escaped.
-    EXPECT_EQ(UrlHelper::escapeUrl(":/:/"), ":/:/");
+    // "$&+,/:;=?@\"<>#%{}|\\′~[]` " should be encoded.
+    EXPECT_EQ(UrlHelper::escapeUrl("$&+,/:;=?@\"<>#%{}|\\^~[]` "),
+              "%24%26%2b%2c%2f%3a%3b%3d%3f%40%22%3c%3e%23%25%7b%7d%7c%5c%5e%7e%5b%5d%60%20");
 }
 
 
@@ -163,7 +164,6 @@ TEST(UrlHelperTest, escapeUrl_specialCharacters)
     // The set of special characters that is being escaped is work in progress.
     // Escaping is also dependent on position inside a URL (one ? is ok, but not more; '&' is ok to separate fields
     // but not inside paramter values).
-    // At the moment only '%' is escaped.
     EXPECT_EQ(UrlHelper::escapeUrl("a%B"), "a%25B");
 }
 

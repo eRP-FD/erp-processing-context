@@ -6,12 +6,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONFREETEXT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONFREETEXT_HXX
 
-#include "erp/model/Resource.hxx"
+#include "erp/model/KbvMedicationBase.hxx"
 
 namespace model
 {
 
-class KbvMedicationFreeText : public Resource<KbvMedicationFreeText, ResourceVersion::KbvItaErp>
+class KbvMedicationFreeText : public KbvMedicationBase<KbvMedicationFreeText, ResourceVersion::KbvItaErp>
 {
 public:
 private:

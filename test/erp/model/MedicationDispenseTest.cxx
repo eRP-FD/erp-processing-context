@@ -5,6 +5,7 @@
 
 #include "erp/fhir/Fhir.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -12,7 +13,7 @@
 
 #include <gtest/gtest.h>
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 
 TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
@@ -643,8 +644,9 @@ TEST(MedicationDispenseTest, CorrectSchema)
     auto& medicationDispense = *medicationDispense1;
 
     const model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.715.74");
-    medicationDispense.setId(prescriptionId);
-    EXPECT_EQ(medicationDispense.id().toString(), prescriptionId.toString());
+    medicationDispense.setPrescriptionId(prescriptionId);
+    medicationDispense.setId({prescriptionId, 0});
+    EXPECT_EQ(medicationDispense.prescriptionId().toString(), prescriptionId.toString());
 
     const std::string kvnr = "X424242424";
     medicationDispense.setKvnr(kvnr);

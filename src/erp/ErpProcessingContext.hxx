@@ -9,26 +9,13 @@
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/HttpsServer.hxx"
 
-
-class ErpProcessingContext
+namespace ErpProcessingContext
 {
-public:
-    ErpProcessingContext (
-        uint16_t port,
-        std::shared_ptr<PcServiceContext> serviceContext,
-        RequestHandlerManager<PcServiceContext>&& handlerManager);
-
-    HttpsServer<PcServiceContext>& getServer (void);
-
-    static void addPrimaryEndpoints (
-        RequestHandlerManager<PcServiceContext>& primaryManager,
-        RequestHandlerManager<PcServiceContext>&& secondaryManager = RequestHandlerManager<PcServiceContext>());
-    static void addSecondaryEndpoints (
-        RequestHandlerManager<PcServiceContext>& handlerManager);
-
-private:
-    HttpsServer<PcServiceContext> mServer;
-};
-
+void addPrimaryEndpoints (
+    RequestHandlerManager& primaryManager,
+    RequestHandlerManager&& secondaryManager = RequestHandlerManager());
+void addSecondaryEndpoints (
+    RequestHandlerManager& handlerManager);
+}
 
 #endif

@@ -38,6 +38,9 @@ public:
     AuditDataContainer apply(AuditDataContainer&& auditEvents) const;
     AuditDataContainer applySearch (AuditDataContainer&& auditEvents) const;
 
+    using ChargeItemContainer = std::vector<db_model::ChargeItem>;
+    ChargeItemContainer applyPaging (ChargeItemContainer&& chargeItems) const;
+
     class SearchMedicationDispense : public db_model::MedicationDispense
     {
     public:
@@ -53,9 +56,6 @@ public:
     MedicationDispenses apply(MedicationDispenses&& medicationDispenses) const;
     MedicationDispenses applySearch(MedicationDispenses&& tasks) const;
 
-private:
-    const UrlArguments& mUrlArguments;
-
     /**
      * Return whether the given `value` matches the specified parameter.
      * @return true if the search does not contain an expression for the parameter
@@ -63,6 +63,10 @@ private:
      */
     template<class T>
     bool matches (const std::string& parameterName, const std::optional<T>& value) const;
+
+private:
+    const UrlArguments& mUrlArguments;
+
 
     Communications applySort (Communications&& communications) const;
     Communications applyPaging (Communications&& communications) const;
@@ -76,6 +80,10 @@ private:
     MedicationDispenses applySort(MedicationDispenses&& tasks) const;
     MedicationDispenses applyPaging(MedicationDispenses&& tasks) const;
 };
+
+extern template bool
+TestUrlArguments::matches<db_model::HashedKvnr>(const std::string& parameterName,
+                                                const std::optional<db_model::HashedKvnr>& value) const;
 
 
 #endif

@@ -5,8 +5,6 @@
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
-#include "tools/ResourceManager.hxx"
-
 
 using Erp8545TestCreate = ErpWorkflowTestTemplate<::testing::TestWithParam<std::string>>;
 
@@ -97,7 +95,8 @@ TEST_P(Erp8545TestActivate, run)
     const auto body = std::regex_replace(GetParam(), prescriptionPlaceholder, bundle);
     const auto& [outerResponse, innerResponse] =
         send(RequestArguments{HttpMethod::POST, path, body, ContentMimeType::fhirXmlUtf8}
-                 .withJwt(jwtArzt()));
+                 .withJwt(jwtArzt())
+                 .withExpectedInnerFlowType("160"));
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }

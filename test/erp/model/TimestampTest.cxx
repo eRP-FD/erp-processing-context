@@ -72,22 +72,22 @@ public:
 
 TEST_F(TimestampTest, fromXsDateTime_success)
 {
-    const auto expectedDateTime = sys_days{January/29/2022} + 12h + 34min + 56s;
+    const auto expectedDateTime = Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s);
 
-    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56Z").toChronoTimePoint(), expectedDateTime);
-    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56+00:00").toChronoTimePoint(), expectedDateTime);
-    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56-00:00").toChronoTimePoint(), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56Z"), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56+00:00"), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56-00:00"), expectedDateTime);
 
     // Time zone plus one, but hour minus one, cancel each other out.
-    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T11:34:56-01:00").toChronoTimePoint(), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T11:34:56-01:00"), expectedDateTime);
 }
 
 
 TEST_F(TimestampTest, fromXsDateTime_successWithMilliseconds)
 {
-    const auto expectedDateTime = sys_days{January/29/2022} + 12h + 34min + 56s + 123ms;
+    const auto expectedDateTime = Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms);
 
-    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56.123Z").toChronoTimePoint(), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56.123Z"), expectedDateTime);
 }
 
 
@@ -188,16 +188,19 @@ TEST_F(TimestampTest, toXsGYear)
 
 TEST_F(TimestampTest, now)
 {
-    EXPECT_LT(abs(Timestamp::now().toChronoTimePoint() - std::chrono::system_clock::now()), std::chrono::seconds(1));
+    EXPECT_LT(abs(std::chrono::duration_cast<std::chrono::seconds>(Timestamp::now().toChronoTimePoint() -
+                                                                   std::chrono::system_clock::now()))
+                  .count(),
+              std::chrono::seconds(1).count());
 }
 
 
 TEST_F(TimestampTest, fromXsDate_success)
 {
-    const auto expectedDateTime = sys_days{January/29/2022};
+    const auto expectedDateTime = Timestamp(sys_days{January/29/2022});
 
     // Without timezone.
-    EXPECT_EQ(Timestamp::fromXsDate("2022-01-29").toChronoTimePoint(), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsDate("2022-01-29"), expectedDateTime);
 }
 
 
@@ -232,10 +235,10 @@ TEST_F(TimestampTest, fromXsDate_failForTimezones)
 
 TEST_F(TimestampTest, fromXsGYearMonth_success)
 {
-    auto expectedDateTime = sys_days{January/01/2022};
+    auto expectedDateTime = Timestamp(sys_days{January/01/2022});
 
     // Without timezone.
-    EXPECT_EQ(Timestamp::fromXsGYearMonth("2022-01").toChronoTimePoint(), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsGYearMonth("2022-01"), expectedDateTime);
 }
 
 
@@ -268,13 +271,13 @@ TEST_F(TimestampTest, fromXsGYear_success)
     auto expectedDateTime = sys_days{January / 01 / 2022};
 
     // Without timezone.
-    EXPECT_EQ(Timestamp::fromXsGYear("2022").toChronoTimePoint(), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsGYear("2022"), Timestamp(expectedDateTime));
 
     // Note that the range of the dates, covered by time_point is not specified.
     // These value have been determined experimentally.
     // Adjusting these values (that make the intervall smaller) is OK as long as a sensible range is maintained.
-    EXPECT_EQ(Timestamp::fromXsGYear("1970").toChronoTimePoint(), sys_days{January / 01 / 1970});
-    EXPECT_EQ(Timestamp::fromXsGYear("2262").toChronoTimePoint(), sys_days{January / 01 / 2262});
+    EXPECT_EQ(Timestamp::fromXsGYear("1970"), Timestamp(sys_days{January / 01 / 1970}));
+    EXPECT_EQ(Timestamp::fromXsGYear("2262"), Timestamp(sys_days{January / 01 / 2262}));
 }
 
 
@@ -301,43 +304,43 @@ TEST_F(TimestampTest, fromFhir_success)
 {
     {
         // xs:dateTime without sub-second precision.
-        const auto expectedDateTime = sys_days{January/29/2022} + 12h + 34min + 56s;
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T12:34:56Z").toChronoTimePoint(), expectedDateTime);
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T11:34:56-01:00").toChronoTimePoint(), expectedDateTime);
+        const auto expectedDateTime = Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T12:34:56Z"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T11:34:56-01:00"), expectedDateTime);
         // search without time zone:
-        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-01-29T12:34:56").toChronoTimePoint(), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-01-29T12:34:56"), expectedDateTime);
     }
     {
         // search without seconds.
-        const auto expectedDateTime = sys_days{June/28/2022} + 18h + 54min + 0s;
-        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54Z").toChronoTimePoint(), expectedDateTime);
-        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T11:54-07:00").toChronoTimePoint(), expectedDateTime);
+        const auto expectedDateTime = Timestamp(sys_days{June/28/2022} + 18h + 54min + 0s);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54Z"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T11:54-07:00"), expectedDateTime);
         // combined with missing time zone:
-        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54").toChronoTimePoint(), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54"), expectedDateTime);
     }
 
     {
         // xs:dateTime with sub-second precision
-        const auto expectedDateTime = sys_days{January/29/2022} + 12h + 34min + 56s + 123ms;
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T12:34:56.123Z").toChronoTimePoint(), expectedDateTime);
+        const auto expectedDateTime = Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T12:34:56.123Z"), expectedDateTime);
     }
 
     {
         // xs:date
-        const auto expectedDateTime = sys_days{January/29/2022};
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29").toChronoTimePoint(), expectedDateTime);
+        const auto expectedDateTime = Timestamp(sys_days{January/29/2022});
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29"), expectedDateTime);
     }
 
     {
         // xs:gYearMonth
-        const auto expectedDateTime = sys_days{February/01/2022};
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-02").toChronoTimePoint(), expectedDateTime);
+        const auto expectedDateTime = Timestamp(sys_days{February/01/2022});
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-02"), expectedDateTime);
     }
 
     {
         // xs:gYear
-        const auto expectedDateTime = sys_days{January/01/2022};
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022").toChronoTimePoint(), expectedDateTime);
+        const auto expectedDateTime = Timestamp(sys_days{January/01/2022});
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022"), expectedDateTime);
     }
 }
 

@@ -8,6 +8,8 @@
 
 #include "erp/util/Environment.hxx"
 
+#include "erp/util/Configuration.hxx"
+
 #include <string>
 
 class EnvironmentVariableGuard
@@ -18,6 +20,11 @@ public:
         , mPreviousValue(Environment::get(variableName))
     {
         set(value);
+    }
+
+    EnvironmentVariableGuard(ConfigurationKey key, const std::optional<std::string>& value)
+        : EnvironmentVariableGuard(Configuration::instance().getEnvironmentVariableName(key), value)
+    {
     }
 
     ~EnvironmentVariableGuard()

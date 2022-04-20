@@ -44,6 +44,9 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
     {
         // as a first step validate using the FHIR schema, which is good enough for the XML->JSON converter
         auto communication = parseAndValidateRequestBody<Communication>(session, SchemaType::fhir);
+        PrescriptionId prescriptionId = communication.prescriptionId();
+        checkFeatureWf200(prescriptionId.type());
+
         Communication::MessageType messageType = communication.messageType();
 
         std::string recipient = std::string(communication.recipient().value());
@@ -70,7 +73,6 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         auto* databaseHandle = session.database();
 
-        PrescriptionId prescriptionId = communication.prescriptionId();
         std::optional<Task> task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
         ErpExpect(task.has_value(), HttpStatus::BadRequest, "Task for prescription id " + prescriptionId.toString() + " is missing");
         std::optional<std::string_view> taskKvnr = task->kvnr();

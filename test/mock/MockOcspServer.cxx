@@ -21,7 +21,7 @@
 #include <test_config.h>
 
 
-using OcspSessionContext = SessionContext<OcspServiceContext>;
+using OcspSessionContext = SessionContext;
 
 namespace
 {
@@ -41,11 +41,11 @@ namespace
         return EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{std::move(ocspPrivateKeyPem)});
     }
 
-    class OCSPStatusRequestHandler : public UnconstrainedRequestHandler<OcspServiceContext>
+    class OCSPStatusRequestHandler : public UnconstrainedRequestHandler
     {
     public:
         OCSPStatusRequestHandler(const std::vector<MockOcsp::CertificatePair>& ocspResponderKnownCertificateCaPairs_)
-            : UnconstrainedRequestHandler<OcspServiceContext>()
+            : UnconstrainedRequestHandler()
             , ocspResponderKnownCertificateCaPairs(ocspResponderKnownCertificateCaPairs_)
             , ocspCertificate(createOcspCertificate())
             , ocspPrivateKey(createOcspPrivateKey())
@@ -77,48 +77,21 @@ namespace
 }
 
 
-std::unique_ptr<HttpsServer<OcspServiceContext>> MockOcspServer::create(
+std::unique_ptr<HttpsServer> MockOcspServer::create(
     const std::string& hostIp,
     uint16_t port,
     const std::vector<MockOcsp::CertificatePair> ocspResponderKnownCertificateCaPairs)
 {
-    RequestHandlerManager<OcspServiceContext> handlerManager;
-    std::unique_ptr<RequestHandlerInterface<OcspServiceContext>> requestHandler =
+    RequestHandlerManager handlerManager;
+    std::unique_ptr<RequestHandlerInterface> requestHandler =
         std::make_unique<OCSPStatusRequestHandler>(ocspResponderKnownCertificateCaPairs);
     handlerManager.onPostDo("/test_path/I_OCSP_Status_Information", std::move(requestHandler));
 
-    std::unique_ptr<OcspServiceContext> serviceContext = std::make_unique<OcspServiceContext>();
+    static PcServiceContext mContext = StaticData::makePcServiceContext();
 
-    return std::make_unique<HttpsServer<OcspServiceContext>>(
+    return std::make_unique<HttpsServer>(
         hostIp,
         port,
         std::move(handlerManager),
-        std::move(serviceContext));
+        mContext);
 }
-
-
-// Instantiate server templates for the MockOcspServer and its OcspServiceContext.
-
-#include "erp/server/HttpsServer.ixx"
-#include "erp/server/ServerSocketHandler.ixx"
-#include "erp/server/context/SessionContext.ixx"
-#include "erp/server/handler/RequestHandlerContext.ixx"
-#include "erp/server/handler/RequestHandlerManager.ixx"
-#include "erp/server/session/ServerSession.ixx"
-#include <erp/server/response/ServerResponse.hxx>
-#include <erp/server/response/ServerResponse.hxx>
-#include <erp/server/response/ServerResponse.hxx>
-
-
-template class HttpsServer<OcspServiceContext>;
-template class RequestHandlerContainer<OcspServiceContext>;
-template class RequestHandlerContext<OcspServiceContext>;
-template class RequestHandlerManager<OcspServiceContext>;
-template class ServerSocketHandler<OcspServiceContext>;
-template class SessionContext<OcspServiceContext>;
-
-template std::shared_ptr<ServerSession> ServerSession::createShared (
-    boost::asio::ip::tcp::socket&& socket,
-    boost::asio::ssl::context& context,
-    const RequestHandlerManager<OcspServiceContext>& requestHandlers,
-    OcspServiceContext& serviceContext);

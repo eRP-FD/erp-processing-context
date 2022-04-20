@@ -11,8 +11,6 @@
 #endif
 
 #include "erp/tpm/Tpm.hxx"
-#include "erp/enrolment/EnrolmentServiceContext.hxx"
-
 
 namespace tpmclient
 {

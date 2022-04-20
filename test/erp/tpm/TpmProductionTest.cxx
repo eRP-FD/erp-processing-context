@@ -9,6 +9,7 @@
 #include "mock/util/MockConfiguration.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
+#include "erp/hsm/BlobCache.hxx"
 
 #include <gtest/gtest.h>
 

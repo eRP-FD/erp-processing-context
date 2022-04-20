@@ -18,7 +18,7 @@
 #include "test/util/ServerTestBase.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 
 #include <chrono>
 

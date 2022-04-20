@@ -23,7 +23,7 @@ class ServerRequest;
 /**
  * Name chosen after the endpoint that is handled (/VAU/).
  */
-class VauRequestHandler : public UnconstrainedRequestHandler<PcServiceContext>
+class VauRequestHandler : public UnconstrainedRequestHandler
 {
 public:
     static constexpr std::string_view wwwAuthenticateErrorTiRequest()
@@ -39,13 +39,13 @@ public:
         return "Bearer realm='prescriptionserver.telematik', error='invalACCESS_TOKEN'";
     }
 
-    explicit VauRequestHandler(RequestHandlerManager<PcServiceContext>&& handlers);
+    explicit VauRequestHandler(RequestHandlerManager&& handlers);
 
     void handleRequest(PcSessionContext& session) override;
     Operation getOperation (void) const override;
 
 private:
-    const RequestHandlerManager<PcServiceContext> mRequestHandlers;
+    const RequestHandlerManager mRequestHandlers;
 
     static std::unique_ptr<InnerTeeRequest> decryptRequest(PcSessionContext& session);
     void handleInnerRequest(PcSessionContext& outerSession, const std::string& upParam,

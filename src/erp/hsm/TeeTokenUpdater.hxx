@@ -31,7 +31,8 @@ public:
     explicit TeeTokenUpdater (
         TokenConsumer&& teeTokenConsumer,
         HsmFactory& hsmFactory,
-        TokenProvider&& tokenProvider);
+        TokenProvider&& tokenProvider,
+        std::shared_ptr<Timer> timerManager);
     ~TeeTokenUpdater (void);
 
     void update (void);
@@ -41,7 +42,8 @@ public:
     void healthCheck() const;
 
     // This factory is defined by the HsmPool.
-    using TeeTokenUpdaterFactory = std::function<std::unique_ptr<TeeTokenUpdater>(std::function<void(ErpBlob&&)>, HsmFactory&)>;
+    using TeeTokenUpdaterFactory = std::function<std::unique_ptr<TeeTokenUpdater>(
+        std::function<void(ErpBlob&&)>, HsmFactory&, std::shared_ptr<Timer> timerManager)>;
 
     // Convenience function to create a token updater that can be used in production.
     static TeeTokenUpdaterFactory createProductionTeeTokenUpdaterFactory (void);
@@ -59,6 +61,7 @@ protected:
         TokenConsumer&& teeTokenConsumer,
         HsmFactory& hsmFactory,
         TokenProvider&& tokenProvider,
+        std::shared_ptr<Timer> timerManager,
         std::chrono::system_clock::duration updateInterval,
         std::chrono::system_clock::duration retryInterval);
 
@@ -71,6 +74,7 @@ private:
     std::chrono::system_clock::duration mUpdateInterval;
     std::chrono::system_clock::duration mRetryInterval;
     std::atomic<std::chrono::system_clock::time_point> mLastUpdate;
+    std::shared_ptr<Timer> mTimerManager;
 };
 
 

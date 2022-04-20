@@ -3,7 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "erp/fhir/Fhir.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/ModelException.hxx"

@@ -10,7 +10,7 @@
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "tools/jwt/JwtBuilder.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test_config.h"
 
 #include "test/erp/model/CommunicationTest.hxx"
@@ -306,4 +306,77 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_person)
     // not contained if patient was the issuer
     EXPECT_FALSE(auditData.metaData().agentWho().has_value());
     EXPECT_FALSE(auditData.metaData().agentName().has_value());
+}
+
+TEST_F(TaskAbortHandlerTest, checkAccessValidity)
+{
+    {
+        // Create Task in database
+        auto task = addTaskToDatabase({model::Task::Status::completed, InsurantE});
+
+        // Call /Task/<id>/$abort for doctor
+        const JWT jwtArzt = mJwtBuilder.makeJwtArzt();
+        auto header = createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort", jwtArzt);
+        header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
+        ClientRequest request(header, {});
+        auto outerResponse = createClient().send(encryptRequest(request, jwtArzt));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
+    }
+
+    {
+        // Create Task in database
+        auto task = addTaskToDatabase({model::Task::Status::draft, InsurantE});
+
+        // Call /Task/<id>/$abort for doctor
+        const JWT jwtArzt = mJwtBuilder.makeJwtArzt();
+        auto header = createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort", jwtArzt);
+        header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
+        ClientRequest request(header, {});
+        auto outerResponse = createClient().send(encryptRequest(request, jwtArzt));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
+    }
+
+    {
+        // Create Task in database
+        auto task = addTaskToDatabase({model::Task::Status::ready, InsurantE});
+
+        // Call /Task/<id>/$abort for doctor
+        const JWT jwtArzt = mJwtBuilder.makeJwtArzt();
+        auto header = createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort", jwtArzt);
+        header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
+        ClientRequest request(header, {});
+        auto outerResponse = createClient().send(encryptRequest(request, jwtArzt));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
+    }
+
+    {
+        // Create Task in database
+        auto task = addTaskToDatabase({model::Task::Status::draft, InsurantE});
+
+        // Call /Task/<id>/$abort for patient
+        const JWT jwtInsurant = mJwtBuilder.makeJwtVersicherter(InsurantE);
+        auto header = createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort", jwtInsurant);
+        header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
+        ClientRequest request(header, {});
+        auto outerResponse = createClient().send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
+    }
+
+    {
+        // Create Task in database
+        auto task = addTaskToDatabase({model::Task::Status::completed, InsurantE});
+
+        // Call /Task/<id>/$abort for patient
+        const JWT jwtInsurant = mJwtBuilder.makeJwtVersicherter(InsurantE);
+        auto header = createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort", jwtInsurant);
+        header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
+        ClientRequest request(header, {});
+        auto outerResponse = createClient().send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
+    }
 }

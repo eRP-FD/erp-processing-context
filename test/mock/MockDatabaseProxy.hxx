@@ -20,7 +20,6 @@ class MockDatabase;
 class MockDatabaseProxy : public DatabaseBackend
 {
 public:
-    static Database::Factory createFactory(MockDatabase& backend);
 
     explicit MockDatabaseProxy(MockDatabase&);
 
@@ -80,17 +79,16 @@ public:
     retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
+    std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
     std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                                            const std::optional<UrlArguments>& search) override;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) override;
 
-    std::vector<db_model::MedicationDispense>
+    std::tuple<std::vector<db_model::MedicationDispense>, bool>
     retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
                                    const std::optional<model::PrescriptionId>& prescriptionId,
                                    const std::optional<UrlArguments>& search) override;
-    uint64_t countAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
-                                         const std::optional<UrlArguments>& search) override;
 
     CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
     std::optional<Uuid> insertCommunication(const model::PrescriptionId& prescriptionId,
@@ -129,8 +127,35 @@ public:
                                                          BlobId blobId) override;
 
     void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
-    std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr& kvnr) override;
+    std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) override;
     [[nodiscard]] bool clearConsent(const db_model::HashedKvnr& kvnr) override;
+
+    void storeChargeInformation(const db_model::HashedTelematikId& pharmacyId, model::PrescriptionId id,
+                                const model::Timestamp& enteredDate,
+                                const db_model::EncryptedBlob& chargeItem,
+                                const db_model::EncryptedBlob& dispenseItem) override;
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformation(const model::PrescriptionId& id) const override;
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const override;
+
+    void deleteChargeInformation(const model::PrescriptionId& id) override;
+    void clearAllChargeInformation(const db_model::HashedKvnr& kvnr) override;
+
+    uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
+                                               const std::optional<UrlArguments>& search) override;
+
+    uint64_t countChargeInformationForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                               const std::optional<UrlArguments>& search) override;
 
     bool isBlobUsed(BlobId blobId) const;
     void deleteTask (const model::PrescriptionId& taskId);

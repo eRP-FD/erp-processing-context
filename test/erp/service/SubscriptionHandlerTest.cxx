@@ -234,9 +234,9 @@ TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)
     ASSERT_TRUE(idField);
     std::string encryptedTelematicId = idField->GetString();
     // Check that the encrypted recipient (telematic) id is identical.
-    EXPECT_EQ(mServer->serviceContext()->getTelematicPseudonymManager().sign(recipient).hex(), encryptedTelematicId);
+    EXPECT_EQ(mServer->serviceContext().getTelematicPseudonymManager().sign(recipient).hex(), encryptedTelematicId);
     // Check that different encrypted recipients do not match ((recipient0) != hash(recipient1))
-    EXPECT_NE(mServer->serviceContext()->getTelematicPseudonymManager().sign(recipient1).hex(), encryptedTelematicId);
+    EXPECT_NE(mServer->serviceContext().getTelematicPseudonymManager().sign(recipient1).hex(), encryptedTelematicId);
 }
 
 

@@ -6,7 +6,7 @@
 #include <gtest/gtest.h>
 
 #include "erp/fhir/FhirStructureRepository.hxx"
-#include "ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 class FhirStructureRepositoryTest : public ::testing::Test
 {

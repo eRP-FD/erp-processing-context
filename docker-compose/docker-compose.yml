@@ -1,0 +1,119 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021
+# (C) Copyright IBM Corp. 2021
+#
+
+version: "3.3"
+
+# Overview
+# --------
+# The following images are pulled from ibmcloud:
+#
+# HSM simulator (de.icr.io/erp_dev/vau-hsm:latest)
+#
+# TPM server    (de.icr.io/erp_dev/tpm-client:latest)
+#
+# Redis server  (de.icr.io/erp_dev/redis:6.0.11)
+#               The local redis/ folder is mapped in /data. The folder
+#               contains the log, config and the database itself.
+#
+# Postgres      (de.icr.io/erp_dev/erp-postgres-db:v-0.0.4)
+#
+# Other services:
+#
+# db-schema     (postgres:13 - official docker image)
+#               It uses the files in tls/ which are generated with
+#               ibm:eRp/postgres-docker/scripts/generate_certs.sh and the
+#               SQL scripts (ibm:eRp/erp-processing-context.git/scripts/sql).
+#
+# Test redis connection from your host with:
+# redis-cli --tls --cert ./tls/server.crt --key ./tls/server.key -p 9004 --cacert ./tls/rootCA.crt -a welcome
+#
+# Test psql connection from your host with:
+# psql --username=erp_admin --dbname=erp-dev --host=<your host ip> --port=9005
+#
+
+services:
+  # --------------------------------------------------------------------------------
+  # HSM Simulator
+  # --------------------------------------------------------------------------------
+  hsm-simulator-1:
+    hostname: com.ibm.erp.hsm-simulator
+    image: de.icr.io/erp_dev/vau-hsm:latest
+    container_name: erp-hsm-simulator-1
+    environment:
+      SIMULATOR_PORT: 3001
+    ports:
+      - "9000:3001"
+
+  # --------------------------------------------------------------------------------
+  # TPM Server (tpm server port 2321, platform server port 2322)
+  # --------------------------------------------------------------------------------
+  tpm-server:
+    hostname: com.ibm.erp.tpm-server
+    image: de.icr.io/erp_dev/tpm-client:latest
+    container_name: erp-tpm-server
+    ports:
+      - "9002:2321"
+      - "9003:2322"
+    environment:
+      TPM_INTERFACE_TYPE: socsim
+
+  # --------------------------------------------------------------------------------
+  # Redis server
+  # --------------------------------------------------------------------------------
+  redis-server:
+    hostname: com.ibm.erp.redis-server
+    image: de.icr.io/erp_dev/redis:6.0.11
+    container_name: erp-redis-server
+    ports:
+      - "9004:6379"
+    volumes:
+      - './redis:/data'
+      - './tls:/tls'
+    command: ["/usr/local/bin/redis-server", "/data/redis.conf", "--port 0", "--tls-port 6379", "--tls-cert-file /tls/server.crt", "--tls-key-file /tls/server.key", "--tls-auth-clients no", "--protected-mode no", "--tls-ca-cert-file /tls/rootCA.crt"]
+
+  # --------------------------------------------------------------------------------
+  # Postgres
+  # --------------------------------------------------------------------------------
+  postgres:
+    hostname: postgres_ssl
+    image: de.icr.io/erp_dev/erp-postgres-db:v-0.0.4
+    container_name: erp-postgres
+    ports:
+      - "9005:5432"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: 'trust'
+      POSTGRES_DB: 'erp-processing-context'
+      POSTGRES_USER: 'erp_admin'
+      POSTGRES_PASSWORD: 'erp0815'
+    volumes:
+      - './tls:/tls'
+    entrypoint: >
+      /bin/bash -c "
+      install -o postgres -m 600 /tls/server.key /erp/secrets/server.key &&
+      install -o postgres -m 644 /tls/server.crt /erp/secrets/server.crt &&
+      docker-entrypoint.sh
+      -c ssl=on
+      -c ssl_cert_file=/erp/secrets/server.crt
+      -c ssl_key_file=/erp/secrets/server.key"
+
+  # --------------------------------------------------------------------------------
+  # Postgres database schema import
+  # --------------------------------------------------------------------------------
+  db-schema:
+    image: postgres:13
+    container_name: erp-postgres-schema
+    volumes:
+      - './tls:/tls'
+      - '../scripts:/data'
+    depends_on:
+      - postgres
+    environment:
+      PGPASSWORD: 'erp0815'
+      PGSSLROOTCERT: '/tls/rootCA.crt'
+    entrypoint: >
+      /bin/bash -c "
+      echo Wait 3 s for postgres ... ;
+      sleep 3 ;
+      /data/reset_database.sh postgres_ssl 5432 erp-processing-context erp_admin erp0815"

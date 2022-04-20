@@ -25,7 +25,6 @@
 #include "mock/tpm/TpmTestData.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
-#include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
@@ -33,6 +32,7 @@
 #include "test/util/MockAndProductionTestBase.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
 
@@ -53,23 +53,14 @@ public:
 
     std::shared_ptr<BlobCache> blobCache;
 
+    PcServiceContext mContext = StaticData::makePcServiceContext();
+
     EnrolmentServerTest(void)
     {
     }
 
     virtual void SetUp (void) override
     {
-        MockAndProductionTestBase::SetUp();
-        // If the tpm factory (stored in `parameter`) is missing or does produce an empty reference
-        // (because it is a factory that creates a "real" tpm client but that is not currently supported)
-        // then skip the test.
-        if (IsSkipped() || (*parameter)(*blobCache)==nullptr)
-        {
-            // TPM is not configured to run in this mode.
-            GTEST_SKIP();
-            return;
-        }
-
         MockAndProductionTestBase<Tpm::Factory>::SetUp();
 
         // Clear the database.
@@ -77,21 +68,28 @@ public:
 
         blobCache = createBlobCache();
 
+        // If the tpm factory (stored in `parameter`) is missing or does produce an empty reference
+        // (because it is a factory that creates a "real" tpm client but that is not currently supported)
+        // then skip the test.
+        if (parameter == nullptr || (*parameter)(*blobCache)==nullptr)
+        {
+            // TPM is not configured to run in this mode.
+            GTEST_SKIP();
+            return;
+        }
 
         if (mServer == nullptr)
         {
             // Create and start the server.
-            RequestHandlerManager<EnrolmentServiceContext> handlers;
+            RequestHandlerManager handlers;
             EnrolmentServer::addEndpoints(handlers);
 
             Tpm::Factory tpmFactory = *parameter;
-            mServer = std::make_unique<HttpsServer<EnrolmentServiceContext>>(
+            mServer = std::make_unique<HttpsServer>(
                 "0.0.0.0",
                 EnrolmentServerPort,
                 std::move(handlers),
-                std::make_unique<EnrolmentServiceContext>(
-                    std::move(tpmFactory),
-                    blobCache, TslTestHelper::createTslManager<TslManager>(), hsmPool()));
+                mContext);
             mServer->serve(1);
         }
     }
@@ -208,7 +206,7 @@ public:
             DummyDerivation() : DummyDerivation{{"TEST_USE_POSTGRES", "false"}} {};
             std::shared_ptr<BlobCache> cache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
             HsmPool mPool{std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), cache),
-                          TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
+                          TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()};
             KeyDerivation derivation{mPool};
         private:
             DummyDerivation(const EnvironmentVariableGuard&) {}
@@ -358,15 +356,13 @@ public:
 
 
 private:
-    EnvironmentVariableGuard mainCaDerPathGuard{
-        "ERP_TSL_INITIAL_CA_DER_PATH", std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der"};
 
-    std::shared_ptr<HsmPool> mHsmPool;
-    std::unique_ptr<HttpsServer<EnrolmentServiceContext>> mServer;
+    std::unique_ptr<HsmPool> mHsmPool;
+    std::unique_ptr<HttpsServer> mServer;
     std::unique_ptr<KeyDerivation> mKeyDerivation;
     std::unique_ptr<MockDatabase> mMockDatabase;
 
-    std::shared_ptr<HsmPool> hsmPool();
+    HsmPool& hsmPool();
     KeyDerivation& keyDerivation();
     bool isBlobUsed(BlobId blobId);
     std::shared_ptr<BlobCache> createBlobCache (void)
@@ -400,7 +396,7 @@ inline KeyDerivation & EnrolmentServerTest::keyDerivation()
 {
     if (!mKeyDerivation)
     {
-        mKeyDerivation.reset(new KeyDerivation(*hsmPool()));
+        mKeyDerivation.reset(new KeyDerivation(hsmPool()));
     }
     return *mKeyDerivation;
 }
@@ -409,28 +405,28 @@ inline std::unique_ptr<Database> EnrolmentServerTest::database()
 {
     if (usePostgres)
     {
-        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), *hsmPool(), keyDerivation());
+        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool(), keyDerivation());
     }
     else
     {
         if (!mMockDatabase)
         {
-            mMockDatabase.reset(new MockDatabase{*hsmPool()});
+            mMockDatabase.reset(new MockDatabase{hsmPool()});
         }
         return std::make_unique<DatabaseFrontend>(
-            std::make_unique<MockDatabaseProxy>(*mMockDatabase), *hsmPool(), keyDerivation());
+            std::make_unique<MockDatabaseProxy>(*mMockDatabase), hsmPool(), keyDerivation());
     }
 }
 
-inline std::shared_ptr<HsmPool> EnrolmentServerTest::hsmPool()
+inline HsmPool & EnrolmentServerTest::hsmPool()
 {
     if (!mHsmPool)
     {
         mHsmPool.reset(new HsmPool(
                            std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), blobCache),
-                           TeeTokenUpdater::createMockTeeTokenUpdaterFactory()));
+                           TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()));
     }
-    return mHsmPool;
+    return *mHsmPool;
 }
 
 TEST_P(EnrolmentServerTest, GetEnclaveStatus)
@@ -804,8 +800,8 @@ TEST_P(EnrolmentServerTest, PostKnownQuote_successWithoutPcrSet)
     ASSERT_EQ(entry.name, ErpVector::create("123"));
     ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
-    ASSERT_TRUE(entry.metaPcrSet.has_value());
-    ASSERT_EQ(entry.metaPcrSet.value(), PcrSet::defaultSet());
+    ASSERT_TRUE(entry.pcrSet.has_value());
+    ASSERT_EQ(entry.pcrSet.value(), PcrSet::defaultSet());
 }
 
 
@@ -824,8 +820,8 @@ TEST_P(EnrolmentServerTest, PostKnownQuote_successWithPcrSet)
     ASSERT_EQ(entry.name, ErpVector::create("123"));
     ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
-    ASSERT_TRUE(entry.metaPcrSet.has_value());
-    ASSERT_EQ(entry.metaPcrSet.value(), PcrSet::fromString("3,4,5"));
+    ASSERT_TRUE(entry.pcrSet.has_value());
+    ASSERT_EQ(entry.pcrSet.value(), PcrSet::fromString("3,4,5"));
 }
 
 
@@ -1268,7 +1264,6 @@ TEST_P(EnrolmentServerTest, TestBasicAuthorization)
 
     {
         // Test with supported authorization type ("basic") and proper credentials.
-        EnvironmentVariableGuard disableEnrolmentApiAuth{"DEBUG_DISABLE_ENROLMENT_API_AUTH", "false"};
         EnvironmentVariableGuard enrolmentApiCredentials{"ERP_ENROLMENT_API_CREDENTIALS", auth};
         auto request = ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EndorsementKey"), "");
         request.setHeader(Header::Authorization, "Basic " + auth);
@@ -1278,7 +1273,6 @@ TEST_P(EnrolmentServerTest, TestBasicAuthorization)
 
     {
         // Test with wrong credentials.
-        EnvironmentVariableGuard disableEnrolmentApiAuth{"DEBUG_DISABLE_ENROLMENT_API_AUTH", "false"};
         EnvironmentVariableGuard enrolmentApiCredentials{"ERP_ENROLMENT_API_CREDENTIALS", "123"};
         auto request = ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EndorsementKey"), "");
         request.setHeader(Header::Authorization, "Basic " + auth);
@@ -1288,7 +1282,6 @@ TEST_P(EnrolmentServerTest, TestBasicAuthorization)
 
     {
         // Test with unsupported authorization type ("digest").
-        EnvironmentVariableGuard disableEnrolmentApiAuth{"DEBUG_DISABLE_ENROLMENT_API_AUTH", "false"};
         EnvironmentVariableGuard enrolmentApiCredentials{"ERP_ENROLMENT_API_CREDENTIALS", "123"};
         auto request = ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EndorsementKey"), "");
         request.setHeader(Header::Authorization, "Digest " + auth);
@@ -1298,7 +1291,6 @@ TEST_P(EnrolmentServerTest, TestBasicAuthorization)
 
     {
         // Test with unsupported authorization type ("digest").
-        EnvironmentVariableGuard disableEnrolmentApiAuth{"DEBUG_DISABLE_ENROLMENT_API_AUTH", "false"};
         EnvironmentVariableGuard enrolmentApiCredentials{"ERP_ENROLMENT_API_CREDENTIALS", "123"};
         auto request = ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EndorsementKey"), "");
         request.setHeader(Header::Authorization, "somethingbad");
@@ -1308,7 +1300,6 @@ TEST_P(EnrolmentServerTest, TestBasicAuthorization)
 
     {
         // Test with empty authorization header field.
-        EnvironmentVariableGuard disableEnrolmentApiAuth{"DEBUG_DISABLE_ENROLMENT_API_AUTH", "false"};
         EnvironmentVariableGuard enrolmentApiCredentials{"ERP_ENROLMENT_API_CREDENTIALS", "123"};
         auto request = ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EndorsementKey"), "");
         request.setHeader(Header::Authorization, "");
@@ -1318,7 +1309,6 @@ TEST_P(EnrolmentServerTest, TestBasicAuthorization)
 
     {
         // Test with missing unsupported authorization header field.
-        EnvironmentVariableGuard disableEnrolmentApiAuth{"DEBUG_DISABLE_ENROLMENT_API_AUTH", "false"};
         EnvironmentVariableGuard enrolmentApiCredentials{"ERP_ENROLMENT_API_CREDENTIALS", "123"};
         auto request = ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EndorsementKey"), "");
         auto response = createClient().send(request);

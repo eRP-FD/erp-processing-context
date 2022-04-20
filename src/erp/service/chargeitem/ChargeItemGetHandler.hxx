@@ -6,19 +6,22 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEMGETHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEMGETHANDLER_HXX
 
-#include "erp/service/ErpRequestHandler.hxx"
+#include "erp/service/chargeitem/ChargeItemHandlerBase.hxx"
 
 
-class ChargeItemGetAllHandler: public ErpRequestHandler
+class ChargeItemGetAllHandler: public ChargeItemHandlerBase
 {
 public:
     ChargeItemGetAllHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
 
     void handleRequest(PcSessionContext& session) override;
+
+private:
+    model::Bundle createBundle(std::vector<model::ChargeItem>& chargeItems);
 };
 
 
-class ChargeItemGetByIdHandler: public ErpRequestHandler
+class ChargeItemGetByIdHandler: public ChargeItemHandlerBase
 {
 public:
     ChargeItemGetByIdHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs);

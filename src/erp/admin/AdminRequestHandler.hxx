@@ -10,15 +10,13 @@
 
 #include <memory>
 
-class AdminServiceContext;
-
-class AdminRequestHandlerBase : public RequestHandlerBasicAuthentication<AdminServiceContext>
+class AdminRequestHandlerBase : public RequestHandlerBasicAuthentication
 {
 public:
-    void handleRequest(SessionContext<AdminServiceContext>& session) override;
+    void handleRequest(SessionContext& session) override;
 
 private:
-    virtual void doHandleRequest(SessionContext<AdminServiceContext>& session) = 0;
+    virtual void doHandleRequest(SessionContext& session) = 0;
 };
 
 class PostRestartHandler : public AdminRequestHandlerBase
@@ -29,7 +27,7 @@ public:
     Operation getOperation(void) const override;
 
 private:
-    void doHandleRequest(SessionContext<AdminServiceContext>& session) override;
+    void doHandleRequest(SessionContext& session) override;
 
     int mDefaultShutdownDelay;
     static constexpr const char* delay_parameter_name = "delay-seconds";

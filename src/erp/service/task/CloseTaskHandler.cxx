@@ -13,6 +13,7 @@
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/NumberAsStringParserWriter.hxx"
 #include "erp/model/Signature.hxx"
 #include "erp/model/Task.hxx"
@@ -21,21 +22,23 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/Uuid.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
 
 #include <memory>
 #include <optional>
 
-CloseTaskHandler::CloseTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
+CloseTaskHandler::CloseTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
     : TaskHandlerBase(Operation::POST_Task_id_close, allowedProfessionOiDs)
 {
 }
 
-void CloseTaskHandler::handleRequest (PcSessionContext& session)
+void CloseTaskHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
+    checkFeatureWf200(prescriptionId.type());
 
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
@@ -63,40 +66,43 @@ void CloseTaskHandler::handleRequest (PcSessionContext& session)
     task->setStatus(model::Task::Status::completed);
     A_19232.finish();
 
-    A_19248_01.start("Check provided MedicationDispense object, especially PrescriptionID, KVNR and TelematikID");
-    auto medicationDispense =
-        parseAndValidateRequestBody<model::MedicationDispense>(session, SchemaType::Gem_erxMedicationDispense);
-
-    // See https://simplifier.net/erezept-workflow/GemerxMedicationDispense/~details
-    // The logical id of the resource, as used in the URL for the resource. Once assigned, this value never changes.
-    // The only time that a resource does not have an id is when it is being submitted to the server using a create operation.
-    // As medication dispenses are queried by "GET /MedicationDispense/{Id}" where Id equals the TaskId (= prescriptionId)
-    // the Id of the medication dispense resource is set to the prescriptionId.
-    // Check for correct MedicationDispense.identifier
-    try
-    {
-        ErpExpect(medicationDispense.id() == prescriptionId, HttpStatus::BadRequest,
-                  "Prescription ID in MedicationDispense does not match the one in the task");
-    }
-    catch(const model::ModelException& exc)
-    {
-        TVLOG(1) << "ModelException: " << exc.what();
-        ErpFail(HttpStatus::BadRequest,
-                "Invalid Prescription ID in MedicationDispense (wrong content)");
-    }
-    medicationDispense.setId(prescriptionId);// sets MedicationDispense.identifier and MedicationDispense.id
-
-    const auto kvnr = task->kvnr();
-    Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
-    ErpExpect(medicationDispense.kvnr() == *kvnr, HttpStatus::BadRequest,
-        "KVNR in MedicationDispense does not match the one in the task");
-
     const auto& accessToken = session.request.getAccessToken();
     const auto telematikIdFromAccessToken = accessToken.stringForClaim(JWT::idNumberClaim);
     ErpExpect(telematikIdFromAccessToken.has_value(), HttpStatus::BadRequest, "Telematik-ID not contained in JWT");
-    ErpExpect(medicationDispense.telematikId() == *telematikIdFromAccessToken, HttpStatus::BadRequest,
-        "Telematik-ID in MedicationDispense does not match the one in the access token.");
-    A_19248_01.finish();
+    const auto kvnr = task->kvnr();
+    Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
+
+    auto medicationDispenses = medicationDispensesFromBody(session);
+    for (size_t i = 0, end = medicationDispenses.size(); i < end; ++i)
+    {
+        auto& medicationDispense = medicationDispenses[i];
+        A_19248_01.start("Check provided MedicationDispense object, especially PrescriptionID, KVNR and TelematikID");
+
+        // See https://simplifier.net/erezept-workflow/GemerxMedicationDispense/~details
+        // The logical id of the resource, as used in the URL for the resource. Once assigned, this value never changes.
+        // The only time that a resource does not have an id is when it is being submitted to the server using a create operation.
+        // As medication dispenses are queried by "GET /MedicationDispense/{Id}" where Id equals the TaskId (= prescriptionId)
+        // the Id of the medication dispense resource is set to the prescriptionId.
+        // Check for correct MedicationDispense.identifier
+        try
+        {
+            ErpExpect(medicationDispense.prescriptionId() == prescriptionId, HttpStatus::BadRequest,
+                      "Prescription ID in MedicationDispense does not match the one in the task");
+        }
+        catch (const model::ModelException& exc)
+        {
+            TVLOG(1) << "ModelException: " << exc.what();
+            ErpFail(HttpStatus::BadRequest, "Invalid Prescription ID in MedicationDispense (wrong content)");
+        }
+        medicationDispense.setId({prescriptionId, i});
+
+        ErpExpect(medicationDispense.kvnr() == *kvnr, HttpStatus::BadRequest,
+                  "KVNR in MedicationDispense does not match the one in the task");
+
+        ErpExpect(medicationDispense.telematikId() == *telematikIdFromAccessToken, HttpStatus::BadRequest,
+                  "Telematik-ID in MedicationDispense does not match the one in the access token.");
+        A_19248_01.finish();
+    }
 
     A_19233.start(
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
@@ -153,7 +159,7 @@ void CloseTaskHandler::handleRequest (PcSessionContext& session)
     // store in DB:
     A_19248_01.start("Save modified Task and MedicationDispense / Receipt objects");
     task->updateLastUpdate();
-    databaseHandle->updateTaskMedicationDispenseReceipt(*task, medicationDispense, responseReceipt);
+    databaseHandle->updateTaskMedicationDispenseReceipt(*task, medicationDispenses, responseReceipt);
     A_19248_01.finish();
 
     A_19514.start("HttpStatus 200 for successful POST");
@@ -166,4 +172,29 @@ void CloseTaskHandler::handleRequest (PcSessionContext& session)
         .setInsurantKvnr(*kvnr)
         .setAction(model::AuditEvent::Action::update)
         .setPrescriptionId(prescriptionId);
+}
+
+std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFromBody(PcSessionContext& session)
+{
+    A_22069.start("Detect input resource type: Bundle or MedicationDispense");
+    const auto resourceDetector = parseAndValidateRequestBody<model::UnspecifiedResource>(session, SchemaType::fhir);
+    const auto resourceType = resourceDetector.getResourceType();
+    ErpExpect(resourceType == model::Bundle::resourceTypeName ||
+                  resourceType == model::MedicationDispense::resourceTypeName,
+              HttpStatus::BadRequest, "Unsupported resource type in request body: " + std::string(resourceType));
+    A_22069.finish();
+
+    if (resourceType == model::Bundle::resourceTypeName)
+    {
+        auto bundle =
+            parseAndValidateRequestBody<model::MedicationDispenseBundle>(session, SchemaType::MedicationDispenseBundle);
+        return bundle.getResourcesByType<model::MedicationDispense>();
+    }
+    else
+    {
+        std::vector<model::MedicationDispense> ret;
+        ret.emplace_back(
+            parseAndValidateRequestBody<model::MedicationDispense>(session, SchemaType::Gem_erxMedicationDispense));
+        return ret;
+    }
 }

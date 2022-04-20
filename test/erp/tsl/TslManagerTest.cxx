@@ -149,6 +149,7 @@ namespace
         "/CN=ACLOS.HBA-CA015 TEST-ONLY/OU=Heilberufsausweis-CA der Telematikinfrastruktur/O=achelos GmbH NOT-VALID/C=DE",
         "/C=DE/O=achelos GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=ACHELOS.HBA-CA21 TEST-ONLY",
         "/C=DE/O=achelos GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=ACHELOS.VPNK-CA21 TEST-ONLY",
+        "/C=DE/O=T-Systems International GmbH NOT-VALID/OU=Trust Center Deutsche Telekom/CN=T-Systems eGK Test-CA 4 TEST-ONLY",
         "/C=DE/CN=GEM.EGK-CA08 TEST-ONLY/O=gematik GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=GEM.EGK-CA10 TEST-ONLY",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=GEM.EGK-CA24 TEST-ONLY",
@@ -269,23 +270,8 @@ namespace
         "/C=DE/O=gematik GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=GEM.EGK-ALVI-CA51 TEST-ONLY",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA41 TEST-ONLY",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA51 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.HBA-OCSP5 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP23 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP24 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.SMCB-OCSP5 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP206 TEST-ONLY",
-        "/C=DE/O=gematik GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=GEM.KOMP-CA54 TEST-ONLY",
-        "/C=DE/O=achelos GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=ACHELOS.KOMP-CA20 TEST-ONLY",
-        "/C=DE/O=gematik GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=GEM.VPNK-CA54 TEST-ONLY",
-        "/C=DE/O=achelos GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=ACHELOS.HBA-CA20 TEST-ONLY",
-        "/C=DE/O=achelos GmbH NOT-VALID/OU=VPN-Zugangsdienst-CA der Telematikinfrastruktur/CN=ACHELOS.VPNK-CA20 TEST-ONLY",
-        "/C=DE/O=achelos GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ACHELOS.EGK-CA20 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=ATOS.HBA-CA5 TEST-ONLY",
-        "/C=DE/O=achelos GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=ACHELOS.SMCB-CA20 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA23 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA24 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA206 TEST-ONLY",
-        "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=ATOS.SMCB-CA5 TEST-ONLY"
+        // The following certificate is inserted in TSL and is used as TSL-Signer-CA of the Test-TSLs
+        "/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=Example Inc. Sub CA EC 1"
     };
 }
 
@@ -299,7 +285,7 @@ public:
     {
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
     }
 
     void TearDown()
@@ -386,7 +372,7 @@ public:
         // but there are withdrawn certificates
         // and the test version contains some duplicate certificates,
         // so there are only 185 unique not withdrawn certificates
-        ASSERT_EQ(194, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
+        ASSERT_EQ(186, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
     }
 };
 
@@ -405,7 +391,7 @@ TEST_F(TslManagerTest, validTsl_Success)
 
 TEST_F(TslManagerTest, outdatedTslUpdate_Success)
 {
-    std::string newTslContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml");
+    std::string newTslContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
 
     bool hookIsCalled = false;
     const std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -428,7 +414,7 @@ TEST_F(TslManagerTest, outdatedTslUpdate_Success)
 
 TEST_F(TslManagerTest, outdatedTslUpdateGetsOutdated_Fail)
 {
-    const std::string outdatedPath = std::string{TEST_DATA_DIR} + "/tsl/TSL_outdated.xml";
+    const std::string outdatedPath = std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_outdated.xml";
     const std::string newTslContent = FileHelper::readFileAsString(outdatedPath);
 
     const std::string tslDownloadUrl = "https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.xml";
@@ -451,12 +437,12 @@ TEST_F(TslManagerTest, outdatedTslUpdateGetsOutdated_Fail)
 
 TEST_F(TslManagerTest, validTslOutdatedBna_Fail)
 {
-    EnvironmentVariableGuard guard("ERP_TSL_INITIAL_CA_DER_PATH", std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+    EnvironmentVariableGuard guard("ERP_TSL_INITIAL_CA_DER_PATH", std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
 
     const std::string tslContent =
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml");
+        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
 
-    const std::string outdatedPath = std::string{TEST_DATA_DIR} + "/tsl/TSL_outdated.xml";
+    const std::string outdatedPath = std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_outdated.xml";
     const std::string bnaContent = FileHelper::readFileAsString(outdatedPath);
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
@@ -475,7 +461,7 @@ TEST_F(TslManagerTest, validTslOutdatedBna_Fail)
 TEST_F(TslManagerTest, validTslNoHttpSha2_Fail)
 {
     const std::string tslContent =
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml");
+        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
     const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
@@ -862,7 +848,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     const std::string tslContent =
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml");
+        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
     const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
@@ -906,7 +892,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
     const std::string tslContent =
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_valid.xml");
+        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
     const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
     const std::string tslSha2Url = "https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2";
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(

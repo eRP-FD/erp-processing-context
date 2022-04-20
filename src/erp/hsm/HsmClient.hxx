@@ -66,6 +66,17 @@ struct UnwrapHashKeyInput
     ErpBlob key;
 };
 
+struct ParsedQuote {
+    ::ErpVector qualifiedSignerName;
+    ::ErpVector qualifyingInformation;
+    ::ErpVector pcrSetFlags;
+    ::ErpVector pcrHash;
+};
+
+struct Nonce {
+    ::ErpVector nonce;
+    ::ErpBlob blob;
+};
 
 class HsmRawSession;
 
@@ -84,6 +95,8 @@ class HsmClient
 {
 public:
     virtual ~HsmClient (void) = default;
+
+    virtual ::Nonce getNonce(const ::HsmRawSession& session, uint32_t input) = 0;
 
     virtual ErpBlob getTeeToken(
         const HsmRawSession& session,
@@ -116,6 +129,8 @@ public:
     virtual ErpArray<Aes256Length> unwrapHashKey(
         const HsmRawSession& session,
         UnwrapHashKeyInput&& input) = 0;
+
+    virtual ::ParsedQuote parseQuote(const ::ErpVector& quote) const = 0;
 
     virtual void reconnect (HsmRawSession& session) = 0;
 };

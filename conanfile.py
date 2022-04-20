@@ -35,31 +35,32 @@ class ErpProcessingContext(ConanFile):
                        'hiredis:shared': False,
                        'hiredis:with_ssl': True,
                        'with_tpmclient': True,
-                       'with_hsmclient': True}
+                       'with_hsmclient': True,
+                       'zlib:shared': True}
     generators = "cmake"
     exports_sources = "."
     build_requires = []
     requires = ['boost/1.77.0',
                 'date/3.0.1',  # date can be removed as soon as we use C++20
-                'glog/0.4.0',
+                'glog/0.5.0',
                 'gsl-lite/0.39.0',
                 'libxml2/2.9.12',
-                'openssl/1.1.1l@erp/stable-1',
+                'openssl/1.1.1n@erp/stable-1',
                 'rapidjson/cci.20211112',
                 'magic_enum/0.7.3',
-                'zlib/1.2.11',  # Enforce new version of zlib (not the previous @conan/stable one)
+                'zlib/1.2.12',  # when updating this, also update /docker/manifest.*.template files
                 'libpqxx/7.6.0',
                 'libpq/13.4',
                 'zstd/1.5.0',  # database compression
-                'gtest/1.10.0',
+                'gtest/1.11.0',
                 'hiredis/1.0.2',
                 'redis-plus-plus/1.3.2']
 
     def requirements(self):
         if self.options.with_tpmclient:
-            self.requires('hsmclient/0.8.1')
+            self.requires('tpmclient/0.8.1')
         if self.options.with_hsmclient:
-            self.requires('tpmclient/0.8')
+            self.requires('hsmclient/2.0.2')
 
     def config_options(self):
         if self.settings.os == 'Windows':

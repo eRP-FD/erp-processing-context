@@ -41,7 +41,7 @@ static Requirement A_19439    ("E-Rezept-Fachdienst - Authentifizierung Authenti
 static Requirement A_19395    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest AuditEvent");
 static Requirement A_19405    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest MedicationDispense");
 static Requirement A_19446_01 ("E-Rezept-Fachdienst - Rollenpruefung Versicherter oder Apotheker liest Rezept");
-// PKV related:
+// PKV related Rollenprüfung:
 static Requirement A_22113    ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - Rollenprüfung");
 static Requirement A_22118    ("E-Rezept-Fachdienst - Abrechnungsinformationen lesen - Rollenprüfung Versicherter oder Apotheker");
 static Requirement A_22124    ("E-Rezept-Fachdienst - Abrechnungsinformationen lesen - Rollenprüfung Versicherter oder Apotheker");
@@ -106,7 +106,7 @@ static Requirement A_19030    ("E-Rezept-Fachdienst - unzulaessige Operationen T
 static Requirement A_19021    ("E-Rezept-Fachdienst - Generierung AccessCode");
 static Requirement A_19112    ("E-Rezept-Fachdienst - Parametrierung Task fuer Workflow-Typ");
 static Requirement A_19214    ("E-Rezept-Fachdienst - Ergaenzung Performer-Typ fuer Einloeseinstitutstyp");
-static Requirement A_21265    ("Prozessparameter - Flowtype"); ///< supersedes A_19445
+static Requirement A_19445_06 ("Prozessparameter - Flowtype"); ///< supersedes A_19445
 static Requirement A_19114    ("E-Rezept-Fachdienst - Status draft");
 static Requirement A_19257    ("E-Rezept-Fachdienst - Schemavalidierung Rezept anlegen");
 
@@ -122,12 +122,17 @@ static Requirement A_19999    ("E-Rezept-Fachdienst - Ergaenzung PerformerTyp fu
 static Requirement A_20159    ("E-Rezept-Fachdienst - QES Pruefung Signaturzertifikat des HBA");
 static Requirement A_19517_02 ("FHIR FLOWTYPE für Prozessparameter - Abweichende Festlegung für Entlassrezept");
 static Requirement A_22222    ("E-Rezept-Fachdienst - Ausschluss weitere Kostenträger");
+static Requirement A_22231    ("E-Rezept-Fachdienst - Ausschluss Betäubungsmittel und Thalidomid");
+// PKV related:
+static Requirement A_22347    ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 200 - Prüfung Coverage Type");
 
 // Requirements for endpoint POST /Task/$accept
 static Requirement A_19149    ("E-Rezept-Fachdienst - Prüfung Datensatz zwischenzeitlich gelöscht");
 static Requirement A_19167_01 ("E-Rezept-Fachdienst - Prüfung AccessCode Rezept abrufen");
 static Requirement A_19168    ("E-Rezept-Fachdienst - Rezept bereits in Abgabe oder Bearbeitung");
 static Requirement A_19169    ("E-Rezept-Fachdienst - Generierung Secret, Statuswechsel in Abgabe und Rückgabewert");
+// PKV related:
+static Requirement A_22110    ("E-Rezept-Fachdienst – Task akzeptieren – Flowtype 200 - Einwilligung ermitteln");
 
 // Requirements for endpoint POST /Task/$close
 static Requirement A_19231    ("E-Rezept-Fachdienst - Prüfung Secret Rezept beenden");
@@ -136,13 +141,15 @@ static Requirement A_19232    ("E-Rezept-Fachdienst - Status beenden");
 static Requirement A_20513    ("E-Rezept-Fachdienst - nicht mehr benötigte Einlösekommunikation");
 static Requirement A_19233    ("E-Rezept-Fachdienst - Serversignatur Rezept beenden (Quittung erstellen)");
 static Requirement A_19233_03 ("E-Rezept-Fachdienst - Hashwert der Verordnung in Quittung hinzufügen");
+static Requirement A_22069    ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
+static Requirement A_22070    ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
 
 // Requirements for endpoint POST /Task/$abort
 static Requirement A_19145    ("E-Rezept-Fachdienst - Statusprüfung Apotheker löscht Rezept");
 static Requirement A_19146    ("E-Rezept-Fachdienst - Statusprüfung Nutzer (außerhalb Apotheke) löscht Rezept");
 static Requirement A_20546_01 ("E-Rezept-Fachdienst - Prüfung KVNR, Versicherter löscht RezeptE-Rezept-Fachdienst - Prüfung KVNR, Versicherter löscht Rezept");
 static Requirement A_20547    ("E-Rezept-Fachdienst - Prüfung KVNR, Vertreter löscht Rezept");
-static Requirement A_19120    ("E-Rezept-Fachdienst - Prüfung AccessCode, Verordnender löscht Rezept");
+static Requirement A_19120_3  ("E-Rezept-Fachdienst - Prüfung AccessCode, Verordnender löscht Rezept");
 static Requirement A_19224    ("E-Rezept-Fachdienst - Prüfung Secret, Apotheker löscht Rezept");
 static Requirement A_19027    ("E-Rezept-Fachdienst - Rezept löschen");
 static Requirement A_19121    ("E-Rezept-Fachdienst - Finaler Status cancelled");
@@ -167,9 +174,60 @@ static Requirement A_19141("Logische Operation - Dispensierinformation für ein 
 
 // Requirements for endpoint /ChargeItem and /ChargeItem/<id>
 static Requirement A_22111   ("E-Rezept-Fachdienst - ChargeItem - unzulässige Operationen");
+// POST /ChargeItem
+static Requirement A_22130   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen - Prüfung Parameter Task");
+static Requirement A_22131   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen - Prüfung Existenz Task");
+static Requirement A_22132   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Secret Task");
+static Requirement A_22133   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Einwilligung");
+static Requirement A_22134   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Verordnungsdatensatz übernehmen");
+static Requirement A_22135   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Quittung übernehmen");
+static Requirement A_22136   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Validierung ChargeItem");
+static Requirement A_22137   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Abgabedatensatz übernehmen");
+static Requirement A_22138   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Validierung PKV-Abgabedatensatz");
+static Requirement A_22139   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturprüfung PKV-Abgabedatensatz");
+static Requirement A_22140   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
+static Requirement A_22141   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturzertifikat SMC-B prüfen");
+static Requirement A_22142   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – OCSP-Response Signaturzertifikat PKV-Abgabedatensatz");
+static Requirement A_22143   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – ChargeItem befüllen");
+// PUT /ChargeItem
+static Requirement A_22215   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Prüfung Einwilligung");
+static Requirement A_22145   ("E-Rezept-Fachdienst – Abrechnungsinformationen ändern – Versicherter - Prüfung KVNR");
+static Requirement A_22146   ("E-Rezept-Fachdienst – Abrechnungsinformationen ändern – Apotheke - Prüfung Telematik-ID");
+static Requirement A_22147   ("E-Rezept-Fachdienst - Abrechnungsinformation ändern – Apotheke - Warnung wenn vom Versicherten markiert");
+static Requirement A_22148   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – PKV-Abgabedatensatz übernehmen");
+static Requirement A_22149   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – FHIR-Validierung PKV-Abgabedatensatz");
+static Requirement A_22150   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern - Apotheke – Signaturprüfung PKV-Abgabedatensatz");
+static Requirement A_22151   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
+static Requirement A_22152   ("E-Rezept-Fachdienst - Abrechnungsinformation ändern – FHIR-Validierung ChargeItem");
+// DELETE /ChargeItem
+static Requirement A_22112   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - alles Löschen verbieten");
+static Requirement A_22114   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen – Prüfung KVNR");
+static Requirement A_22115   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen – Prüfung Telematik-ID");
+static Requirement A_22116   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - Warnung wenn vom Versicherten markiert");
+static Requirement A_22117   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
+// GET /ChargeItem
+static Requirement A_22119   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen – Versicherter – Filter KVNR");
+static Requirement A_22120   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen – Apotheke – Filter Telematik-ID");
+static Requirement A_22121   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen - Suchkriterien");
+static Requirement A_22122   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen – Response");
+static Requirement A_22123   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen - Paging");
+// Requirements for endpoint /ChargeItem/<id>
+static Requirement A_22125   ("E-Rezept-Fachdienst - Abrechnungsinformation lesen - Versicherter - Prüfung KVNR");
+static Requirement A_22126   ("E-Rezept-Fachdienst - Abrechnungsinformation lesen - Apotheke - Prüfung Telematik-ID");
+static Requirement A_22127   ("E-Rezept-Fachdienst - Abrechnungsinformation lesen - Versicherte - Signieren");
+static Requirement A_22128   ("E-Rezept-Fachdienst - Abrechnungsinformation lesen - Apotheke - kein Verordnungsdatensatz und Quittung");
 
 // Requirements for endpoint /Consent and /Consent/<id>
 static Requirement A_22153   ("E-Rezept-Fachdienst - unzulässige Operationen Consent");
+static Requirement A_22154   ("E-Rezept-Fachdienst - Consent löschen - alles Löschen verbieten");
+static Requirement A_22156   ("E-Rezept-Fachdienst - Consent löschen – Prüfung KVNR");
+static Requirement A_22157   ("E-Rezept-Fachdienst - Consent löschen - Löschen der bestehenden Abrechnungsinformationen");
+static Requirement A_22158   ("E-Rezept-Fachdienst - Consent löschen - Löschen der Consent");
+static Requirement A_22160   ("E-Rezept-Fachdienst - Consent lesen - Filter Consent auf KVNR des Versicherten");
+static Requirement A_22162   ("E-Rezept-Fachdienst - Consent schreiben – nur eine Einwilligung CHARGCONS pro KVNR");
+static Requirement A_22289   ("E-Rezept-Fachdienst - Consent schreiben - Prüfung KVNR");
+static Requirement A_22350   ("E-Rezept-Fachdienst - Consent schreiben - Persistieren");
+static Requirement A_22351   ("E-Rezept-Fachdienst - Consent schreiben - FHIR-Validierung");
 
 // Requirements for ACCESS_TOKEN checks
 static Requirement A_20362    ("E-Rezept-Fachdienst - 'ACCESS_TOKEN' generelle Struktur");

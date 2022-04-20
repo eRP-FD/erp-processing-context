@@ -8,7 +8,7 @@
 namespace model
 {
 KbvMedicationFreeText::KbvMedicationFreeText(NumberAsStringParserDocument&& document)
-    : Resource<KbvMedicationFreeText, ResourceVersion::KbvItaErp>(std::move(document))
+    : KbvMedicationBase<KbvMedicationFreeText, ResourceVersion::KbvItaErp>(std::move(document))
 {
 }
 }

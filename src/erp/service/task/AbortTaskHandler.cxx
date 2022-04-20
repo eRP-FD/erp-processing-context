@@ -60,15 +60,23 @@ void AbortTaskHandler::checkAccessValidityOutsidePharmacy(
         }
         A_20546_01.finish();
     }
+    else // For oid_arzt, oid_zahnarzt, oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut, oid_krankenhaus
+    {
+        A_19120_3.start("Check correct task status for doctor");
+        ErpExpect(task.status() == model::Task::Status::ready, HttpStatus::Forbidden,
+              "Task must be ready for doctor, but is: " +
+                  std::string(model::Task::StatusNames.at(task.status())));
+        A_19120_3.finish();
+    }
 
     A_20547.start("Check access code for insured person kvnr mismatch (representative)");
-    A_19120.start("Check access code for prescriptive authority");
+    A_19120_3.start("Check access code for prescriptive authority");
     checkAccessCodeMatches(request, task);
     auditDataCollector.setEventId(professionOIDClaim == profession_oid::oid_versicherter
                                   ? model::AuditEventId::POST_Task_abort_representative
                                   : model::AuditEventId::POST_Task_abort_doctor);
     A_20547.finish();
-    A_19120.finish();
+    A_19120_3.finish();
 }
 
 
@@ -100,12 +108,12 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
+    const auto prescriptionId = parseId(session.request, session.accessLog);
+    checkFeatureWf200(prescriptionId.type());
+    TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
+
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
     Expect3(professionOIDClaim.has_value(), "Missing professionOIDClaim", std::logic_error);  // should not happen because of professionOID check;
-
-    const auto prescriptionId = parseId(session.request, session.accessLog);
-
-    TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
     auto databaseHandle = session.database();
     auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);

@@ -20,6 +20,7 @@
 #include "erp/model/Composition.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Environment.hxx"
@@ -89,35 +90,31 @@ void ServerTestBase::startServer (void)
 
     mJwt = std::make_unique<JWT>( mJwtBuilder.makeJwtVersicherter(InsurantF) );
 
-    RequestHandlerManager<PcServiceContext> handlers;
-    RequestHandlerManager<PcServiceContext> secondaryHandlers;
+    RequestHandlerManager handlers;
+    RequestHandlerManager secondaryHandlers;
     addAdditionalPrimaryHandlers(handlers);
     addAdditionalSecondaryHandlers(secondaryHandlers); // Allow derived test classes to add additional handlers.
     ErpProcessingContext::addPrimaryEndpoints(handlers, std::move(secondaryHandlers));
 
-    auto hsmPool = std::make_unique<HsmPool>(
+    mHsmPool = std::make_unique<HsmPool>(
         std::make_unique<HsmMockFactory>(
             std::make_unique<HsmMockClient>(),
             MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory());
-    mMockDatabase = std::make_unique<MockDatabase>(*hsmPool);
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
+    mMockDatabase = std::make_unique<MockDatabase>(*mHsmPool);
 
     // Create service context without TslManager, the TslManager functionality is skipped for these tests.
-    auto serviceContext = std::make_unique<PcServiceContext>(
-        Configuration::instance(),
-        createDatabaseFactory(),
-        createRedisInstance(),
-        std::move(hsmPool),
-        StaticData::getJsonValidator(),
-        StaticData::getXmlValidator(),
-        StaticData::getInCodeValidator(),
-        std::make_unique<RegistrationMock>());
-    initializeIdp(serviceContext->idp);
-    mServer = std::make_unique<HttpsServer<PcServiceContext>>(
+    auto factories = StaticData::makeMockFactories();
+    factories.tslManagerFactory = [](const std::shared_ptr<XmlValidator> &){return std::shared_ptr<TslManager>{};};
+    factories.databaseFactory = createDatabaseFactory();
+    factories.redisClientFactory = []{return createRedisInstance();};
+    mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
+    initializeIdp(mContext->idp);
+    mServer = std::make_unique<HttpsServer>(
         "0.0.0.0",
         static_cast<uint16_t>(9999),
         std::move(handlers),
-        std::move(serviceContext));
+        *mContext);
     mServer->serve(serverThreadCount);
 }
 
@@ -144,6 +141,8 @@ void ServerTestBase::SetUp (void)
         auto deleteTxn = createTransaction();
         deleteTxn.exec("DELETE FROM erp.communication");
         deleteTxn.exec("DELETE FROM erp.task");
+        deleteTxn.exec("DELETE FROM erp.task_169");
+        deleteTxn.exec("DELETE FROM erp.task_200");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.commit();
     }
@@ -165,6 +164,8 @@ void ServerTestBase::TearDown (void)
         auto deleteTxn = createTransaction();
         deleteTxn.exec("DELETE FROM erp.communication");
         deleteTxn.exec("DELETE FROM erp.task");
+        deleteTxn.exec("DELETE FROM erp.task_169");
+        deleteTxn.exec("DELETE FROM erp.task_200");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.commit();
     }
@@ -271,8 +272,7 @@ Database::Factory ServerTestBase::createDatabaseFactory (void)
 
 std::unique_ptr<Database> ServerTestBase::createDatabase()
 {
-    auto serviceContext = mServer->serviceContext();
-    return createDatabaseFactory()(*serviceContext->getHsmPool(), serviceContext->getKeyDerivation());
+    return createDatabaseFactory()(mContext->getHsmPool(), mContext->getKeyDerivation());
 }
 
 
@@ -425,10 +425,11 @@ void ServerTestBase::acceptTask(model::Task& task, const SafeString secret)
     database->commitTransaction();
 }
 
-MedicationDispense ServerTestBase::closeTask(
+std::vector<MedicationDispense> ServerTestBase::closeTask(
     Task& task,
     const std::string_view& telematicIdPharmacy,
-    const std::optional<Timestamp>& medicationWhenPrepared)
+    const std::optional<Timestamp>& medicationWhenPrepared,
+    size_t numMedications)
 {
     PrescriptionId prescriptionId = task.prescriptionId();
 
@@ -446,19 +447,25 @@ MedicationDispense ServerTestBase::closeTask(
     task.setStatus(Task::Status::completed);
     task.updateLastUpdate();
 
-    MedicationDispense medicationDispense =
-        createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared);
+
+    std::vector<model::MedicationDispense> medicationDispenses;
+    for (size_t i = 0; i < numMedications; ++i)
+    {
+        medicationDispenses.emplace_back(
+            createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared));
+        medicationDispenses.back().setId(model::MedicationDispenseId(medicationDispenses.back().prescriptionId(), i));
+    }
 
     ErxReceipt responseReceipt(
         Uuid(task.receiptUuid().value()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/", prescriptionId,
         compositionResource, authorIdentifier, deviceResource, "TestDigest", prescriptionDigestResource);
 
     auto database = createDatabase();
-    database->updateTaskMedicationDispenseReceipt(task, medicationDispense, responseReceipt);
+    database->updateTaskMedicationDispenseReceipt(task, medicationDispenses, responseReceipt);
     database->deleteCommunicationsForTask(task.prescriptionId());
     database->commitTransaction();
 
-    return medicationDispense;
+    return medicationDispenses;
 }
 
 void ServerTestBase::abortTask(Task& task)
@@ -497,7 +504,8 @@ MedicationDispense ServerTestBase::createMedicationDispense(
     PrescriptionId prescriptionId = task.prescriptionId();
     std::string_view kvnrPatient = task.kvnr().value();
 
-    medicationDispense.setId(prescriptionId);
+    medicationDispense.setPrescriptionId(prescriptionId);
+    medicationDispense.setId({prescriptionId, 0});
     medicationDispense.setKvnr(kvnrPatient);
     medicationDispense.setTelematicId(telematicIdPharmacy);
     medicationDispense.setWhenHandedOver(whenHandedOver);

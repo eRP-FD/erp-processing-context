@@ -16,7 +16,7 @@ class RequestHandlerContextTest
 
 TEST_F(RequestHandlerContextTest, createWithoutParameters)
 {
-    RequestHandlerContext<PcServiceContext> context (
+    RequestHandlerContext context (
         HttpMethod::GET,
         "some/path",
         std::make_unique<GetTaskHandler>(std::initializer_list<std::string_view>{}));
@@ -27,7 +27,7 @@ TEST_F(RequestHandlerContextTest, createWithoutParameters)
 
 TEST_F(RequestHandlerContextTest, createWithParameters)
 {
-    RequestHandlerContext<PcServiceContext> context (
+    RequestHandlerContext context (
         HttpMethod::POST,
         "with/{parameter1}/and/{parameter2}",
         std::make_unique<GetTaskHandler>(std::initializer_list<std::string_view>{}));
@@ -40,7 +40,7 @@ TEST_F(RequestHandlerContextTest, createWithParameters)
 
 TEST_F(RequestHandlerContextTest, matches)
 {
-    RequestHandlerContext<PcServiceContext> context (
+    RequestHandlerContext context (
         HttpMethod::UNKNOWN,
         "with/{parameter1}/and/{parameter2}",
         std::make_unique<GetTaskHandler>(std::initializer_list<std::string_view>{}));
@@ -56,7 +56,7 @@ TEST_F(RequestHandlerContextTest, matches)
 
 TEST_F(RequestHandlerContextTest, matchesWrongMethod)
 {
-    RequestHandlerContext<PcServiceContext> context(
+    RequestHandlerContext context(
         HttpMethod::UNKNOWN,
         "with/{parameter1}/and/{parameter2}",
         std::make_unique<GetTaskHandler>(std::initializer_list<std::string_view>{}));
@@ -69,7 +69,7 @@ TEST_F(RequestHandlerContextTest, matchesWrongMethod)
 
 TEST_F(RequestHandlerContextTest, matchesWrongParams)
 {
-    RequestHandlerContext<PcServiceContext> context(
+    RequestHandlerContext context(
         HttpMethod::UNKNOWN,
         "with/{parameter1}/and/{parameter2}",
         std::make_unique<GetTaskHandler>(std::initializer_list<std::string_view>{}));
@@ -82,7 +82,7 @@ TEST_F(RequestHandlerContextTest, matchesWrongParams)
 
 TEST_F(RequestHandlerContextTest, matchesNoParams)
 {
-    RequestHandlerContext<PcServiceContext> context(
+    RequestHandlerContext context(
         HttpMethod::UNKNOWN,
         "with",
         std::make_unique<GetTaskHandler>(std::initializer_list<std::string_view>{}));

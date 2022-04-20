@@ -101,7 +101,7 @@ public:
             {key,                      value},
             {"nonsense:to-be-ignored", "also to be ignored"}
         });
-        search.parse(request, mServer->serviceContext()->getKeyDerivation());
+        search.parse(request, mServer->serviceContext().getKeyDerivation());
 
         ASSERT_EQ(search.getSqlWhereExpression(getConnection()), expectedResult);
     }
@@ -124,7 +124,7 @@ public:
             {key,                      value},
             {"nonsense:to-be-ignored", "also to be ignored"}
         });
-        search.parse(request, mServer->serviceContext()->getKeyDerivation());
+        search.parse(request, mServer->serviceContext().getKeyDerivation());
 
         const std::string whereExpression = search.getSqlWhereExpression(getConnection());
         const std::string query =
@@ -152,11 +152,11 @@ public:
             {"nonsense:to-be-ignored", "also to be ignored"}
         });
 
-        ASSERT_ANY_THROW(search.parse(request, mServer->serviceContext()->getKeyDerivation()));
+        ASSERT_ANY_THROW(search.parse(request, mServer->serviceContext().getKeyDerivation()));
     }
     std::string hashedHex(const std::string_view& id)
     {
-        return mServer->serviceContext()->getKeyDerivation().hashIdentity(id).toHex();
+        return mServer->serviceContext().getKeyDerivation().hashIdentity(id).toHex();
     }
 
 
@@ -200,7 +200,7 @@ TEST_F(SearchArgumentTest, getSelfLinkPathParameters)
         {"sent",          "lt2021-09-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
-    search.parse(request, mServer->serviceContext()->getKeyDerivation());
+    search.parse(request, mServer->serviceContext().getKeyDerivation());
 
     // Expectations:
     // - the first 'sent' is not expanded to include a time.
@@ -231,7 +231,7 @@ TEST_F(SearchArgumentTest, multipleParameters)
         {"sent",          "gt2022-01-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
-    search.parse(request, mServer->serviceContext()->getKeyDerivation());
+    search.parse(request, mServer->serviceContext().getKeyDerivation());
 
     // Expectations:
     // - for the first 'sent' the end of the implicit, day-long, range is used
@@ -263,7 +263,7 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
         {"sent",          "2021-09-08,2021-09-01"},
         {"received",      "gt2022-01-08,2021-09-01"} // doesn't make sense but its not a failure
         });
-    search.parse(request, mServer->serviceContext()->getKeyDerivation());
+    search.parse(request, mServer->serviceContext().getKeyDerivation());
 
     // Expectations:
     // - the 'recipients' are prefixed with the default "eq:" and ored.
@@ -297,7 +297,7 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValuesWithFailure)
         {"sender",        "KVNR123456,KVNR654321"},
         {"sent",          "gt2021-09-08,lt2021-09-01"} // changing prefix is not supported
         });
-    ASSERT_THROW(search.parse(request, mServer->serviceContext()->getKeyDerivation()), ErpException);
+    ASSERT_THROW(search.parse(request, mServer->serviceContext().getKeyDerivation()), ErpException);
 }
 
 

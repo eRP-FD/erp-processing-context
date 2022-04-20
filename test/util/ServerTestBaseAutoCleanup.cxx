@@ -55,6 +55,8 @@ void ServerTestBaseAutoCleanup::cleanupDatabase (void)
             // There is no predefined method for this. Run an adhoc SQL query.
             auto transaction = createTransaction();
             transaction.exec("DELETE FROM erp.task where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
+            transaction.exec("DELETE FROM erp.task_169 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
+            transaction.exec("DELETE FROM erp.task_200 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.exec("DELETE FROM erp.auditevent where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.commit();
         }

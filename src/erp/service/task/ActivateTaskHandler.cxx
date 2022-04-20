@@ -3,13 +3,14 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include <rapidjson/pointer.h>
 #include "erp/service/task/ActivateTaskHandler.hxx"
 
 #include "erp/ErpRequirements.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Composition.hxx"
+#include "erp/model/KbvMedicationCompounding.hxx"
+#include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
@@ -24,7 +25,6 @@
 #include "erp/util/Uuid.hxx"
 
 #include <date/date.h>
-#include <date/tz.h>
 
 
 ActivateTaskHandler::ActivateTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -34,10 +34,12 @@ ActivateTaskHandler::ActivateTaskHandler (const std::initializer_list<std::strin
 
 void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 {
+    const auto& config = Configuration::instance();
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
+    checkFeatureWf200(prescriptionId.type());
 
     auto databaseHandle = session.database();
     auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
@@ -72,15 +74,14 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_20704.start("Set VAU-Error-Code header field to invalid_prescription when an invalid "
                   "prescription has been transmitted");
     const CadesBesSignature cadesBesSignature = unpackCadesBesSignature(
-        cadesBesSignatureFile, session.serviceContext.getTslManager().get());
+        cadesBesSignatureFile, session.serviceContext.getTslManager());
     A_20704.finish();
     A_19020.finish();
 
     const auto& prescription = cadesBesSignature.payload();
 
     auto prescriptionBundle = [&]() {
-        if (Configuration::instance().getOptionalBoolValue(
-            ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION, true))
+        if (config.getOptionalBoolValue( ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION, true))
         {
             return model::KbvBundle::fromXml(prescription, session.serviceContext.getXmlValidator(),
                                              session.serviceContext.getInCodeValidator(),
@@ -91,6 +92,10 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     }();
 
     checkMultiplePrescription(prescriptionBundle);
+
+    A_22231.start("check narcotics and Thalidomid");
+    checkNarcoticsMatches(prescriptionBundle);
+    A_22231.finish();
 
     std::optional<model::PrescriptionId> bundlePrescriptionId;
     try {
@@ -109,7 +114,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
               "Flowtype mismatch between Task and QES-Bundle");
     A_21370.finish();
 
-    if (! Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
+    if (! config.getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
     {
         A_21370.start("compare the prescription id of the QES bundle with the task");
         ErpExpect(*bundlePrescriptionId == task->prescriptionId(), HttpStatus::BadRequest,
@@ -121,11 +126,10 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
         TLOG(ERROR) << "PrescriptionId check of QES-Bundle is disabled";
     }
 
-
     const auto signingTime = cadesBesSignature.getSigningTime();
     ErpExpect(signingTime.has_value(), HttpStatus::BadRequest, "No signingTime in PKCS7 file");
 
-    checkValidCoverage(prescriptionBundle);
+    checkValidCoverage(prescriptionBundle, prescriptionId.type());
 
     A_19025.start("3. reference the PKCS7 file in task");
     task->setHealthCarePrescriptionUuid();
@@ -135,11 +139,11 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
     // A_19445 Part 1 and 4 are in $create
-    A_21265.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
+    A_19445_06.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
     date::year_month_day signingDay{date::floor<date::days>(signingTime->toChronoTimePoint())};
     task->setExpiryDate(model::Timestamp{date::sys_days{signingDay + date::months{3}}});
-    A_21265.finish();
-    A_21265.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
+    A_19445_06.finish();
+    A_19445_06.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
     A_19517_02.start("different validity duration (accept date) for different types");
     const auto compositions = prescriptionBundle.getResourcesByType<model::Composition>("Composition");
     ErpExpect(compositions.size() == 1, HttpStatus::BadRequest,
@@ -147,10 +151,9 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     auto legalBasisCode = compositions[0].legalBasisCode();
     ErpExpect(legalBasisCode.has_value(), HttpStatus::BadRequest, "no legal basis code in composition");
     task->setAcceptDate(*signingTime, *legalBasisCode,
-                        Configuration::instance().getIntValue(
-                            ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD));
+                        config.getIntValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD));
     A_19517_02.finish();
-    A_21265.finish();
+    A_19445_06.finish();
     A_19999.finish();
 
 
@@ -234,6 +237,18 @@ CadesBesSignature ActivateTaskHandler::unpackCadesBesSignature(
     }
 }
 
+void ActivateTaskHandler::checkNarcoticsMatches(const model::KbvBundle& bundle)
+{
+    A_22231.start(R"(Fehlercode 400 und einem Hinweis auf den Ausschluss von Betäubungsmittel und T-Rezepten)"
+                  R"(("BTM und Thalidomid nicht zulässig" im OperationOutcome))");
+    const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationGeneric>();
+    for (const auto& mr : medicationRequests)
+    {
+        ErpExpect(!mr.isNarcotics(), HttpStatus::BadRequest, "BTM und Thalidomid nicht zulässig");
+    }
+    A_22231.finish();
+}
+
 void ActivateTaskHandler::checkMultiplePrescription(const model::KbvBundle& bundle)
 {
     A_22068.start(R"(Fehlercode 400 und einem Hinweis auf den Ausschluss der Mehrfachverorndung)"
@@ -246,22 +261,32 @@ void ActivateTaskHandler::checkMultiplePrescription(const model::KbvBundle& bund
     A_22068.finish();
 }
 
-void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle)
+void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType)
 {
     A_22222.start("Check for allowed coverage type");
+    const auto& config = Configuration::instance();
     const auto& coverage = bundle.getResourcesByType<model::KbvCoverage>("Coverage");
+    bool featureWf200enabled = config.featureWf200Enabled();
+    bool pkvCovered = false;
     for (const auto& currentCoverage : coverage)
     {
         const auto coverageType = currentCoverage.typeCodingCode();
+        pkvCovered = featureWf200enabled && (coverageType == "PKV");
         ErpExpect((coverageType == "GKV")
                   || (coverageType == "SEL")
                   || (coverageType == "BG")
                   || (coverageType == "UK")
-                  || (Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false)
-                      && (coverageType == "PKV")),
+                  || pkvCovered,
 
                   HttpStatus::BadRequest,
                   "Kostenträger nicht zulässig");
     }
     A_22222.finish();
+    // PKV related: check PKV coverage
+    A_22347.start("Check coverage type for flowtype 200 (PKV prescription)");
+    if(featureWf200enabled && prescriptionType == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+    {
+        ErpExpect(pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not set for flowtype 200");
+    }
+    A_22347.finish();
 }

@@ -44,12 +44,14 @@ public:
      */
     template<class IdpUpdaterType = IdpUpdater>
     static std::unique_ptr<IdpUpdaterType> create (Idp& certificateHolder,
-               const std::shared_ptr<TslManager>& tslManager,
+               TslManager* tslManager,
+               std::shared_ptr<Timer> timerManager,
                bool runFirstUpdateSynchronously = true,
                const std::shared_ptr<UrlRequestSender>& urlRequestSender = {});
     IdpUpdater (Idp& certificateHolder,
-               const std::shared_ptr<TslManager>& tslManager,
-               const std::shared_ptr<UrlRequestSender>& urlRequestSender);
+               TslManager* tslManager,
+               const std::shared_ptr<UrlRequestSender>& urlRequestSender,
+               std::shared_ptr<Timer> timerManager);
     virtual ~IdpUpdater (void);
 
     void update (void);
@@ -77,7 +79,7 @@ protected:
 private:
     size_t mUpdateFailureCount;
     Idp& mCertificateHolder;
-    std::shared_ptr<TslManager> mTslManager;
+    TslManager* mTslManager;
     std::shared_ptr<UrlRequestSender> mRequestSender;
     std::unique_ptr<UrlHelper::UrlParts> mUpdateUrl;
     Timer::JobToken mTimerJobToken;
@@ -85,6 +87,7 @@ private:
     std::optional<size_t> mUpdateHookId;
     std::chrono::system_clock::duration mCertificateMaxAge;
     std::chrono::system_clock::time_point mLastSuccessfulUpdate;
+    std::shared_ptr<Timer> mTimerManager;
 
     Certificate getUpToDateCertificate (void);
     UrlHelper::UrlParts downloadAndParseWellknown (void);
@@ -98,11 +101,12 @@ private:
 template<class IdpUpdaterType>
 std::unique_ptr<IdpUpdaterType> IdpUpdater::create (
     Idp& certificateHolder,
-    const std::shared_ptr<TslManager>& tslManager,
+    TslManager* tslManager,
+    std::shared_ptr<Timer> timerManager,
     bool runFirstUpdateSynchronously,
     const std::shared_ptr<UrlRequestSender>& urlRequestSender)
 {
-    auto idpUpdater = std::make_unique<IdpUpdaterType>(certificateHolder, tslManager, urlRequestSender);
+    auto idpUpdater = std::make_unique<IdpUpdaterType>(certificateHolder, tslManager, urlRequestSender, timerManager);
 
     A_20974.start("start first update and verify of the IDP synchronously on application start");
     if (runFirstUpdateSynchronously)

@@ -69,7 +69,7 @@ public:
     {
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
 
         mTrustStore = TslTestHelper::createTslTrustStore();
     }

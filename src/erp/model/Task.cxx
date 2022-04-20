@@ -207,11 +207,11 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     A_19112.finish();
 
     A_19214.start("set Task.performerType corresponding to the value of prescriptionType");
-    A_21265.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_19445_06.start("set Task.performerType corresponding to the value of prescriptionType");
     setValue(performerTypePointer, PrescriptionTypePerformerType.at(prescriptionType));
     setValue(performerTypeDisplayPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
     setValue(performerTypeTextPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
-    A_21265.finish();
+    A_19445_06.finish();
     A_19214.finish();
 
     setValue(authoredOnPointer, Timestamp::now().toXsDateTime());
@@ -405,7 +405,6 @@ void Task::setAcceptDate(const Timestamp& acceptDate)
 void Task::setAcceptDate(const Timestamp& baseTime, const KbvStatusKennzeichen& legalBasisCode,
                          int entlassRezeptValidityWorkingDays)
 {
-    using namespace std::chrono_literals;
     switch(legalBasisCode)
     {
         case KbvStatusKennzeichen::ohneErsatzverordnungskennzeichen:
@@ -414,9 +413,9 @@ void Task::setAcceptDate(const Timestamp& baseTime, const KbvStatusKennzeichen& 
         case KbvStatusKennzeichen::nurErsatzverordnungsKennzeichen:
         case KbvStatusKennzeichen::asvKennzeichenMitErsatzverordnungskennzeichen:
         case KbvStatusKennzeichen::tssKennzeichenMitErsatzverordungskennzeichen:
-            A_21265.start("Task.AcceptDate = <Date of QES Creation + 28 days");
-            setAcceptDate(baseTime + (24h * 28));
-            A_21265.finish();
+            A_19445_06.start("Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 200)>");
+            setAccepDateDependentPrescriptionType(baseTime);
+            A_19445_06.finish();
             break;
         case KbvStatusKennzeichen::entlassmanagementKennzeichen:
         case KbvStatusKennzeichen::entlassmanagementKennzeichenMitErsatzverordungskennzeichen:
@@ -424,6 +423,23 @@ void Task::setAcceptDate(const Timestamp& baseTime, const KbvStatusKennzeichen& 
             // -1 because the current day is part of the duration.
             setAcceptDate((WorkDay(baseTime) + (entlassRezeptValidityWorkingDays - 1)).toTimestamp());
             A_19517_02.finish();
+            break;
+    }
+}
+
+void Task::setAccepDateDependentPrescriptionType(const Timestamp& baseTime)
+{
+    using namespace std::chrono_literals;
+    switch(type())
+    {
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            setAcceptDate(model::Timestamp{date::sys_days{
+                date::year_month_day{date::floor<date::days>(baseTime.toChronoTimePoint())} +
+                date::months{3}}});
+            break;
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            setAcceptDate(baseTime + (24h * 28));
             break;
     }
 }

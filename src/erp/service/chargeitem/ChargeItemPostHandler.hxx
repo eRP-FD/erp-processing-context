@@ -3,13 +3,14 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#ifndef ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEMPOSTHANDLER_HXX
-#define ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEMPOSTHANDLER_HXX
-
-#include "erp/service/ErpRequestHandler.hxx"
+#ifndef ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEM_CHARGEITEMPOSTHANDLER_HXX
+#define ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEM_CHARGEITEMPOSTHANDLER_HXX
 
 
-class ChargeItemPostHandler: public ErpRequestHandler
+#include "erp/service/chargeitem/ChargeItemBodyHandlerBase.hxx"
+
+
+class ChargeItemPostHandler: public ChargeItemBodyHandlerBase
 {
 public:
     ChargeItemPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);

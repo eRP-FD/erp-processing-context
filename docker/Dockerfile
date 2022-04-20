@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.9 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.10 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -11,8 +11,6 @@ RUN apt-get update --fix-missing && \
 
 WORKDIR /build
 COPY . erp-processing-context
-RUN mkdir release reldeb
-WORKDIR /build/erp-processing-context/release
 ARG GITHUB_USERNAME
 ARG GITHUB_OAUTH_TOKEN
 ENV GITHUB_USERNAME=${GITHUB_USERNAME:-''} \
@@ -46,6 +44,7 @@ RUN conan remote clean &&\
 # Build Release variant:
 FROM build AS release_build
 
+WORKDIR /build/erp-processing-context/release
 RUN conan install .. --build missing
 RUN cmake \
     -DCMAKE_BUILD_TYPE=Release \
@@ -58,12 +57,16 @@ RUN cmake \
     cp install_manifest_production.txt install_manifest.txt
 
 COPY docker/manifest.template /erp/bin/erp-processing-context.manifest
+COPY docker/manifest.release.kubernetes.template /erp/bin/erp-processing-context-kubernetes.manifest
 COPY docker/create_graphene_manifest.sh /build/erp-processing-context/release
 
 RUN chmod 755 /build/erp-processing-context/release/create_graphene_manifest.sh && \
     /build/erp-processing-context/release/create_graphene_manifest.sh \
     /build/erp-processing-context/release/install_manifest.txt \
     /erp/bin/erp-processing-context.manifest
+RUN /build/erp-processing-context/release/create_graphene_manifest.sh \
+    /build/erp-processing-context/release/install_manifest.txt \
+    /erp/bin/erp-processing-context-kubernetes.manifest
 
 RUN tar -czf ./erp-processing-context.tar.gz /erp
 
@@ -83,19 +86,23 @@ RUN cmake \
     cp install_manifest_production.txt install_manifest.txt
 
 COPY docker/manifest.reldeb.template /debug/erp/bin/erp-processing-context.manifest
+COPY docker/manifest.kubernetes.template /debug/erp/bin/erp-processing-context-kubernetes.manifest
 COPY docker/create_graphene_manifest.sh /build/erp-processing-context/reldeb
 
 RUN chmod 755 /build/erp-processing-context/reldeb/create_graphene_manifest.sh && \
     /build/erp-processing-context/reldeb/create_graphene_manifest.sh \
     /build/erp-processing-context/reldeb/install_manifest.txt \
     /debug/erp/bin/erp-processing-context.manifest
+RUN /build/erp-processing-context/reldeb/create_graphene_manifest.sh \
+    /build/erp-processing-context/reldeb/install_manifest.txt \
+    /debug/erp/bin/erp-processing-context-kubernetes.manifest
 
 RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 
-# Build runtime image here:
-FROM ubuntu:focal AS runtime
 
-RUN apt-get update --fix-missing
+
+# Build runtime image here:
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.5 AS runtime
 
 WORKDIR /debug/erp
 COPY --from=reldeb_build /build/erp-processing-context/reldeb/erp-processing-context-debug.tar.gz .

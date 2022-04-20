@@ -45,7 +45,8 @@ public:
     };
 
     using values_t = std::variant<std::vector<std::optional<model::TimePeriod>>, std::vector<std::string>,
-                                  std::vector<model::Task::Status>, std::vector<db_model::HashedId>>;
+                                  std::vector<model::Task::Status>, std::vector<db_model::HashedId>,
+                                  std::vector<model::PrescriptionId>>;
 
     const std::string name;
     const std::string originalName;
@@ -72,6 +73,7 @@ public:
     db_model::HashedId valueAsHashedId(size_t idx) const;
     std::optional<model::TimePeriod> valueAsTimePeriod (size_t idx) const;
     model::Task::Status valueAsTaskStatus (size_t idx) const;
+    model::PrescriptionId valueAsPrescriptionId (size_t idx) const;
 
     std::string prefixAsString (void) const;
     static std::string prefixAsString (const Prefix prefix);
@@ -80,9 +82,13 @@ public:
 
 private:
     void checkValueIndex(size_t idx) const;
+
+    // these are used for the URL links generated for the self/next/previous links
     std::string dateValuesAsString() const;
     std::string dateValueAsString(size_t idx) const;
     std::string taskStatusAsString() const;
+    std::string prescriptionIdValuesAsString() const;
+
     static std::optional<Prefix> prefixFromString (const std::string& prefixString);
 };
 

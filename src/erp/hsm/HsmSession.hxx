@@ -53,6 +53,8 @@ public:
         BlobCache& blobCache,
         std::shared_ptr<HsmRawSession>&& rawSession);
 
+    ::Nonce getNonce(uint32_t input);
+
     void setTeeToken (const ErpBlob& teeToken);
 
     /**
@@ -127,6 +129,8 @@ public:
      * Return a 256 Bit salt that is to be used in HMAC calculations of Telematik Ids.
      */
     ErpArray<Aes256Length> getTelematikIdHmacKey (void);
+
+    ::ParsedQuote parseQuote(const ::ErpVector& quote) const;
 
     /**
      * Make a call to the HSM to keep the connection to the HSM alive.

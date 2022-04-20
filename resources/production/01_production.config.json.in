@@ -54,6 +54,7 @@
         "@ERP_SCHEMA_DIR@hl7.fhir.r4.core/4.0.1/xml/fhir.xsd",
         "@ERP_SCHEMA_DIR@not-profiled/parameters/ActivateTaskParameters.xsd",
         "@ERP_SCHEMA_DIR@not-profiled/parameters/CreateTaskParameters.xsd",
+        "@ERP_SCHEMA_DIR@not-profiled/MedicationDispenseBundle.xsd",
         "@ERP_SCHEMA_DIR@tsl/BNA_tsl.xsd",
         "@ERP_SCHEMA_DIR@tsl/Gematik_tsl.xsd"
       ],
@@ -99,7 +100,9 @@
           "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationInfoReq.xsd",
           "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationReply.xsd",
           "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationRepresentative.xsd",
-          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/medicationdispense/Gem_erxMedicationDispense.xsd"
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/medicationdispense/Gem_erxMedicationDispense.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/chargeitem/Gem_erxChargeItem.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/consent/Gem_erxConsent.xsd"
         ]
       },
       "redis": {

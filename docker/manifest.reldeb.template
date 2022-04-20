@@ -122,5 +122,7 @@ sgx.trusted_files = [
 "file:/debug/erp/lib/libcrypto.so.1.1",
 "file:/debug/erp/lib/libssl.so.1.1",
 "file:/debug/erp/lib/libtpmclient.so",
+"file:/debug/erp/lib/libz.so.1",
+"file:/debug/erp/lib/libz.so.1.2.12",
 __ADDITIONAL_TRUST_FILES__
 ]

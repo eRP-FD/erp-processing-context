@@ -110,3 +110,14 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     , recorded(model::Timestamp::now())
 {
 }
+
+db_model::ChargeItem::ChargeItem(model::PrescriptionId initPrescriptionId, BlobId initBlobId,
+                                               db_model::Blob initSalt, model::Timestamp initAuthoredOn,
+                                               db_model::EncryptedBlob initChargeItem)
+    : prescriptionId{std::move(initPrescriptionId)}
+    , blobId{std::move(initBlobId)}
+    , salt{std::move(initSalt)}
+    , authoredOn{std::move(initAuthoredOn)}
+    , chargeItem{std::move(initChargeItem)}
+{
+}

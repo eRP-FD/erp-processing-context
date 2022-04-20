@@ -19,10 +19,12 @@ namespace model
 class AuditData;
 class Binary;
 class Bundle;
+class ChargeItem;
 class Communication;
 class Consent;
 class ErxReceipt;
 class MedicationDispense;
+class MedicationDispenseId;
 class PrescriptionId;
 class Task;
 class Timestamp;
@@ -57,7 +59,10 @@ public:
     virtual model::PrescriptionId storeTask(const model::Task& task) = 0;
     virtual void updateTaskStatusAndSecret(const model::Task& task) = 0;
     virtual void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) = 0;
-    virtual void updateTaskMedicationDispenseReceipt(const model::Task& task, const model::MedicationDispense& medicationDispense, const model::ErxReceipt& receipt) = 0;
+    virtual void
+    updateTaskMedicationDispenseReceipt(const model::Task& task,
+                                        const std::vector<model::MedicationDispense>& medicationDispenses,
+                                        const model::ErxReceipt& receipt) = 0;
     virtual void updateTaskClearPersonalData(const model::Task& task) = 0;
 
     virtual std::string storeAuditEventData(model::AuditData& auditData) = 0;
@@ -76,16 +81,17 @@ public:
 
     virtual std::tuple<std::optional<model::Task>, std::optional<model::Bundle>> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
+    [[nodiscard]] virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
+    retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) = 0;
+    
     virtual std::vector<model::Task> retrieveAllTasksForPatient (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForPatient (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
 
-    virtual std::vector<model::MedicationDispense> retrieveAllMedicationDispenses(
-        const std::string& kvnr,
-        const std::optional<model::PrescriptionId>& prescriptionId,
-        const std::optional<UrlArguments>& search) = 0;
-    virtual uint64_t countAllMedicationDispenses(
-        const std::string& kvnr,
-        const std::optional<UrlArguments>& search) = 0;
+    // @return <medications, hasNextPage>
+    [[nodiscard]] virtual std::tuple<std::vector<model::MedicationDispense>, bool>
+    retrieveAllMedicationDispenses(const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
+    [[nodiscard]] virtual std::optional<model::MedicationDispense>
+    retrieveMedicationDispense(const std::string& kvnr, const model::MedicationDispenseId& id) = 0;
 
     virtual CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource = RandomSource::defaultSource()) = 0;
 
@@ -144,9 +150,29 @@ public:
         const std::string& recipient) = 0;
 
     virtual void storeConsent(const model::Consent& consent) = 0;
-    virtual std::optional<model::Consent> getConsent(const std::string_view& kvnr) = 0;
+    virtual std::optional<model::Consent> retrieveConsent(const std::string_view& kvnr) = 0;
     [[nodiscard]] virtual bool clearConsent(const std::string_view& kvnr) = 0;
 
+
+    virtual void storeChargeInformation(const std::string_view& pharmacyId, const model::ChargeItem& chargeItem,
+                                        const model::Bundle& dispenseItem) = 0;
+
+    virtual std::vector<model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(const std::string_view& pharmacyTelematikId,
+                                      const std::optional<UrlArguments>& search) const = 0;
+    virtual std::vector<model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
+                                      const std::optional<UrlArguments>& search) const = 0;
+
+    virtual std::tuple<model::ChargeItem, model::Bundle>
+    retrieveChargeInformation(const model::PrescriptionId& id) const = 0;
+    virtual std::tuple<model::ChargeItem, model::Bundle>
+    retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const = 0;
+
+    virtual void deleteChargeInformation(const model::PrescriptionId& id) = 0;
+    virtual void clearAllChargeInformation(const std::string_view& kvnr) = 0;
+    virtual uint64_t countChargeInformationForInsurant (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countChargeInformationForPharmacy (const std::string& telematikId, const std::optional<UrlArguments>& search) = 0;  
 
     virtual DatabaseBackend& getBackend() = 0;
 

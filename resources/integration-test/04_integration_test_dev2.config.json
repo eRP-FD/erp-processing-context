@@ -1,0 +1,13 @@
+{
+  "common": {
+    "erp": {
+      "keep-alive": "true",
+      "idp": {
+        "registeredFdUri": "https://erp.dev2.erezepttest.net/"
+      }
+    },
+    "test": {
+      "qes-pem-file-name": "integration-test/QES.pem"
+    }
+  }
+}

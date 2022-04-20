@@ -16,6 +16,9 @@ public:
     CloseTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs);
 
     void handleRequest (PcSessionContext& session) override;
+
+private:
+    static std::vector<model::MedicationDispense> medicationDispensesFromBody(PcSessionContext& session);
 };
 
 

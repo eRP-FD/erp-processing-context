@@ -4,7 +4,7 @@
  */
 
 #include "erp/admin/AdminRequestHandler.hxx"
-#include "erp/admin/AdminServiceContext.hxx"
+#include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
@@ -13,12 +13,11 @@
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/UrlHelper.hxx"
 
-void AdminRequestHandlerBase::handleRequest(SessionContext<AdminServiceContext>& session)
+void AdminRequestHandlerBase::handleRequest(SessionContext& session)
 {
     try
     {
-        handleBasicAuthentication(session, ConfigurationKey::ADMIN_CREDENTIALS,
-                                  ConfigurationKey::DEBUG_DISABLE_ADMIN_AUTH);
+        handleBasicAuthentication(session, ConfigurationKey::ADMIN_CREDENTIALS);
         doHandleRequest(session);
         session.response.setStatus(HttpStatus::OK);
     }
@@ -49,7 +48,7 @@ PostRestartHandler::PostRestartHandler()
 
 PostRestartHandler::~PostRestartHandler() = default;
 
-void PostRestartHandler::doHandleRequest(SessionContext<AdminServiceContext>& session)
+void PostRestartHandler::doHandleRequest(SessionContext& session)
 {
     TVLOG(1) << "shutdown requested by: " << session.request.header().serializeFields() << "\r\n\r\n"
              << session.request.getBody();
@@ -78,9 +77,8 @@ void PostRestartHandler::doHandleRequest(SessionContext<AdminServiceContext>& se
         }
     }
     ErpExpect(delay >= 0, HttpStatus::BadRequest, "Delay value " + std::to_string(delay) + " is out of range");
-    auto* ioContext = session.serviceContext.getIoContext();
-    Expect(ioContext, "IO context pointer not set");
-    TerminationHandler::instance().gracefulShutdown(*ioContext, delay);
+    auto& ioContext = session.serviceContext.getAdminServer().getThreadPool().ioContext();
+    TerminationHandler::instance().gracefulShutdown(ioContext, delay);
     session.response.setBody("shutdown in " + std::to_string(delay) + " seconds");
 }
 

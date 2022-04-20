@@ -10,7 +10,7 @@
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/util/Base64.hxx"
 #include "test/util/TestConfiguration.hxx"
-#include "tools/ResourceManager.hxx"
+#include "ResourceManager.hxx"
 std::string CryptoHelper::toCadesBesSignature(const std::string& content,
                                               const std::optional<model::Timestamp>& signingTime)
 {

@@ -6,6 +6,7 @@
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/crypto/SecureRandomGenerator.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/Parameters.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/ResourceNames.hxx"
@@ -34,7 +35,8 @@ using namespace std::chrono_literals;
 using namespace model;
 using namespace model::resource;
 
-class MedicationDispenseGetHandlerTest : public ServerTestBase
+// Tests are parameterized with the number of Medication Dispenses per Task
+class MedicationDispenseGetHandlerTest : public ServerTestBase, public testing::WithParamInterface<size_t>
 {
 public:
     MedicationDispenseGetHandlerTest() :
@@ -76,7 +78,7 @@ protected:
         std::set<std::string>& patients,
         std::set<std::string>& pharmacies,
         std::map<std::string, Task>& tasksByPrescriptionIds,
-        std::map<std::string, MedicationDispense>& medicationDispensesByPrescriptionIds,
+        std::map<std::string, std::vector<MedicationDispense>>& medicationDispensesByPrescriptionIds,
         std::map<std::string, std::vector<std::string>>& prescriptionIdsByPatients,
         std::map<std::string, std::vector<std::string>>& prescriptionIdsByPharmacies,
         std::map<std::string, std::string>& medicationDispensesInputXmlStrings)
@@ -93,34 +95,39 @@ protected:
             activateTask(task, std::string(kvnrPatient));
             acceptTask(task);
 
-            MedicationDispense medicationDispense = closeTask(task, pharmacy, whenPrepared);
+            auto medicationDispenses = closeTask(task, pharmacy, whenPrepared, GetParam());
 
             PrescriptionId prescriptionId = task.prescriptionId();
+            ASSERT_EQ(medicationDispenses.size(), GetParam());
 
-            PrescriptionId medicationDispenseId = medicationDispense.id();
+            PrescriptionId medicationDispenseId = medicationDispenses[0].prescriptionId();
             ASSERT_EQ(medicationDispenseId, prescriptionId);
 
-            std::string_view medicationDispenseKvnr = medicationDispense.kvnr();
+            std::string_view medicationDispenseKvnr = medicationDispenses[0].kvnr();
             ASSERT_EQ(medicationDispenseKvnr, kvnrPatient);
 
-            std::string_view medicationDispenseTelematicId = medicationDispense.telematikId();
+            std::string_view medicationDispenseTelematicId = medicationDispenses[0].telematikId();
             ASSERT_EQ(medicationDispenseTelematicId, pharmacy);
 
-            std::chrono::system_clock::time_point handedOver = medicationDispense.whenHandedOver().toChronoTimePoint();
+            std::chrono::system_clock::time_point handedOver = medicationDispenses[0].whenHandedOver().toChronoTimePoint();
             std::chrono::system_clock::time_point now = Timestamp::now().toChronoTimePoint();
             ASSERT_TRUE(handedOver > now - 10s && handedOver < now + 10s);
 
-            std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispense.whenPrepared();
+            std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispenses[0].whenPrepared();
             ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);
 
-            std::string xmlString = medicationDispense.serializeToXmlString();
-            medicationDispensesInputXmlStrings.insert(std::make_pair(prescriptionId.toString(), xmlString));
+            for (size_t i = 0; i  < GetParam(); ++i)
+            {
+                std::string xmlString = medicationDispenses[i].serializeToXmlString();
+                medicationDispensesInputXmlStrings.insert(
+                    std::make_pair(model::MedicationDispenseId(prescriptionId, i).toString(), xmlString));
+            }
 
             patients.insert(kvnrPatient);
             pharmacies.insert(pharmacy);
 
             tasksByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(task)));
-            medicationDispensesByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(medicationDispense)));
+            medicationDispensesByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(medicationDispenses)));
 
             if (prescriptionIdsByPatients.find(kvnrPatient) == prescriptionIdsByPatients.end())
             {
@@ -143,13 +150,11 @@ protected:
         const std::string& kvnrPatient,
         std::optional<std::string> prescriptionId,
         std::vector<MedicationDispense>& medicationDispensesResponse,
-        std::size_t& totalSearchMatches,
         std::optional<std::vector<std::string>>&& filters = {},
         std::optional<std::vector<std::string>>&& sortings = {},
         std::optional<std::pair<size_t, size_t>>&& paging = {},
         HttpStatus expectedHttpStatus = HttpStatus::OK)
     {
-        totalSearchMatches = 0;
         std::string path = "/MedicationDispense";
 
         if (prescriptionId.has_value())
@@ -241,7 +246,6 @@ protected:
                         MedicationDispense::fromJson(responseBundle.getResource(idxResource))));
                     std::string xmlString = medicationDispensesResponse.back().serializeToXmlString();
                 }
-                totalSearchMatches = responseBundle.getTotalSearchMatches();
             }
         }
     }
@@ -254,10 +258,9 @@ protected:
         for (const auto& medicationDispense : medicationDispenses)
         {
             std::string medicationDispenseResponseXmlString = medicationDispense.serializeToXmlString();
-            std::optional<PrescriptionId> medicationDispenseId = medicationDispense.id();
-            ASSERT_TRUE(medicationDispenseId.has_value());
+            std::string medicationDispenseId(medicationDispense.id().toString());
 
-            auto dispenseInput = medicationDispensesInputXmlStrings.find(medicationDispenseId.value().toString());
+            auto dispenseInput = medicationDispensesInputXmlStrings.find(medicationDispenseId);
             if (dispenseInput != medicationDispensesInputXmlStrings.end())
             {
                 EXPECT_EQ(medicationDispenseResponseXmlString, dispenseInput->second);
@@ -267,7 +270,7 @@ protected:
     }
 };
 
-TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
+TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
 {
     // Insert task into database
     //--------------------------
@@ -282,7 +285,7 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -299,14 +302,12 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
     HttpsClient client = createClient();
 
     std::vector<MedicationDispense> medicationDispenses;
-    std::size_t totalSearchMatches = 0;
-    sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches);
-    EXPECT_EQ(medicationDispenses.size(), 1);
-    EXPECT_EQ(totalSearchMatches, 1);
+    sendRequest(client, kvnrPatient, {}, medicationDispenses);
+    EXPECT_EQ(medicationDispenses.size(), GetParam());
     checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
 }
 
-TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
+TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
 {
     // Insert task into database
     //--------------------------
@@ -321,7 +322,7 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -337,11 +338,10 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
     // Create a client
     auto client = createClient();
 
-    std::size_t totalSearchMatches = 0;
     {
         std::vector<std::string> filters = { "whenhandedover=NULL" };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
 
@@ -350,8 +350,8 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        EXPECT_EQ(medicationDispenses.size(), GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -360,7 +360,7 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
 
@@ -369,8 +369,8 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         std::vector<std::string> filters = { "whenhandedover=lt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        EXPECT_EQ(medicationDispenses.size(), GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -379,14 +379,14 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         std::vector<std::string> filters = { "whenhandedover=lt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
 
     {
         std::vector<std::string> filters = { "whenprepared=NULL" };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
 
@@ -395,8 +395,8 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        EXPECT_EQ(medicationDispenses.size(), GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -405,7 +405,7 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
 
@@ -414,8 +414,8 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = { "whenprepared=lt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        EXPECT_EQ(medicationDispenses.size(), GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
@@ -424,22 +424,22 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = { "whenprepared=lt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
 
     {
         std::vector<std::string> filters = { "performer=" + pharmacy };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        EXPECT_EQ(medicationDispenses.size(), GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
     {
         std::vector<std::string> filters = { "performer==3-SMC-B-Ungueltig-123455678909876" };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), 0);
     }
 
@@ -453,14 +453,14 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
             "whenhandedover=gt" + whenHandedOver,
             "whenprepared=gt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
-        EXPECT_EQ(medicationDispenses.size(), 1);
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        EXPECT_EQ(medicationDispenses.size(), GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 
 }
 
-TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
 {
     // Insert tasks into database
     //---------------------------
@@ -479,7 +479,7 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -494,20 +494,18 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
 
     // Create a client
     auto client = createClient();
-    std::size_t totalSearchMatches = 0;
 
     for (const std::string& kvnrPatient : patients)
     {
         std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches);
-        EXPECT_EQ(medicationDispenses.size(), prescriptionIds.size());
-        EXPECT_EQ(totalSearchMatches, prescriptionIds.size());
+        sendRequest(client, kvnrPatient, {}, medicationDispenses);
+        EXPECT_EQ(medicationDispenses.size(), prescriptionIds.size() * GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
 }
 
-TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
 {
     // Insert tasks into database
     //---------------------------
@@ -526,7 +524,7 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -541,16 +539,15 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
 
     // Create a client
     auto client = createClient();
-    std::size_t totalSearchMatches = 0;
 
     {
         std::string kvnrPatient = InsurantA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
-        size_t expectedCount = 3;
+        size_t expectedCount = 3 * GetParam();
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
@@ -562,7 +559,7 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -571,9 +568,9 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
-        size_t expectedCount = 1;
+        size_t expectedCount = GetParam();
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
@@ -585,7 +582,7 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -593,9 +590,9 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
         std::string kvnrPatient = InsurantA;
         std::string pharmacy = pharmacyA;
         std::vector<std::string> filters = { "performer=" + pharmacy };
-        size_t expectedCount = 2;
+        size_t expectedCount = 2 * GetParam();
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
@@ -606,7 +603,7 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
         std::vector<std::string> filters = { "performer=" + pharmacy };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -614,9 +611,9 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
         std::string kvnrPatient = InsurantA;
         std::string pharmacy = pharmacyB;
         std::vector<std::string> filters = { "performer=" + pharmacy };
-        size_t expectedCount = 1;
+        size_t expectedCount = GetParam();
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
@@ -632,9 +629,9 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
             "performer=" + pharmacy,
             "whenhandedover=gt" + whenHandedOver,
             "whenprepared=gt" + whenPrepared };
-        size_t expectedCount = 1;
+        size_t expectedCount = GetParam();
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
@@ -652,12 +649,12 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
             "whenprepared=gt" + whenprepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
     }
 }
 
-TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
+TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
 {
     // Insert tasks into database
     //---------------------------
@@ -695,7 +692,7 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -710,7 +707,6 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
 
     // Create a client
     auto client = createClient();
-    std::size_t totalSearchMatches = 0;
 
     {
         std::string kvnrPatient = InsurantA;
@@ -727,10 +723,11 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
             }
         }
 
+        expectedCountAll *= GetParam();
         // Paging.
         ASSERT_TRUE(expectedCountAll > 50);
 
-        size_t expectedCount = 50;
+        size_t expectedCount = 50 * GetParam();
         size_t receivedCount = 0;
 
         while (receivedCount < expectedCountAll)
@@ -747,13 +744,12 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
             std::optional<std::pair<size_t, size_t>> paging;
             if (receivedCount > 0)
             {
-                paging = {50, receivedCount};
+                paging = {50, receivedCount/GetParam()};
             }
             std::vector<MedicationDispense> medicationDispenses;
-            sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters), std::move(sortings), std::move(paging));
+            sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters), std::move(sortings), std::move(paging));
             // ASSERT to avoid endless loop if less than expected count is returned.
             ASSERT_EQ(medicationDispenses.size(), expectedCount);
-            ASSERT_EQ(totalSearchMatches, expectedCountAll);
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
             if (medicationDispenses.size() > 0 )
             {
@@ -765,11 +761,7 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
                 }
             }
             receivedCount += medicationDispenses.size();
-            expectedCount = expectedCountAll - receivedCount;
-            if (expectedCount > 50)
-            {
-                expectedCount = 50;
-            }
+            expectedCount = std::min(expectedCountAll - receivedCount, 50*GetParam());
         }
     }
 
@@ -787,7 +779,7 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -805,7 +797,7 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -822,12 +814,12 @@ TEST_F(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, totalSearchMatches, std::move(filters));
+        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 }
 
-TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetById)
+TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetById)
 {
     // Insert task into database
     //--------------------------
@@ -842,7 +834,7 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetById)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -859,18 +851,21 @@ TEST_F(MedicationDispenseGetHandlerTest, OneTaskGetById)
     auto client = createClient();
 
     std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
-    std::size_t totalSearchMatches = 0;
 
     for (const std::string& prescriptionId : prescriptionIds)
     {
-        std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, prescriptionId, medicationDispenses, totalSearchMatches);
-        EXPECT_EQ(medicationDispenses.size(), 1);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+        for (size_t i = 0; i < GetParam(); ++i)
+        {
+            model::MedicationDispenseId medicationId(model::PrescriptionId::fromString(prescriptionId), i);
+            std::vector<MedicationDispense> medicationDispenses;
+            sendRequest(client, kvnrPatient, medicationId.toString(), medicationDispenses);
+            EXPECT_EQ(medicationDispenses.size(), 1);
+            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+        }
     }
 }
 
-TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
 {
     // Insert tasks into database
     //---------------------------
@@ -889,7 +884,7 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
@@ -904,7 +899,131 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
 
     // Create a client
     auto client = createClient();
-    std::size_t totalSearchMatches = 0;
+
+    for (const std::string& kvnrPatient : patients)
+    {
+        std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
+
+        for (const std::string& prescriptionId : prescriptionIds)
+        {
+            for (size_t i = 0; i < GetParam(); ++i)
+            {
+                model::MedicationDispenseId medicationId(model::PrescriptionId::fromString(prescriptionId), i);
+                std::vector<MedicationDispense> medicationDispenses;
+                sendRequest(client, kvnrPatient, medicationId.toString(), medicationDispenses);
+                EXPECT_EQ(medicationDispenses.size(), 1);
+                checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+            }
+        }
+    }
+}
+
+TEST_P(MedicationDispenseGetHandlerTest, OneTaskFilterById)
+{
+    A_22070.test("One Task, Multiple Medication Dispenses");
+    // ?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
+    std::string kvnrPatient = InsurantA;
+    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {kvnrPatient, pharmacy, std::nullopt}
+    };
+
+    std::set<std::string> patients;
+    std::set<std::string> pharmacies;
+    std::map<std::string, Task> tasksByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
+    std::map<std::string, std::string> medicationDispensesInputXmlStrings;
+
+    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
+                tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
+                prescriptionIdsByPatients, prescriptionIdsByPharmacies,
+                medicationDispensesInputXmlStrings);
+
+    auto client = createClient();
+    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
+    for (const std::string& prescriptionId : prescriptionIds)
+    {
+        std::vector<model::MedicationDispense> medicationDispenses;
+        sendRequest(client, kvnrPatient, {}, medicationDispenses,
+                    {{"identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}});
+        EXPECT_EQ(medicationDispenses.size(), GetParam());
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+    }
+}
+
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
+{
+    // Insert tasks into database
+    //---------------------------
+
+    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
+    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {InsurantA, pharmacyA, std::nullopt},
+        {InsurantA, pharmacyB, std::nullopt},
+        {InsurantB, pharmacyA, std::nullopt},
+        {InsurantA, pharmacyA, std::nullopt},
+        {InsurantC, pharmacyB, std::nullopt}
+    };
+
+    std::set<std::string> patients;
+    std::set<std::string> pharmacies;
+    std::map<std::string, Task> tasksByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
+    std::map<std::string, std::string> medicationDispensesInputXmlStrings;
+
+    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
+        tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
+        prescriptionIdsByPatients, prescriptionIdsByPharmacies,
+        medicationDispensesInputXmlStrings);
+
+    // GET Medication Dispenses
+    //-------------------------
+
+    // Create a client
+    auto client = createClient();
+
+    std::string kvnrPatient = InsurantA;
+    PrescriptionId prescriptionId = PrescriptionId::fromString("160.000.000.004.711.86");
+    std::vector<std::string> filters = { "performer=" + pharmacyA };
+    std::vector<MedicationDispense> medicationDispenses;
+    sendRequest(client, kvnrPatient, prescriptionId.toString(), medicationDispenses,
+                std::move(filters), {}, {}, HttpStatus::NotFound);
+    EXPECT_EQ(medicationDispenses.size(), 0);
+}
+
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
+{
+    A_22070.test("Several Tasks, Multiple Medication Dispenses");
+    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
+    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>
+        patientsPharmaciesMedicationWhenPrepared = {{InsurantA, pharmacyA, std::nullopt},
+                                                    {InsurantA, pharmacyB, std::nullopt},
+                                                    {InsurantB, pharmacyA, std::nullopt},
+                                                    {InsurantA, pharmacyA, std::nullopt},
+                                                    {InsurantC, pharmacyB, std::nullopt}};
+
+    std::set<std::string> patients;
+    std::set<std::string> pharmacies;
+    std::map<std::string, Task> tasksByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
+    std::map<std::string, std::string> medicationDispensesInputXmlStrings;
+
+    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies, tasksByPrescriptionIds,
+                medicationDispensesByPrescriptionIds, prescriptionIdsByPatients, prescriptionIdsByPharmacies,
+                medicationDispensesInputXmlStrings);
+
+    auto client = createClient();
 
     for (const std::string& kvnrPatient : patients)
     {
@@ -913,55 +1032,49 @@ TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
         for (const std::string& prescriptionId : prescriptionIds)
         {
             std::vector<MedicationDispense> medicationDispenses;
-            sendRequest(client, kvnrPatient, prescriptionId, medicationDispenses, totalSearchMatches);
-            EXPECT_EQ(medicationDispenses.size(), 1);
+            sendRequest(client, kvnrPatient, {}, medicationDispenses,
+                        {{"identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}});
+            EXPECT_EQ(medicationDispenses.size(), GetParam());
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
         }
     }
 }
 
-TEST_F(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterByIdUnknownId)
 {
-    // Insert tasks into database
-    //---------------------------
-
+    A_22070.test("One Task, Multiple Medication Dispenses, invalid PrescrptionID");
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, std::nullopt}
-    };
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>
+        patientsPharmaciesMedicationWhenPrepared = {{InsurantA, pharmacyA, std::nullopt},
+                                                    {InsurantA, pharmacyB, std::nullopt},
+                                                    {InsurantB, pharmacyA, std::nullopt},
+                                                    {InsurantA, pharmacyA, std::nullopt},
+                                                    {InsurantC, pharmacyB, std::nullopt}};
 
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
     std::map<std::string, Task> tasksByPrescriptionIds;
-    std::map<std::string, MedicationDispense> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
     std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
     std::map<std::string, std::string> medicationDispensesInputXmlStrings;
 
-    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
-        tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
-        prescriptionIdsByPatients, prescriptionIdsByPharmacies,
-        medicationDispensesInputXmlStrings);
+    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies, tasksByPrescriptionIds,
+                medicationDispensesByPrescriptionIds, prescriptionIdsByPatients, prescriptionIdsByPharmacies,
+                medicationDispensesInputXmlStrings);
 
-    // GET Medication Dispenses
-    //-------------------------
-
-    // Create a client
     auto client = createClient();
-    std::size_t totalSearchMatches = 0;
 
     std::string kvnrPatient = InsurantA;
     PrescriptionId prescriptionId = PrescriptionId::fromString("160.000.000.004.711.86");
-    std::vector<std::string> filters = { "performer=" + pharmacyA };
+
     std::vector<MedicationDispense> medicationDispenses;
-    sendRequest(client, kvnrPatient, prescriptionId.toString(), medicationDispenses, totalSearchMatches,
-                std::move(filters), {}, {}, HttpStatus::NotFound);
+    sendRequest(client, kvnrPatient, {}, medicationDispenses,
+                {{"identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId.toString()}});
     EXPECT_EQ(medicationDispenses.size(), 0);
-    EXPECT_EQ(totalSearchMatches, 0);
 }
+
+
+INSTANTIATE_TEST_SUITE_P(MedicationDispenseGetHandlerTestInst, MedicationDispenseGetHandlerTest, testing::Values(1,3,10));

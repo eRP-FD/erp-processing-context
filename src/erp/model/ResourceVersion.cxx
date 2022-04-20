@@ -133,4 +133,9 @@ std::tuple<DeGematikErezeptWorkflowR4, KbvItaErp> current()
     return profileValue;
 }
 
+std::string_view v_str(const NotProfiled&)
+{
+    return "";
+}
+
 }

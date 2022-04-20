@@ -60,7 +60,7 @@ public:
         }
     }
 
-    RequestHandlerManager<PcServiceContext> mRequestHandlerManager;
+    RequestHandlerManager mRequestHandlerManager;
     std::set<std::string> mAllProfessionOIDs;
 };
 

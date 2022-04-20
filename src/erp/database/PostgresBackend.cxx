@@ -7,7 +7,6 @@
 
 #include "erp/ErpRequirements.hxx"
 #include "erp/crypto/CMAC.hxx"
-#include "erp/database/Data.hxx"
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Consent.hxx"
@@ -17,8 +16,8 @@
 #include "erp/util/search/UrlArguments.hxx"
 
 #include <boost/algorithm/string.hpp>
-#include <pqxx/pqxx>
 #include <iostream>
+#include <pqxx/pqxx>
 
 
 
@@ -119,70 +118,29 @@ namespace
     QUERY(healthCheckQuery, "SELECT FROM erp.task LIMIT 1")
 
     QUERY(retrieveAllMedicationDispensesByKvnr, R"--(
-        WITH tasks AS (
-            (SELECT t.prescription_id, t.medication_dispense_bundle, t.medication_dispense_blob_id, t.when_handed_over,
-                    t.when_prepared, t.performer, t.kvnr_hashed, a.salt, 160::smallint AS prescription_type
-            FROM erp.task t
-            LEFT JOIN erp.account a ON
-                a.account_id = $1 AND a.master_key_type = 1 AND
-                medication_dispense_blob_id = a.blob_id
-            WHERE t.kvnr_hashed = $1)
-        UNION
-            (SELECT t.prescription_id, t.medication_dispense_bundle, t.medication_dispense_blob_id, t.when_handed_over,
-                    t.when_prepared, t.performer, t.kvnr_hashed, a.salt, 169::smallint AS prescription_type
-            FROM erp.task_169 t
-            LEFT JOIN erp.account a ON
-                a.account_id = $1 AND a.master_key_type = 1 AND
-                medication_dispense_blob_id = a.blob_id
-            WHERE t.kvnr_hashed = $1)
-        )
-        SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, salt, prescription_type from tasks
-        WHERE ($2::bigint IS NULL OR prescription_id = $2::bigint)
+        SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, salt, prescription_type from erp.task_view
+        WHERE kvnr_hashed = $1 AND ($2::bigint IS NULL OR prescription_id = $2::bigint)
             AND medication_dispense_bundle IS NOT NULL
         )--")
 
-
-        QUERY(retrieveAllTasksByKvnr, R"--(
-        WITH tasks AS (
-            SELECT prescription_id, kvnr, last_modified, authored_on,
-                expiry_date, accept_date, status, salt, task_key_blob_id,
-                160::smallint AS prescription_type
-            FROM erp.task
-            WHERE kvnr_hashed = $1
-        UNION
-            SELECT prescription_id, kvnr, last_modified, authored_on,
-                expiry_date, accept_date, status, salt, task_key_blob_id,
-                169::smallint AS prescription_type
-            FROM erp.task_169
-            WHERE kvnr_hashed = $1
-        )
+    QUERY(retrieveAllTasksByKvnr, R"--(
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id, prescription_type FROM tasks
-        WHERE status != 4
+            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id, prescription_type FROM erp.task_view
+        WHERE status != 4 AND kvnr_hashed = $1
         )--")
 
+    QUERY(storeConsent, R"--(
+        INSERT INTO erp.consent (kvnr_hashed, date_time) VALUES ($1, $2)
+    )--")
 
-    constexpr std::initializer_list<PostgresBackend::QueryDefinition> queries = {
-        retrieveCmac,
-        acquireCmac,
-        insertCommunicationStatement,
-        countRepresentativeCommunicationsStatement,
-        countCommunicationsByIdStatement,
-        retrieveCommunicationsStatement,
-        countCommunicationsStatement,
-        retrieveCommunicationIdsStatement,
-        deleteCommunicationStatement,
-        updateCommunicationsRetrievedStatement,
-        deleteCommunicationsForTaskStament,
-        insertAuditEventData,
-        countAuditEventDataStatement,
-        retrieveAuditEventDataStatement,
-        insertOrReturnAccountSalt,
-        retrieveSaltForAccount,
-        healthCheckQuery,
-        retrieveAllMedicationDispensesByKvnr,
-        retrieveAllTasksByKvnr
-    };
+    QUERY(retrieveConsentDateTime, R"--(
+        SELECT EXTRACT(EPOCH FROM date_time) FROM erp.consent WHERE kvnr_hashed = $1
+    )--")
+
+    QUERY(clearConsent, R"--(
+        DELETE FROM erp.consent WHERE kvnr_hashed = $1
+    )--")
+
 #undef QUERY
 
 
@@ -268,6 +226,7 @@ thread_local PostgresConnection PostgresBackend::mConnection{defaultConnectStrin
 PostgresBackend::PostgresBackend (void)
     : mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
     , mBackendTask169(model::PrescriptionType::direkteZuweisung)
+    , mBackendTask200(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
 {
     mConnection.connectIfNeeded();
     mTransaction = mConnection.createTransaction();
@@ -325,7 +284,7 @@ void PostgresBackend::healthCheck()
 }
 
 
-std::vector<db_model::MedicationDispense>
+std::tuple<std::vector<db_model::MedicationDispense>, bool>
 PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnrHashed,
                                                 const std::optional<model::PrescriptionId>& prescriptionId,
                                                 const std::optional<UrlArguments>& search)
@@ -336,7 +295,7 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
     std::string query = retrieveAllMedicationDispensesByKvnr.query;
     if (search.has_value())
     {
-        query.append(search->getSqlExpression(mTransaction->conn(), "                "));
+        query.append(search->getSqlExpression(mTransaction->conn(), "                ", true));
     }
     TVLOG(2) << query;
 
@@ -364,21 +323,20 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
         const auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(res.at(4).as<int16_t>());
         Expect(prescription_type_opt.has_value(), "could not cast to prescription_type");
         auto id = model::PrescriptionId::fromDatabaseId(prescription_type_opt.value(), res[0].as<int64_t>());
-        resultSet.emplace_back(std::move(id), db_model::EncryptedBlob{res[1].as<pqxx::binarystring>()},
+        resultSet.emplace_back(id, db_model::EncryptedBlob{res[1].as<pqxx::binarystring>()},
                                gsl::narrow<BlobId>(res[2].as<int32_t>()),
                                db_model::Blob{res[3].as<pqxx::binarystring>()});
     }
-    return resultSet;
-}
 
-uint64_t PostgresBackend::countAllMedicationDispenses(
-    const db_model::HashedKvnr& kvnr,
-    const std::optional<UrlArguments>& search)
-{
-    checkCommonPreconditions();
-    auto num = mBackendTask.countAllMedicationDispenses(*mTransaction, kvnr, search);
-    num += mBackendTask169.countAllMedicationDispenses(*mTransaction, kvnr, search);
-    return num;
+    bool hasNextPage = search.has_value() && resultSet.size() > search->pagingArgument().getCount();
+    if (hasNextPage)
+    {
+        // We are retrieving paging.count() + 1 items to determine if there is another page.
+        // Therefore, remove the +1 item from the result again.
+        resultSet.pop_back();
+    }
+
+    return std::make_tuple(std::move(resultSet), hasNextPage);
 }
 
 CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource)
@@ -629,6 +587,13 @@ PostgresBackend::retrieveTaskAndPrescription(const model::PrescriptionId& taskId
     return getTaskBackend(taskId.type()).retrieveTaskAndPrescription(*mTransaction, taskId);
 }
 
+std::optional<db_model::Task>
+PostgresBackend::retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId)
+{
+    checkCommonPreconditions();
+    return getTaskBackend(taskId.type()).retrieveTaskAndPrescriptionAndReceipt(*mTransaction, taskId);
+}
+
 std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
     const db_model::HashedKvnr& kvnrHashed,
     const std::optional<UrlArguments>& search)
@@ -673,6 +638,7 @@ uint64_t PostgresBackend::countAllTasksForPatient(
     checkCommonPreconditions();
     auto count = mBackendTask.countAllTasksForPatient(*mTransaction, kvnr, search);
     count += mBackendTask169.countAllTasksForPatient(*mTransaction, kvnr, search);
+    count += mBackendTask200.countAllTasksForPatient(*mTransaction, kvnr, search);
     return count;
 }
 
@@ -931,21 +897,99 @@ PostgresBackend::insertOrReturnAccountSalt(const db_model::HashedId& accountId,
 
 void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
 {
-    (void)kvnr;
-    (void)creationTime;
-    Fail2("PostgresBackend::storeConsent(...) not yet implemented.", std::logic_error);
+    mTransaction->exec_params0(::storeConsent.query, kvnr.binarystring(), creationTime.toXsDateTime());
 }
 
-std::optional<model::Timestamp> PostgresBackend::getConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::optional<model::Timestamp> PostgresBackend::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
 {
-    (void)kvnr;
-    Fail2("PostgresBackend::getConsentDateTime(...) not yet implemented.", std::logic_error);
+    const auto& result = mTransaction->exec_params(::retrieveConsentDateTime.query, kvnr.binarystring());
+    if (result.empty())
+    {
+        return std::nullopt;
+    }
+    Expect(result.size() == 1, "Expected exactly one row.");
+    Expect(result.front().size() == 1, "Expected exactly one column.");
+    return model::Timestamp{result.front().front().as<double>()};
 }
 
 bool PostgresBackend::clearConsent(const db_model::HashedKvnr& kvnr)
 {
-    (void)kvnr;
-    Fail2("PostgresBackend::clearConsent(...) not yet implemented.", std::logic_error);
+    auto result = mTransaction->exec_params0(::clearConsent.query, kvnr.binarystring());
+    return result.affected_rows() > 0;
+}
+
+void PostgresBackend::storeChargeInformation(const db_model::HashedTelematikId& pharmacyTelematikId,
+                                             model::PrescriptionId id, const model::Timestamp& enteredDate,
+                                             const db_model::EncryptedBlob& chargeItem,
+                                             const db_model::EncryptedBlob& dispenseItem)
+{
+    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+           "Attemt to store Chargeinformation for non-PKV Prescription.");
+    checkCommonPreconditions();
+    mBackendTask200.storeChargeInformation(*mTransaction, pharmacyTelematikId, id, enteredDate, chargeItem,
+                                           dispenseItem);
+}
+
+std::vector<db_model::ChargeItem>
+PostgresBackend::retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
+                                                   const std::optional<UrlArguments>& search) const
+{
+    checkCommonPreconditions();
+    return mBackendTask200.retrieveAllChargeItemsForPharmacy(*mTransaction, pharmacyTelematikId, search);
+}
+
+std::vector<db_model::ChargeItem>
+PostgresBackend::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& kvnr,
+                                                   const std::optional<UrlArguments>& search) const
+{
+    checkCommonPreconditions();
+    return mBackendTask200.retrieveAllChargeItemsForInsurant(*mTransaction, kvnr, search);
+}
+
+std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+PostgresBackend::retrieveChargeInformation(const model::PrescriptionId& id) const
+{
+    checkCommonPreconditions();
+    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+           "Attemt to retrieve Chargeinformation for non-PKV Prescription.");
+    return mBackendTask200.retrieveChargeInformation(*mTransaction, id);
+}
+
+std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+PostgresBackend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
+{
+    checkCommonPreconditions();
+    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+           "Attemt to retrieve Chargeinformation for non-PKV Prescription.");
+    return mBackendTask200.retrieveChargeInformationForUpdate(*mTransaction, id);
+}
+
+void PostgresBackend::deleteChargeInformation(const model::PrescriptionId& id)
+{
+    checkCommonPreconditions();
+    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+           "Attemt to delete Chargeinformation for non-PKV Prescription.");
+    return mBackendTask200.deleteChargeInformation(*mTransaction, id);
+}
+
+void PostgresBackend::clearAllChargeInformation(const db_model::HashedKvnr& kvnr)
+{
+    checkCommonPreconditions();
+    return mBackendTask200.clearAllChargeInformation(*mTransaction, kvnr);
+}
+
+uint64_t PostgresBackend::countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
+                                                            const std::optional<UrlArguments>& search)
+{
+    checkCommonPreconditions();
+    return mBackendTask200.countChargeInformationForInsurant(*mTransaction, kvnr, search);
+}
+
+uint64_t PostgresBackend::countChargeInformationForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
+                                                            const std::optional<UrlArguments>& search)
+{
+    checkCommonPreconditions();
+    return mBackendTask200.countChargeInformationForPharmacy(*mTransaction, pharmacyTelematikId, search);
 }
 
 std::optional<db_model::Blob> PostgresBackend::retrieveSaltForAccount(const db_model::HashedId& accountId,
@@ -970,7 +1014,7 @@ std::optional<db_model::Blob> PostgresBackend::retrieveSaltForAccount(const db_m
 }
 
 
-void PostgresBackend::checkCommonPreconditions()
+void PostgresBackend::checkCommonPreconditions() const
 {
     Expect3(mTransaction, "Transaction already committed", std::logic_error);
 }
@@ -984,6 +1028,8 @@ PostgresBackendTask& PostgresBackend::getTaskBackend(const model::PrescriptionTy
             return mBackendTask;
         case model::PrescriptionType::direkteZuweisung:
             return mBackendTask169;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            return mBackendTask200;
     }
     Fail("invalid prescriptionType: " + std::to_string(std::uintmax_t(prescriptionType)));
 }

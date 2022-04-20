@@ -30,13 +30,13 @@ class JWT;
 class PagingArgument;
 
 class ErpRequestHandler
-    : public RequestHandlerInterface<PcServiceContext>
+    : public RequestHandlerInterface
 {
 public:
     explicit ErpRequestHandler (Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     ~ErpRequestHandler (void) override = default;
 
-    void preHandleRequestHook(SessionContext<PcServiceContext>& session) override;
+    void preHandleRequestHook(SessionContext& session) override;
 
     bool allowedForProfessionOID (std::string_view professionOid) const override;
     Operation getOperation (void) const override;
@@ -47,14 +47,14 @@ public:
     static bool callerWantsJson (const ServerRequest& request);
 
 protected:
-    void makeResponse(SessionContext<PcServiceContext>& session, HttpStatus status, const model::ResourceBase* body);
+    void makeResponse(SessionContext& session, HttpStatus status, const model::ResourceBase* body);
     static std::string makeFullUrl(std::string_view tail);
     static std::string getLinkBase ();
 
     /// @brief parse and validate the request body either using TModel::fromJson or TModel::fromXml based on the provided Content-Type
     template<class TModel>
     [[nodiscard]]
-    static TModel parseAndValidateRequestBody(const SessionContext<PcServiceContext>& context, SchemaType schemaType);
+    static TModel parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType);
 
     static std::string getLanguageFromHeader(const Header& requestHeader);
 
@@ -75,7 +75,7 @@ public:
 };
 
 template<class TModel>
-TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext<PcServiceContext>& context, SchemaType schemaType)
+TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType)
 {
     const auto& header = context.request.header();
     const auto& body = context.request.getBody();

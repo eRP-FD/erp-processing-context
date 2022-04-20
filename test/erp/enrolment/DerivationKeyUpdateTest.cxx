@@ -6,9 +6,9 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/PostgresConnection.hxx"
 #include "erp/hsm/ErpTypes.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "tools/ResourceManager.hxx"
 
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "tools/EnrolmentApiClient.hxx"
+#include "test/workflow-test/EndpointTestClient.hxx"
 
 using namespace ::std::literals::chrono_literals;
 using namespace ::std::string_view_literals;
@@ -69,7 +70,7 @@ public:
     }
 
 private:
-    static void createClient()
+    void createClient()
     {
         if (! mEnrolmentApiClient)
         {
@@ -84,12 +85,10 @@ private:
         }
     }
 
-    static ::std::unique_ptr<::EnrolmentApiClient> mEnrolmentApiClient;
+    ::std::unique_ptr<::EnrolmentApiClient> mEnrolmentApiClient;
     ::BlobType mBlobType;
     ::std::string mKeyId;
 };
-
-::std::unique_ptr<::EnrolmentApiClient> TestBlob::mEnrolmentApiClient = {};
 
 struct BlobSet {
     ::TestBlob task = ::TestBlob{::BlobType::TaskKeyDerivation};
@@ -109,20 +108,40 @@ class DerivationKeyUpdateTest : public ErpWorkflowTestTemplate<::testing::TestWi
 public:
     DerivationKeyUpdateTest()
     {
-        if (! runsInCloudEnv() &&
-            ::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
+        if (! runsInCloudEnv())
         {
-            mConnection.connectIfNeeded();
-            mTransaction = mConnection.createTransaction();
+            if (::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
+            {
+                mConnection = std::make_unique<PostgresConnection>(PostgresBackend::defaultConnectString());
+                mTransaction = mConnection->createTransaction();
+            }
+            mTestClient = TestClient::create(nullptr, TestClient::Target::ENROLMENT);
+        }
+    }
+
+    void SetUp() override
+    {
+        if (runsInCloudEnv() ||
+            ! ::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
+        {
+            // These Test can only run, when
+            // a) the enrolment api is reachable (i.e. not in cloud env)
+            // b) against postgres database, not mock database.
+            GTEST_SKIP();
         }
     }
 
     static void forAllTaskTypes(::std::function<void(::model::PrescriptionType)>&& action)
     {
         for (auto taskType :
-             {::model::PrescriptionType::apothekenpflichigeArzneimittel, ::model::PrescriptionType::direkteZuweisung})
+             {::model::PrescriptionType::apothekenpflichigeArzneimittel, ::model::PrescriptionType::direkteZuweisung,
+              ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv})
         {
-            ASSERT_NO_FATAL_FAILURE(action(taskType));
+            if ((taskType != ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv) ||
+                ::Configuration::instance().featurePkvEnabled())
+            {
+                ASSERT_NO_FATAL_FAILURE(action(taskType));
+            }
         }
     }
 
@@ -146,6 +165,20 @@ public:
                 .str();
 
         return queryDatabase(query, manualMode, skip);
+    }
+
+    void forceUpdateBlobCache()
+    {
+        // For compiled-in processing-context (erp-test)
+        // Two blob caches exist in this test due to test framework limitations.
+        // Keep them in sync by getBlob, which triggers rebuildCache if blob is not in cache.
+        // Does not affect the erp-integration-test, where client is not an EndpointTestClient
+        if (auto* context = client->getContext())
+        {
+            context->getBlobCache().getBlob(getLatestBlobId(BlobType::TaskKeyDerivation).value());
+            context->getBlobCache().getBlob(getLatestBlobId(BlobType::AuditLogKeyDerivation).value());
+            context->getBlobCache().getBlob(getLatestBlobId(BlobType::CommunicationKeyDerivation).value());
+        }
     }
 
 protected:
@@ -186,8 +219,9 @@ protected:
         return {};
     }
 
-    ::PostgresConnection mConnection{PostgresBackend::defaultConnectString()};
+    ::std::unique_ptr<::PostgresConnection> mConnection;
     ::std::unique_ptr<::pqxx::work> mTransaction;
+    ::std::unique_ptr<TestClient> mTestClient;
 };
 
 class TestTask
@@ -200,15 +234,19 @@ public:
         mTest.generateNewRandomKVNR(mKvnr);
     }
 
+
+
     void create()
     {
         ::std::cout << "Creating Task for KVNr " << mKvnr << ::std::endl;
+        mTest.forceUpdateBlobCache();
         ASSERT_NO_FATAL_FAILURE(mTest.checkTaskCreate(mPrescriptionId, mAccessCode, mPrescriptionType));
     }
 
     void activate()
     {
         ::std::cout << "Activating Task for KVNr " << mKvnr << ::std::endl;
+        mTest.forceUpdateBlobCache();
         ASSERT_NO_FATAL_FAILURE(
             mTest.checkTaskActivate(mQesBundle, mCommunications, *mPrescriptionId, mKvnr, mAccessCode));
     }
@@ -216,6 +254,7 @@ public:
     void accept()
     {
         ::std::cout << "Accepting Task for KVNr " << mKvnr << ::std::endl;
+        mTest.forceUpdateBlobCache();
         ASSERT_NO_FATAL_FAILURE(
             mTest.checkTaskAccept(mSecret, mLastModifiedDate, *mPrescriptionId, mKvnr, mAccessCode, mQesBundle));
     }
@@ -223,12 +262,14 @@ public:
     void reject()
     {
         ::std::cout << "Rejecting Task for KVNr " << mKvnr << ::std::endl;
+        mTest.forceUpdateBlobCache();
         ASSERT_NO_FATAL_FAILURE(mTest.checkTaskReject(*mPrescriptionId, mKvnr, mAccessCode, mSecret));
     }
 
     void close()
     {
         ::std::cout << "Closing Task for KVNr " << mKvnr << ::std::endl;
+        mTest.forceUpdateBlobCache();
         ASSERT_NO_FATAL_FAILURE(
             mTest.checkTaskClose(*mPrescriptionId, mKvnr, mSecret, *mLastModifiedDate, mCommunications));
 
@@ -257,6 +298,7 @@ public:
     void abort()
     {
         ::std::cout << "Aborting Task for KVNr " << mKvnr << ::std::endl;
+        mTest.forceUpdateBlobCache();
         ASSERT_NO_FATAL_FAILURE(
             mTest.taskAbort(*mPrescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), mAccessCode, {}));
     }
@@ -275,11 +317,6 @@ private:
 
 TEST_F(DerivationKeyUpdateTest, Delete)
 {
-    if (runsInCloudEnv())
-    {
-        GTEST_SKIP();
-    }
-
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
@@ -320,13 +357,6 @@ TEST_F(DerivationKeyUpdateTest, Delete)
 
 TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)
 {
-    if (runsInCloudEnv() ||
-        ! ::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
-    {
-        // This test requires access to the enrolemnt API and checks a database constraint and thus only works on a local, non-mocked database.
-        GTEST_SKIP();
-    }
-
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
@@ -363,13 +393,6 @@ TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)
 
 TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)
 {
-    if (runsInCloudEnv() ||
-        ! ::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
-    {
-        // This test requires access to the enrolemnt API and checks a database constraint and thus only works on a local, non-mocked database.
-        GTEST_SKIP();
-    }
-
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
@@ -422,13 +445,6 @@ TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)
 
 TEST_F(DerivationKeyUpdateTest, DeleteMultiple)
 {
-    if (runsInCloudEnv() ||
-        ! ::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
-    {
-        // This test requires access to the enrolemnt API and checks a database constraint and thus only works on a local, non-mocked database.
-        GTEST_SKIP();
-    }
-
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
@@ -497,12 +513,6 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)
 TEST_P(DerivationKeyUpdateTest, TaskWorkflows)
 {
     const auto isManual = GetParam();
-
-    if (! isManual && runsInCloudEnv())
-    {
-        // Automatic test requires enrolment API access.
-        GTEST_SKIP();
-    }
 
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation, isManual);
     const auto initialLastCommunicationBlobId =

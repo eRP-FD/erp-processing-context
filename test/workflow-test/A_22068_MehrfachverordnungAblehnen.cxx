@@ -8,7 +8,7 @@
 
 #include "erp/model/OperationOutcome.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "tools/ResourceManager.hxx"
+#include "test/util/ResourceManager.hxx"
 
 class A_22068_MehrfachverordnungAblehnen : public ErpWorkflowTest
 {
@@ -20,6 +20,7 @@ TEST_F(A_22068_MehrfachverordnungAblehnen, run)
 {
     auto& resourceManager = ResourceManager::instance();
     auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle_mehrfachverordnung.xml");
+    bundle = patchVersionsInBundle(bundle);
     std::string kvnr;
     ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
     std::optional<model::Task> task;

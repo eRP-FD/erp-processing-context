@@ -98,17 +98,16 @@ public:
     retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
+    std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
     std::vector<db_model::Task> retrieveAllTasksForPatient (const db_model::HashedKvnr& kvnrHashed,
                                                             const std::optional<UrlArguments>& search) override;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) override;
 
-    std::vector<db_model::MedicationDispense>
+    std::tuple<std::vector<db_model::MedicationDispense>, bool>
     retrieveAllMedicationDispenses (const db_model::HashedKvnr& kvnr,
                                     const std::optional<model::PrescriptionId>& prescriptionId,
                                     const std::optional<UrlArguments>& search) override;
-    uint64_t countAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
-                                         const std::optional<UrlArguments>& search) override;
 
     CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
 
@@ -194,8 +193,35 @@ public:
                               const db_model::Blob& salt) override;
 
     void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
-    std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr & kvnr) override;
+    std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr & kvnr) override;
     [[nodiscard]] bool clearConsent(const db_model::HashedKvnr & kvnr) override;
+
+    void storeChargeInformation(const db_model::HashedTelematikId& pharmacyId, model::PrescriptionId id,
+                                const model::Timestamp& enteredDate,
+                                const db_model::EncryptedBlob& chargeItem,
+                                const db_model::EncryptedBlob& dispenseItem) override;
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::vector<db_model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
+                                      const std::optional<UrlArguments>& search) const override;
+
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformation(const model::PrescriptionId & id) const override;
+    std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
+    retrieveChargeInformationForUpdate(const model::PrescriptionId & id) const override;
+
+    void deleteChargeInformation(const model::PrescriptionId& id) override;
+    void clearAllChargeInformation(const db_model::HashedKvnr& insurant) override;
+
+    uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
+                                               const std::optional<UrlArguments>& search) override;
+
+    uint64_t countChargeInformationForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
+                                               const std::optional<UrlArguments>& search) override;
 
     bool isBlobUsed(BlobId blobId) const;
 
@@ -206,20 +232,20 @@ private:
                                                                  Compression::DictionaryUse dictUse
                                                                     = Compression::DictionaryUse::Default_json) const;
 
-    SafeString getMedicationDispenseKey(const db_model::HashedKvnr& kvnr,
-                                        std::optional<BlobId> blobId);
+    SafeString getMedicationDispenseKey(const db_model::HashedKvnr& kvnr, BlobId blobId);
 
     SafeString getAuditEventKey(const db_model::HashedKvnr& kvnr, BlobId& blobId);
 
     void insertTask(const model::Task& task,
                     const std::optional<std::string>& medicationDispense = std::nullopt,
-                    const std::optional<std::string>& healthCareProviderPrescription = std::nullopt);
+                    const std::optional<std::string>& healthCareProviderPrescription = std::nullopt,
+                    const std::optional<std::string>& receipt = std::nullopt);
 
+    void insertChargeItem(const model::PrescriptionId& prescriptionId,
+                          const model::ChargeItem& chargeItem,
+                          const std::string& dispenseItemXML);
     void insertAuditEvent(const model::AuditEvent& auditEvent,
                           model::AuditEventId id);
-
-    MockTaskTable& getTaskTable(model::PrescriptionType prescriptionType);
-
 
     std::mutex mutex;
 
@@ -227,8 +253,7 @@ private:
 
     std::map<std::string, CmacKey> mCmac;
     MockAccountTable mAccounts;
-    MockTaskTable mTasks;
-    MockTaskTable mTasks169;
+    std::map<model::PrescriptionType, MockTaskTable> mTasks;
     MockCommunicationTable mCommunications;
     MockConsentTable mConsents;
     KeyDerivation mDerivation;

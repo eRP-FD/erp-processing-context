@@ -3,20 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-set(ERP_TOOL_LIB_SOURCES
-    jwt/JwtBuilder.cxx
-    ResourceManager.cxx
-)
-
-set(JWT_SOURCES
-    jwt/jwt_main.cxx
-)
-
 set(VAU_ENC_SOURCES vau_encrypt/vau_encrypt_main.cxx)
-
-set(RESOURCE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/resources")
-set(RESOURCE_BINARY_DIR "${CMAKE_BINARY_DIR}/bin/resources")
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/tool_config.hxx.in" "${CMAKE_CURRENT_BINARY_DIR}/tool_config.hxx")
 
 add_library(erp-tool-lib EXCLUDE_FROM_ALL OBJECT ${ERP_TOOL_LIB_SOURCES})
 target_compile_definitions(erp-tool-lib PUBLIC WITH_HSM_MOCK=1)
@@ -33,13 +20,6 @@ target_link_libraries(erp-tool-lib
         erp-processing-context-files
     )
 
-add_executable(jwt EXCLUDE_FROM_ALL ${JWT_SOURCES})
-target_link_libraries(jwt
-    PUBLIC
-        erp-tool-lib
-        erp-test-lib
-        erp-processing-context-files
-)
 add_executable(vau_encrypt EXCLUDE_FROM_ALL ${VAU_ENC_SOURCES})
 target_link_libraries(vau_encrypt
     PUBLIC
@@ -97,6 +77,6 @@ target_link_libraries(fhirconvert
         erp-processing-context-files
 )
 
-add_custom_target(tools DEPENDS jwt vau_encrypt make_task_id fhirconvert resources)
+add_custom_target(tools DEPENDS vau_encrypt make_task_id fhirconvert resources)
 
 

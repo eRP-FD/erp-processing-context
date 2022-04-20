@@ -104,6 +104,13 @@ HsmSession::HsmSession (
 {
 }
 
+::Nonce HsmSession::getNonce(uint32_t input)
+{
+    return guardedRun<::Nonce>(*this, [&] {
+        markHsmCallTime();
+        return mClient.getNonce(*mRawSession, input);
+    });
+}
 
 void HsmSession::setTeeToken (const ErpBlob& teeToken)
 {
@@ -282,6 +289,10 @@ ErpArray<Aes256Length> HsmSession::getTelematikIdHmacKey (void)
     });
 }
 
+::ParsedQuote HsmSession::parseQuote(const ::ErpVector& quote) const
+{
+    return mClient.parseQuote(quote);
+}
 
 DeriveKeyInput HsmSession::makeDeriveKeyInput(
     const BlobType blobType,

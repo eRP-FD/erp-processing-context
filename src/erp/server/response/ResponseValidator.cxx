@@ -111,6 +111,7 @@ namespace {
             Operation::POST_Task_id_activate,
             Operation::POST_Task_id_accept,
             Operation::POST_Task_id_close,
+            Operation::POST_Communication,
             Operation::POST_Subscription,
             // PKV specific:  ->
             Operation::GET_ChargeItem,

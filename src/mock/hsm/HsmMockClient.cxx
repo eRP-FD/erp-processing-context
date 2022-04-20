@@ -35,6 +35,10 @@ HsmMockClient::HsmMockClient (void)
     TVLOG(0) << "creating mock HSM client";
 }
 
+::Nonce HsmMockClient::getNonce([[maybe_unused]] const ::HsmRawSession& session, [[maybe_unused]] uint32_t input)
+{
+    return {};
+}
 
 ErpBlob HsmMockClient::getTeeToken(
     const HsmRawSession&,
@@ -152,6 +156,10 @@ ErpArray<Aes256Length> HsmMockClient::unwrapHashKey(
     return result;
 }
 
+::ParsedQuote HsmMockClient::parseQuote([[maybe_unused]] const ::ErpVector& quote) const
+{
+    return {};
+}
 
 DeriveKeyOutput HsmMockClient::derivePersistenceKey(DeriveKeyInput&& input, ::BlobType expectedBlobType)
 {

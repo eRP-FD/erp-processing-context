@@ -26,23 +26,10 @@ class PcServiceContext;
  * and visible only to a single request handler.
  * The exception is a reference to the, effectively global, ServiceContext.
  */
-template<class ServiceContextType>
 class SessionContext : private boost::noncopyable
 {
 public:
-    SessionContext(ServiceContextType& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& accessLog_);
-
-    ServiceContextType& serviceContext;
-    ServerRequest& request;
-    ServerResponse& response;
-    AccessLog& accessLog;
-};
-
-template <>
-class SessionContext<PcServiceContext>
-{
-public:
-    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& accessLog);
+    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& accessLog_);
 
     PcServiceContext& serviceContext;
     ServerRequest& request;

@@ -93,7 +93,8 @@ namespace
                         {
                           parameters.session->setTeeToken(std::move(blob));
                         },
-                        *parameters.factory
+                        *parameters.factory,
+                        std::make_shared<Timer>()
                     )->update();
 
                 return parameters;

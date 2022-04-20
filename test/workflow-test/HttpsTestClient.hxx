@@ -16,7 +16,7 @@ class HttpsTestClient
     : public TestClient
 {
 public:
-    static std::unique_ptr<TestClient> Factory(std::shared_ptr<XmlValidator> xmlValidator);
+    static std::unique_ptr<TestClient> factory(std::shared_ptr<XmlValidator> xmlValidator, Target target);
 
     ~HttpsTestClient() override;
 
@@ -40,6 +40,7 @@ protected:
     ClientResponse send(const ClientRequest & clientRequest) override;
 private:
     std::unique_ptr<Certificate> retrieveEciesRemoteCertificate();
+    static uint16_t getTargetPort(Target target);
 
     HttpsClient mHttpsClient;
     std::string const mServerAddress;

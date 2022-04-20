@@ -7,7 +7,6 @@
 
 #include "erp/service/HealthHandler.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/hsm/BlobCache.hxx"
 #include "erp/model/Health.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
@@ -105,8 +104,8 @@ class HealthHandlerTestTeeTokenUpdater : public TeeTokenUpdater
 {
 public:
     explicit HealthHandlerTestTeeTokenUpdater(TokenConsumer&& teeTokenConsumer, HsmFactory& hsmFactory,
-                                              TokenProvider&& tokenProvider)
-        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), 100ms, 100ms)
+                                              TokenProvider&& tokenProvider, std::shared_ptr<Timer> timerManager)
+        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), timerManager, 100ms, 100ms)
     {
     }
 };
@@ -117,7 +116,7 @@ class HealthHandlerTestTeeTokenUpdaterFactory
 public:
     static TeeTokenUpdater::TeeTokenUpdaterFactory createHealthHandlerTestMockTeeTokenUpdaterFactory()
     {
-        return [](auto&& tokenConsumer, auto& hsmFactory) {
+        return [](auto&& tokenConsumer, auto& hsmFactory, std::shared_ptr<Timer> timerManager) {
             return std::make_unique<HealthHandlerTestTeeTokenUpdater>(
                 std::forward<decltype(tokenConsumer)>(tokenConsumer), hsmFactory, [](HsmFactory&) {
                     if (HealthHandlerTestTeeTokenUpdaterFactory::fail)
@@ -126,7 +125,8 @@ public:
                     }
                     // Tests that use a mock HSM don't need a TEE token. An empty blob is enough.
                     return ErpBlob();
-                });
+                },
+                timerManager);
         };
     }
 
@@ -173,7 +173,7 @@ public:
         , releasedatePointer("/version/releasedate")
         , mGuardERP_HSM_DEVICE("ERP_HSM_DEVICE", "127.0.0.1")
         , mGuardERP_TSL_INITIAL_CA_DER_PATH("ERP_TSL_INITIAL_CA_DER_PATH",
-                                            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der")
+                                            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der")
     {
         createServiceContext();
     }
@@ -183,28 +183,30 @@ public:
         const auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
         const auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
         const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
-        mServiceContext = std::make_unique<PcServiceContext>(
-            Configuration::instance(),
-            [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
-                auto md = std::make_unique<HealthHandlerTestMockDatabase>(hsmPool);
-                return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
-            },
-            std::make_unique<HealthHandlerTestMockRedisStore>(),
-            std::make_unique<HsmPool>(
-                std::make_unique<HsmMockFactory>(std::make_unique<HealthHandlerTestHsmMockClient>(), mBlobCache),
-                HealthHandlerTestTeeTokenUpdaterFactory::createHealthHandlerTestMockTeeTokenUpdaterFactory()),
-            StaticData::getJsonValidator(), StaticData::getXmlValidator(), StaticData::getInCodeValidator(),
-            std::make_unique<RegistrationManager>("localhost", 9090, std::make_unique<MockRedisStore>()),
-            TslTestHelper::createTslManager<HealthHandlerTestTslManager>(
+
+        auto factories = StaticData::makeMockFactories();
+        factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            auto md = std::make_unique<HealthHandlerTestMockDatabase>(hsmPool);
+            return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
+        };
+
+        factories.redisClientFactory = []{return std::make_unique<HealthHandlerTestMockRedisStore>();};
+        factories.hsmClientFactory = []{return std::make_unique<HealthHandlerTestHsmMockClient>();};
+        factories.teeTokenUpdaterFactory = HealthHandlerTestTeeTokenUpdaterFactory::createHealthHandlerTestMockTeeTokenUpdaterFactory();
+        factories.tslManagerFactory = [cert, certCA, ocspUrl](const std::shared_ptr<XmlValidator> &){
+            return TslTestHelper::createTslManager<HealthHandlerTestTslManager>(
                 CFdSigErpTestHelper::createRequestSender<UrlRequestSenderMock>(),
                 {},
-                {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}}));
-        mContext = std::make_unique<SessionContext<PcServiceContext>>(*mServiceContext, request, response, mAccessLog);
+                {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+        };
+        factories.blobCacheFactory = [this](){return mBlobCache;};
+        mServiceContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
+        mContext = std::make_unique<SessionContext>(*mServiceContext, request, response, mAccessLog);
 
         mPool.setUp(1);
         using namespace std::chrono_literals;
         mServiceContext->setPrngSeeder(std::make_unique<HealthHandlerTestSeedTimerMock>(
-            mPool, *mServiceContext->getHsmPool(), 1, 200ms, [](const SafeString&) {}));
+            mPool, mServiceContext->getHsmPool(), 1, 200ms, [](const SafeString&) {}));
     }
 
     void handleRequest(bool withIdpUpdate = true)
@@ -224,9 +226,6 @@ public:
         const rapidjson::Pointer& pointer,
         const std::string expectedValue)
     {
-        const auto* jsonValue = pointer.Get(document);
-        ASSERT_NE(jsonValue, nullptr);
-        ASSERT_TRUE(jsonValue->IsString());
         const std::string value = pointer.Get(document)->GetString();
         EXPECT_TRUE(value.find(expectedValue) != std::string::npos);
     }
@@ -237,7 +236,7 @@ protected:
     ServerRequest request;
     ServerResponse response;
     AccessLog mAccessLog;
-    std::unique_ptr<SessionContext<PcServiceContext>> mContext;
+    std::unique_ptr<SessionContext> mContext;
     ThreadPool mPool;
     HealthHandler mHandler;
     rapidjson::Pointer statusPointer;
@@ -498,9 +497,8 @@ TEST_F(HealthHandlerTest, VauSigBlobMissing)
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
     EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "");
     EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "");
-    EXPECT_NO_FATAL_FAILURE(
-        verifyRootCause(healthDocument, cFdSigErpRootCausePointer,
-                    "std::runtime_error(never successfully validated) at unknown location"));
+    verifyRootCause(healthDocument, cFdSigErpRootCausePointer,
+                    "std::runtime_error(never successfully validated) at unknown location");
 
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }

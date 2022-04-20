@@ -68,8 +68,9 @@ std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::Url
 
 IdpUpdater::IdpUpdater (
     Idp& certificateHolder,
-    const std::shared_ptr<TslManager>& tslManager,
-    const std::shared_ptr<UrlRequestSender>& urlRequestSender)
+    TslManager* tslManager,
+    const std::shared_ptr<UrlRequestSender>& urlRequestSender,
+    std::shared_ptr<Timer> timerManager)
     : mUpdateFailureCount(),
       mCertificateHolder(certificateHolder),
       mTslManager(tslManager),
@@ -78,8 +79,10 @@ IdpUpdater::IdpUpdater (
       mIsUpdateActive(false),
       mUpdateHookId(),
       mCertificateMaxAge(getMaxCertificateAge()),
-      mLastSuccessfulUpdate()
+      mLastSuccessfulUpdate(),
+      mTimerManager(timerManager)
 {
+    Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);
     SafeString idpSslRootCa;
     const std::string idpRootCaFile =
         Configuration::instance().getOptionalStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH, "");
@@ -108,7 +111,7 @@ IdpUpdater::IdpUpdater (
     // Start a repeating background job that periodically updates the IDP signer certificate.
     const auto updateInterval = std::chrono::minutes(
         Configuration::instance().getOptionalIntValue(ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES, 60));
-    mTimerJobToken = Timer::instance().runRepeating(
+    mTimerJobToken = mTimerManager->runRepeating(
         updateInterval,
         updateInterval,
         [this]
@@ -127,7 +130,7 @@ IdpUpdater::IdpUpdater (
 
 IdpUpdater::~IdpUpdater (void)
 {
-    Timer::instance().cancel(mTimerJobToken);
+    mTimerManager->cancel(mTimerJobToken);
     if (mTslManager != nullptr && mUpdateHookId.has_value())
     {
         mTslManager->disablePostUpdateHook(*mUpdateHookId);

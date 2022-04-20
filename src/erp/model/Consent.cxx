@@ -32,6 +32,7 @@ const std::string consent_template = R"--(
       ""
     ]
   },
+  "status": "active",
   "scope": {
     "coding": [
       {

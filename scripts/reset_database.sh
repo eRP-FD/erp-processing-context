@@ -9,13 +9,21 @@ set -e
 
 HERE="$(cd $(dirname $0); pwd -P)"
 
-DB_HOST=localhost
-DB_PORT=5430
-DB_NAME=postgres
-DB_USER=erp_admin
 PSQL_BIN="/usr/bin/psql"
 
-read -p "Password ${DB_USER}@${DB_HOST}:" -s DB_PASSWORD
+DB_NAME=postgres
+if [ "$#" = 5 ]; then
+    DB_HOST=$1
+    DB_PORT=$2
+    DB_USER=$4
+    DB_PASSWORD=$5
+else
+    DB_HOST=localhost
+    DB_PORT=5430
+    DB_USER=erp_admin
+    read -p "Password ${DB_USER}@${DB_HOST}:" -s DB_PASSWORD
+fi
+
 echo
 
 PSQL_ARGS=("--no-password" "--no-readline" "--echo-errors" "--quiet" "--set=ON_ERROR_STOP=1")
@@ -65,7 +73,11 @@ echo "Creating database."
 run_psql -f "${HERE}/sql/create_database_and_roles.sql" || die "Database creation failed."
 
 # after now use the newly created database
-DB_NAME="erp_processing_context"
+if [ "$#" = 5 ]; then
+    DB_NAME=$3
+else
+    DB_NAME="erp_processing_context"
+fi
 
 echo -e "\nCreating tables."
 run_psql -f "${HERE}/sql/erp_partitioned.sql" || die "Table creation failed."

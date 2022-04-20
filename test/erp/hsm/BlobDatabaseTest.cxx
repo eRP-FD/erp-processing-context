@@ -362,7 +362,7 @@ TEST_P(BlobDatabaseTest, blob_crud_withMetadata)
     entry.blob.generation = 1;
     entry.id = 0;
     entry.metaAkName = ErpArray<TpmObjectNameLength>::create("< 012345678901234567890123456789 >");
-    entry.metaPcrSet = PcrSet::fromString("2,4,6");
+    entry.pcrSet = PcrSet::fromString("2,4,6");
 
     // Store it.
     rememberToDeleteBlob(entry.type, entry.name);
@@ -374,8 +374,8 @@ TEST_P(BlobDatabaseTest, blob_crud_withMetadata)
     ASSERT_EQ(retrieved.id, blobId);
     ASSERT_TRUE(retrieved.metaAkName.has_value());
     ASSERT_EQ(retrieved.metaAkName, ErpArray<TpmObjectNameLength>::create("< 012345678901234567890123456789 >"));
-    ASSERT_TRUE(retrieved.metaPcrSet.has_value());
-    ASSERT_EQ(retrieved.metaPcrSet, PcrSet::fromString("2,4,6"));
+    ASSERT_TRUE(retrieved.pcrSet.has_value());
+    ASSERT_EQ(retrieved.pcrSet, PcrSet::fromString("2,4,6"));
 
     // Delete it.
     databaseFactory()->deleteBlob(entry.type, entry.name);

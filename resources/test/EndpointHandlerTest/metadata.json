@@ -24,7 +24,7 @@
       "resource": [
         {
           "type": "Task",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxTask|1.1.1",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxTask",
           "interaction": [
             {
               "code": "create"
@@ -76,12 +76,12 @@
         },
         {
           "type": "Communication",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Communication|4.0.1",
+          "profile": "http://hl7.org/fhir/StructureDefinition/Communication",
           "supportedProfile": [
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq|1.1.1",
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply|1.1.1",
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq|1.1.1",
-            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative|1.1.1"
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq",
+            "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"
           ],
           "interaction": [
             {
@@ -115,7 +115,7 @@
         },
         {
           "type": "MedicationDispense",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense|1.1.1",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense",
           "interaction": [
             {
               "code": "read"
@@ -138,7 +138,7 @@
         },
         {
           "type": "AuditEvent",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent|1.1.1",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent",
           "interaction": [
             {
               "code": "read"
@@ -157,7 +157,7 @@
         },
         {
           "type": "Device",
-          "profile": "https://gematik.de/fhir/StructureDefinition/ErxDevice|1.1.1",
+          "profile": "https://gematik.de/fhir/StructureDefinition/ErxDevice",
           "interaction": [
             {
               "code": "read"

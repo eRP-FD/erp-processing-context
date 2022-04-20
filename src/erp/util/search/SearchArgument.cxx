@@ -4,6 +4,7 @@
  */
 
 #include "erp/util/search/SearchArgument.hxx"
+#include "erp/util/UrlHelper.hxx"
 #include "erp/model/Task.hxx"
 
 #include <boost/algorithm/string/join.hpp>
@@ -61,6 +62,8 @@ std::string SearchArgument::valuesAsString() const
         return String::concatenateStrings(std::get<std::vector<std::string>>(values), ",");
     case Type::TaskStatus:
         return taskStatusAsString();
+    case Type::PrescriptionId:
+        return prescriptionIdValuesAsString();
     }
     ErpFail(HttpStatus::InternalServerError, "check the switch-case above for missing return statement");
 }
@@ -78,6 +81,8 @@ size_t SearchArgument::valuesCount() const
         return std::get<std::vector<std::string>>(values).size();
     case Type::TaskStatus:
         return std::get<std::vector<model::Task::Status>>(values).size();
+    case Type::PrescriptionId:
+        return std::get<std::vector<model::PrescriptionId>>(values).size();
     }
     ErpFail(HttpStatus::InternalServerError, "check the switch-case above for missing return statement");
 }
@@ -95,6 +100,8 @@ std::string SearchArgument::valueAsString (size_t idx) const
         case Type::String:
         case Type::TaskStatus:
             return std::get<std::vector<std::string>>(values)[idx];
+        case Type::PrescriptionId:
+            return originalValues[idx];
     }
     ErpFail(HttpStatus::InternalServerError, "check the switch-case above for missing return statement");
 }
@@ -124,6 +131,14 @@ model::Task::Status SearchArgument::valueAsTaskStatus(size_t idx) const
 
     ErpExpect(type == Type::TaskStatus, HttpStatus::InternalServerError, "value is not a task status");
     return std::get<std::vector<model::Task::Status>>(values)[idx];
+}
+
+model::PrescriptionId SearchArgument::valueAsPrescriptionId(size_t idx) const
+{
+    checkValueIndex(idx);
+
+    ErpExpect(type == Type::PrescriptionId, HttpStatus::InternalServerError, "value is not a PrescriptionID");
+    return std::get<std::vector<model::PrescriptionId>>(values)[idx];
 }
 
 
@@ -156,9 +171,9 @@ std::string SearchArgument::prefixAsString (const Prefix prefix)
 void SearchArgument::appendLinkString (std::ostream& os) const
 {
     if (type == Type::Date)
-        os << originalName << '=' << prefixAsString() << valuesAsString();
+        os << originalName << '=' << prefixAsString() << UrlHelper::escapeUrl(valuesAsString());
     else
-        os << originalName << '=' << valuesAsString();
+        os << originalName << '=' << UrlHelper::escapeUrl(valuesAsString());
 }
 
 void SearchArgument::checkValueIndex(size_t idx) const
@@ -218,6 +233,21 @@ std::string SearchArgument::taskStatusAsString() const
             valuesString.append(",");
         }
         valuesString.append(model::Task::StatusNames.at(taskStatus));
+    }
+    return valuesString;
+}
+
+std::string SearchArgument::prescriptionIdValuesAsString() const
+{
+    std::string valuesString;
+    const auto& prescriptionIdvalues = std::get<std::vector<model::PrescriptionId>>(values);
+    for (const auto& item : prescriptionIdvalues)
+    {
+        if (!valuesString.empty())
+        {
+            valuesString.append(",");
+        }
+        valuesString.append(item.toString());
     }
     return valuesString;
 }

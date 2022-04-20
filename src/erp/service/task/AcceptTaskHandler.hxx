@@ -14,6 +14,9 @@ class AcceptTaskHandler : public TaskHandlerBase
 public:
     AcceptTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     void handleRequest (PcSessionContext& session) override;
+
+private:
+    static void checkTaskPreconditions(const PcSessionContext& session, const model::Task& task);
 };
 
 

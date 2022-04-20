@@ -54,7 +54,7 @@ public:
     {
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/tsl/TslSignerCertificateIssuer.der");
+            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
         MockTerminationHandler::setupForProduction();
     }
 
@@ -74,34 +74,11 @@ public:
     {
         ErpMain::StateCondition state (ErpMain::State::Unknown);
         auto processingContextThread = std::thread(
-            [&state,
-            blobCache=MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)]
+            [&state]
             {
                 // Run the processing context in a thread so that it does not block the test.
                 ThreadNames::instance().setCurrentThreadName("pc-main");
-                ErpMain::Factories factories;
-                factories.databaseFactory =
-                [] (HsmPool& hsmPool, KeyDerivation& keyDerivation) -> std::unique_ptr<Database>
-                {
-                    std::unique_ptr<DatabaseBackend> backend;
-                    if (usePostgres())
-                        backend = std::make_unique<PostgresBackend>();
-                    else
-                        backend = std::make_unique<MockDatabase>(hsmPool);
-                    return std::make_unique<DatabaseFrontend>(std::move(backend), hsmPool, keyDerivation);
-                };
-                factories.blobCacheFactory = [&blobCache]
-                {
-                    return blobCache;
-                };
-                factories.hsmClientFactory = []{return std::make_unique<HsmMockClient>();};
-                factories.hsmFactoryFactory = [&blobCache](auto,auto)
-                {
-                    auto cache = blobCache;
-                    return std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), std::move(cache));
-                };
-                factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
-
+                auto factories = StaticData::makeMockFactoriesWithServers();
                 factories.tslManagerFactory = [](auto) {
                     auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
                     auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
@@ -109,17 +86,7 @@ public:
                     return TslTestHelper::createTslManager<TslManager>(
                         {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
                 };
-
-                factories.redisClientFactory =
-                    []
-                     {
-                        return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
-                            ? std::unique_ptr<RedisInterface>(new MockRedisStore())
-                            : std::unique_ptr<RedisInterface>(new RedisClient());
-                    };
-
                 ErpMain::runApplication(
-                    9191,
                     std::move(factories),
                     state,
                     [](PcServiceContext& serviceContext)
@@ -236,7 +203,7 @@ TEST_F(ErpMainTest, runProcessingContext_SIGTERM)
 
 TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
 {
-    EnvironmentVariableGuard disableAdminApiAuth{"DEBUG_DISABLE_ADMIN_AUTH", "true"};
+    EnvironmentVariableGuard adminApiAuth{"ERP_ADMIN_CREDENTIALS", "cred"};
     runApplication(
         []
         {
@@ -248,6 +215,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
                     Header(HttpMethod::POST, "/admin/shutdown", 11,
                            {
                                {Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
+                               {Header::Authorization, "Basic cred"}
                            },
                            HttpStatus::Unknown),
                     "delay-seconds=1"));
@@ -259,7 +227,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
 
 TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
 {
-    EnvironmentVariableGuard disableAdminApiAuth{"DEBUG_DISABLE_ADMIN_AUTH", "true"};
+    EnvironmentVariableGuard adminApiAuth{"ERP_ADMIN_CREDENTIALS", "cred"};
     runApplication(
         []
         {
@@ -271,6 +239,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
                     Header(HttpMethod::POST, "/admin/shutdown", 11,
                            {
                                {Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
+                               {Header::Authorization, "Basic cred"}
                            },
                            HttpStatus::Unknown),
                     "delay-seconds=1"));
@@ -288,7 +257,7 @@ TEST_F(ErpMainTest, getEnrolementServerPort_activeEnrolment)
     EnvironmentVariableGuard enrolmentPortGuard ("ERP_ENROLMENT_SERVER_PORT", "2345");
     EnvironmentVariableGuard activateForPortGuard ("ERP_ENROLMENT_ACTIVATE_FOR_PORT", "1234"); // matches the server port
 
-    const auto enrolmentPort = ErpMain::getEnrolementServerPort(1234, 1002);
+    const auto enrolmentPort = getEnrolementServerPort(1234, 1002);
 
     // Expect the default was not used and that the enrolment server is active.
     ASSERT_TRUE(enrolmentPort.has_value());
@@ -301,7 +270,7 @@ TEST_F(ErpMainTest, getEnrolementServerPort_inactiveEnrolment)
     EnvironmentVariableGuard enrolmentPortGuard ("ERP_ENROLMENT_SERVER_PORT", "2345");
     EnvironmentVariableGuard activateForPortGuard ("ERP_ENROLMENT_ACTIVATE_FOR_PORT", "1235"); // does not match the server port
 
-    const auto enrolmentPort = ErpMain::getEnrolementServerPort(1234, 1002);
+    const auto enrolmentPort = getEnrolementServerPort(1234, 1002);
 
     // Expect that the default was not used and that the enrolment server is not active.
     ASSERT_FALSE(enrolmentPort.has_value());

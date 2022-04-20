@@ -34,7 +34,7 @@ TEST(SeedTimerTest, distribute)
     HsmPool mockHsmPool{
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
                                          MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory()};
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()};
     SeedTimer seedTimer(pool, mockHsmPool, threads, interval,
                         [&](const SafeString& seed){
                             ++callCount;

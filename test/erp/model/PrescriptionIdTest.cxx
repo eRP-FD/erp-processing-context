@@ -3,8 +3,9 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/model/PrescriptionId.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/ErpRequirements.hxx"
+#include "erp/model/ModelException.hxx"
 
 #include <gtest/gtest.h>
 
@@ -74,3 +75,41 @@ TEST(PrescriptionIdTest, deriveUuid)
     EXPECT_NE(uuid2, uuid4);
     EXPECT_EQ(uuid3, uuid4);
 }
+
+TEST(PrescriptionIdTest, deriveMedicationDispenseId)
+{
+    auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
+    using model::MedicationDispenseId;
+    EXPECT_EQ(MedicationDispenseId(id, 0).toString(), id.toString());
+    EXPECT_EQ(MedicationDispenseId(id, 1).toString(), id.toString() + "-1");
+    EXPECT_EQ(MedicationDispenseId(id, 99).toString(), id.toString() + "-99");
+}
+
+
+TEST(PrescriptionIdTest, fromMedicationDispenseId)
+{
+    auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
+    auto str = id.toString();
+    EXPECT_THROW((void)model::MedicationDispenseId::fromString(str + "-"), model::ModelException);
+    EXPECT_THROW((void)model::MedicationDispenseId::fromString(str + "--"), model::ModelException);
+    EXPECT_THROW((void)model::MedicationDispenseId::fromString(str + "-A"), model::ModelException);
+    EXPECT_THROW((void)model::MedicationDispenseId::fromString(str + "1"), model::ModelException);
+    EXPECT_THROW((void)model::MedicationDispenseId::fromString(str + "-0"), model::ModelException);
+
+    {
+        auto medid = model::MedicationDispenseId::fromString(str);
+        EXPECT_EQ(medid.getPrescriptionId(), id);
+        EXPECT_EQ(medid.getIndex(), 0);
+    }
+    {
+        auto medid = model::MedicationDispenseId::fromString(str + "-1");
+        EXPECT_EQ(medid.getPrescriptionId(), id);
+        EXPECT_EQ(medid.getIndex(), 1);
+    }
+    {
+        auto medid = model::MedicationDispenseId::fromString(str + "-99");
+        EXPECT_EQ(medid.getPrescriptionId(), id);
+        EXPECT_EQ(medid.getIndex(), 99);
+    }
+}
+

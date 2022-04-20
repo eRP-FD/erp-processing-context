@@ -42,7 +42,7 @@ public:
             for (const std::string user : {InsurantF, InsurantG, InsurantH})
             {
                 auto transaction = pqxx::work(*connection);
-                auto kvnrHashed = mServer->serviceContext()->getKeyDerivation().hashKvnr(user);
+                auto kvnrHashed = mServer->serviceContext().getKeyDerivation().hashKvnr(user);
                 transaction.exec_params0("DELETE FROM erp.communication WHERE sender = $1 OR recipient = $1",
                                          kvnrHashed.binarystring());
                 transaction.commit();
@@ -568,7 +568,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenders)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "," + pharmacyB);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB);
 }
 
 
@@ -613,7 +613,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipients)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "," + pharmacyB);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB);
 }
 
 
@@ -658,7 +658,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndRecip
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "," + pharmacyB + "&recipient=" + kvnrInsurant + "," + InsurantA);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&recipient=" + kvnrInsurant + "%2c" + InsurantA);
 }
 
 
@@ -703,7 +703,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndSent)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "," + pharmacyB + "&sent=ge2022-01-01");
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&sent=ge2022-01-01");
 }
 
 
