@@ -60,7 +60,7 @@ SafeString KeyDerivation::taskKey(const model::PrescriptionId& taskId,
     A_19700.start("key derivation for Task.");
     OptionalDeriveKeyData secondCallData;
     secondCallData.blobId = blobId;
-    secondCallData.salt.assign(salt.begin(), salt.end());
+    secondCallData.salt.append(salt);
     auto hsmPoolSession = mHsmPool.acquire();
     auto keyData =
         hsmPoolSession.session().deriveTaskPersistenceKey(taskKeyDerivationData(taskId, authoredOn), secondCallData);
@@ -88,12 +88,12 @@ db_model::HashedKvnr KeyDerivation::hashKvnr(std::string_view kvnr) const
 
 ErpVector KeyDerivation::medicationDispenseKeyDerivationData(const db_model::HashedKvnr& kvnr)
 {
-    return ErpVector{kvnr.begin(), kvnr.end()};
+    return ErpVector{kvnr};
 }
 
 ErpVector KeyDerivation::auditEventKeyDerivationData(const db_model::HashedKvnr& kvnr)
 {
-    return ErpVector{kvnr.begin(), kvnr.end()};
+    return ErpVector{kvnr};
 }
 
 
@@ -116,8 +116,8 @@ SafeString KeyDerivation::medicationDispenseKey(const db_model::HashedKvnr& kvnr
     A_19700.start("key derivation for medication dispense.");
     OptionalDeriveKeyData secondCallData;
     secondCallData.blobId = blobId;
-    secondCallData.salt.assign(salt.begin(), salt.end());
-    ErpVector derivationData{kvnr.begin(), kvnr.end()};
+    secondCallData.salt.append(salt);
+    ErpVector derivationData{kvnr};
     auto hsmPoolSession = mHsmPool.acquire();
     auto keyData =
         hsmPoolSession.session().deriveTaskPersistenceKey(derivationData, secondCallData);
@@ -132,8 +132,8 @@ SafeString KeyDerivation::auditEventKey(const db_model::HashedKvnr& kvnr, BlobId
     A_19700.start("key derivation for audit event.");
     OptionalDeriveKeyData secondCallData;
     secondCallData.blobId = blobId;
-    secondCallData.salt.assign(salt.begin(), salt.end());
-    ErpVector derivationData{kvnr.begin(), kvnr.end()};
+    secondCallData.salt.append(salt);
+    ErpVector derivationData{kvnr};
     auto hsmPoolSession = mHsmPool.acquire();
     auto keyData =
         hsmPoolSession.session().deriveAuditLogPersistenceKey(derivationData, secondCallData);
@@ -177,7 +177,7 @@ ErpVector KeyDerivation::communicationKeyDerivationData(const std::string_view& 
     ErpVector data;
     data.reserve(identity.size() + identityHashed.size());
     data.insert(data.end(), identity.begin(), identity.end());
-    data.insert(data.end(), identityHashed.begin(), identityHashed.end());
+    data.append(identityHashed);
     return data;
 }
 
@@ -201,7 +201,7 @@ SafeString KeyDerivation::communicationKey(const std::string_view& identity,
     A_19700.start("key derivation for communication.");
     OptionalDeriveKeyData secondCallData;
     secondCallData.blobId = blobId;
-    secondCallData.salt.assign(salt.begin(), salt.end());
+    secondCallData.salt.append(salt);
     auto hsmPoolSession = mHsmPool.acquire();
     auto keyData = hsmPoolSession.session().deriveCommunicationPersistenceKey(
         communicationKeyDerivationData(identity, identityHashed), secondCallData);

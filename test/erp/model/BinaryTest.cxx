@@ -18,7 +18,7 @@ class FriendlyBinary : public Binary
     FRIEND_TEST(BinaryTest, Constructor);
 };
 
-TEST(BinaryTest, Constructor)
+TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string id = "binary_id";
     const std::string data = "binary_data_content";

@@ -115,7 +115,7 @@ public:
     /**
      * The ownership over the object stays by PcServiceContext ( and its refresh job ).
      */
-    TslManager* getTslManager();
+    TslManager& getTslManager();
 
     const SeedTimer* getPrngSeeder() const;
 

@@ -16,7 +16,7 @@
 
 namespace
 {
-    class ReportedException {};
+    class ReportedException : public std::exception {};
 
     std::chrono::system_clock::duration getMaxCertificateAge (void)
     {
@@ -68,19 +68,22 @@ std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::Url
 
 IdpUpdater::IdpUpdater (
     Idp& certificateHolder,
-    TslManager* tslManager,
-    const std::shared_ptr<UrlRequestSender>& urlRequestSender,
+    TslManager& tslManager,
+    const std::shared_ptr<UrlRequestSender>& urlRequestSender, // NOLINT(modernize-pass-by-value)
     std::shared_ptr<Timer> timerManager)
-    : mUpdateFailureCount(),
-      mCertificateHolder(certificateHolder),
-      mTslManager(tslManager),
-      mRequestSender(urlRequestSender),
-      mTimerJobToken(0),
-      mIsUpdateActive(false),
-      mUpdateHookId(),
-      mCertificateMaxAge(getMaxCertificateAge()),
-      mLastSuccessfulUpdate(),
-      mTimerManager(timerManager)
+    : mUpdateFailureCount()
+    , mCertificateHolder(certificateHolder)
+    , mTslManager(tslManager)
+    , mRequestSender(urlRequestSender)
+    , mTimerJobToken(Timer::NotAJob)
+    , mIsUpdateActive(false)
+    , mUpdateHookId()
+    , mCertificateMaxAge(getMaxCertificateAge())
+    , mLastSuccessfulUpdate()
+    , mTimerManager(std::move(timerManager))
+    , updateIntervalMinutes(Configuration::instance().getIntValue(ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES))
+    , noCertificateUpdateIntervalSeconds(
+          Configuration::instance().getIntValue(ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS))
 {
     Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);
     SafeString idpSslRootCa;
@@ -107,33 +110,21 @@ IdpUpdater::IdpUpdater (
     mUpdateUrl = std::make_unique<UrlHelper::UrlParts>(UrlHelper::parseUrl(updateUrl));
     ErpExpect(String::toLower(mUpdateUrl->mProtocol)=="https://", HttpStatus::InternalServerError, "IDP update URL must use https://");
 
-    A_20974.start("update and verify the IDP signer certificate every hour");
-    // Start a repeating background job that periodically updates the IDP signer certificate.
-    const auto updateInterval = std::chrono::minutes(
-        Configuration::instance().getOptionalIntValue(ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES, 60));
-    mTimerJobToken = mTimerManager->runRepeating(
-        updateInterval,
-        updateInterval,
-        [this]
-        {
-            update();
-        });
-    A_20974.finish();
+    startUpdateTimer();
 
     // Also connect to the TslManager. If it updates, so will the IdpUpdater.
-    if (mTslManager != nullptr)
-    {
-        mUpdateHookId = mTslManager->addPostUpdateHook([this]{update();});
-    }
+    mUpdateHookId = mTslManager.addPostUpdateHook([this] {
+        update();
+    });
 }
 
 
 IdpUpdater::~IdpUpdater (void)
 {
     mTimerManager->cancel(mTimerJobToken);
-    if (mTslManager != nullptr && mUpdateHookId.has_value())
+    if (mUpdateHookId.has_value())
     {
-        mTslManager->disablePostUpdateHook(*mUpdateHookId);
+        mTslManager.disablePostUpdateHook(*mUpdateHookId);
     }
 }
 
@@ -272,11 +263,11 @@ std::vector<Certificate> IdpUpdater::doParseDiscovery (std::string&& jwkString)
 }
 
 
-void IdpUpdater::verifyCertificate (const std::vector<Certificate>& certificates)
+void IdpUpdater::verifyCertificate (const std::vector<Certificate>& certificateChain)
 {
     try
     {
-        doVerifyCertificate(certificates);
+        doVerifyCertificate(certificateChain);
     }
     catch(const std::exception& e)
     {
@@ -286,23 +277,20 @@ void IdpUpdater::verifyCertificate (const std::vector<Certificate>& certificates
 }
 
 
-void IdpUpdater::doVerifyCertificate (const std::vector<Certificate>& certificates)
+void IdpUpdater::doVerifyCertificate (const std::vector<Certificate>& certificateChain)
 {
     A_20158_01.start("verify updated IDP signer certificate");
 
-    Expect( ! certificates.empty(), "no certificate found in discovery document");
-    Expect(certificates.size()==1, "got more than one IDP signer certificate in the discovery document");
+    Expect( ! certificateChain.empty(), "no certificate found in discovery document");
+    Expect(certificateChain.size()==1, "got more than one IDP signer certificate in the discovery document");
 
-    if (mTslManager != nullptr)
-    {
-        auto x509 = X509Certificate::createFromX509Pointer(certificates.front().toX509().removeConst().get());
-        mTslManager->verifyCertificate(
-            TslMode::TSL,
-            x509,
-            {CertificateType::C_FD_SIG});
+    auto x509 = X509Certificate::createFromX509Pointer(certificateChain.front().toX509().removeConst().get());
+    mTslManager.verifyCertificate(
+        TslMode::TSL,
+        x509,
+        {CertificateType::C_FD_SIG});
 
-        Expect(x509.checkValidityPeriod(), "Invalid IDP certificate");
-    }
+    Expect(x509.checkValidityPeriod(), "Invalid IDP certificate");
 
     A_20158_01.finish();
 }
@@ -343,6 +331,22 @@ void IdpUpdater::reportUpdateStatus (const UpdateStatus status, std::string_view
 void IdpUpdater::setCertificateMaxAge (std::chrono::system_clock::duration maxAge)
 {
     mCertificateMaxAge = maxAge;
+}
+
+
+void IdpUpdater::startUpdateTimer()
+{
+    const bool healthy = mCertificateHolder.isHealthy();
+    mTimerManager->cancel(mTimerJobToken);
+    A_20974.start("update and verify the IDP signer certificate every hour");
+    mTimerJobToken = mTimerManager->runIn(healthy ? std::chrono::minutes(updateIntervalMinutes)
+                                                  : std::chrono::seconds(noCertificateUpdateIntervalSeconds),
+                                          [this] {
+                                              update();
+                                              startUpdateTimer();
+                                          });
+    A_20974.finish();
+
 }
 
 

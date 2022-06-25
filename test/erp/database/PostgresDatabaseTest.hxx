@@ -60,7 +60,7 @@ public:
 
     Database& database ()
     {
-        if ( ! mDatabase || static_cast<PostgresBackend&>(mDatabase->getBackend()).isCommitted())
+        if ( ! mDatabase || mDatabase->getBackend().isCommitted())
         {
             Expect(usePostgres(), "database support is disabled, database should not be used");
             mDatabase = std::make_unique<DatabaseFrontend>(
@@ -104,7 +104,7 @@ protected:
 
     bool databaseNeedsCommit()
     {
-        return mDatabase && not static_cast<PostgresBackend&>(mDatabase->getBackend()).isCommitted();
+        return mDatabase && not mDatabase->getBackend().isCommitted();
     }
 
     pqxx::work createTransaction()
@@ -121,7 +121,7 @@ protected:
     template <typename ContainerT>
     std::string toHex(const ContainerT& container)
     {
-        const auto data = reinterpret_cast<const char*>(container.data());
+        const char* const data = reinterpret_cast<const char*>(container.data());
         auto size = sizeof(*container.data()) * container.size();
         return ByteHelper::toHex(gsl::span<const char>{data, size});
     }

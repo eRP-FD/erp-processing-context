@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(SeedTimerTest, distribute)
+TEST(SeedTimerTest, distribute)//NOLINT(readability-function-cognitive-complexity)
 {
 
     #ifndef _WIN32
@@ -35,7 +35,7 @@ TEST(SeedTimerTest, distribute)
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
                                          MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()};
-    SeedTimer seedTimer(pool, mockHsmPool, threads, interval,
+    SeedTimer seedTimer(pool, mockHsmPool, interval,
                         [&](const SafeString& seed){
                             ++callCount;
                             ASSERT_EQ(seed.size(), Seeder::seedBytes);

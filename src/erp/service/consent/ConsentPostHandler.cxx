@@ -9,7 +9,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/util/TLog.hxx"
 
-#include <pqxx/except.hxx>
+#include <pqxx/except>
 
 
 ConsentPostHandler::ConsentPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)

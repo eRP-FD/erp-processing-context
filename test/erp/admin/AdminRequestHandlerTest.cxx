@@ -27,8 +27,7 @@ public:
         header.addHeaderField(Header::Authorization, "Basic cred");
     }
 
-public:
-    ~AdminRequestHandlerTest()
+    ~AdminRequestHandlerTest() override
     {
         // reset state to running for other tests.
         MockTerminationHandler::setupForTesting();

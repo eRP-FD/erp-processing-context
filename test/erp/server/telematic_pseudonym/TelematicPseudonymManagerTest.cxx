@@ -16,6 +16,7 @@
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/mock/RegistrationMock.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <shared_mutex>
 
@@ -58,10 +59,10 @@ bool TelematicPseudonymCmacTestDatabase::fail_ = false;
 class TelematicPseudonymCmacTest : public ::testing::Test
 {
 public:
-    virtual void SetUp() override
+    void SetUp() override
     {
         tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
-            "ERP_TSL_INITIAL_CA_DER_PATH", std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            "ERP_TSL_INITIAL_CA_DER_PATH", ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
         auto factories = StaticData::makeMockFactories();
         factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
             return std::make_unique<DatabaseFrontend>(std::make_unique<TelematicPseudonymCmacTestDatabase>(hsmPool),
@@ -70,7 +71,7 @@ public:
         serviceContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
     }
 
-    virtual void TearDown() override
+    void TearDown() override
     {
         tslEnvironmentGuard.reset();
     }
@@ -127,7 +128,7 @@ TEST_F(TelematicPseudonymCmacTest, GracePeriod)
     EXPECT_TRUE(getTelematicPseudonymManager().withinGracePeriod(today));
 }
 
-TEST_F(TelematicPseudonymCmacTest, LoadCMAC)
+TEST_F(TelematicPseudonymCmacTest, LoadCMAC)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace date;
 

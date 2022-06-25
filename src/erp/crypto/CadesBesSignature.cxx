@@ -154,18 +154,30 @@ namespace
                 data) != 0,
             "Can not create OCSP revocation info choice in CMS");
 
-        dataPtr.release();
-        copyFormatObject.release();
+        dataPtr.release(); // NOLINT(bugprone-unused-return-value)
+        // Ownership transferred to CMS_add0_otherRevocationInfoChoice.
+        copyFormatObject.release(); // NOLINT(bugprone-unused-return-value)
     }
 
 
-    void checkProfessionOids(X509Certificate& certificate)
+    void checkProfessionOids(X509Certificate& certificate, const std::vector<std::string_view>& oids)
     {
+        if (oids.empty())
+        {
+            return;
+        }
+
+        std::vector<std::string> oidsStr(oids.size());
+        std::transform(oids.cbegin(),
+                       oids.cend(),
+                       oidsStr.begin(),
+                       [](const auto& oid)
+                       {
+                           return oid.data();
+                       });
+
         A_19225.start("Check ProfessionOIDs in QES certificate.");
-        Expect3(certificate.checkRoles({
-                      std::string(profession_oid::oid_arzt),
-                      std::string(profession_oid::oid_zahnarzt),
-                      std::string(profession_oid::oid_arztekammern)}),
+        Expect3(certificate.checkRoles(oidsStr),
                 "The QES-Certificate does not have expected ProfessionOID.",
                 CadesBesSignature::UnexpectedProfessionOidException);
         A_19225.finish();
@@ -205,7 +217,9 @@ namespace
 
     void verifySignerCertificates(
         CMS_ContentInfo& cmsContentInfo,
-        TslManager& tslManager)
+        TslManager& tslManager,
+        bool allowNonQESCertificate,
+        const std::vector<std::string_view>& professionOids)
     {
         OcspResponsePtr ocspResponse = getOcspResponse(cmsContentInfo);
 
@@ -218,13 +232,29 @@ namespace
 
         for (X509* signerCertificate : signerCertificates)
         {
-            X509Certificate certificate = X509Certificate::createFromX509Pointer(signerCertificate);
+            auto certificate = X509Certificate::createFromX509Pointer(signerCertificate);
+            const bool isSmcBOsig = certificate.checkCertificatePolicy(TslService::oid_smc_b_osig);
+
+            TslMode tslMode{};
+            std::unordered_set<CertificateType> certificateTypes{};
+            if (allowNonQESCertificate && isSmcBOsig)
+            {
+                tslMode = TslMode::TSL;
+                certificateTypes = { CertificateType::C_HCI_OSIG };
+            }
+            else
+            {
+                tslMode = TslMode::BNA;
+                certificateTypes = { CertificateType::C_HP_ENC, CertificateType::C_HP_QES };
+            }
+
             tslManager.verifyCertificate(
-                TslMode::BNA,
+                tslMode,
                 certificate,
-                {CertificateType::C_HP_QES, CertificateType::C_HP_ENC},
+                certificateTypes,
                 ocspResponse);
-            checkProfessionOids(certificate);
+
+            checkProfessionOids(certificate, professionOids);
         }
     }
 
@@ -232,7 +262,9 @@ namespace
     int cmsVerify(
         TslManager* tslManager,
         CMS_ContentInfo& cmsContentInfo,
-        BIO& out)
+        BIO& out,
+        bool allowNonQESCertificate,
+        const std::vector<std::string_view>& professionOids)
     {
         if (tslManager != nullptr)
         {
@@ -240,19 +272,15 @@ namespace
             // and accept trusted intermediate anchors.
             // To workaround it we have to verify signer certificate explicitly
             // and run CMS_verify in CMS_NO_SIGNER_CERT_VERIFY mode.
-            verifySignerCertificates(cmsContentInfo, *tslManager);
+            verifySignerCertificates(cmsContentInfo, *tslManager, allowNonQESCertificate, professionOids);
+        }
 
-            return CMS_verify(&cmsContentInfo,
-                              nullptr,
-                              nullptr,
-                              nullptr,
-                              &out,
-                              CMS_NO_SIGNER_CERT_VERIFY | CMS_BINARY);
-        }
-        else
-        {
-            return CMS_verify(&cmsContentInfo, nullptr, nullptr, nullptr, &out, CMS_NOVERIFY);
-        }
+        return CMS_verify(&cmsContentInfo,
+                          nullptr,
+                          nullptr,
+                          nullptr,
+                          &out,
+                          CMS_NO_SIGNER_CERT_VERIFY | CMS_BINARY);
     }
 
 
@@ -262,7 +290,7 @@ namespace
     {
         try
         {
-            std::rethrow_exception(exception);
+            std::rethrow_exception(std::move(exception));
         }
         catch(const TslError&)
         {
@@ -287,7 +315,7 @@ namespace
 
 
 void CadesBesSignature::internalInitialization(const std::string& base64Data,
-                                               const std::function<int(CMS_ContentInfo&, BIO&)>& cmsVerifyFunction)
+                                               const CmsVerifyFunction& cmsVerifyFunction)
 {
     const auto plain = Base64::decode(Base64::cleanupForDecoding(base64Data));
     auto bioIndata = shared_BIO::make();
@@ -296,7 +324,7 @@ void CadesBesSignature::internalInitialization(const std::string& base64Data,
                   static_cast<int>(plain.size()),
                   "BIO_write function failed.");
 
-    mCmsHandle = shared_CMS_ContentInfo ::make(d2i_CMS_bio(bioIndata.get(), nullptr));
+    mCmsHandle = shared_CMS_ContentInfo::make(d2i_CMS_bio(bioIndata.get(), nullptr));
     OpenSslExpect(mCmsHandle, "d2i_CMS_bio failed.");
     auto bioOutdata = shared_BIO::make();
 
@@ -311,16 +339,20 @@ void CadesBesSignature::internalInitialization(const std::string& base64Data,
     mPayload.resize(bytesRead);
 }
 
-
-CadesBesSignature::CadesBesSignature(const std::string& base64Data, TslManager* tslManager)
+CadesBesSignature::CadesBesSignature(const std::string& base64Data,
+                                     TslManager& tslManager,
+                                     bool allowNonQESCertificate,
+                                     const std::vector<std::string_view>& professionOids)
+: mPayload{},
+  mCmsHandle{}
 {
     try
     {
         internalInitialization(
             base64Data,
-            [tslManager] (CMS_ContentInfo& cmsHandle, BIO& out) -> int
+            [&] (CMS_ContentInfo& cmsHandle, BIO& out) -> int
             {
-              return cmsVerify(tslManager, cmsHandle, out);
+              return cmsVerify(&tslManager, cmsHandle, out, allowNonQESCertificate, professionOids);
             });
     }
     catch(...)
@@ -329,9 +361,29 @@ CadesBesSignature::CadesBesSignature(const std::string& base64Data, TslManager* 
     }
 }
 
+CadesBesSignature::CadesBesSignature(const std::string& base64Data)
+: mPayload{},
+  mCmsHandle{}
+{
+    try
+    {
+        internalInitialization(
+            base64Data,
+            [] (CMS_ContentInfo& cmsHandle, BIO& out) -> int
+            {
+                return cmsVerify(nullptr, cmsHandle, out, false, {});
+            });
+    }
+    catch(...)
+    {
+        HANDLE_EXCEPTION_BY_VERIFICATION;
+    }
+}
 
 CadesBesSignature::CadesBesSignature(const std::list<Certificate>& trustedCertificates,
                                      const std::string& base64Data)
+: mPayload{},
+  mCmsHandle{}
 {
     try
     {
@@ -362,7 +414,8 @@ CadesBesSignature::CadesBesSignature(
     const std::string& payload,
     const std::optional<model::Timestamp>& signingTime,
     OcspResponsePtr ocspResponse)
-    : mPayload(payload)
+    : mPayload(payload),
+      mCmsHandle{}
 {
     auto bio = shared_BIO::make();
     auto written = BIO_write(bio.get(), payload.data(), gsl::narrow<int>(payload.size()));

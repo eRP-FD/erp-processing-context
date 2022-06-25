@@ -12,6 +12,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <map>
 
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/hsm/BlobDatabase.hxx"
@@ -39,7 +40,6 @@ public:
                         const model::Communication::MessageType messageType,
                         const db_model::HashedId& sender,
                         const db_model::HashedId& recipient,
-                        const std::optional<model::Timestamp>& timeReceived,
                         BlobId senderBlobId,
                         const db_model::EncryptedBlob& messageForSender,
                         BlobId recipientBlobId,
@@ -85,7 +85,7 @@ public:
         db_model::HashedId recipient;
         model::Communication::MessageType messageType;
         std::optional<model::Timestamp> received;
-        int64_t prescriptionId;
+        int64_t prescriptionId = 0;
         BlobId senderBlobId;
         db_model::EncryptedBlob messageForSender;
         BlobId recipientBlobId;
@@ -106,7 +106,7 @@ private:
         recipient_blob_id,
         message_for_recipient,
     };
-    db_model::Communication select(const Uuid& uuid, Row row, const std::set<FieldName>& fields) const;
+    db_model::Communication select(const Uuid& uuid, const Row& row, const std::set<FieldName>& fields) const;
     std::optional<db_model::Communication> select(const Uuid& uuid, const std::set<FieldName>& fields) const;
 
     std::shared_mutex mutex;

@@ -85,5 +85,7 @@ extern template bool
 TestUrlArguments::matches<db_model::HashedKvnr>(const std::string& parameterName,
                                                 const std::optional<db_model::HashedKvnr>& value) const;
 
+extern template bool TestUrlArguments::matches<::db_model::HashedTelematikId>(
+    const ::std::string& parameterName, const ::std::optional<::db_model::HashedTelematikId>& value) const;
 
 #endif

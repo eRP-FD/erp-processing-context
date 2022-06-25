@@ -16,6 +16,8 @@ class KBVEXERPAccident : public Extension
 public:
     using Extension::Extension;
     static constexpr auto url = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Accident";
+
+    friend std::optional<KBVEXERPAccident> ResourceBase::getExtension<KBVEXERPAccident>(const std::string_view&) const;
 };
 
 }

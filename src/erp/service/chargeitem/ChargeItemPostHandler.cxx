@@ -116,34 +116,32 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     A_22137.finish();
 
     A_22138.start("Validate PKV dispense item");
+    A_22139.start("Check signature of PKV dispense bundle");
+    A_22140.start("Check signature certificate of PKV dispense bundle");
+    A_22141.start("Check signature certificate SMC-B");
+    A_22142.start("Save OCSP response for signature certificate");
     const auto dispenseItemBundle = createAndValidateDispenseItem(*containedBinary, session.serviceContext);
+    A_22142.finish();
+    A_22141.finish();
+    A_22140.finish();
+    A_22139.finish();
     A_22138.finish();
 
     A_22137.start("Set PKV dispense item reference in ChargeItem");
     setDispenseItemReference(chargeItem, dispenseItemBundle);
     A_22137.finish();
 
-    A_22139.start("Check signature of PKV dispense bundle");
-    // TODO
-// Der PKV-Abgabedatensatz hat QES eines HBAs des Apothekers oder eine nonQES einer SMC-B der Apotheke.
-    A_22139.finish();
-
-    A_22140.start("Check signature certificate of PKV dispense bundle");
-    // TODO
-    A_22140.finish();
-    // OR
-    A_22141.start("Check signature certificate SMC-B");
-    // TODO
-    A_22141.finish();
-
-    A_22142.start("Save OCSP response for signature certificate");
-    // TODO
-    A_22142.finish();
-
     A_22143.start("Fill ChargeItem.enteredDate");
     chargeItem.setEnteredDate(model::Timestamp::now());
     A_22143.finish();
+
     chargeItem.setId(prescriptionId);
+
+    A_22614.start("create access code for pharmacy");
+    auto pharmacyAccessCode = ChargeItemHandlerBase::createPharmacyAccessCode();
+    chargeItem.setAccessCode(std::move(pharmacyAccessCode));
+    A_22614.finish();
+
     session.response.setHeader(Header::Location, getLinkBase() + "/ChargeItem/" + prescriptionId.toString());
 
     databaseHandle->storeChargeInformation(telematikIdClaim.value(), chargeItem, dispenseItemBundle);
@@ -157,4 +155,3 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
         .setAction(model::AuditEvent::Action::create)
         .setPrescriptionId(prescriptionId);
 }
-

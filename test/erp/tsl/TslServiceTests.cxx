@@ -13,9 +13,10 @@
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/MockOcsp.hxx"
-#include "test/mock/UrlRequestSenderMock.hxx"
+#include "mock/tsl/MockOcsp.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <date/date.h>
 #include <test_config.h>
@@ -65,16 +66,16 @@ public:
     std::unique_ptr<TrustStore> mTrustStore;
     std::unique_ptr<EnvironmentVariableGuard> mCaDerPathGuard;
 
-    void SetUp()
+    void SetUp() override
     {
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
 
         mTrustStore = TslTestHelper::createTslTrustStore();
     }
 
-    void TearDown()
+    void TearDown() override
     {
         mCaDerPathGuard.reset();
         mTrustStore.reset();
@@ -102,7 +103,7 @@ TEST_F(TslServiceTest, providedTsl)
 }
 
 
-TEST_F(TslServiceTest, verifyCertificateRevokedCAFailing)
+TEST_F(TslServiceTest, verifyCertificateRevokedCAFailing)//NOLINT(readability-function-cognitive-complexity)
 {
     UrlRequestSenderMock requestSender({});
     X509Certificate certificate = X509Certificate::createFromBase64(userCertificate);
@@ -196,7 +197,7 @@ TEST_F(TslServiceTest, verifyCertificatePolicySuccessful)
 }
 
 
-TEST_F(TslServiceTest, verifyCertificatePolicyFailing)
+TEST_F(TslServiceTest, verifyCertificatePolicyFailing)//NOLINT(readability-function-cognitive-complexity)
 {
     UrlRequestSenderMock requestSender({});
     X509Certificate certificate = X509Certificate::createFromBase64("MIIC4TCCAoegAwIBAgIRAK+JCZiHcke3vWXmfPAbuf0wCgYIKoZIzj0EAwIwgYQxIDAeBgNVBAMMF0FDTE9TLktPTVAtQ0EgVEVTVC1PTkxZMTIwMAYDVQQLDClLb21wb25lbnRlbi1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEfMB0GA1UECgwWYWNoZWxvcyBHbWJIIE5PVC1WQUxJRDELMAkGA1UEBhMCREUwHhcNMjEwMzExMjMwMDAwWhcNMjMwMzEwMjMwMDAwWjBJMRIwEAYDVQQDDAlJRFAgU2lnIDMxJjAkBgNVBAoMHWdlbWF0aWsgVEVTVC1PTkxZIC0gTk9ULVZBTElEMQswCQYDVQQGEwJERTBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAASGGZ8IhgJ+UGDseN2fDMGmSw96/28+gU3EDuaW3rpuqkM2A+XQwnK4sP1TTz2QkM10D4OErVssuTjqvU6IARJjo4IBETCCAQ0wHQYDVR0OBBYEFBZf3Tqupyv/MA5EAvsybQktzVo2MA4GA1UdDwEB/wQEAwIHgDAMBgNVHRMBAf8EAjAAMFIGA1UdIARLMEkwOwYIKoIUAEwEgSMwLzAtBggrBgEFBQcCARYhaHR0cDovL3d3dy5nZW1hdGlrLmRlL2dvL3BvbGljaWVzMAoGCCqCFABMBIFLMEYGCCsGAQUFBwEBBDowODA2BggrBgEFBQcwAYYqaHR0cDovL29jc3AtdGVzdC5vY3NwLnRlbGVtYXRpay10ZXN0OjgwODAvMB8GA1UdIwQYMBaAFITGAi50Bw/bE2uIb0TMdzHGff70MBEGBSskCAMDBAgwBjAEMAIwADAKBggqhkjOPQQDAgNIADBFAiEAilBbiEWbA8n6l3V5iIV/DgJjRVusNpyKCAyKA7Q1kEMCIDwVNy+ORXpKrLNB+YyQQHHAf+UCf4wp71GJp1KFskwn");

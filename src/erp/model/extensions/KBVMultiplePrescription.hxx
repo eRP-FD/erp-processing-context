@@ -20,6 +20,7 @@ public:
     static constexpr auto url = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription";
     bool isMultiplePrescription() const;
 
+    friend std::optional<KBVMultiplePrescription> ResourceBase::getExtension<KBVMultiplePrescription>(const std::string_view&) const;
 };
 
 class KBVMultiplePrescription::Kennzeichen : public model::Extension
@@ -27,6 +28,8 @@ class KBVMultiplePrescription::Kennzeichen : public model::Extension
 public:
     using Extension::Extension;
     static constexpr auto url = "Kennzeichen";
+
+    friend std::optional<Kennzeichen> ResourceBase::getExtension<Kennzeichen>(const std::string_view&) const;
 };
 
 }

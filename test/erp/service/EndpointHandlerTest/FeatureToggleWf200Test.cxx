@@ -38,7 +38,7 @@ private:
 };
 
 template<typename HandlerType>
-void FeatureToggleWF200Test::check(SessionContext& sessionContext)
+void FeatureToggleWF200Test::check(SessionContext& sessionContext)//NOLINT(readability-function-cognitive-complexity)
 {
     HandlerType handler{{}};
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
@@ -53,7 +53,7 @@ void FeatureToggleWF200Test::check(SessionContext& sessionContext)
     }
 }
 
-TEST_P(FeatureToggleWF200Test, task_create)
+TEST_P(FeatureToggleWF200Test, task_create)//NOLINT(readability-function-cognitive-complexity)
 {
     CreateTaskHandler handler({});
 
@@ -203,7 +203,7 @@ TEST_P(FeatureToggleWF200Test, medicationDispense_get)
 }
 
 
-TEST_P(FeatureToggleWF200Test, medicationDispense_getAll)
+TEST_P(FeatureToggleWF200Test, medicationDispense_getAll)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr auto* prefix = "https://gematik.de/fhir/NamingSystem/PrescriptionID|";
 

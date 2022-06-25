@@ -6,6 +6,7 @@
 #include "erp/hsm/HsmSession.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/hsm/BlobCache.hxx"
+#include "erp/hsm/HsmEciesCurveMismatchException.hxx"
 #include "erp/hsm/HsmSessionExpiredException.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/util/Base64.hxx"
@@ -61,6 +62,11 @@ namespace
                 // The actual reconnect.
                 session.reconnect();
                 lastException = std::current_exception();
+            }
+            catch(const HsmEciesCurveMismatchException&)
+            {
+                // No need to retry here. We gave a non-matching input.
+                throw;
             }
             catch(const HsmException& e)
             {
@@ -199,19 +205,38 @@ ErpVector HsmSession::getRandomData (const size_t numberOfRandomBytes)
 }
 
 
-ErpArray<Aes128Length> HsmSession::vauEcies128 (const ErpVector& clientPublicKey)
+ErpArray<Aes128Length> HsmSession::vauEcies128 (const ErpVector& clientPublicKey, bool useFallback)
 {
-    return guardedRun<ErpArray<Aes128Length>>(*this, [&]{
-        DoVAUECIESInput input;
-        input.teeToken = getTeeToken();
-        input.eciesKeyPair = mBlobCache.getBlob(BlobType::EciesKeypair).blob;
-        input.clientPublicKey = clientPublicKey;
+    const auto get = [this, clientPublicKey](const ::ErpBlob &eciesKey) {
+        return guardedRun<::ErpArray<::Aes128Length>>(*this, [&]{
+            ::DoVAUECIESInput input;
+            input.teeToken = getTeeToken();
+            input.eciesKeyPair = eciesKey;
+            input.clientPublicKey = clientPublicKey;
 
-        markHsmCallTime();
-        return mClient.doVauEcies128(
-            *mRawSession,
-            std::move(input));
-    });
+            markHsmCallTime();
+            return mClient.doVauEcies128(
+                *mRawSession,
+                ::std::move(input));
+        });
+    };
+
+    const auto eciesKeys = mBlobCache.getEciesKeys();
+
+    if (! useFallback)
+    {
+        try
+        {
+            return get(eciesKeys.latest.blob);
+        }
+        catch (const ::HsmEciesCurveMismatchException&)
+        {
+            // ignore error and retry with fallback
+        }
+    }
+
+    ErpExpect(eciesKeys.fallback, ::HttpStatus::InternalServerError, "No fallback key available");
+    return get(eciesKeys.fallback->blob);
 }
 
 

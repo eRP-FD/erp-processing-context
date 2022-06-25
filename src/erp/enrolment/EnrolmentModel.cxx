@@ -60,7 +60,7 @@ bool EnrolmentModel::hasValue(std::string_view key) const
 const rapidjson::Value& EnrolmentModel::getValue (std::string_view key) const
 {
     const auto pointer = rapidjson::Pointer(rapidjson::StringRef(key.data(), key.size()));
-    const auto value = pointer.Get(mDocument);
+    const auto* value = pointer.Get(mDocument);
     ErpExpect(value!=nullptr, HttpStatus::BadRequest, "value for key '" + std::string(key) + "' is missing");
     return *value;
 }
@@ -77,13 +77,13 @@ std::string EnrolmentModel::getString (std::string_view key) const
 {
     const auto& value = getValue(key);
     ErpExpect(value.IsString(), HttpStatus::BadRequest, "value is not a string");
-    return std::string(value.GetString());
+    return {value.GetString()};
 }
 
 
 std::optional<std::string> EnrolmentModel::getOptionalDecodedString (std::string_view key) const
 {
-    const auto value = getOptionalValue(key);
+    const auto* value = getOptionalValue(key);
     if (value == nullptr)
         return std::nullopt;
     else
@@ -153,7 +153,7 @@ ErpVector EnrolmentModel::getErpVector (std::string_view key) const
     const auto& value = getValue(key);
     ErpExpect(value.IsString(), HttpStatus::BadRequest, "value is not a string");
     const auto* data = reinterpret_cast<const uint8_t*>(value.GetString());
-    return ErpVector(data, data + value.GetStringLength());
+    return {data, data + value.GetStringLength()};
 }
 
 
@@ -196,6 +196,6 @@ std::string EnrolmentModel::serializeToString (void) const
         rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
         mDocument.Accept(writer);
 
-        return std::string(buffer.GetString());
+        return {buffer.GetString()};
     }
 }

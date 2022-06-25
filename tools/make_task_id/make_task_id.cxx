@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     if (argc != 3)
     {
         std::cerr << "usage: " << argv[0] << " 160|169 <id>" << std::endl;
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     auto prescriptionId = model::PrescriptionId::fromDatabaseId(

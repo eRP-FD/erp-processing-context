@@ -123,6 +123,8 @@ static Requirement A_20159    ("E-Rezept-Fachdienst - QES Pruefung Signaturzerti
 static Requirement A_19517_02 ("FHIR FLOWTYPE für Prozessparameter - Abweichende Festlegung für Entlassrezept");
 static Requirement A_22222    ("E-Rezept-Fachdienst - Ausschluss weitere Kostenträger");
 static Requirement A_22231    ("E-Rezept-Fachdienst - Ausschluss Betäubungsmittel und Thalidomid");
+static Requirement A_22487    ("E-Rezept-Fachdienst - Task aktivieren - Prüfregel Ausstellungsdatum");
+static Requirement A_22925    ("E-Rezept-Fachdienst - Task aktivieren - Längenprüfung PZN");
 // PKV related:
 static Requirement A_22347    ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 200 - Prüfung Coverage Type");
 
@@ -189,6 +191,7 @@ static Requirement A_22140   ("E-Rezept-Fachdienst – Abrechnungsinformation be
 static Requirement A_22141   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturzertifikat SMC-B prüfen");
 static Requirement A_22142   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – OCSP-Response Signaturzertifikat PKV-Abgabedatensatz");
 static Requirement A_22143   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – ChargeItem befüllen");
+static Requirement A_22614   ("E-Rezept-Fachdienst - Abrechnungsinformation bereitstellen - Generierung AccessCode");
 // PUT /ChargeItem
 static Requirement A_22215   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Prüfung Einwilligung");
 static Requirement A_22145   ("E-Rezept-Fachdienst – Abrechnungsinformationen ändern – Versicherter - Prüfung KVNR");
@@ -199,6 +202,8 @@ static Requirement A_22149   ("E-Rezept-Fachdienst – Abrechnungsinformation ä
 static Requirement A_22150   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern - Apotheke – Signaturprüfung PKV-Abgabedatensatz");
 static Requirement A_22151   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
 static Requirement A_22152   ("E-Rezept-Fachdienst - Abrechnungsinformation ändern – FHIR-Validierung ChargeItem");
+static Requirement A_22615   ("E-Rezept-Fachdienst - Abrechnungsinformation ändern - Apotheke - Generierung AccessCode");
+static Requirement A_22616   ("E-Rezept-Fachdienst - Abrechnungsinformation ändern - Apotheke - Prüfung AccessCode");
 // DELETE /ChargeItem
 static Requirement A_22112   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - alles Löschen verbieten");
 static Requirement A_22114   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen – Prüfung KVNR");
@@ -211,6 +216,7 @@ static Requirement A_22120   ("E-Rezept-Fachdienst – Abrechnungsinformationen 
 static Requirement A_22121   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen - Suchkriterien");
 static Requirement A_22122   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen – Response");
 static Requirement A_22123   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen - Paging");
+static Requirement A_22611   ("E-Rezept-Fachdienst - Abrechnungsinformation abrufen - Apotheke - Prüfung AccessCode");
 // Requirements for endpoint /ChargeItem/<id>
 static Requirement A_22125   ("E-Rezept-Fachdienst - Abrechnungsinformation lesen - Versicherter - Prüfung KVNR");
 static Requirement A_22126   ("E-Rezept-Fachdienst - Abrechnungsinformation lesen - Apotheke - Prüfung Telematik-ID");

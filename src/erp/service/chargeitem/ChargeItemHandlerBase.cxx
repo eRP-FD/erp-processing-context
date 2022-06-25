@@ -4,6 +4,8 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemHandlerBase.hxx"
+#include "erp/model/ChargeItem.hxx"
+#include "erp/util/ByteHelper.hxx"
 
 
 namespace
@@ -55,5 +57,39 @@ model::PrescriptionId ChargeItemHandlerBase::parseIdFromQuery(
     const std::string& paramName)
 {
     return parseId(request.getQueryParameter(paramName), accessLog, paramName);
+}
+
+// static
+void ChargeItemHandlerBase::verifyPharmacyAccessCode(
+    const ServerRequest& request,
+    const model::ChargeItem& chargeItem,
+    const bool tryHttpHeader)
+{
+    auto pharmacyAccessCode = request.getQueryParameter("ac");
+    if (!pharmacyAccessCode.has_value() && tryHttpHeader)
+    {
+        pharmacyAccessCode = request.header().header(Header::XAccessCode);
+    }
+
+    ErpExpect(pharmacyAccessCode.has_value(),
+              HttpStatus::Forbidden,
+              "No access code provided for charge item");
+
+    const auto chargeItemAccessCode = chargeItem.accessCode();
+    ErpExpect(chargeItemAccessCode.has_value(),
+              HttpStatus::Forbidden,
+              "Charge item does not have an associated access code");
+
+    ErpExpect(*pharmacyAccessCode == *chargeItemAccessCode,
+              HttpStatus::Forbidden,
+              "Provided charge item access code is wrong");
+}
+
+
+// static
+std::string ChargeItemHandlerBase::createPharmacyAccessCode()
+{
+    const auto rawAccessCode = SecureRandomGenerator::generate(32);
+    return ByteHelper::toHex(rawAccessCode);
 }
 

@@ -5,11 +5,10 @@
 
 #include "erp/fhir/Fhir.hxx"
 #include "test/util/ResourceManager.hxx"
-#include "test/util/StaticData.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 
-TEST_F(ErpWorkflowTest, WF200Consent)
+TEST_F(ErpWorkflowTest, WF200Consent)//NOLINT(readability-function-cognitive-complexity)
 {
     if(isUnsupportedFlowtype(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
         GTEST_SKIP();
@@ -39,10 +38,12 @@ TEST_F(ErpWorkflowTest, WF200Consent)
 
     // Create a closed task:
     std::optional<model::PrescriptionId> prescriptionId;
+    std::optional<model::KbvBundle> kbvBundle;
+    std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
     ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId, accessCode, secret,
+        createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret,
                          model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr));
 
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
@@ -84,7 +85,7 @@ TEST_F(ErpWorkflowTest, WF200Consent)
 }
 
 
-TEST_F(ErpWorkflowTest, WF200TaskAcceptWithConsent)
+TEST_F(ErpWorkflowTest, WF200TaskAcceptWithConsent)//NOLINT(readability-function-cognitive-complexity)
 {
     if(isUnsupportedFlowtype(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
         GTEST_SKIP();
@@ -148,29 +149,28 @@ void checkEqualityMarking(
     EXPECT_EQ(chargeItem1.markingFlag()->getAllMarkings(), chargeItem2.markingFlag()->getAllMarkings());
 }
 
-// TODO for future use (extra PR)
-//void checkEqualitySupportingInfoReference(
-//    const model::ChargeItem& chargeItem1,
-//    const model::ChargeItem& chargeItem2)
-//{
-//    EXPECT_EQ(chargeItem1.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem),
-//              chargeItem2.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem));
-//    EXPECT_EQ(chargeItem1.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt),
-//              chargeItem2.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt));
-//    EXPECT_EQ(chargeItem1.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem),
-//              chargeItem2.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem));
-//}
+void checkEqualitySupportingInfoReference(
+    const model::ChargeItem& chargeItem1,
+    const model::ChargeItem& chargeItem2)
+{
+    EXPECT_EQ(chargeItem1.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem),
+              chargeItem2.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem));
+    EXPECT_EQ(chargeItem1.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt),
+              chargeItem2.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt));
+    EXPECT_EQ(chargeItem1.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem),
+              chargeItem2.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem));
+}
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void checkEquality(
+    const model::ChargeItem& chargeItem1,
+    const model::ChargeItem& chargeItem2)
+{
+    ASSERT_NO_FATAL_FAILURE(checkEqualityBasic(chargeItem1, chargeItem2));
+    ASSERT_NO_FATAL_FAILURE(checkEqualityMarking(chargeItem1, chargeItem2));
+    ASSERT_NO_FATAL_FAILURE(checkEqualitySupportingInfoReference(chargeItem1, chargeItem2));
+}
 
-// TODO for future use (extra PR)
-//void checkEquality(
-//    const model::ChargeItem& chargeItem1,
-//    const model::ChargeItem& chargeItem2)
-//{
-//    ASSERT_NO_FATAL_FAILURE(checkEqualityBasic(chargeItem1, chargeItem2));
-//    ASSERT_NO_FATAL_FAILURE(checkEqualityMarking(chargeItem1, chargeItem2));
-//    ASSERT_NO_FATAL_FAILURE(checkEqualitySupportingInfoReference(chargeItem1, chargeItem2));
-//}
-
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkEqualityExceptSupportingInfo(
     const model::ChargeItem& chargeItem1,
     const model::ChargeItem& chargeItem2)
@@ -181,7 +181,7 @@ void checkEqualityExceptSupportingInfo(
 
 } // anonymous namespace
 
-TEST_F(ErpWorkflowTest, WF200ChargeItem)
+TEST_F(ErpWorkflowTest, WF200ChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
     if (isUnsupportedFlowtype(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
         GTEST_SKIP();
@@ -194,84 +194,101 @@ TEST_F(ErpWorkflowTest, WF200ChargeItem)
     ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr, startTime));
     ASSERT_TRUE(consent.has_value());
 
-    // Create 3 closed tasks:
-    std::optional<model::PrescriptionId> prescriptionId1;
-    std::string accessCode1;
-    std::string secret1;
-    ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId1, accessCode1, secret1,
-                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr));
-
-    std::optional<model::PrescriptionId> prescriptionId2;
-    std::string accessCode2;
-    std::string secret2;
-    ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId2, accessCode2, secret2,
-                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr));
-
-    std::optional<model::PrescriptionId> prescriptionId3;
-    std::string accessCode3;
-    std::string secret3;
-    ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId3, accessCode3, secret3,
-                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr));
-
+    // Create 4 closed tasks
+    const std::size_t numOfTasks = 4;
+    std::vector<std::optional<model::PrescriptionId>> prescriptionIds(numOfTasks);
+    std::vector<std::optional<model::KbvBundle>> kbvBundles(numOfTasks);
+    std::vector<std::optional<model::ErxReceipt>> closeReceipts(numOfTasks);
+    std::vector<std::string> accessCodes(numOfTasks);
+    std::vector<std::string> secrets(numOfTasks);
+    for(std::size_t i = 0; i < numOfTasks; ++i)
+    {
+        ASSERT_NO_FATAL_FAILURE(
+            createClosedTask(prescriptionIds[i], kbvBundles[i], closeReceipts[i], accessCodes[i], secrets[i],
+                             model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr));
+    }
+    // Create a charge item for each task
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
-
-    // Create 3 charge items
-    std::optional<model::ChargeItem> chargeItem1;
-    ASSERT_NO_FATAL_FAILURE(chargeItem1 = chargeItemPost(*prescriptionId1, kvnr, telematicIdPharmacy, secret1));
-    ASSERT_TRUE(chargeItem1);
-
-    std::optional<model::ChargeItem> chargeItem2;
-    ASSERT_NO_FATAL_FAILURE(chargeItem2 = chargeItemPost(*prescriptionId2, kvnr, telematicIdPharmacy, secret2));
-    ASSERT_TRUE(chargeItem2);
-
-    std::optional<model::ChargeItem> chargeItem3;
-    ASSERT_NO_FATAL_FAILURE(chargeItem3 = chargeItemPost(*prescriptionId3, kvnr, telematicIdPharmacy, secret3));
-    ASSERT_TRUE(chargeItem3);
+    std::vector<std::optional<model::ChargeItem>> createdChargeItems(numOfTasks);
+    for(std::size_t i = 0; i < numOfTasks; ++i)
+    {
+        ASSERT_NO_FATAL_FAILURE(
+            createdChargeItems[i] = chargeItemPost(*prescriptionIds[i], kvnr, telematicIdPharmacy, secrets[i]));
+    }
 
     const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
 
+    // Get list of charge items by insurant
     std::optional<model::Bundle> chargeItemsBundle;
-    ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(
-        jwtInsurant, ContentMimeType::fhirJsonUtf8,
-        "entered-date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=entered-date"));
-
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemsBundle = chargeItemsGet(
+            jwtInsurant, ContentMimeType::fhirJsonUtf8,
+            "entered-date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=entered-date"));
     auto chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
-    EXPECT_EQ(chargeItems.size(), 3);
+    EXPECT_EQ(chargeItems.size(), numOfTasks);
+    // Read all charge items individually by insurant
+    for(std::size_t i = 0; i < numOfTasks; ++i)
+    {
+        ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItems[i], *createdChargeItems[i]));
 
-    ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItems[0], *chargeItem1));
-    ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItems[1], *chargeItem2));
-    ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItems[2], *chargeItem3));
+        closeReceipts[i]->removeSignature();
+        ASSERT_NO_FATAL_FAILURE(
+            chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8, chargeItems[i].id(), std::nullopt,
+                                                kbvBundles[i], closeReceipts[i]));
+        const auto chargeItemFromBundle = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+        ASSERT_EQ(chargeItemFromBundle.size(), 1);
+        ASSERT_NO_FATAL_FAILURE(checkEquality(chargeItemFromBundle[0], *createdChargeItems[i]));
+    }
+
+    // Get list of charge items by pharmacy
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemsBundle = chargeItemsGet(
+            jwtApotheke(), ContentMimeType::fhirXmlUtf8,
+            "entered-date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=entered-date"));
+    chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+    EXPECT_EQ(chargeItems.size(), numOfTasks);
+    // Read all charge items individually by pharmacy
+    for(std::size_t i = 0; i < numOfTasks; ++i)
+    {
+        const auto accessCode = chargeItems[i].accessCode();
+        ASSERT_TRUE(accessCode.has_value());
+        ASSERT_NO_FATAL_FAILURE(
+            chargeItemsBundle = chargeItemGetId(jwtApotheke(), ContentMimeType::fhirXmlUtf8, chargeItems[i].id(), accessCode, {}, {}));
+        const auto chargeItemFromBundle = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+        ASSERT_EQ(chargeItemFromBundle.size(), 1);
+        ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItemFromBundle[0], *createdChargeItems[i]));
+        EXPECT_EQ(chargeItemFromBundle[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem),
+                  createdChargeItems[i]->supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem));
+    }
 
     // Pharmacy deletes first charge item
-    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionId1, jwtApotheke()));
+    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionIds[0], jwtApotheke()));
     // Insurant deletes third charge item
-    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionId3, jwtInsurant));
+    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionIds[2], jwtInsurant));
 
-    ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(jwtInsurant, ContentMimeType::fhirJsonUtf8));
+    // Check remaining charge items
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemsBundle = chargeItemsGet(
+            jwtInsurant, ContentMimeType::fhirJsonUtf8,
+            "entered-date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=entered-date"));
     chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
-    EXPECT_EQ(chargeItems.size(), 1);
-    ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItems[0], *chargeItem2));
-    EXPECT_FALSE(chargeItems[0].markingFlag()->getAllMarkings()["insuranceProvider"]);
-    EXPECT_FALSE(chargeItems[0].markingFlag()->getAllMarkings()["subsidy"]);
-    EXPECT_FALSE(chargeItems[0].markingFlag()->getAllMarkings()["taxOffice"]);
+    ASSERT_EQ(chargeItems.size(), 2);
+    EXPECT_EQ(chargeItems[0].id(), createdChargeItems[1]->id());
+    EXPECT_EQ(chargeItems[1].id(), createdChargeItems[3]->id());
 
     // Change of marking by insurant
     std::optional<model::ChargeItem> chargeItem2Changed;
     ASSERT_NO_FATAL_FAILURE(
-        chargeItem2Changed = chargeItemPut(jwtInsurant,
-                                           ContentMimeType::fhirJsonUtf8, *chargeItem2, {},
+        chargeItem2Changed = chargeItemPut(jwtInsurant, ContentMimeType::fhirJsonUtf8, *createdChargeItems[1], {},
                                            std::make_tuple(true, false, true)));
-
-    ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(jwtInsurant, ContentMimeType::fhirJsonUtf8));
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8, createdChargeItems[1]->id(),
+                                            std::nullopt,
+                                            kbvBundles[1], closeReceipts[1]));
     chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
     EXPECT_EQ(chargeItems.size(), 1);
-    ASSERT_NO_FATAL_FAILURE(checkEqualityBasic(chargeItems[0], *chargeItem2));
-    // TODO for list request the following references do not exist.
-    // TODO Call GET /ChargeItem/<id> and perform the check (extra PR):
-//    ASSERT_NO_FATAL_FAILURE(checkEqualitySupportingInfoReference(chargeItems[0], *chargeItem2));
+    ASSERT_NO_FATAL_FAILURE(checkEqualityBasic(chargeItems[0], *createdChargeItems[1]));
+    ASSERT_NO_FATAL_FAILURE(checkEqualitySupportingInfoReference(chargeItems[0], *createdChargeItems[1]));
     EXPECT_TRUE(chargeItems[0].markingFlag()->getAllMarkings()["insuranceProvider"]);
     EXPECT_FALSE(chargeItems[0].markingFlag()->getAllMarkings()["subsidy"]);
     EXPECT_TRUE(chargeItems[0].markingFlag()->getAllMarkings()["taxOffice"]);
@@ -285,41 +302,52 @@ TEST_F(ErpWorkflowTest, WF200ChargeItem)
     ASSERT_NO_FATAL_FAILURE(
         chargeItem2Changed2 = chargeItemPut(jwtApotheke(), ContentMimeType::fhirXmlUtf8, *chargeItem2Changed,
                                             dispenseBundle.serializeToXmlString(), {}));
-    ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(jwtInsurant, ContentMimeType::fhirJsonUtf8));
+
+    const auto accessCode = createdChargeItems[1]->accessCode();
+    ASSERT_TRUE(accessCode.has_value());
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8, createdChargeItems[1]->id(), accessCode,
+                                            kbvBundles[1], closeReceipts[1]));
     chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
     EXPECT_EQ(chargeItems.size(), 1);
     ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItems[0], *chargeItem2Changed));
-    // TODO for list request the following references do not exist.
-    // TODO Call GET /ChargeItem/<id> and perform the check (extra PR):
-//    EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem),
-//              chargeItem2->supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem));
-//    EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt),
-//              chargeItem2->supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt));
-//    EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem),
-//              "Bundle/" + uuid.toString());
+    EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem),
+              createdChargeItems[1]->supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem));
+    EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt),
+              createdChargeItems[1]->supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt));
+    EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem),
+              "Bundle/" + uuid.toString());
 
     // Check audit events
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
-        { {}, prescriptionId1, prescriptionId1, prescriptionId1, prescriptionId2, prescriptionId2, prescriptionId2,
-          prescriptionId3, prescriptionId3, prescriptionId3, prescriptionId1, prescriptionId2, prescriptionId3,
-          prescriptionId1, prescriptionId3, prescriptionId2, prescriptionId2 },
+        { {},
+          prescriptionIds[0], prescriptionIds[0], prescriptionIds[0],
+          prescriptionIds[1], prescriptionIds[1], prescriptionIds[1],
+          prescriptionIds[2], prescriptionIds[2], prescriptionIds[2],
+          prescriptionIds[3], prescriptionIds[3], prescriptionIds[3],
+          prescriptionIds[0], prescriptionIds[1], prescriptionIds[2], prescriptionIds[3],
+          prescriptionIds[0], prescriptionIds[2],
+          prescriptionIds[1],
+          prescriptionIds[1] },
         kvnr, "de", startTime,
         { kvnr, // POST Consent
           telematicIdDoctor, telematicIdPharmacy, telematicIdPharmacy, // Task activate/accept/close
           telematicIdDoctor, telematicIdPharmacy, telematicIdPharmacy, // Task activate/accept/close
           telematicIdDoctor, telematicIdPharmacy, telematicIdPharmacy, // Task activate/accept/close
-          telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy,  // 3 * POST ChargeItem
+          telematicIdDoctor, telematicIdPharmacy, telematicIdPharmacy, // Task activate/accept/close
+          telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, // 4 * POST ChargeItem
           telematicIdPharmacy, kvnr, // DELETE ChargeItem by pharmacy / insurant
           kvnr, // PUT ChargeItem by insurant
           telematicIdPharmacy // PUT ChargeItem by pharmacy
         },
-        { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16 },
+        { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20 },
         { model::AuditEvent::SubType::create,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
-          model::AuditEvent::SubType::create, model::AuditEvent::SubType::create, model::AuditEvent::SubType::create,
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
+          model::AuditEvent::SubType::create, model::AuditEvent::SubType::create, model::AuditEvent::SubType::create, model::AuditEvent::SubType::create,
           model::AuditEvent::SubType::del, model::AuditEvent::SubType::del,
           model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::update });

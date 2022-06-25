@@ -171,13 +171,17 @@ std::ostream& operator << (std::ostream& out, FhirStructureDefinition::Kind kind
     return (out << to_string(kind));
 }
 
-const FhirElement* FhirStructureDefinition::findElement(const std::string& elementId) const
+std::shared_ptr<const FhirElement> FhirStructureDefinition::findElement(const std::string& elementId) const
 {
     auto element = std::find_if(mElements.begin(), mElements.end(),
-                 [elementId](const FhirElement& e) { return e.name() == elementId;});
+                [elementId](const std::shared_ptr<const FhirElement>& e)
+                {
+                    Expect3(e != nullptr, "element is null.", std::logic_error);
+                    return e->name() == elementId;
+                });
     if (element != mElements.end())
     {
-        return &(*element);
+        return *element;
     }
     return nullptr;
 }
@@ -241,10 +245,21 @@ FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::kind(Kind ki
 }
 
 
-FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::addElement(FhirElement&& element)
+FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::addElement(std::shared_ptr<const FhirElement> element)
 {
-    Expect3(mStructureDefinition->findElement(element.name()) == nullptr,
-        "duplicate element id: " + element.name(), std::logic_error);
+    using boost::algorithm::starts_with;
+    Expect3(element != nullptr, "element must not be null.", std::logic_error);
+    Expect3(mStructureDefinition->findElement(element->name()) == nullptr,
+        "duplicate element id: " + element->name(), std::logic_error);
+
+    if (!mStructureDefinition->mElements.empty())
+    {
+        auto& prev = mStructureDefinition->mElements.back();
+        if (starts_with(element->name(), prev->name() + '.'))
+        {
+            prev = FhirElement::Builder{*prev}.isBackbone(true).getAndReset();
+        }
+    }
 
     mStructureDefinition->mElements.emplace_back(std::move(element));
     return *this;

@@ -16,7 +16,7 @@ class CertificateTest : public testing::Test
 {
 };
 
-TEST_F(CertificateTest, fromBase64)
+TEST_F(CertificateTest, fromBase64)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto certificateBase64 =
         ::ResourceManager::instance().getStringResource("test/cadesBesSignature/certificates/erezept.pem");
@@ -31,7 +31,7 @@ TEST_F(CertificateTest, fromBase64)
     EXPECT_ANY_THROW(Certificate::fromBase64(""));
 }
 
-TEST_F(CertificateTest, fromPem)
+TEST_F(CertificateTest, fromPem)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto certificatePem =
         ::ResourceManager::instance().getStringResource("test/cadesBesSignature/certificates/erezept.pem");
@@ -46,7 +46,7 @@ TEST_F(CertificateTest, fromPem)
     EXPECT_ANY_THROW(Certificate::fromPem(""));
 }
 
-TEST_F(CertificateTest, fromBase64Der)
+TEST_F(CertificateTest, fromBase64Der)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto certificateBase64Pem =
         ::ResourceManager::instance().getStringResource("test/cadesBesSignature/certificates/erezept.pem");
@@ -60,7 +60,7 @@ TEST_F(CertificateTest, fromBase64Der)
     EXPECT_ANY_THROW(Certificate::fromBase64Der(""));
 }
 
-TEST_F(CertificateTest, fromBinaryDer)
+TEST_F(CertificateTest, fromBinaryDer)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto certificateBinaryDer =
         ::ResourceManager::instance().getStringResource("test/generated_pki/root_ca_ec/ca.der");

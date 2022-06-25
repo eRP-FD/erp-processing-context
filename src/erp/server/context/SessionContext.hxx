@@ -29,7 +29,7 @@ class PcServiceContext;
 class SessionContext : private boost::noncopyable
 {
 public:
-    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& accessLog_);
+    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& log);
 
     PcServiceContext& serviceContext;
     ServerRequest& request;

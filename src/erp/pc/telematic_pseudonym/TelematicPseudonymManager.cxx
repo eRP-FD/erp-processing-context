@@ -9,18 +9,18 @@
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/util/Expect.hxx"
 
-std::unique_ptr<TelematicPseudonymManager> TelematicPseudonymManager::create(PcServiceContext& serviceContext)
+std::unique_ptr<TelematicPseudonymManager> TelematicPseudonymManager::create(PcServiceContext* serviceContext)
 {
     auto instance = std::make_unique<TelematicPseudonymManager>(serviceContext);
+    instance->LoadCmacs(std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now()));
+    // close the unnecessary connection on the main thread:
+    instance->mServiceContext->databaseFactory()->closeConnection();
     return instance;
 }
 
-TelematicPseudonymManager::TelematicPseudonymManager(PcServiceContext& serviceContext)
-    : mServiceContext(serviceContext)
+TelematicPseudonymManager::TelematicPseudonymManager(PcServiceContext* serviceContext)
+    : PreUserPseudonymManager(serviceContext)
 {
-    LoadCmacs(std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now()));
-    // close the unnecessary connection on the main thread:
-    mServiceContext.databaseFactory()->closeConnection();
 }
 
 void TelematicPseudonymManager::LoadCmacs(const date::sys_days& forDay)
@@ -29,7 +29,7 @@ void TelematicPseudonymManager::LoadCmacs(const date::sys_days& forDay)
     using namespace std::chrono;
 
     TVLOG(1) << "Loading CMAC for TelematicPseudonym from Database " << forDay;
-    auto database = mServiceContext.databaseFactory();
+    auto database = mServiceContext->databaseFactory();
 
     mKeys.clear();
     mKeys.reserve(keyHistoryLength);
@@ -73,43 +73,6 @@ bool TelematicPseudonymManager::withinGracePeriod(date::year_month_day currentDa
     year_month_day lim(mKey2Start);
     lim += months{1};
     return (currentDate >= mKey1End && currentDate < lim);
-}
-
-CmacSignature TelematicPseudonymManager::sign(const std::string_view& src)
-{
-    std::shared_lock lock{mMutex};
-    ensureKeysUptodate(lock);
-    return sign(0, src);
-}
-
-CmacSignature TelematicPseudonymManager::sign(size_t keyNr, const std::string_view& src)
-{
-    Expect(mKeys.size() > keyNr, "Key for upcoming quarter not loaded. Cannot sign src.");
-    return mKeys[keyNr].sign(src);
-}
-
-std::tuple<bool, CmacSignature> TelematicPseudonymManager::verifyAndReSign(const CmacSignature& sig,
-                                                                           const std::string_view& src)
-{
-    using std::get;
-    std::shared_lock lock{mMutex};
-    ensureKeysUptodate(lock);
-    std::tuple<bool, CmacSignature> result{false, sign(0, src)};
-    if (get<1>(result) == sig)
-    {
-        get<0>(result) = true;
-        return result;
-    }
-    for (size_t i = 1; i < mKeys.size(); ++i)
-    {
-        auto sigI = sign(i, src);
-        if (sigI == sig)
-        {
-            get<0>(result) = true;
-            return result;
-        }
-    }
-    return result;
 }
 
 bool TelematicPseudonymManager::keyUpdateRequired(date::year_month_day expirationDate) const

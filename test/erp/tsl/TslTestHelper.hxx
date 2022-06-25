@@ -11,8 +11,8 @@
 #include "erp/tsl/TslManager.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
-#include "test/mock/MockOcsp.hxx"
-#include "test/mock/UrlRequestSenderMock.hxx"
+#include "mock/tsl/MockOcsp.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -32,7 +32,7 @@ try \
 } \
 catch(const TslError& e) \
 { \
-    const std::vector<TslErrorCode> expectedCodes = tslErrorCodes; \
+    const std::vector<TslErrorCode>& expectedCodes = tslErrorCodes; \
     EXPECT_EQ(status, e.getHttpStatus()); \
     EXPECT_EQ(expectedCodes.size(), e.getErrorData().size()); \
     for (size_t ind = 0; ind < expectedCodes.size(); ind++) \
@@ -55,6 +55,7 @@ public:
     static std::string createValidButManipulatedTslContentsFromTemplate(const std::string& tslTemplate);
 
     static Certificate getDefaultOcspCertificate();
+    static shared_EVP_PKEY getDefaultOcspPrivateKey();
     static Certificate getDefaultOcspCertificateCa();
     static Certificate getTslSignerCertificate();
     static Certificate getTslSignerCACertificate();

@@ -37,6 +37,11 @@ PrescriptionId PostgresDatabaseCommunicationTest::insertTask(Task& task)
 std::optional<Uuid> PostgresDatabaseCommunicationTest::insertCommunication(Communication& communication)
 {
     std::optional<Uuid> communicationId = database().insertCommunication(communication);
+    if (communication.timeReceived().has_value())
+    {
+        database().markCommunicationsAsRetrieved({communication.id().value()}, communication.timeReceived().value(),
+                                                 std::string(communication.recipient().value()));
+    }
     database().commitTransaction();
     return communicationId;
 }
@@ -80,10 +85,10 @@ PostgresDatabaseCommunicationTest::retrieveCommunication(const Uuid& communicati
         Expect(result.at(0).size() == 4,
                "Expected four columns in result row (received, blob_id, message and salt).");
         auto blobId = gsl::narrow<BlobId>(result[0][1].as<int32_t>());
-        db_model::Blob salt{result[0][3].as<pqxx::binarystring>()};
+        db_model::Blob salt{result[0][3].as<db_model::postgres_bytea>()};
         auto key = getKeyDerivation().communicationKey(sender, getKeyDerivation().hashIdentity(sender), blobId, salt);
         auto communicationJson = getDBCodec().decode(
-            db_model::EncryptedBlob{result[0][2].as<pqxx::binarystring>()}, key);
+            db_model::EncryptedBlob{result[0][2].as<db_model::postgres_bytea>()}, key);
         Communication communication = Communication::fromJsonNoValidation(communicationJson);
         // Please note that the communication id is not stored in the json string of the message
         // column as the id is only available after the data row has been inserted in the table.
@@ -294,7 +299,7 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
 }
 
 
-TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -434,7 +439,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)
 }
 
 
-TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -499,7 +504,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)
 }
 
 
-TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -738,7 +743,7 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId
  * At the moment only a part of the underlying data types is (dateTime) is implemented and allow only test
  * for equality. Periods and timing are not supported yet.
 */
-TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)
+TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -866,7 +871,7 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
  * This test is work in progress because the task id is not yet a member of the Communication class nor of
  * the erp_communication table. Therefore it can not yet act as filter on the count.
 */
-TEST_P(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
+TEST_P(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -952,7 +957,7 @@ TEST_P(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)
 }
 
 
-TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)
+TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {

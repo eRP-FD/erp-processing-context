@@ -15,6 +15,7 @@ SessionContext::SessionContext(
     , request(request)
     , response(response)
     , accessLog(log)
+    , callerWantsJson(false)
 {
 }
 

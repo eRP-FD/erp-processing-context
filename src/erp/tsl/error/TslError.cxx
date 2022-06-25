@@ -218,7 +218,7 @@ namespace
     }
 
 
-    LogId getErrorsLogId(const TslErrorCode errorCode, const std::vector<TslError::ErrorData> errorData)
+    LogId getErrorsLogId(const TslErrorCode errorCode, const std::vector<TslError::ErrorData>& errorData)
     {
         LogId logId = getErrorLogId(errorCode);
         for (const auto& entry : errorData)
@@ -235,8 +235,8 @@ namespace
     {
         std::ostringstream log;
 
-        log << "{\"errorCode\":\"" << to_string(errorCode) << "\""
-            << ",\"message\":\"" << message << "\"}";
+        log << R"({"errorCode":")" << to_string(errorCode) << R"(")"
+            << R"(,"message":")" << message << R"("})";
 
         if ( ! isLast)
         {
@@ -256,9 +256,9 @@ namespace
         const std::optional<std::string>& tslSequenceNumber = {})
     {
         std::ostringstream log;
-        log << "{\"id\":" << static_cast<uint32_t>(getErrorsLogId(errorCode, errorData))
-            << ",\"compType\":\"eRP:PKI\""
-            << ",\"errorData\":[";
+        log << R"({"id":)" << static_cast<uint32_t>(getErrorsLogId(errorCode, errorData))
+            << R"(,"compType":"eRP:PKI")"
+            << R"(,"errorData":[)";
 
         log << generateErrorDataLog(
             errorCode,
@@ -275,17 +275,17 @@ namespace
 
         if (tslMode.has_value())
         {
-            log << ",\"tslMode\": \"" << to_string(*tslMode) << "\"";
+            log << R"(,"tslMode": ")" << to_string(*tslMode) << R"(")";
         }
 
         if (tslId.has_value())
         {
-            log << ",\"tslId\": \"" << *tslId << "\"";
+            log << R"(,"tslId": ")" << *tslId << R"(")";
         }
 
         if (tslSequenceNumber.has_value())
         {
-            log << ",\"tslSequenceNumber\": \"" << *tslSequenceNumber << "\"";
+            log << R"(,"tslSequenceNumber": ")" << *tslSequenceNumber << R"(")";
         }
 
         log << "}";

@@ -24,7 +24,7 @@ public:
 };
 
 
-TEST_F(StringTest, trim)
+TEST_F(StringTest, trim)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(String::trim("foo"), "foo");
     ASSERT_EQ(String::trim(" \tfoo "), "foo");
@@ -38,7 +38,7 @@ TEST_F(StringTest, trim)
 }
 
 
-TEST_F(StringTest, split)
+TEST_F(StringTest, split)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(String::split("", ';'), std::vector<std::string>({""}));
     ASSERT_EQ(String::split("a", ';'), std::vector<std::string>({"a"}));
@@ -61,7 +61,7 @@ TEST_F(StringTest, split)
 }
 
 
-TEST_F(StringTest, splitByStr)
+TEST_F(StringTest, splitByStr)//NOLINT(readability-function-cognitive-complexity)
 {
     // ---- BEGIN EXPECTED SAME RESULTS AS WITH "StringTest.split" ABOVE ----
     ASSERT_EQ(String::split("", ";"), std::vector<std::string>({""}));
@@ -99,7 +99,7 @@ TEST_F(StringTest, splitByStr)
 }
 
 
-TEST_F(StringTest, splitWithStringQuoting)
+TEST_F(StringTest, splitWithStringQuoting)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_EQ(String::splitWithStringQuoting("", ';'), std::vector<std::string>({""}));
     EXPECT_EQ(String::splitWithStringQuoting("a", ';'), std::vector<std::string>({"a"}));
@@ -133,9 +133,9 @@ TEST_F(StringTest, splitWithStringQuoting_nestedQuoting)
 }
 
 
-TEST_F(StringTest, splitIntoNullTerminatedArray)
+TEST_F(StringTest, splitIntoNullTerminatedArray)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto textToSplit = " abc , def,ghi,";
+    const char* const textToSplit = " abc , def,ghi,";
 
     const auto [array,buffer] = String::splitIntoNullTerminatedArray(textToSplit, ",");
 
@@ -148,7 +148,7 @@ TEST_F(StringTest, splitIntoNullTerminatedArray)
 }
 
 
-TEST_F(StringTest, concatenateStrings)
+TEST_F(StringTest, concatenateStrings)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(String::concatenateStrings(std::vector<std::string>({""}), ";"), std::string(""));
     ASSERT_EQ(String::concatenateStrings(std::vector<std::string>({""}), ";;;"), std::string(""));
@@ -185,7 +185,7 @@ TEST_F(StringTest, concatenateItems)
     ASSERT_EQ(String::concatenateItems(), std::string(""));
 }
 
-TEST_F(StringTest, contains)
+TEST_F(StringTest, contains)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto string = ::std::string{"abc012345def"};
 
@@ -230,7 +230,7 @@ TEST_F(StringTest, removeEnclosing_1)
 }
 
 
-TEST_F(StringTest, removeEnclosing_2)
+TEST_F(StringTest, removeEnclosing_2)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string expected = "BLA";
     std::string head = "head";
@@ -367,7 +367,7 @@ TEST_F(StringTest, toLower)
 }
 
 
-TEST_F(StringTest, toBool)
+TEST_F(StringTest, toBool)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(String::toBool("TRUE"), true);
     ASSERT_EQ(String::toBool("true"), true);
@@ -392,7 +392,7 @@ TEST_F(StringTest, utf8Length)
 }
 
 
-TEST_F(StringTest, truncateUtf8)
+TEST_F(StringTest, truncateUtf8)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_EQ(String::truncateUtf8("Easy", 4), "Easy");
     EXPECT_EQ(String::truncateUtf8("Easy", 2), "Ea");
@@ -411,7 +411,7 @@ TEST_F(StringTest, truncateUtf8)
 
 
 
-TEST_F(StringTest, vaListToString)
+TEST_F(StringTest, vaListToString)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
     EXPECT_EQ("hello world"s, vaListHelper("hello %s", "world"));
@@ -425,4 +425,13 @@ TEST_F(StringTest, vaListToString)
     EXPECT_EQ("hello world"s, vaListHelper("hello %s", "world", "hello"));
 
     EXPECT_ANY_THROW(vaListHelper(nullptr));
+}
+
+TEST_F(StringTest, toHexString)
+{
+    const unsigned char str1[] = {0x0, 0x1, 0x2, 0x11, 0xff};
+    EXPECT_EQ(String::toHexString(std::string_view{reinterpret_cast<const char*>(str1), 5}), "00010211ff");
+    EXPECT_EQ(String::toHexString(std::string_view{}), "");
+    EXPECT_EQ(String::toHexString(""), "");
+    EXPECT_EQ(String::toHexString("hallo"), "68616c6c6f");
 }

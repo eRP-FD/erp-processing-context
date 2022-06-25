@@ -27,6 +27,8 @@ public:
     MarkingContainer getAllMarkings() const;
 
     static bool isMarked(const MarkingContainer& markings);
+
+    friend std::optional<ChargeItemMarkingFlag> ResourceBase::getExtension<ChargeItemMarkingFlag>(const std::string_view&) const;
 };
 
 }

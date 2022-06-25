@@ -20,7 +20,7 @@ class Erp5822Test : public ErpWorkflowTest
 {
 public:
 
-    void SetUp() override
+    void SetUp() override//NOLINT(readability-function-cognitive-complexity)
     {
         if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
         {
@@ -33,7 +33,9 @@ public:
         ASSERT_NO_FATAL_FAILURE(task = taskCreate());
         ASSERT_TRUE(task.has_value());
         std::string accessCode{task->accessCode()};
-        ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle()));
+        ASSERT_NO_FATAL_FAILURE(
+            task = taskActivate(task->prescriptionId(), accessCode,
+                                std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
         ASSERT_TRUE(task.has_value());
         std::optional<Communication> infoReq;
         ASSERT_NO_FATAL_FAILURE(infoReq = communicationPost(model::Communication::MessageType::InfoReq,
@@ -58,7 +60,7 @@ public:
         ASSERT_TRUE(dispReq.has_value());
     }
 
-    void checkComms(const JWT& jwt, size_t expectedCount)
+    void checkComms(const JWT& jwt, size_t expectedCount)//NOLINT(readability-function-cognitive-complexity)
     {
         auto user = jwt.stringForClaim(JWT::idNumberClaim).value();
         std::optional<Bundle> commBundle;
@@ -86,7 +88,7 @@ public:
         }
     }
 
-    void TearDown() override
+    void TearDown() override//NOLINT(readability-function-cognitive-complexity)
     {
         ASSERT_NO_FATAL_FAILURE(communicationDeleteAll(jwtVersicherter()));
         ASSERT_NO_FATAL_FAILURE(communicationDeleteAll(jwtApotheke()));
@@ -109,11 +111,6 @@ public:
     JWT jwtApotheke() const override { return jwtFromResource("claims_apotheke.json"); }
     JWT jwtVersicherter() const override { return jwtFromResource("claims_versicherter.json"); }
 
-    std::string qesBundle()
-    {
-        return Base64::encode(resourceManager.getStringResource(testDataPath + "kbv_bundle.p7s"));
-    }
-
     ResourceManager& resourceManager = ResourceManager::instance();
     const std::string testDataPath{"test/issues/ERP-5822/"};
     std::string kvnr;
@@ -123,7 +120,7 @@ public:
     EnvironmentVariableGuard environmentVariableGuard2{"DEBUG_DISABLE_QES_ID_CHECK", "true"};
 };
 
-TEST_F(Erp5822Test, InsurantFirst)
+TEST_F(Erp5822Test, InsurantFirst)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_NO_FATAL_FAILURE(checkComms(jwtVersicherter(), 3));
     ASSERT_NO_FATAL_FAILURE(checkComms(jwtVersicherter(), 2));
@@ -132,7 +129,7 @@ TEST_F(Erp5822Test, InsurantFirst)
     ASSERT_NO_FATAL_FAILURE(checkComms(jwtApotheke(), 0));
 }
 
-TEST_F(Erp5822Test, PharmacyFirst)
+TEST_F(Erp5822Test, PharmacyFirst)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_NO_FATAL_FAILURE(checkComms(jwtApotheke(), 3));
     ASSERT_NO_FATAL_FAILURE(checkComms(jwtApotheke(), 1));

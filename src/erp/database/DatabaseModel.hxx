@@ -13,7 +13,6 @@
 #include "erp/model/Timestamp.hxx"
 #include "erp/model/AuditData.hxx"
 
-#include <pqxx/binarystring>
 #include <string>
 #include <vector>
 
@@ -22,6 +21,10 @@ class SafeString;
 
 namespace db_model
 {
+
+using postgres_bytea_view = std::basic_string_view<std::byte>;
+using postgres_bytea = std::basic_string<std::byte>;
+
 enum class MasterKeyType: int8_t
 {
     medicationDispense = 1,
@@ -29,14 +32,16 @@ enum class MasterKeyType: int8_t
     auditevent = 3,
 };
 
-class Blob: public std::vector<uint8_t>
+class Blob: public std::vector<std::byte>
 {
 public:
-    using std::vector<uint8_t>::vector;
+    using std::vector<std::byte>::vector;
     Blob() = default;
-    explicit Blob(std::vector<uint8_t>&&);
-    explicit Blob(const pqxx::binarystring& pqxxBin);
-    pqxx::binarystring binarystring() const;
+    explicit Blob(std::vector<std::byte>&&);
+    explicit Blob(const postgres_bytea_view& pqxxBin);
+    explicit Blob(const std::vector<uint8_t>& vec);
+    void append(const std::string_view& str);
+    postgres_bytea_view binarystring() const;
     std::string toHex() const;
 };
 
@@ -45,13 +50,13 @@ class EncryptedBlob : public Blob
 public:
     using Blob::Blob;
     EncryptedBlob() = default;
-    explicit EncryptedBlob(std::vector<uint8_t>&&);
+    explicit EncryptedBlob(std::vector<std::byte>&&);
 };
 
 class HashedId: public EncryptedBlob
 {
 public:
-    explicit HashedId(EncryptedBlob&& hashedKvnr);
+    explicit HashedId(EncryptedBlob&& hashedId);
 };
 
 
@@ -117,7 +122,7 @@ public:
     Uuid id;
     EncryptedBlob communication;
     std::optional<model::Timestamp> received;
-    BlobId blobId;
+    BlobId blobId{};
     Blob salt;
 };
 

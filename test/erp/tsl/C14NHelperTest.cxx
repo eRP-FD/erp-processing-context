@@ -135,8 +135,8 @@ TEST_F(C14NHelperTest, canonicalize_assertionWithoutSignature_complex)
     document.registerNamespace("saml2", "urn:oasis:names:tc:SAML:2.0:assertion");
     document.registerNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
 
-    auto assertionNode = document.getNode("/env:Envelope/env:Header/wss:Security/saml2:Assertion");
-    auto signatureNode = document.getNode("/env:Envelope/env:Header/wss:Security/saml2:Assertion/ds:Signature");
+    auto* assertionNode = document.getNode("/env:Envelope/env:Header/wss:Security/saml2:Assertion");
+    auto* signatureNode = document.getNode("/env:Envelope/env:Header/wss:Security/saml2:Assertion/ds:Signature");
 
     auto assertionWithoutSignature = C14NHelper::canonicalize(
         assertionNode,

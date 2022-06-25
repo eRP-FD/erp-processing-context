@@ -31,7 +31,7 @@
 namespace {
     constexpr uint16_t DefaultProcessingContextPort = 9090;
 
-    void mergeConfig(rapidjson::Value& dst, const rapidjson::Value& src, rapidjson::Document::AllocatorType& allocator)
+    void mergeConfig(rapidjson::Value& dst, const rapidjson::Value& src, rapidjson::Document::AllocatorType& allocator) // NOLINT(misc-no-recursion)
     {
         for (auto srcIt = src.MemberBegin(), end = src.MemberEnd(); srcIt != end; ++srcIt)
         {
@@ -216,7 +216,7 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyNames>& allKeyNames)
     if (! mDocument.IsObject())
         return;
 
-    const auto pathPrefixCommon = "/common";
+    const auto* pathPrefixCommon = "/common";
     const auto pathPrefixHost = "/" + mServerHost;
     const auto pathPrefixHostPort = pathPrefixHost + "/" + std::to_string(mServerPort);
 
@@ -267,13 +267,14 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ENROLMENT_SERVER_PORT                          , {"ERP_ENROLMENT_SERVER_PORT"                          , "/erp/enrolment/server/port"}},
     {ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT                    , {"ERP_ENROLMENT_ACTIVATE_FOR_PORT"                    , "/erp/enrolment/server/activateForPort"}},
     {ConfigurationKey::ENROLMENT_API_CREDENTIALS                      , {"ERP_ENROLMENT_API_CREDENTIALS"                      , "/erp/enrolment/api/credentials"}},
-    {ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS                 , {"ERP_ENTROPY_FETCH_INTERVAL_SECONDS"                 , "/erp/fhir/structure-files/entropy_fetch_interval_seconds"}},
+    {ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS                 , {"ERP_ENTROPY_FETCH_INTERVAL_SECONDS"                 , "/erp/entropy_fetch_interval_seconds"}},
     {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir/structure-files"}},
     {ConfigurationKey::IDP_REGISTERED_FD_URI                          , {"ERP_IDP_REGISTERED_FD_URI"                          , "/erp/idp/registeredFdUri"}},
     {ConfigurationKey::IDP_CERTIFICATE_MAX_AGE_HOURS                  , {"ERP_IDP_CERTIFICATE_MAX_AGE_HOURS"                  , "/erp/idp/certificateMaxAgeHours"}},
     {ConfigurationKey::IDP_UPDATE_ENDPOINT                            , {"ERP_IDP_UPDATE_ENDPOINT"                            , "/erp/idp/updateEndpoint"}},
     {ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH           , {"ERP_IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH"           , "/erp/idp/sslRootCaPath"}},
     {ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES                    , {"ERP_IDP_UPDATE_INTERVAL_MINUTES"                    , "/erp/idp/updateIntervalMinutes"}},
+    {ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS, {"ERP_IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS", "/erp/idp/noValidCertificateUpdateIntervalSeconds"}},
     {ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD                      , {"ERP_OCSP_NON_QES_GRACE_PERIOD"                      , "/erp/ocsp/gracePeriodNonQes"}},
     {ConfigurationKey::OCSP_QES_GRACE_PERIOD                          , {"ERP_OCSP_QES_GRACE_PERIOD"                          , "/erp/ocsp/gracePeriodQes"}},
     {ConfigurationKey::SERVER_THREAD_COUNT                            , {"ERP_SERVER_THREAD_COUNT"                            , "/erp/server/thread-count"}},
@@ -281,11 +282,11 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVER_PRIVATE_KEY                             , {"ERP_SERVER_PRIVATE_KEY"                             , "/erp/server/certificateKey"}},
     {ConfigurationKey::SERVER_REQUEST_PATH                            , {"ERP_SERVER_REQUEST_PATH"                            , "/erp/server/requestPath"}},
     {ConfigurationKey::SERVER_PROXY_CERTIFICATE                       , {"ERP_SERVER_PROXY_CERTIFICATE"                       , "/erp/server/proxy/certificate"}},
-    {ConfigurationKey::SERVER_KEEP_ALIVE                              , {"ERP_SERVER_KEEP_ALIVE"                              , "/erp/server/keep-alive"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD, {"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD", "/erp/service/task/activate/entlassRezeptValidityInWorkDays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS                 , {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS"                 , "/erp/service/task/activate/holidays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION           , {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION"           , "/erp/service/task/activate/kbvValidation"}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, {"ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE", "/erp/service/task/activate/authoredOnMustEqualSigningDate"}},
     {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount"}},
     {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey"}},
     {ConfigurationKey::PCR_SET                                        , {"ERP_PCR_SET"                                        , "/erp/service/pcr-set"}},
@@ -376,7 +377,8 @@ DevConfigKeyNames::DevConfigKeyNames()
     {ConfigurationKey::DEBUG_ENABLE_HSM_MOCK,                 {"DEBUG_ENABLE_HSM_MOCK",             "/debug/enable-hsm-mock"}},
     {ConfigurationKey::DEBUG_DISABLE_REGISTRATION,            {"DEBUG_DISABLE_REGISTRATION",        "/debug/disable-registration"}},
     {ConfigurationKey::DEBUG_DISABLE_DOS_CHECK,               {"DEBUG_DISABLE_DOS_CHECK",           "/debug/disable-dos-check"}},
-    {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check"}}
+    {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check"}},
+    {ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER,         {"DEBUG_ENABLE_MOCK_TSL_MANAGER",     "/debug/enable-mock-tsl-manager"}}
     });
     // clang-format on
 }

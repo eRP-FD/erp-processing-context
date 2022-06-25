@@ -50,6 +50,29 @@ namespace
         }
     }
 
+    void logSslVerifyError(boost::asio::ssl::verify_context& context)
+    {
+        const int error = X509_STORE_CTX_get_error(context.native_handle());
+        const int errorDepth = X509_STORE_CTX_get_error_depth(context.native_handle());
+        X509* errCert = X509_STORE_CTX_get_current_cert(context.native_handle());
+        char buffer[256];
+        X509_NAME_oneline(X509_get_subject_name(errCert), buffer, sizeof buffer);
+        TVLOG(1) << "error " << error << " (" <<  X509_verify_cert_error_string(error)
+                << " at depth " << errorDepth << " in " << buffer;
+
+        auto certificateMemory = shared_BIO::make();
+        if (!PEM_write_bio_X509(certificateMemory, errCert))
+        {
+            TVLOG(1) << "can not convert certificate to PEM string";
+        }
+        else
+        {
+            char* data = nullptr;
+            const size_t length = BIO_get_mem_data(certificateMemory, &data);
+            std::string errCertPem(data, length);
+            TVLOG(1) << "problem certificate:\n" << errCertPem << "\n\n";
+        }
+    }
     /**
      * This is a callback registered by openSsl for debugging to get the detailed information regarding
      * certificate verification problems. The callback does not affect the verification,
@@ -65,26 +88,7 @@ namespace
 
         if ( ! succeded)
         {
-            const int error = X509_STORE_CTX_get_error(context.native_handle());
-            const int errorDepth = X509_STORE_CTX_get_error_depth(context.native_handle());
-            X509* errCert = X509_STORE_CTX_get_current_cert(context.native_handle());
-            char buffer[256];
-            X509_NAME_oneline(X509_get_subject_name(errCert), buffer, sizeof buffer);
-            TVLOG(1) << "error " << error << " (" <<  X509_verify_cert_error_string(error)
-                    << " at depth " << errorDepth << " in " << buffer;
-
-            auto certificateMemory = shared_BIO::make();
-            if (!PEM_write_bio_X509(certificateMemory, errCert))
-            {
-                TVLOG(1) << "can not convert certificate to PEM string";
-            }
-            else
-            {
-                char* data = nullptr;
-                const size_t length = BIO_get_mem_data(certificateMemory, &data);
-                std::string errCertPem(data, length);
-                TVLOG(1) << "problem certificate:\n" << errCertPem << "\n\n";
-            }
+           logSslVerifyError(context);
         }
 
         return succeded;

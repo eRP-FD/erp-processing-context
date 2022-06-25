@@ -35,7 +35,7 @@ public:
     TslManager(
         std::shared_ptr<UrlRequestSender> requestSender,
         std::shared_ptr<XmlValidator> xmlValidator,
-        const std::vector<PostUpdateHook> initialPostUpdateHooks = {});
+        const std::vector<PostUpdateHook>& initialPostUpdateHooks = {});
 
     virtual ~TslManager() = default;
 
@@ -53,7 +53,7 @@ public:
      */
     virtual X509Store getTslTrustedCertificateStore(
         const TslMode tslMode,
-        const std::optional<X509Certificate> certificate);
+        const std::optional<X509Certificate>& certificate);
 
     /**
      * This implementation checks whether the current tsl information is up to date,
@@ -108,7 +108,7 @@ public:
      *
      * @throws std::runtime_error in case of problems
      */
-    size_t addPostUpdateHook (PostUpdateHook postUpdateHook);
+    size_t addPostUpdateHook (const PostUpdateHook& postUpdateHook);
 
     /**
      * Disables the registered callback with specified index.
@@ -130,7 +130,7 @@ protected:
     TslManager(
         std::shared_ptr<UrlRequestSender> requestSender,
         std::shared_ptr<XmlValidator> xmlValidator,
-        const std::vector<PostUpdateHook> initialPostUpdateHooks,
+        const std::vector<PostUpdateHook>& initialPostUpdateHooks,
         std::unique_ptr<TrustStore> tslTrustStore,
         std::unique_ptr<TrustStore> bnaTrustStore);
 
@@ -152,6 +152,10 @@ private:
 
     friend class TslTestHelper;
 
+#endif
+
+#if WITH_HSM_MOCK > 0
+    friend class MockTslManager;
 #endif
 };
 

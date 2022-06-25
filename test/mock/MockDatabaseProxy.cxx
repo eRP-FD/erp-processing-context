@@ -44,6 +44,11 @@ void MockDatabaseProxy::closeConnection()
     mDatabase.closeConnection();
 }
 
+bool MockDatabaseProxy::isCommitted() const
+{
+    return mDatabase.isCommitted();
+}
+
 void MockDatabaseProxy::healthCheck()
 {
     mDatabase.healthCheck();
@@ -73,13 +78,12 @@ std::optional<Uuid> MockDatabaseProxy::insertCommunication(const model::Prescrip
                                                            const model::Communication::MessageType messageType,
                                                            const db_model::HashedId& sender,
                                                            const db_model::HashedId& recipient,
-                                                           const std::optional<model::Timestamp>& timeReceived,
                                                            BlobId senderBlobId,
                                                            const db_model::EncryptedBlob& messageForSender,
                                                            BlobId recipientBlobId,
                                                            const db_model::EncryptedBlob& messageForRecipient)
 {
-    return mDatabase.insertCommunication(prescriptionId, timeSent, messageType, sender, recipient, timeReceived,
+    return mDatabase.insertCommunication(prescriptionId, timeSent, messageType, sender, recipient,
                                          senderBlobId, messageForSender, recipientBlobId, messageForRecipient);
 }
 
@@ -276,6 +280,12 @@ MockDatabaseProxy::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr&
                                                      const std::optional<UrlArguments>& search) const
 {
     return mDatabase.retrieveAllChargeItemsForInsurant(requestingInsurant, search);
+}
+
+std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+MockDatabaseProxy::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) const
+{
+    return mDatabase.retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(taskId);
 }
 
 std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>

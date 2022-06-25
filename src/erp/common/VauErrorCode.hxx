@@ -12,7 +12,8 @@
 enum class VauErrorCode
 {
     brute_force,
-    invalid_prescription
+    invalid_prescription,
+    invalid_dispense
 };
 
 constexpr std::string_view vauErrorCodeStr(VauErrorCode vauErrorCode)

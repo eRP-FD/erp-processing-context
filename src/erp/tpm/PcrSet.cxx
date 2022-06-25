@@ -38,7 +38,7 @@ PcrSet PcrSet::fromString (const std::string& stringValue)
 }
 
 
-PcrSet PcrSet::fromList (const std::vector<size_t> registers)
+PcrSet PcrSet::fromList (const std::vector<size_t>& registers)
 {
     PcrSet pcrSet;
 
@@ -55,7 +55,7 @@ PcrSet PcrSet::fromList (const std::vector<size_t> registers)
 
 std::optional<PcrSet> PcrSet::fromJson (const rapidjson::Document& document, std::string_view pointerToPcrSetArray)
 {
-    const auto value = rapidjson::Pointer(rapidjson::StringRef(pointerToPcrSetArray.data(), pointerToPcrSetArray.size())).Get(document);
+    const auto* value = rapidjson::Pointer(rapidjson::StringRef(pointerToPcrSetArray.data(), pointerToPcrSetArray.size())).Get(document);
     if (value == nullptr)
         return {};
 

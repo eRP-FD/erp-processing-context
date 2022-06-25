@@ -79,8 +79,8 @@ public:
 
     void reset (void);
 
-    self_t& operator= (const self_t& other);
-    self_t& operator= (self_t&& other) noexcept;
+    self_t& operator= (const self_t& other); // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
+    self_t& operator= (self_t&& other) noexcept; // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
     operator C* (void);
     operator const C* (void) const;
     C* get (void);
@@ -289,7 +289,7 @@ void openssl_shared_ptr<C,creator,deleter,upref,name>
 
 
 template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
-openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,deleter,upref,name>
+openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,deleter,upref,name>    // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
     ::operator= (const self_t& other)
 {
     // For this assignment operation we require the upref functor to be present.
@@ -315,7 +315,7 @@ openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,d
 
 
 template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
-openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,deleter,upref,name>
+openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,deleter,upref,name>    // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
     ::operator= (self_t&& other) noexcept
 {
     p = std::move(other.p);

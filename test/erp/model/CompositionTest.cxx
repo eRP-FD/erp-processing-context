@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(CompositionTest, ConstructFromData)
+TEST(CompositionTest, ConstructFromData)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string_view telematicId = "12345654321";
     const model::Timestamp start = model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
@@ -38,7 +38,7 @@ TEST(CompositionTest, ConstructFromData)
 }
 
 
-TEST(CompositionTest, ConstructFromJson)
+TEST(CompositionTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string json = R"(
 {

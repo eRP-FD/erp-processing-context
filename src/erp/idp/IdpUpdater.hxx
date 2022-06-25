@@ -44,12 +44,12 @@ public:
      */
     template<class IdpUpdaterType = IdpUpdater>
     static std::unique_ptr<IdpUpdaterType> create (Idp& certificateHolder,
-               TslManager* tslManager,
+               TslManager& tslManager,
                std::shared_ptr<Timer> timerManager,
                bool runFirstUpdateSynchronously = true,
                const std::shared_ptr<UrlRequestSender>& urlRequestSender = {});
     IdpUpdater (Idp& certificateHolder,
-               TslManager* tslManager,
+               TslManager& tslManager,
                const std::shared_ptr<UrlRequestSender>& urlRequestSender,
                std::shared_ptr<Timer> timerManager);
     virtual ~IdpUpdater (void);
@@ -60,7 +60,7 @@ protected:
     virtual std::string doDownloadWellknown (void);
     virtual UrlHelper::UrlParts doParseWellknown (std::string&& wellKnownConfiguration);
     virtual std::string doDownloadDiscovery (const UrlHelper::UrlParts& url);
-    virtual std::vector<Certificate> doParseDiscovery (std::string&& jwtString);
+    virtual std::vector<Certificate> doParseDiscovery (std::string&& jwkString);
 
     virtual void doVerifyCertificate (const std::vector<Certificate>& certificateChain);
 
@@ -77,9 +77,11 @@ protected:
     void setCertificateMaxAge (std::chrono::system_clock::duration maxAge);
 
 private:
+    void startUpdateTimer();
+
     size_t mUpdateFailureCount;
     Idp& mCertificateHolder;
-    TslManager* mTslManager;
+    TslManager& mTslManager;
     std::shared_ptr<UrlRequestSender> mRequestSender;
     std::unique_ptr<UrlHelper::UrlParts> mUpdateUrl;
     Timer::JobToken mTimerJobToken;
@@ -88,6 +90,9 @@ private:
     std::chrono::system_clock::duration mCertificateMaxAge;
     std::chrono::system_clock::time_point mLastSuccessfulUpdate;
     std::shared_ptr<Timer> mTimerManager;
+    int updateIntervalMinutes;
+    int noCertificateUpdateIntervalSeconds;
+
 
     Certificate getUpToDateCertificate (void);
     UrlHelper::UrlParts downloadAndParseWellknown (void);
@@ -101,7 +106,7 @@ private:
 template<class IdpUpdaterType>
 std::unique_ptr<IdpUpdaterType> IdpUpdater::create (
     Idp& certificateHolder,
-    TslManager* tslManager,
+    TslManager& tslManager,
     std::shared_ptr<Timer> timerManager,
     bool runFirstUpdateSynchronously,
     const std::shared_ptr<UrlRequestSender>& urlRequestSender)

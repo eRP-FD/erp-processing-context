@@ -10,8 +10,8 @@
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Base64.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/MockOcsp.hxx"
-#include "test/mock/UrlRequestSenderMock.hxx"
+#include "mock/tsl/MockOcsp.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"
 
@@ -42,20 +42,19 @@ public:
             {},
             ocspResponderKnownCertificateCaPairs);
 
-        TslTestHelper::addCaCertificateToTrustStore(
-            idpCertificateCa,
-            *tslManager,
-            TslMode::TSL);
+        tslManager->addPostUpdateHook([=]{
+            TslTestHelper::addCaCertificateToTrustStore(idpCertificateCa, *tslManager, TslMode::TSL);
+        });
 
         return tslManager;
     }
 
-    void SetUp()
+    void SetUp() override
     {
         auto& resMgr = ResourceManager::instance();
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
         mIdpCertificate.emplace(Certificate::fromPem(
             resMgr.getStringResource("test/tsl/X509Certificate/IDP-Wansim.pem")));
 
@@ -65,7 +64,7 @@ public:
 
     }
 
-    void TearDown()
+    void TearDown() override
     {
         mCaDerPathGuard.reset();
     }
@@ -84,7 +83,7 @@ namespace
 class IdpTestUpdater : public IdpUpdater
 {
 public:
-    IdpTestUpdater (Idp& certificateHolder, TslManager* tslManager)
+    IdpTestUpdater (Idp& certificateHolder, TslManager& tslManager)
         : IdpUpdater(certificateHolder, tslManager, {}, std::make_shared<Timer>())
     {
     }
@@ -92,20 +91,20 @@ public:
     size_t updateCount = 0;
 
 protected:
-    virtual std::string doDownloadWellknown (void) override
+    std::string doDownloadWellknown (void) override
     {
         return "";
     }
-    virtual UrlHelper::UrlParts doParseWellknown (std::string&&) override
+    UrlHelper::UrlParts doParseWellknown (std::string&&) override
     {
         ++updateCount;
         return {"","",443,"",""};
     }
-    virtual std::string doDownloadDiscovery (const UrlHelper::UrlParts&) override
+    std::string doDownloadDiscovery (const UrlHelper::UrlParts&) override
     {
         return "";
     }
-    virtual std::vector<Certificate> doParseDiscovery (std::string&&) override
+    std::vector<Certificate> doParseDiscovery (std::string&&) override
     {
         return {StaticData::idpCertificate};
     }
@@ -118,7 +117,7 @@ protected:
 class IdpErrorUpdater : public IdpUpdater
 {
 public:
-    IdpErrorUpdater (Idp& certificateHolder, TslManager* tslManager, const UpdateStatus mockStatus)
+    IdpErrorUpdater (Idp& certificateHolder, TslManager& tslManager, const UpdateStatus mockStatus)
         : IdpUpdater(certificateHolder, tslManager, {}, std::make_shared<Timer>()),
           mMockStatus(mockStatus)
     {
@@ -132,34 +131,34 @@ public:
     using UpdateStatus = IdpUpdater::UpdateStatus; // Make it accessible to tests.
 
 protected:
-    virtual std::string doDownloadWellknown (void) override
+    std::string doDownloadWellknown (void) override
     {
         return "";
     }
-    virtual UrlHelper::UrlParts doParseWellknown (std::string&&) override
+    UrlHelper::UrlParts doParseWellknown (std::string&&) override
     {
         if (mMockStatus == UpdateStatus::WellknownDownloadFailed)
             throw std::runtime_error("test");
         else
             return {"","",443,"",""};
     }
-    virtual std::string doDownloadDiscovery (const UrlHelper::UrlParts&) override
+    std::string doDownloadDiscovery (const UrlHelper::UrlParts&) override
     {
         return "";
     }
-    virtual std::vector<Certificate> doParseDiscovery (std::string&&) override
+    std::vector<Certificate> doParseDiscovery (std::string&&) override
     {
         if (mMockStatus == UpdateStatus::DiscoveryDownloadFailed)
             throw std::runtime_error("test");
         else
             return {StaticData::idpCertificate};
     }
-    virtual void doVerifyCertificate (const std::vector<Certificate>&) override
+    void doVerifyCertificate (const std::vector<Certificate>&) override
     {
         if (mMockStatus == UpdateStatus::VerificationFailed)
             throw std::runtime_error("test");
     }
-    virtual void reportUpdateStatus (UpdateStatus status, std::string_view details) override
+    void reportUpdateStatus (UpdateStatus status, std::string_view details) override
     {
         ASSERT_EQ(status, mMockStatus);
 
@@ -176,14 +175,14 @@ class IdpBrokenCertificateUpdater : public IdpUpdater
 public:
     IdpBrokenCertificateUpdater(
         Idp& certificateHolder,
-        TslManager* tslManager,
+        TslManager& tslManager,
         const std::shared_ptr<UrlRequestSender>& urlRequestSender,
         std::shared_ptr<Timer> timerManager)
-        : IdpUpdater(certificateHolder, tslManager, urlRequestSender, timerManager)
+        : IdpUpdater(certificateHolder, tslManager, urlRequestSender, timerManager) // NOLINT(performance-unnecessary-value-param) - have to check if it would have side-effets in the upper layer.
     {
     }
 
-    virtual std::vector<Certificate> doParseDiscovery (std::string&& jwtString) override
+    std::vector<Certificate> doParseDiscovery (std::string&& jwtString) override
     {
         try
         {
@@ -208,7 +207,7 @@ public:
 /**
  * Use the production IdpUpdater to connect to the "real" (but can be configured to use a mocked remote) server.
  */
-TEST_F(IdpUpdaterTest, update)
+TEST_F(IdpUpdaterTest, update) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -226,7 +225,7 @@ TEST_F(IdpUpdaterTest, update)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager.get(),
+        *tslManager,
         std::make_shared<Timer>(),
         true,
         idpRequestSender);
@@ -239,7 +238,7 @@ TEST_F(IdpUpdaterTest, update)
 /**
  * Simulate response with broken IDP certificate.
  */
-TEST_F(IdpUpdaterTest, updateWithBrokenResponse)
+TEST_F(IdpUpdaterTest, updateWithBrokenResponse) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -259,7 +258,7 @@ TEST_F(IdpUpdaterTest, updateWithBrokenResponse)
 
     auto updater = IdpUpdater::create<IdpBrokenCertificateUpdater>(
         idp,
-        tslManager.get(),
+        *tslManager,
         std::make_shared<Timer>(),
         false,
         idpRequestSender);
@@ -277,7 +276,7 @@ TEST_F(IdpUpdaterTest, updateWithBrokenResponse)
 /**
  * Simulate failed update attempts for the maximum age of the certificate. This is 24 hours in production.
  */
-TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge)
+TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -289,7 +288,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge)
     // A missing successful update, i.e. directly after the application starts, is treated like it was
     // on the start of the epoch. That means it is more than 24 hours in the past and as a result the IDP
     // certificate is reset.
-    IdpErrorUpdater updater (idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed);
+    IdpErrorUpdater updater (idp, *tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed);
     updater.update();
 
     // The failed update is expected to trigger the 24 hours maximum age of the certificate.
@@ -300,7 +299,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge)
 /**
  * Simulate a failed update attempt. But this time the last successful attempt is not 24 hours in the past.
  */
-TEST_F(IdpUpdaterTest, update_noResetForMaxAge)
+TEST_F(IdpUpdaterTest, update_noResetForMaxAge) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -310,7 +309,7 @@ TEST_F(IdpUpdaterTest, update_noResetForMaxAge)
     ASSERT_NO_THROW(idp.getCertificate());
 
     // One successful update to set the lastSuccessfulUpdateTime to "now".
-    IdpErrorUpdater updater (idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::Success);
+    IdpErrorUpdater updater (idp, *tslManager, IdpErrorUpdater::UpdateStatus::Success);
     updater.update();
 
     // Now a failed one. As the last successful update is not 2h hours in the past the IDP certificate is not reset...
@@ -325,7 +324,7 @@ TEST_F(IdpUpdaterTest, update_noResetForMaxAge)
 /**
  * Use the a mocked updater to use a static version of the IDP signer certificate.
  */
-TEST_F(IdpUpdaterTest, updateStaticCertificate)
+TEST_F(IdpUpdaterTest, updateStaticCertificate) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -343,7 +342,7 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager.get(),
+        *tslManager,
         std::make_shared<Timer>(),
         true,
         idpRequestSender);
@@ -358,7 +357,7 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate)
 /**
  * This set of static data comes from https://dth01.ibmgcloud.net/jira/browse/ERP-5948
  */
-TEST_F(IdpUpdaterTest, updateStaticCertificate2)
+TEST_F(IdpUpdaterTest, updateStaticCertificate2) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto idpCertificateErp5948 = Certificate::fromPem(
@@ -390,7 +389,7 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate2)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager.get(),
+        *tslManager,
         std::make_shared<Timer>(),
         true,
         idpRequestSender);
@@ -406,7 +405,7 @@ TEST_F(IdpUpdaterTest, update_failForWellknownConfigurationFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed)
+    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed)
         .update();
 }
 
@@ -415,7 +414,7 @@ TEST_F(IdpUpdaterTest, update_failForDiscoveryDownloadFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::DiscoveryDownloadFailed)
+    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::DiscoveryDownloadFailed)
         .update();
 }
 
@@ -425,7 +424,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_failForVerificationFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, tslManager.get(), IdpErrorUpdater::UpdateStatus::VerificationFailed)
+    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::VerificationFailed)
         .update();
 }
 
@@ -440,7 +439,7 @@ TEST_F(IdpUpdaterTest, DISABLED_IdpUpdateAfterTslUpdate)
     Idp idp;
     auto tslManager = createAndSetupTslManager();
 
-    IdpTestUpdater updater (idp, tslManager.get());
+    IdpTestUpdater updater (idp, *tslManager);
 
     // The IdpTestUpdater does not update in its constructor.
     ASSERT_EQ(updater.updateCount, 0);
@@ -455,7 +454,7 @@ TEST_F(IdpUpdaterTest, DISABLED_IdpUpdateAfterTslUpdate)
 /**
  * Simulate an unstable IDP endpoint where at least 2 retries are required to get a valid response
  */
-TEST_F(IdpUpdaterTest, initializeWithForcedRetries)
+TEST_F(IdpUpdaterTest, initializeWithForcedRetries) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -479,19 +478,19 @@ TEST_F(IdpUpdaterTest, initializeWithForcedRetries)
                                         {
                                             header.setStatus(HttpStatus::NetworkConnectTimeoutError);
                                             header.setContentLength(0);
-                                            return ClientResponse(header, "");
+                                            return {header, ""};
                                         }
                                         else
                                         {
                                             header.setStatus(HttpStatus::OK);
                                             header.setContentLength(idpResponseJwk.size());
-                                            return ClientResponse(header, idpResponseJwk);
+                                            return {header, idpResponseJwk};
                                         }
                                     });
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager.get(),
+        *tslManager,
         std::make_shared<Timer>(),
         true,
         idpRequestSender);
@@ -504,7 +503,7 @@ TEST_F(IdpUpdaterTest, initializeWithForcedRetries)
 /**
  * Simulate an unstable IDP endpoint that never returns a valid response
  */
-TEST_F(IdpUpdaterTest, initializeFailedWithForcedRetries)
+TEST_F(IdpUpdaterTest, initializeFailedWithForcedRetries) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -527,16 +526,71 @@ TEST_F(IdpUpdaterTest, initializeFailedWithForcedRetries)
                                       Header header;
                                       header.setStatus(HttpStatus::NetworkConnectTimeoutError);
                                       header.setContentLength(0);
-                                      return ClientResponse(header, "");
+                                      return {header, ""};
                                     });
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager.get(),
+        *tslManager,
         std::make_shared<Timer>(),
         true,
         idpRequestSender);
 
     // ... still no certificate is set due to failing download.
     ASSERT_ANY_THROW(idp.getCertificate());
+}
+
+/**
+ * Simulate an unstable IDP endpoint that never returns a valid response
+ * Afterwards fix the IDP endpoint,
+ * The IDP should recover in IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS in this case
+ */
+TEST_F(IdpUpdaterTest, secondaryTimerTest) // NOLINT(readability-function-cognitive-complexity)
+{
+    Idp idp;
+    auto tslManager = createAndSetupTslManager();
+
+    // Initially the certificate is not set.
+    ASSERT_ANY_THROW(idp.getCertificate());
+
+    // After the initial update ...
+    const std::string idpResponseJson = FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
+    const std::string idpResponseJwk = FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponseJwk.txt");
+    std::shared_ptr<UrlRequestSenderMock> idpRequestSender = std::make_shared<UrlRequestSenderMock>(
+        std::unordered_map<std::string, std::string>{
+            {"https://idp.lu.erezepttest.net:443/certs/puk_idp_sig.json", idpResponseJson}});
+
+    idpRequestSender->setUrlHandler("https://idp.lu.erezepttest.net:443/.well-known/openid-configuration",
+                                    [](const std::string&) -> ClientResponse
+                                    {
+                                        Header header;
+                                        header.setStatus(HttpStatus::NetworkConnectTimeoutError);
+                                        header.setContentLength(0);
+                                        return {header, ""};
+                                    });
+
+    EnvironmentVariableGuard guard(ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS, "1");
+
+    auto updater = IdpUpdater::create(
+        idp,
+        *tslManager,
+        std::make_shared<Timer>(),
+        true,
+        idpRequestSender);
+
+    // ... still no certificate is set due to failing download.
+    ASSERT_ANY_THROW(idp.getCertificate());
+
+
+    // fix the download
+    idpRequestSender->setResponse("https://idp.lu.erezepttest.net:443/certs/puk_idp_sig.json", mIdpResponseJson);
+    idpRequestSender->setResponse("https://idp.lu.erezepttest.net:443/.well-known/openid-configuration", idpResponseJwk);
+
+    using namespace std::chrono_literals;
+    std::this_thread::sleep_for(2s);
+
+    // ... the certificate is set.
+    ASSERT_NO_THROW(idp.getCertificate());
 }

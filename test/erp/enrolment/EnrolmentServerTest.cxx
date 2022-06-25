@@ -55,11 +55,9 @@ public:
 
     PcServiceContext mContext = StaticData::makePcServiceContext();
 
-    EnrolmentServerTest(void)
-    {
-    }
+    EnrolmentServerTest(void) = default;
 
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         MockAndProductionTestBase<Tpm::Factory>::SetUp();
 
@@ -95,7 +93,7 @@ public:
     }
 
 
-    virtual void TearDown (void) override
+    void TearDown (void) override
     {
         BlobDatabaseHelper::removeUnreferencedBlobs();
 
@@ -140,8 +138,8 @@ public:
         const std::optional<size_t> expirySecondsSinceEpoch,
         const std::optional<size_t> startSecondsSinceEpoch,
         const std::optional<size_t> endSecondsSinceEpoch,
-        const std::optional<ErpArray<TpmObjectNameLength>> akName,
-        const std::optional<PcrSet> pcrSet)
+        const std::optional<ErpArray<TpmObjectNameLength>>& akName,
+        const std::optional<PcrSet>& pcrSet)
 
     {
         std::ostringstream os;
@@ -279,8 +277,7 @@ public:
             auto comm = backend.insertCommunication(std::get<model::PrescriptionId>(task),
                                                     now, model::Communication::MessageType::DispReq,
                                                     dummyHashedKvnr(),
-                                                    dummyHashedTelematikId(),
-                                                    std::nullopt, blobId, {}, blobId, {});
+                                                    dummyHashedTelematikId(), blobId, {}, blobId, {});
             backend.commitTransaction();
             Expect3(comm.has_value(), "Failed to create Communication message.", std::logic_error);
             releaseKeyBlob = [&parent, id = std::get<model::PrescriptionId>(task), commId = *comm]
@@ -387,7 +384,7 @@ inline bool EnrolmentServerTest::isBlobUsed(BlobId blobId)
 {
     auto db = database();
     auto& backend = db->getBackend();
-    auto* mockBackend = dynamic_cast<const MockDatabaseProxy*>(&backend);
+    const auto* mockBackend = dynamic_cast<const MockDatabaseProxy*>(&backend);
     Expect3(mockBackend, "isBlobUsed should only be called with MockDatabase", std::logic_error);
     return mockBackend->isBlobUsed(blobId);
 }
@@ -396,7 +393,7 @@ inline KeyDerivation & EnrolmentServerTest::keyDerivation()
 {
     if (!mKeyDerivation)
     {
-        mKeyDerivation.reset(new KeyDerivation(hsmPool()));
+        mKeyDerivation = std::make_unique<KeyDerivation>(hsmPool());
     }
     return *mKeyDerivation;
 }
@@ -411,7 +408,7 @@ inline std::unique_ptr<Database> EnrolmentServerTest::database()
     {
         if (!mMockDatabase)
         {
-            mMockDatabase.reset(new MockDatabase{hsmPool()});
+            mMockDatabase = std::make_unique<MockDatabase>(hsmPool());
         }
         return std::make_unique<DatabaseFrontend>(
             std::make_unique<MockDatabaseProxy>(*mMockDatabase), hsmPool(), keyDerivation());
@@ -422,14 +419,14 @@ inline HsmPool & EnrolmentServerTest::hsmPool()
 {
     if (!mHsmPool)
     {
-        mHsmPool.reset(new HsmPool(
+        mHsmPool = std::make_unique<HsmPool>(
                            std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), blobCache),
-                           TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()));
+                           TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
     }
     return *mHsmPool;
 }
 
-TEST_P(EnrolmentServerTest, GetEnclaveStatus)
+TEST_P(EnrolmentServerTest, GetEnclaveStatus)//NOLINT(readability-function-cognitive-complexity)
 {
     auto response = createClient().send(
         ClientRequest(
@@ -654,7 +651,7 @@ TEST_P(EnrolmentServerTest, PutKnownEndorsementKey_failForOverwrite)
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteKnownEndorsementKey_success)
+TEST_P(EnrolmentServerTest, DeleteKnownEndorsementKey_success)//NOLINT(readability-function-cognitive-complexity)
 {
     // Set up the test with an endorsement key that we then can delete.
     {
@@ -688,7 +685,7 @@ TEST_P(EnrolmentServerTest, DeleteKnownEndorsementKey_failForUnknownKey)
 }
 
 
-TEST_P(EnrolmentServerTest, PostKnownAttestationKey_successWithId)
+TEST_P(EnrolmentServerTest, PostKnownAttestationKey_successWithId)//NOLINT(readability-function-cognitive-complexity)
 {
     // When only an id is given, then it has to double as ak name and must be 34 bytes long, before base64 encoding.
 
@@ -710,7 +707,7 @@ TEST_P(EnrolmentServerTest, PostKnownAttestationKey_successWithId)
 }
 
 
-TEST_P(EnrolmentServerTest, PostKnownAttestationKey_successWithIdAndAkName)
+TEST_P(EnrolmentServerTest, PostKnownAttestationKey_successWithIdAndAkName)//NOLINT(readability-function-cognitive-complexity)
 {
     auto response = createClient().send(
         ClientRequest(
@@ -753,7 +750,7 @@ TEST_P(EnrolmentServerTest, PostKnownAttestationKey_failForOverwrite)
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteKnownAttestationKey_success)
+TEST_P(EnrolmentServerTest, DeleteKnownAttestationKey_success)//NOLINT(readability-function-cognitive-complexity)
 {
     // Set up the test with an attestation key that we then can delete.
     {
@@ -787,7 +784,7 @@ TEST_P(EnrolmentServerTest, DeleteKnownAttestationKey_failForUnknownKey)
 }
 
 
-TEST_P(EnrolmentServerTest, PostKnownQuote_successWithoutPcrSet)
+TEST_P(EnrolmentServerTest, PostKnownQuote_successWithoutPcrSet)//NOLINT(readability-function-cognitive-complexity)
 {
     auto response = createClient().send(
         ClientRequest(
@@ -805,7 +802,7 @@ TEST_P(EnrolmentServerTest, PostKnownQuote_successWithoutPcrSet)
 }
 
 
-TEST_P(EnrolmentServerTest, PostKnownQuote_successWithPcrSet)
+TEST_P(EnrolmentServerTest, PostKnownQuote_successWithPcrSet)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto pcrSet = PcrSet::fromString("3,4,5");
 
@@ -848,7 +845,7 @@ TEST_P(EnrolmentServerTest, PostKnownQuote_failForOverwrite)
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteKnownQuote_success)
+TEST_P(EnrolmentServerTest, DeleteKnownQuote_success)//NOLINT(readability-function-cognitive-complexity)
 {
     // Set up the test with a known quote that we then can delete.
     {
@@ -882,7 +879,7 @@ TEST_P(EnrolmentServerTest, DeleteKnownQuote_failForUnknownKey)
 }
 
 
-TEST_P(EnrolmentServerTest, PostEciesKeypairBlob_success)
+TEST_P(EnrolmentServerTest, PostEciesKeypairBlob_success)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto expiry = std::chrono::system_clock::now() + std::chrono::seconds(60);
     const auto expirySeconds = toSecondsSinceEpoch(expiry);
@@ -903,7 +900,7 @@ TEST_P(EnrolmentServerTest, PostEciesKeypairBlob_success)
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteEciesKeypairBlob_success)
+TEST_P(EnrolmentServerTest, DeleteEciesKeypairBlob_success)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto expiry = std::chrono::system_clock::now() + std::chrono::seconds(60);
     const auto expirySeconds = toSecondsSinceEpoch(expiry);
@@ -929,7 +926,7 @@ TEST_P(EnrolmentServerTest, DeleteEciesKeypairBlob_success)
 }
 
 
-TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)
+TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto start = std::chrono::system_clock::now() - std::chrono::seconds(60);
     const auto end = std::chrono::system_clock::now() + std::chrono::seconds(60);
@@ -993,7 +990,7 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)
 
 
 
-TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)
+TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto start = std::chrono::system_clock::now() - std::chrono::seconds(60);
     const auto end = std::chrono::system_clock::now() + std::chrono::seconds(60);
@@ -1005,7 +1002,7 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)
                                        Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
                                        Descriptor{"AuditLog",      BlobType::AuditLogKeyDerivation}})
     {
-        BlobId blobId;
+        BlobId blobId{};
         // Upload the resource
         {
             auto response = createClient().send(
@@ -1070,7 +1067,7 @@ TEST_P(EnrolmentServerTest, PutKvnrHashKey_success)
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteKvnrHashKey_success)
+TEST_P(EnrolmentServerTest, DeleteKvnrHashKey_success)//NOLINT(readability-function-cognitive-complexity)
 {
     // Set up a hash key that can be deleted.
     {
@@ -1111,7 +1108,7 @@ TEST_P(EnrolmentServerTest, PutTelematikIdHashKey_success)
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteTelematikIdHashKey_success)
+TEST_P(EnrolmentServerTest, DeleteTelematikIdHashKey_success)//NOLINT(readability-function-cognitive-complexity)
 {
     // Set up a hash key that can be deleted.
     {
@@ -1153,7 +1150,7 @@ TEST_P(EnrolmentServerTest, PutVauSig_success)
 }
 
 
-TEST_P(EnrolmentServerTest, DeleteVauSig_success)
+TEST_P(EnrolmentServerTest, DeleteVauSig_success)//NOLINT(readability-function-cognitive-complexity)
 {
     // Set up a hash key that can be deleted.
     {
@@ -1183,7 +1180,7 @@ TEST_P(EnrolmentServerTest, DeleteVauSig_success)
  * operation results in a change of the enrolment status from NotEnrolled to EkKnown to AtKnown to QuoteKnown.
  * After that it will delete the endorsement key and verify that the enrolment status goes back to NotEnrolled.
  */
-TEST_P(EnrolmentServerTest, EnrolmentStatus)
+TEST_P(EnrolmentServerTest, EnrolmentStatus)//NOLINT(readability-function-cognitive-complexity)
 {
     // Store an endorsement key.
     {

@@ -14,7 +14,7 @@ HsmRawSession::HsmRawSession (void)
 }
 
 
-HsmRawSession::HsmRawSession (HsmRawSession&& other)
+HsmRawSession::HsmRawSession (HsmRawSession&& other) noexcept
     : rawSession(other.rawSession),
       identity(other.identity)
 {
@@ -28,7 +28,7 @@ HsmRawSession::~HsmRawSession (void)
 }
 
 
-HsmRawSession& HsmRawSession::operator= (HsmRawSession&& other)
+HsmRawSession& HsmRawSession::operator= (HsmRawSession&& other) noexcept
 {
     if (this != &other)
     {
@@ -40,4 +40,3 @@ HsmRawSession& HsmRawSession::operator= (HsmRawSession&& other)
     }
     return *this;
 }
-

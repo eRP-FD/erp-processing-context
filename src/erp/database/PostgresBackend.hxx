@@ -24,7 +24,7 @@ public:
     ~PostgresBackend (void) override;
 
     void commitTransaction() override;
-    bool isCommitted() const;
+    bool isCommitted() const override;
     void closeConnection() override;
 
     void healthCheck() override;
@@ -108,7 +108,6 @@ public:
                                             const model::Communication::MessageType messageType,
                                             const db_model::HashedId& sender,
                                             const db_model::HashedId& recipient,
-                                            const std::optional<model::Timestamp>& timeReceived,
                                             BlobId senderBlobId,
                                             const db_model::EncryptedBlob& messageForSender,
                                             BlobId recipientBlobId,
@@ -165,6 +164,9 @@ public:
     std::vector<db_model::ChargeItem>
     retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
                                       const std::optional<UrlArguments>& search) const override;
+
+    std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& Id) const override;
 
     std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
     retrieveChargeInformation(const model::PrescriptionId& id) const override;

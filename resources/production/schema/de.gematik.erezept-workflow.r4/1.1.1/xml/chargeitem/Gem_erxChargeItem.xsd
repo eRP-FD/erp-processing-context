@@ -6,7 +6,7 @@
 
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
   <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
-  <xs:include schemaLocation="../identifier/Identifier.xsd"/>
+  <xs:include schemaLocation="../identifier/PrescriptionIdAccessCodeIdentifier.xsd"/>
   <xs:include schemaLocation="../extension/LanguagesExtension.xsd"/>
   <xs:include schemaLocation="../binary/Gem_erxBinary.xsd"/>
   <xs:element name="ChargeItem" type="Gem_erxChargeItem"/>
@@ -18,7 +18,7 @@
           <xs:element name="contained" type="Gem_erxChargeItem.ResourceContainer" minOccurs="0" maxOccurs="unbounded"/>
           <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
           <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
-          <xs:element name="identifier" type="Gem_erxPrescriptionID.Identifier" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="identifier" type="Gem_erxPrescriptionIdAccessCode.Identifier" minOccurs="0" maxOccurs="unbounded"/>
           <xs:element name="definitionUri" type="uri" minOccurs="0" maxOccurs="unbounded"/>
           <xs:element name="definitionCanonical" type="canonical" minOccurs="0" maxOccurs="unbounded"/>
           <xs:element name="status" type="Gem_erxChargeItem.Status"/>

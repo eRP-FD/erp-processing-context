@@ -32,7 +32,7 @@ public:
 /**
  * Test data is based on example in gemspec_Krypt_V2.18, lines 3354 - 3380.
  */
-TEST_F(ClientTeeProtocolTest, testSpecExample)
+TEST_F(ClientTeeProtocolTest, testSpecExample)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create certificate for public ECC key with
     auto vauPublicKey = EllipticCurveUtils::createPublicKeyHex(
@@ -100,7 +100,7 @@ TEST_F(ClientTeeProtocolTest, testSpecExample)
 }
 
 
-TEST_F(ClientTeeProtocolTest, testCreateRequest)
+TEST_F(ClientTeeProtocolTest, testCreateRequest)//NOLINT(readability-function-cognitive-complexity)
 {
     // Use the public key from the example in gemspec_Krypt#7.2
     auto vauPublicKey = EllipticCurveUtils::createPublicKeyHex(

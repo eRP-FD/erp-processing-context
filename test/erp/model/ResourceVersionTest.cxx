@@ -58,7 +58,7 @@ TEST(ResourceVersionTest, currentSelectOldProfile)
     ASSERT_EQ(kbvVersion, ::model::ResourceVersion::KbvItaErp::v1_0_1);
 }
 
-TEST(ResourceVersionTest, versionizeProfile)
+TEST(ResourceVersionTest, versionizeProfile)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto fhirProfile = "http://hl7.org/fhir/StructureDefinition/Binary"sv;
     const auto gematikProfile = "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"sv;

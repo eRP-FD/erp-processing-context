@@ -41,6 +41,8 @@
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
+#include "mock/idp/MockIdpUpdater.hxx"
+#include "mock/tsl/MockTslManager.hxx"
 #endif
 #if WITH_HSM_TPM_PRODUCTION > 0
 #include "erp/hsm/production/HsmProductionClient.hxx"
@@ -55,13 +57,13 @@
 #include <iostream>
 #include <stdexcept>
 
-std::unique_ptr<HeartbeatSender> ErpMain::setupHeartbeatSender(PcServiceContext& serviceContext)
+std::unique_ptr<ApplicationHealthAndRegistrationUpdater> ErpMain::setupHeartbeatSender(PcServiceContext& serviceContext)
 {
-    std::unique_ptr<HeartbeatSender> sender;
+    std::unique_ptr<ApplicationHealthAndRegistrationUpdater> sender;
     if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_REGISTRATION, false))
     {
         LOG(WARNING) << "Initializing Registration Heartbeating.";
-        sender = HeartbeatSender::create(Configuration::instance(), serviceContext.applicationHealth(),
+        sender = ApplicationHealthAndRegistrationUpdater::create(Configuration::instance(), serviceContext,
                                          serviceContext.registrationInterface());
         sender->start();
     }
@@ -75,8 +77,7 @@ std::unique_ptr<HeartbeatSender> ErpMain::setupHeartbeatSender(PcServiceContext&
 
 std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
     ThreadPool& threadpool,
-    size_t threadCount,
-    HsmPool& hsmPool)
+    HsmPool& randomSource)
 {
     A_19021.start("reseed periodically to maintain 120 bit entropy");
     TLOG(WARNING) << "Initializing Periodic Random Seeding.";
@@ -85,8 +86,7 @@ std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
         Configuration::instance().getOptionalIntValue(ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS, 60)};
 
     auto seedTimer = std::make_unique<SeedTimer>(threadpool,
-                                                 hsmPool,
-                                                 threadCount,
+                                                 randomSource,
                                                  entropyFetchInterval);
     seedTimer->start(threadpool.ioContext(), std::chrono::seconds(0));
 
@@ -99,7 +99,7 @@ std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
 int ErpMain::runApplication (
     Factories&& factories,
     StateCondition& state,
-    std::function<void(PcServiceContext&)> postInitializationCallback)
+    const std::function<void(PcServiceContext&)>& postInitializationCallback)
 {
 #define log LOG(WARNING) << "Initialization: "
 
@@ -130,10 +130,17 @@ int ErpMain::runApplication (
     // Setup the IDP updater. As this triggers a first, synchronous update, the IDP updater has to be started
     // before the TEE server accepts connections.
     log << "starting IDP update";
+#if WITH_HSM_MOCK > 0
+    auto idpUpdater = IdpUpdater::create<MockIdpUpdater>(
+        serviceContext->idp,
+        serviceContext->getTslManager(),
+        serviceContext->getTimerManager());
+#else
     auto idpUpdater = IdpUpdater::create(
         serviceContext->idp,
         serviceContext->getTslManager(),
         serviceContext->getTimerManager());
+#endif
 
     if (serviceContext->getEnrolmentServer())
     {
@@ -160,7 +167,7 @@ int ErpMain::runApplication (
     // therefore has to be initialized first.
     log << "starting PRNG seeder";
     auto& hsmPool = serviceContext->getHsmPool();
-    auto prngSeeder = setupPrngSeeding(serviceContext->getTeeServer().getThreadPool(), threadCount, hsmPool);
+    auto prngSeeder = setupPrngSeeding(serviceContext->getTeeServer().getThreadPool(), hsmPool);
     serviceContext->setPrngSeeder(std::move(prngSeeder));
 
     if (postInitializationCallback)
@@ -173,7 +180,7 @@ int ErpMain::runApplication (
     // We wait and block the main thread until background configuration is complete and the health check
     // has found all required services.
     log << "waiting for health check to report all services as up";
-    std::unique_ptr<HeartbeatSender> heartbeatSender;
+    std::unique_ptr<ApplicationHealthAndRegistrationUpdater> heartbeatSender;
     if(waitForHealthUp(*serviceContext))
     {
         log << "complete";
@@ -328,8 +335,6 @@ std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlVa
 {
     LOG(WARNING) << "Initializing TSL-Manager";
 
-    std::shared_ptr<TslManager> tslManager;
-
     try
     {
         std::string tslSslRootCa;
@@ -340,12 +345,24 @@ std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlVa
             tslSslRootCa = FileHelper::readFileAsString(tslRootCaFile);
         }
 
-        tslManager = std::make_shared<TslManager>(
-            std::make_shared<UrlRequestSender>(
-                SafeString(std::move(tslSslRootCa)),
-                static_cast<uint16_t>(Configuration::instance().getOptionalIntValue(
-                    ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds))),
-            xmlValidator);
+        const auto useMockTslManager =
+            Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER, false);
+
+#if WITH_HSM_MOCK > 0
+        if (useMockTslManager)
+        {
+            return MockTslManager::createMockTslManager(xmlValidator);
+        }
+#else
+        Expect3(! useMockTslManager,
+                "Configuration error: DEBUG_ENABLE_MOCK_TSL_MANAGER=true, but WITH_HSM_MOCK is not compiled in",
+                std::logic_error);
+#endif
+        auto requestSender = std::make_shared<UrlRequestSender>(
+            SafeString(std::move(tslSslRootCa)),
+            static_cast<uint16_t>(Configuration::instance().getOptionalIntValue(
+                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds)));
+        return std::make_shared<TslManager>(std::move(requestSender), xmlValidator);
     }
     catch (const TslError& e)
     {
@@ -357,8 +374,6 @@ std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlVa
         LOG(ERROR) << "Can not create TslManager, unexpected exception: " << e.what();
         throw;
     }
-
-    return tslManager;
 }
 
 
@@ -373,19 +388,14 @@ bool ErpMain::waitForHealthUp (PcServiceContext& serviceContext)
 
     size_t loopCount = 0;
 
-    auto request = ServerRequest(Header());
-    auto response = ServerResponse();
-    AccessLog accessLog;
-    accessLog.discard();  // This accessLog object is only used to satisfy the SessionContext constructor.
     bool healthCheckIsUp = false;
 
     while (!serviceContext.getTeeServer().isStopped())
     {
-        SessionContext session (serviceContext, request, response, accessLog);
         if (loopCount % loopHealthCheckInterval == 0)
         {
             TVLOG(1) << "running health check";
-            HealthCheck::update(session);
+            HealthCheck::update(serviceContext);
         }
         healthCheckIsUp = serviceContext.applicationHealth().isUp();
         if (healthCheckIsUp)

@@ -80,7 +80,7 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
     auto [existingChargeItem, existingDispenseItem] = databaseHandle->retrieveChargeInformationForUpdate(prescriptionId);
 
     A_22152.start("Validate input ChargeItem and check that common fields are unchanged");
-    const auto newChargeItem = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::Gem_erxChargeItem);
+    auto newChargeItem = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::Gem_erxChargeItem);
     checkChargeItemConsistencyCommon(existingChargeItem, newChargeItem);
     A_22152.finish();
 
@@ -95,7 +95,7 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
     const auto idClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect3(idClaim.has_value(), "JWT does not contain Id", std::logic_error); // should not happen because of JWT verification;
 
-    model::AuditEventId auditEventId;
+    model::AuditEventId auditEventId{};
 
     if(professionOIDClaim == profession_oid::oid_versicherter)
     {
@@ -158,7 +158,7 @@ void ChargeItemPutHandler::handleRequestInsurant(
 void ChargeItemPutHandler::handleRequestPharmacy(
     PcSessionContext& session,
     model::ChargeItem& existingChargeItem,
-    const model::ChargeItem& newChargeItem,
+    model::ChargeItem& newChargeItem,
     const std::string& idClaim)
 {
     A_22146.start("Pharmacy: validation of TelematikId");
@@ -175,6 +175,10 @@ void ChargeItemPutHandler::handleRequestPharmacy(
     }
     A_22147.finish();
 
+    A_22616.start("verify pharmacy access code");
+    ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, existingChargeItem, true);
+    A_22616.finish();
+
     A_22152.start("Pharmacy: check that marking is unchanged");
     const auto newMarkingFlag = newChargeItem.markingFlag();
     const auto newMarkings = newMarkingFlag.has_value() ?
@@ -183,29 +187,29 @@ void ChargeItemPutHandler::handleRequestPharmacy(
               "Markings in provided ChargeItem do not match the ones from the ChargeItem to update");
     A_22152.finish();
 
+    A_22615.start("create access code for pharmacy");
+    auto pharmacyAccessCode = ChargeItemHandlerBase::createPharmacyAccessCode();
+    newChargeItem.setAccessCode(std::move(pharmacyAccessCode));
+    A_22615.finish();
+
     A_22148.start("Pharmacy: get PKV dispense item");
     const auto containedBinary = getDispenseItemBinary(newChargeItem);
     A_22148.finish();
 
     A_22149.start("Pharmacy: validate PKV dispense item");
-    const auto newDispenseItem = createAndValidateDispenseItem(*containedBinary, session.serviceContext);
+    A_22150.start("Pharmacy: Check signature of PKV dispense bundle");
+    A_22151.start("Pharmacy: check signature certificate of PKV dispense bundle");
+    const auto dispenseItemBundle = createAndValidateDispenseItem(*containedBinary, session.serviceContext);
+    A_22151.finish();
+    A_22150.finish();
     A_22149.finish();
 
     A_22148.start("Pharmacy: set PKV dispense item reference in ChargeItem");
-    setDispenseItemReference(existingChargeItem, newDispenseItem);
+    setDispenseItemReference(existingChargeItem, dispenseItemBundle);
     A_22148.finish();
-
-    A_22150.start("Pharmacy: Check signature of PKV dispense bundle");
-    // TODO
-// Der PKV-Abgabedatensatz hat QES eines HBAs des Apothekers oder eine nonQES einer SMC-B der Apotheke.
-    A_22150.finish();
-
-    A_22151.start("Pharmacy: check signature certificate of PKV dispense bundle");
-    // TODO
-    A_22151.finish();
 
     A_22152.start("Pharmacy may only update dispense item");
     session.database()->storeChargeInformation(
-        existingChargeItem.entererTelematikId(), existingChargeItem, newDispenseItem);
+        existingChargeItem.entererTelematikId(), existingChargeItem, dispenseItemBundle);
     A_22152.finish();
 }

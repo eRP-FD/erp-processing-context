@@ -219,7 +219,7 @@ bool TrustStore::hasCaCertificateWithSubject(const std::string& subjectDn) const
 
     // this implementation is only used in error-handling scenarios,
     // and thus O(n) complexity looks to be OK
-    for (const auto& [id, data] : mServiceInformationMap)
+    for (const auto& [id, data] : mServiceInformationMap) // NOLINT(readability-use-anyofallof)
     {
         (void)data;
         if (id.subject == subjectDn)

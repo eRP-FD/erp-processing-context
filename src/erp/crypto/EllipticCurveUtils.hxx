@@ -57,8 +57,10 @@ public:
     };
     static PaddedComponents getPaddedXYComponents (const shared_EVP_PKEY& keyPair, const size_t length);
 
-    static shared_EVP_PKEY pemToPrivatePublicKeyPair (const SafeString& derBase64);
-    static shared_EVP_PKEY pemToPublicKey (const SafeString& derBase64);
+    // pemString - base64 encoded DER content inlcuding header and footer.
+    static shared_EVP_PKEY pemToPrivatePublicKeyPair (const SafeString& pemString);
+    static shared_EVP_PKEY pemToPublicKey (const SafeString& pemString);
+
     static shared_EVP_PKEY x962ToPublicKey(const SafeString& derString);
     static std::string publicKeyToPem (const shared_EVP_PKEY& publicKey);
     static std::string publicKeyToX962Der (const shared_EVP_PKEY& publicKey);

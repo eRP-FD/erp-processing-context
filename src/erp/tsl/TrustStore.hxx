@@ -40,7 +40,7 @@ public:
     {
     public:
         OcspService::Status status;
-        std::chrono::seconds gracePeriod;
+        std::chrono::seconds gracePeriod{0};
         std::chrono::system_clock::time_point timeStamp;
         std::string response;
     };
@@ -187,6 +187,10 @@ private:
 
     friend class TslTestHelper;
 
+#endif
+
+#if WITH_HSM_MOCK > 0
+    friend class MockTslManager;
 #endif
 };
 

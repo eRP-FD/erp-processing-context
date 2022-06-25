@@ -31,7 +31,7 @@ std::ostream& operator<<(std::ostream& os, const TestParamsKbvBundle& params)
     return os;
 }
 
-static std::vector<TestParamsKbvBundle> makeKbvParams(bool valid, fs::path basePath, std::string startsWith,
+static std::vector<TestParamsKbvBundle> makeKbvParams(bool valid, const fs::path& basePath, std::string_view startsWith,
                                                       SchemaType schemaType, model::ResourceVersion::KbvItaErp version)
 {
     std::vector<TestParamsKbvBundle> params;
@@ -49,7 +49,7 @@ class XmlValidatorTestParamsKbvBundle : public testing::TestWithParam<TestParams
 {
 };
 
-TEST_P(XmlValidatorTestParamsKbvBundle, Resources)
+TEST_P(XmlValidatorTestParamsKbvBundle, Resources)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(GetParam().schemaType, SchemaType::KBV_PR_ERP_Bundle) << "Test called with wrong schema type";
     const auto document = FileHelper::readFileAsString(GetParam().path);
@@ -99,8 +99,8 @@ class KbvWithEmbeddedValidationTestParams : public testing::TestWithParam<TestPa
 };
 
 static std::vector<TestParamsKbvWithEmbedded>
-makeKbvWithPlaceholderParams(bool valid, fs::path basePath, std::string startsWith, SchemaType schemaType,
-                             model::ResourceVersion::KbvItaErp version, fs::path placeholderFile)
+makeKbvWithPlaceholderParams(bool valid, const fs::path& basePath, std::string_view startsWith, SchemaType schemaType,
+                             model::ResourceVersion::KbvItaErp version, const fs::path& placeholderFile)
 {
     std::vector<TestParamsKbvWithEmbedded> params;
     for (const auto& dirEntry : fs::directory_iterator(basePath))
@@ -113,7 +113,7 @@ makeKbvWithPlaceholderParams(bool valid, fs::path basePath, std::string startsWi
     return params;
 }
 
-TEST_P(KbvWithEmbeddedValidationTestParams, KbvBundleWithEmbeddedSubResource)
+TEST_P(KbvWithEmbeddedValidationTestParams, KbvBundleWithEmbeddedSubResource)//NOLINT(readability-function-cognitive-complexity)
 {
     // Load the standalone Medication test files and embed them into a KbvBundle. Validate this KbvBundle
 

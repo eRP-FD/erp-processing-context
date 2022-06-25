@@ -9,6 +9,8 @@
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/hsm/HsmClient.hxx"
 
+#include <map>
+
 
 class MockAccountTable {
 public:
@@ -26,8 +28,8 @@ private:
     struct AccountsPrimaryKey
     {
         db_model::HashedId accountId;
-        db_model::MasterKeyType masterKeyType;
-        BlobId blobId;
+        db_model::MasterKeyType masterKeyType{};
+        BlobId blobId{};
         bool operator < (const AccountsPrimaryKey& rhs) const;
     private:
         auto tie() const -> decltype(std::tie(accountId, masterKeyType, blobId));

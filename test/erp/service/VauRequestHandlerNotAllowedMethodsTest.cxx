@@ -80,7 +80,7 @@ public:
     {
     }
 
-    void SetUp (void)
+    void SetUp (void) override
     {
         EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
         ServerTestBase::SetUp();

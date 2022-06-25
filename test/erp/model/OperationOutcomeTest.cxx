@@ -16,7 +16,7 @@ using namespace model;
 namespace
 {
 
-void checkOperationOutcome(const model::OperationOutcome& operationOutcome)
+void checkOperationOutcome(const model::OperationOutcome& operationOutcome)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto issues = operationOutcome.issues();
     EXPECT_EQ(issues.size(), 4);
@@ -57,7 +57,7 @@ void checkOperationOutcome(const model::OperationOutcome& operationOutcome)
 }
 
 
-TEST(OperationOutcomeTest, Construct)
+TEST(OperationOutcomeTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 {
     const OperationOutcome::Issue issueCompare1 {
         OperationOutcome::Issue::Severity::error,
@@ -95,10 +95,10 @@ TEST(OperationOutcomeTest, Construct)
 
     const auto issues = operationOutcome.issues();
     ASSERT_EQ(issues.size(), 4);
-    EXPECT_EQ(issue1, issues[0]);
-    EXPECT_EQ(issue2, issues[1]);
-    EXPECT_EQ(issue3, issues[2]);
-    EXPECT_EQ(issue4, issues[3]);
+    EXPECT_EQ(issueCompare1, issues[0]);
+    EXPECT_EQ(issueCompare2, issues[1]);
+    EXPECT_EQ(issueCompare3, issues[2]);
+    EXPECT_EQ(issueCompare4, issues[3]);
 }
 
 
@@ -199,7 +199,7 @@ TEST(OperationOutcomeTest, ConstructFromXml)
 }
 
 
-TEST(OperationOutcomeTest, IssueCodeType)
+TEST(OperationOutcomeTest, IssueCodeType)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto codeTypeValues = {
         "invalid", "structure", "required", "value", "invariant", "security", "login", "unknown", "expired", "forbidden",

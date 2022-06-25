@@ -279,7 +279,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneElement)
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootObjectTopLevelMembers)
+TEST_F(JsonMaintainNumberPrecisionTest, RootObjectTopLevelMembers)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer resourceTypePointer(ElementName::path("resourceType"));
     const rj::Pointer metaPointer(ElementName::path("meta"));
@@ -296,7 +296,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootObjectTopLevelMembers)
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootArrayTopLevelElements)
+TEST_F(JsonMaintainNumberPrecisionTest, RootArrayTopLevelElements)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer element0Pointer(ElementName::path(0));
     const rj::Pointer element1Pointer(ElementName::path(1));
@@ -329,7 +329,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithEmptyArray
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithSeveralElements)
+TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithSeveralElements)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer element0Pointer(ElementName::path(elements::contained, 0));
     const rj::Pointer element1Pointer(ElementName::path(elements::contained, 1));
@@ -346,7 +346,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithSeveralEle
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithSeveralArrayElements)
+TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithSeveralArrayElements)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer element0Pointer(ElementName::path(0, "contained", 0));
     const rj::Pointer element1Pointer(ElementName::path(0, "contained", 1));
@@ -371,7 +371,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, CommunicationInfoReq)
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, Numbers)
+TEST_F(JsonMaintainNumberPrecisionTest, Numbers)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer elementNotUsedPointer(ElementName::path("not_used"));
     const rj::Pointer elementStatusPointer(ElementName::path("status"));
@@ -549,7 +549,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, Numbers)
     EXPECT_EQ(model.getValueAsDouble("double_1_1"), 1.1);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, ArrayHelpers)
+TEST_F(JsonMaintainNumberPrecisionTest, ArrayHelpers)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string jsonString = R"({
         "resourceType":"TestModel",
@@ -829,7 +829,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, makeString)
               R"({"aString":"some test string","trailingSpace":"Space-> ","leadingSpace":" <-Space"})");
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, validNumbers)
+TEST_F(JsonMaintainNumberPrecisionTest, validNumbers)//NOLINT(readability-function-cognitive-complexity)
 {
     model::NumberAsStringParserDocument doc;
     EXPECT_NO_THROW((void)doc.makeNumber("0"));
@@ -847,7 +847,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, validNumbers)
     EXPECT_NO_THROW((void)doc.makeNumber("1.100"));
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, invalidNumbers)
+TEST_F(JsonMaintainNumberPrecisionTest, invalidNumbers)//NOLINT(readability-function-cognitive-complexity)
 {
     model::NumberAsStringParserDocument doc;
     EXPECT_THROW((void)doc.makeNumber(" 1.100"), ModelException);

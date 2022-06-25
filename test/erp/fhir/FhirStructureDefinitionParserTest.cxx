@@ -16,8 +16,7 @@ TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT
     using Derivation = FhirStructureDefinition::Derivation;
     using Representation = FhirElement::Representation;
 
-    auto& resourceManager = ResourceManager::instance();
-    const auto& fhirResourcesXml = resourceManager.getAbsoluteFilename("test/fhir/TestPrimitives.xml");
+    const auto& fhirResourcesXml = ResourceManager::getAbsoluteFilename("test/fhir/TestPrimitives.xml");
     auto types = FhirStructureDefinitionParser::parse(fhirResourcesXml);
     ASSERT_EQ(types.size(), 2);
     const FhirStructureDefinition* stringDef = nullptr;
@@ -39,14 +38,14 @@ TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT
     EXPECT_EQ(stringDef->baseDefinition(), "http://hl7.org/fhir/StructureDefinition/Element"sv);
     EXPECT_EQ(stringDef->derivation(), Derivation::specialization);
 
-    const auto* const stringBaseElement = stringDef->findElement("string");
+    const auto stringBaseElement = stringDef->findElement("string");
     ASSERT_TRUE(stringBaseElement);
     EXPECT_EQ(stringBaseElement->typeId(), "string"sv);
     EXPECT_EQ(stringBaseElement->name(), "string"sv);
     EXPECT_TRUE(stringBaseElement->isRoot());
     EXPECT_TRUE(stringBaseElement->isArray());
 
-    const auto* const stringValueElement = stringDef->findElement("string.value");
+    const auto stringValueElement = stringDef->findElement("string.value");
     ASSERT_TRUE(stringValueElement);
     EXPECT_EQ(stringValueElement->typeId(), "http://hl7.org/fhirpath/System.String"sv);
     EXPECT_EQ(stringValueElement->name(), "string.value"sv);
@@ -61,14 +60,14 @@ TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT
     EXPECT_EQ(integerDef->baseDefinition(), "http://hl7.org/fhir/StructureDefinition/Element"sv);
     EXPECT_EQ(integerDef->derivation(), Derivation::specialization);
 
-    const auto* const integerBaseElement = integerDef->findElement("integer");
+    const auto integerBaseElement = integerDef->findElement("integer");
     ASSERT_TRUE(integerBaseElement);
     EXPECT_EQ(integerBaseElement->typeId(), "integer"sv);
     EXPECT_EQ(integerBaseElement->name(), "integer"sv);
     EXPECT_TRUE(integerBaseElement->isRoot());
     EXPECT_TRUE(integerBaseElement->isArray());
 
-    const auto* const integerValueElement = integerDef->findElement("integer.value");
+    const auto integerValueElement = integerDef->findElement("integer.value");
     ASSERT_TRUE(integerValueElement);
     EXPECT_EQ(integerValueElement->typeId(), "http://hl7.org/fhirpath/System.Integer"sv);
     EXPECT_EQ(integerValueElement->name(), "integer.value"sv);
@@ -80,7 +79,6 @@ TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT
 
 TEST(FhirStructureDefinitionParserTest, InvalidXml) //NOLINT
 {
-    auto& resourceManager = ResourceManager::instance();
-    const auto& fhirResourcesXml = resourceManager.getAbsoluteFilename("test/fhir/InvalidStructureDefinition.xml");
+    const auto& fhirResourcesXml = ResourceManager::getAbsoluteFilename("test/fhir/InvalidStructureDefinition.xml");
     ASSERT_ANY_THROW(FhirStructureDefinitionParser::parse(fhirResourcesXml));
 }

@@ -60,7 +60,7 @@ private:
     friend Resource<Subscription>;
     explicit Subscription(NumberAsStringParserDocument&& jsonTree);
 
-    std::string mRecipient{""};
+    std::string mRecipient;
 };
 
 }

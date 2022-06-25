@@ -41,7 +41,6 @@ class AuditData;
 
 namespace model
 {
-class AuditData;
 class Binary;
 class Bundle;
 class Communication;
@@ -59,6 +58,7 @@ public:
 
     virtual void commitTransaction() = 0;
     virtual void closeConnection() = 0;
+    virtual bool isCommitted() const = 0;
 
     virtual void healthCheck() = 0;
 
@@ -135,7 +135,6 @@ public:
                         const model::Communication::MessageType messageType,
                         const db_model::HashedId& sender,
                         const db_model::HashedId& recipient,
-                        const std::optional<model::Timestamp>& timeReceived,
                         BlobId senderBlobId,
                         const db_model::EncryptedBlob& messageForSender,
                         BlobId recipientBlobId,
@@ -217,6 +216,8 @@ public:
     retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& kvnr,
                                       const std::optional<UrlArguments>& search) const = 0;
 
+    [[nodiscard]] virtual std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& Id) const = 0;
     /// @returns: ChargeItem, DispenseItem
     virtual std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
     retrieveChargeInformation(const model::PrescriptionId& id) const = 0;

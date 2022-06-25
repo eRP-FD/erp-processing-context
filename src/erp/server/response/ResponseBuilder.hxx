@@ -21,10 +21,6 @@ public:
      * Create a new builder with the response that it will fill in.
      */
     explicit ResponseBuilder (ServerResponse& response);
-    /**
-     * The constructor will validate the values that where give to the builder.
-     */
-    ~ResponseBuilder (void);
 
     ResponseBuilder& status (HttpStatus status);
     ResponseBuilder& jsonBody (const std::string& body);

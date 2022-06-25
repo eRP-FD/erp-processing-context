@@ -59,7 +59,7 @@ BlobId MockBlobDatabase::storeBlob (Entry&& entry)
 
     const auto id = getNextBlobId(lock);
     const auto name = entry.name;
-    const auto result = mEntries.emplace(name, std::move(entry));
+    const auto result = mEntries.emplace(name, entry);
     Expect(result.second, "storing of blob failed");
 
     result.first->second.id = id;
@@ -116,7 +116,7 @@ std::vector<bool> MockBlobDatabase::hasValidBlobsOfType (std::vector<BlobType>&&
 
 void MockBlobDatabase::setBlobInUseTest(std::function<bool (BlobId)> isBlobInUseFunction)
 {
-    mIsBlobInUse = isBlobInUseFunction;
+    mIsBlobInUse = std::move(isBlobInUseFunction);
 }
 
 BlobId MockBlobDatabase::getNextBlobId(std::lock_guard<std::mutex>&)
@@ -131,4 +131,3 @@ std::shared_ptr< BlobCache > MockBlobDatabase::createBlobCache(const MockBlobCac
     else
         return MockBlobCache::createAndSetup(target, std::make_unique<ProductionBlobDatabase>());
 }
-

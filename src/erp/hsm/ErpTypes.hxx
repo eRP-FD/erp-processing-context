@@ -21,8 +21,12 @@ constexpr size_t Aes256Length = 32; // bytes == 256 bit
 constexpr size_t Aes128Length = 16; // bytes == 128 bit
 constexpr size_t MaxBuffer = 2048;
 constexpr size_t MaxRndBytes = 320;
-constexpr size_t TeeTokenLifeTimeSeconds = 30 * 60;
+constexpr size_t TeeTokenLifeTimeSeconds = 30l * 60l;
 
+namespace db_model
+{
+class Blob;
+}
 
 
 /**
@@ -95,17 +99,23 @@ class ErpVector : public std::vector<uint8_t>
 {
 public:
     using std::vector<uint8_t>::vector;
-    explicit ErpVector(const std::vector<uint8_t>&);
+    ErpVector() = default;
+    explicit ErpVector(const std::vector<uint8_t>& source);
     static ErpVector create (const std::string_view data);
 
     bool operator== (const ErpVector& other) const;
     size_t hash (void) const;
 
-    bool startsWith (const ErpVector& vector) const;
+    bool startsWith (const ErpVector& other) const;
     ErpVector tail (size_t length) const;
 
     template<size_t L>
     ErpArray<L> toArray (void) const;
+
+    explicit ErpVector(const std::basic_string_view<std::byte>& blob);
+    explicit ErpVector(const db_model::Blob& blob);
+    void append(const std::basic_string_view<std::byte>& blob);
+    void append(const db_model::Blob& blob);
 };
 
 

@@ -68,6 +68,7 @@ void PostgresDatabaseMedicationDispenseTest::cleanup()
         The order in which the medication dispenses is returned is unpredictable.
         They will be sorted according to their ids.
 */
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void PostgresDatabaseMedicationDispenseTest::insertTasks(
     const std::vector<std::tuple<std::string, std::string, std::optional<Timestamp>>>& patientsPharmaciesMedicationWhenPrepared,
     std::set<std::string>& patients,
@@ -178,7 +179,7 @@ void PostgresDatabaseMedicationDispenseTest::checkMedicationDispensesXmlStrings(
 void PostgresDatabaseMedicationDispenseTest::writeCurrentTestOutputFile(
     const std::string& testOutput,
     const std::string& fileExtension,
-    const std::string& marker)
+    const std::string& marker) const
 {
     if (!writeTestOutputFileEnabled)
         return;
@@ -305,7 +306,7 @@ void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
 
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
-    ASSERT_TRUE(patients.size() > 0);
+    ASSERT_FALSE(patients.empty());
 
     for (const auto& patient : patients)
     {
@@ -392,7 +393,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
     checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
 }
 
-TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -614,7 +615,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
     }
 }
 
-TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -798,7 +799,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 }
 
-TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
+TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -815,27 +816,27 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
 
     for (size_t idxPatient = 0; idxPatient < 70; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantA, pharmacyA, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 10; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantA, pharmacyB, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 15; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantB, pharmacyA, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 55; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantB, pharmacyB, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantC, pharmacyA, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantC, pharmacyB, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyB, Timestamp::now());
     }
 
     std::set<std::string> patients;
@@ -901,7 +902,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)
             // ASSERT to avoid endless loop if less than expected count is returned.
             ASSERT_EQ(medicationDispenses.size(), expectedCount);
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-            if (medicationDispenses.size() > 0)
+            if (!medicationDispenses.empty())
             {
                 for (size_t idx = 0; idx < medicationDispenses.size() - 1; ++idx)
                 {
@@ -1036,7 +1037,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
     }
 }
 
-TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)
+TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {

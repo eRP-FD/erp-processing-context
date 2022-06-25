@@ -66,13 +66,13 @@ namespace
     constexpr const char* serviceStatusAccredited = "http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/accredited";
     constexpr const char* serviceStatusRecognizedatnationallevel = "http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/recognisedatnationallevel";
 
+    using xmlNodeCPtr = const xmlNode * const;
 
     std::optional<std::string> getChildAttributeValue (
-        const xmlNodePtr node,
+        xmlNodeCPtr node,
         const std::string& attributeName)
     {
         Expects(node);
-
         for (xmlAttrPtr attribute=node->properties; attribute != nullptr; attribute=attribute->next)
         {
             if (attribute->type == XML_ATTRIBUTE_NODE && reinterpret_cast<const char*>(attribute->name) == attributeName)
@@ -339,7 +339,7 @@ namespace
     {
         TslParser::OcspMapping ocspMapping{};
 
-        const xmlNodePtr serviceInformationExtension = getChildTag(serviceInformation, "ServiceInformationExtensions");
+        xmlNodeCPtr serviceInformationExtension = getChildTag(serviceInformation, "ServiceInformationExtensions");
         if (serviceInformationExtension != nullptr)
         {
             for (xmlNodePtr child = serviceInformationExtension->children; child != nullptr; child = child->next)
@@ -418,7 +418,7 @@ namespace
     {
         TslParser::ExtensionOidList oids;
 
-        const xmlNodePtr serviceSupplyPoints =
+        xmlNodeCPtr serviceSupplyPoints =
             getChildTag(serviceInformation, "ServiceInformationExtensions");
         if (serviceSupplyPoints != nullptr)
         {
@@ -440,7 +440,7 @@ namespace
     TslParser::ServiceSupplyPointList getServiceSupplyPoints(const xmlNode& serviceInformation)
     {
         TslParser::ServiceSupplyPointList serviceSupplyPointList{};
-        const xmlNodePtr serviceSupplyPoints =
+        xmlNodeCPtr serviceSupplyPoints =
             getChildTag(serviceInformation, "ServiceSupplyPoints");
         if (serviceSupplyPoints != nullptr)
         {
@@ -466,7 +466,7 @@ namespace
         {
             extendMapWithHistoryInstance(serviceInformation, mode, acceptanceHistoryMap, true);
 
-            const xmlNodePtr serviceDigitalIdentity = getChildTag(serviceInformation, "ServiceDigitalIdentity");
+            xmlNodeCPtr serviceDigitalIdentity = getChildTag(serviceInformation, "ServiceDigitalIdentity");
 
             if (serviceDigitalIdentity != nullptr)
             {
@@ -520,7 +520,7 @@ namespace
         {
             TslParser::AcceptanceHistoryMap result;
 
-            const xmlNodePtr serviceHistory = getChildTag(tspService, "ServiceHistory");
+            xmlNodeCPtr serviceHistory = getChildTag(tspService, "ServiceHistory");
             if (serviceHistory != nullptr)
             {
                 for (xmlNodePtr child = serviceHistory->children; child != nullptr;
@@ -580,10 +580,10 @@ namespace
             EVP_PKEY* publicKey = signerCertificate.getPublicKey();
             if (publicKey)
             {
-                auto ecKey = EVP_PKEY_get0_EC_KEY(publicKey);
+                auto* ecKey = EVP_PKEY_get0_EC_KEY(publicKey);
                 if (ecKey)
                 {
-                    auto group = EC_KEY_get0_group(ecKey);
+                    const auto* group = EC_KEY_get0_group(ecKey);
                     if (group && NID_brainpoolP256r1 == EC_GROUP_get_curve_name(group))
                     {
                         isDomainParameterBrainpoolP256r1 = true;
@@ -851,7 +851,7 @@ namespace
         try
         {
             const std::string certificateBase64 = xmlDocument.getElementText(xpathLiteral_certificate);
-            const X509Certificate certificate =
+            X509Certificate certificate =
                 X509Certificate::createFromBase64(Base64::cleanupForDecoding(certificateBase64));
 
             Expect(certificate.checkValidityPeriod(), "Invalid signer certificate");
@@ -878,11 +878,11 @@ namespace
                 xpathLiteral_otherTslPointer);
             for (int index = 0; index < otherTslPointer->nodesetval->nodeNr; ++index)
             {
-                const xmlNodePtr pointer = otherTslPointer->nodesetval->nodeTab[index];
+                xmlNodeCPtr pointer = otherTslPointer->nodesetval->nodeTab[index];
                 Expect(pointer != nullptr && pointer->type == XML_ELEMENT_NODE,
                        "OtherTSLPointer must be a valid node");
 
-                const xmlNodePtr additionalInformation = getChildTag(*pointer, "AdditionalInformation");
+                xmlNodeCPtr additionalInformation = getChildTag(*pointer, "AdditionalInformation");
                 Expect(additionalInformation != nullptr, "AdditionalInformation must be provided");
 
                 const std::string oid = getChildTagText(
@@ -932,13 +932,13 @@ namespace
 
             for (int index = 0; index < tspServices->nodesetval->nodeNr; ++index)
             {
-                const xmlNodePtr tspService = tspServices->nodesetval->nodeTab[index];
+                xmlNodeCPtr tspService = tspServices->nodesetval->nodeTab[index];
                 Expect (tspService != nullptr && tspService->type == XML_ELEMENT_NODE,
                         "TspService must be a valid node");
 
                 TslParser::AcceptanceHistoryMap historyMap = detail::getHistoryMap(*tspService, mode);
 
-                const xmlNodePtr serviceInformation = getChildTag(*tspService, "ServiceInformation");
+                xmlNodeCPtr serviceInformation = getChildTag(*tspService, "ServiceInformation");
                 Expect (serviceInformation != nullptr, "ServiceInvormation must be a valid one");
 
                 detail::fillTrustStructuresFromServiceInformation(

@@ -8,7 +8,7 @@
 
 #include "erp/database/Database.hxx"
 #include "erp/hsm/HsmPool.hxx"
-#include "erp/registration/HeartbeatSender.hxx"
+#include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/tsl/TslRefreshJob.hxx"
 #include "erp/util/Condition.hxx"
@@ -58,16 +58,15 @@ public:
     static int runApplication (
         Factories&& factories,
         StateCondition& state,
-        std::function<void(PcServiceContext&)> postInitializationCallback = {});
+        const std::function<void(PcServiceContext&)>& postInitializationCallback = {});
 
 private:
     static void checkConfiguration();
 
-    static std::unique_ptr<HeartbeatSender> setupHeartbeatSender(PcServiceContext& serviceContext);
+    static std::unique_ptr<ApplicationHealthAndRegistrationUpdater> setupHeartbeatSender(PcServiceContext& serviceContext);
 
     static std::unique_ptr<SeedTimer> setupPrngSeeding (
         ThreadPool& threadpool,
-        size_t threadCount,
         HsmPool& randomSource);
 
     static std::shared_ptr<TslManager> setupTslManager (const std::shared_ptr<XmlValidator>& xmlValidator);

@@ -164,6 +164,8 @@ public:
     retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
                                       const std::optional<UrlArguments>& search) const = 0;
 
+    [[nodiscard]] virtual std::tuple<std::optional<model::Binary>, std::optional<model::Bundle>, std::optional<model::ChargeItem>, std::optional<model::Bundle>>
+    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id) = 0;
     virtual std::tuple<model::ChargeItem, model::Bundle>
     retrieveChargeInformation(const model::PrescriptionId& id) const = 0;
     virtual std::tuple<model::ChargeItem, model::Bundle>

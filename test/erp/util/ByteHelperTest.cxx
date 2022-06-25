@@ -32,7 +32,7 @@ TEST(ByteHelperTest, fromAndToHex)
 }
 
 
-TEST(ByteHelperTest, fromHex_error)
+TEST(ByteHelperTest, fromHex_error)//NOLINT(readability-function-cognitive-complexity)
 {
     // check error: odd number of hex characters:
     std::ostringstream hexStrm;
@@ -48,7 +48,7 @@ TEST(ByteHelperTest, fromHex_error)
     // check error: invalid hex character value:
     for(unsigned char c = 0; c < 255; ++c) {
         std::string errString = hexStrm.str() + '0';
-        errString += c;
+        errString += static_cast<char>(c);
         errString += hexStrm.str();
         if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
             ASSERT_NO_THROW(ByteHelper::fromHex(errString));

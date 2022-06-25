@@ -10,9 +10,9 @@ class EllipticCurveBrainpoolP256R1
     : public EllipticCurve
 {
 public:
-    virtual shared_EVP_PKEY createKeyPair (void) const override;
-    virtual shared_EC_GROUP getEcGroup (void) const override;
-    virtual DiffieHellman createDiffieHellman (void) const override;
+    shared_EVP_PKEY createKeyPair (void) const override;
+    shared_EC_GROUP getEcGroup (void) const override;
+    DiffieHellman createDiffieHellman (void) const override;
 };
 
 
@@ -70,5 +70,5 @@ shared_EC_GROUP EllipticCurveBrainpoolP256R1::getEcGroup (void) const
 
 DiffieHellman EllipticCurveBrainpoolP256R1::createDiffieHellman (void) const
 {
-    return DiffieHellman();
+    return {};
 }

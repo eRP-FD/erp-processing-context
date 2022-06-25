@@ -35,24 +35,24 @@ public:
     /**
      * Retrieves the endorsement key.
      */
-    virtual EndorsementKeyOutput getEndorsementKey (void) override;
+    EndorsementKeyOutput getEndorsementKey (void) override;
 
     /**
      * Retrieves the attestation key.
      */
-    virtual AttestationKeyOutput getAttestationKey (bool isEnrolmentActive = false) override;
+    AttestationKeyOutput getAttestationKey (bool isEnrolmentActive = false) override;
 
     /**
      * Authenticates the given credential.
      */
-    virtual AuthenticateCredentialOutput authenticateCredential (
+    AuthenticateCredentialOutput authenticateCredential (
         AuthenticateCredentialInput&& input,
         bool isEnrolmentActive = false) override;
 
     /**
      * Computes a quote for the given list of registers and returns it and its signature.
      */
-    virtual QuoteOutput getQuote (
+    QuoteOutput getQuote (
         QuoteInput&& input,
         bool isEnrolmentActive = false) override;
 

@@ -34,8 +34,10 @@ TEST_F(TransactionTest, rollback)
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                                                model::Task::Status::draft, model::Timestamp::now(),
                                                                model::Timestamp::now())));
-        database.updateTask(*prescriptionId, db_model::EncryptedBlob(pqxx::binarystring("accessCode")), blobId,
-                            db_model::Blob(pqxx::binarystring("salt")));
+        database.updateTask(
+            *prescriptionId,
+            db_model::EncryptedBlob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("accessCode"))),
+            blobId, db_model::Blob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("salt"))));
     }// closing scope performs rollback
 
     ASSERT_TRUE(prescriptionId);
@@ -61,8 +63,10 @@ TEST_F(TransactionTest, commit)
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                                                model::Task::Status::draft, model::Timestamp::now(),
                                                                model::Timestamp::now())));
-        database.updateTask(*prescriptionId, db_model::EncryptedBlob(pqxx::binarystring("accessCode")), blobId,
-                            db_model::Blob(pqxx::binarystring("salt")));
+        database.updateTask(
+            *prescriptionId,
+            db_model::EncryptedBlob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("accessCode"))),
+            blobId, db_model::Blob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("salt"))));
         database.commitTransaction();
     }
 

@@ -12,22 +12,27 @@ RUN apt-get update --fix-missing && \
     apt-get install -y software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get install -y  \
-    openjdk-11-jdk \
+    openjdk-11-jre-headless \
     gcc-9 g++-9 \
+    jq \
     wget \
     libgtest-dev \
     libssl1.1 \
     git \
+    ninja-build \
     python3 \
     python3-pip \
     pkg-config \
+    uuid-runtime \
     xz-utils \
     curl \
     automake \
-    clang-tidy \
+    clang-tidy-12 \
     libefiboot-dev \
     libefivar-dev \
     ca-certificates \
+    xxd \
+    xmlsec1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Update certificates and install latest version of cmake
@@ -38,4 +43,7 @@ RUN update-ca-certificates && \
 WORKDIR /usr/src/googletest
 RUN cmake .
 RUN cmake --build . --target install
-
+WORKDIR /root
+RUN mkdir -p ~/.ssh && ssh-keyscan github.ibmgcloud.net >> ~/.ssh/known_hosts
+# work around fix for CVE-2022-24765:
+RUN git config --global --add safe.directory '*'

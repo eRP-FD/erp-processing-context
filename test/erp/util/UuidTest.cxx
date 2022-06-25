@@ -24,7 +24,7 @@ TEST(UuidTest, uuidsAreUnique)
 }
 
 
-TEST(UuidTest, uuidFormat)
+TEST(UuidTest, uuidFormat)//NOLINT(readability-function-cognitive-complexity)
 {
     // This is the format we expect.
     EXPECT_TRUE(Uuid("e6f79c0b-8d08-40c9-88ee-6a157afac6c7").isValidIheUuid());
@@ -47,7 +47,7 @@ TEST(UuidTest, uuidFormat)
     }
 }
 
-TEST(UuidTest, uuidUrnFormat)
+TEST(UuidTest, uuidUrnFormat)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_EQ(Uuid("e6f79c0b-8d08-40c9-88ee-6a157afac6c7").toUrn(), "urn:uuid:e6f79c0b-8d08-40c9-88ee-6a157afac6c7");
     EXPECT_EQ(Uuid("urn:uuid:e6f79c0b-8d08-40c9-88ee-6a157afac6c7").toUrn(), "urn:uuid:e6f79c0b-8d08-40c9-88ee-6a157afac6c7");
@@ -57,7 +57,7 @@ TEST(UuidTest, uuidUrnFormat)
     EXPECT_EQ(Uuid("huhu").toUrn(), "huhu");
 }
 
-TEST(UuidTest, toOid)
+TEST(UuidTest, toOid)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_NO_THROW(Uuid().toOid());
     EXPECT_FALSE(Uuid().toOid().empty());

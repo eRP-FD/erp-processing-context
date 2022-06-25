@@ -37,7 +37,7 @@ public:
     explicit HsmProductionFactory (
         std::unique_ptr<HsmClient>&& hsmClient,
         std::shared_ptr<BlobCache> blobCache);
-    virtual ~HsmProductionFactory (void) = default;
+    ~HsmProductionFactory (void) override = default;
 
     /**
      *  Connect as a user with a password.
@@ -47,7 +47,7 @@ public:
      *
      *  Either returns a valid HamSession object or throws an exception.
      */
-    virtual std::shared_ptr<HsmRawSession> rawConnect (void) override;
+    std::shared_ptr<HsmRawSession> rawConnect (void) override;
 };
 
 

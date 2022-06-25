@@ -69,7 +69,7 @@ TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)
+TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-cognitive-complexity)
 {
     if(isUnsupportedFlowtype(GetParam()))
         GTEST_SKIP();
@@ -908,7 +908,7 @@ TEST_P(ErpWorkflowTestP, AuditEventSearchSortPaging) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, 4, 3, "subtype=R"));
 }
 
-TEST_F(ErpWorkflowTest, GetMetaData)
+TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::MetaData> metaData;
     ASSERT_NO_FATAL_FAILURE(metaData = metaDataGet(ContentMimeType::fhirJsonUtf8));
@@ -927,7 +927,7 @@ TEST_F(ErpWorkflowTest, GetMetaData)
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    auto refFile = "test/EndpointHandlerTest/metadata.json";
+    const char* refFile = "test/EndpointHandlerTest/metadata.json";
     if (model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>() >=
         model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)
     {
@@ -943,7 +943,7 @@ TEST_F(ErpWorkflowTest, GetMetaData)
     ASSERT_EQ(metaData->serializeToJsonString(), expectedMetaData.serializeToJsonString());
 }
 
-TEST_F(ErpWorkflowTest, GetDevice)
+TEST_F(ErpWorkflowTest, GetDevice)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::Device> device;
 
@@ -1034,7 +1034,7 @@ std::string fixBundle(const std::string& bundle, const Uuid& id)
 }
 }
 
-TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)
+TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
     auto& resourceManager = ResourceManager::instance();
@@ -1052,7 +1052,7 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)
     qesXMLString = patchVersionsInBundle(qesXMLString);
     auto qesBundle = model::KbvBundle::fromXml(qesXMLString, *StaticData::getXmlValidator(),
                                                *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle);
-    std::string qesBundleSigned = toCadesBesSignature(qesXMLString);
+    std::string qesBundleSigned = toCadesBesSignature(qesXMLString, model::Timestamp::fromXsDate("2021-04-03"));
 
     std::optional<model::Task> task;
     // invoke /task/<id>/$activate
@@ -1167,7 +1167,7 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
     generateNewRandomKVNR(kvnr);
     std::string qesBundle;
     std::vector<model::Communication> communications;
-    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now()));
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now())));
     ASSERT_FALSE(qesBundle.empty());
     std::string activateBody = R"(<Parameters xmlns="http://hl7.org/fhir">)""\n"
                                "    <parameter>\n"
@@ -1220,7 +1220,7 @@ TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWh
     std::string accessCode(task->accessCode());
 
     const std::string kvnr{"X007654321"};
-    std::string qesBundle = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
+    const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
     ASSERT_TRUE(task);
 
@@ -1275,7 +1275,7 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
     const auto prescriptionId = task->prescriptionId();
     const std::string kvnr{"X101010101"};
 
-    const std::string qesBundle = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
+    const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(prescriptionId, accessCode, qesBundle));
     ASSERT_TRUE(task);
 
@@ -1352,7 +1352,7 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
             send(RequestArguments{HttpMethod::GET, "/Task/", {}}.withJwt(jwt),
                  [](std::string& request){ request[2] = '-'; }));
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::BadRequest);
-    EXPECT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
     EXPECT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/json");
 
     outerErrorResponseDocument.Parse(outerResponse.getBody());
@@ -1501,9 +1501,92 @@ TEST_P(ErpWorkflowTestP, OperationOutcomeIncodeValidation)// NOLINT
     auto bundle =
         ResourceManager::instance().getStringResource("test/validation/xml/kbv/bundle/Bundle_invalid_erp_8431.xml");
     bundle = String::replaceAll(bundle, "REPLACE_ME_taskId", prescriptionId->toString());
-    const auto& qes = toCadesBesSignature(bundle);
+    const auto& qes = toCadesBesSignature(bundle, model::Timestamp::fromXsDate("2021-06-08"));
     ASSERT_NO_FATAL_FAILURE(taskActivate(*prescriptionId, accessCode, qes, HttpStatus::BadRequest,
                                          model::OperationOutcome::Issue::Type::invalid, "mandatory identifier.value not set"));
+}
+
+TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
+{
+    using namespace std::chrono_literals;
+    
+    // invoke POST /task/$create
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
+    ASSERT_TRUE(task);
+
+    std::string kvnr;
+    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
+
+    std::optional<model::PrescriptionId> prescriptionId = task->prescriptionId();
+    ASSERT_TRUE(prescriptionId);
+    std::string qesBundle;
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now())));
+
+    // invoke /task/<id>/$activate
+    ASSERT_NO_FATAL_FAILURE(task = taskActivate(*prescriptionId, std::string(task->accessCode()), qesBundle));
+    ASSERT_TRUE(task);
+
+    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    ASSERT_TRUE(telematicId.has_value());
+
+    std::optional<model::Communication> communicationResponseA;
+    ASSERT_NO_FATAL_FAILURE(communicationResponseA = communicationPost(
+        model::Communication::MessageType::InfoReq, task.value(), ActorRole::Insurant, kvnr,
+        ActorRole::Pharmacists, telematicId.value(), "Ist das Medikament A bei Ihnen vorrätig?"));
+
+    std::this_thread::sleep_for(1s);
+
+    std::optional<model::Communication> communicationResponseB;
+    ASSERT_NO_FATAL_FAILURE(communicationResponseB = communicationPost(
+        model::Communication::MessageType::InfoReq, task.value(), ActorRole::Insurant, kvnr,
+        ActorRole::Pharmacists, telematicId.value(), "Ist das Medikament B bei Ihnen vorrätig?"));
+
+    std::this_thread::sleep_for(2s);
+
+    ASSERT_TRUE(communicationResponseA->timeSent().has_value());
+    auto args = "sent=ge" + communicationResponseA->timeSent()->toXsDateTimeWithoutFractionalSeconds().substr(0, 19);
+    std::optional<model::Bundle> communicationsBundle;
+    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args)); // sets "received" timstamp
+    EXPECT_EQ(communicationsBundle->getResourceCount(), 2);
+
+    auto communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");
+    ASSERT_EQ(communications.size(), 2);
+    ASSERT_TRUE(communications[0].timeReceived().has_value());
+    const auto start = communications[0].timeReceived().value() + (-1s);
+
+    std::optional<model::Communication> communicationResponseC;
+    ASSERT_NO_FATAL_FAILURE(communicationResponseC = communicationPost(
+        model::Communication::MessageType::InfoReq, task.value(), ActorRole::Insurant, kvnr,
+        ActorRole::Pharmacists, telematicId.value(), "Ist das Medikament C bei Ihnen vorrätig?"));
+    std::optional<model::Communication> communicationResponseD;
+    ASSERT_NO_FATAL_FAILURE(communicationResponseD = communicationPost(
+        model::Communication::MessageType::InfoReq, task.value(), ActorRole::Insurant, kvnr,
+        ActorRole::Pharmacists, telematicId.value(), "Ist das Medikament D bei Ihnen vorrätig?"));
+
+    std::this_thread::sleep_for(1s);
+
+    ASSERT_TRUE(communicationResponseC->timeSent().has_value());
+    args = "sent=ge" + communicationResponseC->timeSent()->toXsDateTimeWithoutFractionalSeconds().substr(0, 19);
+    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args)); // sets "received" timstamp
+
+    communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");
+    ASSERT_EQ(communications.size(), 2);
+    ASSERT_TRUE(communications[0].timeReceived().has_value());
+    const auto end = communications[0].timeReceived().value();
+
+    EXPECT_EQ(communicationsBundle->getResourceCount(), 2);
+
+    const auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    args = "received=gt" + start.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "&received=lt" +
+                      end.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "&_sort=sent";
+    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args));
+    ASSERT_EQ(communicationsBundle->getResourceCount(), 2);
+    communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");
+    ASSERT_EQ(communications.size(), 2);
+    EXPECT_EQ(communications[0].id(), communicationResponseA->id());
+    EXPECT_EQ(communications[1].id(), communicationResponseB->id());
+
 }
 
 

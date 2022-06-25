@@ -45,6 +45,13 @@ std::optional<Dosage> KbvMedicationRequest::dosageInstruction() const
     return std::nullopt;
 }
 
+model::Timestamp KbvMedicationRequest::authoredOn() const
+{
+    static const rapidjson::Pointer authoredOnPointer(resource::ElementName::path("authoredOn"));
+    const auto authoredOnStr = getStringValue(authoredOnPointer);
+    return model::Timestamp::fromXsDate(std::string{authoredOnStr});
+}
+
 Dosage::Dosage(NumberAsStringParserDocument&& document)
     : Resource<Dosage, ResourceVersion::KbvItaErp>(std::move(document))
 {

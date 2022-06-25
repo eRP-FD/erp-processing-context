@@ -323,9 +323,9 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
         const auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(res.at(4).as<int16_t>());
         Expect(prescription_type_opt.has_value(), "could not cast to prescription_type");
         auto id = model::PrescriptionId::fromDatabaseId(prescription_type_opt.value(), res[0].as<int64_t>());
-        resultSet.emplace_back(id, db_model::EncryptedBlob{res[1].as<pqxx::binarystring>()},
+        resultSet.emplace_back(id, db_model::EncryptedBlob{res[1].as<db_model::postgres_bytea>()},
                                gsl::narrow<BlobId>(res[2].as<int32_t>()),
-                               db_model::Blob{res[3].as<pqxx::binarystring>()});
+                               db_model::Blob{res[3].as<db_model::postgres_bytea>()});
     }
 
     bool hasNextPage = search.has_value() && resultSet.size() > search->pagingArgument().getCount();
@@ -353,19 +353,19 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
         if (!selectResult.empty())
         {
             Expect(selectResult.size() == 1, "Expected only one CMAC.");
-            auto cmac = selectResult.front().at(0).as<pqxx::binarystring>();
-            return CmacKey::fromBin(cmac.view());
+            auto cmac = selectResult.front().at(0).as<db_model::postgres_bytea>();
+            return CmacKey::fromBin({reinterpret_cast<char*>(cmac.data()), cmac.size()});
         }
     }
     const auto& newKey = CmacKey::randomKey(randomSource);
-    const pqxx::binarystring newKeyBin(newKey.data(), newKey.size());
+    const db_model::postgres_bytea_view newKeyBin(reinterpret_cast<const std::byte*>(newKey.data()), newKey.size());
     { // scope
         TVLOG(2) << ::acquireCmac.query;
         auto acquireResult = mTransaction->exec_params(::acquireCmac.query, validDateStrm.str(), magic_enum::enum_name(cmacType), newKeyBin);
         TVLOG(2) << "got " << acquireResult.size() << " results";
         Expect(acquireResult.size() == 1, "Expected exactly one CMAC.");
-        auto cmac = acquireResult.front().at(0).as<pqxx::binarystring>();
-        return CmacKey::fromBin(cmac.view());
+        auto cmac = acquireResult.front().at(0).as<db_model::postgres_bytea>();
+        return CmacKey::fromBin({reinterpret_cast<char*>(cmac.data()), cmac.size()});
     }
 }
 
@@ -464,7 +464,7 @@ std::string PostgresBackend::storeAuditEventData(db_model::AuditData& auditData)
         auditData.deviceId,
         auditData.prescriptionId.has_value() ? auditData.prescriptionId->toDatabaseId() : std::optional<int64_t>(),
         auditData.prescriptionId.has_value() ? static_cast<int16_t>(magic_enum::enum_integer(auditData.prescriptionId->type())) : std::optional<int16_t>(),
-        auditData.metaData.has_value() ?  auditData.metaData->binarystring() : std::optional<pqxx::binarystring>(),
+        auditData.metaData.has_value() ?  auditData.metaData->binarystring() : std::optional<db_model::postgres_bytea_view>(),
         auditData.blobId);
     TVLOG(2) << "got " << result.size() << " results";
 
@@ -538,7 +538,7 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
                 model::PrescriptionId::fromDatabaseId(*prescriptionType, res.at(6).as<std::int64_t>()));
         }
         const auto metaData = res.at(8).is_null() ? std::optional<db_model::EncryptedBlob>()
-                                                  : db_model::EncryptedBlob(res.at(8).as<pqxx::binarystring>());
+                                                  : db_model::EncryptedBlob(res.at(8).as<db_model::postgres_bytea>());
         const auto blobId = res.at(9).is_null() ? std::optional<BlobId>() : res.at(9).as<int>();
 
         db_model::AuditData auditData(
@@ -647,7 +647,6 @@ std::optional<Uuid> PostgresBackend::insertCommunication(const model::Prescripti
                                                          const model::Communication::MessageType messageType,
                                                          const db_model::HashedId& sender,
                                                          const db_model::HashedId& recipient,
-                                                         const std::optional<model::Timestamp>& timeReceived,
                                                          BlobId senderBlobId,
                                                          const db_model::EncryptedBlob& messageForSender,
                                                          BlobId recipientBlobId,
@@ -663,7 +662,7 @@ std::optional<Uuid> PostgresBackend::insertCommunication(const model::Prescripti
                     static_cast<int>(model::Communication::messageTypeToInt(messageType)),
                     sender.binarystring(),
                     recipient.binarystring(),
-                    timeReceived ? std::make_optional(timeReceived->toXsDateTime()) : std::nullopt,
+                    std::nullopt,
                     prescriptionId.toDatabaseId(),
                     static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
                     gsl::narrow<int32_t>(senderBlobId),
@@ -767,9 +766,9 @@ std::vector<db_model::Communication> PostgresBackend::retrieveCommunications (
         {
             newComm.received = model::Timestamp{item[1].as<double>()};
         }
-        newComm.communication = db_model::EncryptedBlob{item[2].as<pqxx::binarystring>()};
+        newComm.communication = db_model::EncryptedBlob{item[2].as<db_model::postgres_bytea>()};
         newComm.blobId = gsl::narrow<BlobId>(item[3].as<int>());
-        newComm.salt = db_model::Blob{item[4].as<pqxx::binarystring>()};
+        newComm.salt = db_model::Blob{item[4].as<db_model::postgres_bytea>()};
     }
 
     return communications;
@@ -892,7 +891,7 @@ PostgresBackend::insertOrReturnAccountSalt(const db_model::HashedId& accountId,
     {
         return std::nullopt;
     }
-    return std::make_optional<db_model::Blob>(result[0][0].as<pqxx::binarystring>());
+    return std::make_optional<db_model::Blob>(result[0][0].as<db_model::postgres_bytea>());
 }
 
 void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
@@ -944,6 +943,15 @@ PostgresBackend::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& k
 {
     checkCommonPreconditions();
     return mBackendTask200.retrieveAllChargeItemsForInsurant(*mTransaction, kvnr, search);
+}
+
+std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+PostgresBackend::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id) const
+{
+    checkCommonPreconditions();
+    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+           "Attemt to retrieve Chargeinformation for non-PKV Prescription.");
+    return mBackendTask200.retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(*mTransaction, id);
 }
 
 std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
@@ -1010,7 +1018,7 @@ std::optional<db_model::Blob> PostgresBackend::retrieveSaltForAccount(const db_m
     {
         return std::nullopt;
     }
-    return db_model::Blob(result[0].at(0).as<pqxx::binarystring>());
+    return db_model::Blob(result[0].at(0).as<db_model::postgres_bytea>());
 }
 
 

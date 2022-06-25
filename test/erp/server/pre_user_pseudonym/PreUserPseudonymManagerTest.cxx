@@ -9,7 +9,6 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/server/context/ServiceContext.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "erp/util/Expect.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -19,6 +18,7 @@
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/mock/RegistrationMock.hxx"
+#include "test/util/ResourceManager.hxx"
 
 
 static auto todaysKey = CmacKey::fromBin("--Today's Key!--"); // NOLINT
@@ -59,11 +59,11 @@ bool PreUserPseudonymCmacTestDatabase::fail_ = false;
 class PreUserPseudonymCmacTest : public ::testing::Test
 {
 public:
-    virtual void SetUp() override
+    void SetUp() override
     {
         tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
         auto factories = StaticData::makeMockFactories();
         factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
             return std::make_unique<DatabaseFrontend>(std::make_unique<PreUserPseudonymCmacTestDatabase>(hsmPool),
@@ -72,7 +72,7 @@ public:
         serviceContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
     }
 
-    virtual void TearDown() override
+    void TearDown() override
     {
         tslEnvironmentGuard.reset();
     }
@@ -104,9 +104,9 @@ TEST_F(PreUserPseudonymCmacTest, verifyAndResign) // NOLINT
     auto sigToday     = todaysKey.sign(testSub);
     auto sigYesterday = yesterdaysKey.sign(testSub);
     auto sigWrong     = wrongKey.sign(testSub);
-    auto resToday     = preUserPseudonymCmac.verifyAndResign(sigToday    , testSub);
-    auto resYesterday = preUserPseudonymCmac.verifyAndResign(sigYesterday, testSub);
-    auto resWrong     = preUserPseudonymCmac.verifyAndResign(sigWrong    , testSub);
+    auto resToday     = preUserPseudonymCmac.verifyAndReSign(sigToday    , testSub);
+    auto resYesterday = preUserPseudonymCmac.verifyAndReSign(sigYesterday, testSub);
+    auto resWrong     = preUserPseudonymCmac.verifyAndReSign(sigWrong    , testSub);
     EXPECT_TRUE (get<0>(resToday    ));
     EXPECT_TRUE (get<0>(resYesterday));
     EXPECT_FALSE(get<0>(resWrong    ));
@@ -116,7 +116,7 @@ TEST_F(PreUserPseudonymCmacTest, verifyAndResign) // NOLINT
 }
 
 // regression test for ERP-6504 Pre-User-Pseudonym CMAC-Key not loaded when first load fails
-TEST_F(PreUserPseudonymCmacTest, ERP6504RecoverAfterFailure)
+TEST_F(PreUserPseudonymCmacTest, ERP6504RecoverAfterFailure)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string_view testSub{"RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk"};
     PreUserPseudonymCmacTestDatabase::fail_ = true;

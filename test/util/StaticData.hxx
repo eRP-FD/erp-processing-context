@@ -55,17 +55,17 @@ public:
 class StaticData
 {
 public:
-    static const std::shared_ptr<JsonValidator> getJsonValidator()
+    static std::shared_ptr<JsonValidator> getJsonValidator()
     {
         static auto jsonValidatorStatic = std::make_shared<JsonValidatorStatic>();
-        return std::shared_ptr<JsonValidator>(jsonValidatorStatic, &jsonValidatorStatic->mJsonValidator);
+        return {jsonValidatorStatic, &jsonValidatorStatic->mJsonValidator};
     }
     static std::shared_ptr<XmlValidator> getXmlValidator()
     {
         static auto xmlValidatorStatic = std::make_shared<XmlValidatorStatic>();
-        return std::shared_ptr<XmlValidator>(xmlValidatorStatic, &xmlValidatorStatic->mXmlValidator);
+        return {xmlValidatorStatic, &xmlValidatorStatic->mXmlValidator};
     }
-    static const std::shared_ptr<InCodeValidator> getInCodeValidator()
+    static std::shared_ptr<InCodeValidator> getInCodeValidator()
     {
         static auto inCodeValidatorStatic = std::make_shared<InCodeValidator>();
         return inCodeValidatorStatic;

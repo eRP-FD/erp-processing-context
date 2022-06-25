@@ -22,16 +22,16 @@ public:
     static std::unique_ptr<Tpm> createInstance();
     static Tpm::Factory createFactory(void);
 
-    virtual EndorsementKeyOutput getEndorsementKey (void) override;
+    EndorsementKeyOutput getEndorsementKey (void) override;
 
-    virtual AttestationKeyOutput getAttestationKey (
+    AttestationKeyOutput getAttestationKey (
         bool isEnrolmentActive = false) override;
 
-    virtual AuthenticateCredentialOutput authenticateCredential (
+    AuthenticateCredentialOutput authenticateCredential (
         AuthenticateCredentialInput&& input,
         bool isEnrolmentActive = false) override;
 
-    virtual QuoteOutput getQuote (
+    QuoteOutput getQuote (
         QuoteInput&& input,
         bool isEnrolmentActive = false) override;
 };

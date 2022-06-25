@@ -52,9 +52,12 @@ public:
     // system types are builtin and not read from StructureDefinition Files
     // see also Kind
     bool isSystemType() const;
-    const std::vector<FhirElement>& elements() const { return mElements; }
+    [[nodiscard]] const std::vector<std::shared_ptr<const FhirElement>>& elements() const
+    {
+        return mElements;
+    }
 
-    const FhirElement* findElement(const std::string& elementId) const;
+    [[nodiscard]] std::shared_ptr<const FhirElement> findElement(const std::string& elementId) const;
     bool isDerivedFrom(const FhirStructureRepository& repo, const std::string_view& baseUrl) const;
 
     // immutable:
@@ -70,7 +73,7 @@ private:
     std::string mBaseDefinition;
     Derivation mDerivation = Derivation::basetype;
     Kind mKind = Kind::primitiveType;
-    std::vector<FhirElement> mElements;
+    std::vector<std::shared_ptr<const FhirElement>> mElements;
 };
 
 
@@ -89,7 +92,7 @@ public:
 
     Builder& kind(Kind kind_);
 
-    Builder& addElement(FhirElement&& element);
+    Builder& addElement(std::shared_ptr<const FhirElement> element);
 
     FhirStructureDefinition getAndReset();
 

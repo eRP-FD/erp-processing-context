@@ -16,6 +16,8 @@ class KBVEXFORLegalBasis : public model::Extension
 public:
     using Extension::Extension;
     static constexpr auto url = "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis";
+
+    friend std::optional<KBVEXFORLegalBasis> ResourceBase::getExtension<KBVEXFORLegalBasis>(const std::string_view&) const;
 };
 
 }

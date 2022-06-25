@@ -26,7 +26,7 @@ EllipticCurvePublicKey::EllipticCurvePublicKey(int nid, const EC_POINT* publicKe
     Expect(publicKey != nullptr, "EllipticCurvePublicKey: publicKey must not be null");
     OpenSslExpect(1 == EC_POINT_is_on_curve(getGroup(), publicKey, nullptr),
                   "EllipticCurvePublicKey: public key not on expected elliptic curve");
-    
+
     OpenSslExpect(1 == EC_KEY_set_public_key(mKey.get(), publicKey),
                   "EllipticCurvePublicKey: setting of public key failed");
 }
@@ -40,7 +40,7 @@ bool EllipticCurvePublicKey::hasPublicKey() const
 
 const EC_POINT* EllipticCurvePublicKey::getPublicKey() const
 {
-    auto publicKeyResult = EC_KEY_get0_public_key(mKey.get());
+    const auto* publicKeyResult = EC_KEY_get0_public_key(mKey.get());
     if (!publicKeyResult)
     {
         throw std::logic_error{"No public key stored"};
@@ -52,7 +52,7 @@ const EC_POINT* EllipticCurvePublicKey::getPublicKey() const
 
 const EC_GROUP* EllipticCurvePublicKey::getGroup() const
 {
-    auto groupResult = EC_KEY_get0_group(mKey.get());
+    const auto* groupResult = EC_KEY_get0_group(mKey.get());
     OpenSslExpect(groupResult != nullptr,
                   "EllipticCurvePublicKey: group retrieval failed");
 

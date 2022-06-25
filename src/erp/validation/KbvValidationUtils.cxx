@@ -19,7 +19,7 @@ std::string setToString(const std::set<std::string_view>& valueSet)
 {
     std::ostringstream oss;
     oss << "[";
-    std::string_view sep = "";
+    std::string_view sep;
     for (const auto& item : valueSet)
     {
         oss << sep << "\"" << item << "\"";
@@ -50,7 +50,7 @@ std::string constraintMessage(KbvAddressLineConstraint constraint)
         case KbvAddressLineConstraint::add_3:
             return "Wenn die Extension 'Postfach' verwendet wird, muss auch Address.line gefüllt werden";
         case KbvAddressLineConstraint::add_4:
-            return "Eine Postfach-Adresse darf nicht vom Type \"physical\" oder \"both\" sein.";
+            return R"(Eine Postfach-Adresse darf nicht vom Type "physical" oder "both" sein.)";
         case KbvAddressLineConstraint::add_5:
             return "Wenn die Extension 'Adresszusatz' verwendet wird, muss auch Address.line gefüllt werden";
         case KbvAddressLineConstraint::add_6:
@@ -235,7 +235,7 @@ void KbvValidationUtils::checkKbvExtensionValueIdentifier(const std::string_view
     }
 }
 
-bool KbvValidationUtils::isKostentraeger(const model::KbvCoverage& coverage, std::set<std::string> kostentraeger)
+bool KbvValidationUtils::isKostentraeger(const model::KbvCoverage& coverage, const std::set<std::string>& kostentraeger)
 {
     const auto& codingTypeCode = coverage.typeCodingCode();
     return (kostentraeger.count(std::string(codingTypeCode)) > 0);
@@ -263,7 +263,7 @@ void KbvValidationUtils::checkIknr(const std::string_view& iknr)
 {
     // ik-1
     // matches('[0-9]{8,9}')
-    static const auto constraintError = "Eine IK muss 8- (ohne Prüfziffer) oder 9-stellig (mit Prüfziffer) sein";
+    const auto *const constraintError = "Eine IK muss 8- (ohne Prüfziffer) oder 9-stellig (mit Prüfziffer) sein";
     ErpExpectWithDiagnostics(iknr.size() == 8 || iknr.size() == 9, HttpStatus::BadRequest, constraintError,
                              std::string(iknr));
     checkNumeric(iknr, constraintError);
@@ -273,7 +273,7 @@ void KbvValidationUtils::checkZanr(const std::string_view& zanr)
 {
     // zanr-2
     // matches('[0-9]{9}')
-    static const auto constraintError = "Die KZVAbrechnungsnummer muss 9-stellig numerisch sein";
+    const auto *const constraintError = "Die KZVAbrechnungsnummer muss 9-stellig numerisch sein";
     ErpExpectWithDiagnostics(zanr.size() == 9, HttpStatus::BadRequest, constraintError, std::string(zanr));
     checkNumeric(zanr, constraintError);
 }
@@ -282,7 +282,7 @@ void KbvValidationUtils::checkKvnr(const std::string_view& kvnr)
 {
     // kvid-1
     // matches('^[A-Z][0-9]{9}$')
-    static const auto constraintError =
+    const auto *const constraintError =
         "Der unveränderliche Teil der KVID muss 10-stellig sein und mit einem Großbuchstaben anfangen";
     ErpExpectWithDiagnostics(kvnr.size() == 10, HttpStatus::BadRequest, constraintError, std::string(kvnr));
     ErpExpectWithDiagnostics(kvnr[0] >= 'A' && kvnr[0] <= 'Z', HttpStatus::BadRequest, constraintError,
@@ -294,7 +294,7 @@ void KbvValidationUtils::checkLanr(const std::string_view& lanr)
 {
     // lanr-1: Eine LANR muss neunstellig numerisch sein
     //matches('[0-9]{9}')
-    static const auto constraintError = "Eine LANR muss neunstellig numerisch sein";
+    const auto *const constraintError = "Eine LANR muss neunstellig numerisch sein";
     ErpExpectWithDiagnostics(lanr.size() == 9, HttpStatus::BadRequest, constraintError, std::string(lanr));
     checkNumeric(lanr, constraintError);
 }

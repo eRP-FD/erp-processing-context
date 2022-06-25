@@ -66,7 +66,7 @@ TEST_F(Base64Test, encodeString)
 }
 
 
-TEST_F(Base64Test, encodePadding)
+TEST_F(Base64Test, encodePadding)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_EQ("", Base64::encode(""));
     EXPECT_EQ("Zg==", Base64::encode("f"));
@@ -88,7 +88,7 @@ TEST_F(Base64Test, encodeDecodeRoundTrip)
 }
 
 
-TEST_F(Base64Test, decodeErrors)
+TEST_F(Base64Test, decodeErrors)//NOLINT(readability-function-cognitive-complexity)
 {
     // Invalid characters.
     EXPECT_THROW(Base64::decode("ABC`"), std::invalid_argument);

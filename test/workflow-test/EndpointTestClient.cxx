@@ -16,7 +16,7 @@
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
-#include "test/mock/MockIdpUpdater.hxx"
+#include "mock/idp/MockIdpUpdater.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
@@ -34,7 +34,7 @@ EndpointTestClient::EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidato
             initAdminServer();
             return;
         case TestClient::Target::VAU:
-            initVauServer(xmlValidator);
+            initVauServer(std::move(xmlValidator));
             return;
         case Target::ENROLMENT:
             initEnrolmentServer();
@@ -98,7 +98,7 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
     mMockDatabase = std::make_unique<MockDatabase>(*mPool);
 
     auto factories = StaticData::makeMockFactories();
-    factories.xmlValidatorFactory = [xmlValidator] {
+    factories.xmlValidatorFactory = [xmlValidator = std::move(xmlValidator)] {
         return xmlValidator;
     };
     factories.databaseFactory = createDatabaseFactory();
@@ -123,8 +123,7 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
 
     using namespace std::chrono_literals;
     mServer->serviceContext().setPrngSeeder(std::make_unique<SeedTimer>(
-        mServer->getThreadPool(), mContext->getHsmPool(),
-        Configuration::instance().getIntValue(ConfigurationKey::SERVER_THREAD_COUNT), 200ms, [](const SafeString&) {}));
+        mServer->getThreadPool(), mContext->getHsmPool(), 200ms, [](const SafeString&) {}));
     const_cast<SeedTimer*>(mContext->getPrngSeeder())->refreshSeeds();
 
     mServer->serve(2);

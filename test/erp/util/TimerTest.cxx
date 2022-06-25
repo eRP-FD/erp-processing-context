@@ -163,7 +163,7 @@ TEST_F(TimerTest, runRepeating_multipleJobs)
     constexpr size_t jobCount = 10;
 
     std::array<SharedValue, jobCount> values;
-    std::array<size_t, jobCount> indices;
+    std::array<size_t, jobCount> indices{};
     indices.fill(0);
 
     for (size_t index=0; index<jobCount; ++index)

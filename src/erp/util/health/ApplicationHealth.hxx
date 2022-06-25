@@ -50,7 +50,7 @@ public:
 
     struct State
     {
-        Status status;
+        Status status{Status::Unknown};
         std::map<ServiceDetail, std::string> serviceDetails; // Details like HSM device.
         std::optional<std::string> details; // Details like reason for being down or being skipped.
     };

@@ -3,6 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
+//NOLINTNEXTLINE[bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp]
 #define _USE_CUSTOM_READER
 
 #include "test/erp/model/JsonMaintainNumberPrecisionTestModel.hxx"

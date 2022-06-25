@@ -129,6 +129,18 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
             AND charge_item IS NOT NULL
         )--")
 
+    QUERY(retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt, R"--(
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
+            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id,
+            access_code, secret, healthcare_provider_prescription, receipt, charge_item, dispense_item
+        FROM )--" + taskTableName() + R"--(
+        WHERE prescription_id = $1
+            AND charge_item_enterer IS NOT NULL
+            AND charge_item_entered_date IS NOT NULL
+            AND charge_item IS NOT NULL
+            AND dispense_item IS NOT NULL
+        )--")
+
     QUERY(retrieveChargeInformation, R"--(
         SELECT prescription_id, task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on), charge_item, dispense_item
         FROM )--" + taskTableName() + R"--(
@@ -203,13 +215,13 @@ std::tuple<model::PrescriptionId, model::Timestamp> PostgresBackendTask::createT
     Expect(result.size() == 2, "Expected Prescription Id and athored on as returned values.");
     auto prescriptionId = model::PrescriptionId::fromDatabaseId(mPrescriptionType, result[0].as<int64_t>());
     model::Timestamp authoredOn{result[1].as<double>()};
-    return std::make_tuple(std::move(prescriptionId), std::move(authoredOn));
+    return std::make_tuple(prescriptionId, authoredOn);
 }
 
 
 void PostgresBackendTask::updateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
                                      const db_model::EncryptedBlob& accessCode, uint32_t blobId,
-                                     const db_model::Blob& salt)
+                                     const db_model::Blob& salt) const
 {
     TVLOG(2) << mQueries.updateTask.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:updateTask");
@@ -223,7 +235,7 @@ void PostgresBackendTask::updateTask(pqxx::work& transaction, const model::Presc
 
 
 std::tuple<BlobId, db_model::Blob, model::Timestamp>
-PostgresBackendTask::getTaskKeyData(pqxx::work& transaction, const model::PrescriptionId& taskId)
+PostgresBackendTask::getTaskKeyData(pqxx::work& transaction, const model::PrescriptionId& taskId) const
 {
     TVLOG(2) << mQueries.getTaskKeyData.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:getTaskKeyData");
@@ -232,22 +244,22 @@ PostgresBackendTask::getTaskKeyData(pqxx::work& transaction, const model::Prescr
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() == 1, "Expected exactly one set of key data");
     const auto blobId = result.front().at(0).as<int64_t>();
-    const db_model::Blob salt{result.front().at(1).as<pqxx::binarystring>()};
+    const db_model::Blob salt{result.front().at(1).as<db_model::postgres_bytea>()};
 
     const model::Timestamp authoredOn{result.front().at(2).as<double>()};
-    return std::make_tuple(gsl::narrow_cast<BlobId>(blobId), std::move(salt), authoredOn);
+    return std::make_tuple(gsl::narrow_cast<BlobId>(blobId), salt, authoredOn);
 }
 
 
 void PostgresBackendTask::updateTaskStatusAndSecret(pqxx::work& transaction, const model::PrescriptionId& taskId,
                                                     model::Task::Status status,
                                                     const model::Timestamp& lastModifiedDate,
-                                                    const std::optional<db_model::EncryptedBlob>& secret)
+                                                    const std::optional<db_model::EncryptedBlob>& secret) const
 {
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:updateTaskStatusAndSecret");
 
     // It is possible to set or delete the secret using this query
-    std::optional<pqxx::binarystring> secretBin;
+    std::optional<db_model::postgres_bytea_view> secretBin;
     if (secret.has_value())
     {
         secretBin = secret->binarystring();
@@ -268,7 +280,7 @@ void PostgresBackendTask::activateTask(pqxx::work& transaction, const model::Pre
                                        const db_model::HashedKvnr& hashedKvnr, model::Task::Status taskStatus,
                                        const model::Timestamp& lastModified, const model::Timestamp& expiryDate,
                                        const model::Timestamp& acceptDate,
-                                       const db_model::EncryptedBlob& healthCareProviderPrescription)
+                                       const db_model::EncryptedBlob& healthCareProviderPrescription) const
 {
     TVLOG(2) << mQueries.updateTask_activateTask.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:activateTask");
@@ -290,7 +302,7 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
     const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
     BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
     const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
-    const db_model::EncryptedBlob& receipt)
+    const db_model::EncryptedBlob& receipt) const
 {
     TVLOG(2) << mQueries.updateTask_medicationDispenseReceipt.query;
     const auto timerKeepAlive =
@@ -310,7 +322,7 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
 
 void PostgresBackendTask::updateTaskClearPersonalData(pqxx::work& transaction, const model::PrescriptionId& taskId,
                                                       model::Task::Status taskStatus,
-                                                      const model::Timestamp& lastModified)
+                                                      const model::Timestamp& lastModified) const
 {
     // TODO: ERP-8162: also clear ChargeInformation
     TVLOG(2) << mQueries.updateTask_deletePersonalData.query;
@@ -453,7 +465,7 @@ PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::work& transac
 
 
 uint64_t PostgresBackendTask::countAllTasksForPatient(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
-                                                      const std::optional<UrlArguments>& search)
+                                                      const std::optional<UrlArguments>& search) const
 {
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:countAllTasksForPatient");
     return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countAllTasksByKvnr.query, kvnr, search, "tasks");
@@ -524,6 +536,38 @@ PostgresBackendTask::retrieveAllChargeItemsForPharmacy(::pqxx::work& transaction
     return retrieveAllChargeItems(transaction, mQueries.retrieveAllChargeItemsForPharmacy, pharmacyTelematikId, search);
 }
 
+std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+PostgresBackendTask::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(::pqxx::work& transaction, const model::PrescriptionId& id) const
+{
+    TVLOG(2) << mQueries.retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt.query;
+    Expect(id.type() == mPrescriptionType,
+           "retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt: Invalid prescription type for: " + id.toString());
+
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer("PostgreSQL:retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt");
+
+    const pqxx::result dbResult =
+        transaction.exec_params(mQueries.retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt.query, id.toDatabaseId());
+
+    TVLOG(2) << "got " << dbResult.size() << " results";
+    Expect(dbResult.size() <= 1, "Too many results in result set.");
+    if (! dbResult.empty())
+    {
+        const auto& row = dbResult[0];
+        Expect(dbResult.front().size() == 15,
+               "Invalid number of fields in result row: " + std::to_string(dbResult.front().size()));
+        TaskQueryIndexes indexes;
+        indexes.secretIndex = 10;
+        indexes.healthcareProviderPrescriptionIndex = 11;
+        indexes.receiptIndex = 12;
+
+        return {taskFromQueryResultRow(dbResult.front(), indexes, mPrescriptionType),
+                db_model::EncryptedBlob{row[13].as<db_model::postgres_bytea>()},
+                db_model::EncryptedBlob{row[14].as<db_model::postgres_bytea>()}};
+    }
+    return {};
+}
+
 std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
 PostgresBackendTask::retrieveChargeInformation(::pqxx::work& transaction, const model::PrescriptionId& id) const
 {
@@ -540,7 +584,7 @@ PostgresBackendTask::retrieveChargeInformation(::pqxx::work& transaction, const 
     ErpExpectWithDiagnostics(dbResult.size() == 1, HttpStatus::NotFound, "no such task", id.toString());
     const auto& row = dbResult[0];
     Expect3(row.size() == 6, "Unexpected number of columns.", std::logic_error);
-    return {chargeItemFromQueryResultRow(row), db_model::EncryptedBlob{row[5].as<pqxx::binarystring>()}};
+    return {chargeItemFromQueryResultRow(row), db_model::EncryptedBlob{row[5].as<db_model::postgres_bytea>()}};
 }
 
 std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
@@ -561,7 +605,7 @@ PostgresBackendTask::retrieveChargeInformationForUpdate(::pqxx::work& transactio
     ErpExpectWithDiagnostics(dbResult.size() == 1, HttpStatus::NotFound, "no such task", id.toString());
     const auto& row = dbResult[0];
     Expect3(row.size() == 6, "Unexpected number of columns.", std::logic_error);
-    return {chargeItemFromQueryResultRow(row), db_model::EncryptedBlob{row[5].as<pqxx::binarystring>()}};
+    return {chargeItemFromQueryResultRow(row), db_model::EncryptedBlob{row[5].as<db_model::postgres_bytea>()}};
 }
 
 db_model::ChargeItem PostgresBackendTask::chargeItemFromQueryResultRow(const pqxx::row& row) const
@@ -569,13 +613,13 @@ db_model::ChargeItem PostgresBackendTask::chargeItemFromQueryResultRow(const pqx
     return db_model::ChargeItem{
             model::PrescriptionId::fromDatabaseId(mPrescriptionType, row[0].as<int64_t>()),
             row[1].as<BlobId>(),
-            db_model::Blob{row[2].as<pqxx::binarystring>()},
+            db_model::Blob{row[2].as<db_model::postgres_bytea>()},
             model::Timestamp{row[3].as<double>()},
-            db_model::EncryptedBlob{row[4].as<pqxx::binarystring>()}
+            db_model::EncryptedBlob{row[4].as<db_model::postgres_bytea>()}
         };
 }
 
-void PostgresBackendTask::clearAllChargeInformation(::pqxx::work& transaction, const db_model::HashedKvnr& kvnr)
+void PostgresBackendTask::clearAllChargeInformation(::pqxx::work& transaction, const db_model::HashedKvnr& kvnr) const
 {
     TVLOG(2) << mQueries.clearAllChargeInformation.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:clearAllChargeInformation");
@@ -594,7 +638,7 @@ void PostgresBackendTask::deleteChargeInformation(::pqxx::work& transaction, con
 
 uint64_t PostgresBackendTask::countChargeInformationForInsurant(pqxx::work& transaction,
                                                                 const db_model::HashedKvnr& kvnr,
-                                                                const std::optional<UrlArguments>& search)
+                                                                const std::optional<UrlArguments>& search) const
 {
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:countChargeInformationForInsurant");
     return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countChargeInformationForInsurant.query,
@@ -603,7 +647,7 @@ uint64_t PostgresBackendTask::countChargeInformationForInsurant(pqxx::work& tran
 
 uint64_t PostgresBackendTask::countChargeInformationForPharmacy(pqxx::work& transaction,
                                                                 const db_model::HashedTelematikId& pharmacyTelematikId,
-                                                                const std::optional<UrlArguments>& search)
+                                                                const std::optional<UrlArguments>& search) const
 {
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:countChargeInformationForPharmacy");
     return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countChargeInformationForPharmacy.query,
@@ -621,7 +665,7 @@ db_model::Blob getSalt(const pqxx::row& resultRow, model::Task::Status status,
     }
     else
     {
-        return db_model::Blob{resultRow.at(indexes.saltIndex).as<pqxx::binarystring>()};
+        return db_model::Blob{resultRow.at(indexes.saltIndex).as<db_model::postgres_bytea>()};
     }
     return {};
 }
@@ -653,12 +697,12 @@ db_model::Task PostgresBackendTask::taskFromQueryResultRow(const pqxx::row& resu
 
     if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.accessCodeIndex, resultRow))
     {
-        dbTask.accessCode.emplace(resultRow.at(*indexes.accessCodeIndex).as<pqxx::binarystring>());
+        dbTask.accessCode.emplace(resultRow.at(*indexes.accessCodeIndex).as<db_model::postgres_bytea>());
     }
 
     if (! resultRow.at(indexes.kvnrIndex).is_null())
     {
-        dbTask.kvnr.emplace(resultRow.at(indexes.kvnrIndex).as<pqxx::binarystring>());
+        dbTask.kvnr.emplace(resultRow.at(indexes.kvnrIndex).as<db_model::postgres_bytea>());
     }
 
     if (! resultRow.at(indexes.expiryDateIndex).is_null())
@@ -673,18 +717,18 @@ db_model::Task PostgresBackendTask::taskFromQueryResultRow(const pqxx::row& resu
 
     if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.secretIndex, resultRow))
     {
-        dbTask.secret.emplace(resultRow.at(*indexes.secretIndex).as<pqxx::binarystring>());
+        dbTask.secret.emplace(resultRow.at(*indexes.secretIndex).as<db_model::postgres_bytea>());
     }
 
     if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.receiptIndex, resultRow))
     {
-        dbTask.receipt.emplace(resultRow.at(*indexes.receiptIndex).as<pqxx::binarystring>());
+        dbTask.receipt.emplace(resultRow.at(*indexes.receiptIndex).as<db_model::postgres_bytea>());
     }
 
     if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.healthcareProviderPrescriptionIndex, resultRow))
     {
         dbTask.healthcareProviderPrescription.emplace(
-            resultRow.at(*indexes.healthcareProviderPrescriptionIndex).as<pqxx::binarystring>());
+            resultRow.at(*indexes.healthcareProviderPrescriptionIndex).as<db_model::postgres_bytea>());
     }
 
     return dbTask;

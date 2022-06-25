@@ -22,24 +22,18 @@
 namespace
 {
     std::unique_ptr<TslRefreshJob> setupTslRefreshJob(
-        const std::shared_ptr<TslManager>& tslManager,
+        TslManager& tslManager,
         const Configuration& configuration)
     {
-        std::unique_ptr<TslRefreshJob> refreshJob;
-        if (tslManager != nullptr)
-        {
-            GS_A_4899.start("Create asynchronous TSL-Update job.");
-            std::chrono::seconds tslRefreshInterval{
-                configuration.getOptionalIntValue(
-                    ConfigurationKey::TSL_REFRESH_INTERVAL, 86400)}; // 24 Hours per default
-            refreshJob = std::make_unique<TslRefreshJob>(tslManager, tslRefreshInterval);
-            refreshJob->start();
-            GS_A_4899.finish();
-        }
-
+        GS_A_4899.start("Create asynchronous TSL-Update job.");
+        const std::chrono::seconds tslRefreshInterval{
+            configuration.getOptionalIntValue(
+                ConfigurationKey::TSL_REFRESH_INTERVAL, 86400)}; // 24 Hours per default
+        auto refreshJob = std::make_unique<TslRefreshJob>(tslManager, tslRefreshInterval);
+        refreshJob->start();
+        GS_A_4899.finish();
         return refreshJob;
     }
-
 }
 
 
@@ -57,10 +51,10 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mXmlValidator(factories.xmlValidatorFactory())
     , mInCodeValidator(factories.incodeValidatorFactory())
     , mPreUserPseudonymManager(PreUserPseudonymManager::create(this))
-    , mTelematicPseudonymManager(TelematicPseudonymManager::create(*this))
+    , mTelematicPseudonymManager(TelematicPseudonymManager::create(this))
     , mTslManager(factories.tslManagerFactory(mXmlValidator))
-    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, mTslManager, *mHsmPool))
-    , mTslRefreshJob(setupTslRefreshJob(mTslManager, configuration))
+    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, *mTslManager, *mHsmPool))
+    , mTslRefreshJob(setupTslRefreshJob(*mTslManager, configuration))
     , mRegistrationInterface(std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(), factories.redisClientFactory()))
     , mTpmFactory(std::move(factories.tpmFactory))
 {
@@ -88,6 +82,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
                                                 std::move(adminHandlers), *this, false, SafeString{});
     Expect3(mDatabaseFactory!=nullptr, "database factory has been passed as nullptr to ServiceContext constructor", std::logic_error);
     Expect3(mTpmFactory!=nullptr, "mTpmFactory has been passed as nullptr to ServiceContext constructor", std::logic_error);
+    Expect3(mTslManager!=nullptr, "mTslManager could not be initialized", std::logic_error);
 }
 
 PcServiceContext::~PcServiceContext()
@@ -168,9 +163,9 @@ const AuditEventTextTemplates& PcServiceContext::auditEventTextTemplates() const
     return mAuditEventTextTemplates;
 }
 
-TslManager* PcServiceContext::getTslManager()
+TslManager& PcServiceContext::getTslManager()
 {
-    return mTslManager.get();
+    return *mTslManager;
 }
 
 void PcServiceContext::setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer)

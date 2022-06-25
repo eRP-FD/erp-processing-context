@@ -197,6 +197,13 @@ void BundleBase<DerivedBundle, SchemaVersionType>::setSignature(const model::Sig
 
 
 template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::removeSignature()
+{
+    this->removeElement(signaturePointer);
+}
+
+
+template <class DerivedBundle, typename SchemaVersionType>
 std::optional<model::Signature> BundleBase<DerivedBundle, SchemaVersionType>::getSignature() const
 {
     const auto* signature = getValue(signaturePointer);

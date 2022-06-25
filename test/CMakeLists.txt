@@ -14,17 +14,32 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/test_config.h.in" "${CMAKE_CURRENT_B
 
 set(RESOURCE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/resources")
 set(RESOURCE_BINARY_DIR "${CMAKE_BINARY_DIR}/bin/resources")
+set(RESOURCE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/resources")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/util/tool_config.hxx.in" "${CMAKE_CURRENT_BINARY_DIR}/tool_config.hxx")
 
 
 set(ERP_TEST_LIB_SOURCES
         erp/enrolment/DerivationKeyUpdateTest.cxx
         mock/ClientTeeProtocol.cxx
+        mock/MockBlobDatabase.cxx
+        mock/MockRedisStore.cxx
+        mock/MockDatabase.cxx
+        mock/MockAccountTable.cxx
+        mock/MockCommunicationTable.cxx
+        mock/MockConsentTable.cxx
+        mock/MockDatabaseProxy.cxx
+        mock/MockOcspServer.cxx
+        mock/MockRandom.cxx
+        mock/MockTaskTable.cxx
+        mock/MockTerminationHandler.cxx
+        mock/RegistrationMock.cxx
+        mock/TestUrlArguments.cxx
         util/JsonTestUtils.cxx
         workflow-test/A_19445_ProzessParameterFlowtype.cxx
         workflow-test/A_21370_CheckPrescriptionIdOnActivate.cxx
         workflow-test/A_22068_MehrfachverordnungAblehnen.cxx
         workflow-test/A_22231_BetaebungsmittelAblehnen.cxx
+        workflow-test/A_22487_AuthoredOnEqualsQesSigningDate.cxx
         workflow-test/TestClient.cxx
         workflow-test/Erp5827Test.cxx
         workflow-test/Erp5833Test.cxx
@@ -35,6 +50,9 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp6619Test.cxx
         workflow-test/Erp8538Test.cxx
         workflow-test/Erp8545Test.cxx
+        workflow-test/Erp9230Test.cxx
+        workflow-test/Erp9770Test.cxx
+        workflow-test/Erp9777Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
         workflow-test/ErpWorkflow169Test.cxx
@@ -48,6 +66,7 @@ set(ERP_TEST_LIB_SOURCES
         util/JwtBuilder.cxx
         util/ResourceManager.cxx
         util/TestConfiguration.cxx
+        util/StaticData.cxx
     )
 
 add_library(erp-test-lib OBJECT ${ERP_TEST_LIB_SOURCES})
@@ -173,7 +192,7 @@ list(
         erp/pc/CFdSigErpTestHelper.hxx
         erp/pc/PcServiceContextTest.cxx
         erp/requirements/A_19714_SecureTransportChannel.cxx
-        erp/registration/HeartbeatSenderTest.cxx
+        erp/registration/ApplicationHealthAndRegistrationUpdaterTest.cxx
         erp/registration/RegistrationManagerTest.cxx
         erp/server/AccessLogTest.cxx
         erp/server/handler/RequestHandlerContextTest.cxx
@@ -193,6 +212,7 @@ list(
         erp/service/CommunicationGetHandlerTest.cxx
         erp/service/CommunicationPostHandlerTest.cxx
         erp/service/EndpointErrorTest.cxx
+        erp/service/EndpointHandlerTest/ActivateTaskTest.cxx
         erp/service/EndpointHandlerTest/CloseTaskTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
         erp/service/EndpointHandlerTest/FeatureToggleWf200Test.cxx
@@ -254,28 +274,12 @@ list(
         erp/validation/SampleDataTest.cxx
         erp/validation/XmlValidatorTest.cxx
         erp/xml/SaxParserTest.cxx
-        mock/MockAccountTable.cxx
-        mock/MockCommunicationTable.cxx
-        mock/MockBlobDatabase.cxx
-        mock/MockConsentTable.cxx
-        mock/MockDatabase.cxx
-        mock/MockDatabaseProxy.cxx
-        mock/MockIdpUpdater.cxx
-        mock/MockOcsp.cxx
-        mock/MockOcspServer.cxx
-        mock/MockRandom.cxx
-        mock/MockRedisStore.cxx
-        mock/MockTaskTable.cxx
-        mock/MockTerminationHandler.cxx
-        mock/RegistrationMock.cxx
-        mock/TestUrlArguments.cxx
+        erp/xml/XmlStringViewTest.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx
         util/BlobDatabaseHelper.cxx
         util/ServerTestBase.cxx
         util/ServerTestBaseAutoCleanup.cxx
-        util/StaticData.cxx
-        mock/UrlRequestSenderMock.cxx
         workflow-test/EndpointTestClient.cxx
         workflow-test/Erp5822Test.cxx # contains invalid KBV bundle, can only run in erp-test
         workflow-test/Erp5899Test.cxx # contains invalid KBV bundle, can only run in erp-test

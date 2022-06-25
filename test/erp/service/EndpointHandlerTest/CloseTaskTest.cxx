@@ -13,7 +13,7 @@ class CloseTaskTestP : public EndpointHandlerTest, public testing::WithParamInte
 {
 };
 
-TEST_P(CloseTaskTestP, CloseTask)
+TEST_P(CloseTaskTestP, CloseTask)//NOLINT(readability-function-cognitive-complexity)
 {
     A_22069.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
     const auto& testConfig = TestConfiguration::instance();
@@ -110,7 +110,7 @@ TEST_P(CloseTaskTestP, CloseTask)
 }
 
 // Regression Test for Bugticket ERP-5656
-TEST_P(CloseTaskTestP, CloseTaskWrongMedicationDispenseErp5656)
+TEST_P(CloseTaskTestP, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readability-function-cognitive-complexity)
 {
     A_22069.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
     const auto correctId =
@@ -167,7 +167,7 @@ TEST_P(CloseTaskTestP, CloseTaskWrongMedicationDispenseErp5656)
 }
 
 // Regression Test for Bugticket ERP-6513 (CloseTaskHandler does not accept MedicationDispense::whenPrepared and whenHandedOver with only date)
-TEST_F(EndpointHandlerTest, CloseTaskPartialDateTimeErp6513)
+TEST_F(EndpointHandlerTest, CloseTaskPartialDateTimeErp6513)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto correctId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715).toString();

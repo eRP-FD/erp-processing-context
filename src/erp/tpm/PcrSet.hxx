@@ -34,7 +34,7 @@ public:
     static PcrSet defaultSet (void);
 
     static PcrSet fromString (const std::string& stringValue);
-    static PcrSet fromList (const std::vector<size_t> registers);
+    static PcrSet fromList (const std::vector<size_t>& registers);
     static std::optional<PcrSet> fromJson (const rapidjson::Document& document, std::string_view pointerToPcrSetArray);
 
     /**

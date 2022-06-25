@@ -8,7 +8,7 @@
 #include "erp/fhir/Fhir.hxx"
 #include "erp/fhir/FhirStructureDefinition.hxx"
 
-TEST(FhirStructureDefinitionTest, derivationEnum)
+TEST(FhirStructureDefinitionTest, derivationEnum)//NOLINT(readability-function-cognitive-complexity)
 {
     using Derivation = FhirStructureDefinition::Derivation;
 
@@ -24,7 +24,7 @@ TEST(FhirStructureDefinitionTest, derivationEnum)
     // clang-format on
 }
 
-TEST(FhirStructureDefinitionTest, kindEnum)
+TEST(FhirStructureDefinitionTest, kindEnum)//NOLINT(readability-function-cognitive-complexity)
 {
     using Kind = FhirStructureDefinition::Kind;
 
@@ -50,7 +50,7 @@ TEST(FhirStructureDefinitionTest, kindEnum)
 }
 
 
-TEST(FhirStructureDefinitionTest, Builder)
+TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitive-complexity)
 {
     using Kind = FhirStructureDefinition::Kind;
     using Derivation = FhirStructureDefinition::Derivation;
@@ -89,14 +89,14 @@ TEST(FhirStructureDefinitionTest, Builder)
     EXPECT_EQ(testDefinition.baseDefinition(), baseUrl);
     EXPECT_EQ(testDefinition.derivation(), Derivation::specialization);
 
-    const auto* const testBaseElement = testDefinition.findElement(typeId);
+    const auto testBaseElement = testDefinition.findElement(typeId);
     ASSERT_TRUE(testBaseElement);
     EXPECT_EQ(testBaseElement->typeId(), typeId);
     EXPECT_EQ(testBaseElement->name(), typeId);
     EXPECT_TRUE(testBaseElement->isRoot());
     EXPECT_TRUE(testBaseElement->isArray());
 
-    const auto* const testElement = testDefinition.findElement(typeId + ".element");
+    const auto testElement = testDefinition.findElement(typeId + ".element");
     ASSERT_TRUE(testElement);
     EXPECT_EQ(testElement->typeId(), "Coding"sv);
     EXPECT_EQ(testElement->name(), typeId + ".element");

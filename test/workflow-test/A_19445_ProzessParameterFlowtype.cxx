@@ -35,7 +35,7 @@ std::ostream& operator << (std::ostream& out, const Parameters& params)
 
 using ProzessParameterFlowtype = ErpWorkflowTestTemplate<::testing::TestWithParam<ParameterTuple>>;
 
-TEST_P(ProzessParameterFlowtype, samples)
+TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19445_06.test("Prozessparameter - Flowtype");
     using namespace std::string_view_literals;
@@ -47,6 +47,7 @@ TEST_P(ProzessParameterFlowtype, samples)
     auto& resourceManager = ResourceManager::instance();
     auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
     bundle = patchVersionsInBundle(bundle);
+    bundle = String::replaceAll(bundle, "2021-06-08", std::string{params.signingTime});
     std::string kvnr;
     ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
     boost::replace_all(bundle, "X234567890"sv, kvnr);

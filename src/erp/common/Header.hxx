@@ -18,7 +18,7 @@
 
 struct StringHashCaseInsensitive
 {
-    size_t operator() (const std::string& a) const;
+    size_t operator() (const std::string& s) const;
 };
 
 struct StringComparatorCaseInsensitive

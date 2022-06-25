@@ -48,14 +48,13 @@ using namespace model;
 
 static constexpr const char* AuthorizationBearerPrefix = "Bearer ";
 
-template<class T> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const T& jwt1);
 
-template<> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const JWT& jwt1)
+std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const JWT& jwt1)
 {
     return { Header::Authorization, AuthorizationBearerPrefix + jwt1.serialize() };
 }
 
-template<> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const std::string& jwt1)
+std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const std::string& jwt1)
 {
     return { Header::Authorization, AuthorizationBearerPrefix + jwt1 };
 }
@@ -103,9 +102,7 @@ void ServerTestBase::startServer (void)
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
     mMockDatabase = std::make_unique<MockDatabase>(*mHsmPool);
 
-    // Create service context without TslManager, the TslManager functionality is skipped for these tests.
     auto factories = StaticData::makeMockFactories();
-    factories.tslManagerFactory = [](const std::shared_ptr<XmlValidator> &){return std::shared_ptr<TslManager>{};};
     factories.databaseFactory = createDatabaseFactory();
     factories.redisClientFactory = []{return createRedisInstance();};
     mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
@@ -240,6 +237,7 @@ ClientResponse ServerTestBase::verifyOuterResponse (const ClientResponse& outerR
 }
 
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ServerTestBase::verifyGenericInnerResponse (
     const ClientResponse& innerResponse,
     const HttpStatus expectedStatus,
@@ -325,6 +323,7 @@ JWT ServerTestBase::jwtWithProfessionOID(const std::string_view professionOID)
 std::vector<model::Task> ServerTestBase::addTasksToDatabase(const std::vector<TaskDescriptor>& descriptors)
 {
     std::vector<model::Task> tasks;
+    tasks.reserve(descriptors.size());
     for (const auto& descriptor : descriptors)
     {
         tasks.emplace_back(addTaskToDatabase(descriptor));
@@ -389,7 +388,7 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
 
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
-    ASSERT_TRUE(patients.size() > 0);
+    ASSERT_FALSE(patients.empty());
 
     for (const auto& patient : patients)
     {
@@ -521,6 +520,7 @@ MedicationDispense ServerTestBase::createMedicationDispense(
 std::vector<Uuid> ServerTestBase::addCommunicationsToDatabase(const std::vector<CommunicationDescriptor>& descriptors)
 {
     std::vector<Uuid> communicationIds;
+    communicationIds.reserve(descriptors.size());
     for (const auto& descriptor : descriptors)
     {
         communicationIds.emplace_back(addCommunicationToDatabase(descriptor).id().value());
@@ -562,6 +562,10 @@ model::Communication ServerTestBase::addCommunicationToDatabase(const Communicat
     model::Communication communication = Communication::fromJsonNoValidation(builder.createJsonString());
     auto database = createDatabase();
     const auto communicationId = database->insertCommunication(communication);
+    if (descriptor.received.has_value())
+    {
+        database->markCommunicationsAsRetrieved({*communicationId}, *descriptor.received, descriptor.recipient.name);
+    }
     database->commitTransaction();
     communication.setId(communicationId.value());
     return communication;

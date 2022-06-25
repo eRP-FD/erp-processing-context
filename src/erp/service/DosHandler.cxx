@@ -12,10 +12,11 @@
 #include <chrono>
 #include <string>
 
-DosHandler::DosHandler(std::shared_ptr<RedisInterface> iface) : mInterface(iface)
+DosHandler::DosHandler(std::shared_ptr<RedisInterface> iface)
+    : mInterface(std::move(iface))
+    , mNumreqs(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS, 100))
+    , mTimespan(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS, 1000))
 {
-    mNumreqs = Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS, 100);
-    mTimespan = Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS, 1000);
 }
 
 void DosHandler::setRequestsUpperLimit(size_t numreqs)

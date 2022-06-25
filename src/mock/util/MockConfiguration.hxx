@@ -19,7 +19,11 @@ enum class MockConfigurationKey
     MOCK_IDP_PRIVATE_KEY,
     MOCK_IDP_PUBLIC_KEY,
     MOCK_ID_FD_SIG_PRIVATE_KEY,
-    MOCK_USE_MOCK_TPM
+    MOCK_ID_FD_SIG_SIGNER_CERT,
+    MOCK_ID_FD_SIG_OCSP_URL,
+    MOCK_ID_FD_SIG_CERT,
+    MOCK_USE_MOCK_TPM,
+    MOCK_GENERATED_PKI_PATH
 };
 
 class MockConfigurationKeyNames : public ConfigurationKeyNamesBase<MockConfigurationKey>

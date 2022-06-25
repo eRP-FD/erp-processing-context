@@ -11,7 +11,7 @@
 class FhirStructureRepositoryTest : public ::testing::Test
 {
 public:
-    void checkTaskFields(const FhirStructureDefinition* task)
+    void checkTaskFields(const FhirStructureDefinition* task)//NOLINT(readability-function-cognitive-complexity)
     {
         ASSERT_TRUE(task);
         EXPECT_TRUE(task->findElement("Task.id"));
@@ -25,11 +25,10 @@ public:
 };
 
 
-TEST_F(FhirStructureRepositoryTest, loadResources)
+TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr std::string_view erxTaskUrl{"https://gematik.de/fhir/StructureDefinition/ErxTask"};
-    const auto& resourceManager = ResourceManager::instance();
-    auto mkres= [&](const std::filesystem::path& p) { return resourceManager.getAbsoluteFilename(p); };
+    auto mkres= [&](const std::filesystem::path& p) { return ResourceManager::getAbsoluteFilename(p); };
 
     auto fileList = {
         mkres("fhir/hl7.org/profiles-resources.xml"),
@@ -67,8 +66,7 @@ TEST_F(FhirStructureRepositoryTest, loadResources)
 
 TEST_F(FhirStructureRepositoryTest, missingBase)
 {
-    const auto& resourceManager = ResourceManager::instance();
-    auto mkres= [&](const std::filesystem::path& p) { return resourceManager.getAbsoluteFilename(p); };
+    auto mkres= [&](const std::filesystem::path& p) { return ResourceManager::getAbsoluteFilename(p); };
 
     auto fileList = {
         mkres("fhir/hl7.org/profiles-resources.xml"),

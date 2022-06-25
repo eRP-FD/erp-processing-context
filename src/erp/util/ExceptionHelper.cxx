@@ -46,7 +46,7 @@ void ExceptionHelper::extractInformationAndRethrow (
 {
     try
     {
-        std::rethrow_exception(exception);
+        std::rethrow_exception(std::move(exception));
     }
     catch (const ErpException& e)
     {
@@ -141,7 +141,7 @@ void ExceptionHelper::extractInformation (
 {
     try
     {
-        extractInformationAndRethrow(std::move(consumer), exception);
+        extractInformationAndRethrow(std::move(consumer), std::move(exception));
     }
     catch(...)
     {

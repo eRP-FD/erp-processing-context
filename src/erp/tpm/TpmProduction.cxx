@@ -4,15 +4,15 @@
  */
 
 #include "erp/tpm/TpmProduction.hxx"
-#include "erp/util/Base64.hxx"
 #include "erp/common/HttpStatus.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/BlobCache.hxx"
+#include "erp/hsm/ErpTypes.hxx"
+#include "erp/util/Base64.hxx"
+#include "erp/util/Expect.hxx"
+#include "erp/util/Hash.hxx"
 
 #include <tpmclient/Client.h>
 #include <tpmclient/Session.h>
-
 #include <iostream>
 
 
@@ -22,7 +22,7 @@ namespace
     // and fixed.
     constexpr size_t logLevel = 1;
 
-    static std::optional<tpmclient::KeyPairBlob> AttestationKeyPairBlob;
+    std::optional<tpmclient::KeyPairBlob> AttestationKeyPairBlob;
 
     util::Buffer guardedBase64Decode (const std::string& encoded)
     {
@@ -39,12 +39,12 @@ namespace
     #define catchLogAndRethrow(message)                                                       \
         catch(const std::exception& e)                                                        \
         {                                                                                     \
-            TLOG(ERROR) << "TPM: caught exception " << e.what() << " while " << message;      \
+            TLOG(ERROR) << "TPM: caught exception " << e.what() << " while " << (message);    \
             throw;                                                                            \
         }                                                                                     \
         catch(...)                                                                            \
         {                                                                                     \
-            TLOG(ERROR) << "TPM: caught exception while " << message;                         \
+            TLOG(ERROR) << "TPM: caught exception while " << (message);                       \
             throw;                                                                            \
         }
 
@@ -144,19 +144,41 @@ std::vector<uint8_t> TpmProduction::provideAkKeyPairBlob (
 {
     try
     {
-        const auto blobProvider = [&client]() -> ErpBlob
+        ::std::optional<::BlobCache::Entry> entry = {};
+        try
         {
-            TVLOG(logLevel) << "TPM: creating attestation key pair blob";
-            ErpBlob blob;
-            blob.data = SafeString(client.createAk());
-            blob.generation = 1;
-            TVLOG(logLevel) << "TPM: got attestation key pair blob of size " << blob.data.size();
-            return blob;
-        };
-        const auto entry = blobCache.getAttestationKeyPairBlob(blobProvider, isEnrolmentActive);
+            entry = blobCache.getBlob(::BlobType::AttestationKeyPair);
+        }
+        catch (...)
+        {
+            // The attestation key pair can only be created during the enrolment process.
+            // That is currently not active, so throw an exception.
+            // BadRequest because during the enrolment process       the processing context should not be open to the public
+            // and calls to its VAU interface should not come       in.
+            ErpExpect (isEnrolmentActive, ::HttpStatus::BadRequest, "attestation key pair is missing and can not be created");
 
-        const uint8_t* p = entry.blob.data;
-        return tpmclient::KeyPairBlob(p, p+entry.blob.data.size());
+            // From here on we can assume that an enrolment is ongoing. That means that calls come in only from a single thread
+            // in a single process (which services the enrolment api). Locking of the database is not necessary as collisions
+            // between multiple calls that all try to create a new attestation token should not be possible.
+
+            // Create a new attestation key pair blob.
+            TLOG(WARNING) << "creating a new attestation token";
+            ::BlobCache::Entry newEntry;
+            newEntry.type = ::BlobType::AttestationKeyPair;
+
+            TVLOG(logLevel) << "TPM: creating attestation key pair blob";
+            newEntry.blob.data = SafeString(client.createAk());
+            newEntry.blob.generation = 1;
+            TVLOG(logLevel) << "TPM: got attestation key pair blob of size " << newEntry.blob.data.size();
+
+            const auto hash = ::Hash::sha256(newEntry.blob.data);
+            newEntry.name = ::ErpVector(hash.begin(), hash.end());
+            const auto id = blobCache.storeBlob(::std::move(newEntry));
+            entry = blobCache.getBlob(id);
+        }
+
+        const uint8_t* p = entry->blob.data;
+        return {p, p + entry->blob.data.size()};
     }
     catchLogAndRethrow("getting AK key pair blob while setting up connection to TPM");
 }

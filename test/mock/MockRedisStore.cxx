@@ -45,13 +45,14 @@ void MockRedisStore::setKeyExpireAt(
     mData[std::string{key}]["expireat"] = s;
 }
 
-int MockRedisStore::incr(const std::string_view& key)
+int64_t MockRedisStore::incr(const std::string_view& key)
 {
     const std::string_view field = "_mockCount";
-    auto count = 1;
+    int64_t count = 1;
     if (exists(key)) {
         auto countStr = fieldValueForKey(key, field).value();
-        count = std::stoul(countStr);
+		char* end = nullptr;
+        count = std::strtoll(countStr.c_str(), &end, 10);
         count++;
     }
     setKeyFieldValue(key, field, std::to_string(count));

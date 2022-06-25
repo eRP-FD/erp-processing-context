@@ -35,12 +35,11 @@ public:
 
     RequestHandlerContext (
         HttpMethod method,
-        const std::string& url,
+        const std::string& path,
         std::unique_ptr<HandlerType>&& handler);
     RequestHandlerContext (RequestHandlerContext&& other) noexcept = default;
     RequestHandlerContext (void) = delete;
     RequestHandlerContext (const RequestHandlerContext& other) = delete;
-    RequestHandlerContext& operator= (RequestHandlerContext&& other) noexcept = default;
     RequestHandlerContext& operator= (const RequestHandlerContext& other) = delete;
     ~RequestHandlerContext (void);
 

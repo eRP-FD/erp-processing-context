@@ -95,7 +95,7 @@ TEST_F(ConsentTableTest, clear)
     }
 }
 
-TEST_F(ConsentTableTest, duplicate)
+TEST_F(ConsentTableTest, duplicate)//NOLINT(readability-function-cognitive-complexity)
 {
     auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
     { // scope

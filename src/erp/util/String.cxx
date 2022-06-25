@@ -15,6 +15,7 @@
 #include <boost/algorithm/string/trim_all.hpp>
 
 #include <openssl/crypto.h>
+#include <iomanip>
 
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
@@ -42,7 +43,7 @@ std::vector<std::string> String::split(const std::string& s, const std::string& 
 
     std::vector<std::string> tokens;
 
-    for (size_t start = 0, end; start < s.length(); start = end + separator.length())
+    for (size_t start = 0, end = 0; start < s.length(); start = end + separator.length())
     {
         size_t position = s.find(separator, start);
         end = position != std::string::npos ? position : s.length();
@@ -89,24 +90,12 @@ std::vector<std::string> String::splitWithStringQuoting (const std::string& s, c
             {
                 case '\'':
                     part << c;
-                    if (expectingClosingSingleQuote)
-                        expectingClosingSingleQuote = false;
-                    else if (expectingClosingDoubleQuote)
-                        ;
-                    else
-                        expectingClosingSingleQuote = true;
+                    expectingClosingSingleQuote = !expectingClosingSingleQuote && !expectingClosingDoubleQuote;
                     break;
-
                 case '\"':
                     part << c;
-                    if (expectingClosingDoubleQuote)
-                        expectingClosingDoubleQuote = false;
-                    else if (expectingClosingSingleQuote)
-                        ;
-                    else
-                        expectingClosingDoubleQuote = true;
+                    expectingClosingDoubleQuote = !expectingClosingSingleQuote && !expectingClosingDoubleQuote;
                     break;
-
                 case '\\':
                     if (index < length)
                         part << s[index++];
@@ -385,4 +374,15 @@ std::string String::vaListToString(const char* msg, va_list args)
         message.resize(size);
     }
     return message;
+}
+
+std::string String::toHexString(const std::string_view& input)
+{
+    std::stringstream sstr;
+    sstr << std::hex << std::setfill('0');
+    for (const auto& byte : input)
+    {
+        sstr << std::setw(2) << (static_cast<int>(byte) & 0xff);
+    }
+    return sstr.str();
 }

@@ -70,7 +70,7 @@ private:
 
     static void errorCallback(void*, const char* msg, ...);
     static void warningCallback(void*, const char* msg, ...);
-    static void structuredErrorCallback(void* userData, xmlErrorPtr error);
+    static void structuredErrorCallback(void* context, xmlErrorPtr error);
 };
 
 

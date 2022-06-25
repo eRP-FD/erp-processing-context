@@ -11,7 +11,7 @@
 TEST(ParameterTest, CanGetData)
 {
     const std::string xml = R"(
-    <Parameters xmlns="http://hl7.org/fhir/">
+    <Parameters xmlns="http://hl7.org/fhir">
       <parameter>
         <name value="ErxBinary" />
         <resource>

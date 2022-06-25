@@ -80,7 +80,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 using Erp8545TestActivate = ErpWorkflowTestTemplate<::testing::TestWithParam<std::string>>;
 
-TEST_P(Erp8545TestActivate, run)
+TEST_P(Erp8545TestActivate, run)//NOLINT(readability-function-cognitive-complexity)
 {
     static const std::regex prescriptionPlaceholder{"##PRESCRIPTION##"};
     std::string kvnr;
@@ -91,7 +91,7 @@ TEST_P(Erp8545TestActivate, run)
     auto prescriptionId = task->prescriptionId();
     std::string accessCode{task->accessCode()};
     const auto& path = "/Task/" + prescriptionId.toString() + "/$activate?ac=" + accessCode;
-    const auto& bundle = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
+    const auto& [bundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
     const auto body = std::regex_replace(GetParam(), prescriptionPlaceholder, bundle);
     const auto& [outerResponse, innerResponse] =
         send(RequestArguments{HttpMethod::POST, path, body, ContentMimeType::fhirXmlUtf8}

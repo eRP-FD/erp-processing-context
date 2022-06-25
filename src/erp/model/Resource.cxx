@@ -66,7 +66,7 @@ namespace rj = rapidjson;
 
 namespace
 {
-static const auto profilePointer = ::rapidjson::Pointer{"/meta/profile/0"};
+const auto profilePointer = ::rapidjson::Pointer{"/meta/profile/0"};
 
 rj::GenericStringRef<std::string_view::value_type> stringRefFrom(const std::string_view& s)
 {

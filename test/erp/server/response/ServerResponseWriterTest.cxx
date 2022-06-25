@@ -18,7 +18,7 @@ class ServerResponseWriterTest : public testing::Test
 
 
 
-TEST_F(ServerResponseWriterTest, toString)
+TEST_F(ServerResponseWriterTest, toString)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string request =
         "HTTP/1.1 201 Created\r\n"

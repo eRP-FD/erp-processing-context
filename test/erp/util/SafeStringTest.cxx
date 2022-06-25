@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(SafeStringTest, size)
+TEST(SafeStringTest, size)//NOLINT(readability-function-cognitive-complexity)
 {
     {
         SafeString sf;
@@ -37,7 +37,7 @@ TEST(SafeStringTest, size)
     }
 }
 
-TEST(SafeStringTest, TerminatingZero)
+TEST(SafeStringTest, TerminatingZero)//NOLINT(readability-function-cognitive-complexity)
 {
     SafeString sf("hello");
     const auto size = sf.size();
@@ -74,7 +74,7 @@ TEST(SafeStringTest, MoveConstructFromString)
     std::string theSource = "source string";
     const auto size = theSource.size();
     SafeString sf(std::move(theSource));
-    ASSERT_EQ(theSource.size(), 0u); // NOLINT(bugprone-use-after-move)
+    ASSERT_EQ(theSource.size(), 0u); // NOLINT(bugprone-use-after-move, hicpp-invalid-access-moved)
     ASSERT_EQ(sf.size(), size);
     ASSERT_EQ(static_cast<std::string_view>(sf), "source string");
 }
@@ -85,7 +85,7 @@ TEST(SafeStringTest, MoveAssignFromString)
     const auto size = theSource.size();
     SafeString sf;
     sf = std::move(theSource);
-    ASSERT_EQ(theSource.size(), 0u); // NOLINT(bugprone-use-after-move)
+    ASSERT_EQ(theSource.size(), 0u); // NOLINT(bugprone-use-after-move, hicpp-invalid-access-moved)
     ASSERT_EQ(sf.size(), size);
     ASSERT_EQ(static_cast<std::string_view>(sf), "source string");
 }
@@ -97,7 +97,7 @@ TEST(SafeStringTest, MoveConstruct)
     SafeString sf2(std::move(sf1));
     ASSERT_EQ(sf2.size(), size);
     ASSERT_EQ(static_cast<std::string_view>(sf2), "source");
-    ASSERT_EQ(sf1.size(), 0u); // NOLINT(bugprone-use-after-move)
+    ASSERT_EQ(sf1.size(), 0u); // NOLINT(bugprone-use-after-move, hicpp-invalid-access-moved)
     ASSERT_EQ(static_cast<const char*>(sf1), nullptr);
 }
 
@@ -124,7 +124,7 @@ TEST(SafeStringTest, SizeConstruced)
     }
 }
 
-TEST(SafeStringTest, comparisonLength)
+TEST(SafeStringTest, comparisonLength)//NOLINT(readability-function-cognitive-complexity)
 {
     SafeString a1{"a1"};
     SafeString a11{"a11"};
@@ -147,7 +147,7 @@ TEST(SafeStringTest, comparisonLength)
     ASSERT_TRUE(a11 >= a1);
 }
 
-TEST(SafeStringTest, comparisonLex)
+TEST(SafeStringTest, comparisonLex)//NOLINT(readability-function-cognitive-complexity)
 {
     SafeString a10{"a10"};
     SafeString a11{"a11"};
@@ -171,7 +171,7 @@ TEST(SafeStringTest, comparisonLex)
     ASSERT_TRUE(a11 >= a10);
 }
 
-TEST(SafeStringTest, comparisonEqual)
+TEST(SafeStringTest, comparisonEqual)//NOLINT(readability-function-cognitive-complexity)
 {
     SafeString a{"a10"};
     SafeString b{"a10"};
@@ -195,7 +195,7 @@ TEST(SafeStringTest, comparisonEqual)
     ASSERT_TRUE(b >= a);
 }
 
-TEST(SafeStringTest, comparisonSelf)
+TEST(SafeStringTest, comparisonSelf)//NOLINT(readability-function-cognitive-complexity)
 {
     SafeString a{"a10"};
 

@@ -5,15 +5,12 @@
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
+#include "erp/erp-serverinfo.hxx"
 #include "erp/beast/BoostBeastStringWriter.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/fhir/FhirConverter.hxx"
 #include "erp/model/ResourceNames.hxx"
-#include "erp/model/KbvBundle.hxx"
 #include "erp/validation/XmlValidator.hxx"
-#include "mock/crypto/MockCryptography.hxx"
+#include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/StaticData.hxx"
@@ -32,6 +29,7 @@ namespace
 {
 
 template<class TModelElem>
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void modelElemfromString(
     std::optional<TModelElem>& result,
     const std::string_view& str,
@@ -58,7 +56,7 @@ void modelElemfromString(
 
 ErpWorkflowTestBase::~ErpWorkflowTestBase() = default;
 
-
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskCreate(
     std::optional<model::PrescriptionId>& createdId,
     std::string& createdAccessCode,
@@ -76,6 +74,7 @@ void ErpWorkflowTestBase::checkTaskCreate(
     ASSERT_FALSE(createdAccessCode.empty());
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskActivate(
     std::string& qesBundle,
     std::vector<model::Communication>& communications,
@@ -84,7 +83,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
     const std::string& accessCode)
 {
     // repare QES-Bundle for invokation of POST /task/<id>/$activate
-    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now()));
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, prescriptionId, model::Timestamp::now())));
     ASSERT_FALSE(qesBundle.empty());
     std::optional<model::Task> task;
     // invoke /task/<id>/$activate
@@ -150,6 +149,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
     if (communicationResponse.has_value()) communications.emplace_back(std::move(communicationResponse.value()));
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskAccept(
     std::string& createdSecret,
     std::optional<model::Timestamp>& lastModifiedDate,
@@ -169,6 +169,7 @@ void ErpWorkflowTestBase::checkTaskAccept(
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), prescriptionId.toString());
     ASSERT_EQ(tasks[0].status(), model::Task::Status::inprogress);
+    EXPECT_FALSE(tasks[0].patientConfirmationUuid().has_value());
     const auto secret = tasks[0].secret();
     ASSERT_TRUE(secret.has_value());
     const auto binaryResources = acceptResultBundle->getResourcesByType<model::Binary>("Binary");
@@ -201,6 +202,7 @@ void ErpWorkflowTestBase::checkTaskAccept(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskClose(
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
@@ -251,7 +253,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     const auto& cadesBesTrustedCertDir =
     testConfig.getOptionalStringValue(TestConfigurationKey::TEST_CADESBES_TRUSTED_CERT_DIR, "test/cadesBesSignature/certificates");
     auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
-    auto cms = runsInCloudEnv() ? CadesBesSignature(signatureData, nullptr) : CadesBesSignature(certs, signatureData);
+    auto cms = runsInCloudEnv() ? CadesBesSignature(signatureData) : CadesBesSignature(certs, signatureData);
 
     // This cannot be validated using XSD, because the Signature is defined mantatory, but not contained in the receipt
     // from the signature.
@@ -291,6 +293,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     checkCommunicationsDeleted(prescriptionId, kvnr, communications);
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskAbort(
     const model::PrescriptionId& prescriptionId,
     const JWT& jwt,
@@ -321,6 +324,7 @@ void ErpWorkflowTestBase::checkTaskAbort(
     checkCommunicationsDeleted(prescriptionId, kvnr, communications);
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskReject(
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
@@ -342,6 +346,7 @@ void ErpWorkflowTestBase::checkTaskReject(
     ASSERT_FALSE(task->secret().has_value());
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkCommunicationsDeleted(
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
@@ -382,6 +387,7 @@ void ErpWorkflowTestBase::checkCommunicationsDeleted(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkAuditEventsFrom(const std::string& insurantKvnr)
 {
     std::optional<model::Bundle> auditEventBundle;
@@ -393,6 +399,7 @@ void ErpWorkflowTestBase::checkAuditEventsFrom(const std::string& insurantKvnr)
         EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkAuditEvents(
     std::vector<std::optional<model::PrescriptionId>> prescriptionIds,
     const std::string& insurantKvnr,
@@ -452,7 +459,7 @@ void ErpWorkflowTestBase::checkAuditEvents(
             EXPECT_TRUE(!entityWhatIdentifierValue.has_value());
 
             // If no unique prescriptionId is available, the field AuditEvent.entity.description is filled with "+" or "-"
-            const auto expectedDescription = auditEvent.action() == model::AuditEvent::Action::del ? "-" : "+";
+            const char* const expectedDescription = auditEvent.action() == model::AuditEvent::Action::del ? "-" : "+";
             EXPECT_EQ(auditEvent.entityDescription(), expectedDescription);
         }
         else
@@ -488,6 +495,7 @@ void ErpWorkflowTestBase::checkAuditEventSorting(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkAuditEventSearchSubType(const std::string& kvnr)
 {
     std::unordered_map<model::AuditEvent::SubType, std::size_t> numOfEventsBySubType;
@@ -512,6 +520,7 @@ void ErpWorkflowTestBase::checkAuditEventSearchSubType(const std::string& kvnr)
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkAuditEventPaging(
     const std::string& kvnr,
     const std::size_t numEventsExpected,
@@ -626,10 +635,11 @@ std::string ErpWorkflowTestBase::toExpectedOperation(const ErpWorkflowTestBase::
     return expectedOperation.append(" ").append(vauPath);
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::communicationsGetInternal(std::optional<model::Bundle>& communicationsBundle,
                                                 const JWT& jwt, const std::string_view& requestArgs)
 {
-    std::string getPath = "/Communication/";
+    std::string getPath = "/Communication";
     if (!requestArgs.empty())
     {
         getPath.append("?").append(requestArgs);
@@ -663,6 +673,8 @@ void ErpWorkflowTestBase::communicationsGetInternal(std::optional<model::Bundle>
         }
     }
 }
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::communicationGetInternal(std::optional<model::Communication>& communication,
                                                const JWT& jwt,
                                                const Uuid& communicationId)
@@ -697,6 +709,7 @@ void ErpWorkflowTestBase::communicationGetInternal(std::optional<model::Communic
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::communicationPostInternal(
     std::optional<model::Communication>& communicationResponse,
     model::Communication::MessageType messageType,
@@ -786,6 +799,8 @@ void ErpWorkflowTestBase::communicationPostInternal(
             communicationResponse, serverResponse.getBody(), *serverResponse.getHeader().contentType(),
             model::Communication::messageTypeToSchemaType(messageType)));
 }
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::medicationDispenseGetInternal(
     std::optional<model::MedicationDispense>& medicationDispense,
     const std::string& kvnr,
@@ -814,6 +829,7 @@ void ErpWorkflowTestBase::medicationDispenseGetInternal(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::medicationDispenseGetAllInternal(std::optional<model::Bundle>& medicationDispenseBundle,
                                                        const std::string_view& searchArguments,
                                                        const std::optional<JWT>& jwt)
@@ -851,6 +867,7 @@ void ErpWorkflowTestBase::medicationDispenseGetAllInternal(std::optional<model::
 }
 
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBundle,
                                       const std::string& kvnr,
                                       const std::string& searchArguments,
@@ -888,6 +905,9 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
             {
                 ASSERT_NO_THROW(model::Task::fromXml(task.serializeToXmlString(), *getXmlValidator(),
                                                      *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+                ASSERT_FALSE(task.healthCarePrescriptionUuid().has_value());
+                ASSERT_FALSE(task.patientConfirmationUuid().has_value());
+                ASSERT_FALSE(task.receiptUuid().has_value());
             }
             EXPECT_LE(tasks.size(), taskBundle->getTotalSearchMatches());
         }
@@ -898,6 +918,8 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
         ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(response.getBody(), true/*isJson*/, expectedErrorCode.value()));
     }
 }
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBundle,
                                         const model::PrescriptionId& prescriptionId,
                                         const std::string& kvnrOrTid,
@@ -968,12 +990,25 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
                     ASSERT_NO_THROW(model::ErxReceipt::fromXml(patientConfirmationOrReceipt[0].serializeToXmlString(),
                                                                *getXmlValidator(), *StaticData::getInCodeValidator(),
                                                                SchemaType::Gem_erxReceiptBundle));
+                    ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
+                    ASSERT_FALSE(tasks[0].patientConfirmationUuid().has_value());
+                    if (tasks[0].status() == model::Task::Status::completed)
+                    {
+                        ASSERT_TRUE(tasks[0].receiptUuid().has_value());
+                    }
+                    else
+                    {
+                        ASSERT_FALSE(tasks[0].receiptUuid().has_value());
+                    }
                 }
                 else
                 {
                     ASSERT_NO_THROW(model::KbvBundle::fromXml(patientConfirmationOrReceipt[0].serializeToXmlString(),
                                                               *getXmlValidator(), *StaticData::getInCodeValidator(),
                                                               SchemaType::KBV_PR_ERP_Bundle));
+                    ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
+                    ASSERT_TRUE(tasks[0].patientConfirmationUuid().has_value());
+                    ASSERT_FALSE(tasks[0].receiptUuid().has_value());
                 }
             }
         }
@@ -1040,6 +1075,7 @@ bool ErpWorkflowTestBase::isUnsupportedFlowtype(const model::PrescriptionType wo
 }
 
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::taskCloseInternal(std::optional<model::ErxReceipt>& receipt,
                                         const model::PrescriptionId& prescriptionId,
                                         const std::string& secret,
@@ -1086,6 +1122,8 @@ void ErpWorkflowTestBase::taskCloseInternal(std::optional<model::ErxReceipt>& re
                                                       expectedErrorCode.value(), expectedErrorText, expectedDiagnostics));
     }
 }
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundle,
                                          const model::PrescriptionId& prescriptionId,
                                          const std::string& accessCode, HttpStatus expectedInnerStatus,
@@ -1114,6 +1152,7 @@ void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundl
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::taskActivateInternal(std::optional<model::Task>& task,
                                                const model::PrescriptionId& prescriptionId,
                                                const std::string& accessCode,
@@ -1412,6 +1451,8 @@ void ErpWorkflowTestBase::makeQESBundleInternal(std::string& qesBundle, const st
 </Bundle>
 )";
 }
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, HttpStatus expectedOuterStatus,
                                          HttpStatus expectedInnerStatus,
                                          const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
@@ -1471,6 +1512,7 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::auditEventGetInternal(
     std::optional<model::Bundle>& auditEventBundle,
     const std::string& kvnr,
@@ -1510,6 +1552,7 @@ void ErpWorkflowTestBase::auditEventGetInternal(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::metaDataGetInternal(
     std::optional<model::MetaData>& metaData,
     const ContentMimeType& acceptContentType)
@@ -1530,6 +1573,7 @@ void ErpWorkflowTestBase::metaDataGetInternal(
             metaData, response.getBody(), contentType.value(), SchemaType::fhir));
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::deviceGetInternal(
     std::optional<model::Device>& device,
     const ContentMimeType& acceptContentType)
@@ -1550,6 +1594,7 @@ void ErpWorkflowTestBase::deviceGetInternal(
             device, response.getBody(), contentType.value(), SchemaType::fhir));
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::consentPostInternal(
     std::optional<model::Consent>& consent,
     const std::string& kvnr,
@@ -1584,6 +1629,7 @@ void ErpWorkflowTestBase::consentPostInternal(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::consentGetInternal(
     std::optional<model::Consent>& consent,
     const std::string& kvnr,
@@ -1622,6 +1668,7 @@ void ErpWorkflowTestBase::consentGetInternal(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::chargeItemPostInternal(
     std::optional<model::ChargeItem>& resultChargeItem,
     const model::PrescriptionId& prescriptionId,
@@ -1634,12 +1681,32 @@ void ErpWorkflowTestBase::chargeItemPostInternal(
     auto& resourceManager = ResourceManager::instance();
     const auto dispenseBundleString = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
     const auto chargeItemTemplate = resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_POST_template.xml");
+
+    const auto serviceContext = StaticData::makePcServiceContext();
+
+    std::optional<Certificate> certificate{};
+    std::optional<shared_EVP_PKEY> prvKey{};
+    if (runsInCloudEnv())
+    {
+        certificate.emplace(CryptoHelper::cHpQesWansim());
+        prvKey.emplace(CryptoHelper::cHpQesPrvWansim());
+    }
+    else
+    {
+        certificate.emplace(CryptoHelper::cHpQes());
+        prvKey.emplace(CryptoHelper::cHpQesPrv());
+    }
+
+    CadesBesSignature cadesBesSignature{*certificate,
+                                        *prvKey,
+                                        dispenseBundleString,
+                                        std::nullopt};
     const auto chargeItemString =
         String::replaceAll(
             String::replaceAll(
                 String::replaceAll(chargeItemTemplate, "##PRESCRIPTION_ID##", prescriptionId.toString()),
                 "##KVNR##", kvnr),
-            "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleString)); // TODO only interim solution
+            "##DISPENSE_BUNDLE##", Base64::encode(cadesBesSignature.get()));
     auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemString);
     inputChargeItem.setEntererTelematikId(telematikId);
 
@@ -1668,13 +1735,11 @@ void ErpWorkflowTestBase::chargeItemPostInternal(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::chargeItemPutInternal(
     std::optional<model::ChargeItem>& resultChargeItem,
-    //        const model::PrescriptionId& prescriptionId,
     const JWT& jwt,
     const ContentMimeType& contentType,
-    //        const std::string& kvnr,
-    //        const std::string& telematikId,
     const model::ChargeItem& inputChargeItem,
     const std::optional<std::string>& newMedicationDispenseString,
     const std::optional<std::tuple<bool, bool, bool>>& newMarking,
@@ -1682,13 +1747,20 @@ void ErpWorkflowTestBase::chargeItemPutInternal(
     const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
 {
     auto chargeItemString = inputChargeItem.serializeToXmlString();
-    if(newMedicationDispenseString.has_value())
+    if (newMedicationDispenseString.has_value())
     {
+        const auto serviceContext = StaticData::makePcServiceContext();
+        CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(),
+                                            CryptoHelper::cHpQesPrv(),
+                                            *newMedicationDispenseString,
+                                            std::nullopt};
+
         chargeItemString = String::replaceAll(
             chargeItemString, "</meta>",
             "</meta><contained><Binary><id value=\"dispense-1\"/><contentType value=\"application/pkcs7-mime\"/>"
-            "<data value=\"" + Base64::encode(*newMedicationDispenseString) + "\"/></Binary></contained>");
+            "<data value=\"" + Base64::encode(cadesBesSignature.get()) + "\"/></Binary></contained>");
     }
+
     if(newMarking.has_value())
     {
         const auto [insuranceProvider, subsidy, taxOffice] = newMarking.value();
@@ -1718,6 +1790,7 @@ void ErpWorkflowTestBase::chargeItemPutInternal(
                  .withJwt(jwt)
                  .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
                  .withHeader(Header::Accept, contentType)
+                 .withHeader(Header::XAccessCode, inputChargeItem.accessCode()->data())
                  .withExpectedInnerStatus(expectedStatus)));
 
     if(expectedStatus == HttpStatus::OK)
@@ -1738,6 +1811,7 @@ void ErpWorkflowTestBase::chargeItemPutInternal(
 }
 
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::chargeItemsGetInternal(
     std::optional<model::Bundle>& chargeItemsBundle,
     const JWT& jwt,
@@ -1789,11 +1863,105 @@ void ErpWorkflowTestBase::chargeItemsGetInternal(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
+void ErpWorkflowTestBase::chargeItemGetIdInternal(
+    std::optional<model::Bundle>& chargeItemResultBundle,
+    const JWT& jwt,
+    const ContentMimeType& contentType,
+    const model::PrescriptionId& id,
+    const std::optional<std::string_view>& accessCode,
+    const std::optional<model::KbvBundle>& expectedKbvBundle,
+    const std::optional<model::ErxReceipt>& expectedReceipt,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::string vauPath = "/ChargeItem/" + id.toString();
+    if (accessCode.has_value())
+    {
+        vauPath += "?ac=";
+        vauPath += accessCode->data();
+    }
 
+    ClientResponse response;
+    ASSERT_NO_FATAL_FAILURE(
+        tie(std::ignore, response) =
+            send(RequestArguments{HttpMethod::GET, vauPath, {}}
+                .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                .withJwt(jwt)
+                .withHeader(Header::Accept, contentType)
+                 .withExpectedInnerStatus(expectedStatus)));
+    if(expectedStatus == HttpStatus::OK)
+    {
+        const auto resultContentType = response.getHeader().header(Header::ContentType);
+        ASSERT_TRUE(resultContentType);
+        EXPECT_EQ(resultContentType.value(), static_cast<std::string>(contentType));
+
+        ASSERT_NO_FATAL_FAILURE(
+            modelElemfromString<model::Bundle>(chargeItemResultBundle, response.getBody(), *resultContentType, SchemaType::fhir));
+
+        ASSERT_GE(chargeItemResultBundle->getResourceCount(), 2);
+        const auto chargeItems = chargeItemResultBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+        ASSERT_EQ(chargeItems.size(), 1);
+        ASSERT_NO_THROW(
+            model::ChargeItem::fromXml(chargeItems[0].serializeToXmlString(), *getXmlValidator(),
+                                       *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem));
+
+        const auto professionOIDClaim = jwt.stringForClaim(JWT::professionOIDClaim);
+        if(professionOIDClaim == profession_oid::oid_versicherter)
+        {
+            ASSERT_EQ(chargeItemResultBundle->getResourceCount(), 4);
+            const auto bundles = chargeItemResultBundle->getResourcesByType<model::Bundle>("Bundle");
+            EXPECT_EQ(bundles.size(), 3);
+
+            const model::Bundle& kbvBundle = bundles[1];
+            const model::Bundle& receipt = bundles[2];
+
+            const auto& cadesBesTrustedCertDir = TestConfiguration::instance().getOptionalStringValue(
+                    TestConfigurationKey::TEST_CADESBES_TRUSTED_CERT_DIR, "test/cadesBesSignature/certificates");
+            const auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
+            {
+                // check KBV bundle signature
+                Expect(expectedKbvBundle.has_value(), "expectedKbvBundle must be set");
+                const auto signature = kbvBundle.getSignature();
+                ASSERT_TRUE(signature.has_value());
+                std::string signatureData;
+                ASSERT_NO_THROW(signatureData = signature->data().value().data());
+                CadesBesSignature cms(certs, signatureData);
+                std::optional<model::KbvBundle> kbvBundleFromSignature;
+                ASSERT_NO_THROW(kbvBundleFromSignature = model::KbvBundle::fromXml(
+                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle));
+                EXPECT_FALSE(kbvBundleFromSignature->getSignature().has_value());
+                EXPECT_EQ(expectedKbvBundle->serializeToJsonString(), kbvBundleFromSignature->serializeToJsonString());
+            }
+            {
+                // check receipt signature
+                const auto signature = receipt.getSignature();
+                ASSERT_TRUE(signature.has_value());
+                std::string signatureData;
+                ASSERT_NO_THROW(signatureData = signature->data().value().data());
+                CadesBesSignature cms(certs, signatureData);
+                std::optional<model::ErxReceipt> receiptFromSignature;
+                ASSERT_NO_THROW(receiptFromSignature = model::ErxReceipt::fromXml(
+                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle));
+                EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
+                EXPECT_EQ(expectedReceipt->serializeToJsonString(), receiptFromSignature->serializeToJsonString());
+            }
+        }
+    }
+    else
+    {
+        Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
+        ASSERT_NO_FATAL_FAILURE(
+            checkOperationOutcome(response.getBody(), std::string(contentType) == std::string(ContentMimeType::fhirJsonUtf8)/*isJson*/,
+                                  expectedErrorCode.value()));
+    }
+}
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse>& result,
                                        const ErpWorkflowTestBase::RequestArguments& args,
-                                       std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest,
-                                       std::optional<std::function<void(Header&)>> manipInnerRequestHeader)
+                                       const std::function<void(std::string&)>& manipEncryptedInnerRequest,
+                                       const std::function<void(Header&)>& manipInnerRequestHeader)
 {
     static std::regex XMLUtf8EncodingRegex{R"(^<\?xml[^>]*encoding="utf-8")", std::regex::icase|std::regex::optimize};
     using std::get;
@@ -1814,16 +1982,16 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
         std::string(args.clearTextBody));
 
     std::string teeRequest;
-    if(manipInnerRequestHeader.has_value())
+    if(manipInnerRequestHeader)
     {
-        manipInnerRequestHeader.value()(innerRequest.header);
+        manipInnerRequestHeader(innerRequest.header);
         teeRequest = creatUnvalidatedTeeRequest(client->getEciesCertificate(), innerRequest, jwt);
     }
     else
         teeRequest = creatTeeRequest(client->getEciesCertificate(), innerRequest, jwt);
 
-    if(manipEncryptedInnerRequest.has_value())
-        manipEncryptedInnerRequest.value()(teeRequest);
+    if(manipEncryptedInnerRequest)
+        manipEncryptedInnerRequest(teeRequest);
 
     std::string outerPath = "/VAU/" + userPseudonym;
     if (userPseudonymType == UserPseudonymType::PreUserPseudonym)
@@ -1922,6 +2090,7 @@ std::string ErpWorkflowTestBase::creatUnvalidatedTeeRequest(const Certificate& s
     return teeProtocol.createRequest(serverPublicKeyCertificate, serializedRequest, jwt);
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskMeta(const rapidjson::Value& meta)
 {
     using namespace std::string_literals;
@@ -1953,6 +2122,8 @@ void ErpWorkflowTestBase::checkTaskIdentifiers(const rapidjson::Value& identifie
         ASSERT_NO_FATAL_FAILURE(checkTaskSingleIdentifier(id));
     }
 }
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTask(const rapidjson::Value& task)
 {
     const auto& meta = task.FindMember("meta");
@@ -1963,6 +2134,7 @@ void ErpWorkflowTestBase::checkTask(const rapidjson::Value& task)
     ASSERT_NO_FATAL_FAILURE(checkTaskIdentifiers(identifier->value));
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkOperationOutcome(const std::string& responseBody,
                                             bool isJson,
                                             const model::OperationOutcome::Issue::Type expectedErrorCode,
@@ -2008,8 +2180,8 @@ void ErpWorkflowTestBase::getTaskFromBundle(std::optional<model::Task>& task, co
 
 std::tuple<ClientResponse, ClientResponse>
 ErpWorkflowTestBase::send(const ErpWorkflowTestBase::RequestArguments& args,
-                          std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest,
-                          std::optional<std::function<void(Header&)>> manipInnerRequestHeader)
+                          const std::function<void(std::string&)>& manipEncryptedInnerRequest,
+                          const std::function<void(Header&)>& manipInnerRequestHeader)
 {
     std::tuple<ClientResponse, ClientResponse> result;
     sendInternal(result, args, manipEncryptedInnerRequest, manipInnerRequestHeader);
@@ -2090,6 +2262,7 @@ void ErpWorkflowTestBase::taskAbort(const model::PrescriptionId& prescriptionId,
     std::string abortPath = "/Task/" + prescriptionId.toString() + "/$abort";
     if(secret.has_value())
         abortPath += ("?secret=" + secret.value());
+    const auto professionOIDClaim = jwt.stringForClaim(JWT::professionOIDClaim);
     RequestArguments requestArguments{HttpMethod::POST, abortPath, {}};
     requestArguments.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(jwt));
     requestArguments.jwt = std::move(jwt);
@@ -2104,7 +2277,6 @@ void ErpWorkflowTestBase::taskAbort(const model::PrescriptionId& prescriptionId,
     if(expectedStatus != HttpStatus::NoContent)
     {
         Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
-        const auto professionOIDClaim = jwt.stringForClaim(JWT::professionOIDClaim);
         const auto isJson = professionOIDClaim.has_value() && professionOIDClaim == profession_oid::oid_versicherter;
         checkOperationOutcome(serverResponse.getBody(), isJson, expectedErrorCode.value());
     }
@@ -2164,13 +2336,14 @@ std::optional<model::Bundle> ErpWorkflowTestBase::taskGet(const std::string& kvn
     taskGetInternal(taskBundle, kvnr, searchArguments, expectedStatus, expectedErrorCode);
     return taskBundle;
 }
-std::string ErpWorkflowTestBase::makeQESBundle(const std::string& kvnr,
-                                           const model::PrescriptionId& prescriptionId,
-                                           const model::Timestamp& timestamp)
+std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(
+    const std::string& kvnr,
+    const model::PrescriptionId& prescriptionId,
+    const model::Timestamp& timestamp)
 {
     std::string qesBundle;
     makeQESBundleInternal(qesBundle, kvnr, prescriptionId, timestamp);
-    return toCadesBesSignature(qesBundle);
+    return std::make_tuple(toCadesBesSignature(qesBundle, model::Timestamp::fromXsDate("2021-06-08")), qesBundle);
 }
 std::optional<model::MedicationDispense> ErpWorkflowTestBase::medicationDispenseGet(
     const std::string& kvnr, const std::string& medicationDispenseId)
@@ -2215,13 +2388,14 @@ std::optional<model::Communication> ErpWorkflowTestBase::communicationGet(const 
 
 void ErpWorkflowTestBase::communicationDelete(const JWT& jwt, const Uuid& communicationId)
 {
-    auto commId = communicationId.toString();
+    const auto& commId = communicationId.toString();
     TVLOG(0) << "Delete Communication: " << commId;
     ASSERT_NO_FATAL_FAILURE(
         send(RequestArguments{HttpMethod::DELETE, "/Communication/" + commId, {}}.withJwt(jwt).withExpectedInnerStatus(
             HttpStatus::NoContent)));
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::communicationDeleteAll(const JWT& jwt)
 {
     std::optional<model::Bundle> commBundle;
@@ -2306,6 +2480,7 @@ std::optional<model::Consent> ErpWorkflowTestBase::consentGet(
     return consent;
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::consentDelete(
     const std::string& consentId,
     const std::string& kvnr,
@@ -2373,6 +2548,22 @@ std::optional<model::Bundle> ErpWorkflowTestBase::chargeItemsGet(
     return chargeItemsBundle;
 }
 
+std::optional<model::Bundle> ErpWorkflowTestBase::chargeItemGetId(
+    const JWT& jwt,
+    const ContentMimeType& contentType,
+    const model::PrescriptionId& id,
+    const std::optional<std::string_view>& accessCode,
+    const std::optional<model::KbvBundle>& expectedKbvBundle,
+    const std::optional<model::ErxReceipt>& expectedReceipt,
+    const HttpStatus expectedStatus,
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+{
+    std::optional<model::Bundle> chargeItemResultBundle;
+    chargeItemGetIdInternal(chargeItemResultBundle, jwt, contentType, id, accessCode, expectedKbvBundle, expectedReceipt, expectedStatus, expectedErrorCode);
+    return chargeItemResultBundle;
+}
+
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::chargeItemDelete(
     const model::PrescriptionId& prescriptionId,
     const JWT& jwt,
@@ -2398,8 +2589,11 @@ void ErpWorkflowTestBase::chargeItemDelete(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::createClosedTask(
     std::optional<model::PrescriptionId>& createdId,
+    std::optional<model::KbvBundle>& usedKbvBundle,
+    std::optional<model::ErxReceipt>& closeReceipt,
     std::string& createdAccessCode,
     std::string& createdSecret,
     const model::PrescriptionType prescriptionType,
@@ -2409,10 +2603,11 @@ void ErpWorkflowTestBase::createClosedTask(
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(createdId, createdAccessCode, prescriptionType));
     ASSERT_TRUE(createdId.has_value());
 
-    std::string qesBundle;
+    std::tuple<std::string, std::string> qesBundle;
     ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, model::Timestamp::now()));
+    ASSERT_NO_THROW(usedKbvBundle = model::KbvBundle::fromXmlNoValidation(std::get<1>(qesBundle)));
     std::optional<model::Task> task;
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(*createdId, createdAccessCode, qesBundle));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivate(*createdId, createdAccessCode, std::get<0>(qesBundle)));
     ASSERT_TRUE(task);
 
     std::optional<model::Bundle> acceptResultBundle;
@@ -2424,7 +2619,6 @@ void ErpWorkflowTestBase::createClosedTask(
     ASSERT_TRUE(secret.has_value());
     createdSecret = *secret;
 
-    std::optional<model::ErxReceipt> closeReceipt;
     ASSERT_NO_FATAL_FAILURE(closeReceipt = taskClose(*createdId, std::string(*secret), kvnr));
     ASSERT_TRUE(closeReceipt);
 }

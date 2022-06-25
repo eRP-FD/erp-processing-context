@@ -37,6 +37,9 @@ public:
     bool isStreamClosed (void) const;
 
 private:
+    void on_async_read(const RequestConsumer& requestConsumer, const std::optional<std::string>& logContext,
+                       const boost::beast::error_code& ec, const size_t count);
+
     SslStream& mStream;
     boost::beast::flat_static_buffer<ErpConstants::DefaultBufferSize> mBuffer;
     boost::beast::http::request_parser<boost::beast::http::string_body> mParser;

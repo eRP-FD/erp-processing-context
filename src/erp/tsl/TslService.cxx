@@ -12,12 +12,10 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
-#include <utility>
 
 #include "erp/ErpRequirements.hxx"
-#include "erp/client/HttpClient.hxx"
-#include "erp/client/HttpsClient.hxx"
 #include "erp/client/UrlRequestSender.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/OcspUrl.hxx"
@@ -28,7 +26,6 @@
 #include "erp/validation/XmlValidator.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/FileHelper.hxx"
 #include "erp/util/GLog.hxx"
 #include "erp/util/Hash.hxx"
 #include "erp/util/UrlHelper.hxx"
@@ -169,17 +166,7 @@ namespace
 
     bool checkC_HCI_OSIG(const X509Certificate& certificate)
     {
-        // Selection of roles per A_17928
-        return certificate.checkCertificatePolicy(TslService::oid_smc_b_osig)
-               && certificate.checkRoles({
-                      std::string(profession_oid::oid_praxis_arzt),
-                      std::string(profession_oid::oid_zahnarztpraxis),
-                      std::string(profession_oid::oid_praxis_psychotherapeut),
-                      std::string(profession_oid::oid_krankenhaus),
-                      std::string(profession_oid::oid_oeffentliche_apotheke),
-                      std::string(profession_oid::oid_krankenhausapotheke),
-                      std::string(profession_oid::oid_bundeswehrapotheke),
-                      std::string(profession_oid::oid_mobile_einrichtung_rettungsdienst)});
+        return certificate.checkCertificatePolicy(TslService::oid_smc_b_osig);
     }
 
     bool isCertificateOfType(const X509Certificate& certificate, CertificateType certificateType)
@@ -245,7 +232,7 @@ namespace
     {
         switch (certificateType)
         {
-            case CertificateType::C_CH_AUT:
+            case CertificateType::C_CH_AUT: // NOLINT(bugprone-branch-clone)
                 //GS_A_4595 begin - expected key usage
                 // in case of RSA certificate keyEncipherment is optional
                 // our implementation checks only required key usages
@@ -257,7 +244,7 @@ namespace
                 // our implementation checks only required key usages
                 return {KeyUsage::digitalSignature};
                 //A_17989 end
-            case CertificateType::C_HCI_AUT:
+            case CertificateType::C_HCI_AUT: // NOLINT(bugprone-branch-clone)
                 if (certificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
                 {
                     return {KeyUsage::digitalSignature};
@@ -288,7 +275,7 @@ namespace
                 {
                     return {KeyUsage::dataEncipherment, KeyUsage::keyEncipherment};
                 }
-            case CertificateType::C_HCI_OSIG:
+            case CertificateType::C_HCI_OSIG: // NOLINT(bugprone-branch-clone)
                 return {KeyUsage::nonRepudiation};
 
             case CertificateType::C_HP_QES:
@@ -697,7 +684,6 @@ namespace
             trustStore);
     }
 
-
     void checkCertificateChain(X509Certificate& certificate,
                                TrustStore& trustStore)
     {
@@ -707,14 +693,29 @@ namespace
                 X509_STORE_CTX_new(), X509_STORE_CTX_free);
             OpenSslExpect(storeContext != nullptr, "Can not create store context.");
 
+            auto* x509Certificate = certificate.getX509Ptr();
             X509Store x509Store = trustStore.getX509Store(certificate);
             OpenSslExpect(1 == X509_STORE_CTX_init(storeContext.get(),
                                                    x509Store.getStore(),
-                                                   certificate.getX509Ptr(),
+                                                   x509Certificate,
                                                    nullptr),
                           "Can not init store context");
             X509_VERIFY_PARAM *param = X509_STORE_CTX_get0_param(storeContext.get());
             X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_PARTIAL_CHAIN);
+
+            if (trustStore.getTslMode() == TslMode::BNA)
+            {
+                auto* notBefore = X509_get_notBefore(x509Certificate);
+                OpenSslExpect(notBefore != nullptr, "Can not get notBefore info.");
+                OpenSslExpect(1 == ASN1_TIME_normalize(notBefore), "Can not normalize notBefore ASN1 time.");
+
+                tm notBeforeTm{};
+                OpenSslExpect(1 == ASN1_TIME_to_tm(notBefore, &notBeforeTm), "Can not convert ASN1 time to tm.");
+
+                const auto timestamp = model::Timestamp::fromTmInUtc(notBeforeTm);
+                X509_VERIFY_PARAM_set_time(param, timestamp.toTimeT());
+            }
+
             OpenSslExpect(X509_verify_cert(storeContext.get()) == 1, "Signer certificate is invalid");
 
             STACK_OF(X509)* verifiedChain = X509_STORE_CTX_get0_chain(storeContext.get());
@@ -763,7 +764,7 @@ namespace
     }
 
 
-    void checkTrustStoreAfterUpdateError(TrustStore& trustStore, const TslError tslError)
+    void checkTrustStoreAfterUpdateError(TrustStore& trustStore, const TslError& tslError)
     {
         if ( ! trustStore.hasTsl())
         {
@@ -928,7 +929,14 @@ TslService::refreshTslIfNecessary(
             }
         }
 
-        TslExpect( ! tslContent.empty(), "Can not download new TrustServiceStatusList version.", TslErrorCode::TSL_DOWNLOAD_ERROR);
+        TslExpect(! tslContent.empty(),
+                  "Can not download new TrustServiceStatusList version. Hash: " +
+                      String::toHexString(newHash.value_or("")),
+                  TslErrorCode::TSL_DOWNLOAD_ERROR);
+        TLOG(WARNING) << "Successfully downloaded " << magic_enum::enum_name(trustStore.getTslMode())
+                      << " with hash " + String::toHexString(newHash.value_or(""));
+        const auto contentHash = Hash::sha256(tslContent);
+        TVLOG(1) << "Content hash: " << String::toHexString(contentHash);
 
         return attemptTslParsing(tslContent, xmlValidator, trustStore, expectedSignerCertificates);
     }

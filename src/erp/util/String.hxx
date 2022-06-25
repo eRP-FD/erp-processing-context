@@ -135,7 +135,7 @@ public:
       * with a single space each.
     */
     // Currently unused, remove if not needed in future:
-    static std::string normalizeWhitespace(const std::string& s);
+    static std::string normalizeWhitespace(const std::string& in);
     /**
      * Return an upper case version of the given string.
      * Note that only ASCII strings are supported. For UTF-8 (or UTF-N) we would need an external library to do
@@ -173,6 +173,8 @@ public:
 
     // convert the given va_list to string using vsnprintf
     static std::string vaListToString(const char* msg, va_list args);
+
+    static std::string toHexString(const std::string_view& input);
 };
 
 

@@ -53,9 +53,9 @@ db_model::EncryptedBlob DataBaseCodec::encode(const std::string_view& data,
     auto cipherResult = EncryptionT::encrypt(compressed, key, iv);
     db_model::EncryptedBlob blob;
     blob.reserve(versionLength + iv.size() + cipherResult.authenticationTag.size() + cipherResult.ciphertext.size());
-    blob.push_back(char(version));
-    blob.insert(blob.end(), static_cast<const char*>(iv), static_cast<const char*>(iv) + iv.size());
-    blob.insert(blob.end(), cipherResult.authenticationTag.begin(), cipherResult.authenticationTag.end());
-    blob.insert(blob.end(), cipherResult.ciphertext.begin(), cipherResult.ciphertext.end());
+    blob.push_back(static_cast<std::byte>(version));
+    blob.insert(blob.end(), static_cast<const std::byte*>(iv), static_cast<const std::byte*>(iv) + iv.size());
+    blob.append(cipherResult.authenticationTag);
+    blob.append(cipherResult.ciphertext);
     return blob;
 }

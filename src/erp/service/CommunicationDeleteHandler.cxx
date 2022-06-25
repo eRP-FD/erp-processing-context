@@ -8,7 +8,6 @@
 #include "erp/database/Database.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/server/context/ServiceContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/Expect.hxx"
@@ -47,7 +46,7 @@ void CommunicationDeleteHandler::handleRequest (PcSessionContext& session)
     Uuid communicationId(communicationIdString.value());
     ErpExpect(communicationId.isValidIheUuid(), HttpStatus::BadRequest, "Invalid format of communication id");
 
-    auto databaseHandle = session.database();
+    auto* databaseHandle = session.database();
 
     auto [id, received] = databaseHandle->deleteCommunication(communicationId, sender.value());
 

@@ -66,7 +66,7 @@ TEST_F(XmlValidatorTest, TaskInvalidPrescriptionId)
 }
 
 
-TEST_F(XmlValidatorTest, getSchemaValidationContext)
+TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-function-cognitive-complexity)
 {
     for(const auto& type : magic_enum::enum_values<SchemaType>())
     {
@@ -184,7 +184,7 @@ public:
 };
 class XmlValidatorTestParamsGematik : public XmlValidatorTestParams, public testing::TestWithParam<TestParamsGematik> {
 public:
-    void checkDocument(const std::string& document, const std::string& filename)
+    void checkDocument(const std::string& document, const std::string& filename) //NOLINT(readability-function-cognitive-complexity)
     {
         if (GetParam().valid)
         {
@@ -276,7 +276,7 @@ INSTANTIATE_TEST_SUITE_P(ValidResources, XmlValidatorTestParamsGematik,
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/consent/", "Consent_invalid", SchemaType::Gem_erxConsent, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1}
 ));
 
-TEST_F(XmlValidatorTest, Erp6345)
+TEST_F(XmlValidatorTest, Erp6345)//NOLINT(readability-function-cognitive-complexity)
 {
     auto file1 = FileHelper::readFileAsString(std::filesystem::path(TEST_DATA_DIR) / "issues/ERP-6345/bundleFromSignedFile.xml");
 
@@ -350,7 +350,7 @@ public:
     XmlValidator xmlValidator;
 
 private:
-    void DoTest(bool expectSuccess)
+    void DoTest(bool expectSuccess) const //NOLINT(readability-function-cognitive-complexity)
     {
         auto file_valid = FileHelper::readFileAsString(
             std::filesystem::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/MedicationDispense_valid.xml");

@@ -16,6 +16,8 @@ class KBVMedicationCategory : public model::Extension
 public:
     using Extension::Extension;
     static constexpr auto url = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category";
+
+    friend std::optional<KBVMedicationCategory> ResourceBase::getExtension<KBVMedicationCategory>(const std::string_view&) const;
 };
 
 }

@@ -79,7 +79,19 @@ Checks: >-
   -readability-simplify-boolean-expr,
   -readability-uppercase-literal-suffix,
   -zircon-*,
-
+  -altera-unroll-loops,
+  -readability-convert-member-functions-to-static,
+  -hicpp-explicit-conversions,
+  -google-explicit-constructor,
+  -readability-identifier-naming,
+  -bugprone-easily-swappable-parameters,
+  -abseil-string-find-str-contains,
+  -altera-id-dependent-backward-branch,
+  -readability-suspicious-call-argument,
+  -modernize-pass-by-value,
+  -modernize-raw-string-literal,
+  -readability-inconsistent-declaration-parameter-name
+HeaderFilterRegex: '(src|test)/.*'
 CheckOptions:
   - { key: readability-identifier-naming.ClassCase,            value: CamelCase  }
   - { key: readability-identifier-naming.FunctionCase,         value: camelBack  }
@@ -90,5 +102,6 @@ CheckOptions:
   - { key: readability-identifier-naming.PrivateMemberPrefix,  value: m          }
   - { key: readability-identifier-naming.StructCase,           value: CamelCase  }
   - { key: readability-identifier-naming.TypedefCase,          value: CamelCase  }
-  - { key: readability-identifier-naming.VariableCase,         value: aNy_CasE  }
-  - { key: readability-function-cognitive-complexity.Threshold,value: 25  }
+  - { key: readability-identifier-naming.VariableCase,         value: aNy_CasE   }
+  - { key: readability-function-cognitive-complexity.Threshold,value: 20         }
+  - { key: readability-identifier-naming.TypedefCase,          value: CamelCase  }

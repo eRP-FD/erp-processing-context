@@ -29,10 +29,8 @@
 #include <gtest/gtest.h>
 #include <pqxx/transaction>
 
-template<class T> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const T& jwt);
-
-template<> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const JWT& jwt);
-template<> std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const std::string& jwt);
+std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const JWT& jwt);
+std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const std::string& jwt);
 
 class MockDatabase;
 /**
@@ -55,7 +53,7 @@ public:
     constexpr static size_t serverThreadCount = 2;
 
     explicit ServerTestBase (bool forceMockDatabase = false);
-    virtual ~ServerTestBase();
+    ~ServerTestBase() override;
 
     void SetUp (void) override;
     void TearDown (void) override;
@@ -109,7 +107,7 @@ public:
         model::Communication::MessageType messageType;
         CommunicationAttandee sender;
         CommunicationAttandee recipient = CommunicationAttandee{ActorRole::Insurant, ""};
-        std::string accessCode = "";
+        std::string accessCode;
         std::optional<std::string> contentString = "";
         std::optional<model::Timestamp> sent = model::Timestamp::now();
         std::optional<model::Timestamp> received = std::nullopt;

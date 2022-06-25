@@ -115,7 +115,7 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
     Expect3(professionOIDClaim.has_value(), "Missing professionOIDClaim", std::logic_error);  // should not happen because of professionOID check;
 
-    auto databaseHandle = session.database();
+    auto* databaseHandle = session.database();
     auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
 
     ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
@@ -145,10 +145,6 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     A_19027.start("Delete personal data");
     // Task.for (KVNR of patient)
     task->deleteKvnr();
-    // Task.input
-    task->deleteInput();
-    // Task.output
-    task->deleteOutput();
     // Task.identifier (AccessCode)
     task->deleteAccessCode();
     // Task.identifier (Secret)

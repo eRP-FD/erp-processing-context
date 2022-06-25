@@ -227,7 +227,6 @@ Task::Task(const PrescriptionId& id, PrescriptionType prescriptionType, Timestam
     updateLastUpdate(lastModified);
     setValue(authoredOnPointer, authoredOn.toXsDateTime());
     setStatus(status);
-    setInputOutputUuids();
 }
 
 void Task::setPrescriptionId(const PrescriptionId& prescriptionId)
@@ -339,25 +338,6 @@ void Task::setKvnr(std::string_view kvnr)
     ModelExpect(!hasValue(kvnrPointer), "KVNR cannot be set multiple times.");
     setValue(kvnrPointer, kvnr);
     setValue(kvnrSysPointer, resource::naming_system::gkvKvid10);
-}
-
-void Task::setInputOutputUuids()
-{
-    switch(status())
-    {
-        case Status::draft:
-        case Status::cancelled:
-            // no UUIDs in input/output array present in state draft and cancelled
-            break;
-        case Status::completed:
-            setReceiptUuid();
-            [[fallthrough]];
-        case Status::ready:
-        case Status::inprogress:
-            setHealthCarePrescriptionUuid();
-            setPatientConfirmationUuid();
-            break;
-    }
 }
 
 void Task::setHealthCarePrescriptionUuid()

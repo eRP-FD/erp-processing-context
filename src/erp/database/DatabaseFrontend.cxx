@@ -169,7 +169,7 @@ PrescriptionId DatabaseFrontend::storeTask(const Task& task)
     A_19700.start("Initial key derivation for Task.");
     // use authoredOn returned from createTask to ensure we have identical rounding (see ERP-5602)
     auto [key, derivationData] = mDerivation.initialTaskKey(prescriptionId, authoredOn);
-    db_model::Blob salt{std::move(derivationData.salt)};
+    db_model::Blob salt{derivationData.salt};
     A_19700.finish();
 
     A_19688.start("encrypt access code");
@@ -420,7 +420,6 @@ std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communi
     const std::optional<std::string_view> sender = communication.sender();
     const std::optional<std::string_view> recipient = communication.recipient();
     const std::optional<model::Timestamp> timeSent = communication.timeSent();
-    const std::optional<model::Timestamp> timeReceived = communication.timeReceived();
 
     ErpExpect(sender.has_value(), HttpStatus::InternalServerError, "communication object has no 'sender' value");
     ErpExpect(recipient.has_value(), HttpStatus::InternalServerError, "communication object has no 'recipient' value");
@@ -437,7 +436,7 @@ std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communi
     auto messageForSender = mCodec.encode(messagePlain, senderKey, Compression::DictionaryUse::Default_json);
     auto messageForRecipient = mCodec.encode(messagePlain, recipientKey, Compression::DictionaryUse::Default_json);
     auto uuid = mBackend->insertCommunication(prescriptionId, timeSent.value(), messageType, senderHashed, recipientHashed,
-                                              timeReceived, senderBlobId, messageForSender, recipientBlobId,
+                                              senderBlobId, messageForSender, recipientBlobId,
                                               messageForRecipient);
     if (uuid)
     {
@@ -580,6 +579,21 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const std::string_view& kvnr
     return decryptChargeItems(dbChargeItems);
 }
 
+std::tuple<std::optional<model::Binary>, std::optional<model::Bundle>, std::optional<model::ChargeItem>, std::optional<model::Bundle>>
+DatabaseFrontend::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id)
+{
+    const auto& [dbTask, dbChargeItem, dbDispenseItem] = mBackend->retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(id);
+    if (!dbTask)
+    {
+        return {};
+    }
+    const auto& keyForTask = taskKey(*dbTask);
+    return std::make_tuple(keyForTask ? getHealthcareProviderPrescription(*dbTask, *keyForTask) : std::nullopt,
+                           keyForTask ? getReceipt(*dbTask, *keyForTask) : std::nullopt,
+                           keyForTask ? getChargeItem(*dbChargeItem, *keyForTask) : std::nullopt,
+                           keyForTask ? getDispenseItem(*dbDispenseItem, *keyForTask) : std::nullopt);
+}
+
 std::tuple<model::ChargeItem, model::Bundle>
 DatabaseFrontend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
@@ -617,7 +631,7 @@ void DatabaseFrontend::clearAllChargeInformation(const std::string_view& kvnr)
     mBackend->clearAllChargeInformation(hashedKvnr);
 }
 
-uint64_t DatabaseFrontend::countChargeInformationForInsurant(const std::string& kvnr, 
+uint64_t DatabaseFrontend::countChargeInformationForInsurant(const std::string& kvnr,
                                                              const std::optional<UrlArguments>& search)
 {
     return mBackend->countChargeInformationForInsurant(mDerivation.hashKvnr(kvnr), search);
@@ -690,6 +704,23 @@ std::optional<model::Bundle> DatabaseFrontend::getReceipt(const db_model::Task& 
     return model::Bundle::fromJsonNoValidation(mCodec.decode(*dbTask.receipt, key));
 }
 
+std::optional<model::ChargeItem> DatabaseFrontend::getChargeItem(const std::optional<db_model::EncryptedBlob>& dbChargeItem, const SafeString& key)
+{
+    if (! dbChargeItem.has_value())
+    {
+        return std::nullopt;
+    }
+    return model::ChargeItem::fromJsonNoValidation(mCodec.decode(dbChargeItem.value(), key));
+}
+
+std::optional<model::Bundle> DatabaseFrontend::getDispenseItem(const std::optional<db_model::EncryptedBlob>& dbDispensItem, const SafeString& key)
+{
+    if (! dbDispensItem.has_value())
+    {
+        return std::nullopt;
+    }
+    return model::Bundle::fromJsonNoValidation(mCodec.decode(dbDispensItem.value(), key));
+}
 
 
 SafeString DatabaseFrontend::taskKey(const model::PrescriptionId& taskId)

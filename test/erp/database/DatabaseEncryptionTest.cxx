@@ -65,14 +65,14 @@ protected:
         return std::make_tuple(std::move(task), std::move(erxReceipt), std::move(medicationDispenses.at(0)));
     }
 
-    db_model::Blob accountSalt(const db_model::HashedId identityHashed, db_model::MasterKeyType keyType, BlobId blobId)
+    db_model::Blob accountSalt(const db_model::HashedId& identityHashed, db_model::MasterKeyType keyType, BlobId blobId)
     {
         auto txn = createTransaction();
         auto medicationDispenseAccountRow = txn.exec_params1(
             "SELECT salt FROM erp.account WHERE account_id = $1 AND master_key_type = $2 AND blob_id = $3",
             identityHashed.binarystring(), gsl::narrow<int>(keyType), blobId);
         txn.commit();
-        return db_model::Blob{medicationDispenseAccountRow[0].as<pqxx::binarystring>()};
+        return db_model::Blob{medicationDispenseAccountRow[0].as<db_model::postgres_bytea>()};
     }
 
     SafeString medicationDispenseKey(const db_model::HashedKvnr& kvnrHashed, BlobId blobId)
@@ -96,7 +96,7 @@ protected:
 };
 
 
-TEST_F(DatabaseEncryptionTest, TableTask)
+TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -135,7 +135,7 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     auto row = txn.exec_params1("SELECT * FROM erp.task WHERE prescription_id = $1", prescriptionId.toDatabaseId());
     ASSERT_EQ(row.size(), col::index::COUNT) << "Expected table `erp.task` to have 18 columns.";
     txn.commit();
-    db_model::Blob salt{row[col::salt].as<pqxx::binarystring>()};
+    db_model::Blob salt{row[col::salt].as<db_model::postgres_bytea>()};
     BlobId blobId = gsl::narrow<BlobId>(row[col::task_key_blob_id].as<int32_t>());
     auto taskKey = getKeyDerivation().taskKey(prescriptionId, task.authoredOn(), blobId, salt);
     auto kvnrHashed = getKeyDerivation().hashKvnr(*task.kvnr());
@@ -145,12 +145,12 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     //     not encrypted
     //  1: kvnr
     //     encrypted kvnr
-    db_model::EncryptedBlob encryptedKvnr{row[col::kvnr].as<pqxx::binarystring>()};
+    db_model::EncryptedBlob encryptedKvnr{row[col::kvnr].as<db_model::postgres_bytea>()};
     SafeString decryptedKvnr;
     ASSERT_NO_THROW(decryptedKvnr = getDBCodec().decode(encryptedKvnr, taskKey));
     EXPECT_EQ(decryptedKvnr, task.kvnr());
     //  2: kvnr_hashed bytea,
-    EXPECT_EQ(kvnrHashed, db_model::EncryptedBlob{row[col::kvnr_hashed].as<pqxx::binarystring>()});
+    EXPECT_EQ(kvnrHashed, db_model::EncryptedBlob{row[col::kvnr_hashed].as<db_model::postgres_bytea>()});
     //  3: last_modified timestamp with time zone DEFAULT CURRENT_TIMESTAMP::timestamp with time zone NOT NULL,
     //     not encrypted
     //  4: authored_on timestamp with time zone DEFAULT CURRENT_TIMESTAMP::timestamp with time zone NOT NULL,
@@ -166,24 +166,25 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     //  9: salt bytea,
     //     not encrypted
     // 10: access_code bytea,
-    db_model::EncryptedBlob encryptedAccessCode{row[col::access_code].as<pqxx::binarystring>()};
+    db_model::EncryptedBlob encryptedAccessCode{row[col::access_code].as<db_model::postgres_bytea>()};
     SafeString decryptedAccessCode;
     ASSERT_NO_THROW(decryptedAccessCode = getDBCodec().decode(encryptedAccessCode, taskKey));
     EXPECT_EQ(decryptedAccessCode, accessCode);
     // 11: secret bytea,
-    db_model::EncryptedBlob encryptedSecret{row[col::secret].as<pqxx::binarystring>()};
+    db_model::EncryptedBlob encryptedSecret{row[col::secret].as<db_model::postgres_bytea>()};
     SafeString decryptedSecret;
     ASSERT_NO_THROW(decryptedSecret = getDBCodec().decode(encryptedSecret, taskKey));
     EXPECT_EQ(decryptedSecret, secret);
     // 12: healthcare_provider_prescription bytea,
-    db_model::EncryptedBlob encryptedPrescription{row[col::healthcare_provider_prescription].as<pqxx::binarystring>()};
+    db_model::EncryptedBlob encryptedPrescription{
+        row[col::healthcare_provider_prescription].as<db_model::postgres_bytea>()};
     std::optional<model::Binary> decryptedPrescription;
     ASSERT_NO_THROW(decryptedPrescription =
                         model::Binary::fromJsonNoValidation(getDBCodec().decode(encryptedPrescription, taskKey)));
     EXPECT_EQ(decryptedPrescription->id(), binId);
     EXPECT_EQ(decryptedPrescription->data(), binData);
     // 13: receipt bytea,
-    db_model::EncryptedBlob encryptedReceipt{row[col::receipt].as<pqxx::binarystring>()};
+    db_model::EncryptedBlob encryptedReceipt{row[col::receipt].as<db_model::postgres_bytea>()};
     std::optional<model::ErxReceipt> decryptedReceipt;
     ASSERT_NO_THROW(decryptedReceipt =
                         model::ErxReceipt::fromJsonNoValidation(getDBCodec().decode(encryptedReceipt, taskKey)));
@@ -195,11 +196,12 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     // 16: performer bytea,
     auto telematikId = medicationDispense.telematikId();
     EXPECT_EQ(getKeyDerivation().hashTelematikId(telematikId),
-              db_model::EncryptedBlob{row[col::performer].as<pqxx::binarystring>()});
+              db_model::EncryptedBlob{row[col::performer].as<db_model::postgres_bytea>()});
     // 17: medication_dispense_blob_id integer,
     //     not encrypted
     // 18: medication_dispense_bundle bytea
-    db_model::EncryptedBlob encryptedMedicationDispense{row[col::medication_dispense_bundle].as<pqxx::binarystring>()};
+    db_model::EncryptedBlob encryptedMedicationDispense{
+        row[col::medication_dispense_bundle].as<db_model::postgres_bytea>()};
     std::optional<model::Bundle> decryptedMedicationDispenseBundle;
     {
         auto key = medicationDispenseKey(kvnrHashed, medicationDispenseBlobId);
@@ -213,7 +215,7 @@ TEST_F(DatabaseEncryptionTest, TableTask)
     A_19688.finish();
 }
 
-TEST_F(DatabaseEncryptionTest, TableCommunication)
+TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -263,10 +265,10 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
     //     not encrypted
     //  1: sender bytea NOT NULL,
     auto senderHashed = getKeyDerivation().hashIdentity(communication.sender().value());
-    EXPECT_EQ(db_model::EncryptedBlob{row[col::sender].as<pqxx::binarystring>()}, senderHashed);
+    EXPECT_EQ(db_model::EncryptedBlob{row[col::sender].as<db_model::postgres_bytea>()}, senderHashed);
     //  2: recipient bytea NOT NULL,
     auto recipientHashed = getKeyDerivation().hashIdentity(communication.recipient().value());
-    EXPECT_EQ(db_model::EncryptedBlob{row[col::recipient].as<pqxx::binarystring>()}, recipientHashed);
+    EXPECT_EQ(db_model::EncryptedBlob{row[col::recipient].as<db_model::postgres_bytea>()}, recipientHashed);
     //  3: message_type smallint NOT NULL,
     //     not encrypted
     //  4: received timestamp with time zone,
@@ -281,7 +283,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
     auto senderBlobId = gsl::narrow<BlobId>(row[col::sender_blob_id].as<int32_t>());
     {
         auto key = communicationKey(communication.sender().value(), senderHashed, senderBlobId);
-        db_model::EncryptedBlob encryptedMessage{row[col::message_for_sender].as<pqxx::binarystring>()};
+        db_model::EncryptedBlob encryptedMessage{row[col::message_for_sender].as<db_model::postgres_bytea>()};
         std::optional<model::Communication> decryptedMessage;
         ASSERT_NO_THROW(decryptedMessage =
                             model::Communication::fromJsonNoValidation(getDBCodec().decode(encryptedMessage, key)));
@@ -294,7 +296,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
     auto recipientBlobId = gsl::narrow<BlobId>(row[col::recipient_blob_id].as<int32_t>());
     {
         auto key = communicationKey(communication.recipient().value(), recipientHashed, recipientBlobId);
-        db_model::EncryptedBlob encryptedMessage{row[col::message_for_recipient].as<pqxx::binarystring>()};
+        db_model::EncryptedBlob encryptedMessage{row[col::message_for_recipient].as<db_model::postgres_bytea>()};
         std::optional<model::Communication> decryptedMessage;
         ASSERT_NO_THROW(decryptedMessage =
                             model::Communication::fromJsonNoValidation(getDBCodec().decode(encryptedMessage, key)));
@@ -304,7 +306,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)
     A_19688.finish();
 }
 
-TEST_F(DatabaseEncryptionTest, TableAuditEvent)
+TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr std::string_view agentName{"Max Mustermann"};
     if (!usePostgres())
@@ -348,7 +350,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)
     //  0: id uuid DEFAULT erp.gen_suuid(CURRENT_TIMESTAMP) NOT NULL,
     //     not encrypted
     //  1: kvnr_hashed bytea NOT NULL,
-    EXPECT_EQ(db_model::EncryptedBlob{row[col::kvnr_hashed].as<pqxx::binarystring>()}, kvnrHashed);
+    EXPECT_EQ(db_model::EncryptedBlob{row[col::kvnr_hashed].as<db_model::postgres_bytea>()}, kvnrHashed);
     //  2: event_id smallint NOT NULL,
     //     not encrypted
     //  3: action character(1) NOT NULL,
@@ -362,7 +364,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)
     //  7: prescription_type smallint,
     //     not encrypted
     //  8: metadata bytea,
-    db_model::EncryptedBlob encryptedMetaData{row[col::metadata].as<pqxx::binarystring>()};
+    db_model::EncryptedBlob encryptedMetaData{row[col::metadata].as<db_model::postgres_bytea>()};
     std::optional<model::AuditMetaData> decryptedMetaData;
     ASSERT_NO_THROW(decryptedMetaData =
                         model::AuditMetaData::fromJsonNoValidation(getDBCodec().decode(encryptedMetaData, key)));

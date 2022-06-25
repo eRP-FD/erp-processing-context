@@ -147,7 +147,7 @@ void AccessLog::error (const std::string_view message, std::exception_ptr except
             keyValue("location", location);
             error(std::string(message) + ": " + details);
         },
-        exception);
+        std::move(exception));
 }
 
 

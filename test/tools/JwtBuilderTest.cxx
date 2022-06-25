@@ -16,13 +16,13 @@
 #include "test/util/ResourceManager.hxx"
 
 
-TEST(JwtBuilderTest, testBuilder)
+TEST(JwtBuilderTest, testBuilder)//NOLINT(readability-function-cognitive-complexity)
 {
     auto testBuilder = JwtBuilder::testBuilder();
     Idp idp;
     auto tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
         "ERP_TSL_INITIAL_CA_DER_PATH",
-        std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
 
     auto idpCertificate = Certificate::fromPem(
         FileHelper::readFileAsString(
@@ -40,10 +40,9 @@ TEST(JwtBuilderTest, testBuilder)
                  {idpCertificate, idpCertificateCa, MockOcsp::CertificateOcspTestMode::SUCCESS}}}}
         );
 
-    TslTestHelper::addCaCertificateToTrustStore(
-        idpCertificateCa,
-        *tslManager,
-        TslMode::TSL);
+    tslManager->addPostUpdateHook([=]{
+        TslTestHelper::addCaCertificateToTrustStore(idpCertificateCa, *tslManager, TslMode::TSL);
+    });
 
     std::string idpResponseJson = FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
@@ -59,7 +58,7 @@ TEST(JwtBuilderTest, testBuilder)
 
     auto updater = IdpUpdater::create(
         idp,
-        tslManager.get(),
+        *tslManager,
         std::make_shared<Timer>(),
         true,
         idpRequestSender);

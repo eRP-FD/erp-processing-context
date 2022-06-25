@@ -96,6 +96,7 @@ public:
 
     void setSignature (rapidjson::Value& signature);
     void setSignature(const model::Signature& signature);
+    void removeSignature();
 
     std::optional<model::Signature> getSignature() const;
 

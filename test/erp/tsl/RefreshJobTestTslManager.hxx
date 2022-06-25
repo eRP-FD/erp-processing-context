@@ -24,18 +24,18 @@ public:
     RefreshJobTestTslManager(
         std::shared_ptr<UrlRequestSender> requestSender,
         std::shared_ptr<XmlValidator> xmlValidator,
-        const std::vector<std::function<void(void)>> initialPostUpdateHooks,
+        const std::vector<std::function<void(void)>>& initialPostUpdateHooks,
         std::unique_ptr<TrustStore> tslTrustStore,
         std::unique_ptr<TrustStore> bnaTrustStore)
-        : TslManager(
-        requestSender, xmlValidator, initialPostUpdateHooks, std::move(tslTrustStore), std::move(bnaTrustStore))
+        : TslManager(std::move(requestSender), std::move(xmlValidator), initialPostUpdateHooks,
+                     std::move(tslTrustStore), std::move(bnaTrustStore))
         , updateCount(0)
     {
     }
 
-    virtual ~RefreshJobTestTslManager() = default;
+    ~RefreshJobTestTslManager() override = default;
 
-    virtual void updateTrustStoresOnDemand()
+    void updateTrustStoresOnDemand() override
     {
         updateCount++;
         TslManager::updateTrustStoresOnDemand();

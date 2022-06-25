@@ -16,5 +16,5 @@ TEST_F(ValidatedServerResponseTest, moveConstructor)
     ValidatedServerResponse validatedResponse (std::move(response));
 
     ASSERT_EQ(validatedResponse.getHeader().header("key"), "value");
-    ASSERT_FALSE(response.getHeader().hasHeader("key"));
+    ASSERT_FALSE(response.getHeader().hasHeader("key")); //NOLINT[bugprone-use-after-move,hicpp-invalid-access-moved]
 }

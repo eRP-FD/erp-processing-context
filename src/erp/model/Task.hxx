@@ -85,15 +85,13 @@ public:
 
 private:
     friend Resource<Task>;
-    explicit Task(NumberAsStringParserDocument&& document);
+    explicit Task(NumberAsStringParserDocument&& jsonTree);
 
     [[nodiscard]] std::optional<std::string_view> uuidFromArray(const rapidjson::Pointer& array, std::string_view code) const;
     void addUuidToArray(const rapidjson::Pointer& array, std::string_view code, std::string_view uuid);
     void dateToExtensionArray(std::string_view url, const Timestamp& expiryDate);
     [[nodiscard]] Timestamp dateFromExtensionArray(std::string_view url) const;
 
-    // based on task status set the expected UUIDs in the input/output arrays.
-    void setInputOutputUuids();
     void setAccepDateDependentPrescriptionType(const Timestamp& baseTime);
 };
 

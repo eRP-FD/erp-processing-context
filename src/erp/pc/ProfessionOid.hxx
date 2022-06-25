@@ -88,7 +88,7 @@ namespace profession_oid
     constexpr static std::string_view inner_request_role_pharmacy = "pharmacy";
     constexpr static std::string_view inner_request_role_doctor = "doctor";
     constexpr static std::string_view inner_request_role_patient = "patient";
-    constexpr static std::string_view inner_request_role_unknown = "";
+    constexpr static std::string_view inner_request_role_unknown = "";//NOLINT(readability-redundant-string-init)
 
     // Tabelle 6: Tab_PKI_406 OID-Festlegung technische Rolle in X.509-Zertifikaten
     constexpr static std::string_view oid_vsdd = "1.2.276.0.76.4.97";

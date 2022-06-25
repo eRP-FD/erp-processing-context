@@ -22,16 +22,16 @@
 class MockBlobDatabase : public BlobDatabase
 {
 public:
-    virtual Entry getBlob (
+    Entry getBlob (
         BlobType type,
         BlobId id) const override;
-    virtual std::vector<Entry> getAllBlobsSortedById (void) const override;
+    std::vector<Entry> getAllBlobsSortedById (void) const override;
 
-    virtual BlobId storeBlob (Entry&& entry) override;
+    BlobId storeBlob (Entry&& entry) override;
 
-    virtual void deleteBlob (BlobType type, const ErpVector& name) override;
+    void deleteBlob (BlobType type, const ErpVector& name) override;
 
-    virtual std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const override;
+    std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const override;
 
     void setBlobInUseTest(std::function<bool(BlobId blobId)> isBlobInUseFunction);
 

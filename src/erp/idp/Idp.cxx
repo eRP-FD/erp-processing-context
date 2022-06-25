@@ -33,6 +33,18 @@ void Idp::resetCertificate(void)
     mSignerCertificate.reset();
 }
 
+bool Idp::isHealthy() const
+{
+    try
+    {
+        healthCheck();
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+    return true;
+}
 
 void Idp::healthCheck() const
 {

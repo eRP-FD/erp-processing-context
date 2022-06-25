@@ -60,7 +60,7 @@ public:
 
     void updateTask(const model::PrescriptionId& taskId,
                     const db_model::EncryptedBlob& accessCode,
-                    int32_t keyGenerationId,
+                    BlobId blobId,
                     const db_model::Blob& salt);
     /// @returns blobId, salt, authoredOn
     std::tuple<BlobId, db_model::Blob, model::Timestamp>
@@ -123,6 +123,9 @@ public:
     retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
                                       const std::optional<UrlArguments>& search,
                                       const bool applyPaging = true) const;
+
+    std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) const;
 
     std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
     retrieveChargeInformation(const model::PrescriptionId & id) const;

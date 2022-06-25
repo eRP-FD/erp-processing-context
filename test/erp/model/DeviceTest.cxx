@@ -11,7 +11,7 @@
 
 using namespace model;
 
-TEST(DeviceTest, DefaultConstruct)
+TEST(DeviceTest, DefaultConstruct)//NOLINT(readability-function-cognitive-complexity)
 {
     const Device device;
 
@@ -28,7 +28,7 @@ TEST(DeviceTest, DefaultConstruct)
 }
 
 
-TEST(DeviceTest, ConstructFromJson)
+TEST(DeviceTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string json = R"(
     {

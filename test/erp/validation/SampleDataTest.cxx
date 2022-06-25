@@ -118,3 +118,6 @@ INSTANTIATE_TEST_SUITE_P(Konnektathon, SampleDataTest, testing::ValuesIn(makePar
 
 INSTANTIATE_TEST_SUITE_P(Kostbarkeiten_der_Abgabe_Abrechnung, SampleDataTest,
                          testing::ValuesIn(makeParams("Kostbarkeiten_der_Abgabe_Abrechnung")));
+
+INSTANTIATE_TEST_SUITE_P(MVO_KBV_1_0_2_, SampleDataTest,
+                         testing::ValuesIn(makeParams("MVO_KBV_1.0.2_")));

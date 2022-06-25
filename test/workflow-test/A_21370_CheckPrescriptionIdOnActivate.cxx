@@ -29,14 +29,15 @@ public:
         auto kbvBundle = model::KbvBundle::fromXml(bundle, *StaticData::getXmlValidator(),
                                                 *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle);
         const auto bundlePrescriptionId = kbvBundle.getIdentifier().toString();
-        return toCadesBesSignature(boost::replace_all_copy(bundle, bundlePrescriptionId, id));
+        return toCadesBesSignature(boost::replace_all_copy(bundle, bundlePrescriptionId, id),
+                                   model::Timestamp::fromXsDate("2021-06-08"));
     }
 
     ResourceManager& resourceManager = ResourceManager::instance();
 };
 
 
-TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
+TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_view_literals;
     const auto correctWorkflow = GetParam();

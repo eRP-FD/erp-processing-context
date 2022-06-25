@@ -29,7 +29,7 @@ public:
     setKeyExpireAt(const std::string_view& key,
                    const std::chrono::time_point<std::chrono::system_clock,
                    std::chrono::milliseconds>& timestamp) = 0;
-    virtual int incr(const std::string_view& key) = 0;
+    virtual int64_t incr(const std::string_view& key) = 0;
     virtual void publish(const std::string_view& channel, const std::string_view& message) = 0;
 };
 

@@ -46,7 +46,7 @@ std::string FhirCanonicalizer::serialize(const rj::Value& resource)
     return buffer.str();
 }
 
-void FhirCanonicalizer::serializeResource(
+void FhirCanonicalizer::serializeResource( // NOLINT(misc-no-recursion)
     size_t& immersionDepth,
     std::ostringstream& buffer,
     const std::string& name,
@@ -63,11 +63,11 @@ void FhirCanonicalizer::serializeResource(
     serializeObject(immersionDepth, buffer, nullptr, nullptr, *objectStructDef, name, object);
 }
 
-void FhirCanonicalizer::serializeObject(
+void FhirCanonicalizer::serializeObject( // NOLINT(misc-no-recursion)
     size_t& immersionDepth,
     std::ostringstream& buffer,
     const FhirStructureDefinition* backboneStructDef,
-    const FhirElement* backboneElement,
+    std::shared_ptr<const FhirElement> backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& objectName,
     const rj::Value& object)
@@ -99,19 +99,19 @@ void FhirCanonicalizer::serializeObject(
         else
         {
             std::string elementPath = buildElementPath(backboneElement, objectStructDef, itr.first);
-            const FhirElement* element = backboneStructDef == nullptr ? objectStructDef.findElement(elementPath) : backboneStructDef->findElement(elementPath);
+            auto element = backboneStructDef == nullptr ? objectStructDef.findElement(elementPath) : backboneStructDef->findElement(elementPath);
             ModelExpect(element != nullptr, "Element " + elementPath + " does not belong to FHIR structure definition " + objectStructDef.typeId());
             const FhirStructureDefinition* elementStructDef = Fhir::instance().structureRepository().findTypeById(element->typeId());
             ModelExpect(elementStructDef != nullptr, "Element " + element->typeId() + " is not a valid resource type");
 
             const FhirStructureDefinition* elementBackboneStructDef = nullptr;
-            const FhirElement* elementBackboneElement = nullptr;
+            std::shared_ptr<const FhirElement> elementBackboneElement = nullptr;
 
-            if (element->typeId() == "BackboneElement")
+            if (element->isBackbone())
             {
                 // For backbone elements we remain in the current structure definition but have to address "childs" of the backbone element.
                 elementBackboneStructDef = &objectStructDef;
-                elementBackboneElement = element;
+                elementBackboneElement = std::move(element);
             }
 
             serializeValue(immersionDepth, buffer, elementBackboneStructDef, elementBackboneElement, *elementStructDef, itr.first, *itr.second);
@@ -125,11 +125,11 @@ void FhirCanonicalizer::serializeObject(
     buffer << "}";
 }
 
-void FhirCanonicalizer::serializeArray(
+void FhirCanonicalizer::serializeArray( // NOLINT(misc-no-recursion)
     size_t& immersionDepth,
     std::ostringstream& buffer,
     const FhirStructureDefinition* backboneStructDef,
-    const FhirElement* backboneElement,
+    std::shared_ptr<const FhirElement> backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& arrayName,
     const rj::Value& array)
@@ -199,11 +199,11 @@ void FhirCanonicalizer::serializePrimitiveValue(
     }
 }
 
-void FhirCanonicalizer::serializeValue(
+void FhirCanonicalizer::serializeValue( // NOLINT(misc-no-recursion)
     size_t& immersionDepth,
     std::ostringstream& buffer,
     const FhirStructureDefinition* backboneStructDef,
-    const FhirElement* backboneElement,
+    std::shared_ptr<const FhirElement> backboneElement,
     const FhirStructureDefinition& elementStructDef,
     const std::string& name,
     const rapidjson::Value& value)
@@ -232,7 +232,7 @@ void FhirCanonicalizer::serializeValue(
 std::map<std::string, const rj::Value*> FhirCanonicalizer::getSortedMembers(
     size_t immersionDepth,
     const FhirStructureDefinition* backboneStructDef,
-    const FhirElement* backboneElement,
+    std::shared_ptr<const FhirElement> backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const rj::Value& object)
 {
@@ -249,7 +249,7 @@ std::map<std::string, const rj::Value*> FhirCanonicalizer::getSortedMembers(
 }
 
 std::string FhirCanonicalizer::buildElementPath(
-    const FhirElement* backboneElement,
+    std::shared_ptr<const FhirElement> backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& objectName)
 {
@@ -270,7 +270,7 @@ void FhirCanonicalizer::removeDoubleWhitespaces(std::string& value)
 bool FhirCanonicalizer::elementHasToBeRemoved(
     size_t immersionDepth,
     const FhirStructureDefinition* backboneStructDef,
-    const FhirElement* backboneElement,
+    std::shared_ptr<const FhirElement> backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& objectName)
 {
@@ -294,7 +294,7 @@ bool FhirCanonicalizer::elementHasToBeRemoved(
         if (elemToBeRemoved != elementsToBeRemoved.end())
         {
             std::string elementPath = buildElementPath(backboneElement, objectStructDef, objectName);
-            const FhirElement* element = backboneStructDef == nullptr ? objectStructDef.findElement(elementPath) : backboneStructDef->findElement(elementPath);
+            auto element = backboneStructDef == nullptr ? objectStructDef.findElement(elementPath) : backboneStructDef->findElement(elementPath);
             ModelExpect(element != nullptr, "Element " + elementPath + " does not belong to FHIR structure definition " + objectStructDef.typeId());
             const FhirStructureDefinition* elementStructDef = Fhir::instance().structureRepository().findTypeById(element->typeId());
             ModelExpect(elementStructDef != nullptr, "Element " + element->typeId() + " is not a valid resource type");

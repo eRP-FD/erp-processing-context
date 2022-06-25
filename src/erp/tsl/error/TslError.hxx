@@ -56,7 +56,7 @@ public:
         const TslError& original,
         HttpStatus newHttpStatus);
 
-    virtual ~TslError() = default;
+    ~TslError() override = default;
 
     const std::vector<ErrorData>& getErrorData() const;
     const std::optional<TslMode>& getTslMode() const;

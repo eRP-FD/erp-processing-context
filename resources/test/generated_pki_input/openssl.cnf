@@ -34,6 +34,10 @@ oid_fd_enc           = 1.2.276.0.76.4.202
 oid_fd_sig           = 1.2.276.0.76.4.203
 oid_fd_tls_c         = 1.2.276.0.76.4.168
 oid_fd_tls_s         = 1.2.276.0.76.4.169
+oid_hba_qes          = 1.2.276.0.76.4.72
+qcp-natural-qscd     = 0.4.0.194112.1.2
+oid_policy_hba_cp    = 1.2.276.0.76.4.145
+oid_policy_eu_phys   = 1.3.6.1.4.1.42675.1.1
 
 # Policies used by the TSA examples.
 tsa_policy1 = 1.2.3.4.1
@@ -409,6 +413,7 @@ extendedKeyUsage       = id_tsl_kp_tslSigning
 
 crlDistributionPoints  = URI:http://example.com/example_ca.crl
 
+
 ####################################################################
 [vau_signer_cert]
 
@@ -450,6 +455,7 @@ certificatePolicies    = oid_fd_tls_s
 extendedKeyUsage       = serverAuth
 
 
+####################################################################
 [tls_c_cert]
 
 basicConstraints       = CA:FALSE
@@ -468,6 +474,8 @@ certificatePolicies    = oid_fd_tls_c
 
 extendedKeyUsage       = clientAuth
 
+
+####################################################################
 [vau_enc_cert]
 
 basicConstraints       = CA:FALSE
@@ -486,6 +494,58 @@ certificatePolicies    = oid_fd_enc
 1.3.36.8.3.3           = ASN1:SEQUENCE:admission_syntax_epa_vau_sequence
 
 crlDistributionPoints  = URI:http://example.com/example_ca.crl
+
+
+####################################################################
+[bna_signer_cert]
+
+basicConstraints       = CA:FALSE
+
+keyUsage               = nonRepudiation, digitalSignature
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+
+subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
+
+extendedKeyUsage       = id_tsl_kp_tslSigning
+
+crlDistributionPoints  = URI:http://example.com/example_ca.crl
+
+
+####################################################################
+[qes_cert1]
+
+basicConstraints       = CA:FALSE
+
+keyUsage               = nonRepudiation
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+
+certificatePolicies    = oid_hba_qes,qcp-natural-qscd,oid_policy_hba_cp,oid_policy_eu_phys
+1.3.6.1.5.5.7.1.3      = ASN1:SEQUENCE:qcStatement
+1.3.36.8.3.3           = ASN1:SEQUENCE:profession_oids
+authorityInfoAccess    = OCSP;URI:http://ocsp.test.ibm.de/
+
+
+####################################################################
+[qes_cert2]
+
+basicConstraints       = CA:FALSE
+
+keyUsage               = nonRepudiation
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+
+certificatePolicies    = oid_hba_qes,qcp-natural-qscd,oid_policy_hba_cp,oid_policy_eu_phys
+1.3.6.1.5.5.7.1.3      = ASN1:SEQUENCE:qcStatement
+1.3.36.8.3.3           = ASN1:SEQUENCE:profession_oids
+authorityInfoAccess    = OCSP;URI:http://ocsp.test.ibm.de/
 
 
 [admission_syntax_epa_vau_sequence]
@@ -528,3 +588,93 @@ oid1 = OID:1.2.276.0.76.4.209
 
 [profession_oid_stack_epa_tlssc_sequence]
 oid1 = OID:1.2.276.0.76.4.207
+
+[qcStatement]
+etsiQcsCompliance=SEQUENCE:etsiQcsCompliance
+qcs-QcPDS=SEQUENCE:qcs-QcPDS
+id-qc-statement=SEQUENCE:id-qc-statement
+qcs-QcType=SEQUENCE:qcs-QcType
+[etsiQcsCompliance]
+statementId=OID:0.4.0.1862.1.1
+[qcs-QcPDS]
+statementId=OID:0.4.0.1862.1.5
+QcPDS-List=SEQUENCE:QcPDS-List
+[QcPDS-List]
+QcPDS1=SEQUENCE:QcPDS1
+[QcPDS1]
+url=IA5STRING:https://test.ibm.de/
+description=PRINTABLESTRING:test
+
+[id-qc-statement]
+statementId=OID:0.4.0.19495.2
+statementInfo=SEQUENCE:id-qc-statement-Info
+[id-qc-statement-Info]
+rolesOfPSP=SEQUENCE:rolesOfPSP
+nCAName=UTF8String:CA Test Name
+nCAId=UTF8String:XX-DFSA
+[rolesOfPSP]
+PSP_AI=SEQUENCE:PSP_AI
+PSP_AS=SEQUENCE:PSP_AS
+PSP_PI=SEQUENCE:PSP_PI
+PSP_IC=SEQUENCE:PSP_IC
+[PSP_AI]
+roleOfPspOid=OID:0.4.0.19495.1.3
+roleOfPspName=UTF8String:PSP_AI
+[PSP_AS]
+roleOfPspOid=OID:0.4.0.19495.1.1
+roleOfPspName=UTF8String:PSP_AS
+[PSP_PI]
+roleOfPspOid=OID:0.4.0.19495.1.2
+roleOfPspName=UTF8String:PSP_PI
+[PSP_IC]
+roleOfPspOid=OID:0.4.0.19495.1.4
+roleOfPspName=UTF8String:PSP_IC
+[qcs-QcType]
+statementId=OID:0.4.0.1862.1.6
+statementInfo=SEQUENCE:qcs-QcType-Info
+[qcs-QcType-Info]
+qct-esign=OID:0.4.0.1862.1.6.1
+qct-eseal=OID:0.4.0.1862.1.6.2
+qct-web=OID:0.4.0.1862.1.6.3
+
+[profession_oids]
+admissionAuthority = EXPLICIT:4, SEQUENCE:authority_name_sect
+contentsOfAdmissions = SEQWRAP, SEQUENCE:admission0_sect
+
+[authority_name_sect]
+rdn.1 = SETWRAP, SEQUENCE:authority_dn_C_sect
+rdn.2 = SETWRAP, SEQUENCE:authority_dn_O_sect
+rdn.3 = SETWRAP, SEQUENCE:authority_dn_postal_sect
+
+[authority_dn_C_sect]
+oid = OID:2.5.4.6
+value = PRINTABLESTRING:DE
+
+[authority_dn_O_sect]
+oid = OID:2.5.4.10
+value = UTF8String:Firm Name
+
+[authority_dn_postal_sect]
+oid = OID:2.5.4.16
+value = SEQUENCE:authority_dn_postal_values
+
+[authority_dn_postal_values]
+0 = UTF8String:Street
+1 = UTF8String:Address
+2 = UTF8String:DE
+
+[admission0_sect]
+professionInfos = SEQUENCE:professionInfos_sect
+
+[professionInfos_sect]
+professionInfo.0 = SEQUENCE:professionInfo0_sect
+
+[professionInfo0_sect]
+professionItems = SEQUENCE:professionItems_sect
+professionOIDs=SEQUENCE:oid_sect
+
+[professionItems_sect]
+professionItem.0 = UTF8String:Arzt
+
+[oid_sect]
+one=OID:1.3.6.1.4.1.24796.4.11.1

@@ -29,8 +29,13 @@ public:
     /// @throws TslError                            if there are problems by certificate verification.
     /// @throws UnexpectedProfessionOidException    if certificate does not contain expected ProfessionOID
     /// @throws std::runtime_error                  if the signature verification fails.
-    /// In case TslManager is provided it is used to verify the signature, otherwise no verification is done.
-    CadesBesSignature(const std::string& base64Data, TslManager* tslManager);
+    CadesBesSignature(const std::string& base64Data,
+                      TslManager& tslManager,
+                      bool allowNonQesCertificate = false,
+                      const std::vector<std::string_view>& professionOids = {});
+
+    /// @brief initialize from a base64 encoded CMS file signature format. NO VERIFICATION IS DONE.
+    explicit CadesBesSignature(const std::string& base64Data);
 
     /// @brief initialize from a base64 encoded CMS file signature format. Verifies the incoming signature
     /// @throws std::runtime_error if the signature verification fails.
@@ -58,9 +63,10 @@ public:
     [[nodiscard]] ::std::optional<::std::string> getMessageDigest() const;
 
 private:
+    using CmsVerifyFunction = std::function<int(CMS_ContentInfo&, BIO&)>;
+
     void setSigningTime(const model::Timestamp& signingTime);
-    void internalInitialization(const std::string& base64Data,
-                                const std::function<int(CMS_ContentInfo&, BIO&)>& cmsVerifyFunction);
+    void internalInitialization(const std::string& base64Data, const CmsVerifyFunction& cmsVerifyFunction);
 
     std::string mPayload;
     shared_CMS_ContentInfo mCmsHandle;

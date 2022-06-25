@@ -5,6 +5,7 @@
 
 #include "erp/hsm/ErpTypes.hxx"
 
+#include "erp/database/DatabaseModel.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/TLog.hxx"
 
@@ -67,7 +68,7 @@ ErpBlob ErpBlob::fromCDump (const std::string_view base64)
     Expect(binary.size()-offset >= blobSize, "inconsistent size");
     blob.data = SafeString(SafeString::no_zero_fill, blobSize);
     const auto dataStart = binary.begin() + offset;
-    std::copy(dataStart, dataStart + blobSize, static_cast<char*>(blob.data));
+    std::copy(dataStart, dataStart + gsl::narrow<ptrdiff_t>(blobSize), static_cast<char*>(blob.data));
 
     return blob;
 }
@@ -135,6 +136,28 @@ ErpVector ErpVector::tail (size_t length) const
     Expect(length <= size(), "tail must not be longer than ErpVector");
     ErpVector result;
     result.reserve(length);
-    std::copy(end()-length, end(), std::back_inserter(result));
+    std::copy(end() - gsl::narrow<ptrdiff_t>(length), end(), std::back_inserter(result));
     return result;
+}
+
+ErpVector::ErpVector(const std::basic_string_view<std::byte>& blob)
+{
+    append(blob);
+}
+
+ErpVector::ErpVector(const db_model::Blob& blob)
+    : ErpVector(blob.binarystring())
+{
+}
+
+void ErpVector::append(const std::basic_string_view<std::byte>& blob)
+{
+    reserve(blob.size() + size());
+    insert(end(), reinterpret_cast<const uint8_t*>(blob.data()),
+           reinterpret_cast<const uint8_t*>(blob.data()) + blob.size());
+}
+
+void ErpVector::append(const db_model::Blob& blob)
+{
+    append(blob.binarystring());
 }

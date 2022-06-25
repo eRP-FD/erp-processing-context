@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(AuditEventTest, ConstructFromData)
+TEST(AuditEventTest, ConstructFromData)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string_view id = "auditevent_id";
     const std::string_view language = "de";
@@ -66,7 +66,7 @@ TEST(AuditEventTest, ConstructFromData)
 }
 
 
-TEST(AuditEventTest, ConstructFromJson)
+TEST(AuditEventTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string_view id = "01eb69a4-9029-d610-b1cf-ddb8c6c0bfbc";
     const std::string_view language = "de";

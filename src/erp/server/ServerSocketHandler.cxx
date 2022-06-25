@@ -4,10 +4,9 @@
 */
 
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/server/ErrorHandler.hxx"
 #include "erp/server/ServerSocketHandler.hxx"
-#include "erp/server/session/SynchronousServerSession.hxx"
+#include "erp/server/ServerSession.hxx"
 
 #include <boost/asio/strand.hpp>
 

@@ -11,7 +11,7 @@
 #include <cstdint>
 
 
-TEST(BufferTest, byteUnitMultiplesCalculation)
+TEST(BufferTest, byteUnitMultiplesCalculation)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_EQ(1_B, 1u);
     EXPECT_EQ(1_KB, 1024u);
@@ -38,7 +38,7 @@ TEST(BufferTest, concatenateBuffers)
     // Then
     EXPECT_EQ(c1c2c3, expected);
 
-    for (const auto& movedFromContainerItr : {c1, c2, c3}) // NOLINT(bugprone-use-after-move)
+    for (const auto& movedFromContainerItr : {c1, c2, c3}) // NOLINT(bugprone-use-after-move, hicpp-invalid-access-moved)
     {
         for (const auto& stringItr : movedFromContainerItr)
         {
@@ -79,14 +79,14 @@ TEST(BufferTest, rawToBufferToString)
     EXPECT_EQ(binary, buffer);
 
     // When
-    auto begin = util::bufferToRaw(buffer);
+    uint8_t* begin = util::bufferToRaw(buffer);
     std::vector<std::uint8_t> binaryAgain(begin, begin + buffer.size());
 
     // Then
     EXPECT_EQ(binaryAgain, buffer);
 
     // When
-    const auto cbegin = util::bufferToRaw((const util::Buffer&)buffer);
+    const uint8_t* const  cbegin = util::bufferToRaw((const util::Buffer&)buffer);
     std::vector<std::uint8_t> cbinaryAgain(cbegin, cbegin + buffer.size());
 
     // Then

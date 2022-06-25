@@ -12,27 +12,27 @@
 class HealthCheck
 {
 public:
-    static void update (SessionContext& session);
+    static void update (PcServiceContext& context);
 
 private:
-    static void checkBna             (SessionContext& session);
-    static void checkHsm             (SessionContext& session);
-    static void checkCFdSigErp       (SessionContext& session);
-    static void checkIdp             (SessionContext& session);
-    static void checkPostgres        (SessionContext& session);
-    static void checkRedis           (SessionContext& session);
-    static void checkSeedTimer       (SessionContext& session);
-    static void checkTeeTokenUpdater (SessionContext& session);
-    static void checkTsl             (SessionContext& session);
+    static void checkBna             (PcServiceContext& context);
+    static void checkHsm             (PcServiceContext& context);
+    static void checkCFdSigErp       (PcServiceContext& context);
+    static void checkIdp             (PcServiceContext& context);
+    static void checkPostgres        (PcServiceContext& context);
+    static void checkRedis           (PcServiceContext& context);
+    static void checkSeedTimer       (PcServiceContext& context);
+    static void checkTeeTokenUpdater (PcServiceContext& context);
+    static void checkTsl             (PcServiceContext& context);
 
     static void check (
         const ApplicationHealth::Service service,
-        SessionContext& session,
-        void (* checkAction)(SessionContext&));
+        PcServiceContext& context,
+        void (* checkAction)(PcServiceContext&));
 
     static void handleException(
         ApplicationHealth::Service service,
-        SessionContext& session);
+        PcServiceContext& context);
 };
 
 

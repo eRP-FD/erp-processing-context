@@ -20,7 +20,6 @@
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ResponseBuilder.hxx"
 #include "erp/server/response/ResponseValidator.hxx"
-#include "erp/server/session/SynchronousServerSession.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
@@ -135,7 +134,7 @@ void fillErrorResponse(ServerResponse& innerResponse,
 {
     ResponseBuilder(innerResponse).status(httpStatus).clearBody().keepAlive(false);
     bool callerWantsJson = false;
-    if(innerRequest.get())
+    if(innerRequest)
     {
         // Read wanted format from inner request if available, else use XML as general default;
         try
@@ -588,7 +587,7 @@ bool VauRequestHandler::checkProfessionOID(
     return true;
 }
 
-
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void VauRequestHandler::processException(const std::exception_ptr& exception,
                                          const std::unique_ptr<ServerRequest>& innerRequest,
                                          ServerResponse& innerResponse, PcSessionContext& outerSession)
@@ -721,7 +720,7 @@ CmacSignature VauRequestHandler::getPreUserPseudonym(
     else
     {
         auto pup = PreUserPseudonym::fromUserPseudonym(upParam);
-        auto [verified, preUserPseudonym] = PnPVerifier.verifyAndResign(pup.getSignature(), sub);
+        auto [verified, preUserPseudonym] = PnPVerifier.verifyAndReSign(pup.getSignature(), sub);
         if (! verified)
         {
             TVLOG(1) << "PNP verification failed";

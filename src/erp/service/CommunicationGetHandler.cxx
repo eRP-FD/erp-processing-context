@@ -86,7 +86,7 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     // Set up a DB query with filters that are based on path and query arguments of the request
-    auto database = session.database();
+    auto* database = session.database();
 
     A_19522.start("support sent, received, recipient and sender in searching and sorting");
     auto arguments = std::optional<UrlArguments>(
@@ -137,7 +137,7 @@ void CommunicationGetByIdHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     // Set up a DB query with filters that are based on path and query parameters of the request
-    auto database = session.database();
+    auto* database = session.database();
     const auto caller = getValidatedCaller(session);
     const auto communicationId = getValidatedCommunicationId(session);
 

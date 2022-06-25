@@ -13,7 +13,7 @@ using model::Extension;
 
 std::optional<bool> Extension::valueBoolean() const
 {
-    auto* value = getValue(rapidjson::Pointer{resource::ElementName::path(resource::elements::valueBoolean)});
+    const auto* value = getValue(rapidjson::Pointer{resource::ElementName::path(resource::elements::valueBoolean)});
     if (! value)
     {
         return std::nullopt;

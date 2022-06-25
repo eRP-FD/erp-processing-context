@@ -14,9 +14,11 @@ namespace model
 class KbvMedicationPzn : public KbvMedicationBase<KbvMedicationPzn, ResourceVersion::KbvItaErp>
 {
 public:
-    [[nodiscard]] const std::optional<std::string_view> amountNumeratorValueAsString() const;
+    [[nodiscard]] std::optional<std::string_view> amountNumeratorValueAsString() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorSystem() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorCode() const;
+    [[nodiscard]] std::string_view pzn() const;
+
 private:
     friend Resource<KbvMedicationPzn, ResourceVersion::KbvItaErp>;
     explicit KbvMedicationPzn(NumberAsStringParserDocument&& document);

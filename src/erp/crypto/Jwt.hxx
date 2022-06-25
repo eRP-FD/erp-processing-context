@@ -33,7 +33,7 @@ public:
      * Pass a JWT as expected (b64EncHeader.b64EncPayload.b64EncSignature). The claims are
      * initialized with the payload and can be queried afterwards.
      */
-    explicit JWT(const std::string& data);
+    explicit JWT(std::string jwt);
 
     JWT& operator=(JWT&& other) = default;
 

@@ -38,7 +38,7 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     checkFeatureWf200(*prescriptionType);
     model::Task task(*prescriptionType, accessCode);
 
-    auto databaseHandle = session.database();
+    auto* databaseHandle = session.database();
     const auto prescriptionId = databaseHandle->storeTask(task);
 
     // Note that the prescription ID is not yet permanently stored inside the encrypted task-bundle,

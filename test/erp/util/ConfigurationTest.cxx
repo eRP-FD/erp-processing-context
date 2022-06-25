@@ -22,7 +22,7 @@ public:
 
     std::unique_ptr<Configuration> createConfiguration() const
     {
-        return std::unique_ptr<Configuration>(new Configuration);
+        return std::make_unique<Configuration>();
     }
 
     using ScopedSetEnv = EnvironmentVariableGuard;
@@ -93,7 +93,7 @@ TEST_F(ConfigurationTest, getOptionalBoolValue)
 }
 
 
-TEST_F(ConfigurationTest, getArrayFromEnvironment)
+TEST_F(ConfigurationTest, getArrayFromEnvironment)//NOLINT(readability-function-cognitive-complexity)
 {
     ScopedSetEnv configFileEnv(ErpConstants::ConfigurationFileNameVariable,
                                ResourceManager::getAbsoluteFilename("test/configuration-emptyObject.json").string());
@@ -136,7 +136,7 @@ TEST_F(ConfigurationTest, getArrayFromFile)
     EXPECT_EQ(createConfiguration()->getArray(key), (std::vector<std::string>{"value1", "value2"}));
 }
 
-TEST_F(ConfigurationTest, levels)
+TEST_F(ConfigurationTest, levels)//NOLINT(readability-function-cognitive-complexity)
 {
     ScopedSetEnv configFileEnv(ErpConstants::ConfigurationFileNameVariable,
                                ResourceManager::getAbsoluteFilename("test/configuration-levels.json").string());

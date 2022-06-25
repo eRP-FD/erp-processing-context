@@ -25,7 +25,7 @@ public:
 
     void commitTransaction() override;
     void closeConnection() override;
-
+    bool isCommitted() const override;
     void healthCheck() override;
 
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
@@ -96,7 +96,6 @@ public:
                                             const model::Communication::MessageType messageType,
                                             const db_model::HashedId& sender,
                                             const db_model::HashedId& recipient,
-                                            const std::optional<model::Timestamp>& timeReceived,
                                             BlobId senderBlobId,
                                             const db_model::EncryptedBlob& messageForSender,
                                             BlobId recipientBlobId,
@@ -142,6 +141,9 @@ public:
     std::vector<db_model::ChargeItem>
     retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
                                       const std::optional<UrlArguments>& search) const override;
+
+    std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& Id) const override;
 
     std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
     retrieveChargeInformation(const model::PrescriptionId& id) const override;

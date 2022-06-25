@@ -113,7 +113,7 @@ public:
      *
      * @throws if there is any error
      */
-    ErpArray<Aes128Length> vauEcies128 (const ErpVector& clientPublicKey);
+    ErpArray<Aes128Length> vauEcies128 (const ErpVector& clientPublicKey, bool useFallback = false);
 
     std::tuple<shared_EVP_PKEY, ErpBlob> getVauSigPrivateKey(const shared_EVP_PKEY& cachedKey,
                                                              const ErpBlob& cachedBlob);

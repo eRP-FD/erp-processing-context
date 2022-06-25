@@ -9,37 +9,11 @@
 #include "erp/hsm/BlobDatabase.hxx"
 
 #include <functional>
+#include <map>
 #include <mutex>
 #include <optional>
-#include <unordered_map>
-#include <vector>
 #include <shared_mutex>
-
-
-/**
- * The CacheKey models the lookup of a blob via type and id.
- */
-struct CacheKey
-{
-    BlobType type;
-    BlobId id;
-    CacheKey (const BlobType type, const BlobId id);
-    bool operator== (const CacheKey& other) const;
-    size_t hash (void) const;
-};
-
-namespace std
-{
-    template <>
-    struct hash<CacheKey>
-    {
-        std::size_t operator() (const CacheKey& key) const
-        {
-            return key.hash();
-        }
-    };
-}
-
+#include <vector>
 
 /**
  * This cache is intended as the primary interface to access blobs in the blob database, either for hsm or
@@ -67,38 +41,30 @@ class BlobCache
 public:
     using Entry = BlobDatabase::Entry;
 
+    struct EciesKeys {
+        Entry latest;
+        ::std::optional<Entry> fallback;
+    };
 
-    explicit BlobCache (std::unique_ptr<BlobDatabase>&& db);
+    explicit BlobCache(std::unique_ptr<BlobDatabase>&& db);
     ~BlobCache();
-
-    /**
-     * Return the requested blob which is identified by type and blob id. Throws an exception if
-     * - there is no blob for the given type and id
-     * - the blob is not valid due to expiry, start or end date time.
-     *
-     * @throws if either the requested blob is neither in the cache nor in the database or if the blob exists but is
-     *  not valid yet or not anymore, due to optional time date metadata.
-     */
-    Entry getBlob (
-        BlobType type,
-        BlobId id);
 
     /**
      * Return the latest blob for the given type.
      */
-    Entry getBlob (
-        BlobType type);
-
-    Entry getBlob(BlobId id);
+    Entry getBlob(::BlobType type);
 
     /**
-     * Return an entry that contains the attestation key pair blob or throw an exception.
-     * The `isEnrolmentActive` flag tells the method whether it is allowed to create a new key pair, if it does not yet exist.
-     * That is only permitted to be done during the enrolment procedure.
+     * Return the requested blob which is identified by type and blob id. Throws an exception if
+     * there is no blob for the given type and id
+     *
+     * @throws if either the requested blob is neither in the cache nor in the database
      */
-    Entry getAttestationKeyPairBlob (
-        const std::function<ErpBlob()>& blobProvider,
-        const bool isEnrolmentActive);
+    Entry getBlob(::BlobType type, ::BlobId id);
+
+    Entry getBlob(::BlobId id);
+
+    EciesKeys getEciesKeys();
 
     /**
      * Return whether there are valid blobs for the given blob types.
@@ -107,43 +73,47 @@ public:
      * b) if it has an expiry date that must lie in the future
      * c) if it has a start/end time, the interval must include `now`.
      */
-    std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const;
+    std::vector<bool> hasValidBlobsOfType(std::vector<BlobType>&& blobTypes) const;
 
     /**
      * Store the given new entry first in the database and rebuild the cache.
      */
-    BlobId storeBlob (BlobDatabase::Entry&& entry);
+    BlobId storeBlob(BlobDatabase::Entry&& entry);
 
     /**
      * Delete the given new entry first in the database and rebuild the cache.
      */
-    void deleteBlob (
-        BlobType type,
-        const ErpVector& name);
+    void deleteBlob(BlobType type, const ErpVector& name);
 
     void setPcrHash(const ::ErpVector& pcrHash);
 
     void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);
 
 private:
-    mutable std::shared_mutex mDatabaseMutex;
-    std::unique_ptr<BlobDatabase> mDatabase;
+    mutable ::std::shared_mutex mDatabaseMutex{};
+    ::std::unique_ptr<BlobDatabase> mDatabase{};
     // shared_mutex to optimize for the much more frequent read-only calls.
-    mutable std::shared_mutex mMutex;
-    /// For the lookup per blob type and id.
-    std::unordered_map<CacheKey, Entry> mEntries;
-    /// For the lookup per blob type alone (references the newest blob of its type).
-    std::unordered_map<BlobType, std::reference_wrapper<Entry>> mNewestEntries;
-    ::ErpVector mPcrHash;
+    mutable std::shared_mutex mMutex{};
+    ::ErpVector mPcrHash{};
+    // For the lookup per blob type alone.
+    ::std::map<::BlobId, Entry> mEntriesById{};
+    // For the lookup per blob type.
+    ::std::multimap<::BlobType, ::std::reference_wrapper<Entry>> mEntriesByType{};
 
     class Refresher;
-    std::unique_ptr<Refresher> mRefresher;
+    std::unique_ptr<Refresher> mRefresher{};
 
-    void rebuildCache (void);
-    template<class KeyType, class ValueType>
-    BlobCache::Entry getBlob(const KeyType key, std::unordered_map<KeyType, ValueType>& map,
-                             const bool allowInvalidBlobs = false);
+    void rebuildCache(void);
+
+    using ValidityChecker = ::std::function<bool(const ::BlobCache::Entry& entry)>;
+
+    template<class Map, typename Key>
+    ::std::vector<::BlobCache::Entry> findBlobs(const Map& map, Key key, const ValidityChecker& validityChecker,
+                                                ::std::size_t count);
+
+    template<class Map, typename Key>
+    ::std::vector<::BlobCache::Entry> getBlobs(const Map& map, Key key, const ValidityChecker& validityChecker = {},
+                                               ::std::size_t count = 1);
 };
-
 
 #endif

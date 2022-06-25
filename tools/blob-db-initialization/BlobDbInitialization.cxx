@@ -4,7 +4,6 @@
  */
 
 #include "tools/blob-db-initialization/BlobDbInitialization.hxx"
-
 #include "erp/client/HttpsClient.hxx"
 #include "erp/common/Constants.hxx"
 #include "erp/erp-serverinfo.hxx"
@@ -16,16 +15,16 @@
 #include "mock/enrolment/MockEnrolmentManager.hxx"
 
 #include <date/date.h>
-#include <iostream>
-#include <filesystem>
-#include <unordered_set>
 #include <magic_enum.hpp>
+#include <filesystem>
+#include <iostream>
+#include <unordered_set>
 
 #include "tools/EnrolmentApiClient.hxx"
 
 class DummyBlobDatabase : public BlobDatabase
 {
-    void deleteBlob(BlobType, const ErpVector &) override
+    void deleteBlob(BlobType, const ErpVector&) override
     {
         Fail("DummyBlobDatabase::deleteBlob should not be called.");
     }
@@ -37,20 +36,20 @@ class DummyBlobDatabase : public BlobDatabase
     {
         Fail("DummyBlobDatabase::getBlob should not be called.");
     }
-    std::vector<bool> hasValidBlobsOfType(std::vector<BlobType> &&) const override
+    std::vector<bool> hasValidBlobsOfType(std::vector<BlobType>&&) const override
     {
         Fail("DummyBlobDatabase::hasValidBlobsOfType should not be called.");
     }
 
-    BlobId storeBlob(BlobDatabase::Entry &&) override
+    BlobId storeBlob(BlobDatabase::Entry&&) override
     {
         Fail("DummyBlobDatabase::storeBlob should not be called.");
     }
 };
 
-void usage (const char* argv0, const std::string message = "")
+void usage(const char* argv0, const std::string& message = "")
 {
-    if ( ! message.empty())
+    if (! message.empty())
         std::cerr << "ERROR: " << message << "\n\n";
 
     std::cout << "Usage: " << argv0 << " {options}+ {blob-type}+\n";
@@ -65,6 +64,7 @@ Options:
     -p|--port <port-number>               port number of the enrolment API, defaults to 9191
     -s|--static <directory>               directory that contains static data to upload
     -d|--delete                           delete a blob before a new one is stored
+    -a|--api-credentials                  credentials to access the enrolment API
     --dev                                 use static data for the DEV environment
     --ru                                  use static data for the RU environment
     -v|--version                          print the build version number
@@ -86,9 +86,9 @@ Blob types:
 )";
 
     if (message.empty())
-        exit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);// NOLINT(concurrency-mt-unsafe)
     else
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);// NOLINT(concurrency-mt-unsafe)
 }
 
 enum class TargetEnvironment
@@ -100,13 +100,14 @@ enum class TargetEnvironment
 struct CommandLineArguments
 {
     std::string certificateFilename;
-    std::string hostname;
     std::string staticDirectory;
     bool deleteBeforeStore = false;
-    uint16_t portnumber;
     std::unordered_set<BlobType> blobTypes;
     TargetEnvironment environment = TargetEnvironment::DEV;
-    bool hasBlobType (const BlobType type) const {return blobTypes.find(type)!=blobTypes.end();}
+    bool hasBlobType(const BlobType type) const
+    {
+        return blobTypes.find(type) != blobTypes.end();
+    }
 };
 
 
@@ -123,11 +124,11 @@ struct BlobDescriptor
 };
 
 static std::vector<BlobDescriptor> blobDescriptors = {
-    {BlobType::EndorsementKey,             "ek",     "knownEk",                    "trustedEKSaved.blob",      "trustedEKSaved.blob",          true,  false, false},
+    {BlobType::EndorsementKey,             "ek",     "knownEk",                    "trustedEKSaved.blob",      "trustedEKSaved.blob",          true, false, false },
     {BlobType::AttestationPublicKey,       "ak",     "knownAk",                    "AKPub.bin",                "AKPub.bin",                    true,  false, false},
     {BlobType::AttestationKeyPair,         "akpair", "knownAkKeyPair",             "",                         "",                             false, false, false},
     {BlobType::Quote,                      "quote",  "knownQuote",                 "trustedQuoteSaved.blob",   "trustedQuoteSaved.blob",       true,  false, false},
-    {BlobType::EciesKeypair,               "ecies",  "eciesKeypair",               "ECIESKeyPairSaved.blob",   "eciesKeyPairSaved.blob",       false, false, true },
+    {BlobType::EciesKeypair,               "ecies",  "eciesKeypair",               "ECIESKeyPairSaved.blob",   "eciesKeyPairSaved. blob",      false, false, true },
     {BlobType::TaskKeyDerivation,          "task",   "taskDerivationKey",          "StaticDerivationKey.blob", "taskDerivationKeySaved.blob",  false, false, false},
     {BlobType::CommunicationKeyDerivation, "comm",   "communicationDerivationKey", "StaticDerivationKey.blob", "commDerivationKeySaved.blob",  false, false, false},
     {BlobType::AuditLogKeyDerivation,      "audit",  "auditLogDerivationKey",      "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
@@ -136,14 +137,12 @@ static std::vector<BlobDescriptor> blobDescriptors = {
     {BlobType::VauSig,                     "vausig", "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false}};
 
 
-void expectArgument (const std::string name, const int index, const int argc, const char* argv[])
+void expectArgument(const std::string& name, const int index, const int argc, const char* argv[])
 {
-    if (index+1 >= argc)
+    if ((index + 1 >= argc) || (argv[index + 1] == nullptr) || (argv[index + 1][0] == '-'))
+    {
         usage(argv[0], "option " + name + " has no argument");
-    else if (argv[index+1] == nullptr)
-        usage(argv[0], "option " + name + " has no argument");
-    else if (argv[index+1][0] == '-')
-        usage(argv[0], "option " + name + " has no argument");
+    }
 }
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -151,13 +150,8 @@ CommandLineArguments processCommandLine(const int argc,
                                         const char* argv[])// NOLINT(readability-function-cognitive-complexity)
 {
     CommandLineArguments arguments;
-    arguments.hostname = Environment::get("ERP_SERVER_HOST").value_or("localhost");
-    auto portnumber = Environment::get("ERP_ENROLMENT_SERVER_PORT").value_or("9191");
-    size_t pos = 0;
-    arguments.portnumber = gsl::narrow<uint16_t>(std::stoi(portnumber, &pos));
-    Expect(pos == portnumber.size(), "Invalid portnumber: " + portnumber);
 
-    for (int index=1; index<argc; ++index)
+    for (int index = 1; index < argc; ++index)
     {
         if (argv[index] == nullptr)
             usage(argv[0], "invalid option");
@@ -173,12 +167,12 @@ CommandLineArguments processCommandLine(const int argc,
         else if (argument == "-h" || argument == "--host")
         {
             expectArgument("-h|--host", index, argc, argv);
-            arguments.hostname = argv[++index];
+            ::Environment::set("ERP_SERVER_HOST", argv[++index]);
         }
         else if (argument == "-p" || argument == "--port")
         {
             expectArgument("-p|--port", index, argc, argv);
-            arguments.portnumber = gsl::narrow<uint16_t>(std::stoi(argv[++index]));
+            ::Environment::set("ERP_ENROLMENT_SERVER_PORT", argv[++index]);
         }
         else if (argument == "-s" || argument == "--static")
         {
@@ -188,6 +182,11 @@ CommandLineArguments processCommandLine(const int argc,
         else if (argument == "-d" || argument == "--delete")
         {
             arguments.deleteBeforeStore = true;
+        }
+        else if (argument == "-a" || argument == "--api-credentials")
+        {
+            expectArgument("-a|--api-credentials", index, argc, argv);
+            ::Environment::set("ERP_ENROLMENT_API_CREDENTIALS", argv[++index]);
         }
         else if (argument == "--dev")
         {
@@ -204,48 +203,33 @@ CommandLineArguments processCommandLine(const int argc,
         }
         else if (argument[0] == '-')
         {
-            usage(argv[0], "unknown option "+argument);
+            usage(argv[0], "unknown option " + argument);
         }
         else
         {
             // Process blob type.
             if (argument == "all")
-                arguments.blobTypes.insert({
-                    BlobType::EndorsementKey,
-                    BlobType::AttestationPublicKey,
-                    BlobType::Quote,
-                    BlobType::EciesKeypair,
-                    BlobType::TaskKeyDerivation,
-                    BlobType::CommunicationKeyDerivation,
-                    BlobType::AuditLogKeyDerivation,
-                    BlobType::KvnrHashKey,
-                    BlobType::TelematikIdHashKey,
-                    BlobType::VauSig});
+                arguments.blobTypes.insert({BlobType::EndorsementKey, BlobType::AttestationPublicKey, BlobType::Quote,
+                                            BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
+                                            BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
+                                            BlobType::KvnrHashKey, BlobType::TelematikIdHashKey, BlobType::VauSig});
             else if (argument == "static")
-                arguments.blobTypes.insert({
-                    BlobType::EciesKeypair,
-                    BlobType::TaskKeyDerivation,
-                    BlobType::CommunicationKeyDerivation,
-                    BlobType::AuditLogKeyDerivation,
-                    BlobType::KvnrHashKey,
-                    BlobType::TelematikIdHashKey,
-                    BlobType::VauSig});
+                arguments.blobTypes.insert({BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
+                                            BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
+                                            BlobType::KvnrHashKey, BlobType::TelematikIdHashKey, BlobType::VauSig});
             else if (argument == "dynamic")
-                arguments.blobTypes.insert({
-                    BlobType::EndorsementKey,
-                    BlobType::AttestationPublicKey,
-                    BlobType::Quote});
+                arguments.blobTypes.insert({BlobType::EndorsementKey, BlobType::AttestationPublicKey, BlobType::Quote});
             else
             {
                 bool found = false;
                 for (const auto& descriptor : blobDescriptors)
-                    if (argument==descriptor.shortName || argument==descriptor.longName)
+                    if (argument == descriptor.shortName || argument == descriptor.longName)
                     {
                         arguments.blobTypes.insert(descriptor.type);
                         found = true;
                         break;
                     }
-                if ( ! found)
+                if (! found)
                     usage(argv[0], "unknown blob type " + argument);
             }
         }
@@ -258,7 +242,7 @@ CommandLineArguments processCommandLine(const int argc,
         else
         {
             arguments.certificateFilename = arguments.staticDirectory;
-            if ( ! String::ends_with(arguments.certificateFilename, "/"))
+            if (! String::ends_with(arguments.certificateFilename, "/"))
                 arguments.certificateFilename += "/";
             arguments.certificateFilename += "cacertecc.crt";
             std::cout << "using " << arguments.certificateFilename << " as certificate filename\n";
@@ -271,21 +255,19 @@ CommandLineArguments processCommandLine(const int argc,
 }
 
 
-const BlobDescriptor& getDescriptor (const BlobType type)
+const BlobDescriptor& getDescriptor(const BlobType type)
 {
-    return *std::find_if(
-        blobDescriptors.begin(),
-        blobDescriptors.end(),
-        [type](const auto& descriptor){return descriptor.type == type;});
+    return *std::find_if(blobDescriptors.begin(), blobDescriptors.end(), [type](const auto& descriptor) {
+        return descriptor.type == type;
+    });
 }
 
-struct StaticData
-{
+struct StaticData {
     ErpBlob blob;
     ::std::optional<::std::string> certificate;
 };
 
-StaticData readStaticData (const BlobDescriptor& descriptor, const CommandLineArguments& arguments)
+StaticData readStaticData(const BlobDescriptor& descriptor, const CommandLineArguments& arguments)
 {
     ::std::filesystem::path path = arguments.staticDirectory;
     // TODO: check if static blob types are to be uploaded and if directory is specified where the command line arguments are parsed.
@@ -293,19 +275,25 @@ StaticData readStaticData (const BlobDescriptor& descriptor, const CommandLineAr
         usage("", "directory for static data has not been specified");
     switch (arguments.environment)
     {
-        case TargetEnvironment::DEV: path /= descriptor.staticFilename;   break;
-        case TargetEnvironment::RU:  path /= descriptor.staticFilenameRu; break;
+        case TargetEnvironment::DEV:
+            path /= descriptor.staticFilename;
+            break;
+        case TargetEnvironment::RU:
+            path /= descriptor.staticFilenameRu;
+            break;
     }
 
-    Expect(::FileHelper::exists(path), "No blob file found for " + ::std::string{::magic_enum::enum_name(descriptor.type)} + " (expected " + path.string() +")");
+    Expect(::FileHelper::exists(path), "No blob file found for " +
+                                           ::std::string{::magic_enum::enum_name(descriptor.type)} + " (expected " +
+                                           path.string() + ")");
 
     StaticData result;
     result.blob = ErpBlob::fromCDump(Base64::encode(FileHelper::readFileAsString(path)));
-    if(descriptor.type == BlobType::VauSig)
+    if (descriptor.type == BlobType::VauSig)
     {
         path.replace_extension(".pem");
 
-        Expect(::FileHelper::exists(path), "No certificate file found for VauSig (expected " + path.string() +")");
+        Expect(::FileHelper::exists(path), "No certificate file found for VauSig (expected " + path.string() + ")");
 
         result.certificate = ::FileHelper::readFileAsString(path);
     }
@@ -493,16 +481,24 @@ int main(const int argc, const char* argv[])
     GLogConfiguration::init_logging(argv[0]);
     ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
 
+    if (! ::Environment::get("ERP_SERVER_HOST").has_value())
+    {
+        ::Environment::set("ERP_SERVER_HOST", "localhost");
+    }
+
+    if (! ::Environment::get("ERP_ENROLMENT_SERVER_PORT").has_value())
+    {
+        ::Environment::set("ERP_ENROLMENT_SERVER_PORT", "9191");
+    }
+
     const auto arguments = processCommandLine(argc, argv);
-    Environment::set("ERP_SERVER_HOST", arguments.hostname);
-    Environment::set("ERP_ENROLMENT_SERVER_PORT", std::to_string(arguments.portnumber));
 
     std::cerr << "will read certificate from " << arguments.certificateFilename
-              << " and write blobs via enrolment API at " << arguments.hostname << ":" << arguments.portnumber
-              << std::endl;
+              << " and write blobs via enrolment API at " << ::Configuration::instance().serverHost() << ":"
+              << ::Configuration::instance().getStringValue(::ConfigurationKey::ENROLMENT_SERVER_PORT) << ::std::endl;
 
 
-    BlobDbInitializationClient client{arguments.hostname, arguments.portnumber, ::gsl::narrow<uint16_t>(Constants::httpTimeoutInSeconds), false};
+    BlobDbInitializationClient client;
     client.enroll(arguments);
 
     return EXIT_SUCCESS;

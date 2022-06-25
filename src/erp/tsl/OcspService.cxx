@@ -54,7 +54,7 @@ namespace
         }
 
         // after this, id will be part of request, so it does no longer have to be freed
-        id.release();
+        id.release(); // NOLINT(bugprone-unused-return-value)
         return request;
     }
 
@@ -327,7 +327,7 @@ namespace
 
         // calculate hash of certificate
         unsigned char messageDigest[EVP_MAX_MD_SIZE];
-        unsigned int digestLength;
+        unsigned int digestLength{0};
         Expect(X509_digest(certificate.getX509ConstPtr(), digest, messageDigest, &digestLength) == 1
                     && gsl::narrow<int>(digestLength) == EVP_MD_size(digest),
                "OCSP response - cert hash extension - length of hash values not matching");
@@ -515,6 +515,14 @@ namespace
         return std::nullopt;
     }
 
+    OcspService::Status requestStatus(
+            OcspCertidPtr certId,
+            const X509Certificate& certificate,
+            const UrlRequestSender& requestSender,
+            const OcspUrl& ocspUrl,
+            TrustStore& trustStore,
+            const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
+            const bool validateHashExtension);
 
     /**
      * Gets the OCSP status of a certificate.
@@ -576,6 +584,20 @@ namespace
             }
         }
 
+        return requestStatus(std::move(certId), certificate, requestSender, ocspUrl, trustStore, ocspSignerCertificates,
+                             validateHashExtension);
+
+    }
+
+    OcspService::Status requestStatus(
+            OcspCertidPtr certId,
+            const X509Certificate& certificate,
+            const UrlRequestSender& requestSender,
+            const OcspUrl& ocspUrl,
+            TrustStore& trustStore,
+            const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
+            const bool validateHashExtension)
+    {
         OcspRequestPtr request = createOcspRequest(certId);
 
         VLOG(2) << "Sending new OCSP request with URL: " << ocspUrl.url;

@@ -78,7 +78,7 @@ public:
     shared_EVP_PKEY mIdpPrivateKey;
 };
 
-TEST_F(JwtTest, ValidVerification)
+TEST_F(JwtTest, ValidVerification)//NOLINT(readability-function-cognitive-complexity)
 {
     std::unique_ptr<JWT> jwt = nullptr;
     ASSERT_NO_THROW(jwt = std::make_unique<JWT>(mHeader + "." + mPayload + "." + mSignature));
@@ -86,7 +86,7 @@ TEST_F(JwtTest, ValidVerification)
     ASSERT_NO_THROW(jwt->verifySignature(mIdpPublicKey));
 }
 
-TEST_F(JwtTest, InvalidSignatureVerification)
+TEST_F(JwtTest, InvalidSignatureVerification)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19131.test("Unit test for VauRequestHandler::verify");
     std::unique_ptr<JWT> jwt = nullptr;
@@ -96,7 +96,7 @@ TEST_F(JwtTest, InvalidSignatureVerification)
     ASSERT_THROW(jwt->verifySignature(mIdpPublicKey), JwtInvalidSignatureException);
 }
 
-TEST_F(JwtTest, MissingSignatureVerification)
+TEST_F(JwtTest, MissingSignatureVerification)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19131.test("Unit test for VauRequestHandler::verify");
     std::unique_ptr<JWT> jwt = nullptr;
@@ -104,7 +104,7 @@ TEST_F(JwtTest, MissingSignatureVerification)
     ASSERT_THROW(jwt->verifySignature(mIdpPublicKey), JwtInvalidSignatureException);
 }
 
-TEST_F(JwtTest, TamperedPayloadVerification)
+TEST_F(JwtTest, TamperedPayloadVerification)//NOLINT(readability-function-cognitive-complexity)
 {
     std::unique_ptr<JWT> jwt = nullptr;
     ASSERT_NO_THROW(jwt = std::make_unique<JWT>(mHeader + "." + mTamperedPayload + "." + mSignature));
@@ -122,7 +122,7 @@ TEST_F(JwtTest, DefaultConstructor)
     A_19993.finish();
 }
 
-TEST_F(JwtTest, HeaderChecks)
+TEST_F(JwtTest, HeaderChecks)//NOLINT(readability-function-cognitive-complexity)
 {
     A_20362.test("Check for the two periods in a JWT.");
 
@@ -150,7 +150,7 @@ TEST_F(JwtTest, HeaderChecks)
     A_20362.finish();
 }
 
-TEST_F(JwtTest, KnownStringClaim)
+TEST_F(JwtTest, KnownStringClaim)//NOLINT(readability-function-cognitive-complexity)
 {
     std::unique_ptr<JWT> jwt = nullptr;
     ASSERT_NO_THROW(jwt = std::make_unique<JWT>(mHeader + "." + mPayload + "." + mSignature));
@@ -171,7 +171,7 @@ TEST_F(JwtTest, UnknownStringClaim)
     ASSERT_EQ(jwt->stringForClaim("___"), std::optional<std::string>{});
 }
 
-TEST_F(JwtTest, RequiredClaimsAvailable)
+TEST_F(JwtTest, RequiredClaimsAvailable)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -187,7 +187,7 @@ TEST_F(JwtTest, RequiredClaimsAvailable)
     A_20368.finish();
 }
 
-TEST_F(JwtTest, MissingRequiredClaim)
+TEST_F(JwtTest, MissingRequiredClaim)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -205,7 +205,7 @@ TEST_F(JwtTest, MissingRequiredClaim)
     A_20368.finish();
 }
 
-TEST_F(JwtTest, MissingOptionalClaims)
+TEST_F(JwtTest, MissingOptionalClaims)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_arzt.json");
 
@@ -230,7 +230,7 @@ TEST_F(JwtTest, InvalidJsonPayload)
     ASSERT_THROW(JWT (mHeader + "." + Base64::encode(" a : b }") + "." + mSignature), JwtInvalidFormatException);
 }
 
-TEST_F(JwtTest, ExpiredChecksIat)
+TEST_F(JwtTest, ExpiredChecksIat)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -253,7 +253,7 @@ TEST_F(JwtTest, ExpiredChecksIat)
     ASSERT_NO_THROW(jwt.verify(mIdpPublicKey));
 }
 
-TEST_F(JwtTest, NotExpired)
+TEST_F(JwtTest, NotExpired)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -273,7 +273,7 @@ TEST_F(JwtTest, NotExpired)
     ASSERT_NO_THROW(jwt.verify(mIdpPublicKey));
 }
 
-TEST_F(JwtTest, IssuedAtInFuture)
+TEST_F(JwtTest, IssuedAtInFuture)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -294,7 +294,7 @@ TEST_F(JwtTest, IssuedAtInFuture)
     ASSERT_THROW(jwt.verify(mIdpPublicKey), JwtExpiredException);
 }
 
-TEST_F(JwtTest, IssuedAtMaxAge)
+TEST_F(JwtTest, IssuedAtMaxAge)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -315,7 +315,7 @@ TEST_F(JwtTest, IssuedAtMaxAge)
     ASSERT_NO_THROW(jwt.verify(mIdpPublicKey));
 }
 
-TEST_F(JwtTest, IssuedAtToleranceExceed)
+TEST_F(JwtTest, IssuedAtToleranceExceed)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -336,7 +336,7 @@ TEST_F(JwtTest, IssuedAtToleranceExceed)
     ASSERT_THROW(jwt.verify(mIdpPublicKey), JwtExpiredException);
 }
 
-TEST_F(JwtTest, MaxAgeExceedWithNbf)
+TEST_F(JwtTest, MaxAgeExceedWithNbf)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -361,7 +361,7 @@ TEST_F(JwtTest, MaxAgeExceedWithNbf)
     A_20374.finish();
 }
 
-TEST_F(JwtTest, InvalidClaimsTypes)
+TEST_F(JwtTest, InvalidClaimsTypes)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -385,7 +385,7 @@ TEST_F(JwtTest, InvalidClaimsTypes)
     A_20370.finish();
 }
 
-TEST(JwtRoundtripTest, success)
+TEST(JwtRoundtripTest, success)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_arzt.json");
     rapidjson::Document claim;
@@ -400,7 +400,7 @@ TEST(JwtRoundtripTest, success)
     }
 }
 
-TEST_F(JwtTest, ForceMissingRequiredTimingClaim_exp)
+TEST_F(JwtTest, ForceMissingRequiredTimingClaim_exp)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -427,7 +427,7 @@ TEST_F(JwtTest, ForceMissingRequiredTimingClaim_exp)
     ASSERT_THROW(jwt.checkRequiredClaims(), JwtRequiredClaimException);
 }
 
-TEST_F(JwtTest, ForceMissingRequiredTimingClaim_iat)
+TEST_F(JwtTest, ForceMissingRequiredTimingClaim_iat)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -457,7 +457,7 @@ TEST_F(JwtTest, ForceMissingRequiredTimingClaim_iat)
     ASSERT_THROW(jwt.checkRequiredClaims(), JwtRequiredClaimException);
 }
 
-TEST_F(JwtTest, ConstructorChecks)
+TEST_F(JwtTest, ConstructorChecks)//NOLINT(readability-function-cognitive-complexity)
 {
     // Basic  constructor checks.
     EXPECT_NO_THROW(JWT());
@@ -511,7 +511,7 @@ TEST_F(JwtTest, ConstructorChecks)
     }
 }
 
-TEST_F(JwtTest, CheckAudClaim)
+TEST_F(JwtTest, CheckAudClaim)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -529,7 +529,7 @@ TEST_F(JwtTest, CheckAudClaim)
     A_21520.finish();
 }
 
-TEST_F(JwtTest, OptionalClaimsForNonInsurant)
+TEST_F(JwtTest, OptionalClaimsForNonInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto idpPublicKey = MockCryptography::getIdpPublicKey();
     JwtBuilder builder{mIdpPrivateKey};

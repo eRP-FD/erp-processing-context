@@ -11,10 +11,10 @@
 #include "erp/util/OpenSsl.hxx"
 
 
-std::vector<char> Hash::sha1 (gsl::span<const char> span)
+std::vector<char> Hash::sha1 (gsl::span<const char> source)
 {
     std::vector<char> result(SHA_DIGEST_LENGTH);
-    SHA1(reinterpret_cast<const unsigned char*>(span.data()), span.size_bytes(),
+    SHA1(reinterpret_cast<const unsigned char*>(source.data()), source.size_bytes(),
          reinterpret_cast<unsigned char*>(result.data()));
     return result;
 }
@@ -29,10 +29,10 @@ util::Buffer Hash::sha1 (const util::Buffer& data)
 }
 
 
-std::vector<char> Hash::sha256 (gsl::span<const char> span)
+std::vector<char> Hash::sha256 (gsl::span<const char> source)
 {
     std::vector<char> result(SHA256_DIGEST_LENGTH);
-    SHA256(reinterpret_cast<const unsigned char*>(span.data()), span.size_bytes(),
+    SHA256(reinterpret_cast<const unsigned char*>(source.data()), source.size_bytes(),
            reinterpret_cast<unsigned char*>(result.data()));
     return result;
 }
@@ -41,7 +41,7 @@ std::vector<char> Hash::sha256 (gsl::span<const char> span)
 std::string Hash::sha256 (const std::string& data)
 {
     const auto hash = sha256(gsl::span<const char>(data));
-    return std::string(hash.data(), hash.size());
+    return {hash.data(), hash.size()};
 }
 
 

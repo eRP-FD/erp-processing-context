@@ -95,7 +95,7 @@ std::ostream& operator << (std::ostream& out, const TestSample& sample)
 
 class ZStdSampleTest : public ::testing::TestWithParam<TestSample> {};
 
-TEST_P(ZStdSampleTest, roundTrip)
+TEST_P(ZStdSampleTest, roundTrip)//NOLINT(readability-function-cognitive-complexity)
 {
     auto dir = Configuration::instance().getStringValue(ConfigurationKey::ZSTD_DICTIONARY_DIR);
     ZStd compressor{dir};

@@ -20,6 +20,7 @@
 #include "erp/hsm/KeyDerivation.hxx"
 #include "erp/model/AuditData.hxx"
 #include "erp/model/Binary.hxx"
+#include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/Timestamp.hxx"
@@ -33,12 +34,15 @@ class Database;
 class MockDatabase : public DatabaseBackend
 {
 public:
+    static constexpr std::string_view mockAccessCode = "b79e5bca8b072113f08c43ce22aa1dded4db61ef21571b37911b6dfc852004f6";
+
     static std::unique_ptr<Database> createMockDatabase(HsmPool& hsmPool, KeyDerivation& keyDerivation);
 
     explicit MockDatabase(HsmPool& hsmPool);
 
     void commitTransaction() override;
     void closeConnection() override;
+    bool isCommitted() const override;
 
     void healthCheck() override;
 
@@ -119,7 +123,6 @@ public:
                                             const model::Communication::MessageType messageType,
                                             const db_model::HashedId& sender,
                                             const db_model::HashedId& recipient,
-                                            const std::optional<model::Timestamp>& timeReceived,
                                             BlobId senderBlobId,
                                             const db_model::EncryptedBlob& messageForSender,
                                             BlobId recipientBlobId,
@@ -136,7 +139,7 @@ public:
     /**
       * Checks whether a communication object with the given `communicationId` exists in the database.
       */
-    virtual bool existCommunication(const Uuid& communicationId) override;
+    bool existCommunication(const Uuid& communicationId) override;
     /**
      * Retrieve all communication objects to or from the given `user` (insurant or pharmacy) with
      * an optional filter on `communicationId` (for getById) and an optional `search` object (for getAll).
@@ -179,14 +182,14 @@ public:
     void deleteAuditEvent(const Uuid& eventId);
     void deleteAuditEventDataForTask (const model::PrescriptionId& taskId);
 
-   [[nodiscard]]
-    virtual std::optional<db_model::Blob> retrieveSaltForAccount(const db_model::HashedId& accountId,
-                                                                 db_model::MasterKeyType masterKeyType,
-                                                                 BlobId blobId) override;
+    [[nodiscard]]
+    std::optional<db_model::Blob> retrieveSaltForAccount(const db_model::HashedId& accountId,
+                                                         db_model::MasterKeyType masterKeyType,
+                                                         BlobId blobId) override;
 
     /// @returns true if the salt has actually been inserted
     [[nodiscard]]
-    virtual std::optional<db_model::Blob>
+    std::optional<db_model::Blob>
     insertOrReturnAccountSalt(const db_model::HashedId& accountId,
                               db_model::MasterKeyType masterKeyType,
                               BlobId blobId,
@@ -209,6 +212,9 @@ public:
     retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
                                       const std::optional<UrlArguments>& search) const override;
 
+    std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& Id) const override;
+    
     std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
     retrieveChargeInformation(const model::PrescriptionId & id) const override;
     std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>

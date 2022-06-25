@@ -13,7 +13,7 @@
 #include "erp/util/TLog.hxx"
 
 
-TEST(ThreadPoolTest, runOnAllThreads)
+TEST(ThreadPoolTest, runOnAllThreads)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr size_t workers = 10;
     ThreadPool threadPool;

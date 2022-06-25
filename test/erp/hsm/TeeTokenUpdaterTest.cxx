@@ -21,7 +21,7 @@ class TeeTokenUpdaterTest : public testing::Test,
                             public HsmTestBase
 {
 public:
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         setupHsmTest();
     }

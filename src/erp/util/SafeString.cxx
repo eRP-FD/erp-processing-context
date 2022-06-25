@@ -33,6 +33,11 @@ SafeString::SafeString(char* value, size_t size)
     OPENSSL_cleanse(value, size);
 }
 
+SafeString::SafeString(std::byte* value, size_t size)
+    : SafeString(reinterpret_cast<char*>(value), size)
+{
+}
+
 SafeString::SafeString(unsigned char* value, size_t size)
     : SafeString(reinterpret_cast<char*>(value), size)
 {}
@@ -98,6 +103,12 @@ SafeString::operator std::string_view (void) const
     return { mValue.get(), mStringLength };
 }
 
+SafeString::operator std::basic_string_view<std::byte>(void) const
+{
+    checkForTerminatingZero();
+    return {reinterpret_cast<const std::byte*>(mValue.get()), mStringLength };
+}
+
 SafeString::operator gsl::span<const char> (void) const
 {
     checkForTerminatingZero();
@@ -108,6 +119,12 @@ SafeString::operator char* (void)
 {
     checkForTerminatingZero();
     return mValue.get();
+}
+
+SafeString::operator std::byte*(void)
+{
+    checkForTerminatingZero();
+    return reinterpret_cast<std::byte*>(mValue.get());
 }
 
 size_t SafeString::size (void) const

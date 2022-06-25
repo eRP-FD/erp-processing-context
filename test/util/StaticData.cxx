@@ -11,6 +11,7 @@
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/TestConfiguration.hxx"
+#include "mock/tsl/MockTslManager.hxx"
 
 
 const Certificate StaticData::idpCertificate = Certificate::fromPem(R"(-----BEGIN CERTIFICATE-----
@@ -53,9 +54,7 @@ Factories StaticData::makeMockFactories()
     };
     factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
 
-    factories.tslManagerFactory = [](auto) {
-        return std::shared_ptr<TslManager>{nullptr};
-    };
+    factories.tslManagerFactory = MockTslManager::createMockTslManager;
 
     factories.redisClientFactory = [] {
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)

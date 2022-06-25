@@ -73,6 +73,7 @@ protected:
             The order in which the medication dispenses is returned is unpredictable.
             They will be sorted according to their ids.
     */
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void insertTasks(
         const std::vector<std::tuple<std::string, std::string, std::optional<Timestamp>>>& patientsPharmaciesMedicationWhenPrepared,
         std::set<std::string>& patients,
@@ -145,6 +146,7 @@ protected:
         }
     }
 
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void sendRequest(
         HttpsClient& client,
         const std::string& kvnrPatient,
@@ -165,7 +167,7 @@ protected:
         {
             path += "?";
             size_t idx = 0;
-            for (std::string filter : *filters)
+            for (const std::string& filter : *filters)
             {
                 path += filter;
                 if (idx < (filters->size() - 1))
@@ -187,7 +189,7 @@ protected:
             }
             path += "_sort=";
             size_t idx = 0;
-            for (std::string sort : *sortings)
+            for (const std::string& sort : *sortings)
             {
                 path += sort;
                 if (idx < (sortings->size() - 1))
@@ -223,7 +225,7 @@ protected:
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
         auto innerResponse = verifyOuterResponse(outerResponse);
-        std::string responseBody = innerResponse.getBody();
+        const std::string& responseBody = innerResponse.getBody();
         ASSERT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, expectedHttpStatus));
 
         if (expectedHttpStatus == HttpStatus::OK)
@@ -307,7 +309,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
     checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
 }
 
-TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)
+TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
 {
     // Insert task into database
     //--------------------------
@@ -505,7 +507,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
     }
 }
 
-TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
 {
     // Insert tasks into database
     //---------------------------
@@ -588,7 +590,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
 
     {
         std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyA;
+        const std::string& pharmacy = pharmacyA;
         std::vector<std::string> filters = { "performer=" + pharmacy };
         size_t expectedCount = 2 * GetParam();
         std::vector<MedicationDispense> medicationDispenses;
@@ -599,7 +601,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
 
     {
         std::string kvnrPatient = InsurantC;
-        std::string pharmacy = pharmacyA;
+        const std::string& pharmacy = pharmacyA;
         std::vector<std::string> filters = { "performer=" + pharmacy };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
@@ -609,7 +611,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
 
     {
         std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyB;
+        const std::string& pharmacy = pharmacyB;
         std::vector<std::string> filters = { "performer=" + pharmacy };
         size_t expectedCount = GetParam();
         std::vector<MedicationDispense> medicationDispenses;
@@ -620,7 +622,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
 
     {
         std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyA;
+        const std::string& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
@@ -654,7 +656,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)
     }
 }
 
-TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
+TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
 {
     // Insert tasks into database
     //---------------------------
@@ -666,27 +668,27 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
 
     for (size_t idxPatient = 0; idxPatient < 70; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantA, pharmacyA, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 10; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantA, pharmacyB, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 15; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantB, pharmacyA, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 55; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantB, pharmacyB, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantC, pharmacyA, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.push_back(std::make_tuple(InsurantC, pharmacyB, Timestamp::now()));
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyB, Timestamp::now());
     }
 
     std::set<std::string> patients;
@@ -710,7 +712,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
 
     {
         std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyA;
+        const std::string& pharmacy = pharmacyA;
 
         size_t expectedCountAll = 0;
 
@@ -751,7 +753,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
             // ASSERT to avoid endless loop if less than expected count is returned.
             ASSERT_EQ(medicationDispenses.size(), expectedCount);
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-            if (medicationDispenses.size() > 0 )
+            if (!medicationDispenses.empty())
             {
                 for (size_t idx = 0; idx < medicationDispenses.size()-1; ++idx)
                 {
@@ -768,7 +770,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
     for (const std::string& kvnrPatient : patients)
     {
         // whenhandedover is in the future
-        std::string pharmacy = pharmacyA;
+        const std::string& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
@@ -786,7 +788,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)
     for (const std::string& kvnrPatient : patients)
     {
         // whenprepared is in the future
-        std::string pharmacy = pharmacyA;
+        const std::string& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);

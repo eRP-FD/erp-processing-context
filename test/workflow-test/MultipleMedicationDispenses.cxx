@@ -29,7 +29,7 @@ public:
         createClosedTaskInternal(prescriptionId, kvnr);
         return *prescriptionId;
     }
-    void createClosedTaskInternal(std::optional<model::PrescriptionId>& prescriptionId, const std::string& kvnr)
+    void createClosedTaskInternal(std::optional<model::PrescriptionId>& prescriptionId, const std::string& kvnr)//NOLINT(readability-function-cognitive-complexity)
     {
         std::string accessCode;
         ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam().mPrescriptionType));
@@ -49,7 +49,7 @@ public:
     }
 };
 
-TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)
+TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Timestamp startTime = model::Timestamp::now();
     auto kvnr = generateNewRandomKVNR();
@@ -78,7 +78,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)
         ASSERT_EQ(med->kvnr(), kvnr);
         actorIdentifiers.push_back(kvnr);
         expectedActions.push_back(model::AuditEvent::SubType::read);
-        prescriptionIds.push_back(task1);
+        prescriptionIds.emplace_back(task1);
     }
     auto noMed =
         medicationDispenseGet(kvnr, model::MedicationDispenseId(task1, GetParam().numMedicationDispenses).toString());
@@ -98,7 +98,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)
         }
         actorIdentifiers.push_back(kvnr);
         expectedActions.push_back(model::AuditEvent::SubType::read);
-        prescriptionIds.push_back({});
+        prescriptionIds.emplace_back(std::nullopt);
     }
 
     // GET MedicationDispense/?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
@@ -117,13 +117,13 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)
         }
         actorIdentifiers.push_back(kvnr);
         expectedActions.push_back(model::AuditEvent::SubType::read);
-        prescriptionIds.push_back(task1);
+        prescriptionIds.emplace_back(task1);
     }
 
     checkAuditEvents(prescriptionIds, kvnr, "de", startTime, actorIdentifiers, {0, 2, 3, 4, 5}, expectedActions);
 }
 
-TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)
+TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//NOLINT(readability-function-cognitive-complexity)
 {
     auto kvnr = generateNewRandomKVNR();
     auto task1 = createClosedTask(kvnr);
@@ -221,7 +221,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)
     }
 }
 
-TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsNextPageLink)
+TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsNextPageLink)//NOLINT(readability-function-cognitive-complexity)
 {
     auto kvnr = generateNewRandomKVNR();
     std::vector<model::PrescriptionId> tasks;

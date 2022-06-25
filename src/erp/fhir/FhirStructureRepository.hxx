@@ -52,11 +52,11 @@ public:
         const FhirStructureDefinition& baseType;
         const FhirStructureDefinition& elementType;
         const size_t elementIndex;
-        const FhirElement& element;
+        const std::shared_ptr<const FhirElement> element;
     };
 
     [[nodiscard]]
-    ContentReferenceResolution resolveContentReference(const std::string_view& contentReference) const;
+    ContentReferenceResolution resolveContentReference(const FhirElement& element) const;
 
 private:
     class Verifier;

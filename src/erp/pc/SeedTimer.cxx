@@ -7,12 +7,11 @@
 #include "erp/util/TLog.hxx"
 
 
-SeedTimer::SeedTimer(ThreadPool& pool, HsmPool& hsmPool, size_t threadCount,
+SeedTimer::SeedTimer(ThreadPool& pool, HsmPool& hsmPool,
                      std::chrono::steady_clock::duration interval,
                      SeedTimer::AddEntropyFunction addEntropy)
     : PeriodicTimer(interval)
     , mThreadPool(pool)
-    , mThreadCount(threadCount)
     , mSeeder(hsmPool)
     , mAddEntropy(std::move(addEntropy))
     , mInterval(interval)

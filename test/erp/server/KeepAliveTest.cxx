@@ -1,23 +1,27 @@
+/*
+* (C) Copyright IBM Deutschland GmbH 2022
+* (C) Copyright IBM Corp. 2022
+*/
+
 #include "erp/server/handler/RequestHandlerInterface.hxx"
-#include "erp/server/session/SynchronousServerSession.hxx"
 #include "test/util/ServerTestBase.hxx"
 
-#include <erp/service/Operation.hxx>
+#include "erp/service/Operation.hxx"
 
 
 namespace {
     class ErrorHandler : public RequestHandlerInterface
     {
     public:
-        virtual void handleRequest (SessionContext&) override
+        void handleRequest (SessionContext&) override
         {
             throw std::runtime_error("simulated error in request handler implementation");
         }
-        [[nodiscard]] virtual bool allowedForProfessionOID(std::string_view) const override
+        [[nodiscard]] bool allowedForProfessionOID(std::string_view) const override
         {
             return true;
         }
-        virtual Operation getOperation (void) const override
+        Operation getOperation (void) const override
         {
             return Operation::GET_Device;
         }
@@ -35,7 +39,7 @@ public:
     {
     }
 
-    virtual void addAdditionalPrimaryHandlers (RequestHandlerManager& manager) override
+    void addAdditionalPrimaryHandlers (RequestHandlerManager& manager) override
     {
         manager.addRequestHandler(
                 HttpMethod::GET,
@@ -161,7 +165,7 @@ TEST_F(KeepAliveTest, manyRequests_noKeepAlive)
     EnvironmentVariableGuard isKeepAliveSupported ("ERP_SERVER_KEEP_ALIVE", "FALSE");
 
     std::chrono::steady_clock::duration totalDuration;
-    std::array<size_t,manyRequestCount> durations;
+    std::array<size_t,manyRequestCount> durations{};
 
     for (size_t index=0; index<manyRequestCount; ++index)
     {
@@ -177,7 +181,7 @@ TEST_F(KeepAliveTest, manyRequests_noKeepAlive)
         totalDuration += end-start;
         durations[index] = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
 
-        TVLOG(1) << "request on client side took " << durations[index]/1.e3 << "ms to complete";
+        TVLOG(1) << "request on client side took " << static_cast<double>(durations[index])/1.e3 << "ms to complete";
     }
 
     std::sort(durations.begin(), durations.end());
@@ -186,8 +190,8 @@ TEST_F(KeepAliveTest, manyRequests_noKeepAlive)
         totalMicroSeconds += durations[index];
 
     TVLOG(0) << "\n\n" << (manyRequestCount-20) << " requests took a total of "
-            << totalMicroSeconds/1e6
-            << " s, which is " << (totalMicroSeconds/1000)/1e3
+            << gsl::narrow<double>(totalMicroSeconds)/1e6
+            << " s, which is " << gsl::narrow<double>(totalMicroSeconds/1000)/1e3
             << "ms per request";
     TVLOG(0) << "smallest value is " << durations[0] << ", greatest value is " << durations[manyRequestCount-1];
 }
@@ -204,7 +208,7 @@ TEST_F(KeepAliveTest, manyRequests_keepAlive)
 
     auto client = createClient();
     std::chrono::steady_clock::duration totalDuration;
-    std::array<size_t,manyRequestCount> durations;
+    std::array<size_t,manyRequestCount> durations{};
 
     for (size_t index=0; index<manyRequestCount; ++index)
     {
@@ -219,7 +223,7 @@ TEST_F(KeepAliveTest, manyRequests_keepAlive)
         totalDuration += end-start;
         durations[index] = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
 
-        TVLOG(1) << "request on client side took " << durations[index]/1.e3 << "ms to complete";
+        TVLOG(1) << "request on client side took " << gsl::narrow<double>(durations[index])/1.e3 << "ms to complete";
     }
 
     std::sort(durations.begin(), durations.end());
@@ -228,8 +232,8 @@ TEST_F(KeepAliveTest, manyRequests_keepAlive)
         totalMicroSeconds += durations[index];
 
     TVLOG(0) << "\n\n" << (manyRequestCount-20) << " requests took a total of "
-            << totalMicroSeconds/1e6
-            << " s, which is " << (totalMicroSeconds/1000)/1e3
+            << gsl::narrow<double>(totalMicroSeconds)/1e6
+            << " s, which is " << gsl::narrow<double>(totalMicroSeconds/1000)/1e3
             << "ms per request";
     TVLOG(0) << "smallest value is " << durations[0] << ", greatest value is " << durations[manyRequestCount-1];
 }

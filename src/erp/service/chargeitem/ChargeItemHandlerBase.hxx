@@ -10,6 +10,12 @@
 #include "erp/service/ErpRequestHandler.hxx"
 
 
+namespace model
+{
+class ChargeItem;
+}
+
+
 class ChargeItemHandlerBase : public ErpRequestHandler
 {
 public:
@@ -25,6 +31,13 @@ protected:
         const ServerRequest& request,
         AccessLog& accessLog,
         const std::string& paramName = "id");
+
+    static void verifyPharmacyAccessCode(
+        const ServerRequest& request,
+        const model::ChargeItem& chargeItem,
+        bool tryHttpHeader = false);
+
+    static std::string createPharmacyAccessCode();
 };
 
 

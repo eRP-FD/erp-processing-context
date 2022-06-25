@@ -14,7 +14,7 @@
 
 using namespace std::string_view_literals;
 
-TEST(ZStdDictionaryTest, dictionaryIds)
+TEST(ZStdDictionaryTest, dictionaryIds)//NOLINT(readability-function-cognitive-complexity)
 {
     using DictionaryUse = Compression::DictionaryUse;
     for (auto dictUse : {DictionaryUse::Default_json, DictionaryUse::Default_xml})

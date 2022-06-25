@@ -4,10 +4,10 @@
  */
 
 #include "mock/enrolment/MockEnrolmentManager.hxx"
-
 #include "erp/hsm/HsmIdentity.hxx"
 #include "erp/util/Hash.hxx"
 
+#include "TpmProxyApi.hxx"
 #include "mock_config.h"
 
 void MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob (

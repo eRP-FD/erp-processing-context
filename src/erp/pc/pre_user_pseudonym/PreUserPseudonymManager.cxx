@@ -15,6 +15,9 @@
 std::unique_ptr<PreUserPseudonymManager> PreUserPseudonymManager::create(PcServiceContext* serviceContext)
 {
     std::unique_ptr<PreUserPseudonymManager> instance{new PreUserPseudonymManager(serviceContext)};
+    instance->LoadCmacs(std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now()));
+    // close the unnecessary connection on the main thread:
+    instance->mServiceContext->databaseFactory()->closeConnection();
     return instance;
 }
 
@@ -22,9 +25,6 @@ PreUserPseudonymManager::PreUserPseudonymManager(PcServiceContext* serviceContex
     : mServiceContext(serviceContext)
 {
     Expect(mServiceContext != nullptr, "serviceContext must not be NULL.");
-    LoadCmacs(std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now()));
-    // close the unnecessary connection on the main thread:
-    mServiceContext->databaseFactory()->closeConnection();
 }
 
 void PreUserPseudonymManager::LoadCmacs(const date::sys_days& forDay)
@@ -54,7 +54,7 @@ CmacSignature PreUserPseudonymManager::sign(size_t keyNr, const std::string_view
     return mKeys[keyNr].sign(subClaim);
 }
 
-std::tuple<bool, CmacSignature> PreUserPseudonymManager::verifyAndResign(const CmacSignature& sig, const std::string_view& subClaim)
+std::tuple<bool, CmacSignature> PreUserPseudonymManager::verifyAndReSign(const CmacSignature& sig, const std::string_view& subClaim)
 {
     using std::get;
     std::shared_lock lock{mMutex};

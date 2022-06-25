@@ -289,18 +289,19 @@ void FhirStructureDefinitionParser::leaveElement()
         mElementBuilder.typeId(mElementTypes.front());
     }
     auto element = mElementBuilder.getAndReset();
+    Expect3(element != nullptr, "element must not be null.", std::logic_error);
     if (mElementTypes.empty())
     {
-        auto implType = implementationDefinedTypes.find(element.name());
+        auto implType = implementationDefinedTypes.find(element->name());
         if (implType != implementationDefinedTypes.end())
         {
             mStructureBuilder.addElement(
-                FhirElement::Builder{element}
+                FhirElement::Builder{*element}
                     .typeId(std::string{implType->second}).getAndReset());
             return;
         }
     }
-    if (! boost::ends_with(element.name(), Fhir::typePlaceholder))
+    if (! boost::ends_with(element->name(), Fhir::typePlaceholder))
     {
         Expect3(mElementTypes.size() <= 1,
                 "More than one element type for element without placeholder: " + getPath(), std::logic_error);
@@ -309,14 +310,14 @@ void FhirStructureDefinitionParser::leaveElement()
         return;
     }
     Expect3(not mElementTypes.empty(), "No type for element with placeholder: " + getPath(), std::logic_error);
-    auto namePrefix = element.name().substr(0, element.name().size() - Fhir::typePlaceholder.size());
+    auto namePrefix = element->name().substr(0, element->name().size() - Fhir::typePlaceholder.size());
     for (const auto& type: mElementTypes)
     {
         Expect3(not type.empty(), "Empty type id: " + getPath(), std::logic_error);
         std::string nameSuffix = type;
         nameSuffix[0] = ctype.toupper(nameSuffix[0]);
         mStructureBuilder.addElement(
-                FhirElement::Builder{element}
+                FhirElement::Builder{*element}
                     .name(namePrefix + nameSuffix)
                     .typeId(type).getAndReset());
     }

@@ -46,7 +46,7 @@ void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
 
     A_22158.start("Delete Consent");
     ErpExpect(session.database()->clearConsent(kvnrClaim.value()), HttpStatus::NotFound,
-              "No Consent found for id " + consentIdString.has_value());
+              "No Consent found for id " + consentIdString.value());
     A_22158.finish();
 
     session.response.setStatus(HttpStatus::NoContent);
@@ -57,4 +57,3 @@ void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
         .setInsurantKvnr(*kvnrClaim)
         .setAction(model::AuditEvent::Action::del);
 }
-

@@ -9,6 +9,7 @@
 #include "erp/xml/XmlMemory.hxx"
 #include "rapidjson/fwd.h"
 
+class FhirElement;
 class FhirStructureRepository;
 class FhirStructureDefinition;
 
@@ -43,14 +44,15 @@ private:
     [[nodiscard]]
     size_t convertMember(xmlNode& targetNode, const std::string& memberName,
                          const FhirStructureDefinition& fhirParentType, size_t fhirElementIndex,
-                         const rapidjson::Value* object, const rapidjson::Value& subObjectOfPrimary);
+                         const rapidjson::Value* jsonMember, const rapidjson::Value& subObjectOfPrimary);
 
     [[nodiscard]]
     size_t convertMemberWithType(xmlNode& targetNode, const std::string& memberName,
                          const FhirStructureDefinition& fhirParentType,
                          const FhirStructureDefinition& fhirElementType,
+                         const std::shared_ptr<const FhirElement>& fhirElementInfo,
                          size_t fhirElementIndex,
-                         const rapidjson::Value* object, const rapidjson::Value& subObjectOfPrimary);
+                         const rapidjson::Value* jsonMember, const rapidjson::Value& subObjectOfPrimary);
 
     [[nodiscard]]
     size_t convertSingleMember(xmlNode& targetNode, const std::string& memberName,

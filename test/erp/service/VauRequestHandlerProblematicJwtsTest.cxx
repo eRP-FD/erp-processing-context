@@ -85,7 +85,7 @@ public:
     ClientTeeProtocol teeProtocol;
 };
 
-TEST_P(VauRequestHandlerProblematicJwtsTest, acrUnsupportedContent)
+TEST_P(VauRequestHandlerProblematicJwtsTest, acrUnsupportedContent)//NOLINT(readability-function-cognitive-complexity)
 {
     rapidjson::Document claims;
     ASSERT_NO_THROW(claims.Parse(claimsFromTestFile("/jwt/claims_patient.json")));
@@ -109,7 +109,7 @@ TEST_P(VauRequestHandlerProblematicJwtsTest, acrUnsupportedContent)
     A_19439.finish();
 }
 
-TEST_P(VauRequestHandlerProblematicJwtsTest, acrValidContent)
+TEST_P(VauRequestHandlerProblematicJwtsTest, acrValidContent)//NOLINT(readability-function-cognitive-complexity)
 {
     rapidjson::Document claims;
     ASSERT_NO_THROW(claims.Parse(claimsFromTestFile("/jwt/claims_patient.json")));

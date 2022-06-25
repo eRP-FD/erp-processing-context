@@ -21,7 +21,7 @@ public:
                         << container << " does not contain " << subject;
     }
 
-    void checkPostgresConnectionString (void)
+    void checkPostgresConnectionString (void)//NOLINT(readability-function-cognitive-complexity)
     {
         const auto connectionString = PostgresBackend::defaultConnectString();
         const auto& configuration = Configuration::instance();

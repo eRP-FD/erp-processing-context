@@ -7,7 +7,7 @@
 
 #include "erp/fhir/FhirElement.hxx"
 
-TEST(FhirElementTest, representationEnum)
+TEST(FhirElementTest, representationEnum)//NOLINT(readability-function-cognitive-complexity)
 {
     using Representation = FhirElement::Representation;
     // clang-format off
@@ -28,7 +28,7 @@ TEST(FhirElementTest, representationEnum)
     // clang-format on
 }
 
-TEST(FhirElementTest, Builder)
+TEST(FhirElementTest, Builder)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_view_literals;
     using Representation = FhirElement::Representation;
@@ -39,20 +39,21 @@ TEST(FhirElementTest, Builder)
         .representation(Representation::xhtml)
         .contentReference("contentReference")
         .getAndReset();
+    ASSERT_TRUE(testElement1);
+    EXPECT_EQ(testElement1->name(), "name"sv);
+    EXPECT_EQ(testElement1->typeId(), "text"sv);
+    EXPECT_EQ(testElement1->contentReference(), "contentReference"sv);
+    EXPECT_TRUE(testElement1->isArray());
+    EXPECT_EQ(testElement1->representation(), Representation::xhtml);
+    EXPECT_EQ(testElement1->isRoot(), false);
 
-    EXPECT_EQ(testElement1.name(), "name"sv);
-    EXPECT_EQ(testElement1.typeId(), "text"sv);
-    EXPECT_EQ(testElement1.contentReference(), "contentReference"sv);
-    EXPECT_TRUE(testElement1.isArray());
-    EXPECT_EQ(testElement1.representation(), Representation::xhtml);
-    EXPECT_EQ(testElement1.isRoot(), false);
-
-    auto testElement2 = FhirElement::Builder{testElement1}.name("otherName").getAndReset();
-    EXPECT_EQ(testElement2.name(), "otherName"sv);
-    EXPECT_EQ(testElement2.typeId(), "text"sv);
-    EXPECT_TRUE(testElement2.isArray());
-    EXPECT_EQ(testElement2.representation(), Representation::xhtml);
-    EXPECT_EQ(testElement2.isRoot(), false);
+    auto testElement2 = FhirElement::Builder{*testElement1}.name("otherName").getAndReset();
+    ASSERT_TRUE(testElement2);
+    EXPECT_EQ(testElement2->name(), "otherName"sv);
+    EXPECT_EQ(testElement2->typeId(), "text"sv);
+    EXPECT_TRUE(testElement2->isArray());
+    EXPECT_EQ(testElement2->representation(), Representation::xhtml);
+    EXPECT_EQ(testElement2->isRoot(), false);
 }
 
 TEST(FhirElementTest, RootElement)
@@ -64,10 +65,10 @@ TEST(FhirElementTest, RootElement)
         .isArray(true)
         .representation(Representation::xhtml)
         .getAndReset();
-
-    EXPECT_EQ(testElement1.name(), "Meta"sv);
-    EXPECT_EQ(testElement1.typeId(), "Meta"sv);
-    EXPECT_TRUE(testElement1.isArray());
-    EXPECT_EQ(testElement1.representation(), Representation::xhtml);
-    EXPECT_EQ(testElement1.isRoot(), true);
+    ASSERT_TRUE(testElement1);
+    EXPECT_EQ(testElement1->name(), "Meta"sv);
+    EXPECT_EQ(testElement1->typeId(), "Meta"sv);
+    EXPECT_TRUE(testElement1->isArray());
+    EXPECT_EQ(testElement1->representation(), Representation::xhtml);
+    EXPECT_EQ(testElement1->isRoot(), true);
 }

@@ -27,7 +27,7 @@ public:
 };
 
 
-TEST_F(InnerTeeRequestTest, create_success)
+TEST_F(InnerTeeRequestTest, create_success)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string serializedJwt = JWT( Base64::encode(R"({"alg":"BP256R1"})") + "." + Base64::encode("{}") + "." + Base64::encode("three") ).serialize();
     InnerTeeRequest message (SafeString("1 "
@@ -49,7 +49,7 @@ TEST_F(InnerTeeRequestTest, create_success)
 }
 
 
-TEST_F(InnerTeeRequestTest, create_successWithoutBody)
+TEST_F(InnerTeeRequestTest, create_successWithoutBody)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string serializedJwt = JWT( Base64::encode(R"({"alg":"BP256R1"})") + "." + Base64::encode("{}") + "." + Base64::encode("three") ).serialize();
     InnerTeeRequest message (SafeString("1 "
@@ -111,7 +111,7 @@ TEST_F(InnerTeeRequestTest, create_failForMissingAccessToken2)
 }
 
 
-TEST_F(InnerTeeRequestTest, create_failForInvalidSeparators)
+TEST_F(InnerTeeRequestTest, create_failForInvalidSeparators)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_ERP_EXCEPTION(
         InnerTeeRequest(SafeString(" 1 {}.two.three request-id aes-key Content-Type: application/json\r\nContent-Size: 5\r\n\r\nhello"))

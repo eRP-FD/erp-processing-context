@@ -8,11 +8,11 @@
 #include "erp/util/Expect.hxx"
 #include "erp/model/Consent.hxx"
 
-#include <pqxx/except.hxx>
+#include <pqxx/except>
 
 void MockConsentTable::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
 {
-    bool inserted;
+    bool inserted{};
     std::tie(std::ignore, inserted) = mConsents.emplace(kvnr, creationTime);
     if (!inserted)
     {

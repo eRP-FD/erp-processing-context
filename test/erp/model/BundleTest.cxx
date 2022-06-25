@@ -74,7 +74,7 @@ TEST_F(BundleTest, toJsonString)
 }
 
 
-TEST_F(BundleTest, getResourceSize)
+TEST_F(BundleTest, getResourceSize)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
 

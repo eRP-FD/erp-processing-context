@@ -43,13 +43,14 @@ public:
 
     size_t countMedicationDispenses(const std::string_view& query)
     {
-        size_t count;
+        size_t count{};
         countMedicationDispensesInternal(count, query);
         return count;
     }
 
 
 private:
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void countMedicationDispensesInternal(size_t& count, const std::string_view& query)
     {
         std::optional<model::Bundle> medicationDispenseBundle;
@@ -69,9 +70,11 @@ private:
 };
 
 
-TEST_F(Erp5899Test, run)
+TEST_F(Erp5899Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
     EnvironmentVariableGuard environmentVariableGuard("ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION", "false");
+    EnvironmentVariableGuard environmentVariableGuard3("ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE",
+                                                       "false");
     EnvironmentVariableGuard environmentVariableGuard2("DEBUG_DISABLE_QES_ID_CHECK", "true");
     if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
     {

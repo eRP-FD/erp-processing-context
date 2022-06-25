@@ -41,7 +41,7 @@ public:
     static constexpr std::string_view p_outputArray          = "/output";
 };
 
-TEST_F(TaskTest, ConstructNewTask)
+TEST_F(TaskTest, ConstructNewTask)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_status.data())), "draft");
@@ -57,7 +57,7 @@ TEST_F(TaskTest, ConstructNewTask)
     ASSERT_FALSE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_authoredOn.data())).empty());
 }
 
-TEST_F(TaskTest, ConstructNewPkvTask)
+TEST_F(TaskTest, ConstructNewPkvTask)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "access_code");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_status.data())), "draft");
@@ -99,7 +99,7 @@ TEST_F(TaskTest, UpdateLastUpdated)
     ASSERT_NE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_lastModified.data())), lastModified);
 }
 
-TEST_F(TaskTest, SetStatus)
+TEST_F(TaskTest, SetStatus)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_status.data())), "draft");
@@ -125,7 +125,7 @@ TEST_F(TaskTest, SetStatus)
     ASSERT_EQ(task.status(), model::Task::Status::draft);
 }
 
-TEST_F(TaskTest, SetAndDeleteKvnr)
+TEST_F(TaskTest, SetAndDeleteKvnr)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     ASSERT_EQ(rapidjson::Pointer(p_kvnr.data()).Get(task.jsonDocument()), nullptr);
@@ -141,7 +141,7 @@ TEST_F(TaskTest, SetAndDeleteKvnr)
     ASSERT_FALSE(task.kvnr().has_value());
 }
 
-TEST_F(TaskTest, FromJson)
+TEST_F(TaskTest, FromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto task1 = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/task1.json");
     ASSERT_NO_THROW(model::Task::fromJsonNoValidation(task1));
@@ -152,7 +152,7 @@ TEST_F(TaskTest, FromJson)
     ASSERT_EQ(task.type(), model::PrescriptionType::apothekenpflichigeArzneimittel);
 }
 
-TEST_F(TaskTest, SetAndDeleteUuids)
+TEST_F(TaskTest, SetAndDeleteUuids)//NOLINT(readability-function-cognitive-complexity)
 {
     auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     model::Task task(id, model::PrescriptionType::apothekenpflichigeArzneimittel,
@@ -162,19 +162,32 @@ TEST_F(TaskTest, SetAndDeleteUuids)
     const auto uuid2 = id.deriveUuid(2);
     const auto uuid3 = id.deriveUuid(3);
 
-    ASSERT_EQ(task.healthCarePrescriptionUuid().value_or(""), uuid1);
-    ASSERT_EQ(task.patientConfirmationUuid().value_or(""), uuid2);
-    ASSERT_EQ(task.receiptUuid().value_or(""), uuid3);
-
-    ASSERT_EQ(rapidjson::Pointer(p_inputArray.data()).Get(task.jsonDocument())->GetArray().Size(), static_cast<rapidjson::SizeType>(2));
-    task.deleteInput();
+    // no input and output
     ASSERT_EQ(rapidjson::Pointer(p_inputArray.data()).Get(task.jsonDocument()), nullptr);
     ASSERT_TRUE(!task.patientConfirmationUuid().has_value());
     ASSERT_TRUE(!task.healthCarePrescriptionUuid().has_value());
+    ASSERT_EQ(rapidjson::Pointer(p_outputArray.data()).Get(task.jsonDocument()), nullptr);
+    ASSERT_TRUE(!task.receiptUuid().has_value());
+
+    // Set and check:
+    task.setHealthCarePrescriptionUuid();
+    task.setPatientConfirmationUuid();
+    task.setReceiptUuid();
+    ASSERT_EQ(task.healthCarePrescriptionUuid().value_or(""), uuid1);
+    ASSERT_EQ(task.patientConfirmationUuid().value_or(""), uuid2);
+    ASSERT_EQ(task.receiptUuid().value_or(""), uuid3);
+    ASSERT_EQ(rapidjson::Pointer(p_inputArray.data()).Get(task.jsonDocument())->GetArray().Size(), static_cast<rapidjson::SizeType>(2));
     ASSERT_EQ(rapidjson::Pointer(p_outputArray.data()).Get(task.jsonDocument())->GetArray().Size(), static_cast<rapidjson::SizeType>(1));
+
+    // Delete and check
     task.deleteOutput();
     ASSERT_EQ(rapidjson::Pointer(p_outputArray.data()).Get(task.jsonDocument()), nullptr);
     ASSERT_TRUE(!task.receiptUuid().has_value());
+
+    task.deleteInput();
+    ASSERT_EQ(rapidjson::Pointer(p_inputArray.data()).Get(task.jsonDocument()), nullptr);
+    ASSERT_FALSE(task.patientConfirmationUuid().has_value());
+    ASSERT_FALSE(task.healthCarePrescriptionUuid().has_value());
 
     // Set and check again:
     task.setHealthCarePrescriptionUuid();
@@ -268,7 +281,7 @@ TEST_F(TaskTest, AcceptDate6WorkDaysOverHolidays)
 }
 
 
-TEST_F(TaskTest, DeleteAccessCode)
+TEST_F(TaskTest, DeleteAccessCode)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     ASSERT_EQ(task.accessCode(), "access_code");
@@ -278,7 +291,7 @@ TEST_F(TaskTest, DeleteAccessCode)
     ASSERT_THROW(accessCode = task.accessCode(), model::ModelException);
 }
 
-TEST_F(TaskTest, SetAndDeleteSecret)
+TEST_F(TaskTest, SetAndDeleteSecret)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
 

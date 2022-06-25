@@ -35,6 +35,7 @@ std::filesystem::path ResourceManager::getAbsoluteFilename(const std::filesystem
     {
             ToolConfig::RESOURCE_BINARY_DIR / resourceFile,
             ToolConfig::RESOURCE_SOURCE_DIR / resourceFile,
+            ToolConfig::RESOURCE_OUTPUT_DIR / resourceFile,
             std::filesystem::path(
                 TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_RESOURCE_MANAGER_PATH)) /
                 resourceFile};

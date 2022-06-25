@@ -13,9 +13,9 @@
 
 using namespace db_model;
 
-pqxx::binarystring db_model::Blob::binarystring() const
+postgres_bytea_view db_model::Blob::binarystring() const
 {
-    return pqxx::binarystring{data(), size()};
+    return {data(), size()};
 }
 
 std::string db_model::Blob::toHex() const
@@ -24,17 +24,30 @@ std::string db_model::Blob::toHex() const
     return ByteHelper::toHex(span);
 }
 
-db_model::Blob::Blob(std::vector<uint8_t> && blob)
-    : vector<uint8_t>(std::move(blob))
+db_model::Blob::Blob(std::vector<std::byte> && blob)
+    : vector<std::byte>(std::move(blob))
 {
 }
 
-db_model::Blob::Blob(const pqxx::binarystring& pqxxBin)
-    : vector<uint8_t>(pqxxBin.begin(), pqxxBin.end())
+db_model::Blob::Blob(const postgres_bytea_view& pqxxBin)
+    : vector<std::byte>(pqxxBin.begin(), pqxxBin.end())
 {
 }
 
-db_model::EncryptedBlob::EncryptedBlob(std::vector<uint8_t> &&encryptedBlob)
+Blob::Blob(const std::vector<uint8_t>& vec)
+    : vector<std::byte>(reinterpret_cast<const std::byte*>(vec.data()),
+                        reinterpret_cast<const std::byte*>(vec.data()) + vec.size())
+{
+}
+
+void Blob::append(const std::string_view& str)
+{
+    reserve(str.size() + size());
+    insert(end(), reinterpret_cast<const std::byte*>(str.data()),
+           reinterpret_cast<const std::byte*>(str.data()) + str.size());
+}
+
+db_model::EncryptedBlob::EncryptedBlob(std::vector<std::byte> &&encryptedBlob)
     : Blob(std::move(encryptedBlob))
 {
 }
@@ -88,7 +101,7 @@ MedicationDispense::MedicationDispense(model::PrescriptionId initPrescriptionId,
                                        db_model::EncryptedBlob initMedicationDispense,
                                        BlobId initKeyBlobId,
                                        db_model::Blob initSalt)
-    : prescriptionId(std::move(initPrescriptionId))
+    : prescriptionId(initPrescriptionId)
     , medicationDispense(std::move(initMedicationDispense))
     , blobId(initKeyBlobId)
     , salt(std::move(initSalt))
@@ -114,10 +127,10 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
 db_model::ChargeItem::ChargeItem(model::PrescriptionId initPrescriptionId, BlobId initBlobId,
                                                db_model::Blob initSalt, model::Timestamp initAuthoredOn,
                                                db_model::EncryptedBlob initChargeItem)
-    : prescriptionId{std::move(initPrescriptionId)}
-    , blobId{std::move(initBlobId)}
+    : prescriptionId{initPrescriptionId}
+    , blobId{initBlobId}
     , salt{std::move(initSalt)}
-    , authoredOn{std::move(initAuthoredOn)}
+    , authoredOn{initAuthoredOn}
     , chargeItem{std::move(initChargeItem)}
 {
 }

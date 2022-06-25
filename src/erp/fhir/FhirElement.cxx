@@ -33,11 +33,10 @@ FhirElement::Builder::Builder(const FhirElement& elementTemplate)
 {
 }
 
-
-FhirElement FhirElement::Builder::getAndReset()
+std::shared_ptr<const FhirElement> FhirElement::Builder::getAndReset()
 {
-    FhirElement prev{std::move(*mFhirElement)};
-    mFhirElement = std::make_unique<FhirElement>();
+    auto prev{std::move(mFhirElement)};
+    mFhirElement = std::make_shared<FhirElement>();
     return prev;
 }
 
@@ -129,3 +128,11 @@ FhirElement::Builder& FhirElement::Builder::isArray(bool isArray_)
     mFhirElement->mIsArray = isArray_;
     return *this;
 }
+
+FhirElement::Builder& FhirElement::Builder::isBackbone(bool isBackbone_)
+{
+    mFhirElement->mIsBackbone = isBackbone_;
+    return *this;
+}
+
+

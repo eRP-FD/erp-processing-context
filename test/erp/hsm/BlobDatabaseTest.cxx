@@ -36,11 +36,11 @@ namespace {
     {
     public:
         explicit MockBlobDatabaseWrapper (MockBlobDatabase& database) : mDatabase(database) {}
-        virtual Entry getBlob (BlobType type, BlobId id) const override {return mDatabase.getBlob(type,id);}
-        virtual std::vector<Entry> getAllBlobsSortedById (void) const override {return mDatabase.getAllBlobsSortedById();}
-        virtual BlobId storeBlob (Entry&& entry) override {return mDatabase.storeBlob(std::move(entry));}
-        virtual void deleteBlob (BlobType type, const ErpVector& name) override {mDatabase.deleteBlob(type,name);}
-        virtual std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const override {return mDatabase.hasValidBlobsOfType(std::move(blobTypes));}
+        Entry getBlob (BlobType type, BlobId id) const override {return mDatabase.getBlob(type,id);}
+        std::vector<Entry> getAllBlobsSortedById (void) const override {return mDatabase.getAllBlobsSortedById();}
+        BlobId storeBlob (Entry&& entry) override {return mDatabase.storeBlob(std::move(entry));}
+        void deleteBlob (BlobType type, const ErpVector& name) override {mDatabase.deleteBlob(type,name);}
+        std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const override {return mDatabase.hasValidBlobsOfType(std::move(blobTypes));}
     private:
         MockBlobDatabase& mDatabase;
     };
@@ -64,12 +64,12 @@ class BlobDatabaseTest : public testing::Test,
                          public testing::WithParamInterface<std::tuple<DatabaseFactory,bool>>
 {
 public:
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         BlobDatabaseHelper::removeUnreferencedBlobs();
     }
 
-    virtual void TearDown (void) override
+    void TearDown (void) override
     {
         deleteAllItems();
     }
@@ -111,9 +111,9 @@ private:
 };
 
 
-TEST_P(BlobDatabaseTest, blob_crud)
+TEST_P(BlobDatabaseTest, blob_crud) // NOLINT(readability-function-cognitive-complexity)
 {
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     // Verify that initially there is no EciesKeyPair|1 blob.
     ASSERT_ANY_THROW(
@@ -151,9 +151,9 @@ TEST_P(BlobDatabaseTest, blob_crud)
 }
 
 
-TEST_P(BlobDatabaseTest, storeBlob_failForDuplicateName)
+TEST_P(BlobDatabaseTest, storeBlob_failForDuplicateName) // NOLINT(readability-function-cognitive-complexity)
 {
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     // Create the blob.
     BlobDatabase::Entry entry;
@@ -176,7 +176,7 @@ TEST_P(BlobDatabaseTest, storeBlob_failForDuplicateName)
 
 TEST_P(BlobDatabaseTest, deleteBlob_failForMissingBlob)
 {
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     ASSERT_THROW(
         databaseFactory()->deleteBlob(BlobType::Quote, ErpVector()),
@@ -186,7 +186,7 @@ TEST_P(BlobDatabaseTest, deleteBlob_failForMissingBlob)
 
 TEST_P(BlobDatabaseTest, getAllBlobsSortedById)
 {
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     // Prepare a blob.
     BlobDatabase::Entry entry;
@@ -225,7 +225,7 @@ TEST_P(BlobDatabaseTest, getAllBlobsSortedById)
 
 TEST_P(BlobDatabaseTest, hasValidBlobOfTypes)
 {
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     // Prepare a blob.
     BlobDatabase::Entry entry;
@@ -263,7 +263,7 @@ TEST_P(BlobDatabaseTest, hasValidBlobOfTypes)
 
 TEST_P(BlobDatabaseTest, hasValidBlobOfTypes_withExpiry)
 {
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     // Prepare a blob.
     BlobDatabase::Entry entry;
@@ -289,13 +289,13 @@ TEST_P(BlobDatabaseTest, hasValidBlobOfTypes_withExpiry)
 }
 
 
-TEST_P(BlobDatabaseTest, blob_filterByRelease)
+TEST_P(BlobDatabaseTest, blob_filterByRelease) // NOLINT(readability-function-cognitive-complexity)
 {
     // This test can only work with a real database.
     if (std::get<1>(GetParam()))
         GTEST_SKIP();
 
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     // Verify that initially there is no EciesKeyPair|1 blob.
     ASSERT_ANY_THROW(
@@ -350,9 +350,9 @@ TEST_P(BlobDatabaseTest, blob_filterByRelease)
 /**
  * This test focuses on storing and retrieving metadata.
  */
-TEST_P(BlobDatabaseTest, blob_crud_withMetadata)
+TEST_P(BlobDatabaseTest, blob_crud_withMetadata)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto databaseFactory = std::get<0>(GetParam());
+    const auto& databaseFactory = std::get<0>(GetParam());
 
     // Create the blob.
     BlobDatabase::Entry entry;

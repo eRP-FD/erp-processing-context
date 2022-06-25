@@ -31,7 +31,7 @@
           <xs:element name="medium" minOccurs="0" maxOccurs="unbounded" type="CodeableConcept"/>
           <xs:element name="subject" minOccurs="0" type="Reference"/>
           <xs:element name="topic" minOccurs="0" type="CodeableConcept"/>
-          <xs:element name="about" minOccurs="0" maxOccurs="unbounded" type="KBV_PR_ERP_Bundle.Reference"/>
+          <xs:element name="about" minOccurs="1" maxOccurs="unbounded" type="KBV_PR_ERP_Bundle.Reference"/>
           <xs:element name="encounter" minOccurs="0" type="Reference"/>
           <xs:element name="sent" minOccurs="0" type="dateTime"/>
           <xs:element name="received" minOccurs="0" type="dateTime"/>

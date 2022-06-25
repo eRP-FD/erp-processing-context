@@ -21,7 +21,7 @@ class ValidatedServerResponse;
 class ServerResponseWriter
 {
 public:
-    explicit ServerResponseWriter (void);
+    explicit ServerResponseWriter (void) = default;
 
     void write (
         SslStream& stream,

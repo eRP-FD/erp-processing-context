@@ -27,7 +27,7 @@ public:
         for (size_t l = 0; l < lifecycleCount; ++l) { ASSERT_NO_FATAL_FAILURE(lifecycle(kvnr)); }
     }
 
-    void lifecycle(const std::string& kvnr)
+    void lifecycle(const std::string& kvnr)//NOLINT(readability-function-cognitive-complexity)
     {
         std::optional<model::Task> task;
         ASSERT_NO_FATAL_FAILURE(task = taskCreate());
@@ -35,7 +35,7 @@ public:
         std::string accessCode{task->accessCode()};
         auto prescriptionId{task->prescriptionId()};
 
-        auto qesBundle = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
+        const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
         ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, accessCode, qesBundle));
 
         {
@@ -94,7 +94,7 @@ TEST_F(Erp6619Test, DISABLED_keep_alives_parallel)
             {
                 auto total = (threadCount * lifecycleCount);
                 double runtimeSeconds = duration_cast<duration<double, std::ratio<1,1>>>(steady_clock::now() - startTime).count();
-                std::cout << '\r' << std::right << std::setw(std::log10(total) + 1) << TestWorker::cyclesCompleted << '/' << total
+                std::cout << '\r' << std::right << std::setw(static_cast<int>(std::log10(total)) + 1) << TestWorker::cyclesCompleted << '/' << total
                         << std::setw(12) << std::setprecision(3) << std::fixed << runtimeSeconds << "s" << std::flush;
                 std::this_thread::sleep_for(73ms);
             }

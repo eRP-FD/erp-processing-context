@@ -61,7 +61,7 @@ std::string Base64::encode (std::string_view data)
     for (std::uint8_t byte : data)
     {
         value = (value << 8) + byte;
-        valueShift = valueShift + 8;
+        valueShift = static_cast<std::int8_t>(valueShift + 8);
 
         while (valueShift >= 0)
         {
@@ -135,13 +135,13 @@ util::Buffer Base64::decode (const std::string_view& base64)
         }
 
         value = (value << 6) + binaryDigit;
-        valueShift = valueShift + 6;
+        valueShift = static_cast<std::int8_t>(valueShift + 6);
 
         if (valueShift >= 0)
         {
-            *p++ = static_cast<std::uint8_t>((value >> valueShift) & 0xFF);
+            *p++ = static_cast<char>((value >> valueShift) & 0xFF);
 
-            valueShift = valueShift - 8;
+            valueShift = static_cast<std::int8_t>(valueShift - 8);
         }
     }
 

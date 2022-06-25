@@ -557,13 +557,13 @@ std::unique_ptr<EllipticCurvePublicKey> X509Certificate::getEllipticCurvePublicK
         throw std::logic_error{"There is no elliptic curve public key to be retrieved"};
     }
 
-    auto evpKey = getPublicKey();
+    auto* evpKey = getPublicKey();
     if (evpKey)
     {
-        auto ecKey = EVP_PKEY_get0_EC_KEY(evpKey);
+        auto* ecKey = EVP_PKEY_get0_EC_KEY(evpKey);
         if (ecKey)
         {
-            auto ecPublicKey = EC_KEY_get0_public_key(ecKey);
+            const auto* ecPublicKey = EC_KEY_get0_public_key(ecKey);
             return std::make_unique<EllipticCurvePublicKey>(NID_brainpoolP256r1, ecPublicKey);
         }
     }
@@ -637,11 +637,12 @@ std::vector<std::string> X509Certificate::getOcspUrls() const {
     }
 
     std::vector<std::string> result;
-    
+
     STACK_OF(OPENSSL_STRING) *ocspStack = X509_get1_ocsp(pCert.get());
     Expect(ocspStack != nullptr, "can not get ocsp stack");
-
-    for (int i = 0; i < sk_OPENSSL_STRING_num(ocspStack); ++i)
+    int len = sk_OPENSSL_STRING_num(ocspStack);
+    result.reserve(len);
+    for (int i = 0; i < len; ++i)
     {
         result.emplace_back(sk_OPENSSL_STRING_value(ocspStack, i));
     }
@@ -693,37 +694,65 @@ bool X509Certificate::checkRoles (const std::vector<std::string>& roleOids) cons
         return false;
     }
 
+    return checkRoles(objectsToSearchFor, admissions);
+}
+
+bool X509Certificate::checkRoles(const std::vector<std::shared_ptr<ASN1_OBJECT>>& roleOids,
+                                 const STACK_OF(ADMISSIONS)* admissions)
+{
     const int numberOfAdmissions{sk_ADMISSIONS_num(admissions)};
     for (int i = 0; i < numberOfAdmissions; ++i)
     {
         const ADMISSIONS* admission{sk_ADMISSIONS_value(admissions, i)};
-
-        // ADMISSION has a stack of PROFESSION_INFO items
-        const STACK_OF(PROFESSION_INFO)* professionInfos{
-            ADMISSIONS_get0_professionInfos(admission)};
-        const int numberOfProfessionInfos{sk_PROFESSION_INFO_num(professionInfos)};
-        for (int j = 0; j < numberOfProfessionInfos; ++j)
+        if (!admission)
         {
-            const PROFESSION_INFO* professionInfo{sk_PROFESSION_INFO_value(professionInfos, j)};
-            if (!professionInfo)
-            {
-                continue;
-            }
+            continue;
+        }
+        const STACK_OF(PROFESSION_INFO)* professionInfos{ADMISSIONS_get0_professionInfos(admission)};
+        if (checkRoles(roleOids, professionInfos))
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
-            // PROFESSION_INFO has a stack of profession OIDs
-            const STACK_OF(ASN1_OBJECT)* professionOids{
-                PROFESSION_INFO_get0_professionOIDs(professionInfo)};
-            const int numberOfProfessionOids{sk_ASN1_OBJECT_num(professionOids)};
-            for (int k = 0; k < numberOfProfessionOids; ++k)
+bool X509Certificate::checkRoles(const std::vector<std::shared_ptr<ASN1_OBJECT>>& roleOids,
+                                 const STACK_OF(PROFESSION_INFO)* professionInfos)
+{
+    const int numberOfProfessionInfos{sk_PROFESSION_INFO_num(professionInfos)};
+    for (int j = 0; j < numberOfProfessionInfos; ++j)
+    {
+        const PROFESSION_INFO* professionInfo{sk_PROFESSION_INFO_value(professionInfos, j)};
+        if (!professionInfo)
+        {
+            continue;
+        }
+        const STACK_OF(ASN1_OBJECT)* professionOids{PROFESSION_INFO_get0_professionOIDs(professionInfo)};
+        if (checkRoles(roleOids, professionOids))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool X509Certificate::checkRoles(const std::vector<std::shared_ptr<ASN1_OBJECT>>& roleOids,
+                                 const STACK_OF(ASN1_OBJECT)* professionOids)
+{
+    const int numberOfProfessionOids{sk_ASN1_OBJECT_num(professionOids)};
+    for (int k = 0; k < numberOfProfessionOids; ++k)
+    {
+        const ASN1_OBJECT* professionOid{sk_ASN1_OBJECT_value(professionOids, k)};
+        if (!professionOid)
+        {
+            continue;
+        }
+        for (const auto& objectToSearchFor: roleOids)
+        {
+            if (OBJ_cmp(professionOid, objectToSearchFor.get()) == 0)
             {
-                const ASN1_OBJECT* professionOid{sk_ASN1_OBJECT_value(professionOids, k)};
-                for (const auto& objectToSearchFor: objectsToSearchFor)
-                {
-                    if (professionOid && OBJ_cmp(professionOid, objectToSearchFor.get()) == 0)
-                    {
-                        return true;
-                    }
-                }
+                return true;
             }
         }
     }
@@ -748,7 +777,7 @@ bool X509Certificate::checkKeyUsage (const std::vector<KeyUsage>& keyUsages) con
         return false;
     }
 
-    for (const auto& keyUsageBit: keyUsages)
+    for (const auto& keyUsageBit: keyUsages)         // NOLINT(readability-use-anyofallof)
     {
         if (ASN1_BIT_STRING_get_bit(keyUsage.get(), static_cast<int>(keyUsageBit)) == 0)
         {
@@ -903,7 +932,12 @@ std::vector<std::string> X509Certificate::getRoles () const
     {
         return roleOids;
     }
+    appendRoles(roleOids, admissions);
+    return roleOids;
+}
 
+void X509Certificate::appendRoles(std::vector<std::string>& outRoleOids, const STACK_OF(ADMISSIONS)* admissions)
+{
     const int numberOfAdmissions{sk_ADMISSIONS_num(admissions)};
     for (int i = 0; i < numberOfAdmissions; ++i)
     {
@@ -912,43 +946,51 @@ std::vector<std::string> X509Certificate::getRoles () const
         // ADMISSION has a stack of PROFESSION_INFO items
         const STACK_OF(PROFESSION_INFO)* professionInfos{
             ADMISSIONS_get0_professionInfos(admission)};
-        const int numberOfProfessionInfos{sk_PROFESSION_INFO_num(professionInfos)};
-        for (int j = 0; j < numberOfProfessionInfos; ++j)
+        appendRoles(outRoleOids, professionInfos);
+    }
+}
+
+void X509Certificate::appendRoles(std::vector<std::string>& outRoleOids, const STACK_OF(PROFESSION_INFO)* professionInfos)
+{
+    const int numberOfProfessionInfos{sk_PROFESSION_INFO_num(professionInfos)};
+    for (int j = 0; j < numberOfProfessionInfos; ++j)
+    {
+        const PROFESSION_INFO* professionInfo{sk_PROFESSION_INFO_value(professionInfos, j)};
+        if (!professionInfo)
         {
-            const PROFESSION_INFO* professionInfo{sk_PROFESSION_INFO_value(professionInfos, j)};
-            if (!professionInfo)
-            {
-                continue;
-            }
+            continue;
+        }
 
-            // PROFESSION_INFO has a stack of profession OIDs
-            const STACK_OF(ASN1_OBJECT)* professionOids{
-                PROFESSION_INFO_get0_professionOIDs(professionInfo)};
-            const int numberOfProfessionOids{sk_ASN1_OBJECT_num(professionOids)};
-            for (int k = 0; k < numberOfProfessionOids; ++k)
-            {
-                const ASN1_OBJECT* professionOid{sk_ASN1_OBJECT_value(professionOids, k)};
-                if (!professionOid)
-                {
-                    continue;
-                }
+        // PROFESSION_INFO has a stack of profession OIDs
+        const STACK_OF(ASN1_OBJECT)* professionOids{
+            PROFESSION_INFO_get0_professionOIDs(professionInfo)};
+        appendRoles(outRoleOids, professionOids);
+    }
+}
 
-                // 'A buffer length of 80 should be more than enough to handle any OID encountered
-                // in practice.' (from the man page for OBJ_obj2txt)
-                static constexpr const int bufferLength{80};
-                char buffer[bufferLength];
+void X509Certificate::appendRoles(std::vector<std::string>& outRoleOids, const STACK_OF(ASN1_OBJECT)* professionOids)
+{
+    const int numberOfProfessionOids{sk_ASN1_OBJECT_num(professionOids)};
+    for (int k = 0; k < numberOfProfessionOids; ++k)
+    {
+        const ASN1_OBJECT* professionOid{sk_ASN1_OBJECT_value(professionOids, k)};
+        if (!professionOid)
+        {
+            continue;
+        }
 
-                // last parameter (no_name) == 1: always use numerical form
-                const int stringLength{OBJ_obj2txt(buffer, bufferLength, professionOid, 1)};
-                if (stringLength > 0)
-                {
-                    roleOids.emplace_back(buffer, stringLength);
-                }
-            }
+        // 'A buffer length of 80 should be more than enough to handle any OID encountered
+        // in practice.' (from the man page for OBJ_obj2txt)
+        static constexpr const int bufferLength{80};
+        char buffer[bufferLength];
+
+        // last parameter (no_name) == 1: always use numerical form
+        const int stringLength{OBJ_obj2txt(buffer, bufferLength, professionOid, 1)};
+        if (stringLength > 0)
+        {
+            outRoleOids.emplace_back(buffer, stringLength);
         }
     }
-
-    return roleOids;
 }
 
 tm X509Certificate::getNotAfter() const

@@ -92,8 +92,7 @@ be required for unit tests and be placed in `test/mock/`.
 ## Database
 
 Access to the PostgreSQL database can be found in `src/erp/database/`. It is based on the `pqxx` library. The table structure
-is defined by `scripts/sql/create_tables.sql`. It is not yet final and will have to undergo one more update to conform to
-https://dth01.ibmgcloud.net/confluence/display/ERP/Postgres+Table+definition.
+is defined by the sql scripts located in `scripts/sql'.
 
 ## VAU / TEE
 

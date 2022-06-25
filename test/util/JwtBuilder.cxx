@@ -20,7 +20,7 @@
 namespace
 {
 
-void setIdNummer(rapidjson::Document& claims, const std::string id)
+void setIdNummer(rapidjson::Document& claims, const std::string& id)
 {
     static const rapidjson::Pointer idNummer{"/idNummer"};
     idNummer.Set(claims, id);

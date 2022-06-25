@@ -10,12 +10,12 @@
 
 
 TslRefreshJob::TslRefreshJob(
-    const std::shared_ptr<TslManager>& tslManager,
+    TslManager& tslManager,
     const std::chrono::steady_clock::duration interval)
         : TimerJobBase("TslRefreshJob", interval)
         , mTslManager(tslManager)
 {
-    Expect(tslManager != nullptr, "The refresh job must be initialized with TslManager");
+    TslRefreshJob::executeJob();
 }
 
 
@@ -33,7 +33,7 @@ void TslRefreshJob::executeJob()
     try
     {
         VLOG(2) << "Executing TSL refresh job";
-        mTslManager->updateTrustStoresOnDemand();
+        mTslManager.updateTrustStoresOnDemand();
     }
     catch(const TslError& e)
     {

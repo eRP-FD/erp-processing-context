@@ -41,7 +41,7 @@ public:
         mAllProfessionOIDs.insert({});
     }
 
-    void checkAllOids (const HttpMethod method, const std::string& target, const std::set<std::string>& allowedOIDs)
+    void checkAllOids (const HttpMethod method, const std::string& target, const std::set<std::string>& allowedOIDs)//NOLINT(readability-function-cognitive-complexity)
     {
         auto matchingHandler = mRequestHandlerManager.findMatchingHandler(method, target);
         ASSERT_TRUE(matchingHandler.handlerContext);

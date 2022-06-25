@@ -71,7 +71,7 @@ public:
         return task;
     }
 
-    void checkGetAllAuditEvents(const std::string& kvnr, const std::string& expectedResultFilename)
+    void checkGetAllAuditEvents(const std::string& kvnr, const std::string& expectedResultFilename)//NOLINT(readability-function-cognitive-complexity)
     {
         GetAllAuditEventsHandler handler({});
 
@@ -107,6 +107,15 @@ public:
 
         ASSERT_EQ(canonicalJson(auditEvent.serializeToJsonString()),
                   canonicalJson(expectedAuditEvent.serializeToJsonString()));
+    }
+
+    std::string replacePrescriptionId(const std::string& templateStr, const std::string& prescriptionId)
+    {
+        return String::replaceAll(templateStr, "##PRESCRIPTION_ID##", prescriptionId);
+    }
+    std::string replaceKvnr(const std::string& templateStr, const std::string& kvnr)
+    {
+        return String::replaceAll(templateStr, "##KVNR##", kvnr);
     }
 
 protected:

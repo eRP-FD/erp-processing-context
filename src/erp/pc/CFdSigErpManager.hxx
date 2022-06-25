@@ -22,7 +22,7 @@ class CFdSigErpManager : public TimerJobBase
 public:
     CFdSigErpManager(
         const Configuration& configuration,
-        std::shared_ptr<TslManager> tslManager,
+        TslManager& tslManager,
         HsmPool& hsmPool);
 
     ~CFdSigErpManager() override;
@@ -44,7 +44,7 @@ public:
      *
      * @param forceOcspRequest if set to true the OCSP-request is forced
      */
-    std::optional<TrustStore::OcspResponseData> getOcspResponseData(const bool forceOcspRequest);
+    TrustStore::OcspResponseData getOcspResponseData(const bool forceOcspRequest);
 
     /**
      * If no tsl manager is provided (a special case for test scenarios), then nullptr is returned.
@@ -78,12 +78,12 @@ protected:
     void onFinish(void) override;
 
 private:
-    std::optional<TrustStore::OcspResponseData> internalGetOcspResponseData(const Certificate& certificate,
-                                                                            const bool forceOcspRequest);
+    TrustStore::OcspResponseData internalGetOcspResponseData(const Certificate& certificate,
+                                                             const bool forceOcspRequest);
 
     std::mutex mMutex;
 
-    const std::shared_ptr<TslManager> mTslManager;
+    TslManager& mTslManager;
     std::optional<size_t> mValidationHookId;
     HsmPool& mHsmPool;
 

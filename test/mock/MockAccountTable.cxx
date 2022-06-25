@@ -22,7 +22,7 @@ std::optional<db_model::Blob> MockAccountTable::insertOrReturnAccountSalt(const 
                                                                       BlobId blobId,
                                                                       const db_model::Blob& salt)
 {
-    auto [account, inserted] = mAccounts.try_emplace({accountId, masterKeyType, blobId}, std::move(salt));
+    auto [account, inserted] = mAccounts.try_emplace({accountId, masterKeyType, blobId}, salt);
     return inserted?std::nullopt:std::make_optional(account->second);
 }
 

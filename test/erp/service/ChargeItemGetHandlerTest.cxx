@@ -13,6 +13,7 @@
 #include "erp/util/search/UrlArguments.hxx"
 
 #include "test/erp/model/CommunicationTest.hxx"
+#include "test/mock/MockDatabase.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ServerTestBase.hxx"
@@ -27,10 +28,11 @@ public:
     {
     }
 protected:
-    
-    void insertChargeItem(
+
+    void insertChargeItem( // NOLINT(readability-function-cognitive-complexity)
         const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>& patientsPharmaciesChargeItem,
-        std::vector<std::string>& prescriptionIds)
+        std::vector<std::string>& prescriptionIds,
+        const std::optional<std::string_view>& accessCode = std::nullopt)
     {
         ResourceManager& resourceManager = ResourceManager::instance();
 
@@ -41,14 +43,15 @@ protected:
             auto chargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXML);
             const auto& dispenseItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
             auto dispenseItem = model::Bundle::fromXmlNoValidation(dispenseItemXML);
-
-            std::string insurant = std::get<0>(patientAndPharmacy);
-            std::string pharmacy = std::get<1>(patientAndPharmacy);
-            std::optional<model::Timestamp> enteredDate = std::get<2>(patientAndPharmacy);
+            const auto& [insurant, pharmacy, enteredDate] = patientAndPharmacy;
 
             chargeItem.setSubjectKvnr(insurant);
             chargeItem.setEntererTelematikId(pharmacy);
             chargeItem.setEnteredDate(enteredDate.value_or(model::Timestamp::now()));
+            if (accessCode.has_value())
+            {
+                chargeItem.setAccessCode(*accessCode);
+            }
             auto db = createDatabase();
             model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "09409348029834029384023984209");
             task.setKvnr(insurant);
@@ -66,7 +69,7 @@ protected:
         }
     }
 
-    void sendRequest(
+    void sendRequest( // NOLINT(readability-function-cognitive-complexity)
         HttpsClient& client,
         JWT& jwt,
         std::vector<model::ChargeItem>& chargeItemsResponse,
@@ -82,7 +85,7 @@ protected:
         {
             path += "?";
             size_t idx = 0;
-            for (std::string filter : *filters)
+            for (const std::string& filter : *filters)
             {
                 path += filter;
                 if (idx < (filters->size() - 1))
@@ -294,7 +297,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllPharmacie)
     checkChargeItemSupportingInfoElement(chargeItems);
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter) // NOLINT(readability-function-cognitive-complexity)
 {
     // Insert ChargeItem into database
     //--------------------------
@@ -433,7 +436,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter)
     }
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging) // NOLINT(readability-function-cognitive-complexity)
 {
     // Insert tasks into database
     //---------------------------
@@ -444,23 +447,24 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging)
 
     std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
-    int countInsurantParmasy = 11;
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    int countInsurantPharmacy = 11;
+	patientsPharmacies.reserve(100);
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyA, std::nullopt));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyA, std::nullopt));
     }
 
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyB, std::nullopt));
-        patientsPharmacies.push_back(std::make_tuple(InsurantB, pharmacyA, std::nullopt));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyB, std::nullopt));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantB, pharmacyA, std::nullopt));
     }
 
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyC, std::nullopt));
-        patientsPharmacies.push_back(std::make_tuple(InsurantB, pharmacyB, std::nullopt));
-        patientsPharmacies.push_back(std::make_tuple(InsurantC, pharmacyA, std::nullopt));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyC, std::nullopt));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantB, pharmacyB, std::nullopt));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantC, pharmacyA, std::nullopt));
     }
 
     // insert ChargeItem
@@ -478,7 +482,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -491,7 +495,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -504,7 +508,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -518,7 +522,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -526,7 +530,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging)
     }
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging) // NOLINT(readability-function-cognitive-complexity)
 {
     // Insert tasks into database
     //---------------------------
@@ -538,25 +542,26 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging)
     std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
     model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
-    int countInsurantParmasy = 11;
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    int countInsurantPharmacy = 11;
+	patientsPharmacies.reserve(100);
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
     }
 
     timestamp = model::Timestamp::fromXsDateTime("2021-10-25T12:34:56+01:00");
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
-        patientsPharmacies.push_back(std::make_tuple(InsurantB, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantB, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
     }
 
     timestamp = model::Timestamp::fromXsDateTime("2021-11-25T12:34:56+01:00");
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyC, timestamp + std::chrono::hours(-24 * idxPatient)));
-        patientsPharmacies.push_back(std::make_tuple(InsurantB, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
-        patientsPharmacies.push_back(std::make_tuple(InsurantC, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyC, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantB, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantC, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
     }
 
     // insert ChargeItem
@@ -575,7 +580,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, filters, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, filters, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -588,7 +593,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -601,7 +606,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - std::get<1>(paging);
         auto expectedPage = (remainder >= std::get<0>(paging)) ? std::get<0>(paging) : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -616,7 +621,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging)
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, filters, std::move(paging));
+        sendRequest(client, jwt, chargeItems, totalSearchMatches, filters, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -624,7 +629,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging)
     }
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readability-function-cognitive-complexity)
 {
     // Insert tasks into database
     //---------------------------
@@ -636,25 +641,26 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks)
     std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
     model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
-    int countInsurantParmasy = 11;
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    int countInsurantPharmacy = 11;
+	patientsPharmacies.reserve(100);
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
     }
 
     timestamp = model::Timestamp::fromXsDateTime("2021-10-25T12:34:56+01:00");
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
-        patientsPharmacies.push_back(std::make_tuple(InsurantB, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantB, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
     }
 
     timestamp = model::Timestamp::fromXsDateTime("2021-11-25T12:34:56+01:00");
-    for (int idxPatient = 0; idxPatient < countInsurantParmasy; ++idxPatient)
+    for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
-        patientsPharmacies.push_back(std::make_tuple(InsurantA, pharmacyC, timestamp + std::chrono::hours(-24 * idxPatient)));
-        patientsPharmacies.push_back(std::make_tuple(InsurantB, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
-        patientsPharmacies.push_back(std::make_tuple(InsurantC, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantA, pharmacyC, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantB, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient)));
+        patientsPharmacies.emplace_back(std::make_tuple(InsurantC, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient)));
     }
 
     // insert ChargeItem
@@ -766,7 +772,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks)
     }
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cognitive-complexity)
 {
     // Insert chargeItem into database
     //--------------------------
@@ -780,7 +786,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)
     };
 
     std::vector<std::string> prescriptionIDs;
-    insertChargeItem(patientsPharmaciesChargeItems, prescriptionIDs);
+    insertChargeItem(patientsPharmaciesChargeItems, prescriptionIDs, MockDatabase::mockAccessCode);
 
     // GET ChargeItems
     //-------------------------
@@ -793,6 +799,10 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)
     {
         std::string argument = {"/ChargeItem/" + prescriptionIDs[0]};
         JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyA);
+        sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        EXPECT_FALSE(chargeItemBundle.has_value());
+
+        argument += std::string{"?ac="} + MockDatabase::mockAccessCode.data();
         sendRequest(client, jwt, argument, chargeItemBundle);
         EXPECT_TRUE(chargeItemBundle.has_value());
 
@@ -819,6 +829,11 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)
     {
         std::string argument = {"/ChargeItem/" + prescriptionIDs[1]};
         JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyB);
+        chargeItemBundle.reset();
+        sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        EXPECT_FALSE(chargeItemBundle.has_value());
+
+        argument += std::string{"?ac="} + MockDatabase::mockAccessCode.data();
         sendRequest(client, jwt, argument, chargeItemBundle);
         EXPECT_TRUE(chargeItemBundle.has_value());
 

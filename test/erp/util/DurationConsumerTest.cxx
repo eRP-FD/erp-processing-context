@@ -52,7 +52,7 @@ TEST_F(DurationConsumerTest, DurationConsumerGuard_failForSecondResetSessionIden
 }
 
 
-TEST_F(DurationConsumerTest, DurationConsumer_threadLocalInstances)
+TEST_F(DurationConsumerTest, DurationConsumer_threadLocalInstances)//NOLINT(readability-function-cognitive-complexity)
 {
     DurationConsumerGuard guard ("thread 1", {});
     EXPECT_TRUE(DurationConsumer::getCurrent().isInitialized());
@@ -86,7 +86,7 @@ TEST_F(DurationConsumerTest, DurationConsumerGuard_nestedAccess)
 }
 
 
-TEST_F(DurationConsumerTest, DurationConsumer)
+TEST_F(DurationConsumerTest, DurationConsumer)//NOLINT(readability-function-cognitive-complexity)
 {
     std::atomic_size_t callCount = 0;
     std::chrono::system_clock::duration duration;

@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-void checkProfileVersion(::std::string_view profile, ::std::string_view jsonValue)
+void checkProfileVersion(::std::string_view profile, ::std::string_view jsonValue)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto profileParts = ::String::split(jsonValue, '|');
     ASSERT_GE(profileParts.size(), 1);
@@ -34,7 +34,7 @@ void checkProfileVersion(::std::string_view profile, ::std::string_view jsonValu
     }
 }
 
-TEST(MetaDataTest, Construct)
+TEST(MetaDataTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 {
     model::MetaData metaData;
 
@@ -55,7 +55,7 @@ TEST(MetaDataTest, Construct)
     EXPECT_EQ(metaData.date(), releaseDate);
 }
 
-TEST(MetaDataTest, ProfileVersions)
+TEST(MetaDataTest, ProfileVersions)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto now = ::model::Timestamp::now().toXsDateTime();
     EnvironmentVariableGuard enableProfile{"ERP_FHIR_PROFILE_VALID_FROM", now};

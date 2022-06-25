@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(SignatureTest, ConstructFromData)
+TEST(SignatureTest, ConstructFromData)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1";
     const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
@@ -24,7 +24,7 @@ TEST(SignatureTest, ConstructFromData)
 }
 
 
-TEST(SignatureTest, ConstructFromJson)
+TEST(SignatureTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string json = R"(
 {

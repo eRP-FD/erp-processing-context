@@ -23,7 +23,7 @@ class MockAndProductionTestBase : public testing::TestWithParam<std::function<st
 public:
     std::unique_ptr<ParameterType> parameter;
 
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         std::function<std::unique_ptr<ParameterType>()> factory = testing::TestWithParam<std::function<std::unique_ptr<ParameterType>()>>::GetParam();
         parameter = factory();

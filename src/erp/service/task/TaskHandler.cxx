@@ -54,7 +54,7 @@ model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Bina
 
     // read CAdES-BES signature, but do not verify it
     const CadesBesSignature cadesBesSignature =
-        CadesBesSignature(std::string(*healthcareProviderPrescription.data()), nullptr);
+        CadesBesSignature(std::string(*healthcareProviderPrescription.data()));
 
     // this comes from the database and has already been validated when initially received
     auto bundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
@@ -253,6 +253,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     std::optional<model::KbvBundle> patientConfirmation;
     if (healthcareProviderPrescription.has_value())
     {
+        task->setPatientConfirmationUuid();
         auto confirmationId = task->patientConfirmationUuid();
         Expect3(confirmationId.has_value(), "patient confirmation ID not set in task", std::logic_error);
         patientConfirmation = convertToPatientConfirmation(*healthcareProviderPrescription, Uuid(*confirmationId),
@@ -305,7 +306,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
 void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, const model::PrescriptionId& prescriptionId)
 {
     auto* databaseHandle = session.database();
-    const auto [task, receipt] = databaseHandle->retrieveTaskAndReceipt(prescriptionId);
+    auto [task, receipt] = databaseHandle->retrieveTaskAndReceipt(prescriptionId);
 
     checkTaskState(task);
 
@@ -320,12 +321,16 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
     const auto selfLink = makeFullUrl("/Task/" + task.value().prescriptionId().toString());
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, selfLink);
-    responseBundle.addResource(
-        selfLink, {}, {}, task->jsonDocument());
 
     if (task->status() == model::Task::Status::completed && receipt.has_value())
     {
+        task->setReceiptUuid();
+        responseBundle.addResource(selfLink, {}, {}, task->jsonDocument());
         responseBundle.addResource(receipt->getId().toUrn(), {}, {}, receipt->jsonDocument());
+    }
+    else
+    {
+        responseBundle.addResource(selfLink, {}, {}, task->jsonDocument());
     }
 
     A_19514.start("HttpStatus 200 for successful GET");

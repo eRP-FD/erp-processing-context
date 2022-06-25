@@ -14,7 +14,7 @@
 #include <test/util/EnvironmentVariableGuard.hxx>
 
 
-TEST(ErxReceiptTest, ConstructFromData)
+TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.715.74");
 
@@ -86,7 +86,7 @@ TEST(ErxReceiptTest, ConstructFromData)
 }
 
 
-TEST(ErxReceiptTest, ConstructFromJson)
+TEST(ErxReceiptTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     for (const auto& profileVersion : {::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1,
                                        ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1})

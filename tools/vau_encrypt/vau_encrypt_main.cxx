@@ -28,7 +28,7 @@ static std::string usage(const std::string_view& argv0)
     return oss.str();
 }
 
-static void encrypt(std::ostream& out, const Certificate& vauCertificate, const SafeString& plaintext) {
+static void vauEncrypt(std::ostream& out, const Certificate& vauCertificate, const SafeString& plaintext) {
   // Prepare encryption
     // The key is created in the constructor.
     auto ephemeralKeyPair = EllipticCurve::BrainpoolP256R1->createKeyPair();
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         LOG(ERROR) << "could not open output file";
         return EXIT_FAILURE;
     }
-    encrypt(outfile, certificate, infileData);
+    vauEncrypt(outfile, certificate, infileData);
 
     return EXIT_SUCCESS;
 }

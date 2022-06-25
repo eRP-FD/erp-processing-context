@@ -29,41 +29,41 @@ public:
 
     ::Nonce getNonce(const ::HsmRawSession& session, uint32_t input) override;
 
-    virtual ErpBlob getTeeToken(
+    ErpBlob getTeeToken(
         const HsmRawSession& session,
         TeeTokenRequestInput&& input) override;
 
-    virtual DeriveKeyOutput deriveTaskKey(
+    DeriveKeyOutput deriveTaskKey(
         const HsmRawSession& session,
         DeriveKeyInput&& input) override;
 
-    virtual DeriveKeyOutput deriveAuditKey(
+    DeriveKeyOutput deriveAuditKey(
         const HsmRawSession& session,
         DeriveKeyInput&& input) override;
 
-    virtual DeriveKeyOutput deriveCommsKey(
+    DeriveKeyOutput deriveCommsKey(
         const HsmRawSession& session,
         DeriveKeyInput&& input) override;
 
-    virtual ErpArray<Aes128Length> doVauEcies128(
+    ErpArray<Aes128Length> doVauEcies128(
         const HsmRawSession& session,
         DoVAUECIESInput&& input) override;
 
-    virtual SafeString getVauSigPrivateKey (
+    SafeString getVauSigPrivateKey (
         const HsmRawSession& session,
-        GetVauSigPrivateKeyInput&& arguments) override;
+        GetVauSigPrivateKeyInput&& input) override;
 
-    virtual ErpVector getRndBytes(
+    ErpVector getRndBytes(
         const HsmRawSession& session,
         size_t input) override;
 
-    virtual ErpArray<Aes256Length> unwrapHashKey(
+    ErpArray<Aes256Length> unwrapHashKey(
         const HsmRawSession& session,
         UnwrapHashKeyInput&& input) override;
 
     ::ParsedQuote parseQuote(const ::ErpVector& quote) const override;
 
-    virtual void reconnect (HsmRawSession& session) override;
+    void reconnect (HsmRawSession& session) override;
 
 private:
     ErpBlob mTeeToken;

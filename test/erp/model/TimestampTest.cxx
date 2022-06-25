@@ -18,6 +18,7 @@ using namespace model;
 class TimestampTest : public testing::Test
 {
 public:
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     static void expectErrorForValidTimezones (
         const std::string& validDate,
         const std::function<void(const std::string& s)>& consumer)
@@ -38,6 +39,7 @@ public:
         EXPECT_THROW(consumer(validDate + "-13:59"), ModelException);
     }
 
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     static void expectErrorForInvalidTimezones (
         const std::string& validDate,
         const std::function<void(const std::string& s)>& consumer)
@@ -91,7 +93,7 @@ TEST_F(TimestampTest, fromXsDateTime_successWithMilliseconds)
 }
 
 
-TEST_F(TimestampTest, fromXsDateTime_failForInvalidFormats)
+TEST_F(TimestampTest, fromXsDateTime_failForInvalidFormats)//NOLINT(readability-function-cognitive-complexity)
 {
     // In some ISO8601 profiles a divider other than T is allowed. Not in ours.
     EXPECT_THROW(Timestamp::fromXsDateTime("2022-01-29 12:34:56Z"), ModelException);
@@ -204,7 +206,7 @@ TEST_F(TimestampTest, fromXsDate_success)
 }
 
 
-TEST_F(TimestampTest, fromXsDate_failForInvalidDates)
+TEST_F(TimestampTest, fromXsDate_failForInvalidDates)//NOLINT(readability-function-cognitive-complexity)
 {
     // Year must not be negative. While this is allowed by strict xs:date, FHRE does not support it.
     EXPECT_THROW(Timestamp::fromXsDate("-2022-01-29"), ModelException);
@@ -242,7 +244,7 @@ TEST_F(TimestampTest, fromXsGYearMonth_success)
 }
 
 
-TEST_F(TimestampTest, fromXsGYearMonth_failForInvalidDates)
+TEST_F(TimestampTest, fromXsGYearMonth_failForInvalidDates)//NOLINT(readability-function-cognitive-complexity)
 {
     // Year must not be negative. While this is allowed by strict xs:date, FHRE does not support it.
     EXPECT_THROW(Timestamp::fromXsGYearMonth("-2022-01"), ModelException);
@@ -281,7 +283,7 @@ TEST_F(TimestampTest, fromXsGYear_success)
 }
 
 
-TEST_F(TimestampTest, fromXsGYear_failForInvalidDates)
+TEST_F(TimestampTest, fromXsGYear_failForInvalidDates)//NOLINT(readability-function-cognitive-complexity)
 {
     // Year must not be negative. While this is allowed by strict xs:date, FHIR does not support it.
     EXPECT_THROW(Timestamp::fromXsGYear("-2022"), ModelException);
@@ -300,7 +302,7 @@ TEST_F(TimestampTest, fromGYear_failForTimezones)
 }
 
 
-TEST_F(TimestampTest, fromFhir_success)
+TEST_F(TimestampTest, fromFhir_success)//NOLINT(readability-function-cognitive-complexity)
 {
     {
         // xs:dateTime without sub-second precision.
@@ -344,7 +346,7 @@ TEST_F(TimestampTest, fromFhir_success)
     }
 }
 
-TEST_F(TimestampTest, fromFhirSearchDateTime_failForInvalidFormats)
+TEST_F(TimestampTest, fromFhirSearchDateTime_failForInvalidFormats)//NOLINT(readability-function-cognitive-complexity)
 {
     // In some ISO8601 profiles a divider other than T is allowed. Not in ours.
     EXPECT_THROW(Timestamp::fromFhirSearchDateTime("2022-01-29 12:34:56Z"), ModelException);

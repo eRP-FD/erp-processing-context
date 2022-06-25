@@ -123,7 +123,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     ErpExpect(prescription.has_value() && prescription.value().data().has_value(), ::HttpStatus::InternalServerError,
               "No matching prescription found.");
     const auto digest =
-        CadesBesSignature{::std::string{prescription.value().data().value()}, nullptr}.getMessageDigest();
+        CadesBesSignature{::std::string{prescription.value().data().value()}}.getMessageDigest();
     ErpExpect(digest, ::HttpStatus::InternalServerError, "Cannot get prescription message digest.");
     const auto base64Digest = ::Base64::encode(digest.value());
     const auto prescriptionDigestResource =

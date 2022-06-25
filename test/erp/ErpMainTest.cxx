@@ -54,7 +54,7 @@ public:
     {
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
         MockTerminationHandler::setupForProduction();
     }
 
@@ -70,22 +70,24 @@ public:
      * Make some calls to the servers.
      * Terminate the application.
      */
-    void runApplication (std::function<void(void)>&& terminationAction)
+    void runApplication (std::function<void(void)>&& terminationAction, Factories factories = StaticData::makeMockFactoriesWithServers())
     {
         ErpMain::StateCondition state (ErpMain::State::Unknown);
         auto processingContextThread = std::thread(
-            [&state]
+            [&state, &factories]
             {
                 // Run the processing context in a thread so that it does not block the test.
                 ThreadNames::instance().setCurrentThreadName("pc-main");
-                auto factories = StaticData::makeMockFactoriesWithServers();
-                factories.tslManagerFactory = [](auto) {
-                    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-                    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
-                    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
-                    return TslTestHelper::createTslManager<TslManager>(
-                        {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
-                };
+                if (!factories.tslManagerFactory)
+                {
+                    factories.tslManagerFactory = [](auto) {
+                        const auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+                        const auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+                        const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
+                        return TslTestHelper::createTslManager<TslManager>(
+                            {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+                    };
+                }
                 ErpMain::runApplication(
                     std::move(factories),
                     state,
@@ -207,7 +209,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
     runApplication(
         []
         {
-            auto& config = Configuration::instance();
+            const auto& config = Configuration::instance();
             HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
                                std::stoi(config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
             const auto response = client.send(
@@ -231,7 +233,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
     runApplication(
         []
         {
-            auto& config = Configuration::instance();
+            const auto& config = Configuration::instance();
             HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
                                std::stoi(config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
             const auto response = client.send(
@@ -248,6 +250,46 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
 
             std::raise(SIGTERM);
         });
+    SUCCEED();
+}
+
+TEST_F(ErpMainTest, runProcessingContext_initialTslDownloadFails)
+{
+    Factories factories = StaticData::makeMockFactoriesWithServers();
+    factories.tslManagerFactory = [](auto) {
+        const std::string tslContent =
+            ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
+        const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+        const auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+        const auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+        const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
+        auto requestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{});
+        requestSender->setUrlHandler(TslTestHelper::shaDownloadUrl, [](const std::string&) {
+            return ClientResponse(Header(HttpStatus::InternalServerError), "");
+        });
+
+        return TslTestHelper::createTslManager<TslManager>(
+            requestSender, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+    };
+
+    auto processingContextThread = std::thread(
+        [&factories]
+        {
+            ErpMain::StateCondition state (ErpMain::State::Unknown);
+            // Run the processing context in a thread so that it does not block the test.
+            ThreadNames::instance().setCurrentThreadName("pc-main");
+            ASSERT_NO_FATAL_FAILURE(ErpMain::runApplication(
+                std::move(factories),
+                state,
+                [](PcServiceContext& serviceContext)
+                {
+                    // Set the certificate explicitly as a simple mock of the idp updater.
+                    serviceContext.idp.setCertificate(Certificate(StaticData::idpCertificate));
+                    TerminationHandler::instance().terminate();
+                }));
+        });
+
+    processingContextThread.join();
     SUCCEED();
 }
 

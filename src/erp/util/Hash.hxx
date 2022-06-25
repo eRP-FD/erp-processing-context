@@ -16,8 +16,8 @@
 class Hash
 {
 public:
-    static std::vector<char> sha1 (gsl::span<const char> data);
-    static std::vector<char> sha256 (gsl::span<const char> data);
+    static std::vector<char> sha1 (gsl::span<const char> source);
+    static std::vector<char> sha256 (gsl::span<const char> source);
 
     /**
      * Return the binary SHA1 hash of the given data.

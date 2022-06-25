@@ -19,7 +19,8 @@ class ErpProcessingContext(ConanFile):
                 'build_type': ['Debug', 'Release', 'RelWithDebInfo'],
                 'arch': ['x86_64']}
     options = {'with_tpmclient': [True, False],
-               'with_hsmclient': [True, False]}
+               'with_hsmclient': [True, False],
+               'with_sbom': [True, False]}
     default_options = {'boost:bzip2': False,
                        'boost:header_only': True,
                        'gsl-lite:on_contract_violation': 'throw',
@@ -36,31 +37,41 @@ class ErpProcessingContext(ConanFile):
                        'hiredis:with_ssl': True,
                        'with_tpmclient': True,
                        'with_hsmclient': True,
-                       'zlib:shared': True}
+                       'with_sbom': False,
+                       'zlib:shared': True,
+                       'date:use_system_tz_db': True}
     generators = "cmake"
     exports_sources = "."
     build_requires = []
-    requires = ['boost/1.77.0',
+    requires = ['boost/1.79.0',
                 'date/3.0.1',  # date can be removed as soon as we use C++20
-                'glog/0.5.0',
-                'gsl-lite/0.39.0',
-                'libxml2/2.9.12',
-                'openssl/1.1.1n@erp/stable-1',
+                'glog/0.6.0',
+                'gsl-lite/0.40.0',
+                'libxml2/2.9.14',
+                'openssl/1.1.1o@erp/stable-1',
                 'rapidjson/cci.20211112',
                 'magic_enum/0.7.3',
                 'zlib/1.2.12',  # when updating this, also update /docker/manifest.*.template files
-                'libpqxx/7.6.0',
-                'libpq/13.4',
-                'zstd/1.5.0',  # database compression
+                'libpqxx/7.7.3',
+                'libpq/13.6',
+                'zstd/1.5.2',  # database compression
                 'gtest/1.11.0',
                 'hiredis/1.0.2',
-                'redis-plus-plus/1.3.2']
+                'redis-plus-plus/1.3.3']
 
     def requirements(self):
         if self.options.with_tpmclient:
             self.requires('tpmclient/0.8.1')
         if self.options.with_hsmclient:
             self.requires('hsmclient/2.0.2')
+
+    def build_requirements(self):
+        if self.options.with_sbom:
+            self.build_requires('sbom_generator/0.1@ibm/stable')
+
+    def configure(self):
+        if self.options.with_sbom:
+            self.generators = "cmake", "sbom"
 
     def config_options(self):
         if self.settings.os == 'Windows':

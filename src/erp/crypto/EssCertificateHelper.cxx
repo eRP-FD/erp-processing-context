@@ -136,7 +136,7 @@ namespace
         OpenSslExpect(generalName->d.dirn != nullptr, "Can not duplicate certificate issuer name");
         OpenSslExpect(1 == sk_GENERAL_NAME_push(certificateId.essIssuerSerial->issuer, generalName.get()),
                       "Can not set general name to certificate id");
-        generalName.release();
+        generalName.release(); // NOLINT(bugprone-unused-return-value)
 
         ASN1_INTEGER_free(certificateId.essIssuerSerial->serial);
         certificateId.essIssuerSerial->serial = ASN1_INTEGER_dup(X509_get_serialNumber(&certificate));
@@ -167,7 +167,7 @@ namespace
         EssCertificateIdPtr certificateId = createEssCertificateId(certificate);
         OpenSslExpect(sk_EssCertificateId_push(essCertificate->essCertificateIds, certificateId.get()),
                       "Can not push certificate id to EssSigningCertificate");
-        certificateId.release();
+        certificateId.release(); // NOLINT(bugprone-unused-return-value)
 
         return essCertificate;
     }
@@ -240,7 +240,7 @@ namespace
         EssCertificateIdV2Ptr certificateId = createEssCertificateIdV2(certificate, hashAlgorithm);
         OpenSslExpect(sk_EssCertificateIdV2_push(essCertificate->essCertificateIds, certificateId.get()),
                       "Can not push certificate id to EssSigningCertificateV2");
-        certificateId.release();
+        certificateId.release(); // NOLINT(bugprone-unused-return-value)
 
         return essCertificate;
     }
@@ -413,4 +413,3 @@ void EssCertificateHelper::verifySigningCertificateFromSignedData(
         verifySigningCertificateV2(*signingCertificateV2AttributeString, signingCertificate);
     }
 }
-

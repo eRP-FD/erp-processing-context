@@ -29,8 +29,8 @@ JWT::JWT(const JWT& other)
 }
 
 
-JWT::JWT(const std::string& jwt)
-    : mJwt(jwt)
+JWT::JWT(std::string jwt)
+    : mJwt(std::move(jwt))
 {
     A_19993.start("Check JWT structure according to gemSpec_IDP_FD chapter 6.");
     A_20362.start("RFC 7519 7.2.1, 7.2.2, 7.2.10 - Check that exactly two periods exist, first part is the header, second part is the claims document.");
@@ -155,7 +155,7 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     const auto binarySignature = Base64::decodeToString(mSignature);
     // Two number buffers (r and s values), 2x32 bytes.
     A_20504.start("Check for problematic/corrupted signature.");
-    if (binarySignature.size() != 2 * veclen)
+    if (binarySignature.size() != 2ul * veclen)
     {
         throw JwtInvalidSignatureException("Verification failed - invalid binary signature.");
     }

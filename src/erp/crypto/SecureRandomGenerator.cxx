@@ -51,12 +51,12 @@ double SecureRandomGenerator::shannonEntropy (const std::string_view& data)
     {
         if (count > 0)
         {
-            double p_of_x = static_cast<double>(count) / data.size();
+            double p_of_x = static_cast<double>(count) / gsl::narrow<double>(data.size());
             entropy -= p_of_x * std::log2(p_of_x);
         }
     }
 
-    return entropy * data.size();
+    return entropy * static_cast<double>(data.size());
 }
 
 SafeString SecureRandomGenerator::randomBytes(size_t count)

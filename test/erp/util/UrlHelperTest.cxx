@@ -132,7 +132,7 @@ TEST(UrlHelperTest, unescapeUrl_success)
 }
 
 
-TEST(UrlHelperTest, unescapeUrl_fail)
+TEST(UrlHelperTest, unescapeUrl_fail)//NOLINT(readability-function-cognitive-complexity)
 {
     // Incomplete hex number.
     EXPECT_THROW(UrlHelper::unescapeUrl("a%2"), ErpException);

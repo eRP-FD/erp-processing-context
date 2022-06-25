@@ -201,6 +201,7 @@ namespace {
                     // PKV specific:  ->
                     Operation::GET_ChargeItem_id,
                     Operation::PUT_ChargeItem_id,
+                    Operation::DELETE_ChargeItem_id,
                     Operation::DELETE_Consent_id,
                     Operation::GET_Consent,     // TODO not sure;
                     Operation::POST_Consent,
@@ -223,6 +224,7 @@ namespace {
                     Operation::POST_Task_id_abort,
                     // PKV specific:  ->
                     Operation::POST_Consent,
+                    Operation::POST_ChargeItem,
                     // <-
                 }},
             {HttpStatus::Gone,                    // 410
@@ -261,8 +263,9 @@ void ResponseValidator::validate (ServerResponse& response, const Operation oper
         response.setStatus(HttpStatus::InternalServerError);
         response.setBody("");
         A_19514.finish();
+        return;
     }
-    else if (operations->second.count(operation) == 0)
+    if (operations->second.count(operation) == 0)
     {
         // There are eRp operations that would permit the status code of the response
         // but `operation` is not one of them.
@@ -278,25 +281,23 @@ void ResponseValidator::validate (ServerResponse& response, const Operation oper
         response.setStatus(HttpStatus::InternalServerError);
         response.setBody("");
         A_19514.finish();
+        return;
     }
-    else
+    // Validation was successful. Print a log message.
+    switch(status)
     {
-        // Validation was successful. Print a log message.
-        switch(status)
-        {
-            case HttpStatus::OK:
-            case HttpStatus::Created:
-            case HttpStatus::NoContent:
-                TVLOG(1) << "request was successful with status "
-                         << static_cast<size_t>(status)
-                         << " " << toString(status);
-                break;
+        case HttpStatus::OK:
+        case HttpStatus::Created:
+        case HttpStatus::NoContent:
+            TVLOG(1) << "request was successful with status "
+                        << static_cast<size_t>(status)
+                        << " " << toString(status);
+            break;
 
-            default:
-                TVLOG(1) << "request failed with status "
-                         << static_cast<size_t>(status)
-                         << " " << toString(status);
-                break;
-        }
+        default:
+            TVLOG(1) << "request failed with status "
+                        << static_cast<size_t>(status)
+                        << " " << toString(status);
+            break;
     }
 }

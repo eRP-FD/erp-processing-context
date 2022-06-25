@@ -43,7 +43,7 @@ protected:
         size_t& immersionDepth,
         std::ostringstream& buffer,
         const FhirStructureDefinition* backboneStructDef,
-        const FhirElement* backboneElement,
+        std::shared_ptr<const FhirElement> backboneElement,
         const FhirStructureDefinition& objectStructDef,
         const std::string& objectName,
         const rapidjson::Value& object);
@@ -51,7 +51,7 @@ protected:
         size_t& immersionDepth,
         std::ostringstream& buffer,
         const FhirStructureDefinition* backboneStructDef,
-        const FhirElement* backboneElement,
+        std::shared_ptr<const FhirElement> backboneElement,
         const FhirStructureDefinition& objectStructDef,
         const std::string& arrayName,
         const rapidjson::Value& array);
@@ -65,7 +65,7 @@ protected:
         size_t& immersionDepth,
         std::ostringstream& buffer,
         const FhirStructureDefinition* backboneStructDef,
-        const FhirElement* backboneElement,
+        std::shared_ptr<const FhirElement> backboneElement,
         const FhirStructureDefinition& elementStructDef,
         const std::string& name,
         const rapidjson::Value& value);
@@ -73,12 +73,12 @@ protected:
     static std::map<std::string, const rapidjson::Value*> getSortedMembers(
         size_t immersionDepth,
         const FhirStructureDefinition* backboneStructDef,
-        const FhirElement* backboneElement,
+        std::shared_ptr<const FhirElement> backboneElement,
         const FhirStructureDefinition& objectStructDef,
         const rapidjson::Value& object);
 
     static std::string buildElementPath(
-        const FhirElement* backboneElement,
+        std::shared_ptr<const FhirElement> backboneElement,
         const FhirStructureDefinition& objectStructDef,
         const std::string& objectName);
 
@@ -87,7 +87,7 @@ protected:
     static bool elementHasToBeRemoved(
         size_t immersionDepth,
         const FhirStructureDefinition* backboneStructDef,
-        const FhirElement* backboneElement,
+        std::shared_ptr<const FhirElement> backboneElement,
         const FhirStructureDefinition& objectStructDef,
         const std::string& objectName);
     static bool doubleWhitespacesHaveToBeRemoved(const FhirStructureDefinition& elementStructDef);

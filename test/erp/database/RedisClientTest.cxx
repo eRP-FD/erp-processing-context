@@ -30,7 +30,7 @@ class RedisClientTest : public testing::Test
 {
 };
 
-TEST_F(RedisClientTest, BasicTest)
+TEST_F(RedisClientTest, BasicTest)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono;
     DosHandler dosHandler(std::make_unique<MockRedisStore>());
@@ -82,7 +82,7 @@ TEST_F(RedisClientTest, BasicTest)
     ASSERT_THROW(jwt.verify(publicKey), JwtExpiredException);
 }
 
-TEST_F(RedisClientTest, BasicTest2)
+TEST_F(RedisClientTest, BasicTest2)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono;
     DosHandler dosHandler(std::make_unique<MockRedisStore>());

@@ -15,8 +15,8 @@
 #include <pqxx/nontransaction>
 
 
-UrlArguments::UrlArguments (std::vector<SearchParameter>&& urlArguments)
-    : mSupportedParameters(std::move(urlArguments)),
+UrlArguments::UrlArguments (std::vector<SearchParameter>&& searchParameters)
+    : mSupportedParameters(std::move(searchParameters)),
       mSearchArguments(),
       mSortArguments(),
       mPagingArgument()

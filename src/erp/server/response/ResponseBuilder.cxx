@@ -21,9 +21,6 @@ ResponseBuilder::ResponseBuilder (ServerResponse& response)
 }
 
 
-ResponseBuilder::~ResponseBuilder (void) = default;
-
-
 ResponseBuilder& ResponseBuilder::status (HttpStatus status)
 {
     mResponse.setStatus(status);

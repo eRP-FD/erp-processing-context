@@ -43,11 +43,6 @@ namespace {
 }
 
 
-ServerResponseWriter::ServerResponseWriter(void)
-{
-}
-
-
 void ServerResponseWriter::write (
     SslStream& stream,
     ValidatedServerResponse&& validatedResponse,

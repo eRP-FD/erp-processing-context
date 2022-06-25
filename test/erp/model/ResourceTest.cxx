@@ -25,7 +25,7 @@ class FriendlyResourceBase : public ResourceBase
     FRIEND_TEST(ResourceBaseTest, Constructor);
 };
 
-TEST(ResourceBaseTest, Constructor)
+TEST(ResourceBaseTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto [gematikVersion, kbvVersion] = ResourceVersion::current();
 

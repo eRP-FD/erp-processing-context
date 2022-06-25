@@ -9,7 +9,6 @@
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/server/context/ServiceContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/service/SubscriptionPostHandler.hxx"
@@ -139,6 +138,8 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         A_19450.start("do not allow malicious code in payload");
         communication.verifyPayload();
         A_19450.finish();
+
+        communication.deleteTimeReceived();
 
         // Please note that "insertCommunication" adds the id to the communication.
         const std::optional<Uuid> id = databaseHandle->insertCommunication(communication);

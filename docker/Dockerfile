@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.10 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -47,12 +47,14 @@ FROM build AS release_build
 WORKDIR /build/erp-processing-context/release
 RUN conan install .. --build missing
 RUN cmake \
+    -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DERP_WITH_HSM_MOCK=OFF \
     -DERP_BUILD_VERSION=${ERP_BUILD_VERSION} \
     -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
+    -DERP_WARNING_AS_ERROR=ON \
     -DCMAKE_INSTALL_PREFIX=/erp .. && \
-    cmake --build . -j 6 --target production && \
+    ninja -l$(nproc) production && \
     cmake --install . --strip --component production &&\
     cp install_manifest_production.txt install_manifest.txt
 
@@ -76,12 +78,14 @@ FROM build AS reldeb_build
 WORKDIR /build/erp-processing-context/reldeb
 RUN conan install .. --build missing
 RUN cmake \
+    -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DERP_WITH_HSM_MOCK=OFF \
     -DERP_BUILD_VERSION=${ERP_BUILD_VERSION} \
     -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
+    -DERP_WARNING_AS_ERROR=ON \
     -DCMAKE_INSTALL_PREFIX=/debug/erp .. && \
-    cmake --build . -j 6 --target production && \
+    ninja -l$(nproc) production && \
     cmake --install . --strip --component production &&\
     cp install_manifest_production.txt install_manifest.txt
 

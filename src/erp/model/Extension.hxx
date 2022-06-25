@@ -42,6 +42,8 @@ public:
     [[nodiscard]] std::optional<std::string_view> valueIdentifierTypeSystem() const;
     [[nodiscard]] std::optional<std::string_view> valueIdentifierTypeCode() const;
     [[nodiscard]] std::optional<std::string_view> valueIdentifierUse() const;
+
+    friend std::optional<Extension> ResourceBase::getExtension<Extension>(const std::string_view&) const;
 };
 
 }

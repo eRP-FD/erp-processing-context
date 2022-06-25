@@ -95,7 +95,7 @@ TEST_F(UrlArgumentsTest, parseWithSelfLink_WithOffsetAndCount)
 
 
 
-TEST_F(UrlArgumentsTest, parseWithBundleLinks)
+TEST_F(UrlArgumentsTest, parseWithBundleLinks)//NOLINT(readability-function-cognitive-complexity)
 {
     UrlArguments arguments (
         {

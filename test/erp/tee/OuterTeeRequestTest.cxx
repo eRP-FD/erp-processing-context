@@ -35,7 +35,7 @@ TEST_F(OuterTeeRequestTest, assemble)
 }
 
 
-TEST_F(OuterTeeRequestTest, disassemble)
+TEST_F(OuterTeeRequestTest, disassemble)//NOLINT(readability-function-cognitive-complexity)
 {
     const OuterTeeRequest message = OuterTeeRequest::disassemble(
         "\1x component of the ephemeral keyy component of the ephemeral key"

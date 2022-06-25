@@ -4,6 +4,7 @@
  */
 
 #include "erp/validation/KbvMedicationPZNValidator.hxx"
+#include "erp/ErpRequirements.hxx"
 #include "erp/model/Extension.hxx"
 #include "erp/model/KbvMedicationPzn.hxx"
 #include "erp/validation/KbvValidationUtils.hxx"
@@ -14,7 +15,8 @@ enum class KbvMedicationPZNConstraint
 {
     erp_NormgroesseOderMenge,
     erp_begrenzungValue,
-    erp_codeUndSystem
+    erp_codeUndSystem,
+    erp_begrenzungPznCode
 };
 std::string constraintMessage(KbvMedicationPZNConstraint constraint)
 {
@@ -26,6 +28,8 @@ std::string constraintMessage(KbvMedicationPZNConstraint constraint)
             return "Die Packungsgröße darf aus maximal 7 Zeichen bestehen";
         case KbvMedicationPZNConstraint::erp_codeUndSystem:
             return "Wenn ein Code eingegeben ist, muss auch das System hinterlegt sein.";
+        case KbvMedicationPZNConstraint::erp_begrenzungPznCode:
+            return "Der PZN-Code muss aus genau 8 Zeichen bestehen.";
     }
     Fail("invalid KbvMedicationPZNConstraint " + std::to_string(static_cast<std::uintmax_t>(constraint)));
 }
@@ -56,6 +60,7 @@ void KbvMedicationPZNValidator_V1_0_1::doValidate(const model::KbvMedicationPzn&
     erp_NormgroesseOderMenge(kbvMedicationpzn);
     amountNumerator_erp_begrenzungValue(kbvMedicationpzn);
     amountNumerator_erp_codeUndSystem(kbvMedicationpzn);
+    erp_begrenzungPznCode(kbvMedicationpzn);
 }
 
 void KbvMedicationPZNValidator_V1_0_1::erp_NormgroesseOderMenge(const model::KbvMedicationPzn& kbvMedicationpzn) const
@@ -117,4 +122,20 @@ void KbvMedicationPZNValidator_V1_0_1::amountNumerator_erp_codeUndSystem(
         ErpFailWithDiagnostics(HttpStatus::BadRequest,
                                constraintError(KbvMedicationPZNConstraint::erp_codeUndSystem), ex.what());
     }
+}
+
+void KbvMedicationPZNValidator_V1_0_1::erp_begrenzungPznCode(const model::KbvMedicationPzn& kbvMedicationpzn) const
+{
+    A_22925.start("PZN length constraint check");
+    const auto* errorMessageFromAfo = "Länge PZN unzulässig (muss 8-stellig sein)";
+    try
+    {
+        const auto pznString = kbvMedicationpzn.pzn();
+        ErpExpect(pznString.size() == 8, HttpStatus::BadRequest, errorMessageFromAfo);
+    }
+    catch (const model::ModelException& ex)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, errorMessageFromAfo, ex.what());
+    }
+    A_22925.finish();
 }

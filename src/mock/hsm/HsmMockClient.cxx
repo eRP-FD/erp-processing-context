@@ -136,7 +136,7 @@ ErpVector HsmMockClient::getRndBytes(
     {
         const size_t count = std::min(remaining, defaultRandomData.size());
         std::copy(defaultRandomData.begin(), defaultRandomData.begin()+count, p);
-        p += count;
+        p += gsl::narrow<ptrdiff_t>(count);
         remaining -= count;
     }
     return result;

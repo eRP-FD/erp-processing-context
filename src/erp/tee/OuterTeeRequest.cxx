@@ -9,7 +9,7 @@
 
 
 namespace {
-    static constexpr size_t MessageLengthWithoutCiphertext =
+    constexpr size_t MessageLengthWithoutCiphertext =
         OuterTeeRequest::VersionLength
         + EllipticCurve::KeyCoordinateLength // x
         + EllipticCurve::KeyCoordinateLength // y
@@ -27,7 +27,7 @@ std::string OuterTeeRequest::assemble (void) const
 {
     std::string result (MessageLengthWithoutCiphertext + ciphertext.size(), 'X');
 
-    result[0] = version;
+    result[0] = static_cast<char>(version);
     size_t offset = VersionLength;
     std::copy(xComponent, xComponent + EllipticCurve::KeyCoordinateLength, result.data() + offset);
     offset += EllipticCurve::KeyCoordinateLength;
@@ -68,24 +68,23 @@ OuterTeeRequest OuterTeeRequest::disassemble (const std::string& outerRequestBod
 
 std::string_view OuterTeeRequest::getPublicX (void) const
 {
-    return std::string_view(reinterpret_cast<const char*>(xComponent), EllipticCurve::KeyCoordinateLength);
+    return {reinterpret_cast<const char*>(xComponent), EllipticCurve::KeyCoordinateLength};
 }
 
 
 std::string_view OuterTeeRequest::getPublicY (void) const
 {
-    return std::string_view(reinterpret_cast<const char*>(yComponent), EllipticCurve::KeyCoordinateLength);
+    return {reinterpret_cast<const char*>(yComponent), EllipticCurve::KeyCoordinateLength};
 }
 
 
 std::string_view OuterTeeRequest::getIv (void) const
 {
-    return std::string_view(reinterpret_cast<const char*>(iv), AesGcm128::IvLength);
+    return {reinterpret_cast<const char*>(iv), AesGcm128::IvLength};
 }
 
 
 std::string_view OuterTeeRequest::getAuthenticationTag (void) const
 {
-    return std::string_view(reinterpret_cast<const char*>(authenticationTag), AesGcm128::AuthenticationTagLength);
+    return {reinterpret_cast<const char*>(authenticationTag), AesGcm128::AuthenticationTagLength};
 }
-

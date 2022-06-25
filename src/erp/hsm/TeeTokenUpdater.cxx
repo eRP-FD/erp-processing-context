@@ -41,7 +41,7 @@ TeeTokenUpdater::TeeTokenUpdater (
           std::move(teeTokenConsumer),
           hsmFactory,
           std::move(tokenProvider),
-          timerManager,
+          std::move(timerManager),
           std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS, 1200)),
           std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_RETRY_SECONDS, 60)))
 {
@@ -63,7 +63,7 @@ TeeTokenUpdater::TeeTokenUpdater (
       mUpdateInterval(updateInterval),
       mRetryInterval(retryInterval),
       mLastUpdate(decltype(mLastUpdate)::value_type()),
-      mTimerManager(timerManager)
+      mTimerManager(std::move(timerManager))
 {
     Expect(mTokenProvider!=nullptr, "can not create TeeTokenUpdater without token provider");
     Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);

@@ -25,7 +25,7 @@ CommunicationPayload::CommunicationPayload(const rj::Value* payloadValue) :
 
         const auto& array = payloadValue->GetArray();
 
-        for (auto object = array.Begin(); object != array.End(); ++object)
+        for (const auto* object = array.Begin(); object != array.End(); ++object)
         {
             for (const auto& itemType : CommunicationPayloadItem::types())
             {

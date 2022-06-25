@@ -7,14 +7,13 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/Device.hxx"
-#include "erp/model/ErxReceipt.hxx"
 #include "erp/model/MetaData.hxx"
-#include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
@@ -25,7 +24,6 @@
 #include "erp/service/task/AbortTaskHandler.hxx"
 #include "erp/service/task/ActivateTaskHandler.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
-#include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
 #include "erp/service/chargeitem/ChargeItemDeleteHandler.hxx"
@@ -35,18 +33,16 @@
 #include "erp/service/consent/ConsentDeleteHandler.hxx"
 #include "erp/service/consent/ConsentGetHandler.hxx"
 #include "erp/service/consent/ConsentPostHandler.hxx"
-#include "erp/service/chargeitem/ChargeItemDeleteHandler.hxx"
-#include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
+#include "erp/tsl/OcspHelper.hxx"
 #include "erp/util/Base64.hxx"
+#include "erp/util/Configuration.hxx"
 #include "erp/util/FileHelper.hxx"
-#include "test/erp/tsl/TslTestHelper.hxx"
+#include "mock/util/MockConfiguration.hxx"
 #include "test/mock/MockDatabase.hxx"
-#include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/StaticData.hxx"
-#include "test_config.h"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/mock/RegistrationMock.hxx"
@@ -115,7 +111,7 @@
  *
 */
 
-TEST_F(EndpointHandlerTest, GetTaskById)
+TEST_F(EndpointHandlerTest, GetTaskById)//NOLINT(readability-function-cognitive-complexity)
 {
     GetTaskHandler handler({});
 
@@ -158,7 +154,7 @@ TEST_F(EndpointHandlerTest, GetTaskById)
     EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::NotFound);
 }
 
-TEST_F(EndpointHandlerTest, GetTaskById169NoAccessCode)
+TEST_F(EndpointHandlerTest, GetTaskById169NoAccessCode)//NOLINT(readability-function-cognitive-complexity)
 {
     GetTaskHandler handler({});
 
@@ -195,7 +191,7 @@ TEST_F(EndpointHandlerTest, GetTaskById169NoAccessCode)
 
 }
 
-TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)
+TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)//NOLINT(readability-function-cognitive-complexity)
 {
     GetTaskHandler handler({});
 
@@ -256,7 +252,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)
     ASSERT_TRUE(parts[1].empty());
 }
 
-TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)
+TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19116.test("Get Task using the correct KVNR");
     // The database contains a task with
@@ -290,7 +286,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)
                                          *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
-TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)
+TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19116.test("Get Task wrong KVNR and using the correct AccessCode passed by URL");
     // The database contains a task with
@@ -325,7 +321,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)
                                          *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
-TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)
+TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19116.test("Get Task wrong KVNR and using the correct AccessCode passed by Http-Header");
     // The database contains a task with
@@ -421,7 +417,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMissingAccessCode)
     ASSERT_TRUE(serverResponse.getBody().empty());
 }
 
-TEST_F(EndpointHandlerTest, GetTaskById_A20753_ExclusionOfVerificationIdentity)
+TEST_F(EndpointHandlerTest, GetTaskById_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
 {
     GetTaskHandler handler({});
 
@@ -473,7 +469,7 @@ TEST_F(EndpointHandlerTest, GetTaskById_A20753_ExclusionOfVerificationIdentity)
     }
 }
 
-TEST_F(EndpointHandlerTest, GetAllTasks)
+TEST_F(EndpointHandlerTest, GetAllTasks)//NOLINT(readability-function-cognitive-complexity)
 {
     GetAllTasksHandler handler({});
 
@@ -526,7 +522,7 @@ TEST_F(EndpointHandlerTest, GetAllTasks)
 }
 
 // Regression Test for bugticket ERP-6560 (Task bundle doesn't contain paging links to next and prev)
-TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
+TEST_F(EndpointHandlerTest, GetAllTasksErp6560)//NOLINT(readability-function-cognitive-complexity)
 {
     GetAllTasksHandler handler({});
 
@@ -658,7 +654,7 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)
     }
 }
 
-TEST_F(EndpointHandlerTest, CreateTask)
+TEST_F(EndpointHandlerTest, CreateTask)//NOLINT(readability-function-cognitive-complexity)
 {
     CreateTaskHandler handler({});
 
@@ -705,7 +701,7 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyJson)
     Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirJsonUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
 
-    std::string parameters = R"--()--";
+    std::string parameters;
 
     serverRequest.setBody(std::move(parameters));
 
@@ -723,7 +719,7 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyXml)
     Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
 
-    std::string parameters = R"--()--";
+    std::string parameters;
 
     serverRequest.setBody(std::move(parameters));
 
@@ -734,136 +730,7 @@ TEST_F(EndpointHandlerTest, CreateTaskEmptyBodyXml)
     EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::BadRequest);
 }
 
-namespace {
 
-void checkActivateTask(
-    PcServiceContext& serviceContext,
-    const std::string_view& taskJson,
-    const std::string_view& kbvBundleXml,
-    const std::string_view& expectedKvnr,
-    const HttpStatus expectedStatus = HttpStatus::OK)
-{
-    auto cadesBesSignatureFile = CryptoHelper::toCadesBesSignature(std::string(kbvBundleXml));
-    const auto& origTask = model::Task::fromJsonNoValidation(taskJson);
-
-    ActivateTaskHandler handler({});
-    Header requestHeader{ HttpMethod::POST, "/Task/" + origTask.prescriptionId().toString() + "/$activate", 0,
-                         {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
-    requestHeader.addHeaderField("X-AccessCode", std::string(origTask.accessCode()));
-    ServerRequest serverRequest{ std::move(requestHeader) };
-
-    std::string parameters = R"--(
-<Parameters xmlns="http://hl7.org/fhir">
-    <parameter>
-        <name value="ePrescription" />
-        <resource>
-            <Binary>
-                <contentType value="application/pkcs7-mime" />
-                <data value=")--" +  cadesBesSignatureFile + R"--("/>
-            </Binary>
-        </resource>
-    </parameter>
-</Parameters>)--";
-
-    serverRequest.setBody(std::move(parameters));
-    serverRequest.setPathParameters({"id"}, {origTask.prescriptionId().toString()});
-
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext{serviceContext, serverRequest, serverResponse, accessLog};
-
-    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-    if(expectedStatus != HttpStatus::OK)
-    {
-        EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), expectedStatus);
-        return;
-    }
-
-    ASSERT_NO_THROW(handler.handleRequest(sessionContext));
-    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-
-    std::optional<model::Task> task;
-    ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(),
-                                                *StaticData::getXmlValidator(),
-                                                *StaticData::getInCodeValidator(),
-                                                SchemaType::Gem_erxTask));
-    ASSERT_TRUE(task.has_value());
-    EXPECT_EQ(task->prescriptionId(), origTask.prescriptionId());
-    EXPECT_EQ(task->status(), model::Task::Status::ready);
-    EXPECT_EQ(task->kvnr().value(), expectedKvnr);
-    EXPECT_NO_THROW((void)task->expiryDate());
-    EXPECT_FALSE(task->lastModifiedDate().toXsDateTime().empty());
-    EXPECT_FALSE(task->authoredOn().toXsDateTime().empty());
-    EXPECT_FALSE(task->accessCode().empty());
-    EXPECT_FALSE(task->expiryDate().toXsDateTime().empty());
-    EXPECT_FALSE(task->acceptDate().toXsDateTime().empty());
-    EXPECT_TRUE(task->healthCarePrescriptionUuid().has_value());
-    EXPECT_TRUE(task->patientConfirmationUuid().has_value());
-    EXPECT_FALSE(task->receiptUuid().has_value());
-}
-
-std::string replacePrescriptionId(const std::string& templateStr, const std::string& prescriptionId)
-{
-    return String::replaceAll(templateStr, "##PRESCRIPTION_ID##", prescriptionId);
-}
-std::string replaceKvnr(const std::string& templateStr, const std::string& kvnr)
-{
-    return String::replaceAll(templateStr, "##KVNR##", kvnr);
-}
-
-} // anonymous namespace
-
-TEST_F(EndpointHandlerTest, ActivateTask)
-{
-    auto& resourceManager = ResourceManager::instance();
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
-        mServiceContext,
-        resourceManager.getStringResource(dataPath + "/task3.json"),
-        resourceManager.getStringResource(dataPath + "/kbv_bundle.xml"),
-        "X234567890"));
-}
-
-TEST_F(EndpointHandlerTest, ActivateTaskPkv)
-{
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
-    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50010);
-    const auto pkvKvnr = "X500000010";
-
-    auto& resourceManager = ResourceManager::instance();
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
-        mServiceContext,
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_created_template.json"), pkvTaskId.toString()), pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"), pkvTaskId.toString()), pkvKvnr),
-        pkvKvnr));
-}
-
-TEST_F(EndpointHandlerTest, ActivateTaskPkvInvalidCoverage)
-{
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
-    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50010);
-    const auto pkvKvnr = "X500000010";
-
-    auto& resourceManager = ResourceManager::instance();
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
-        mServiceContext,
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_created_template.json"), pkvTaskId.toString()), pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_gkv_bundle_template.xml"), pkvTaskId.toString()), pkvKvnr),
-        pkvKvnr,
-        HttpStatus::BadRequest));
-}
-
-TEST_F(EndpointHandlerTest, ActivateTaskBrokenSignature)
-{
-    auto& resourceManager = ResourceManager::instance();
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
-        mServiceContext,
-        resourceManager.getStringResource(dataPath + "/task3.json"),
-        "",  // empty signature
-        "X234567890",
-        HttpStatus::BadRequest));
-}
 
 
 
@@ -878,7 +745,7 @@ TEST_F(EndpointHandlerTest, GetAllAuditEvents_delete_task)
     ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446689", "audit_event_delete_task.json"));
 }
 
-TEST_F(EndpointHandlerTest, GetAuditEvent)
+TEST_F(EndpointHandlerTest, GetAuditEvent)//NOLINT(readability-function-cognitive-complexity)
 {
     GetAuditEventHandler handler({});
 
@@ -912,6 +779,7 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)
 
 namespace {
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkAcceptTaskSuccessCommon(
     std::optional<model::Bundle>& resultBundle,
     PcServiceContext& serviceContext,
@@ -952,7 +820,7 @@ void checkAcceptTaskSuccessCommon(
     ASSERT_EQ(binaryResources.size(), 1);
     ASSERT_TRUE(binaryResources[0].data().has_value());
     std::optional<CadesBesSignature> signature;
-    ASSERT_NO_THROW(signature.emplace(std::string{binaryResources[0].data().value()}, nullptr));
+    ASSERT_NO_THROW(signature.emplace(std::string{binaryResources[0].data().value()}));
     EXPECT_EQ(signature->payload(), kbvBundleXml);
 
     ASSERT_TRUE(tasks[0].healthCarePrescriptionUuid().has_value());
@@ -973,12 +841,12 @@ TEST_F(EndpointHandlerTest, AcceptTaskSuccess)
         2 /*numOfExpectedResources*/));
 }
 
-TEST_F(EndpointHandlerTest, AcceptTaskPkvWithConsent)
+TEST_F(EndpointHandlerTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-cognitive-complexity)
 {
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
-    const auto pkvKvnr = "X500000000";
+    const char* const pkvKvnr = "X500000000";
 
     auto& resourceManager = ResourceManager::instance();
     std::optional<model::Bundle> resultBundle;
@@ -1003,7 +871,7 @@ TEST_F(EndpointHandlerTest, AcceptTaskPkvWithoutConsent)
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
-    const auto pkvKvnr = "X500000001";
+    const char* const pkvKvnr = "X500000001";
 
     auto& resourceManager = ResourceManager::instance();
     std::optional<model::Bundle> resultBundle;
@@ -1014,7 +882,7 @@ TEST_F(EndpointHandlerTest, AcceptTaskPkvWithoutConsent)
         2 /*numOfExpectedResources*/));  // no consent resource in result;
 }
 
-TEST_F(EndpointHandlerTest, AcceptTaskFail)
+TEST_F(EndpointHandlerTest, AcceptTaskFail)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string validAccessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
     AcceptTaskHandler handler({});
@@ -1142,7 +1010,7 @@ void checkTaskOperation(
 
 } // anonymous namespace
 
-TEST_F(EndpointHandlerTest, AbortTask)
+TEST_F(EndpointHandlerTest, AbortTask)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
     const std::string operation = "$abort";
@@ -1216,7 +1084,7 @@ TEST_F(EndpointHandlerTest, AbortTask169NotAllowed)
         operation, mServiceContext, jwtInsurant1, task, {}, {}, HttpStatus::Forbidden, model::PrescriptionType::direkteZuweisung));
 }
 
-TEST_F(EndpointHandlerTest, RejectTask)
+TEST_F(EndpointHandlerTest, RejectTask)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto jwt = JwtBuilder::testBuilder().makeJwtApotheke();
     const std::string operation = "$reject";
@@ -1244,7 +1112,7 @@ TEST_F(EndpointHandlerTest, RejectTask)
         { {"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f" } }, HttpStatus::Forbidden));
 }
 
-TEST_F(EndpointHandlerTest, MetaDataXml)
+TEST_F(EndpointHandlerTest, MetaDataXml)//NOLINT(readability-function-cognitive-complexity)
 {
     MetaDataHandler handler({});
 
@@ -1282,7 +1150,7 @@ TEST_F(EndpointHandlerTest, MetaDataXml)
     ASSERT_EQ(metaData->serializeToXmlString(), expectedMetaData.serializeToXmlString());
 }
 
-TEST_F(EndpointHandlerTest, MetaDataJson)
+TEST_F(EndpointHandlerTest, MetaDataJson)//NOLINT(readability-function-cognitive-complexity)
 {
     MetaDataHandler handler({});
 
@@ -1319,7 +1187,7 @@ TEST_F(EndpointHandlerTest, MetaDataJson)
     ASSERT_EQ(metaData.serializeToJsonString(), expectedMetaData.serializeToJsonString());
 }
 
-TEST_F(EndpointHandlerTest, DeviceXml)
+TEST_F(EndpointHandlerTest, DeviceXml)//NOLINT(readability-function-cognitive-complexity)
 {
     DeviceHandler handler({});
 
@@ -1350,7 +1218,7 @@ TEST_F(EndpointHandlerTest, DeviceXml)
     EXPECT_EQ(device->contact(model::Device::CommunicationSystem::email).value(), model::Device::Email);
 }
 
-TEST_F(EndpointHandlerTest, DeviceJson)
+TEST_F(EndpointHandlerTest, DeviceJson)//NOLINT(readability-function-cognitive-complexity)
 {
     DeviceHandler handler({});
 
@@ -1381,6 +1249,7 @@ TEST_F(EndpointHandlerTest, DeviceJson)
 
 namespace {
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkPostConsentHandler(
     std::optional<model::Consent>& resultConsent,
     PcServiceContext& serviceContext,
@@ -1413,13 +1282,13 @@ void checkPostConsentHandler(
 
 } // anonymous namespace
 
-TEST_F(EndpointHandlerTest, PostConsent)
+TEST_F(EndpointHandlerTest, PostConsent)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto& consentTemplateJson = ResourceManager::instance().getStringResource(dataPath + "/consent_template.json");
-    auto origKvnr = "X500000000";
-    auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(origKvnr));
-    const auto origDateTimeStr = "2021-06-01T07:13:00+05:00";
-    auto consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr), "##DATETIME##", origDateTimeStr);
+    const char* const origKvnr1 = "X500000000";
+    auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(origKvnr1));
+    const char* const origDateTimeStr = "2021-06-01T07:13:00+05:00";
+    auto consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr1), "##DATETIME##", origDateTimeStr);
 
     // Consent with same Kvnr already exists in mock database -> conflict
     A_22162.test("Only single consent for the same Kvnr");
@@ -1428,14 +1297,14 @@ TEST_F(EndpointHandlerTest, PostConsent)
         checkPostConsentHandler(resultConsent, mServiceContext, jwtInsurant, consentJson, HttpStatus::Conflict));
     EXPECT_FALSE(resultConsent);
 
-    origKvnr = "Y123456789";
-    consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr), "##DATETIME##", origDateTimeStr);
-    jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(origKvnr));
+    const char* const origKvnr2 = "Y123456789";
+    consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr2), "##DATETIME##", origDateTimeStr);
+    jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(origKvnr2));
     ASSERT_NO_FATAL_FAILURE(
         checkPostConsentHandler(resultConsent, mServiceContext, jwtInsurant, consentJson, HttpStatus::Created));
 
-    EXPECT_EQ(resultConsent->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, origKvnr));
-    EXPECT_EQ(resultConsent->patientKvnr(), origKvnr);
+    EXPECT_EQ(resultConsent->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, origKvnr2));
+    EXPECT_EQ(resultConsent->patientKvnr(), origKvnr2);
     EXPECT_TRUE(resultConsent->isChargingConsent());
     EXPECT_EQ(model::Timestamp::fromXsDateTime(origDateTimeStr), resultConsent->dateTime());
 
@@ -1458,7 +1327,7 @@ TEST_F(EndpointHandlerTest, PostConsent)
     // Check invalid datetime field
     EXPECT_NO_FATAL_FAILURE(
         checkPostConsentHandler(resultConsent, mServiceContext, jwtInsurant,
-                                String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr), "##DATETIME##", "2021-13-30T12:00:11+00:00"),
+                                String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr2), "##DATETIME##", "2021-13-30T12:00:11+00:00"),
                                 HttpStatus::BadRequest));
     EXPECT_FALSE(resultConsent);
 }
@@ -1468,7 +1337,7 @@ namespace {
 void checkDeleteConsentHandler(
     PcServiceContext& serviceContext,
     JWT jwtInsurant,
-    const std::string id,
+    const std::string& id,
     const HttpStatus expectedStatus)
 {
     ConsentDeleteHandler handler({});
@@ -1490,10 +1359,10 @@ void checkDeleteConsentHandler(
 
 } // anonymous namespace
 
-TEST_F(EndpointHandlerTest, DeleteConsent)
+TEST_F(EndpointHandlerTest, DeleteConsent)//NOLINT(readability-function-cognitive-complexity)
 {
     // Kvnr from static Consent object in mock database
-    const auto kvnr = "X500000000";
+    const char* const kvnr = "X500000000";
     const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(kvnr));
 
     // succcessful deletion:
@@ -1503,7 +1372,7 @@ TEST_F(EndpointHandlerTest, DeleteConsent)
                                   HttpStatus::NoContent));
 
     // deletion with unknown id fails (not found):
-    const auto unknownKvnr = "X999999999";
+    const char* const unknownKvnr = "X999999999";
     const auto unknownId = model::Consent::createIdString(model::Consent::Type::CHARGCONS, unknownKvnr);
     EXPECT_NO_FATAL_FAILURE(
         checkDeleteConsentHandler(mServiceContext,
@@ -1522,6 +1391,7 @@ TEST_F(EndpointHandlerTest, DeleteConsent)
 
 namespace {
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkGetConsentHandler(
     std::optional<model::Consent>& resultConsent,
     PcServiceContext& serviceContext,
@@ -1561,11 +1431,11 @@ void checkGetConsentHandler(
 
 } // anonymous namespace
 
-TEST_F(EndpointHandlerTest, GetConsent)
+TEST_F(EndpointHandlerTest, GetConsent)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto& consentTemplateJson = ResourceManager::instance().getStringResource(dataPath + "/consent_template.json");
-    auto origKvnr = "X500000000";
-    const auto origDateTimeStr = "2021-06-01T07:13:00+05:00";
+    const char* const origKvnr = "X500000000";
+    const char* const origDateTimeStr = "2021-06-01T07:13:00+05:00";
     // Consent object contained by mock database:
     auto consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr), "##DATETIME##", origDateTimeStr);
 
@@ -1589,20 +1459,28 @@ TEST_F(EndpointHandlerTest, GetConsent)
 
 namespace {
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkGetChargeItemByIdHandler(
     PcServiceContext& serviceContext,
-    JWT jwtInsurant,
-    const std::string id,
-    const HttpStatus expectedStatus)
+    JWT jwt,
+    const std::string& id,
+    const HttpStatus expectedStatus,
+    const std::optional<std::string_view> accessCode = std::nullopt)
 {
     ChargeItemGetByIdHandler handler({});
     Header requestHeader{HttpMethod::GET, "/ChargeItem/" + id, 0, {{}}, HttpStatus::Unknown};
 
     ServerRequest serverRequest{ std::move(requestHeader) };
-    serverRequest.setAccessToken(std::move(jwtInsurant));
+    serverRequest.setAccessToken(std::move(jwt));
     if(!id.empty())
     {
         serverRequest.setPathParameters({"id"}, {id});
+    }
+
+    if (accessCode.has_value())
+    {
+        serverRequest.setQueryParameters(
+            std::vector<std::pair<std::string, std::string>>{std::make_pair("ac", accessCode->data())});
     }
 
     ServerResponse serverResponse;
@@ -1617,54 +1495,102 @@ void checkGetChargeItemByIdHandler(
         if(professionOIDClaim == profession_oid::oid_versicherter)
         {
             A_22128.test("Check ChargeItem.supportingInformation for insurant");
-            model::Bundle chargeItemBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
-            auto chargeItem = chargeItemBundle.getResourcesByType<model::ChargeItem>("ChargeItem");
-            ASSERT_EQ(chargeItem.size(), 1);
-            auto bundleItems = chargeItemBundle.getResourcesByType<model::Bundle>("Bundle");
+
+            const model::Bundle chargeItemBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
+            const auto chargeItems = chargeItemBundle.getResourcesByType<model::ChargeItem>("ChargeItem");
+            ASSERT_EQ(chargeItems.size(), 1);
+            const auto& chargeItem = chargeItems[0];
+
+            std::optional<model::ChargeItem> checkedChargeItem;
+            ASSERT_NO_THROW(checkedChargeItem = model::ChargeItem::fromXml(
+                chargeItem.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                SchemaType::Gem_erxChargeItem));
+
+            const auto bundleItems = chargeItemBundle.getResourcesByType<model::Bundle>("Bundle");
             ASSERT_EQ(bundleItems.size(), 3);
 
-            EXPECT_TRUE(
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
-            ASSERT_EQ(
-                "Bundle/" + bundleItems[0].getId().toString(),
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).value());
+            const model::Bundle& dispenseItemBundle = bundleItems[0];
+            ASSERT_TRUE(
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
+            EXPECT_EQ(
+                "Bundle/" + dispenseItemBundle.getId().toString(),
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).value());
 
-            EXPECT_TRUE(
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).has_value());
-            ASSERT_EQ(
-                "Bundle/" + bundleItems[1].getId().toString(),
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).value());
+            const model::Bundle& kbvBundle = bundleItems[1];
+            ASSERT_TRUE(
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).has_value());
+            EXPECT_EQ(
+                "Bundle/" + kbvBundle.getId().toString(),
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).value());
 
-            EXPECT_TRUE(
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).has_value());
-            ASSERT_EQ(
-                "Bundle/" + bundleItems[2].getId().toString(),
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).value());
+            const model::Bundle& receipt = bundleItems[2];
+            std::optional<model::ErxReceipt> checkedReceipt;
+            ASSERT_NO_THROW(checkedReceipt = model::ErxReceipt::fromXml(
+                receipt.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                SchemaType::Gem_erxReceiptBundle));
+
+            ASSERT_TRUE(
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).has_value());
+            EXPECT_EQ(
+                "Bundle/" + receipt.getId().toString(),
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).value());
+
+            const auto& cadesBesTrustedCertDir = TestConfiguration::instance().getOptionalStringValue(
+                    TestConfigurationKey::TEST_CADESBES_TRUSTED_CERT_DIR, "test/cadesBesSignature/certificates");
+            const auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
+
+            {
+                // check KBV bundle signature
+                const auto signature = kbvBundle.getSignature();
+                ASSERT_TRUE(signature.has_value());
+                std::string signatureData;
+                ASSERT_NO_THROW(signatureData = signature->data().value().data());
+                CadesBesSignature cms(certs, signatureData);
+                std::optional<model::KbvBundle> kbvBundleFromSignature;
+                ASSERT_NO_THROW(kbvBundleFromSignature = model::KbvBundle::fromXml(
+                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                    SchemaType::KBV_PR_ERP_Bundle));
+                EXPECT_FALSE(kbvBundleFromSignature->getSignature().has_value());
+            }
+            {
+                // check receipt signature
+                const auto signature = receipt.getSignature();
+                ASSERT_TRUE(signature.has_value());
+                std::string signatureData;
+                ASSERT_NO_THROW(signatureData = signature->data().value().data());
+                CadesBesSignature cms(certs, signatureData);
+                std::optional<model::ErxReceipt> receiptFromSignature;
+                ASSERT_NO_THROW(receiptFromSignature = model::ErxReceipt::fromXml(
+                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                    SchemaType::Gem_erxReceiptBundle));
+                EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
+            }
         }
         else
         {
             A_22128.test("Check ChargeItem.supportingInformation for pharmacy");
-            model::Bundle chargeItemBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
-            auto chargeItem = chargeItemBundle.getResourcesByType<model::ChargeItem>("ChargeItem");
-            ASSERT_EQ(chargeItem.size(), 1);
-            auto bundleItems = chargeItemBundle.getResourcesByType<model::Bundle>("Bundle");
+            const model::Bundle chargeItemBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+            const auto chargeItems = chargeItemBundle.getResourcesByType<model::ChargeItem>("ChargeItem");
+            ASSERT_EQ(chargeItems.size(), 1);
+            const auto& chargeItem = chargeItems[0];
+            const auto bundleItems = chargeItemBundle.getResourcesByType<model::Bundle>("Bundle");
 
             ASSERT_EQ(bundleItems.size(), 1);
 
             EXPECT_TRUE(
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
             ASSERT_EQ(
                 "Bundle/" + bundleItems[0].getId().toString(),
-                chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).value());
+                chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).value());
         }
     }
 }
 
 } // anonymous namespace
 
-TEST_F(EndpointHandlerTest, GetChargeItem)
+TEST_F(EndpointHandlerTest, GetChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto kvnr = "X500000000";
+    const char* const  kvnr = "X500000000";
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
 
     A_22125.test("kvnr check");
@@ -1685,27 +1611,35 @@ TEST_F(EndpointHandlerTest, GetChargeItem)
                                      JwtBuilder::testBuilder().makeJwtVersicherter(std::string(kvnr)),
                                      pkvTaskId.toString(), HttpStatus::OK));
 
-    A_22128.test("Check respon for pharmacy");
+    A_22611.test("Access code check");
     EXPECT_NO_FATAL_FAILURE(
         checkGetChargeItemByIdHandler(mServiceContext,
                                       JwtBuilder::testBuilder().makeJwtApotheke(std::string("606358757")),
                                       pkvTaskId.toString(),
-                                      HttpStatus::OK));
+                                      HttpStatus::Forbidden));
+
+    A_22128.test("Check response for pharmacy");
+    EXPECT_NO_FATAL_FAILURE(
+        checkGetChargeItemByIdHandler(mServiceContext,
+                                      JwtBuilder::testBuilder().makeJwtApotheke(std::string("606358757")),
+                                      pkvTaskId.toString(),
+                                      HttpStatus::OK,
+                                      MockDatabase::mockAccessCode));
 }
 
 namespace {
 
 void checkDeleteChargeItemHandler(
     PcServiceContext& serviceContext,
-    JWT jwtInsurant,
-    const std::string id,
+    JWT jwt,
+    const std::string& id,
     const HttpStatus expectedStatus)
 {
     ChargeItemDeleteHandler handler({});
     Header requestHeader{HttpMethod::DELETE, "/ChargeItem/" + id, 0, {{}}, HttpStatus::Unknown};
 
     ServerRequest serverRequest{ std::move(requestHeader) };
-    serverRequest.setAccessToken(std::move(jwtInsurant));
+    serverRequest.setAccessToken(std::move(jwt));
     if(!id.empty())
     {
         serverRequest.setPathParameters({"id"}, {id});
@@ -1720,9 +1654,9 @@ void checkDeleteChargeItemHandler(
 
 } // anonymous namespace
 
-TEST_F(EndpointHandlerTest, DeleteChargeItem)
+TEST_F(EndpointHandlerTest, DeleteChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto kvnr = "X500000000";
+    const char* const kvnr = "X500000000";
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
 
     A_22112.test("Forbid all deletion");
@@ -1760,6 +1694,7 @@ TEST_F(EndpointHandlerTest, DeleteChargeItem)
 
 namespace {
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkPostChargeItemHandler(
     std::optional<model::ChargeItem>& resultChargeItem,
     PcServiceContext& serviceContext,
@@ -1805,17 +1740,21 @@ void checkPostChargeItemHandler(
 } // anonymous namespace
 
 
-TEST_F(EndpointHandlerTest, PostChargeItem)
+TEST_F(EndpointHandlerTest, PostChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto pkvTaskId= model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = "X500000000";
+    const char* const pkvKvnr = "X500000000";
 
     auto& resourceManager = ResourceManager::instance();
     const auto dispenseBundleXml = resourceManager.getStringResource(dataPath + "/dispense_item.xml");
+    CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(),
+                                        CryptoHelper::cHpQesPrv(),
+                                        dispenseBundleXml,
+                                        std::nullopt};
     const auto chargeItemTemplateXml = resourceManager.getStringResource(dataPath + "/charge_item_POST_template.xml");
     const auto chargeItemXml =
         String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
-                           "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleXml)); // TODO only interim solution
+                           "##DISPENSE_BUNDLE##", Base64::encode(cadesBesSignature.get()));
     const auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
 
     const auto taskTemplateJson = resourceManager.getStringResource(dataPath + "/task_pkv_closed_template.json");
@@ -1849,7 +1788,7 @@ TEST_F(EndpointHandlerTest, PostChargeItem)
 
     // Error cases:
 
-    A_22130.test("Check existance of 'task' parameter");
+    A_22130.test("Check existence of 'task' parameter");
     ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
         resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, std::nullopt/*task id*/, referencedTask.secret(),
         HttpStatus::BadRequest));
@@ -1882,7 +1821,7 @@ TEST_F(EndpointHandlerTest, PostChargeItem)
 
     {
         A_22136.test("Validate input ChargeItem resource: Kvnr");
-        const auto pkvKvnr = "X500000001";
+        const char* const pkvKvnr = "X500000001";
         const auto chargeItemXml =
             String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
                                "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleXml));
@@ -1906,7 +1845,140 @@ TEST_F(EndpointHandlerTest, PostChargeItem)
     }
     {
         A_22133.test("Check consent");
-        const auto pkvKvnr = "X500000001";
+        const char* const pkvKvnr = "X500000001";
+        const auto chargeItemXml =
+            String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
+                               "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleXml));
+        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+            resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, pkvTaskId, referencedTask.secret(),
+            HttpStatus::BadRequest));
+    }
+}
+
+TEST_F(EndpointHandlerTest, PostChargeItemNonQes)//NOLINT(readability-function-cognitive-complexity)
+{
+    const auto pkiPath = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
+
+    const auto nonQesSmcbCert = Certificate::fromPem(FileHelper::readFileAsString(
+        pkiPath / "../tsl/X509Certificate/nonQesSmcb.pem"));
+    const auto nonQesSmcbPrivateKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(
+        SafeString{FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/nonQesSmcbPrivateKey.pem")});
+
+    auto nonQesSmcbCertX509 = X509Certificate::createFromX509Pointer(nonQesSmcbCert.toX509().removeConst().get());
+
+    const auto ocspResponseData = mServiceContext.getTslManager().getCertificateOcspResponse(
+        TslMode::TSL,
+        nonQesSmcbCertX509,
+        { CertificateType::C_HCI_OSIG },
+        false);
+
+    const auto pkvTaskId= model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
+    const char* const pkvKvnr = "X500000000";
+
+    auto& resourceManager = ResourceManager::instance();
+    const auto dispenseBundleXml = resourceManager.getStringResource(dataPath + "/dispense_item.xml");
+
+    CadesBesSignature cadesBesSignature{nonQesSmcbCert,
+                                        nonQesSmcbPrivateKey,
+                                        dispenseBundleXml,
+                                        std::nullopt,
+                                        OcspHelper::stringToOcspResponse(ocspResponseData.response)};
+
+    const auto chargeItemTemplateXml = resourceManager.getStringResource(dataPath + "/charge_item_POST_template.xml");
+    const auto chargeItemXml =
+        String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
+                           "##DISPENSE_BUNDLE##", Base64::encode(cadesBesSignature.get()));
+    const auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+
+    const auto taskTemplateJson = resourceManager.getStringResource(dataPath + "/task_pkv_closed_template.json");
+    const auto taskJson = replaceKvnr(replacePrescriptionId(taskTemplateJson, pkvTaskId.toString()), pkvKvnr);
+    const auto referencedTask = model::Task::fromJsonNoValidation(taskJson);
+
+    const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId()));
+
+    // succcessful retrieval:
+    std::optional<model::ChargeItem> resultChargeItem;
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+        resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, inputChargeItem.prescriptionId(), referencedTask.secret(),
+        HttpStatus::Created));
+
+    const auto inputDispenseBundle = model::Bundle::fromXmlNoValidation(dispenseBundleXml);
+    EXPECT_EQ(resultChargeItem->id(), pkvTaskId);
+    EXPECT_EQ(resultChargeItem->prescriptionId(), pkvTaskId);
+
+    A_22137.test("Contained binary removed and PKV dispense item reference set");
+    EXPECT_FALSE(resultChargeItem->containedBinary().has_value());
+    EXPECT_EQ(resultChargeItem->supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem),
+              "Bundle/"  + inputDispenseBundle.getId().toString());
+
+    A_22134.test("KBV prescription bundle reference set");
+    EXPECT_EQ(resultChargeItem->supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem),
+              "Bundle/8938aff5-720a-414a-b574-114bd8d1e11c");
+
+    A_22135.test("Receipt reference set");
+    EXPECT_EQ(resultChargeItem->supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt),
+              "Bundle/a0010000-0000-0000-0003-000000000000");
+
+    // Error cases:
+
+    A_22130.test("Check existence of 'task' parameter");
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+        resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, std::nullopt/*task id*/, referencedTask.secret(),
+        HttpStatus::BadRequest));
+
+    {
+        A_22131.test("Check existance of referenced task");
+        // Id of task which does not exist:
+        const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 999999999);
+        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+            resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, pkvTaskId, referencedTask.secret(),
+            HttpStatus::Conflict));
+    }
+    {
+        A_22131.test("Check task in status 'completed'");
+        // Id of task which is not completed:
+        const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
+        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+            resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, pkvTaskId, referencedTask.secret(),
+            HttpStatus::Conflict));
+    }
+
+    A_22132.start("Check that secret is provided as URL parameter");
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+        resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, inputChargeItem.prescriptionId(), std::nullopt,
+        HttpStatus::Forbidden));
+    A_22132.start("Check that secret from URL is equal to secret from referenced task");
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+        resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, inputChargeItem.prescriptionId(), "invalidsecret",
+        HttpStatus::Forbidden));
+
+    {
+        A_22136.test("Validate input ChargeItem resource: Kvnr");
+        const char* const pkvKvnr = "X500000001";
+        const auto chargeItemXml =
+            String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
+                               "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleXml));
+        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+            resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, pkvTaskId, referencedTask.secret(),
+            HttpStatus::BadRequest));
+    }
+    {
+        A_22136.test("Validate input ChargeItem resource: TelematikId");
+        const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke("Invalid-TelematikId");
+        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+            resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, inputChargeItem.prescriptionId(), referencedTask.secret(),
+            HttpStatus::BadRequest));
+    }
+    {
+        A_22136.test("Validate input ChargeItem resource: PrescriptionId");
+        const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50021);
+        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+            resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml, pkvTaskId, referencedTask.secret(),
+            HttpStatus::BadRequest));
+    }
+    {
+        A_22133.test("Check consent");
+        const char* const pkvKvnr = "X500000001";
         const auto chargeItemXml =
             String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
                                "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleXml));
@@ -1919,6 +1991,7 @@ TEST_F(EndpointHandlerTest, PostChargeItem)
 
 namespace {
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkPutChargeItemHandler(
     std::optional<model::ChargeItem>& resultChargeItem,
     PcServiceContext& serviceContext,
@@ -1931,6 +2004,12 @@ void checkPutChargeItemHandler(
     const auto idStr = id.has_value() ? id->toString() : "";
     ChargeItemPutHandler handler({});
     Header requestHeader{HttpMethod::PUT, "/ChargeItem/" + idStr, 0, {{Header::ContentType, contentType}}, HttpStatus::Unknown};
+
+    const auto accessCode = chargeItem.accessCode();
+    if (accessCode.has_value())
+    {
+        requestHeader.addHeaderField(Header::XAccessCode, accessCode->data());
+    }
 
     std::string body = (contentType.getMimeType() == MimeType::fhirJson) ?
         chargeItem.serializeToJsonString() : chargeItem.serializeToXmlString();
@@ -1967,9 +2046,10 @@ void checkPutChargeItemHandler(
     }
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkUnchangedChargeItemFieldsCommon(
     PcServiceContext& serviceContext,
-    JWT jwt,
+    const JWT& jwt,
     const ContentMimeType& contentType,
     const std::string_view& chargeItemXml,
     const model::PrescriptionId& pkvTaskId)
@@ -2036,10 +2116,10 @@ void checkUnchangedChargeItemFieldsCommon(
 
 } // anonymous namespace
 
-TEST_F(EndpointHandlerTest, PutChargeItemPharmacy)
+TEST_F(EndpointHandlerTest, PutChargeItemPharmacy)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = "X500000000";
+    const char* const pkvKvnr = "X500000000";
 
     auto &resourceManager = ResourceManager::instance();
 
@@ -2047,18 +2127,25 @@ TEST_F(EndpointHandlerTest, PutChargeItemPharmacy)
     auto newDispenseBundle = model::Bundle::fromXmlNoValidation(newDispenseBundleXml);
     // set new ID to check update
     newDispenseBundle.setId(Uuid());
-
+    CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(),
+                                        CryptoHelper::cHpQesPrv(),
+                                        newDispenseBundle.serializeToXmlString(),
+                                        std::nullopt};
     const auto chargeItemTemplateXml = resourceManager.getStringResource(dataPath + "/charge_item_PUT_template.xml");
     const auto chargeItemXml =
          String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
-                            "##DISPENSE_BUNDLE##", Base64::encode(newDispenseBundle.serializeToXmlString()));
-    const auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+                            "##DISPENSE_BUNDLE##", Base64::encode(cadesBesSignature.get()));
+    auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
     const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId()));
 
     const ContentMimeType contentType = ContentMimeType::fhirXmlUtf8;
     std::optional<model::ChargeItem> resultChargeItem;
     {
+        ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(
+            resultChargeItem, mServiceContext, jwtPharmacy, contentType, inputChargeItem, pkvTaskId, HttpStatus::Forbidden));
+
         // succcessful retrieval:
+        inputChargeItem.setAccessCode(MockDatabase::mockAccessCode);
         ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(
             resultChargeItem, mServiceContext, jwtPharmacy, contentType, inputChargeItem, pkvTaskId, HttpStatus::OK));
         EXPECT_EQ(resultChargeItem->id(), pkvTaskId);
@@ -2084,6 +2171,7 @@ TEST_F(EndpointHandlerTest, PutChargeItemPharmacy)
             // Pharmacy: Marking
             const auto errChargeItemXml = String::replaceAll(chargeItemXml, "false", "true");
             auto errChargeItem = model::ChargeItem::fromXmlNoValidation(errChargeItemXml);
+            errChargeItem.setAccessCode(MockDatabase::mockAccessCode);
             ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(
                 resultChargeItem, mServiceContext, jwtPharmacy, contentType, errChargeItem, pkvTaskId, HttpStatus::BadRequest));
 
@@ -2094,20 +2182,22 @@ TEST_F(EndpointHandlerTest, PutChargeItemPharmacy)
     }
     {
         A_22215.test("Check consent");
-        const auto pkvKvnr = "X500000001";  // no consent exists for this kvnr
+        const char* const pkvKvnr = "X500000001";  // no consent exists for this kvnr
         const auto errChargeItemXml =
             String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
                                "##DISPENSE_BUNDLE##", Base64::encode(newDispenseBundleXml));
+
+        auto errChargeItem = model::ChargeItem::fromXmlNoValidation(errChargeItemXml);
+        errChargeItem.setAccessCode(MockDatabase::mockAccessCode);
         ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(
-            resultChargeItem, mServiceContext, jwtPharmacy, contentType,
-            model::ChargeItem::fromXmlNoValidation(errChargeItemXml), pkvTaskId, HttpStatus::BadRequest));
+            resultChargeItem, mServiceContext, jwtPharmacy, contentType, errChargeItem, pkvTaskId, HttpStatus::BadRequest));
     }
 }
 
-TEST_F(EndpointHandlerTest, PutChargeItemInsurant)
+TEST_F(EndpointHandlerTest, PutChargeItemInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = "X500000000";
+    const char* const pkvKvnr = "X500000000";
 
     auto &resourceManager = ResourceManager::instance();
 
@@ -2148,7 +2238,7 @@ TEST_F(EndpointHandlerTest, PutChargeItemInsurant)
     }
     {
         A_22215.test("Check consent");
-        const auto pkvKvnr = "X500000001";  // no consent exists for this kvnr
+        const char* const pkvKvnr = "X500000001";  // no consent exists for this kvnr
         const auto errChargeItemXml =
                 String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
                                    "##DISPENSE_BUNDLE##", Base64::encode(dispenseBundleXml));

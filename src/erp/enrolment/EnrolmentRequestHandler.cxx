@@ -4,7 +4,6 @@
  */
 
 #include "erp/enrolment/EnrolmentRequestHandler.hxx"
-#include "erp/enrolment/EnrolmentHelper.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/pc/PcServiceContext.hxx"
@@ -18,11 +17,14 @@
 #include "erp/util/Hash.hxx"
 #include "erp/util/TLog.hxx"
 
+#if WITH_HSM_TPM_PRODUCTION > 0
+#include "erp/enrolment/EnrolmentHelper.hxx"
+#endif
+
 using namespace ::std::literals;
 
 namespace
 {
-constexpr ::std::string_view hashAlgorithm = "SHA256";
 
     /**
      * Acquire a TPM instance on demand so that the TPM is not blocked longer than necessary.
@@ -549,9 +551,8 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
 
         entry.certificate = requestData.getDecodedString(requestCertificate);
 
-        auto* tslManager = session.serviceContext.getTslManager();
-        Expect(tslManager != nullptr, "TslManager must not be null");
-        if (!isCertificateValid(*entry.certificate, *tslManager))
+        auto& tslManager = session.serviceContext.getTslManager();
+        if (!isCertificateValid(*entry.certificate, tslManager))
         {
             session.response.setStatus(HttpStatus::BadRequest);
             EnrolmentModel response{};

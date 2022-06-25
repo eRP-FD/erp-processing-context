@@ -1,7 +1,7 @@
 This directory contains configuration and templates for generation of root CA, sub CA ( TSL signer )
 and signing the TSL templates using the script scripts/generate_pki_test_data.sh.
 
-The generated results are placed in resources/test/generated_pki folder, that has following structure.
+The generated results are placed in ${CMAKE_BINARY_DIR}/resources/test/generated_pki folder, that has following structure.
 For each created CA there's a subdirectory, which contains, besides some management data for the CA,
 all certificates and associated private keys issued by the CA.
 resources/test/generated_pki layout:

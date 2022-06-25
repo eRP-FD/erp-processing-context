@@ -11,7 +11,7 @@
 #include "erp/util/TLog.hxx"
 #include "erp/erp-serverinfo.hxx"
 
-#include <pqxx/except.hxx>
+#include <pqxx/except>
 #include <pqxx/pqxx>
 #include <unordered_set>
 #include <vector>
@@ -22,6 +22,8 @@ namespace
     constexpr std::string_view akNameKey = "/akName";
     constexpr std::string_view pcrSetKey = "/pcrSet";
 
+    using postgres_bytea_view = std::basic_string_view<std::byte>;
+    using postgres_bytea = std::basic_string<std::byte>;
 
     BlobType getBlobType (const pqxx::row& row, const size_t columnIndex, const std::string& columnName)
     {
@@ -38,9 +40,8 @@ namespace
     ErpVector getErpVector (const pqxx::row& row, const size_t columnIndex, const std::string& columnName)
     {
         Expect( ! row[gsl::narrow<pqxx::row::size_type>(columnIndex)].is_null(), columnName + " is null");
-        const auto data = row[gsl::narrow<pqxx::row::size_type>(columnIndex)].as<pqxx::binarystring>();
-        ErpVector result (data.size());
-        std::copy(data.begin(), data.end(), result.begin());
+        const auto data = row[gsl::narrow<pqxx::row::size_type>(columnIndex)].as<postgres_bytea>();
+        ErpVector result (data);
         return result;
     }
 
@@ -57,10 +58,7 @@ namespace
     SafeString getSafeString (const pqxx::row& row, const size_t columnIndex, const std::string& columnName)
     {
         Expect( ! row[gsl::narrow<pqxx::row::size_type>(columnIndex)].is_null(), columnName + " is null");
-        const auto& data = row[gsl::narrow<pqxx::row::size_type>(columnIndex)].as<pqxx::binarystring>();
-        SafeString result (SafeString::no_zero_fill, data.size());
-        std::copy(data.begin(), data.end(), static_cast<char*>(result));
-        return result;
+        return SafeString{row[gsl::narrow<pqxx::row::size_type>(columnIndex)].as<postgres_bytea>()};
     }
 
     std::optional<std::chrono::system_clock::time_point> getOptionalTimePoint (const pqxx::row& row, const size_t columnIndex)
@@ -84,7 +82,7 @@ namespace
         if ( ! timePoint.has_value())
             return std::nullopt;
         else
-            return std::chrono::duration_cast<std::chrono::milliseconds>(timePoint->time_since_epoch()).count() / 1000.0;
+            return static_cast<double> ( std::chrono::duration_cast<std::chrono::milliseconds>(timePoint->time_since_epoch()).count() ) / 1000.0;
     }
 
     std::string getHostIp (void)
@@ -184,7 +182,7 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob (
         transaction->esc(getHostIp()),
         transaction->esc(getBuildNumber()));
 
-    Expect(result.size() > 0, "did not find the requested blob");
+    Expect(!result.empty(), "did not find the requested blob");
     Expect(result.size() == 1, "found more than one blob");
 
     Entry entry = convertEntry(result.front());
@@ -236,17 +234,18 @@ BlobId ProductionBlobDatabase::storeBlob (Entry&& entry)
             static_cast<int16_t>(entry.type),
             hostIp,
             build,
-            pqxx::binarystring(entry.name.data(), entry.name.size()),
-            pqxx::binarystring(static_cast<const char*>(entry.blob.data), entry.blob.data.size()),
+            postgres_bytea_view(reinterpret_cast<const std::byte*>(entry.name.data()), entry.name.size()),
+            postgres_bytea_view(entry.blob.data),
             gsl::narrow<int32_t>(entry.blob.generation),
             toOptionalSecondsSinceEpoch(entry.expiryDateTime),
             toOptionalSecondsSinceEpoch(entry.startDateTime),
             toOptionalSecondsSinceEpoch(entry.endDateTime),
             createMeta(entry.metaAkName, entry.pcrSet),
             entry.certificate,
-            entry.pcrHash ? ::pqxx::binarystring(reinterpret_cast<const ::std::byte*>(entry.pcrHash->data()),
-                                                 entry.pcrHash->size())
-                          : ::pqxx::binarystring{::std::string_view{}});
+            entry.pcrHash ? std::basic_string_view<std::byte>{
+                                    reinterpret_cast<const ::std::byte*>(entry.pcrHash->data()), entry.pcrHash->size()}
+                          : std::basic_string_view<std::byte>{}
+        );
         Expect(result.size() == 1, "insertion of new blob failed");
 
         transaction.commit();
@@ -272,8 +271,8 @@ void ProductionBlobDatabase::deleteBlob (
             "DELETE FROM erp.blob "
             "WHERE type = $1 AND name = $2",
             gsl::narrow<int16_t>(type),
-            pqxx::binarystring(name.data(), name.size()));
-        Expect(result.size() == 0, "did not expect an output");
+            postgres_bytea_view(reinterpret_cast<const std::byte*>(name.data()), name.size()));
+        Expect(result.empty(), "did not expect an output");
         const auto count = result.affected_rows();
         ErpExpect(count==1, HttpStatus::NotFound, "did not find the blob");
     }
@@ -373,7 +372,7 @@ BlobDatabase::Entry ProductionBlobDatabase::convertEntry (const pqxx::row& dbEnt
         }
         else
         {
-            const auto akNameValue = rapidjson::Pointer(std::string(akNameKey)).Get(json);
+            const auto *const akNameValue = rapidjson::Pointer(std::string(akNameKey)).Get(json);
             if (akNameValue != nullptr)
             {
                 Expect(akNameValue->IsString(), "/akName value in meta field is not a string");
@@ -463,4 +462,3 @@ void ProductionBlobDatabase::processStoreBlobException (void)
         throw;
     }
 }
-

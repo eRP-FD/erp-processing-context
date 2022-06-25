@@ -26,19 +26,19 @@ class HsmSessionReconnectTest : public testing::Test
 /**
  * Verify that the HsmSessionExpiredException triggers a call to HsmClient::reconnect.
  */
-TEST_F(HsmSessionReconnectTest, triggerReconnect_fail)
+TEST_F(HsmSessionReconnectTest, triggerReconnect_fail)//NOLINT(readability-function-cognitive-complexity)
 {
     class TestClient : public HsmMockClient
     {
     public:
         size_t reconnectCallCount = 0;
 
-        virtual ErpVector getRndBytes (const HsmRawSession&, size_t) override
+        ErpVector getRndBytes (const HsmRawSession&, size_t) override
         {
             throw HsmSessionExpiredException("session expired", ERP_UTIMACO_SESSION_EXPIRED);
         }
 
-        virtual void reconnect (HsmRawSession&) override
+        void reconnect (HsmRawSession&) override
         {
             ++reconnectCallCount;
         }
@@ -60,14 +60,14 @@ TEST_F(HsmSessionReconnectTest, triggerReconnect_fail)
 /**
  * Verify that the HsmSessionExpiredException triggers a call to HsmClient::reconnect.
  */
-TEST_F(HsmSessionReconnectTest, triggerReconnect_successAfterReconnect)
+TEST_F(HsmSessionReconnectTest, triggerReconnect_successAfterReconnect)//NOLINT(readability-function-cognitive-complexity)
 {
     class TestClient : public HsmMockClient
     {
     public:
         size_t reconnectCallCount = 0;
 
-        virtual ErpVector getRndBytes (const HsmRawSession& session, const size_t count) override
+        ErpVector getRndBytes (const HsmRawSession& session, const size_t count) override
         {
             if (reconnectCallCount == 0)
                 throw HsmSessionExpiredException("session expired", ERP_UTIMACO_SESSION_EXPIRED);
@@ -75,7 +75,7 @@ TEST_F(HsmSessionReconnectTest, triggerReconnect_successAfterReconnect)
                 return HsmMockClient::getRndBytes(session, count);
         }
 
-        virtual void reconnect (HsmRawSession&) override
+        void reconnect (HsmRawSession&) override
         {
             ++reconnectCallCount;
         }

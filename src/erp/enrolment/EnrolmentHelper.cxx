@@ -27,12 +27,12 @@ namespace
     #define catchLogAndRethrow(message)                                                       \
         catch(const std::exception& e)                                                        \
         {                                                                                     \
-            TVLOG(logLevel) << "caught exception " << e.what() << " while " << message;       \
+            TVLOG(logLevel) << "caught exception " << e.what() << " while " << (message);     \
             throw;                                                                            \
         }                                                                                     \
         catch(...)                                                                            \
         {                                                                                     \
-            TVLOG(logLevel) << "caught exception while " << message;                          \
+            TVLOG(logLevel) << "caught exception while " << (message);                        \
             throw;                                                                            \
         }
 
@@ -97,14 +97,6 @@ namespace
         return Hash::hmacSha256(key, message);
     }
 
-
-    std::string to_string (const Tpm::PcrRegisterList& list)
-    {
-        std::ostringstream os;
-        os << list;
-        return os.str();
-    }
-
     PcrSet getConfiguredOrDefaultPcrSet (void)
     {
         return PcrSet::fromString(
@@ -116,109 +108,6 @@ namespace
     }
 
 } // end of anonymous namespace
-
-
-Tpm::EndorsementKeyOutput TpmProxyApi::getEndorsementKey (void)
-{
-    const auto response = createClient().send(
-        ClientRequest(
-            createHeader(HttpMethod::GET, "/Enrolment/EndorsementKey"),
-            ""));
-    Expect(response.getHeader().status() == HttpStatus::OK, "POST /Enrolment/EndorsementKey failed");
-
-    EnrolmentModel model (response.getBody());
-    Tpm::EndorsementKeyOutput output;
-    output.certificateBase64 = model.getString("/certificate");
-    output.ekNameBase64 = model.getString("/ekName");
-    return output;
-}
-
-
-Tpm::AttestationKeyOutput TpmProxyApi::getAttestationKey (bool)
-{
-    const auto response = createClient().send(
-        ClientRequest(
-            createHeader(HttpMethod::GET, "/Enrolment/AttestationKey"),
-            ""));
-    Expect(response.getHeader().status() == HttpStatus::OK, "POST /Enrolment/AttestationKey failed");
-
-    EnrolmentModel model (response.getBody());
-    Tpm::AttestationKeyOutput output;
-    output.publicKeyBase64 = model.getString("/publicKey");
-    output.akNameBase64 = model.getString("/akName");
-    return output;
-}
-
-
-Tpm::AuthenticateCredentialOutput TpmProxyApi::authenticateCredential (Tpm::AuthenticateCredentialInput&& input)
-{
-    const auto response = createClient().send(
-        ClientRequest(
-            createHeader(HttpMethod::POST, "/Enrolment/AuthenticateCredential"),
-            R"({ "secret"     : ")" + input.secretBase64     + R"(",)"
-            + R"(  "credential" : ")" + input.credentialBase64 + R"(",)"
-            + R"(  "akName"     : ")" + input.akNameBase64     + R"(")"
-            + R"(})"
-        ));
-    Expect(response.getHeader().status() == HttpStatus::OK, "POST /Enrolment/AuthenticateCredential failed");
-
-    EnrolmentModel model (response.getBody());
-    Tpm::AuthenticateCredentialOutput output;
-    output.plainTextCredentialBase64 = model.getString("/plainTextCredential");
-    return output;
-}
-
-
-Tpm::QuoteOutput TpmProxyApi::getQuote (Tpm::QuoteInput&& input, const std::string& message)
-{
-    // The nonce is modified by the enrolment API. Just check that we are called with the correct message.
-    Expect(message == "ERP_ENROLLMENT", "getQuote called with the wrong nonce modified");
-
-    const std::string body = R"({ "nonce"         : ")" + input.nonceBase64       + R"(",)"
-                           + R"(  "pcrSet"        : )"  + to_string(input.pcrSet) + R"(,)"
-                           + R"(  "hashAlgorithm" : ")" + input.hashAlgorithm     + R"(")"
-                           + R"(})";
-
-    const auto response = createClient().send(
-        ClientRequest(
-            createHeader(HttpMethod::POST, "/Enrolment/GetQuote"),
-            body));
-    Expect(response.getHeader().status() == HttpStatus::OK, "POST /Enrolment/GetQuote failed");
-
-    EnrolmentModel model (response.getBody());
-    Tpm::QuoteOutput output;
-    output.quotedDataBase64 = model.getString("/quotedData");
-    output.quoteSignatureBase64 = model.getString("/quoteSignature");
-    return output;
-}
-
-
-HttpsClient TpmProxyApi::createClient (void)
-{
-    return HttpsClient(
-        Configuration::instance().serverHost(),
-        Configuration::instance().getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
-        Constants::httpTimeoutInSeconds,
-        false/*enforceServerAuthentication*/);
-}
-
-
-Header TpmProxyApi::createHeader (
-    const HttpMethod method,
-    std::string&& target)
-{
-    auto result = Header(
-        method,
-        std::move(target),
-        Header::Version_1_1,
-        {
-            {Header::Authorization, "Basic " + Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS)}
-        },
-        HttpStatus::Unknown);
-    result.setKeepAlive(false);
-    return result;
-}
-
 
 TpmProxyDirect::TpmProxyDirect (BlobCache& blobCache)
     : mBlobCache(blobCache)
@@ -295,27 +184,39 @@ EnrolmentHelper::~EnrolmentHelper (void)
     HsmProductionClient::disconnect(mHsmSession);
 }
 
-
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 EnrolmentHelper::Blobs EnrolmentHelper::createBlobs (
     TpmProxy& tpm)
 {
     // The attestation process that is implemented in this method is not used in production. However it shares enough
     // code with the production code to be not easily separable. Therefore it remains here for the moment.
     const uint32_t generation = 0x42; // Arbitrary generation value, copied over from the original code [Sic, hex 42, not decimal 42].
+    TVLOG(1) << "creating blobs 1/10: get PCR set";
     const auto pcrSet = getConfiguredOrDefaultPcrSet();
 
+    TVLOG(1) << "creating blobs 2/11: trustTpmMfr";
     const auto trustedRoot = trustTpmMfr(generation);
+    TVLOG(1) << "creating blobs 3/11: getEndorsementKey";
     const auto ek = tpm.getEndorsementKey();
+    TVLOG(1) << "creating blobs 4/11: getAttestationKey";
     const auto ak = tpm.getAttestationKey(true);
     const auto akName = decodeAkName(ak.akNameBase64);
     const auto akPublicKey = Base64::decodeToString(ak.publicKeyBase64);
+    TVLOG(1) << "creating blobs 5/11: enrollEk";
           auto trustedEk = enrollEk(generation, trustedRoot, Base64::decode(ek.certificateBase64));
+    TVLOG(1) << "creating blobs 6/11: getAkChallenge";
     const auto [akChallenge, credential, secret] = getAkChallenge(generation, trustedEk, akPublicKey, akName);
+    TVLOG(1) << "creating blobs 7/11: getChallengeAnswer";
     const auto decCredential = getChallengeAnswer(tpm, secret, credential, akName);
+    TVLOG(1) << "creating blobs 8/11: enrollAk";
           auto trustedAk = enrollAk(generation, trustedEk, akChallenge, akPublicKey, akName, decCredential);
+    TVLOG(1) << "creating blobs 9/11: getNonce";
     const auto [nonceVector, nonceBlob] = getNonce(generation);
+    TVLOG(1) << "creating blobs 10/11: getQuote";
     const auto quote = getQuote(tpm, nonceVector, pcrSet.toPcrList(), "ERP_ENROLLMENT");
+    TVLOG(1) << "creating blobs 11/11: enrollEnclave";
           auto trustedQuote = enrollEnclave(generation, akName, quote, trustedAk, nonceBlob);
+    TVLOG(1) << "creating blobs: successfully finished";
 
     EnrolmentHelper::Blobs blobs;
     blobs.akName = ErpVector(akName.begin(), akName.end());

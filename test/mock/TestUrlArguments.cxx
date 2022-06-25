@@ -198,8 +198,8 @@ TestUrlArguments::SearchMedicationDispense::SearchMedicationDispense(
         std::optional<model::Timestamp> whenPrepared)
     : MedicationDispense(std::move(dbMedicationDispense))
     , performer(std::move(performer))
-    , whenHandedOver(std::move(whenHandedOver))
-    , whenPrepared(std::move(whenPrepared))
+    , whenHandedOver(whenHandedOver)
+    , whenPrepared(whenPrepared)
 {
 }
 
@@ -211,7 +211,7 @@ TestUrlArguments::TestUrlArguments (const UrlArguments& urlArguments)
 
 
 template<typename T>
-bool TestUrlArguments::matches(const std::string& parameterName, const std::optional<T>& value) const
+bool TestUrlArguments::matches(const std::string& parameterName, const std::optional<T>& value) const //NOLINT(readability-function-cognitive-complexity)
 {
     struct Equals {
         bool operator() (const SearchArgument& searchArg, const std::string_view& value)
@@ -286,8 +286,12 @@ bool TestUrlArguments::matches(const std::string& parameterName, const std::opti
 
 
 template<>
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterName, const std::optional<model::Timestamp>& value) const
 {
+    // Default result is true, because if parameter is not mentioned by the search arguments 
+    // => the value does not take part in the search 
+    bool result = true;
     for (const auto& argument : mUrlArguments.mSearchArguments)
     {
         if (argument.originalName == parameterName)
@@ -306,11 +310,12 @@ bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterNa
                             // FHIR: The range of the search value fully contains the range of the target value.
                             // B <= T < E
                             eq = searchValue->begin() <= value.value() && value.value() < searchValue->end();
-                        // Multiple values of a single parameter are ored. Search result is true if one value matches.
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
                         if(eq)
                             break;
                     }
-                    return eq;
+                    result = result && eq;
+                    break;
                 }
                 case SearchArgument::Prefix::NE:
                 {
@@ -318,19 +323,22 @@ bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterNa
                     for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
                     {
                         const auto& searchValue = argument.valueAsTimePeriod(idx);
-                        if (value.has_value() && !searchValue.has_value())
-                            eq = false; // Not equal if value is not NULL but argument is NULL.
-                        else if (!value.has_value() && searchValue.has_value())
-                            eq = false; // Not equal if value is NULL but argument is not NULL.
+                        if (value.has_value() != searchValue.has_value())
+                        {
+                            eq = false;
+                        }
                         else if (value.has_value() && searchValue.has_value())
+                        {
                             // FHIR: The range of the search value does not fully contain the range of the target value.
                             // T < B || E <= T
                             eq = searchValue->begin() <= value.value() && value.value() < searchValue->end();
-                        // Multiple values of a single parameter are ored. Search result is true if one value does not match.
+                        }
+                        // Multiple values of a single parameter are or'd. Search result is true if one value does not match.
                         if (!eq)
                             break;
                     }
-                    return !eq;
+                    result = result && !eq;
+                    break;
                 }
                 case SearchArgument::Prefix::GT:
                 case SearchArgument::Prefix::SA:
@@ -347,11 +355,12 @@ bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterNa
                             // >= instead of > because the upper bound is exclusive
                             // When target values are time points then SA becomes equivalent to GT.
                             gt = value.value() >= searchValue->end();
-                        // Multiple values of a single parameter are ored. Search result is true if one value matches.
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
                         if (gt)
                             break;
                     }
-                    return gt;
+                    result = result && gt;
+                    break;
                 }
                 case SearchArgument::Prefix::LT:
                 case SearchArgument::Prefix::EB:
@@ -367,11 +376,12 @@ bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterNa
                             // T < B
                             // When target values are time points then EB becomes equivalent to LT.
                             lt = value.value() < searchValue->begin();
-                        // Multiple values of a single parameter are ored. Search result is true if one value matches.
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
                         if (lt)
                             break;
                     }
-                    return lt;
+                    result = result && lt;
+                    break;
                 }
                 case SearchArgument::Prefix::GE:
                 {
@@ -385,11 +395,12 @@ bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterNa
                             // The range above the search value intersects (i.e. overlaps) with the range of the target value, or the range of the search value fully contains the range of the target value.
                             // T >= B
                             ge = value.value() >= searchValue->begin();
-                        // Multiple values of a single parameter are ored. Search result is true if one value matches.
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
                         if (ge)
                             break;
                     }
-                    return ge;
+                    result = result && ge;
+                    break;
                 }
                 case SearchArgument::Prefix::LE:
                 {
@@ -404,20 +415,22 @@ bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterNa
                             // T < E
                             // < instead of <= because E is exclusive
                             le = value.value() < searchValue->end();
-                        // Multiple values of a single parameter are ored. Search result is true if one value matches.
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
                         if (le)
                             break;
                     }
-                    return le;
+                    result = result && le;
+                    break;
                 }
                 default:
                     ErpFail(HttpStatus::InternalServerError, "unsupported SearchArgument::Prefix");
             }
+            if(!result)
+                return result; // short cut evaluation
         }
     }
 
-    // Parameter was not mentioned by the search arguments => the value does not take part in the search => return true
-    return true;
+    return result;
 }
 
 TestUrlArguments::Communications TestUrlArguments::apply (Communications&& initialCommunications) const
@@ -508,8 +521,8 @@ TestUrlArguments::Communications TestUrlArguments::applySort (Communications&& c
 TestUrlArguments::Communications TestUrlArguments::applyPaging (Communications&& communications) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
-    const ptrdiff_t remaining = communications.size() - offset;
+    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(communications.size()) - offset;
     size_t count = 0;
     if(remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -585,8 +598,8 @@ TestUrlArguments::Tasks TestUrlArguments::applySort (TestUrlArguments::Tasks&& t
 TestUrlArguments::Tasks TestUrlArguments::applyPaging (TestUrlArguments::Tasks&& tasks) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
-    const ptrdiff_t remaining = tasks.size() - offset;
+    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(tasks.size()) - offset;
     size_t count = 0;
     if(remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -657,8 +670,8 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::applySort (TestUrlArgumen
 TestUrlArguments::AuditDataContainer TestUrlArguments::applyPaging (TestUrlArguments::AuditDataContainer&& auditEvents) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
-    const ptrdiff_t remaining = auditEvents.size() - offset;
+    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(auditEvents.size()) - offset;
     size_t count = 0;
     if(remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -735,7 +748,7 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applySort(MedicationDisp
 TestUrlArguments::MedicationDispenses TestUrlArguments::applyPaging(MedicationDispenses&& medicationDispenses) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount() + 1;
-    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
+    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
 
     // find unique prescriptionIds, paging is based on prescription IDs, not the medication dispenses
     std::unordered_set<std::string> prescriptionIds;
@@ -744,7 +757,7 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applyPaging(MedicationDi
         prescriptionIds.insert(item.prescriptionId.toString());
     }
 
-    const ptrdiff_t remaining = prescriptionIds.size() - offset;
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(prescriptionIds.size()) - offset;
     size_t count = 0;
     if (remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -773,8 +786,8 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applyPaging(MedicationDi
 TestUrlArguments::ChargeItemContainer TestUrlArguments::applyPaging(ChargeItemContainer&& chargeItems) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
-    const ptrdiff_t remaining = chargeItems.size() - offset;
+    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(chargeItems.size()) - offset;
     size_t count = 0;
     if (remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -790,3 +803,6 @@ TestUrlArguments::ChargeItemContainer TestUrlArguments::applyPaging(ChargeItemCo
 
 template bool TestUrlArguments::matches<db_model::HashedKvnr>(const std::string& parameterName,
                                                               const std::optional<db_model::HashedKvnr>& value) const;
+
+template bool TestUrlArguments::matches<::db_model::HashedTelematikId>(
+    const ::std::string& parameterName, const ::std::optional<::db_model::HashedTelematikId>& value) const;

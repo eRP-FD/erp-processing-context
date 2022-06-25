@@ -15,7 +15,7 @@
 class HsmPoolSessionRemoverTest : public testing::Test
 {
 public:
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         BlobDatabaseHelper::removeUnreferencedBlobs();
     }

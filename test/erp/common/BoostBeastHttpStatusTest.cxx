@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(BoostBeastHttpStatusTest, boostRoundTrip)
+TEST(BoostBeastHttpStatusTest, boostRoundTrip)//NOLINT(readability-function-cognitive-complexity)
 {
 #define STATUS(boostStatus, eStatus, code)                                        \
     {                                                                             \
@@ -22,7 +22,7 @@ TEST(BoostBeastHttpStatusTest, boostRoundTrip)
 }
 
 
-TEST(BoostBeastHttpStatusTest, epaRoundTrip)
+TEST(BoostBeastHttpStatusTest, epaRoundTrip)//NOLINT(readability-function-cognitive-complexity)
 {
 #define STATUS(boostStatus, eStatus, code)                                                          \
     {                                                                                               \

@@ -124,7 +124,7 @@ public:
     {
     }
 
-    void SetUp (void)
+    void SetUp (void) override
     {
         EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
         ServerTestBase::SetUp();
@@ -523,14 +523,13 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetMetadataSuccess)
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::OK);
 }
 
-TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemSuccess)
+TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemNotFound)
 {
-    // TODO adapt as soon as service is implemented
     A_22113.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
-    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::DELETE, endpoint, jwtOeffentliche_apotheke, HttpStatus::InternalServerError);
-    testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhausapotheke, HttpStatus::InternalServerError);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemForbidden)

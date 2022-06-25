@@ -82,17 +82,17 @@ private:
     // Push functions create a new context on the Parser stack
     void pushRootResource(const XmlStringView& resoureType);
 
-    void pushArrayContext(const Context& parentItem, const FhirElement& parentElement,
-                       const FhirElement& element, const XmlStringView& localname);
+    void pushArrayContext(const Context& parentItem, std::shared_ptr<const FhirElement> parentElement,
+                       std::shared_ptr<const FhirElement> element, const XmlStringView& localname);
 
-    void pushJsonField(const std::string_view& name, const AttributeList& attributes, const FhirStructureDefinition& type, const FhirElement& element);
-    void pushObject(const std::string_view& name, const SaxHandler::AttributeList& attributes, const FhirStructureDefinition& type, const FhirElement& element);
-    void pushString(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, const FhirElement& element);
-    void pushBoolean(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, const FhirElement& element);
-    void pushNumber(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, const FhirElement& element);
+    void pushJsonField(const std::string_view& name, const AttributeList& attributes, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
+    void pushObject(const std::string_view& name, const SaxHandler::AttributeList& attributes, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
+    void pushString(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
+    void pushBoolean(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
+    void pushNumber(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
 
 
-    std::tuple<const FhirStructureDefinition&, const FhirElement&>
+    [[nodiscard]] std::tuple<const FhirStructureDefinition&, std::shared_ptr<const FhirElement>>
     getTypeAndElement(const FhirStructureDefinition& baseType,
                      const FhirStructureDefinition* parentType,
                      const FhirElement& baseElement,
@@ -123,7 +123,6 @@ private:
     model::NumberAsStringParserDocument mResult; ///< will contain the final result document one all Contexts have been joined
     std::list<Context> mStack; ///< holds the nested contexts back() is the current context
     const FhirStructureRepository& mStructureRepo;
-    const FhirStructureDefinition* const mBackBoneType; ///< used to quickly compare with Backbone by using pointer comparison
     UniqueXmlDocumentPtr mCurrentXHTMLDoc;
     xmlNodePtr mCurrentXHTMLNode = nullptr;
 };

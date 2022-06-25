@@ -12,7 +12,7 @@
 using DictVersion = uint8_t;
 using DictUseAndVersion = std::tuple<Compression::DictionaryUse, DictVersion>;
 
-TEST(ZStdDictionaryRepositoryTest, VersionRange)
+TEST(ZStdDictionaryRepositoryTest, VersionRange)//NOLINT(readability-function-cognitive-complexity)
 {
     std::set<DictUseAndVersion> samples = {
         {Compression::DictionaryUse::Default_json, static_cast<DictVersion>( 0) },
@@ -55,7 +55,7 @@ TEST(ZStdDictionaryRepositoryTest, VersionRange)
 }
 
 
-TEST(ZStdDictionaryRepositoryTest, latestVersion)
+TEST(ZStdDictionaryRepositoryTest, latestVersion)//NOLINT(readability-function-cognitive-complexity)
 {
     std::set<DictUseAndVersion> samples = {
         {Compression::DictionaryUse::Default_json, static_cast<DictVersion>( 0) },

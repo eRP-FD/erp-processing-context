@@ -50,6 +50,7 @@ public:
         }
     }
 
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     std::optional<model::Bundle> expectGetCommunicationResponse (
         const ClientResponse& outerResponse,
         std::vector<Uuid> expectedCommunicationIds,
@@ -234,7 +235,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
 }
 
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT(readability-function-cognitive-complexity)
 {
     // Setup the database.
     const auto givenTask = addTaskToDatabase({model::Task::Status::ready, InsurantE});
@@ -397,6 +398,50 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentAndReceived
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
     EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=ge2022-01-01&received=le2022-01-04");
+}
+
+
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedTimeRange) // Created for ticket ERP-9253
+{
+    // Setup the database.
+    const auto givenTask = addTaskToDatabase({ model::Task::Status::draft, InsurantF });
+    const auto givenCommunication1 = addCommunicationToDatabase({
+        givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+        {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
+        std::string(givenTask.accessCode()),
+        RepresentativeMessageByInsurant,
+        model::Timestamp::fromXsDateTime("2022-02-28T23:59:56Z"), model::Timestamp::fromXsDateTime("2022-02-28T23:59:59Z") });// not found
+    const auto givenCommunication2 = addCommunicationToDatabase({
+        givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+        {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
+        std::string(givenTask.accessCode()),
+        RepresentativeMessageByInsurant,
+        model::Timestamp::fromXsDateTime("2022-03-01T12:34:56Z"), model::Timestamp::fromXsDateTime("2022-03-01T12:35:00Z") });// found
+    const auto givenCommunication3 = addCommunicationToDatabase({
+        givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+        {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
+        std::string(givenTask.accessCode()),
+        RepresentativeMessageByInsurant,
+        model::Timestamp::fromXsDateTime("2022-02-28T23:59:59Z"), model::Timestamp::fromXsDateTime("2022-03-01T00:00:00Z") });// found
+    const auto givenCommunication4 = addCommunicationToDatabase({
+        givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+        {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
+        std::string(givenTask.accessCode()),
+        RepresentativeMessageByInsurant,
+        model::Timestamp::fromXsDateTime("2022-03-01T23:59:56Z"), model::Timestamp::fromXsDateTime("2022-03-02T00:00:00Z") });// not found
+
+    // Send the request.
+    const auto jwtInsurant = mJwtBuilder.makeJwtVersicherter(InsurantF);
+    const char* const urlPath = "/Communication?received=gt2022-02-28&received=lt2022-03-02&_sort=received";
+    const auto outerResponse = createClient().send(
+        encryptRequest(ClientRequest(createGetHeader(urlPath, jwtInsurant), ""/*body*/), jwtInsurant));
+
+    // Verify the response.
+    const auto bundle = expectGetCommunicationResponse(
+        outerResponse, {givenCommunication3.id().value(), givenCommunication2.id().value()}, true);
+    const auto selfLink = bundle->getLink(model::Link::Type::Self);
+    EXPECT_TRUE(selfLink.has_value());
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), urlPath);
 }
 
 
@@ -926,7 +971,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_sort_receivedSentAndSea
 }
 
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_firstPage)
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_firstPage)//NOLINT(readability-function-cognitive-complexity)
 {
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::draft, InsurantF });
@@ -972,7 +1017,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_firstPage)
 }
 
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_nextPage)
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_nextPage)//NOLINT(readability-function-cognitive-complexity)
 {
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::draft, InsurantF });
@@ -1026,7 +1071,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_nextPage)
 }
 
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string kvnrInsurant = InsurantA;
     std::string kvnrRepresentative1 = InsurantB;
@@ -1140,7 +1185,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)
     }
 }
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string kvnrInsurant = InsurantA;
     std::string kvnrRepresentative1 = InsurantB;
@@ -1413,7 +1458,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
     verifyGenericInnerResponse(innerResponse, HttpStatus::NotFound);
 }
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string kvnrInsurant = InsurantA;
     std::string pharmacy1 = "3-SMC-B-Testkarte-883110000120312";

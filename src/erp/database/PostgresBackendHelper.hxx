@@ -6,7 +6,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_POSTGRESBACKENDHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_POSTGRESBACKENDHELPER_HXX
 
-#include <pqxx/transaction.hxx>
+#include <pqxx/transaction>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -18,7 +18,7 @@ class Blob;
 class UrlArguments;
 
 struct QueryDefinition {
-    const char* name;
+    const char* name{};
     std::string query;
 };
 

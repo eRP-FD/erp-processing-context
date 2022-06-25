@@ -22,7 +22,6 @@ public:
     using AddEntropyFunction = std::function<void (const SafeString&)>;
     explicit SeedTimer(ThreadPool& pool,
                     HsmPool& hsmPool,
-                    size_t threadCount,
                     std::chrono::steady_clock::duration interval,
                     AddEntropyFunction addEntropy = &SecureRandomGenerator::addEntropy);
 
@@ -35,7 +34,6 @@ private:
     void seedThisThread();
 
     ThreadPool& mThreadPool;
-    const size_t mThreadCount;
     Seeder mSeeder;
     const AddEntropyFunction mAddEntropy;
     std::chrono::steady_clock::duration mInterval;

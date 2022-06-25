@@ -27,14 +27,14 @@ HsmPool::HsmPool (
       mTeeToken(),
       mTokenUpdater(
           teeTokenUpdaterFactory(
-              [this](auto&& token){setTeeToken(std::move(token));},
+              [this](ErpBlob&& token){setTeeToken(std::move(token));},
               *mHsmFactory, timerManager)),
       mKeepAliveUpdateToken(Timer::NotAJob),
       mHsmIdleTimeout(std::chrono::seconds(
           Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS, 15 * 60))),
       mMaxSessionCount(Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_MAX_SESSION_COUNT, 5)),
       mMaxUsedSessionCount(0),
-      mTimerManager(timerManager)
+      mTimerManager(std::move(timerManager))
 {
     Expect3(mHsmFactory!=nullptr, "HsmFactory missing", std::logic_error);
     Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);

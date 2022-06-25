@@ -120,7 +120,7 @@ public:
 /**
  * This test focuses on the handling of the TEE protocol and not on the actual implementation of the endpoint.
  */
-TEST_F(VauRequestHandlerTest, success)
+TEST_F(VauRequestHandlerTest, success)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create a client
     auto client = createClient();
@@ -169,7 +169,7 @@ TEST_F(VauRequestHandlerTest, failForMissingTeeWrapper)
 }
 
 
-TEST_F(VauRequestHandlerTest, failForExpiredJwt)
+TEST_F(VauRequestHandlerTest, failForExpiredJwt)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono_literals;
 
@@ -203,7 +203,7 @@ TEST_F(VauRequestHandlerTest, failForExpiredJwt)
     ASSERT_EQ(innerResponse.getHeader().header(Header::WWWAuthenticate).value(), R"(Bearer realm='prescriptionserver.telematik', error='invalACCESS_TOKEN')");
 }
 
-TEST_F(VauRequestHandlerTest, MissingRequiredClaim)
+TEST_F(VauRequestHandlerTest, MissingRequiredClaim)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto privateKey = MockCryptography::getIdpPrivateKey();
     const auto publicKey = MockCryptography::getIdpPublicKey();
@@ -234,7 +234,7 @@ TEST_F(VauRequestHandlerTest, MissingRequiredClaim)
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 }
 
-TEST_F(VauRequestHandlerTest, ClaimTypeCheckFailure)
+TEST_F(VauRequestHandlerTest, ClaimTypeCheckFailure)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto privateKey = MockCryptography::getIdpPrivateKey();
     const auto publicKey = MockCryptography::getIdpPublicKey();
@@ -263,7 +263,7 @@ TEST_F(VauRequestHandlerTest, ClaimTypeCheckFailure)
     ClientTeeProtocol teeProtocol;
     ClientRequest encryptedRequest(
         Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
-        teeProtocol.createRequest(MockCryptography().getEciesPublicKeyCertificate(), request, jwt));
+        teeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, jwt));
     encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
     // This header field will be present - we have to set it explicitly in the tests.
     encryptedRequest.setHeader(Header::ExternalInterface, std::string{Header::ExternalInterface_INTERNET});
@@ -275,7 +275,7 @@ TEST_F(VauRequestHandlerTest, ClaimTypeCheckFailure)
     A_20370.finish();
 }
 
-TEST_F(VauRequestHandlerTest, invalidSignatureJwt)
+TEST_F(VauRequestHandlerTest, invalidSignatureJwt)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono_literals;
 
@@ -815,7 +815,7 @@ TEST_F(VauRequestHandlerTest, failForMissingTls)
         std::runtime_error);
 }
 
-TEST_F(VauRequestHandlerTest, VerifyTokenBlocklisting)
+TEST_F(VauRequestHandlerTest, VerifyTokenBlocklisting)//NOLINT(readability-function-cognitive-complexity)
 {
     EnvironmentVariableGuard enableDosCheck{"DEBUG_DISABLE_DOS_CHECK", "false"};
 
@@ -947,7 +947,7 @@ TEST_F(VauRequestHandlerTest, failMessageInvalidPublicKey)
         << "header status was " << toString(response.getHeader().status());
 }
 
-TEST_F(VauRequestHandlerTest, CheckClientId)
+TEST_F(VauRequestHandlerTest, CheckClientId)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto privateKey = MockCryptography::getIdpPrivateKey();
     const auto publicKey = MockCryptography::getIdpPublicKey();

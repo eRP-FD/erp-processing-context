@@ -13,7 +13,7 @@
 namespace EnrolmentServer
 {
 constexpr uint16_t DefaultEnrolmentServerPort = 9191;
-void addEndpoints (RequestHandlerManager& manager);
+void addEndpoints (RequestHandlerManager& handlers);
 }
 
 

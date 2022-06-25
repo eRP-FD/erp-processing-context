@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(ClientRequestTest, Construct)
+TEST(ClientRequestTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string body = "This is a test body string";
     {

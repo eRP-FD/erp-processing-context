@@ -22,6 +22,7 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test_config.h"
 #include "test/mock/RegistrationMock.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 
@@ -38,6 +39,7 @@ public:
     }
 
     template <typename TModel>
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void testParseAndValidateRequestBodyT(std::string body, const std::string& contentMimeType, SchemaType schemaType, bool expectFail)
     {
         Header header(HttpMethod::POST, "", Header::Version_1_1, {{Header::ContentType, contentMimeType}}, HttpStatus::Unknown);
@@ -59,7 +61,7 @@ public:
 
     }
 
-    void testParseAndValidateRequestBody(std::string body, const std::string& contentMimeType, SchemaType schemaType, bool expectFail)
+    void testParseAndValidateRequestBody(const std::string& body, const std::string& contentMimeType, SchemaType schemaType, bool expectFail)
     {
         switch (schemaType)
         {
@@ -147,15 +149,15 @@ public:
     std::unique_ptr<EnvironmentVariableGuard> mCaDerPathGuard;
     std::unique_ptr<ErpRequestHandlerUnderTest> mErpRequestHandlerUnderTest;
 
-    virtual void SetUp() override
+    void SetUp() override
     {
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
         mErpRequestHandlerUnderTest = std::make_unique<ErpRequestHandlerUnderTest>();
     }
 
-    virtual void TearDown() override
+    void TearDown() override
     {
         mCaDerPathGuard.reset();
     }

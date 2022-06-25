@@ -28,7 +28,7 @@ public:
     static int8_t messageTypeToInt(MessageType messageType);
     static MessageType stringToMessageType(const std::string_view& messageType);
     static const std::string_view& messageTypeToProfileUrl(MessageType messageType);
-    static MessageType profileUrlToMessageType(const std::string_view& messageType);
+    static MessageType profileUrlToMessageType(const std::string_view& profileUrl);
     static bool messageTypeHasPrescriptionId(MessageType messageType);
     static SchemaType messageTypeToSchemaType(MessageType messageType);
 
@@ -67,6 +67,7 @@ public:
 
     std::optional<Timestamp> timeReceived() const;
     void setTimeReceived(const Timestamp& timestamp = Timestamp::now());
+    void deleteTimeReceived();
 
     PrescriptionId prescriptionId() const;
     std::optional<std::string> accessCode() const;

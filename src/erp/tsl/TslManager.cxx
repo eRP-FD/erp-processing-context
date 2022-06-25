@@ -31,7 +31,7 @@ namespace
     {
         try
         {
-            std::rethrow_exception(exception);
+            std::rethrow_exception(std::move(exception));
         }
         catch(const TslError& e)
         {
@@ -68,7 +68,7 @@ namespace
 TslManager::TslManager(
     std::shared_ptr<UrlRequestSender> requestSender,
     std::shared_ptr<XmlValidator> xmlValidator,
-    const std::vector<PostUpdateHook> initialPostUpdateHooks)
+    const std::vector<PostUpdateHook>& initialPostUpdateHooks)
     : mRequestSender(std::move(requestSender))
     , mXmlValidator(std::move(xmlValidator))
     , mTslTrustStore(std::make_unique<TrustStore>(TslMode::TSL, getInitialTslDownloadUrls()))
@@ -95,7 +95,7 @@ TslManager::TslManager(
 TslManager::TslManager(
     std::shared_ptr<UrlRequestSender> requestSender,
     std::shared_ptr<XmlValidator> xmlValidator,
-    const std::vector<PostUpdateHook> initialPostUpdateHooks,
+    const std::vector<PostUpdateHook>& initialPostUpdateHooks,
     std::unique_ptr<TrustStore> tslTrustStore,
     std::unique_ptr<TrustStore> bnaTrustStore)
     : mRequestSender(std::move(requestSender))
@@ -115,8 +115,6 @@ TslManager::TslManager(
         {
             mBnaTrustStore = std::make_unique<TrustStore>(TslMode::BNA);
         }
-
-        internalUpdate(true);
     }
     catch(...)
     {
@@ -127,7 +125,7 @@ TslManager::TslManager(
 
 X509Store TslManager::getTslTrustedCertificateStore(
     const TslMode tslMode,
-    const std::optional<X509Certificate> certificate)
+    const std::optional<X509Certificate>& certificate)
 {
     // no mutex is necessary because trust store is thread safe
     try
@@ -237,7 +235,7 @@ void TslManager::updateTrustStoresOnDemand()
 }
 
 
-size_t TslManager::addPostUpdateHook (PostUpdateHook postUpdateHook)
+size_t TslManager::addPostUpdateHook (const PostUpdateHook& postUpdateHook)
 {
     std::lock_guard lock (mUpdateHookMutex);
 

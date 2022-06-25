@@ -12,12 +12,21 @@ set -e
 
 scriptDir=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
 rootDir=$(dirname "$scriptDir")
-testDataDir="$rootDir/resources/test/generated_pki"
+testDataDirRel=resources/test/generated_pki
+testDataDir="$rootDir/$testDataDirRel"
 inputDataDir=$(dirname "$scriptDir")/resources/test/generated_pki_input
 opensslConfig="$inputDataDir/openssl.cnf"
 
 defaultKeyArguments="-newkey rsa:4096"
 
+# TSL and certificates generation modes, meaning depends from context, please see the related method
+normal="normal"
+outdated="outdated"
+multipleNewCA="multipleNewCA"
+brokenNewCA="brokenNewCA"
+validBeforeOutdated="validBeforeOutdated"
+
+: "${OPENSSL:=openssl}"
 
 function printUsage()
 {
@@ -32,6 +41,7 @@ Options:
       generate root CA, sub CA ( TSL signer ) and use them to sign TSL templates.
   --clean
       Remove all pre-existing data first, and then start the generation
+  --output-dir=<output_dir> the data will be generated into \$(output_dir)/resources/test/generated_pki
 EOF
 }
 
@@ -114,20 +124,20 @@ function generate_root_ca()
   (cd "$caDir" && {
     # create private key and certificate signing request
     echo -e '\n\n\n\n\nExample Inc. Root CA\n' \
-      | openssl req -new $keyArguments \
+      | "$OPENSSL" req -new $keyArguments \
         -keyout private/ca_key.pem \
         -out ca_req.pem -config "$opensslConfig" \
         -nodes
-    chmod 0600 private/ca_key.pem
+    chmod 0644 private/ca_key.pem
 
     # create the certificate
     echo -e 'y\ny\n' \
-      | openssl ca -out ca.pem -days 3653 \
+      | "$OPENSSL" ca -out ca.pem -days 3653 \
         -keyfile private/ca_key.pem -selfsign \
         -extensions v3_ca_has_san -config "$opensslConfig" \
         -infiles ca_req.pem
 
-    openssl x509 -outform der -in ca.pem -out ca.der
+    "$OPENSSL" x509 -outform der -in ca.pem -out ca.der
 
     # the certificate chain to the CA certificate
     ln -s ca.pem ca_cert_chain.pem
@@ -144,7 +154,19 @@ function generate_certificate()
   local commonName="$3"
   local extensions="$4"
   local keyType="$5"
-  shift 5
+  # generation modes are:
+  # normal - normal validity timeframe
+  # outdated - outdated validity timeframe
+  # validBeforeOutdated - valid currently and validity timeframe starts before outdated validity timeframe ends
+  local generationMode="$6"
+  shift 6
+
+  if [ "$generationMode" != "$normal" ] \
+    && [ "$generationMode" != "$outdated" ] \
+    && [ "$generationMode" != "$validBeforeOutdated" ] ; then
+      echo "Wrong generation mode '$generationMode' is provided for certificate $alias"
+      exit 1
+  fi
 
   eval "$(get_named_arguments subjectAltName "$@")"
 
@@ -185,18 +207,43 @@ function generate_certificate()
     # create private key and CSR
     echo "Generating key and CSR..."
     echo -e "\n\n\n\n\n$commonName\n\n" \
-      | openssl req -new $keyArguments -keyout "$keyFile" \
+      | "$OPENSSL" req -new $keyArguments -keyout "$keyFile" \
         -out "$csrFile" -config "$opensslConfig" \
         -nodes
+    chmod 0644 "$keyFile" "$csrFile"
 
     # sign the certificate
     echo "Signing certificate..."
-    echo -e "y\ny\n" \
-      | env "${additionalEnvVars[@]}" \
-        openssl ca -config "$opensslConfig" \
-          -extensions "$extensions" -in "$csrFile" -out "$certFile"
 
-    openssl x509 -outform der -in "$certFile" -out "$certDerFile"
+    local oudatedStartDate="20210101120000Z"
+    local beforeOutdatedStartDate="20210201120000Z"
+    local oudatedEndDate="20220101120000Z"
+
+    if [ "$generationMode" == "$normal" ]; then
+      echo -e "y\ny\n" \
+        | env "${additionalEnvVars[@]}" \
+          "$OPENSSL" ca -config "$opensslConfig" \
+            -extensions "$extensions" -in "$csrFile" -out "$certFile"
+    elif [ "$generationMode" == "$outdated" ]; then
+      echo -e "y\ny\n" \
+        | env "${additionalEnvVars[@]}" \
+          "$OPENSSL" ca -config "$opensslConfig" \
+            -extensions "$extensions" -startdate "$oudatedStartDate" -enddate "$oudatedEndDate" -in "$csrFile" -out "$certFile"
+    else # "$generationMode" == "$validBeforeOutdated"
+      local validEndDate
+      if [[ "$OSTYPE" == "darwin"* ]]; then
+        validEndDate="$(date -j -v +29d '+%Y%m%d%H%M%SZ')"
+      else
+        validEndDate="$(date -d '+29 days' '+%Y%m%d%H%M%SZ')"
+      fi
+
+      echo -e "y\ny\n" \
+        | env "${additionalEnvVars[@]}" \
+          "$OPENSSL" ca -config "$opensslConfig" \
+            -extensions "$extensions" -startdate "$beforeOutdatedStartDate" -enddate "$validEndDate" -in "$csrFile" -out "$certFile"
+    fi
+
+    "$OPENSSL" x509 -outform der -in "$certFile" -out "$certDerFile"
   })
 
   caMap[$alias]="$caName"
@@ -209,7 +256,8 @@ function generate_sub_ca()
   local caName=$2
   local commonName="$3"
   local keyType="$4"
-  shift 4
+  local generationMode="$5"
+  shift 5
 
   local parentCaDir="$testDataDir/$parentCaName"
   local caDir="$testDataDir/$caName"
@@ -220,7 +268,7 @@ function generate_sub_ca()
   fi
 
   # create sub CA certificate
-  generate_certificate "$parentCaName" "$caName" "$commonName" v3_ca_has_san "$keyType" "$@"
+  generate_certificate "$parentCaName" "$caName" "$commonName" v3_ca_has_san "$keyType" "$generationMode" "$@"
 
   # initialize sub CA directory
   init_ca_directory "$caDir"
@@ -238,7 +286,22 @@ function generate_tsl()
 {
   local tslSignerName=$1
   local caName=$2
-  local tslName=$3
+  local templateName=$3
+  local tslName=$4
+  # generation modes are:
+  # normal - normal TSL
+  # outdated - outdated TSL
+  # multipleNewCA - TSL with multiple new trust anchor
+  # brokenNewCA - TSL with broken new trust anchor
+  local generationMode=$5
+
+  if [ "$generationMode" != "$normal" ] \
+    && [ "$generationMode" != "$outdated" ] \
+    && [ "$generationMode" != "$multipleNewCA" ] \
+    && [ "$generationMode" != "$brokenNewCA" ] ; then
+      echo "Wrong generation mode '$generationMode' is provided for TSL name $tslName"
+      exit 1
+  fi
 
   # check, if TSL already exists
   local tslDir="$testDataDir/tsl"
@@ -265,18 +328,28 @@ function generate_tsl()
     exit 1
   fi
 
+  # bna related certificates
+  local bnaSignerCaFile="$testDataDir/bna_signer_ca_ec/ca.pem"
+  local bnaSignerCaCertificateBase64
+  local bnaSignerFile="$testDataDir/bna_signer_ca_ec/certificates/bna_signer_ec/bna_signer_ec.pem"
+  local bnaSignerCertificateBase64
+
   # read the CA certificate
   local caDir="$testDataDir/$caName"
   local caCertificateFile="$caDir/ca.pem"
   local caCertificateBase64
   local tslNextUpdate
+  local tslId
+  local tslSequenceNumber
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
-    caCertificateBase64="$(openssl x509 -in "$caCertificateFile" -outform der | base64)"
-    tslNextUpdate="$(date -j -v +29d '+%Y-%m-%dT%H:%M:%SZ')"
+    caCertificateBase64="$($OPENSSL x509 -in "$caCertificateFile" -outform der | base64)"
+    bnaSignerCaCertificateBase64="$($OPENSSL x509 -in "$bnaSignerCaFile" -outform der | base64)"
+    bnaSignerCertificateBase64="$($OPENSSL x509 -in "$bnaSignerFile" -outform der | base64)"
   else
-    caCertificateBase64="$(openssl x509 -in "$caCertificateFile" -outform der | base64 --wrap=0)"
-    tslNextUpdate="$(date -d '+29 days' '+%Y-%m-%dT%H:%M:%SZ')"
+    caCertificateBase64="$($OPENSSL x509 -in "$caCertificateFile" -outform der | base64 --wrap=0)"
+    bnaSignerCaCertificateBase64="$($OPENSSL x509 -in "$bnaSignerCaFile" -outform der | base64 --wrap=0)"
+    bnaSignerCertificateBase64="$($OPENSSL x509 -in "$bnaSignerFile" -outform der | base64 --wrap=0)"
   fi
 
   if [ -z "$caCertificateBase64" ]; then
@@ -284,10 +357,57 @@ function generate_tsl()
     exit 1
   fi
 
+  if [ "$generationMode" == "$outdated" ]; then
+    # outdated TSL
+    tslId="ID31028220210914152510Z"
+    tslSequenceNumber="10281"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      tslNextUpdate="$(date -j -v -2d '+%Y-%m-%dT%H:%M:%SZ')"
+    else
+      tslNextUpdate="$(date -d '-2 days' '+%Y-%m-%dT%H:%M:%SZ')"
+    fi
+  else
+    # other modes
+    tslId="ID31028220210914152511Z"
+    tslSequenceNumber="10282"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      tslNextUpdate="$(date -j -v +29d '+%Y-%m-%dT%H:%M:%SZ')"
+    else
+      tslNextUpdate="$(date -d '+29 days' '+%Y-%m-%dT%H:%M:%SZ')"
+    fi
+  fi
+
   # create final unsigned TSL
   local tslUnsigned="$tslDir/unsigned_$tslName"
-  local tslTemplate="$inputDataDir/template_$tslName"
-  sed -e "s@%CERTIFICATE_DER_BASE64%@$caCertificateBase64@" -e "s@%TSL_NEXT_UPDATE%@$tslNextUpdate@" "$tslTemplate" > "$tslUnsigned"
+  local tslTemplate="$inputDataDir/$templateName"
+
+  if [[ "$generationMode" == "$normal" || "$generationMode" == "$outdated" ]]; then
+    sed -e "s@%CERTIFICATE_DER_BASE64%@$caCertificateBase64@" \
+        -e "s@%BNA_SIGNER_CERTIFICATE_DER_BASE64%@$bnaSignerCertificateBase64@" \
+        -e "s@%BNA_SIGNER_CA_DER_BASE64%@$bnaSignerCaCertificateBase64@" \
+        -e "s@%TSL_NEXT_UPDATE%@$tslNextUpdate@" \
+        -e "s@%TSL_SYSTEM_ID%@$tslId@" \
+        -e "s@%TSL_SEQUENCE_NUMBER%@$tslSequenceNumber@" \
+        "$tslTemplate" > "$tslUnsigned"
+  elif [ "$generationMode" == "$multipleNewCA" ]; then
+    sed -e "s@%CERTIFICATE_DER_BASE64%@$caCertificateBase64@" \
+        -e "s@%BNA_SIGNER_CERTIFICATE_DER_BASE64%@$bnaSignerCertificateBase64@" \
+        -e "s@%BNA_SIGNER_CA_DER_BASE64%@$bnaSignerCaCertificateBase64@" \
+        -e "s@%TSL_NEXT_UPDATE%@$tslNextUpdate@" \
+        -e "s@%TSL_SYSTEM_ID%@$tslId@" \
+        -e "s@%TSL_SEQUENCE_NUMBER%@$tslSequenceNumber@" \
+        -e "s@</TrustServiceProviderList>@$(<"$inputDataDir/TSL_NewCAServerProviders.xml")</TrustServiceProviderList>@" \
+        "$tslTemplate" > "$tslUnsigned"
+  else # "$generationMode" == "$brokenNewCA"
+    sed -e "s@%CERTIFICATE_DER_BASE64%@$caCertificateBase64@" \
+        -e "s@%BNA_SIGNER_CERTIFICATE_DER_BASE64%@$bnaSignerCertificateBase64@" \
+        -e "s@%BNA_SIGNER_CA_DER_BASE64%@$bnaSignerCaCertificateBase64@" \
+        -e "s@%TSL_NEXT_UPDATE%@$tslNextUpdate@" \
+        -e "s@%TSL_SYSTEM_ID%@$tslId@" \
+        -e "s@%TSL_SEQUENCE_NUMBER%@$tslSequenceNumber@" \
+        -e "s@</TrustServiceProviderList>@$(<"$inputDataDir/TSL_BrokenNewCAServerProvider.xml")</TrustServiceProviderList>@" \
+        "$tslTemplate" > "$tslUnsigned"
+  fi
 
   # sign TSL
   xmlsec1 --sign --privkey-pem "$signerKeyFile,$signerCertFile" --output "$tslSigned" "$tslUnsigned"
@@ -308,7 +428,7 @@ function sign()
     if [ "$1" = "--hash-twice" ]; then
       # This supports a peculiarity of the record removal protocol -- the data
       # data to be signed is hashed once before hashing+signing.
-      hashTwiceCommand="openssl dgst -sha256 -binary"
+      hashTwiceCommand="$OPENSSL dgst -sha256 -binary"
     else
       echo "error: sign: unsupported option: $1"
     fi
@@ -340,11 +460,11 @@ function sign()
   fi
 
   if [[ "$OSTYPE" == "darwin"* ]]; then
-    openssl dgst -sha256 -sign "$keyFile" \
+    "$OPENSSL" dgst -sha256 -sign "$keyFile" \
         <(echo -n "$data" | $hashTwiceCommand) \
       | base64 > "$outFile"
   else
-    openssl dgst -sha256 -sign "$keyFile" \
+    "$OPENSSL" dgst -sha256 -sign "$keyFile" \
         <(echo -n "$data" | $hashTwiceCommand) \
       | base64 --wrap=0 > "$outFile"
   fi
@@ -368,11 +488,18 @@ trap scriptExit EXIT
 # parse arguments
 removeExistingData=false
 
-while [ $# -ge 1 ]; do
-  case "$1" in
+for i in "$@"; do
+  case $i in
     --clean)
       removeExistingData=true
-      shift
+      ;;
+    --output-dir=*)
+      root="${i#*=}"
+      if [ -z "$root" ]; then
+        printUsage
+        exit 1
+      fi
+      testDataDir="$root/$testDataDirRel"
       ;;
     -h|--help)
       printUsage
@@ -393,13 +520,24 @@ mkdir -p "$testDataDir"
 declare -A caMap
 
 generate_root_ca root_ca_ec ec:brainpoolP256r1
-generate_sub_ca root_ca_ec sub_ca1_ec "Example Inc. Sub CA EC 1" ec:brainpoolP256r1
-generate_certificate sub_ca1_ec tsl_signer_ec "TSL signer" tsl_signer_cert ec:brainpoolP256r1 \
+generate_sub_ca root_ca_ec sub_ca1_ec "Example Inc. Sub CA EC 1" ec:brainpoolP256r1 $normal
+generate_sub_ca root_ca_ec bna_signer_ca_ec "Example Inc. BNA signer CA EC" ec:brainpoolP256r1 $normal
+generate_sub_ca root_ca_ec outdated_ca_ec "Example Inc. outdated CA EC" ec:brainpoolP256r1 $outdated
+generate_certificate sub_ca1_ec tsl_signer_ec "TSL signer" tsl_signer_cert ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
+generate_certificate bna_signer_ca_ec bna_signer_ec "BNA signer" bna_signer_cert ec:brainpoolP256r1 $normal \
+    subjectAltName=email:admin@example.com
+generate_certificate outdated_ca_ec qes_cert1_ec "Example Inc. Test QES Certificate" qes_cert1 ec:brainpoolP256r1 \
+    $validBeforeOutdated subjectAltName=email:admin@example.com
+generate_certificate outdated_ca_ec qes_cert2_ec "Example Inc. Test QES Certificate Invalid" qes_cert2 ec:brainpoolP256r1 \
+    $normal subjectAltName=email:admin@example.com
 
 # The Gematik TSLs to generate from templates
-generate_tsl tsl_signer_ec sub_ca1_ec "TSL_valid.xml"
-generate_tsl tsl_signer_ec sub_ca1_ec "TSL_no_ocsp_mapping.xml"
-generate_tsl tsl_signer_ec sub_ca1_ec "TSL_outdated.xml"
+generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_valid.xml" $normal
+generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_no_ocsp_mapping.xml" "TSL_no_ocsp_mapping.xml" $normal
+generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_outdated.xml" $outdated
+generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_multiple_new_cas.xml" $multipleNewCA
+generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_broken_new_ca.xml" $brokenNewCA
+generate_tsl bna_signer_ec outdated_ca_ec "template_BNA_EC_valid.xml" "BNA_EC_valid.xml" $normal
 
 success=true

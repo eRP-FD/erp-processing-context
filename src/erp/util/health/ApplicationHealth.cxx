@@ -232,17 +232,19 @@ std::string ApplicationHealth::downServicesString_noLock (void) const
 std::string_view ApplicationHealth::getUpDownStatus (const Service service) const
 {
     const auto iterator = mStates.find(service);
-    if (iterator == mStates.end())
+    if (iterator == mStates.end() || iterator->second.status != Status::Up)
+    {
         return model::Health::down;
-    else if (iterator->second.status == Status::Up)
-        return model::Health::up;
+    }
     else
-        return model::Health::down;
+    {
+        return model::Health::up;
+    }
 }
 
 
 std::string ApplicationHealth::getServiceDetail(const ApplicationHealth::Service service,
-                                                     const ApplicationHealth::ServiceDetail key) const
+                                                const ApplicationHealth::ServiceDetail key) const
 {
     const auto iterator = mStates.find(service);
     if (iterator == mStates.end())
@@ -265,4 +267,3 @@ std::optional<std::string_view> ApplicationHealth::getDetails (const Service ser
     else
         return iterator->second.details;
 }
-

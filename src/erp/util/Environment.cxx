@@ -35,7 +35,7 @@ void Environment::set (const std::string& variableName, const std::string& value
 #ifdef _WINDOWS
     _putenv_s(variableName.c_str(), value.c_str());
 #else
-    setenv(variableName.c_str(), value.c_str(), true);
+    setenv(variableName.c_str(), value.c_str(), true); //NOLINT(concurrency-mt-unsafe)
 #endif
 }
 
@@ -45,7 +45,7 @@ void Environment::unset (const std::string& variableName)
 #ifdef _WINDOWS
     _putenv_s(variableName.c_str(), "");
 #else
-    unsetenv(variableName.c_str());
+    unsetenv(variableName.c_str());//NOLINT(concurrency-mt-unsafe)
 #endif
 }
 

@@ -28,14 +28,14 @@
 class MockTpmTestHelper : public TpmTestHelper
 {
 public:
-    virtual Tpm::AuthenticateCredentialInput getAuthenticateCredentialInput (BlobCache& blobCache) override;
+    Tpm::AuthenticateCredentialInput getAuthenticateCredentialInput (BlobCache& blobCache) override;
 };
 
 
 class ProductionTpmTestHelper : public TpmTestHelper
 {
 public:
-    virtual Tpm::AuthenticateCredentialInput getAuthenticateCredentialInput (BlobCache& blobCache) override;
+    Tpm::AuthenticateCredentialInput getAuthenticateCredentialInput (BlobCache& blobCache) override;
 };
 
 

@@ -168,17 +168,17 @@ list(
         pc/pre_user_pseudonym/PreUserPseudonym.cxx
         pc/pre_user_pseudonym/PreUserPseudonymManager.cxx
         pc/telematic_pseudonym/TelematicPseudonymManager.cxx
-        registration/HeartbeatSender.cxx
+        registration/ApplicationHealthAndRegistrationUpdater.cxx
         registration/RegistrationManager.cxx
         server/AccessLog.cxx
         server/ErrorHandler.cxx
         server/HttpsServer.cxx
         server/ServerSocketHandler.cxx
+        server/ServerSession.cxx
         server/SslStream.cxx
         server/ThreadPool.cxx
         server/TlsSettings.cxx
         server/Worker.cxx
-        server/context/ServiceContext.cxx
         server/context/SessionContext.cxx
         server/handler/RequestHandlerContext.cxx
         server/handler/RequestHandlerInterface.cxx
@@ -190,9 +190,6 @@ list(
         server/response/ServerResponse.cxx
         server/response/ServerResponseWriter.cxx
         server/response/ValidatedServerResponse.cxx
-        server/session/ServerSession.cxx
-        server/session/AsynchronousServerSession.cxx
-        server/session/SynchronousServerSession.cxx
         service/AuditDataCollector.cxx
         service/AuditEventCreator.cxx
         service/AuditEventTextTemplates.cxx
@@ -326,9 +323,6 @@ add_library(
     erp-processing-context-files OBJECT
     ${erp-processing-context-source-files}
         )
-
-#TODO: ERP-8426, pqxx::binarystring is deprecated
-target_compile_options(erp-processing-context-files PUBLIC -Wno-deprecated-declarations)
 
 if(ERP_WITH_HSM_MOCK)
     target_compile_definitions(erp-processing-context-files PUBLIC WITH_HSM_MOCK=1)

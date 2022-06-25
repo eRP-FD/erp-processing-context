@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(AuditDataTest, ConstructFromData)
+TEST(AuditDataTest, ConstructFromData)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::GET_Task_id_representative;
     const model::AuditEvent::Action action = model::AuditEvent::Action::update;
@@ -43,7 +43,7 @@ TEST(AuditDataTest, ConstructFromData)
 }
 
 
-TEST(AuditDataTest, ConstructFromJson)
+TEST(AuditDataTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::POST_Task_abort_doctor;
     const model::AuditEvent::Action action = model::AuditEvent::Action::del;

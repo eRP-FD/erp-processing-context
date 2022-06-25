@@ -21,6 +21,7 @@ class ExceptionHelperTest : public testing::Test
 namespace
 {
     template<typename ExceptionType, typename ... ConstructorArguments>
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void throwAndCatchException (
         const std::string& expectedDetails,
         ConstructorArguments&& ... constructorArguments)
@@ -30,7 +31,7 @@ namespace
         ASSERT_THROW(
             try
             {
-                throw ExceptionType(std::forward<ConstructorArguments>(constructorArguments)...);
+                throw ExceptionType(std::forward<ConstructorArguments>(constructorArguments)...); //NOLINT[hicpp-exception-baseclass]
             }
             catch(...)
             {

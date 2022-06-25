@@ -48,8 +48,8 @@ public:
                                                  bool mandatoryExtension, const std::string_view& system,
                                                  size_t maxValueLength);
 
-    static bool isKostentraeger(const model::KbvCoverage& kbvBundle,
-                                std::set<std::string> kostentraeger = {"GKV", "BG", "SKT", "UK"});
+    static bool isKostentraeger(const model::KbvCoverage& coverage,
+                                const std::set<std::string>& kostentraeger = {"GKV", "BG", "SKT", "UK"});
 
     static void checkIknr(const std::string_view& iknr);
     static void checkZanr(const std::string_view& zanr);

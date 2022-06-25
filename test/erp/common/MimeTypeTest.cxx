@@ -21,7 +21,7 @@ void checkMimeType(std::string_view text, std::string_view expectedMimeType)
     ASSERT_EQ(mimeType.getMimeType(), expectedMimeType);
 }
 
-void checkContentMimeType(std::string_view text, std::string_view expectedMimeType, std::optional<std::string> expectedEncoding)
+void checkContentMimeType(std::string_view text, std::string_view expectedMimeType, const std::optional<std::string>& expectedEncoding)
 {
     const ContentMimeType mimeType(text);
     ASSERT_EQ(mimeType.getMimeType(), expectedMimeType);
@@ -58,7 +58,7 @@ TEST(MimeTypeTest, valid)
     checkContentMimeType("application/fhir+XML;x=y;Charset=UTF-8;abc=123", "application/fhir+xml", "utf-8");
 }
 
-TEST(MimeTypeTest, invalid)
+TEST(MimeTypeTest, invalid)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_ANY_THROW(MimeType(""));
     ASSERT_ANY_THROW(MimeType(","));

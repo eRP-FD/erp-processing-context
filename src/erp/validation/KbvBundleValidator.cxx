@@ -430,14 +430,9 @@ bool KbvBundleValidator_V1_0_1::isKostentraeger(const model::KbvBundle& kbvBundl
                                                 std::set<std::string> kostentraeger) const
 {
     const auto& coverageBundle = kbvBundle.getResourcesByType<model::KbvCoverage>();
-    for (const auto& coverage : coverageBundle)
-    {
-        if (KbvValidationUtils::isKostentraeger(coverage, kostentraeger))
-        {
-            return true;
-        }
-    }
-    return false;
+    return std::any_of(coverageBundle.begin(), coverageBundle.end(), [&kostentraeger](const auto& coverage) {
+        return KbvValidationUtils::isKostentraeger(coverage, kostentraeger);
+    });
 }
 
 

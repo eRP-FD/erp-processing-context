@@ -40,7 +40,7 @@ public:
     explicit UrlArguments (std::vector<SearchParameter>&& searchParameters);
 
     void parse(const ServerRequest& request, const KeyDerivation& keyDerivation);
-    void parse(const std::vector<std::pair<std::string, std::string>>& queryParams, const KeyDerivation& keyDerivation);
+    void parse(const std::vector<std::pair<std::string, std::string>>& queryParameters, const KeyDerivation& keyDerivation);
 
     /**
      * Return a string that can be appended to a link prefix that ends in "&".

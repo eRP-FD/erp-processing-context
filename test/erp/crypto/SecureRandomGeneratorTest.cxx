@@ -12,7 +12,7 @@ class SecureRandomGeneratorTest
 {
 };
 
-TEST_F(SecureRandomGeneratorTest, TestEntropy)
+TEST_F(SecureRandomGeneratorTest, TestEntropy)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(SecureRandomGenerator::shannonEntropy("AAAAAA"), SecureRandomGenerator::shannonEntropy("BBBBBB"));
     ASSERT_EQ(SecureRandomGenerator::shannonEntropy(""), SecureRandomGenerator::shannonEntropy("A"));

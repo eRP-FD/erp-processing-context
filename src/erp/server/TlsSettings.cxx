@@ -10,7 +10,7 @@
 
 namespace
 {
-    std::string getCyphers(const std::optional<std::string> forcedCiphers)
+    std::string getCyphers(const std::optional<std::string>& forcedCiphers)
     {
         if (forcedCiphers.has_value())
         {

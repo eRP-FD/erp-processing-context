@@ -29,11 +29,30 @@ InnerTeeRequest ErpTeeProtocol::decrypt (const std::string& outerRequestBody, Hs
     {
         ErpFailWithDiagnostics(HttpStatus::BadRequest, std::string("Unable to create public key from message data"), exc.what());
     }
-    const SafeString symmetricKey{
-        hsmSession.session().vauEcies128(
-            ErpVector(clientPublicKeyPem.data(), clientPublicKeyPem.data() + clientPublicKeyPem.size()))};
 
-    SafeString plaintext = decryptOuterRequestBody(message, symmetricKey);
+    const auto clientPublicKey =
+        ::ErpVector{clientPublicKeyPem.data(), clientPublicKeyPem.data() + clientPublicKeyPem.size()};
+    ::SafeString symmetricKey;
+    ::SafeString plaintext;
+    try
+    {
+        symmetricKey = ::SafeString{hsmSession.session().vauEcies128(clientPublicKey, false)};
+        plaintext = decryptOuterRequestBody(message, symmetricKey);
+    }
+    catch (const AesGcmException& exception)
+    {
+        try
+        {
+            symmetricKey = ::SafeString{hsmSession.session().vauEcies128(clientPublicKey, true)};
+        }
+        catch (const ErpException&)
+        {
+            // Fallback is not available. Continue with error from standard try.
+            throw exception;
+        }
+
+        plaintext = decryptOuterRequestBody(message, symmetricKey);
+    }
     A_20163.finish();
 
     A_20163.start("3 - verify p structure");

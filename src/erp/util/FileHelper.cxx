@@ -5,6 +5,7 @@
 
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/Gsl.hxx"
 
 #include <filesystem>
 #include <fstream>
@@ -34,7 +35,7 @@ void FileHelper::writeFile (const std::filesystem::path& filePath, const std::st
     if ( ! out.good())
         Fail("could not open file '" + filePath.string() + "' for writing");
 
-    out.write(content.data(), content.size());
+    out.write(content.data(), gsl::narrow<std::streamsize>(content.size()));
     out.close();
 }
 

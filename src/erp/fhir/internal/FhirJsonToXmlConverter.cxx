@@ -75,12 +75,15 @@ size_t FhirJsonToXmlConverter::convertStructure(xmlNode& targetNode,
                                               size_t fhirElementIndex, const rapidjson::Value& object)
 {
     const auto& fhirElements = fhirType.elements();
-    const std::string prefix = fhirElements.at(fhirElementIndex).name() + '.';
+    const auto& element = fhirElements.at(fhirElementIndex);
+    Expect3(element != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+    const std::string prefix = element->name() + '.';
     ++fhirElementIndex;
     while (fhirElementIndex < fhirElements.size())
     {
         const auto& fhirElementInfo = fhirElements[fhirElementIndex];
-        const auto& fhirElementName = fhirElementInfo.name();
+        Expect3(fhirElementInfo != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+        const auto& fhirElementName = fhirElementInfo->name();
         TVLOG(3) << "elementName = " << fhirElementName;
         if (! boost::starts_with(fhirElementName, prefix))
         {
@@ -121,21 +124,22 @@ size_t FhirJsonToXmlConverter::convertMember(xmlNode& targetNode, const std::str
 {
     const auto& fhirElements = fhirParentType.elements();
     const auto& fhirElementInfo = fhirElements[fhirElementIndex];
-    if (fhirElementInfo.typeId() == "xhtml" && jsonMember)
+    Expect3(fhirElementInfo != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+    if (fhirElementInfo->typeId() == "xhtml" && jsonMember)
     {
         return convertXHTMLMember(targetNode, memberName, fhirParentType, fhirElementIndex, *jsonMember);
     }
-    const auto* fhirElementType = mStructureRepository.findTypeById(fhirElementInfo.typeId());
+    const auto* fhirElementType = mStructureRepository.findTypeById(fhirElementInfo->typeId());
     if (fhirElementType != nullptr)
     {
-        return convertMemberWithType(targetNode, memberName, fhirParentType, *fhirElementType, fhirElementIndex,
-                                     jsonMember, subObjectOfPrimary);
+        return convertMemberWithType(targetNode, memberName, fhirParentType, *fhirElementType, fhirElementInfo,
+                                     fhirElementIndex, jsonMember, subObjectOfPrimary);
     }
-    const auto& contentReference = fhirElementInfo.contentReference();
-    Expect3(not contentReference.empty(), "Cannot determin type of: " + fhirElementInfo.name(), std::logic_error);
-    auto ref = mStructureRepository.resolveContentReference(fhirElementInfo.contentReference());
-    (void)convertMemberWithType(targetNode, memberName, ref.baseType, ref.elementType, ref.elementIndex, jsonMember,
-                                subObjectOfPrimary);
+    const auto& contentReference = fhirElementInfo->contentReference();
+    Expect3(not contentReference.empty(), "Cannot determine type of: " + fhirElementInfo->name(), std::logic_error);
+    auto ref = mStructureRepository.resolveContentReference(*fhirElementInfo);
+    (void)convertMemberWithType(targetNode, memberName, ref.baseType, ref.elementType, ref.element, ref.elementIndex,
+                                jsonMember, subObjectOfPrimary);
     return skipElement(fhirParentType, fhirElementIndex);
 }
 
@@ -143,12 +147,13 @@ size_t FhirJsonToXmlConverter::convertMember(xmlNode& targetNode, const std::str
 size_t FhirJsonToXmlConverter::convertMemberWithType(xmlNode& targetNode, const std::string& memberName,
                                                      const FhirStructureDefinition& fhirParentType,
                                                      const FhirStructureDefinition& fhirElementType,
-                                                     size_t fhirElementIndex, const rapidjson::Value* jsonMember,
+                                                     const std::shared_ptr<const FhirElement>& fhirElementInfo,
+                                                     size_t fhirElementIndex,
+                                                     const rapidjson::Value* jsonMember,
                                                      const rapidjson::Value& subObjectOfPrimary)
 {
-    const auto& fhirElements = fhirParentType.elements();
-    const auto& fhirElementInfo = fhirElements[fhirElementIndex];
-    const auto& fhirElementName = fhirElementInfo.name();
+    Expect3(fhirElementInfo != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+    const auto& fhirElementName = fhirElementInfo->name();
     xmlNode* fieldNode = &targetNode;
     if (fhirElementType.kind() == FhirStructureDefinition::Kind::resource)
     {
@@ -156,7 +161,7 @@ size_t FhirJsonToXmlConverter::convertMemberWithType(xmlNode& targetNode, const 
                                     xmlNewNode(mFhirNamespace, reinterpret_cast<const xmlChar*>(memberName.data())));
         Expect3(fieldNode != nullptr, "Failed add child: " + fhirElementName, std::logic_error);
     }
-    if (fhirElementInfo.isArray())
+    if (fhirElementInfo->isArray())
     {
         ModelExpect(jsonMember || !subObjectOfPrimary.IsNull(),
                     "Neither subobject nor primary field set: " + fhirElementName);
@@ -190,9 +195,10 @@ size_t FhirJsonToXmlConverter::convertSingleMember(xmlNode& targetNode, const st
 {
     const auto& fhirElements = fhirType.elements();
     const auto& fhirElementInfo = fhirElements[fhirElementIndex];
-    const auto& fhirElementName = fhirElementInfo.name();
-    const auto* fhirElementType = mStructureRepository.findTypeById(fhirElementInfo.typeId());
-    Expect3(fhirElementType != nullptr, "Type not found for " + fhirElementName + ": " + fhirElementInfo.typeId(),
+    Expect3(fhirElementInfo != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+    const auto& fhirElementName = fhirElementInfo->name();
+    const auto* fhirElementType = mStructureRepository.findTypeById(fhirElementInfo->typeId());
+    Expect3(fhirElementType != nullptr, "Type not found for " + fhirElementName + ": " + fhirElementInfo->typeId(),
             std::logic_error);
     switch (fhirElementType->kind())
     {
@@ -209,7 +215,8 @@ size_t FhirJsonToXmlConverter::convertSingleMember(xmlNode& targetNode, const st
             Expect3(jsonObject != nullptr, "Object cannot be null.", std::logic_error);
             ModelExpect(jsonObject->IsObject(), "Expected json object: " + fhirElementName);
             auto* subNode = xmlAddChild(&targetNode, xmlNewNode(mFhirNamespace, reinterpret_cast<const xmlChar*>(memberName.c_str())));
-            if (fhirElementType->typeId() == "BackboneElement")
+
+            if (fhirElementInfo->isBackbone())
             {
                 TVLOG(3) << "BackboneElement: " + fhirElementName;
                 fhirElementIndex = convertStructure(*subNode, fhirType, fhirElementIndex, *jsonObject);
@@ -236,6 +243,7 @@ size_t FhirJsonToXmlConverter::convertSingleMember(xmlNode& targetNode, const st
     return fhirElementIndex;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 size_t FhirJsonToXmlConverter::convertPrimitive(xmlNode& targetNode, const std::string& memberName,
                                                 const FhirStructureDefinition& fhirType, size_t fhirElementIndex,
                                                 const FhirStructureDefinition& fhirElementType,
@@ -244,9 +252,10 @@ size_t FhirJsonToXmlConverter::convertPrimitive(xmlNode& targetNode, const std::
 {
     const auto& fhirElements = fhirType.elements();
     const auto& fhirElementInfo = fhirElements[fhirElementIndex];
-    const auto& fhirElementName = fhirElementInfo.name();
+    Expect3(fhirElementInfo != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+    const auto& fhirElementName = fhirElementInfo->name();
     TVLOG(3) << fhirElementType.typeId() << fhirElementName;
-    if (fhirElementInfo.representation() == FhirElement::Representation::xmlAttr && jsonObject)
+    if (fhirElementInfo->representation() == FhirElement::Representation::xmlAttr && jsonObject)
     {
         xmlNewProp(&targetNode, reinterpret_cast<const xmlChar*>(memberName.c_str()),
                     reinterpret_cast<const xmlChar*>(valueString(fhirElementName, *jsonObject).c_str()));
@@ -273,7 +282,8 @@ size_t FhirJsonToXmlConverter::convertXHTMLMember(xmlNode& targetNode, const std
                                                   size_t fhirElementIndex, const rapidjson::Value& jsonMember)
 {
     const auto& parentElement = fhirParentType.elements()[fhirElementIndex];
-    const auto& elementName = parentElement.name();
+    Expect3(parentElement != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+    const auto& elementName = parentElement->name();
 
     ModelExpect(model::NumberAsStringParserDocument::valueIsString(jsonMember),
                 "member of type xhtml is not a string: " + elementName);
@@ -339,13 +349,16 @@ rapidjson::SizeType FhirJsonToXmlConverter::maxElements(const rapidjson::Value* 
 size_t FhirJsonToXmlConverter::skipElement(const FhirStructureDefinition& type, size_t fhirElementIndex)
 {
     const auto& fhirElements = type.elements();
-    const std::string prefix = fhirElements.at(fhirElementIndex).name() + '.';
+    const auto& element = fhirElements.at(fhirElementIndex);
+    Expect3(element != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+    const std::string prefix = fhirElements.at(fhirElementIndex)->name() + '.';
     TVLOG(3) << "skip: " << prefix;
     ++fhirElementIndex;
     for (; fhirElementIndex < fhirElements.size(); ++fhirElementIndex)
     {
         const auto& fhirElementInfo = fhirElements[fhirElementIndex];
-        const auto& fhirElementName = fhirElementInfo.name();
+        Expect3(fhirElementInfo != nullptr, "Elements in StructureDefinitions must not be null.", std::logic_error);
+        const auto& fhirElementName = fhirElementInfo->name();
         if (! boost::starts_with(fhirElementName, prefix))
         {
             return fhirElementIndex;

@@ -95,7 +95,7 @@ struct BlobSet {
     ::TestBlob communication = ::TestBlob{::BlobType::CommunicationKeyDerivation};
     ::TestBlob audit = ::TestBlob{::BlobType::AuditLogKeyDerivation};
 
-    void enrol(const ::std::string& blobName, const uint32_t generation)
+    void enrol(const ::std::string& blobName, const uint32_t generation) //NOLINT(readability-function-cognitive-complexity)
     {
         ASSERT_NO_THROW(task.enrol(blobName, generation));
         ASSERT_NO_THROW(communication.enrol(blobName, generation));
@@ -129,9 +129,10 @@ public:
             // b) against postgres database, not mock database.
             GTEST_SKIP();
         }
+        ErpWorkflowTestTemplate<::testing::TestWithParam<bool>>::SetUp();
     }
 
-    static void forAllTaskTypes(::std::function<void(::model::PrescriptionType)>&& action)
+    static void forAllTaskTypes(::std::function<void(::model::PrescriptionType)>&& action)//NOLINT(readability-function-cognitive-complexity)
     {
         for (auto taskType :
              {::model::PrescriptionType::apothekenpflichigeArzneimittel, ::model::PrescriptionType::direkteZuweisung,
@@ -266,7 +267,7 @@ public:
         ASSERT_NO_FATAL_FAILURE(mTest.checkTaskReject(*mPrescriptionId, mKvnr, mAccessCode, mSecret));
     }
 
-    void close()
+    void close()//NOLINT(readability-function-cognitive-complexity)
     {
         ::std::cout << "Closing Task for KVNr " << mKvnr << ::std::endl;
         mTest.forceUpdateBlobCache();
@@ -315,7 +316,7 @@ private:
     ::std::optional<model::Timestamp> mLastModifiedDate;
 };
 
-TEST_F(DerivationKeyUpdateTest, Delete)
+TEST_F(DerivationKeyUpdateTest, Delete)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
@@ -335,7 +336,7 @@ TEST_F(DerivationKeyUpdateTest, Delete)
     EXPECT_NO_THROW(blobs.task.remove());
     EXPECT_NO_THROW(blobs.communication.remove());
     EXPECT_NO_THROW(blobs.audit.remove());
-
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
         TestTask task(*this, taskType);
         ASSERT_NO_FATAL_FAILURE(task.create());
@@ -355,7 +356,7 @@ TEST_F(DerivationKeyUpdateTest, Delete)
         << "Key was not deleted.";
 }
 
-TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)
+TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
@@ -371,7 +372,7 @@ TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)
         << "No new key found.";
     ASSERT_GE(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(3), initialLastAuditBlobId.value_or(0) + 3)
         << "No new key found.";
-
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
         TestTask task(*this, taskType);
         ASSERT_NO_FATAL_FAILURE(task.create());
@@ -391,7 +392,7 @@ TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)
         << "Key was wrongfully deleted.";
 }
 
-TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)
+TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
@@ -419,6 +420,7 @@ TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)
     const auto intermediateLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
     ASSERT_GE(intermediateLastAuditBlobId.value_or(6), initialLastAuditBlobId.value_or(0) + 6) << "No new key found.";
 
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
         TestTask task(*this, taskType);
         ASSERT_NO_FATAL_FAILURE(task.create());
@@ -443,7 +445,7 @@ TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)
         << "Key was wrongfully deleted.";
 }
 
-TEST_F(DerivationKeyUpdateTest, DeleteMultiple)
+TEST_F(DerivationKeyUpdateTest, DeleteMultiple)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
@@ -483,6 +485,7 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)
               intermediateLastCommunicationBlobId.value_or(6));
     ASSERT_EQ(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(6), intermediateLastAuditBlobId.value_or(6));
 
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
         TestTask task(*this, taskType);
         ASSERT_NO_FATAL_FAILURE(task.create());
@@ -510,10 +513,9 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)
         << "Key was wrongfully deleted.";
 }
 
-TEST_P(DerivationKeyUpdateTest, TaskWorkflows)
+TEST_P(DerivationKeyUpdateTest, TaskWorkflows)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto isManual = GetParam();
-
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation, isManual);
     const auto initialLastCommunicationBlobId =
         getLatestBlobId(::BlobType::CommunicationKeyDerivation, isManual, ! initialLastTaskBlobId.has_value());
@@ -586,10 +588,12 @@ A set includes one of each
 
     // Tasks to abort
     ::std::vector<TestTask> abortTasks;
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     forAllTaskTypes([this, &abortTasks](::model::PrescriptionType taskType) {
         abortTasks.emplace_back(TestTask{*this, taskType});
     });
 
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(::std::for_each(abortTasks.begin(), abortTasks.end(), [](auto& task) {
         ASSERT_NO_FATAL_FAILURE(task.create());
         ASSERT_NO_FATAL_FAILURE(task.activate());

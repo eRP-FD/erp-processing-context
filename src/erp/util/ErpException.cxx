@@ -11,7 +11,7 @@ ErpException::ErpException(const std::string& message, const HttpStatus status)
 {
 }
 
-ErpException::ErpException(const std::string& message, const HttpStatus status, const std::optional<std::string> diagnostics)
+ErpException::ErpException(const std::string& message, const HttpStatus status, const std::optional<std::string>& diagnostics)
         : ErpException(message, status, diagnostics, {})
 {
 }
@@ -23,7 +23,7 @@ ErpException::ErpException(const std::string& message, const HttpStatus status,
 }
 
 ErpException::ErpException(const std::string& message, const HttpStatus status,
-                           const std::optional<std::string> diagnostics, const std::optional<VauErrorCode> vauErrorCode)
+                           const std::optional<std::string>& diagnostics, const std::optional<VauErrorCode> vauErrorCode)
     : std::runtime_error(message), mStatus(status), mDiagnostics(diagnostics), mVauErrorCode(vauErrorCode)
 {
 }

@@ -24,7 +24,7 @@ public:
     const char* timestampFieldName = "timestamp";
 };
 
-TEST_F(RegistrationManagerTest, Registration)
+TEST_F(RegistrationManagerTest, Registration)//NOLINT(readability-function-cognitive-complexity)
 {
     auto uniqueRedisClient =
         TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
@@ -77,7 +77,7 @@ TEST_F(RegistrationManagerTest, Registration)
     EXPECT_LT(heartbeatTime, deregisterTime);
 }
 
-TEST_F(RegistrationManagerTest, RegistrationBasedOnApplicationHealth)
+TEST_F(RegistrationManagerTest, RegistrationBasedOnApplicationHealth)//NOLINT(readability-function-cognitive-complexity)
 {
     auto uniqueRedisClient =
         TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)

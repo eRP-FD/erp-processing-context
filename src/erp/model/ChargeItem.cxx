@@ -36,6 +36,28 @@ const rapidjson::Pointer urlPointer(ElementName::path(elements::url));
 const rapidjson::Pointer containedBinaryArrayPointer(ElementName::path("contained"));
 const rapidjson::Pointer resourceTypePointer(ElementName::path(elements::resourceType));
 
+const rapidjson::Pointer identifierPointer(ElementName::path("identifier"));
+const rapidjson::Pointer identifierEntrySystemPointer(ElementName::path("system"));
+const rapidjson::Pointer identifierEntrySystemValuePointer(ElementName::path("value"));
+
+constexpr std::string_view secretTemplate = R"--(
+{
+  "use": "official",
+  "system": "",
+  "value": ""
+}
+)--";
+
+std::once_flag onceFlag;
+struct SecretAccessCodeTemplate;
+RapidjsonNumberAsStringParserDocument<SecretAccessCodeTemplate> SecretAccessCodeTemplate;
+
+void initTemplates ()
+{
+    rapidjson::StringStream stringStream{secretTemplate.data()};
+    SecretAccessCodeTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(stringStream);
+}
+
 }  // anonymous namespace
 
 //static
@@ -49,6 +71,7 @@ const std::unordered_map<ChargeItem::SupportingInfoType, std::pair<std::string_v
 ChargeItem::ChargeItem (NumberAsStringParserDocument&& jsonTree)
     : Resource<ChargeItem>(std::move(jsonTree))
 {
+    std::call_once(onceFlag, initTemplates);
 }
 
 PrescriptionId ChargeItem::id() const
@@ -98,6 +121,14 @@ std::optional<model::ChargeItemMarkingFlag> ChargeItem::markingFlag() const
     return getExtension<ChargeItemMarkingFlag>();
 }
 
+std::optional<std::string_view> ChargeItem::accessCode() const
+{
+    return findStringInArray(identifierPointer,
+                             identifierEntrySystemPointer,
+                             resource::naming_system::accessCode,
+                             identifierEntrySystemValuePointer);
+}
+
 std::optional<model::Binary> ChargeItem::containedBinary() const
 {
     std::optional<model::Binary> result;
@@ -137,7 +168,7 @@ void ChargeItem::setEnteredDate(const model::Timestamp& entered)
 void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoType, const std::string_view& reference)
 {
     const auto supportingInfoTypeData = SupportingInfoTypeNames.at(supportingInfoType);
-    auto elem = findMemberInArray(supportingInformationPointer, typePointer, supportingInfoTypeData.first);
+    auto* elem = findMemberInArray(supportingInformationPointer, typePointer, supportingInfoTypeData.first);
     if(elem)
     {
         setKeyValue(*elem, referencePointer, reference);
@@ -162,6 +193,16 @@ void ChargeItem::setMarkingFlag(const model::ChargeItemMarkingFlag& markingFlag)
     }
     auto entry = this->copyValue(markingFlag.jsonDocument());
     addToArray(extensionArrayPointer, std::move(entry));
+}
+
+void ChargeItem::setAccessCode(const std::string_view& accessCode)
+{
+    auto copiedValue = copyValue(*SecretAccessCodeTemplate);
+
+    setKeyValue(copiedValue, identifierEntrySystemValuePointer, accessCode);
+    setKeyValue(copiedValue, identifierEntrySystemPointer, resource::naming_system::accessCode);
+
+    addToArray(identifierPointer, std::move(copiedValue));
 }
 
 void ChargeItem::deleteSupportingInfoElement(SupportingInfoType supportingInfoType)

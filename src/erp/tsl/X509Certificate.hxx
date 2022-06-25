@@ -252,6 +252,17 @@ public:
     std::unordered_multimap<std::string, std::string> getDistinguishedNameMapFromSubject() const;
 
 private:
+    static bool checkRoles (const std::vector<std::shared_ptr<ASN1_OBJECT>>& roleOids,
+                            const STACK_OF(ADMISSIONS)* admissions);
+    static bool checkRoles (const std::vector<std::shared_ptr<ASN1_OBJECT>>& roleOids,
+                            const STACK_OF(PROFESSION_INFO)* professionInfos);
+    static bool checkRoles (const std::vector<std::shared_ptr<ASN1_OBJECT>>& roleOids,
+                            const STACK_OF(ASN1_OBJECT)* professionOids);
+    static void appendRoles(std::vector<std::string>& outRoleOids, const STACK_OF(ADMISSIONS)* admissions);
+    static void appendRoles(std::vector<std::string>& outRoleOids, const STACK_OF(PROFESSION_INFO)* professionInfos);
+    static void appendRoles(std::vector<std::string>& outRoleOids, const STACK_OF(ASN1_OBJECT)* professionOids);
+
+
     using RawCertificatePtr = std::shared_ptr<X509>;
     std::string getFingerprint(const EVP_MD *(*digestFunction)(), const size_t digestLength) const;
 

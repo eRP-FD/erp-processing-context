@@ -8,9 +8,31 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
+#include "erp/model/Device.hxx"
 #include "erp/model/KbvBundle.hxx"
+#include "erp/util/Base64.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "erp/util/TLog.hxx"
+
+
+namespace
+{
+    template <typename BundleT>
+    void signBundle(BundleT& bundle, const std::string& authorIdentifier, const PcServiceContext& serviceContext)
+    {
+        CadesBesSignature cadesBesSignature{serviceContext.getCFdSigErp(),
+                                            serviceContext.getCFdSigErpPrv(),
+                                            bundle.serializeToXmlString(),
+                                            std::nullopt,
+                                            serviceContext.getCFdSigErpManager().getOcspResponse()};
+
+        const model::Signature fullSignature{Base64::encode(cadesBesSignature.get()),
+                                             model::Timestamp::now(),
+                                             authorIdentifier};
+
+        bundle.setSignature(fullSignature);
+    }
+}
 
 
 ChargeItemGetAllHandler::ChargeItemGetAllHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -23,7 +45,7 @@ void ChargeItemGetAllHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     std::vector<model::ChargeItem> chargeItems;
-    std::size_t totalSearchMatches;
+    std::size_t totalSearchMatches{0};
     std::unordered_map<model::Link::Type, std::string> links;
 
     const std::optional<std::string> idNumberClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
@@ -123,12 +145,11 @@ ChargeItemGetByIdHandler::ChargeItemGetByIdHandler(const std::initializer_list<s
 {
 }
 
-void ChargeItemGetByIdHandler::handleRequest (PcSessionContext& session)
+void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     const auto prescriptionId = parseIdFromPath(session.request, session.accessLog);
-    auto [chargeItem, dispenseItem] = session.database()->retrieveChargeInformation(prescriptionId);
 
     const auto idNumberClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(idNumberClaim.has_value(), "JWT does not contain idNumberClaim");
@@ -136,53 +157,53 @@ void ChargeItemGetByIdHandler::handleRequest (PcSessionContext& session)
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
     Expect(professionOIDClaim.has_value(), "JWT does not contain professionOIDClaim");
 
-    // respons bundle
+    // response bundle
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
-    if(professionOIDClaim == profession_oid::oid_versicherter)
+    if (professionOIDClaim == profession_oid::oid_versicherter)
     {
+        auto [prescription, receipt, chargeItem, dispenseItem] = session.database()->retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(prescriptionId);
+        ErpExpect(prescription.has_value(), HttpStatus::NotFound, "No prescription found");
+        ErpExpect(receipt.has_value(), HttpStatus::NotFound, "No receipt found");
+        ErpExpect(chargeItem.has_value(), HttpStatus::NotFound, "No chargeItem found");
+        ErpExpect(dispenseItem.has_value(), HttpStatus::NotFound, "No dispenseItem found");
+
         A_22125.start("Assure identical kvnr of access token and ChargeItem resource");
-        ErpExpect(chargeItem.subjectKvnr() == idNumberClaim.value(), HttpStatus::Forbidden,
-                    "Mismatch between access token and Kvnr");        
+        ErpExpect(chargeItem.value().subjectKvnr() == idNumberClaim.value(), HttpStatus::Forbidden,
+                    "Mismatch between access token and Kvnr");
         A_22125.finish();
 
         A_22127.start("Response for insured");
-        const auto [_, prescription, receipt] = session.database()->retrieveTaskAndPrescriptionAndReceipt(prescriptionId);
-        Expect3(prescription.has_value(), "No prescription found", std::logic_error);
         Expect3(prescription.value().data().has_value(), "Prescription binary has no data", std::logic_error);
 
         const CadesBesSignature cadesBesSignature(
             std::string(prescription.value().data().value()), session.serviceContext.getTslManager());
-        const auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
+        auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
+
+        const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
+        signBundle(kbvBundle, authorIdentifier, session.serviceContext);
+
+        receipt->removeSignature();
+        signBundle(*receipt, authorIdentifier, session.serviceContext);
 
         responseBundle.addResource(getLinkBase() + "/ChargeItem/" + prescriptionId.toString(),
-                                   {}, {}, chargeItem.jsonDocument());
-        responseBundle.addResource(dispenseItem.getId().toUrn(), {}, {}, dispenseItem.jsonDocument());
+                                   {}, {}, chargeItem.value().jsonDocument());
+        responseBundle.addResource(dispenseItem.value().getId().toUrn(), {}, {}, dispenseItem.value().jsonDocument());
         responseBundle.addResource(kbvBundle.getId().toUrn(), {}, {}, kbvBundle.jsonDocument());
-
-        Expect3(receipt.has_value(), "No receipt found", std::logic_error);
-        responseBundle.addResource(receipt->getId().toUrn(), {}, {}, receipt->jsonDocument());
-
-        //TODOs
-
-        // Die OCSP-Response der C.HCI.OSIG-Zertifikatsprüfung des Apothekensignierten
-        // Abgabedatensastzes als Binary Ressource
-
-        // mit der Signaturidentität des E-Rezept-Fachdienstes IDC.FD.SIG
-        // gemäß [RFC5652] mit Profil CAdES-BES ([CAdES]) als Enveloping im XML-Format
-        // signieren und
-
-        // in die Signatur die letzte OCSP-Antwort der regelmäßigen Statusprüfung des
-        // Signaturzertifikats C.FD.SIG einbetten (Signatur-Ergebnis wird als
-        // dss:Base64Signature-Objekt in Bundle.signature eingebettet),
+        responseBundle.addResource(receipt.value().getId().toUrn(), {}, {}, receipt.value().jsonDocument());
 
         A_22127.finish();
     }
     else
     {
+        auto [chargeItem, dispenseItem] = session.database()->retrieveChargeInformation(prescriptionId);
         A_22126.start("Assure identical TelematikId of access token and ChargeItem resource");
         ErpExpect(chargeItem.entererTelematikId() == idNumberClaim.value(), HttpStatus::Forbidden,
                 "Mismatch between access token and TelematikId");
         A_22126.finish();
+
+        A_22611.start("verify pharmacy access code");
+        ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, chargeItem);
+        A_22611.finish();
 
         A_22128.start("Response for pharmacy. Delete unused supportingInfoType");
         chargeItem.deleteSupportingInfoElement(model::ChargeItem::SupportingInfoType::prescriptionItem);

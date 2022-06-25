@@ -36,7 +36,7 @@ PostgresDatabaseTest::PostgresDatabaseTest() :
 }
 
 
-TEST_F(PostgresDatabaseTest, acquireCMACCommits)
+TEST_F(PostgresDatabaseTest, acquireCMACCommits)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -79,7 +79,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)
             ASSERT_NO_THROW(result = txn.exec_prepared(retrieveCmac.name, todayStr));
             ASSERT_FALSE(result.empty());
             EXPECT_EQ(result.size(), 1);
-            auto CmacDirectDB = result.front().at(0).as<pqxx::binarystring>();
+            auto CmacDirectDB = result.front().at(0).as<db_model::postgres_bytea>();
             EXPECT_EQ(toHex(*cmac1st), toHex(CmacDirectDB));
             txn.commit();
         }
@@ -99,7 +99,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)
     }
 }
 
-TEST_F(PostgresDatabaseTest, swapCMAC)
+TEST_F(PostgresDatabaseTest, swapCMAC)//NOLINT(readability-function-cognitive-complexity)
 {
     if (! usePostgres())
     {
@@ -123,7 +123,7 @@ TEST_F(PostgresDatabaseTest, swapCMAC)
     // TelematicPseudonymManager always works with the current date.
     //
     std::unique_ptr<TelematicPseudonymManager> mTelematicPseudonymManager =
-        TelematicPseudonymManager::create(*serviceContext);
+        TelematicPseudonymManager::create(serviceContext.get());
 
     // Empty the keys table in order to not interfere with previous keys and have a clean database state.
     {// scope

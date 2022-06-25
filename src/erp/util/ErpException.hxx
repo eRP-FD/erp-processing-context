@@ -16,9 +16,9 @@ class ErpException : public std::runtime_error
 {
 public:
     ErpException(const std::string& message, const HttpStatus status);
-    ErpException(const std::string& message, const HttpStatus status, const std::optional<std::string> diagnostics);
+    ErpException(const std::string& message, const HttpStatus status, const std::optional<std::string>& diagnostics);
     ErpException(const std::string& message, const HttpStatus status, const std::optional<VauErrorCode> vauErrorCode);
-    ErpException(const std::string& message, const HttpStatus status, const std::optional<std::string> diagnostics, const std::optional<VauErrorCode> vauErrorCode);
+    ErpException(const std::string& message, const HttpStatus status, const std::optional<std::string>& diagnostics, const std::optional<VauErrorCode> vauErrorCode);
 
     HttpStatus status(void) const;
     const std::optional<std::string>& diagnostics() const;

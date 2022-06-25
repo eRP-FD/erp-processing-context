@@ -27,12 +27,12 @@ class OuterTeeRequest
 public:
     static constexpr size_t VersionLength = 1;
 
-    uint8_t version;
-    uint8_t xComponent[EllipticCurve::KeyCoordinateLength];
-    uint8_t yComponent[EllipticCurve::KeyCoordinateLength];
-    uint8_t iv[AesGcm128::IvLength];
+    uint8_t version{};
+    uint8_t xComponent[EllipticCurve::KeyCoordinateLength]{};
+    uint8_t yComponent[EllipticCurve::KeyCoordinateLength]{};
+    uint8_t iv[AesGcm128::IvLength]{};
     std::string ciphertext;
-    uint8_t authenticationTag[AesGcm128::AuthenticationTagLength];
+    uint8_t authenticationTag[AesGcm128::AuthenticationTagLength]{};
 
     std::string assemble (void) const;
     static OuterTeeRequest disassemble (const std::string& body);

@@ -23,7 +23,7 @@ namespace
         xmlNodePtr exclude;
     };
 
-    bool isNodeReferredBySegment(const xmlNodePtr node, const C14NHelper::PathSegment& segment)
+    bool isNodeReferredBySegment(const xmlNodePtr& node, const C14NHelper::PathSegment& segment)
     {
         Expects(node);
         Expects(node->name);
@@ -58,8 +58,8 @@ namespace
 
 
     xmlNodePtr getNodeByPath(
-        const xmlDocPtr document,
-        const std::vector<C14NHelper::PathSegment> path)
+        const xmlDocPtr& document,
+        const std::vector<C14NHelper::PathSegment>& path)
     {
         xmlNodePtr node = nullptr;
         if (!path.empty())

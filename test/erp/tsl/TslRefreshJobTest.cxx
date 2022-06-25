@@ -9,9 +9,10 @@
 #include "erp/util/Hash.hxx"
 #include "test/erp/tsl/RefreshJobTestTslManager.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/UrlRequestSenderMock.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <memory>
 #include <gtest/gtest.h>
@@ -21,15 +22,15 @@ class TslRefreshJobTest : public testing::Test
 {
 public:
 
-    virtual void SetUp() override
+    void SetUp() override
     {
         environmentGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
         manager = TslTestHelper::createTslManager<RefreshJobTestTslManager>();
     }
 
-    virtual void TearDown() override
+    void TearDown() override
     {
         manager.reset();
         environmentGuard.reset();
@@ -42,7 +43,7 @@ public:
 
 TEST_F(TslRefreshJobTest, triggerRefreshSuccess)
 {
-    TslRefreshJob refreshJob(manager, std::chrono::milliseconds(10));
+    TslRefreshJob refreshJob(*manager, std::chrono::milliseconds(10));
 
     refreshJob.start();
 

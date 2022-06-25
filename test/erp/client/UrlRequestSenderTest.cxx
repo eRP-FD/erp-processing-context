@@ -31,13 +31,13 @@ public:
     BlockingTestServerHandler(std::function<bool()> isBlockedFunctor,
                               std::function<void(bool)> serverBlockingStatusSetter)
         : UnconstrainedRequestHandler()
-        , mIsBlockedFunctor(isBlockedFunctor)
-        , mServerBlockingStatusSetter(serverBlockingStatusSetter)
+        , mIsBlockedFunctor(std::move(isBlockedFunctor))
+        , mServerBlockingStatusSetter(std::move(serverBlockingStatusSetter))
     {
-        Expect(isBlockedFunctor != nullptr, "the functor must be set");
+        Expect(mIsBlockedFunctor != nullptr, "the isBlockedFunctor must be set");
     }
 
-    virtual void handleRequest (BlockingTestSessionContext& session) override
+    void handleRequest (BlockingTestSessionContext& session) override
     {
         if (session.request.getBody() == EXPECTED_BODY)
         {
@@ -55,7 +55,7 @@ public:
         session.response.setBody("");
     }
 
-    virtual Operation getOperation (void) const override
+    Operation getOperation (void) const override
     {
         return Operation::UNKNOWN;
     }
@@ -82,7 +82,8 @@ public:
     {
         RequestHandlerManager handlerManager;
         std::unique_ptr<RequestHandlerInterface> requestHandler =
-            std::make_unique<BlockingTestServerHandler>(isBlockedFunctor, serverBlockingStatusSetter);
+                std::make_unique<BlockingTestServerHandler>(std::move(isBlockedFunctor),
+                                                            std::move(serverBlockingStatusSetter));
         handlerManager.onPostDo("/test_path", std::move(requestHandler));
 
         return std::make_unique<HttpsServer>(
@@ -97,7 +98,7 @@ private:
 
 
 // TODO: create http-blocking-test for issue https://dth01.ibmgcloud.net/jira/browse/ERP-5935
-TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)
+TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)//NOLINT(readability-function-cognitive-complexity)
 {
     std::atomic_bool blocking = true;
     std::atomic_bool serverBlockingStatus = false;

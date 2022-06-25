@@ -18,7 +18,7 @@ class TimePeriodTest : public testing::Test
 {
 };
 
-TEST_F(TimePeriodTest, fromFhirSearchDate_successForDateTime)
+TEST_F(TimePeriodTest, fromFhirSearchDate_successForDateTime)//NOLINT(readability-function-cognitive-complexity)
 {
     {
         // Start of epoch.
@@ -57,7 +57,7 @@ TEST_F(TimePeriodTest, fromFhirSearchDate_successForDateTime)
 }
 
 
-TEST_F(TimePeriodTest, fromFhirSearchDate_successForDate)
+TEST_F(TimePeriodTest, fromFhirSearchDate_successForDate)//NOLINT(readability-function-cognitive-complexity)
 {
     {
         // Start of epoch.
@@ -146,7 +146,7 @@ TEST_F(TimePeriodTest, fromFhirSearchDate_successForYear)
 }
 
 
-TEST_F(TimePeriodTest, fromFhirSearchDate_optionalTimeZone)
+TEST_F(TimePeriodTest, fromFhirSearchDate_optionalTimeZone)//NOLINT(readability-function-cognitive-complexity)
 {
     {
         const TimePeriod period = TimePeriod::fromFhirSearchDate("2022-09-07T16:44:59");

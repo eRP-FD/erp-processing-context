@@ -25,10 +25,10 @@ public:
 
     HsmRawSession (void);
     HsmRawSession (const HsmRawSession& other) = delete;
-    HsmRawSession (HsmRawSession&& other);
+    HsmRawSession (HsmRawSession&& other) noexcept;
     ~HsmRawSession (void);
     HsmRawSession& operator= (const HsmRawSession& other) = delete;
-    HsmRawSession& operator= (HsmRawSession&& other);
+    HsmRawSession& operator= (HsmRawSession&& other) noexcept;
 };
 
 

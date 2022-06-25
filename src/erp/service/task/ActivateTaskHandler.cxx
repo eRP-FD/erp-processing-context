@@ -41,7 +41,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto prescriptionId = parseId(session.request, session.accessLog);
     checkFeatureWf200(prescriptionId.type());
 
-    auto databaseHandle = session.database();
+    auto* databaseHandle = session.database();
     auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
 
     ErpExpect(task.has_value(), HttpStatus::NotFound, "Requested Task not found in DB");
@@ -129,6 +129,12 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto signingTime = cadesBesSignature.getSigningTime();
     ErpExpect(signingTime.has_value(), HttpStatus::BadRequest, "No signingTime in PKCS7 file");
 
+    date::year_month_day signingDay{date::floor<date::days>(signingTime->toChronoTimePoint())};
+    if (config.getOptionalBoolValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, true))
+    {
+        checkAuthoredOnEqualsSigningDate(prescriptionBundle, signingDay);
+    }
+
     checkValidCoverage(prescriptionBundle, prescriptionId.type());
 
     A_19025.start("3. reference the PKCS7 file in task");
@@ -140,7 +146,6 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
     // A_19445 Part 1 and 4 are in $create
     A_19445_06.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
-    date::year_month_day signingDay{date::floor<date::days>(signingTime->toChronoTimePoint())};
     task->setExpiryDate(model::Timestamp{date::sys_days{signingDay + date::months{3}}});
     A_19445_06.finish();
     A_19445_06.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
@@ -196,13 +201,18 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 }
 
 CadesBesSignature ActivateTaskHandler::unpackCadesBesSignature(
-    const std::string& cadesBesSignatureFile, TslManager* tslManager)
+    const std::string& cadesBesSignatureFile, TslManager& tslManager)
 {
     try
     {
         A_19025.start("verify the QES signature");
         A_20159.start("verify HBA Signature Certificate ");
-        return CadesBesSignature(cadesBesSignatureFile, tslManager);
+        return {cadesBesSignatureFile,
+                tslManager,
+                false,
+                {profession_oid::oid_arzt,
+                 profession_oid::oid_zahnarzt,
+                 profession_oid::oid_arztekammern}};
         A_20159.finish();
         A_19025.finish();
     }
@@ -247,6 +257,19 @@ void ActivateTaskHandler::checkNarcoticsMatches(const model::KbvBundle& bundle)
         ErpExpect(!mr.isNarcotics(), HttpStatus::BadRequest, "BTM und Thalidomid nicht zulässig");
     }
     A_22231.finish();
+}
+
+void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle,
+                                                           const date::year_month_day& signingDay)
+{
+    A_22487.start("check equality of signing day and authoredOn");
+    const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationRequest>();
+    for (const auto& mr : medicationRequests)
+    {
+        ErpExpect(signingDay == date::floor<date::days>(mr.authoredOn().toChronoTimePoint()), HttpStatus::BadRequest,
+                  "Ausstellungsdatum und Signaturzeitpunkt weichen voneinander ab, müssen aber taggleich sein");
+    }
+    A_22487.finish();
 }
 
 void ActivateTaskHandler::checkMultiplePrescription(const model::KbvBundle& bundle)

@@ -33,11 +33,11 @@ namespace
 
 CFdSigErpManager::CFdSigErpManager(
     const Configuration& configuration,
-    std::shared_ptr<TslManager> mTslManager,
+    TslManager& tslManager,
     HsmPool& hsmPool)
     : TimerJobBase("CFdSigErpManager job", getOcspRequestInterval(configuration))
     , mMutex()
-    , mTslManager(std::move(mTslManager))
+    , mTslManager(tslManager)
     , mValidationHookId()
     , mHsmPool(hsmPool)
     , mOcspRequestGracePeriod(std::chrono::seconds(
@@ -52,12 +52,9 @@ CFdSigErpManager::CFdSigErpManager(
     executeJob();
 
     // If TSL is updated the validation has to be done again
-    if (mTslManager != nullptr)
-    {
-        mValidationHookId = mTslManager->addPostUpdateHook([this] {
-            getOcspResponseData(true);
-        });
-    }
+    mValidationHookId = mTslManager.addPostUpdateHook([this] {
+        getOcspResponseData(true);
+    });
 
     start();
 }
@@ -65,9 +62,9 @@ CFdSigErpManager::CFdSigErpManager(
 
 CFdSigErpManager::~CFdSigErpManager()
 {
-    if (mTslManager != nullptr && mValidationHookId.has_value())
+    if (mValidationHookId.has_value())
     {
-        mTslManager->disablePostUpdateHook(*mValidationHookId);
+        mTslManager.disablePostUpdateHook(*mValidationHookId);
     }
 
     shutdown();
@@ -95,7 +92,7 @@ shared_EVP_PKEY CFdSigErpManager::getPrivateKey()
 }
 
 
-std::optional<TrustStore::OcspResponseData> CFdSigErpManager::getOcspResponseData(const bool forceOcspRequest)
+TrustStore::OcspResponseData CFdSigErpManager::getOcspResponseData(const bool forceOcspRequest)
 {
     auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
     std::lock_guard lock(mMutex);
@@ -119,43 +116,36 @@ OcspResponsePtr CFdSigErpManager::getOcspResponse()
 }
 
 
-std::optional<TrustStore::OcspResponseData>
+TrustStore::OcspResponseData
 CFdSigErpManager::internalGetOcspResponseData(const Certificate& certificate, const bool forceOcspRequest)
 {
     // internal implementation call, it has to be guarded by mutex in caller public/protected methods
-    if (mTslManager != nullptr)
+    mLastCheckSuccessfull = false;
+    try
     {
-        mLastCheckSuccessfull = false;
-        std::optional<TrustStore::OcspResponseData> responseData;
-        try
-        {
-            // after the Certificate and X509Certificate classes refactored to one class this workaround will no more be necessary,
-            // it could be possible to share X509 pointer between classes, but this approach looks to be more safe
-            auto x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+        // after the Certificate and X509Certificate classes refactored to one class this workaround will no more be necessary,
+        // it could be possible to share X509 pointer between classes, but this approach looks to be more safe
+        auto x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-            responseData =
-                mTslManager->getCertificateOcspResponse(
-                    TslMode::TSL,
-                    x509Certificate,
-                    {CertificateType::C_FD_SIG, CertificateType::C_FD_OSIG},
-                    forceOcspRequest);
-        }
-        catch(const TslError& tslError)
-        {
-            // in this context TslError always means internal server error
-            throw TslError(tslError, HttpStatus::InternalServerError);
-        }
+        auto responseData =
+            mTslManager.getCertificateOcspResponse(
+                TslMode::TSL,
+                x509Certificate,
+                {CertificateType::C_FD_SIG, CertificateType::C_FD_OSIG},
+                forceOcspRequest);
 
-        if (responseData.has_value() && responseData->status.certificateStatus == OcspService::CertificateStatus::good)
+        if (responseData.status.certificateStatus == OcspService::CertificateStatus::good)
         {
             mLastCheckSuccessfull = true;
-            mLastSuccess = responseData->timeStamp;
+            mLastSuccess = responseData.timeStamp;
         }
-
         return responseData;
     }
-
-    return {};
+    catch(const TslError& tslError)
+    {
+        // in this context TslError always means internal server error
+        throw TslError(tslError, HttpStatus::InternalServerError);
+    }
 }
 
 

@@ -162,13 +162,12 @@ std::optional<Uuid> MockDatabase::insertCommunication(
     const model::Communication::MessageType messageType,
     const db_model::HashedId& sender,
     const db_model::HashedId& recipient,
-    const std::optional<model::Timestamp>& timeReceived,
     BlobId senderBlobId,
     const db_model::EncryptedBlob& messageForSender,
     BlobId recipientBlobId,
     const db_model::EncryptedBlob& messageForRecipient)
 {
-    return mCommunications.insertCommunication(prescriptionId, timeSent, messageType, sender, recipient, timeReceived,
+    return mCommunications.insertCommunication(prescriptionId, timeSent, messageType, sender, recipient,
                                                senderBlobId, messageForSender, recipientBlobId, messageForRecipient);
 }
 
@@ -262,9 +261,9 @@ SafeString MockDatabase::getMedicationDispenseKey(const db_model::HashedKvnr& kv
         return mDerivation.medicationDispenseKey(kvnr, blobId, *salt);
     }
     auto [key, derivationData] = mDerivation.initialMedicationDispenseKey(kvnr);
-    db_model::Blob saltBlob{derivationData.salt.begin(), derivationData.salt.end()};
+    db_model::Blob saltBlob{derivationData.salt};
     (void)mAccounts.insertOrReturnAccountSalt(kvnr, db_model::MasterKeyType::medicationDispense,
-                                              derivationData.blobId, std::move(saltBlob));
+                                              derivationData.blobId, saltBlob);
     return std::move(key);
 }
 
@@ -277,9 +276,9 @@ SafeString MockDatabase::getAuditEventKey(const db_model::HashedKvnr& kvnr, Blob
         return mDerivation.auditEventKey(kvnr, blobId, *salt);
     }
     auto [key, derivationData] = mDerivation.initialAuditEventKey(kvnr);
-    db_model::Blob saltBlob{derivationData.salt.begin(), derivationData.salt.end()};
+    db_model::Blob saltBlob{derivationData.salt};
     (void) mAccounts.insertOrReturnAccountSalt(kvnr, db_model::MasterKeyType::auditevent, derivationData.blobId,
-                                               std::move(saltBlob));
+                                               saltBlob);
     blobId = derivationData.blobId;
     return std::move(key);
 }
@@ -306,7 +305,7 @@ void MockDatabase::insertTask(const model::Task& task,
     }
     newRow.status = task.status();
     newRow.taskKeyBlobId = derivationData.blobId;
-    newRow.salt = db_model::Blob{derivationData.salt.begin(), derivationData.salt.end()};
+    newRow.salt = db_model::Blob{derivationData.salt};
     newRow.accessCode = optionalEncrypt(taskKey, tryOptional(task, &model::Task::accessCode));
     newRow.secret = optionalEncrypt(taskKey, task.secret());
     if (medicationDispense)
@@ -429,20 +428,20 @@ void MockDatabase::fillWithStaticData ()
     // Activated task with consent (added below):
     const auto pkvTaskActivatedTemplate = resourceManager.getStringResource(dataPath + "/task_pkv_activated_template.json");
     const auto pkvTaskId1 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
-    const auto pkvKvnr1 = "X500000000";
+    const char* const pkvKvnr1 = "X500000000";
     auto taskPkv1 = model::Task::fromJsonNoValidation(
         replaceKvnr(replacePrescriptionId(pkvTaskActivatedTemplate, pkvTaskId1.toString()), pkvKvnr1));
     taskPkv1.setHealthCarePrescriptionUuid();
     // Activated task without consent:
     const auto pkvTaskId1a = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
-    const auto pkvKvnr1a = "X500000001";
+    const char* const pkvKvnr1a = "X500000001";
     auto taskPkv1a = model::Task::fromJsonNoValidation(
         replaceKvnr(replacePrescriptionId(pkvTaskActivatedTemplate, pkvTaskId1a.toString()), pkvKvnr1a));
     taskPkv1a.setHealthCarePrescriptionUuid();
     // Created task:
     const auto pkvTaskCreatedTemplate = resourceManager.getStringResource(dataPath + "/task_pkv_created_template.json");
     const auto pkvTaskId2 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50010);
-    const auto pkvKvnr2 = "X500000010";
+    const char* const pkvKvnr2 = "X500000010";
     auto taskPkv2 = model::Task::fromJsonNoValidation(
         replaceKvnr(replacePrescriptionId(pkvTaskCreatedTemplate, pkvTaskId2.toString()), pkvKvnr2));
 
@@ -463,7 +462,7 @@ void MockDatabase::fillWithStaticData ()
 
     // add static consent entry for kvnr1
     const auto consentTemplate = resourceManager.getStringResource(dataPath + "/consent_template.json");
-    const auto dateTimeStr = "2021-06-01T07:13:00+05:00";
+    const char* const dateTimeStr = "2021-06-01T07:13:00+05:00";
     const auto consent = model::Consent::fromJsonNoValidation(String::replaceAll(replaceKvnr(consentTemplate, pkvKvnr1), "##DATETIME##", dateTimeStr));
     storeConsent(mDerivation.hashKvnr(consent.patientKvnr()), consent.dateTime());
 
@@ -502,6 +501,7 @@ void MockDatabase::fillWithStaticData ()
                            "##DISPENSE_BUNDLE##", Base64::encode(dispenseItemXML));
     auto chargeItemForManip = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
     chargeItemForManip.deleteContainedBinary();
+    chargeItemForManip.setAccessCode(MockDatabase::mockAccessCode);
     insertChargeItem(pkvTaskId3, chargeItemForManip, dispenseItemXML);
 }
 
@@ -650,6 +650,10 @@ void MockDatabase::commitTransaction()
 void MockDatabase::closeConnection()
 {
 }
+bool MockDatabase::isCommitted() const
+{
+    return true;
+}
 
 void MockDatabase::healthCheck()
 {
@@ -715,6 +719,13 @@ MockDatabase::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requ
 {
     return mTasks.at(PrescriptionType::apothekenpflichtigeArzneimittelPkv)
                 .retrieveAllChargeItemsForInsurant(requestingInsurant, search);
+}
+
+std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+MockDatabase::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) const
+{
+    return mTasks.at(PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+                .retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(taskId);
 }
 
 std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>

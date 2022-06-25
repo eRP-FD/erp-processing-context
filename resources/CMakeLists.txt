@@ -91,6 +91,7 @@ set(SCHEMA_FILES
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/identifier/Identifier.xsd"
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/identifier/KVNRIdentifier.xsd"
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/identifier/PrescriptionIDIdentifier.xsd"
+        "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/identifier/PrescriptionIdAccessCodeIdentifier.xsd"
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/identifier/TelematikIDIdentifier.xsd"
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/medicationdispense/Gem_erxMedicationDispense.xsd"
         "schema/de.gematik.erezept-workflow.r4/1.1.1/xml/organization/Gem_erxOrganization.xsd"
@@ -266,6 +267,7 @@ set(SAMPLEDATA_ARCHIVES
         "test/Konnektathon/8. Konnektathon/Pharmatechnik_IXOS_8_Konnektathon.7z"
         "test/Konnektathon/8. Konnektathon/konnektathon8_pharmatechnik_XT.7z"
         "test/Kostbarkeiten_der_Abgabe_Abrechnung/Kostbarkeiten_der_Abgabe_Abrechnung.zip"
+        "test/MVO_KBV_1.0.2_.zip"
         )
 find_program(BASH_EXECUTABLE NAMES bash REQUIRED)
 

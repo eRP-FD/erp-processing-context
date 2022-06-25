@@ -296,6 +296,11 @@ void Communication::setTimeReceived(const Timestamp& timestamp)
     setValue(receivedPointer, timestamp.toXsDateTime());
 }
 
+void model::Communication::deleteTimeReceived()
+{
+    removeElement(receivedPointer);
+}
+
 PrescriptionId Communication::prescriptionId() const
 {
     std::string_view taskReference = getStringValue(basedOn0ReferencePointer);

@@ -71,50 +71,54 @@ void ServerRequestReader::readAsynchronously (RequestConsumer&& requestConsumer)
         mParser,
         [this, requestConsumer=std::move(requestConsumer), logContext = erp::server::Worker::tlogContext]
         (const boost::beast::error_code& ec, const size_t count)
-        {
-            ScopedLogContext logScope{logContext};
-            if (count == 0)
-            {
-                TVLOG(0) << "closing stream.";
-                closeConnection(true);
-                if (ec != boost::beast::http::error::end_of_stream &&
-                    ec != boost::asio::ssl::error::stream_truncated)
-                {
-                    TLOG(WARNING) << "error on stream while waiting for next request: " << ec.message();
-                }
-                requestConsumer({}, {});
-                return;
-            }
-            if (ec)
-            {
-                TLOG(WARNING) << "after reading " << count << " bytes: " << ec.message();
-            }
-            else
-            {
-                TVLOG(2) << "request bytes: " << count;
-            }
-
-            try
-            {
-                ErrorHandler(ec).throwOnServerError("ServerRequestReader::readAsynchronously", fileAndLine);
-
-                // Parse the request.
-                ServerRequest request (BoostBeastHeader::fromBeastRequestParser(mParser));
-
-                // Transfer ownership of the body string to the request object.
-                request.setBody(std::move(mParser.get().body()));
-
-                // Note that the requestConsumer callback is expected to be (effectively) `noexcept` and therefore does
-                // not throw any exceptions.
-                requestConsumer(std::move(request), {});
-            }
-            catch(...)
-            {
-               requestConsumer(std::nullopt, std::current_exception());
-            }
-        });
+        { on_async_read(requestConsumer, logContext, ec, count);});
 }
 
+void ServerRequestReader::on_async_read(const ServerRequestReader::RequestConsumer& requestConsumer,
+                                        const std::optional<std::string>& logContext,
+                                        const boost::beast::error_code& ec, const size_t count)
+{
+    ScopedLogContext logScope{logContext};
+    if (count == 0)
+    {
+        TVLOG(0) << "closing stream.";
+        closeConnection(true);
+        if (ec != boost::beast::http::error::end_of_stream &&
+            ec != boost::asio::ssl::error::stream_truncated)
+        {
+            TLOG(WARNING) << "error on stream while waiting for next request: " << ec.message();
+        }
+        requestConsumer({}, {});
+        return;
+    }
+    if (ec)
+    {
+        TLOG(WARNING) << "after reading " << count << " bytes: " << ec.message();
+    }
+    else
+    {
+        TVLOG(2) << "request bytes: " << count;
+    }
+
+    try
+    {
+        ErrorHandler(ec).throwOnServerError("ServerRequestReader::readAsynchronously", fileAndLine);
+
+        // Parse the request.
+        ServerRequest request (BoostBeastHeader::fromBeastRequestParser(mParser));
+
+        // Transfer ownership of the body string to the request object.
+        request.setBody(std::move(mParser.get().body()));
+
+        // Note that the requestConsumer callback is expected to be (effectively) `noexcept` and therefore does
+        // not throw any exceptions.
+        requestConsumer(std::move(request), {});
+    }
+    catch(...)
+    {
+        requestConsumer(std::nullopt, std::current_exception());
+    }
+}
 
 void ServerRequestReader::markStreamAsClosed (void)
 {

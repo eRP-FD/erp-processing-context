@@ -23,9 +23,9 @@
 #include "test/erp/service/HealthHandlerTestTslManager.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
-#include "test/mock/MockOcsp.hxx"
+#include "mock/tsl/MockOcsp.hxx"
 #include "test/mock/MockRedisStore.hxx"
-#include "test/mock/UrlRequestSenderMock.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 #include "erp/erp-serverinfo.hxx"
@@ -50,8 +50,9 @@ public:
         }
     }
 
-    bool fail = false;
+    static bool fail;
 };
+bool HealthHandlerTestMockDatabase::fail = false;
 
 class HealthHandlerTestHsmMockClient : public HsmMockClient
 {
@@ -105,7 +106,7 @@ class HealthHandlerTestTeeTokenUpdater : public TeeTokenUpdater
 public:
     explicit HealthHandlerTestTeeTokenUpdater(TokenConsumer&& teeTokenConsumer, HsmFactory& hsmFactory,
                                               TokenProvider&& tokenProvider, std::shared_ptr<Timer> timerManager)
-        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), timerManager, 100ms, 100ms)
+        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), std::move(timerManager), 100ms, 100ms)
     {
     }
 };
@@ -173,16 +174,16 @@ public:
         , releasedatePointer("/version/releasedate")
         , mGuardERP_HSM_DEVICE("ERP_HSM_DEVICE", "127.0.0.1")
         , mGuardERP_TSL_INITIAL_CA_DER_PATH("ERP_TSL_INITIAL_CA_DER_PATH",
-                                            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der")
+                                            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"))
     {
         createServiceContext();
     }
 
     void createServiceContext()
     {
-        const auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
-        const auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner);
-        const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl);
+        const auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+        const auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+        const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
 
         auto factories = StaticData::makeMockFactories();
         factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
@@ -206,7 +207,7 @@ public:
         mPool.setUp(1);
         using namespace std::chrono_literals;
         mServiceContext->setPrngSeeder(std::make_unique<HealthHandlerTestSeedTimerMock>(
-            mPool, mServiceContext->getHsmPool(), 1, 200ms, [](const SafeString&) {}));
+            mPool, mServiceContext->getHsmPool(), 200ms, [](const SafeString&) {}));
     }
 
     void handleRequest(bool withIdpUpdate = true)
@@ -224,7 +225,7 @@ public:
     void verifyRootCause (
         rapidjson::Document& document,
         const rapidjson::Pointer& pointer,
-        const std::string expectedValue)
+        const std::string& expectedValue)
     {
         const std::string value = pointer.Get(document)->GetString();
         EXPECT_TRUE(value.find(expectedValue) != std::string::npos);
@@ -270,7 +271,7 @@ protected:
     EnvironmentVariableGuard mGuardERP_TSL_INITIAL_CA_DER_PATH;
 };
 
-TEST_F(HealthHandlerTest, healthy)
+TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-complexity)
 {
 
     ASSERT_NO_THROW(handleRequest());
@@ -308,10 +309,11 @@ TEST_F(HealthHandlerTest, healthy)
 }
 
 
-TEST_F(HealthHandlerTest, DatabaseDown)
+TEST_F(HealthHandlerTest, DatabaseDown)//NOLINT(readability-function-cognitive-complexity)
 {
-    dynamic_cast<HealthHandlerTestMockDatabase&>(mContext->database()->getBackend()).fail = true;
+    HealthHandlerTestMockDatabase::fail = true;
     ASSERT_NO_THROW(handleRequest());
+    HealthHandlerTestMockDatabase::fail = false;
 
     ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);
     ASSERT_FALSE(mContext->response.getBody().empty());
@@ -320,13 +322,13 @@ TEST_F(HealthHandlerTest, DatabaseDown)
     auto body = mContext->response.getBody();
     healthDocument.Parse(body);
 
-    EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    EXPECT_EQ(std::string(postgresStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
+    ASSERT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
+    ASSERT_EQ(std::string(postgresStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     verifyRootCause(healthDocument, postgresRootCausePointer, "CONNECTION FAILURE");
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, HsmDown)
+TEST_F(HealthHandlerTest, HsmDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestHsmMockClient::fail = true;
     ASSERT_NO_THROW(handleRequest());
@@ -346,7 +348,7 @@ TEST_F(HealthHandlerTest, HsmDown)
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, RedisDown)
+TEST_F(HealthHandlerTest, RedisDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestMockRedisStore::fail = true;
     EnvironmentVariableGuard envGuard("DEBUG_DISABLE_DOS_CHECK", "false");
@@ -365,7 +367,7 @@ TEST_F(HealthHandlerTest, RedisDown)
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, TslDown)
+TEST_F(HealthHandlerTest, TslDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestTslManager::failTsl = true;
     EnvironmentVariableGuard envGuard("DEBUG_IGNORE_TSL_CHECKS", "false");
@@ -384,7 +386,7 @@ TEST_F(HealthHandlerTest, TslDown)
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, BnaDown)
+TEST_F(HealthHandlerTest, BnaDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestTslManager::failBna = true;
     EnvironmentVariableGuard envGuard("DEBUG_IGNORE_TSL_CHECKS", "false");
@@ -403,7 +405,7 @@ TEST_F(HealthHandlerTest, BnaDown)
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, IdpDown)
+TEST_F(HealthHandlerTest, IdpDown)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_NO_THROW(handleRequest(false));
 
@@ -419,7 +421,7 @@ TEST_F(HealthHandlerTest, IdpDown)
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, CFdSigErpDown)
+TEST_F(HealthHandlerTest, CFdSigErpDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestTslManager::failOcspRetrieval = true;
     ASSERT_THROW(mServiceContext->getCFdSigErpManager().getOcspResponseData(true), std::runtime_error);
@@ -442,7 +444,7 @@ TEST_F(HealthHandlerTest, CFdSigErpDown)
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, SeedTimerDown)
+TEST_F(HealthHandlerTest, SeedTimerDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestSeedTimerMock::fail = true;
     ASSERT_NO_THROW(handleRequest());
@@ -460,7 +462,7 @@ TEST_F(HealthHandlerTest, SeedTimerDown)
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)
+TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestTeeTokenUpdaterFactory::fail = true;
     std::this_thread::sleep_for(151ms);
@@ -480,7 +482,7 @@ TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
-TEST_F(HealthHandlerTest, VauSigBlobMissing)
+TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognitive-complexity)
 {
     mBlobCache->deleteBlob(BlobType::VauSig, ErpVector::create("vau-sig"));
     createServiceContext();

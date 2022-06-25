@@ -139,6 +139,11 @@ public:
      */
     timepoint_t toChronoTimePoint () const;
 
+    /**
+     * Convert to timestamp (time_t) format.
+     */
+    std::time_t toTimeT () const;
+
     bool operator== (const Timestamp& other) const;
     bool operator!= (const Timestamp& other) const;
     bool operator< (const Timestamp& other) const;

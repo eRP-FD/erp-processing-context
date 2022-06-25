@@ -11,7 +11,7 @@
 
 #include "test/util/ResourceManager.hxx"
 
-TEST_F(ErpWorkflowTest, WF169PatientAbortOnlyCompletedTasks)
+TEST_F(ErpWorkflowTest, WF169PatientAbortOnlyCompletedTasks)//NOLINT(readability-function-cognitive-complexity)
 {
     A_22102.test("");
     std::optional<model::PrescriptionId> prescriptionId;
@@ -47,7 +47,7 @@ TEST_F(ErpWorkflowTest, WF169PatientAbortOnlyCompletedTasks)
     ASSERT_NO_FATAL_FAILURE(checkTaskAbort(prescriptionId.value(), jwt, kvnr, accessCode, secret, {}));
 }
 
-TEST_F(ErpWorkflowTest, WF169PatientNoAccessCode)
+TEST_F(ErpWorkflowTest, WF169PatientNoAccessCode)//NOLINT(readability-function-cognitive-complexity)
 {
     A_21360.test("");
     std::optional<model::PrescriptionId> prescriptionId;

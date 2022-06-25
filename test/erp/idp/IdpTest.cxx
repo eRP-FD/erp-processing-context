@@ -30,7 +30,7 @@ public:
 };
 
 
-TEST_F(IdpTest, setCertificate)
+TEST_F(IdpTest, setCertificate)//NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
 
@@ -45,7 +45,7 @@ TEST_F(IdpTest, setCertificate)
 
 
 // TODO: reenable once the workaround for ERP-5548 is no longer needed.
-TEST_F(IdpTest, DISABLED_resetCertificate)
+TEST_F(IdpTest, DISABLED_resetCertificate)//NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     idp.setCertificate(Certificate::build().withPublicKey(MockCryptography::getEciesPublicKey()).build());

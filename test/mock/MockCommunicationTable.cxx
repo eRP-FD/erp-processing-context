@@ -39,7 +39,6 @@ std::optional<Uuid> MockCommunicationTable::insertCommunication(
     const model::Communication::MessageType messageType,
     const db_model::HashedId& sender,
     const db_model::HashedId& recipient,
-    const std::optional<model::Timestamp>& timeReceived,
     BlobId senderBlobId,
     const db_model::EncryptedBlob& messageForSender,
     BlobId recipientBlobId,
@@ -54,7 +53,6 @@ std::optional<Uuid> MockCommunicationTable::insertCommunication(
     auto [newRow, inserted] = mCommunications.try_emplace(communicationId, sender, recipient, messageType, senderBlobId,
                                                           messageForSender, recipientBlobId, messageForRecipient);
     Expect3(inserted, "Failed to insert new Communication.", std::logic_error);
-    newRow->second.received = timeReceived;
     newRow->second.prescriptionId = prescriptionId.toDatabaseId();
     return communicationId;
 }
@@ -217,7 +215,7 @@ void MockCommunicationTable::deleteCommunicationsForTask(const model::Prescripti
     }
 }
 
-db_model::Communication MockCommunicationTable::select(const Uuid& uuid, MockCommunicationTable::Row row,
+db_model::Communication MockCommunicationTable::select(const Uuid& uuid, const Row& row,
                                                        const std::set<FieldName>& fields) const
 {
     db_model::Communication comm;

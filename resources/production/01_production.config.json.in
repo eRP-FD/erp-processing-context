@@ -13,8 +13,7 @@
         },
         "proxy": {
           "certificate": ""
-        },
-        "keep-alive": "false"
+        }
       },
       "service": {
         "task": {
@@ -22,7 +21,8 @@
             "entlassRezeptValidityInWorkDays": "6",
             "holidays": ["01-01", "Karfreitag", "Ostermontag", "05-01", "Himmelfahrt", "Pfingstmontag", "10-03", "12-25", "12-26"],
             "easterCsv": "@ERP_RUNTIME_RESOURCE_DIR@/easter.csv",
-            "kbvValidation": "true"
+            "kbvValidation": "true",
+            "authoredOnMustEqualSigningDate": "true"
           }
         },
         "communication": {
@@ -149,6 +149,7 @@
         "registeredFdUri": "https://gematik.erppre.de/",
         "updateEndpoint": "https://idp.lu.erezepttest.net/.well-known/openid-configuration",
         "updateIntervalMinutes": "60",
+        "noValidCertificateUpdateIntervalSeconds": "20",
         "certificateMaxAgeHours": "24"
       },
       "fhir": {
@@ -168,7 +169,8 @@
         },
         "defaultShutdownDelaySeconds": "5",
         "credentials": ""
-      }
+      },
+      "entropy_fetch_interval_seconds": "60"
     }
   }
 }

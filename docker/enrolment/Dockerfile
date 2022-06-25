@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.10 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -32,6 +32,7 @@ ENV CONAN_LOGIN_USERNAME=${CONAN_LOGIN_USERNAME:-''} \
     ERP_RELEASE_VERSION=${ERP_RELEASE_VERSION:-'0.0.0'}
 
 RUN conan remote clean &&\
+    conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force &&\
     conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force &&\
     conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force &&\
     conan profile new default --detect &&\
@@ -42,12 +43,13 @@ RUN conan remote clean &&\
     conan profile update env.CC=gcc-9 default
 RUN conan install .. --build missing
 RUN cmake \
+    -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DERP_WITH_HSM_MOCK=ON \
     -DERP_BUILD_VERSION=${ERP_BUILD_VERSION} \
     -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
     -DCMAKE_INSTALL_PREFIX=/erp ..
-RUN cmake --build . --target blob-db-initialization -j 6
+RUN ninja -l$(nproc) blob-db-initialization
 RUN cmake --install . --component blob-db-initialization
 RUN cp ../scripts/enrolment-helper.sh /erp/bin
 RUN cp ../scripts/auto-enrolment.sh /erp/bin

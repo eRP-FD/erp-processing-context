@@ -146,7 +146,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionTelematikIdMismatch)
     A_22363.finish();
 }
 
-TEST_F(SubscriptionHandlerTest, PostSubscriptionSuccessAuth)
+TEST_F(SubscriptionHandlerTest, PostSubscriptionSuccessAuth)//NOLINT(readability-function-cognitive-complexity)
 {
     EnvironmentVariableGuard signingKey{"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY",
                                         std::string{MockCryptography::getEciesPrivateKeyPem()}};
@@ -156,7 +156,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionSuccessAuth)
     // Test valid request.
     const auto* body =
         R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
-    std::string responseBody = "";
+    std::string responseBody;
     testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody);
 
     rapidjson::Document response;
@@ -164,7 +164,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionSuccessAuth)
     ASSERT_FALSE(parseResult.IsError());
 
     rapidjson::Pointer channelHeaderPointer("/channel/header/0");
-    const auto headerField = channelHeaderPointer.Get(response);
+    const auto* const headerField = channelHeaderPointer.Get(response);
     ASSERT_TRUE(headerField);
     std::string token = headerField->GetString();
     token = String::replaceAll(token, "Authorization: Bearer ", "");
@@ -175,7 +175,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionSuccessAuth)
     ASSERT_NO_THROW(jwt->verifySignature(MockCryptography::getEciesPublicKey()));
 }
 
-TEST_F(SubscriptionHandlerTest, Overlap)
+TEST_F(SubscriptionHandlerTest, Overlap)//NOLINT(readability-function-cognitive-complexity)
 {
     EnvironmentVariableGuard signingKey{"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY",
                                         std::string{MockCryptography::getEciesPrivateKeyPem()}};
@@ -185,7 +185,7 @@ TEST_F(SubscriptionHandlerTest, Overlap)
     // Test valid request.
     const auto* body =
         R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
-    std::string responseBody = "";
+    std::string responseBody;
     testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody);
 
     rapidjson::Document response;
@@ -193,7 +193,7 @@ TEST_F(SubscriptionHandlerTest, Overlap)
     ASSERT_FALSE(parseResult.IsError());
 
     rapidjson::Pointer channelHeaderPointer("/channel/header/0");
-    const auto headerField = channelHeaderPointer.Get(response);
+    const auto* const headerField = channelHeaderPointer.Get(response);
     ASSERT_TRUE(headerField);
     std::string token = headerField->GetString();
     token = String::replaceAll(token, "Authorization: Bearer ", "");
@@ -205,7 +205,7 @@ TEST_F(SubscriptionHandlerTest, Overlap)
 }
 
 
-TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)
+TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)//NOLINT(readability-function-cognitive-complexity)
 {
     EnvironmentVariableGuard signingKey{"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY",
                                         std::string{MockCryptography::getEciesPrivateKeyPem()}};
@@ -216,13 +216,13 @@ TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)
     const std::string bodyFmt =
         R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&recipient=%1%", "channel": { "type": "websocket" } })--";
     const std::string body = boost::str(boost::format(bodyFmt.c_str()) % recipient);
-    std::string responseBody = "";
+    std::string responseBody;
     testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody);
     rapidjson::Document response;
     const rapidjson::ParseResult parseResult = response.Parse(responseBody);
     ASSERT_FALSE(parseResult.IsError());
     rapidjson::Pointer channelHeaderPointer("/channel/header/0");
-    const auto headerField = channelHeaderPointer.Get(response);
+    const auto* const headerField = channelHeaderPointer.Get(response);
     ASSERT_TRUE(headerField);
     std::string token = headerField->GetString();
     token = String::replaceAll(token, "Authorization: Bearer ", "");
@@ -230,7 +230,7 @@ TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)
     ASSERT_NO_THROW(jwt = std::make_unique<JWT>(token));
     ASSERT_NO_THROW(jwt->verifySignature(MockCryptography::getEciesPublicKey()));
     const rapidjson::Pointer idPointer("/id");
-    const auto idField = idPointer.Get(response);
+    const auto* const idField = idPointer.Get(response);
     ASSERT_TRUE(idField);
     std::string encryptedTelematicId = idField->GetString();
     // Check that the encrypted recipient (telematic) id is identical.
@@ -257,7 +257,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionXML)
     </channel>
 </Subscription>
 )--";
-    std::string responseBody = "";
+    std::string responseBody;
     mMimeType = ContentMimeType::fhirXmlUtf8;
     auto request = makeEncryptedRequest(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke);
     testEndpoint(request, HttpStatus::OK, responseBody);

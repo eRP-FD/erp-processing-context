@@ -20,13 +20,15 @@ public:
 private:
     /**
      * Allows to unpack CAdES-BES signature, for testing purpose it is allowed to provide no TslManager.
+     * cadesBesSignatureFile - Path to a pkcs7File
      */
     static CadesBesSignature unpackCadesBesSignature(
-        const std::string& pkcs7File, TslManager* tslManager);
+        const std::string& cadesBesSignatureFile, TslManager& tslManager);
 
     static void checkMultiplePrescription(const model::KbvBundle& bundle);
     static void checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType);
     static void checkNarcoticsMatches(const model::KbvBundle& bundle);
+    static void checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle, const date::year_month_day& signingDay);
 };
 
 

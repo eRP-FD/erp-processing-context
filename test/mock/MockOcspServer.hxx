@@ -8,7 +8,7 @@
 
 #include "erp/server/HttpsServer.hxx"
 #include "erp/util/Configuration.hxx"
-#include "test/mock/MockOcsp.hxx"
+#include "mock/tsl/MockOcsp.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -22,7 +22,7 @@ public:
     static std::unique_ptr<HttpsServer> create (
         const std::string& hostIp,
         uint16_t port,
-        const std::vector<MockOcsp::CertificatePair> ocspResponderKnownCertificateCaPairs);
+        const std::vector<MockOcsp::CertificatePair>& ocspResponderKnownCertificateCaPairs);
 };
 
 

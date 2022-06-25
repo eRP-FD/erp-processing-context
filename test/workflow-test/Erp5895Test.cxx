@@ -25,7 +25,7 @@ private:
 };
 
 
-TEST_F(Erp5895Test, run)
+TEST_F(Erp5895Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());

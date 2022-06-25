@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-TEST(RandomTest, randomIntBetween)
+TEST(RandomTest, randomIntBetween)//NOLINT(readability-function-cognitive-complexity)
 {
     for(int from = -50; from <= 50; ++from)
     {

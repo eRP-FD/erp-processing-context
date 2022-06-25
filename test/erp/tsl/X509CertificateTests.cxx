@@ -192,7 +192,7 @@ TEST_F(X509CertificateTests, SubjectHasExpectedValue)
 }
 
 
-TEST_F(X509CertificateTests, CertificateValidity)
+TEST_F(X509CertificateTests, CertificateValidity)//NOLINT(readability-function-cognitive-complexity)
 {
     // The certificate is valid from 2015-02-19 through 2023-02-17. Test this ...
 

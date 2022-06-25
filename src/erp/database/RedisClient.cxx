@@ -78,7 +78,7 @@ void RedisClient::setKeyExpireAt(
     mConnection->pexpireat(key, timestamp);
 }
 
-int RedisClient::incr(const std::string_view& key)
+int64_t RedisClient::incr(const std::string_view& key)
 {
     return mConnection->incr(key);
 }

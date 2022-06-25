@@ -69,7 +69,7 @@ typename decltype(toCallbackClass(memberFunctionPointer))::Type makeCallback()
     return &CallbackFunctionMakerClass::cStyleCallbackFunction;
 }
 
-static void failMaybeWithDiagnostics(const std::string& message, const xmlError& error)
+void failMaybeWithDiagnostics(const std::string& message, const xmlError& error)
 {
     if (error.message)
     {

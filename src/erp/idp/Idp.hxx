@@ -20,10 +20,11 @@ class Idp
 public:
     const Certificate& getCertificate (void) const;
 
-    void setCertificate (Certificate&& updatToDateCertificate);
+    void setCertificate (Certificate&& idpCertificate);
 
     void resetCertificate (void);
 
+    bool isHealthy() const;
     void healthCheck() const;
 
 private:

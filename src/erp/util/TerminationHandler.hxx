@@ -105,7 +105,7 @@ private:
      * Tests present an atypical use case for the TerminationHandler:
      * - it is a singleton by nature so that a signal handler can reach and trigger it
      * - its life time extends that of most other objects because it controls the life time of long running objects
-     *   like HttpsServer and HeartbeatSender
+     *   like HttpsServer and ApplicationHealthAndRegistrationUpdater
      * - it is supposed to be destroyed when the application is exited.
      *
      * Especially the last item conflicts with the use in tests as each test represents essentially a very simplified run

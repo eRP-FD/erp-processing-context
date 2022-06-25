@@ -56,7 +56,7 @@ public:
 };
 
 
-TEST_F(AccessLogTest, logAfterConstruction)
+TEST_F(AccessLogTest, logAfterConstruction)//NOLINT(readability-function-cognitive-complexity)
 {
     std::ostringstream os;
     {

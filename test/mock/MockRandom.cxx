@@ -7,8 +7,7 @@
 
 
 
-MockRandom::MockRandom (void)
-{ }
+MockRandom::MockRandom (void) = default;
 
 
 SafeString MockRandom::randomBytes (const size_t count)

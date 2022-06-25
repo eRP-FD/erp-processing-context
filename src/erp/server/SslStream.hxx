@@ -10,6 +10,7 @@
 #include "erp/util/GLog.hxx"
 #include "erp/util/String.hxx"
 
+#include <boost/beast/core/detail/stream_traits.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
 #include <boost/beast/core/stream_traits.hpp>
@@ -146,6 +147,7 @@ size_t SslStream::write_some (
 
 
 template<class ConstBufferSequence, class WriteHandler>
+//NOLINTNEXTLINE(misc-no-recursion)
 void SslStream::async_write_some(
     ConstBufferSequence const& buffers,
     BOOST_ASIO_MOVE_ARG(WriteHandler) handler)
@@ -176,11 +178,12 @@ void SslStream::async_write_some(
 
 
 template<class MutableBufferSequence, class Handler>
+//NOLINTNEXTLINE(misc-no-recursion)
 void SslStream::async_read_some(
     MutableBufferSequence& buffers,
     BOOST_ASIO_MOVE_ARG(Handler) handler)
 {
-    mSslStream->async_read_some(buffers, std::move(handler));
+    mSslStream->async_read_some(buffers, std::forward<Handler>(handler));
 }
 
 

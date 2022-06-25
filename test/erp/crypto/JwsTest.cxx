@@ -27,12 +27,12 @@ TEST_F(JwsTest, Roundtrip)// NOLINT
     JoseHeader header(JoseHeader::Algorithm::ES256);
     header.setContentType(MimeType::fhirJson);
     header.setType(MimeType::jose);
-    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp);
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
     header.setX509Certificate(cert);
     header.setCritical({"alg", "x5c"});
 
     std::string payload("the payload");
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey});
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey()});
 
     Jws jws(header, payload, privKey);
     auto serialized = jws.compactSerialized();

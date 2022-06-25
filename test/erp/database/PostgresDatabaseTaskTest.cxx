@@ -145,7 +145,7 @@ public:
 };
 
 
-TEST_P(PostgresDatabaseTaskTest, InsertTask)
+TEST_P(PostgresDatabaseTaskTest, InsertTask)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -194,7 +194,7 @@ TEST_P(PostgresDatabaseTaskTest, InsertTask)
     ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
-TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)
+TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -305,7 +305,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     ASSERT_EQ(std::string(healthCareProviderPrescription.value().data().value()), "HealthCareProviderPrescription");
 }
 
-TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)
+TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -404,7 +404,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)
 }
 
 
-TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)
+TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -453,7 +453,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)
     ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
-TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)
+TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -467,11 +467,11 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)
     task.setPrescriptionId(id);
 
     {
-        const auto kvnr = InsurantA;
-        const auto healthCareProviderPrescription = "HealthCareProviderPrescription";
-        const auto receipt = "Receipt";
-        const auto performer = "Performer";
-        const auto medicationDispense = "MedicationDispense";
+        const char* const kvnr = InsurantA;
+        const char* const healthCareProviderPrescription = "HealthCareProviderPrescription";
+        const char* const receipt = "Receipt";
+        const char* const performer = "Performer";
+        const char* const medicationDispense = "MedicationDispense";
 
         const Query updateTaskComplete{
                 "updateTaskComplete",
@@ -524,7 +524,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)
     ASSERT_EQ(updatedTask->status(), model::Task::Status::cancelled);
 }
 
-TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -586,7 +586,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)
     cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_P(PostgresDatabaseTaskTest, SearchTasksLastModified)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksLastModified)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -667,7 +667,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksLastModified)
     cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_P(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -748,7 +748,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)
     cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_P(PostgresDatabaseTaskTest, SearchTasksSort)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksSort)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -805,7 +805,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksSort)
     cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_P(PostgresDatabaseTaskTest, SearchTasksPaging)
+TEST_P(PostgresDatabaseTaskTest, SearchTasksPaging)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -865,7 +865,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksPaging)
     cleanKvnr(kvnr1, taskTableName());
 }
 
-TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)
+TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
@@ -874,8 +874,8 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)
 
     cleanKvnr(InsurantA, taskTableName());
 
-    const auto kvnr = InsurantA;
-    const auto telematicId = "3-SMC-XXXX-883110000120312";
+    const char* const kvnr = InsurantA;
+    const char* const telematicId = "3-SMC-XXXX-883110000120312";
     const auto deviceId = 42;
 
     model::Task task(prescriptionType(), "access_code");

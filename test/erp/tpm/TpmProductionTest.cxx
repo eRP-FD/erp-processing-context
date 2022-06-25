@@ -26,7 +26,7 @@ public:
     {
     }
 
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         if (MockConfiguration::instance().getOptionalBoolValue(MockConfigurationKey::MOCK_USE_MOCK_TPM, true))
             GTEST_SKIP();
@@ -70,7 +70,7 @@ TEST_F(TpmProductionTest, getAttestationKey)
 }
 
 
-TEST_F(TpmProductionTest, getAttestationKey_failForMissingAkKeyPair)
+TEST_F(TpmProductionTest, getAttestationKey_failForMissingAkKeyPair)//NOLINT(readability-function-cognitive-complexity)
 {
     auto blobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
 
@@ -94,7 +94,7 @@ TEST_F(TpmProductionTest, getAttestationKey_failForMissingAkKeyPair)
  * As the connection happens in the constructor of LockedTpmClient, technically there can be more than one instance of it.
  *
  */
-TEST_F(TpmProductionTest, getAttestationKey_getAttestationKey_manyThreads)
+TEST_F(TpmProductionTest, getAttestationKey_getAttestationKey_manyThreads)//NOLINT(readability-function-cognitive-complexity)
 {
     const size_t threadCount = 100;
     const size_t callCount = 100;

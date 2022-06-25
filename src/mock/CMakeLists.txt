@@ -14,8 +14,12 @@ target_sources(erp-hsm-tpm-mock
         hsm/HsmMockClient.cxx
         hsm/HsmMockFactory.cxx
         hsm/MockBlobCache.cxx
+        idp/MockIdpUpdater.cxx
         tpm/TpmMock.cxx
         tpm/TpmTestHelper.cxx
+        tsl/MockOcsp.cxx
+        tsl/MockTslManager.cxx
+        tsl/UrlRequestSenderMock.cxx
         util/MockConfiguration.cxx
     INTERFACE $<TARGET_OBJECTS:erp-hsm-tpm-mock>
 )
@@ -32,6 +36,7 @@ target_link_libraries(erp-hsm-tpm-mock
         CONAN_PKG::magic_enum
         CONAN_PKG::openssl
         CONAN_PKG::rapidjson
+        CONAN_PKG::libxml2
 )
 
 
@@ -61,10 +66,12 @@ add_library(erp-mock-enrollmentmanager OBJECT)
 target_sources(erp-mock-enrollmentmanager
         PRIVATE
         enrolment/MockEnrolmentManager.cxx
+        enrolment/TpmProxyApi.cxx
         )
 target_link_libraries (
         erp-mock-enrollmentmanager
         PUBLIC
+        enrolment-api-client
         CONAN_PKG::boost
         CONAN_PKG::date
         CONAN_PKG::glog
@@ -80,12 +87,7 @@ target_link_libraries (
 target_include_directories(
         erp-mock-enrollmentmanager
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. # Include the erp prefixes in include statements.
+        ${CMAKE_SOURCE_DIR}
         ${CMAKE_CURRENT_BINARY_DIR}
 )
-
-if(ERP_WITH_HSM_MOCK)
-target_link_libraries(erp-processing-context-files
-        PUBLIC
-        erp-mock-enrollmentmanager)
-endif()
 endif()

@@ -46,7 +46,7 @@ TEST(PrescriptionIdTest, example2)
     ASSERT_EQ(prescriptionId2.toString(), "160.123.456.789.123.58");
 }
 
-TEST(PrescriptionIdTest, wrongChecksum)
+TEST(PrescriptionIdTest, wrongChecksum)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19218.test("validate incorrect checksums");
     ASSERT_ANY_THROW(model::PrescriptionId::fromString("160.123.456.789.123.11"));
@@ -54,7 +54,7 @@ TEST(PrescriptionIdTest, wrongChecksum)
     ASSERT_ANY_THROW(model::PrescriptionId::fromString("161.123.456.789.123.58"));
 }
 
-TEST(PrescriptionIdTest, deriveUuid)
+TEST(PrescriptionIdTest, deriveUuid)//NOLINT(readability-function-cognitive-complexity)
 {
     auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     auto id2 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4712);
@@ -86,7 +86,7 @@ TEST(PrescriptionIdTest, deriveMedicationDispenseId)
 }
 
 
-TEST(PrescriptionIdTest, fromMedicationDispenseId)
+TEST(PrescriptionIdTest, fromMedicationDispenseId)//NOLINT(readability-function-cognitive-complexity)
 {
     auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     auto str = id.toString();

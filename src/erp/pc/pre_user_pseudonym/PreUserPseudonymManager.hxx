@@ -18,31 +18,33 @@ class PcServiceContext;
 
 class PreUserPseudonymManager
 {
-    static constexpr size_t keyHistoryLength = 2;
 public:
     static constexpr std::string_view PNPHeader{"PNP"};
+
+    virtual ~PreUserPseudonymManager() = default;
 
     [[nodiscard]]
     static std::unique_ptr<PreUserPseudonymManager> create(PcServiceContext* serviceContext);
 
     /// @returns {verified, updatedSignature}
     [[nodiscard]]
-    std::tuple<bool, CmacSignature> verifyAndResign(const CmacSignature& sig, const std::string_view& subClaim);
+    std::tuple<bool, CmacSignature> verifyAndReSign(const CmacSignature& sig, const std::string_view& subClaim);
 
     [[nodiscard]]
-    CmacSignature sign(const std::string_view& subClaim);
+    virtual CmacSignature sign(const std::string_view& subClaim);
 
     PreUserPseudonymManager(const PreUserPseudonymManager&) = delete;
     PreUserPseudonymManager(PreUserPseudonymManager&&) = delete;
     PreUserPseudonymManager& operator = (const PreUserPseudonymManager&) = delete;
     PreUserPseudonymManager& operator = (PreUserPseudonymManager&&) = delete;
-private:
     [[nodiscard]]
     CmacSignature sign(size_t keyNr, const std::string_view& subClaim);
+protected:
+    static constexpr size_t keyHistoryLength = 2;
 
     explicit PreUserPseudonymManager(PcServiceContext* serviceContext);
-    void LoadCmacs(const date::sys_days& forDay);
-    void ensureKeysUptodate(std::shared_lock<std::shared_mutex>& sharedLock);
+    virtual void LoadCmacs(const date::sys_days& forDay);
+    virtual void ensureKeysUptodate(std::shared_lock<std::shared_mutex>& sharedLock);
 
     PcServiceContext* const mServiceContext;
 

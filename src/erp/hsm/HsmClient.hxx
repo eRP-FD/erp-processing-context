@@ -31,14 +31,14 @@ struct DeriveKeyInput
     ErpBlob derivationKey;
     bool initialDerivation = true;
     ErpVector derivationData;
-    BlobId blobId;
-    ::BlobType blobType;
+    BlobId blobId{};
+    ::BlobType blobType{};
 };
 
 struct OptionalDeriveKeyData
 {
     ErpVector salt;
-    BlobId blobId;
+    BlobId blobId{};
 };
 
 struct DeriveKeyOutput

@@ -16,7 +16,7 @@ public:
 
 
 
-TEST_F(BoostBeastStringReaderTest, parseRequest)
+TEST_F(BoostBeastStringReaderTest, parseRequest) //NOLINT(readability-function-cognitive-complexity)
 {
     const std::string request =
         "GET /this/is/a/path HTTP/1.1\r\n"
@@ -51,7 +51,7 @@ TEST_F(BoostBeastStringReaderTest, parseRequestWrongContentLength)
 
 
 
-TEST_F(BoostBeastStringReaderTest, parseResponse)
+TEST_F(BoostBeastStringReaderTest, parseResponse)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string request =
         "HTTP/1.1 404 Not Found\r\n"
@@ -72,7 +72,7 @@ TEST_F(BoostBeastStringReaderTest, parseResponse)
 
 
 
-TEST_F(BoostBeastStringReaderTest, parseRequest_successWithLargeHeaderAndBody)
+TEST_F(BoostBeastStringReaderTest, parseRequest_successWithLargeHeaderAndBody)//NOLINT(readability-function-cognitive-complexity)
 {
     // Header max size is currently configured as 8kB.
     std::string request =

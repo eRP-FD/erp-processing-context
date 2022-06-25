@@ -16,20 +16,21 @@
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/mock/RegistrationMock.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 
 
 class ServiceContextTest : public ::testing::Test
 {
-    virtual void SetUp() override
+    void SetUp() override
     {
         tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+            ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
     }
 
-    virtual void TearDown() override
+    void TearDown() override
     {
         tslEnvironmentGuard.reset();
     }
@@ -53,7 +54,6 @@ TEST_F(ServiceContextTest, initWithTsl)
     };
     PcServiceContext serviceContext(Configuration::instance(), std::move(factories));
     ASSERT_TRUE(serviceContext.databaseFactory());
-    ASSERT_NE(nullptr,serviceContext.getTslManager());
-    ASSERT_NE(nullptr, serviceContext.getTslManager()->getTslTrustedCertificateStore(TslMode::TSL, std::nullopt).getStore());
-    ASSERT_NE(nullptr, serviceContext.getTslManager()->getTslTrustedCertificateStore(TslMode::BNA, std::nullopt).getStore());
+    ASSERT_NE(nullptr, serviceContext.getTslManager().getTslTrustedCertificateStore(TslMode::TSL, std::nullopt).getStore());
+    ASSERT_NE(nullptr, serviceContext.getTslManager().getTslTrustedCertificateStore(TslMode::BNA, std::nullopt).getStore());
 }

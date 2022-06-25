@@ -6,12 +6,11 @@
 #ifndef ERP_PROCESSING_CONTEXT_ENROLMENTHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_ENROLMENTHELPER_HXX
 
-#include "erp/tpm/Tpm.hxx"
-#include "erp/util/SafeString.hxx"
 #include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/production/HsmRawSession.hxx"
-#include "erp/client/HttpsClient.hxx"
+#include "erp/tpm/Tpm.hxx"
+#include "erp/util/SafeString.hxx"
 
 
 namespace hsmclient {
@@ -37,32 +36,14 @@ public:
     virtual Tpm::QuoteOutput getQuote (Tpm::QuoteInput&& input, const std::string& message) = 0;
 };
 
-
-/**
- * This class is not used in production. It is used in tests and for the blob-db-initialization tool.
- */
-class TpmProxyApi : public TpmProxy
-{
-public:
-    virtual Tpm::EndorsementKeyOutput getEndorsementKey (void) override;
-    virtual Tpm::AttestationKeyOutput getAttestationKey (bool isEnrolmentActive = false) override;
-    virtual Tpm::AuthenticateCredentialOutput authenticateCredential (Tpm::AuthenticateCredentialInput&& input) override;
-    virtual Tpm::QuoteOutput getQuote (Tpm::QuoteInput&& input, const std::string& message) override;
-
-private:
-    HttpsClient createClient (void);
-    Header createHeader (const HttpMethod method, std::string&& target);
-};
-
-
 class TpmProxyDirect : public TpmProxy
 {
 public:
     TpmProxyDirect (BlobCache& blobCache);
-    virtual Tpm::EndorsementKeyOutput getEndorsementKey (void) override;
-    virtual Tpm::AttestationKeyOutput getAttestationKey (bool isEnrolmentActive = false) override;
-    virtual Tpm::AuthenticateCredentialOutput authenticateCredential (Tpm::AuthenticateCredentialInput&& input) override;
-    virtual Tpm::QuoteOutput getQuote (Tpm::QuoteInput&& input, const std::string& message) override;
+    Tpm::EndorsementKeyOutput getEndorsementKey (void) override;
+    Tpm::AttestationKeyOutput getAttestationKey (bool isEnrolmentActive = false) override;
+    Tpm::AuthenticateCredentialOutput authenticateCredential (Tpm::AuthenticateCredentialInput&& input) override;
+    Tpm::QuoteOutput getQuote (Tpm::QuoteInput&& input, const std::string& message) override;
 
 private:
     BlobCache& mBlobCache;

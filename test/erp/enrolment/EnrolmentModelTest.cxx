@@ -47,7 +47,7 @@ TEST(EnrolmentModelTest, HasValue)
     EXPECT_FALSE(model.hasValue("/invalid"));
 }
 
-TEST(EnrolmentModelTest, GetString)
+TEST(EnrolmentModelTest, GetString)//NOLINT(readability-function-cognitive-complexity)
 {
     EnrolmentModel model{json};
 
@@ -59,7 +59,7 @@ TEST(EnrolmentModelTest, GetString)
     EXPECT_THROW(model.getString("/invalid"), ErpException);
 }
 
-TEST(EnrolmentModelTest, GetSafeString)
+TEST(EnrolmentModelTest, GetSafeString)//NOLINT(readability-function-cognitive-complexity)
 {
     EnrolmentModel model{json};
 
@@ -71,7 +71,7 @@ TEST(EnrolmentModelTest, GetSafeString)
     EXPECT_THROW(model.getString("/invalid"), ErpException);
 }
 
-TEST(EnrolmentModelTest, GetInt64)
+TEST(EnrolmentModelTest, GetInt64)//NOLINT(readability-function-cognitive-complexity)
 {
     EnrolmentModel model{json};
 
@@ -90,7 +90,7 @@ TEST(EnrolmentModelTest, GetInt64)
     EXPECT_THROW(model.getInt64("/invalid"), ErpException);
 }
 
-TEST(EnrolmentModelTest, GetDecodedString)
+TEST(EnrolmentModelTest, GetDecodedString)//NOLINT(readability-function-cognitive-complexity)
 {
     EnrolmentModel model{json};
 
@@ -102,7 +102,7 @@ TEST(EnrolmentModelTest, GetDecodedString)
     EXPECT_THROW(model.getDecodedString("/invalid"), ErpException);
 }
 
-TEST(EnrolmentModelTest, GetSizeTVector)
+TEST(EnrolmentModelTest, GetSizeTVector)//NOLINT(readability-function-cognitive-complexity)
 {
     EnrolmentModel model{json};
 
@@ -117,7 +117,7 @@ TEST(EnrolmentModelTest, GetSizeTVector)
     ASSERT_THROW(model.getOptionalSizeTVector("/first"), ErpException);
 }
 
-TEST(EnrolmentModelTest, GetErpVector)
+TEST(EnrolmentModelTest, GetErpVector)//NOLINT(readability-function-cognitive-complexity)
 {
     EnrolmentModel model{json};
 
@@ -130,11 +130,11 @@ TEST(EnrolmentModelTest, GetErpVector)
     EXPECT_THROW(model.getErpVector("/invalid-vector"), ErpException);
 }
 
-TEST(EnrolmentModelTest, Setter)
+TEST(EnrolmentModelTest, Setter)//NOLINT(readability-function-cognitive-complexity)
 {
     {
         EnrolmentModel model;
-        EXPECT_TRUE(model.serializeToString() == "");
+        EXPECT_TRUE(model.serializeToString().empty());
 
         model.set("/set-one", "1");
         EXPECT_EQ(model.getString("/set-one"), "1");

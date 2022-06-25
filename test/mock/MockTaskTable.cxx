@@ -118,14 +118,14 @@ void MockTaskTable::activateTask(const model::PrescriptionId& taskId,
 
 void MockTaskTable::updateTask(const model::PrescriptionId& taskId,
                               const db_model::EncryptedBlob& accessCode,
-                              int32_t keyGenerationId,
+                              BlobId blobId,
                               const db_model::Blob& salt)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
     Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
     auto& taskRow = taskRowIt->second;
     taskRow.accessCode = accessCode;
-    taskRow.taskKeyBlobId = keyGenerationId;
+    taskRow.taskKeyBlobId = blobId;
     taskRow.salt = salt;
 }
 
@@ -325,6 +325,20 @@ MockTaskTable::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& req
     }
 
     return result;
+}
+
+std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
+MockTaskTable::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) const
+{
+    const auto& rowIt = mTasks.find(taskId.toDatabaseId());
+    ErpExpect(rowIt != mTasks.end(), HttpStatus::NotFound, "No such task: " + taskId.toString());
+    const auto& row = rowIt->second;
+    ErpExpect(row.chargeItem.has_value(), HttpStatus::NotFound, "No charge item exists for task " + taskId.toString());
+
+    const auto task = select(taskId.toDatabaseId(),
+                {prescription_id, kvnr, last_modified, authored_on, expiry_date, accept_date, status, salt,
+                task_key_blob_id, access_code, secret, healthcare_provider_prescription, receipt});
+    return std::make_tuple(task, row.chargeItem.value(), row.dispenseItem.value());
 }
 
 std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>

@@ -48,7 +48,8 @@ private:
         }
         for (const auto& element: def.elements())
         {
-            verifyElement(def, element);
+            Expect3(element != nullptr, "ElementDefinition must not be null.", std::logic_error);
+            verifyElement(def, *element);
         }
     }
 
@@ -83,7 +84,7 @@ private:
         {
             try
             {
-                (void)mRepo.resolveContentReference(element.contentReference());
+                (void) mRepo.resolveContentReference(element);
             }
             catch (const std::logic_error&)
             {
@@ -140,9 +141,10 @@ FhirStructureRepository::findTypeById(const std::string& typeName) const
 }
 
 FhirStructureRepository::ContentReferenceResolution
-FhirStructureRepository::resolveContentReference(const std::string_view& contentReference) const
+FhirStructureRepository::resolveContentReference(const FhirElement& element) const
 {
     using namespace std::string_literals;
+    const auto& contentReference = element.contentReference();
     auto dot = contentReference.find('.');
     Expect3(dot != std::string::npos, "Missing dot in contentReference: "s.append(contentReference) , std::logic_error);
     const auto& elementName = contentReference.substr(1); // remove prefix '#'
@@ -152,18 +154,19 @@ FhirStructureRepository::resolveContentReference(const std::string_view& content
             "Failed to find referenced type (" + baseTypeId + ") for: "s.append(contentReference),
             std::logic_error);
     const auto& baseElements = baseType->elements();
-    const auto& element = find_if(baseElements.begin(), baseElements.end(),
-            [&](const FhirElement& element)
-            {
-                return element.name() == elementName;
-            });
-    Expect3(element != baseElements.end(),
-            "Element referenced Element not found: "s.append(contentReference), std::logic_error);
-    auto* elementType = findTypeById(element->typeId());
-    Expect3(elementType != nullptr,
-            "Failed to resolve type of referenced element: " + element->name(), std::logic_error);
-    auto elementIndex = gsl::narrow<size_t>(element - baseElements.begin());
-    return {*baseType, *elementType, elementIndex, *element};
+    const auto& refElement = find_if(baseElements.begin(), baseElements.end(),
+                [&](const std::shared_ptr<const FhirElement>& element) {
+                    return element->name() == elementName;
+                });
+    Expect3(refElement != baseElements.end() && *refElement != nullptr,
+            "referenced Element not found: "s.append(contentReference),
+            std::logic_error);
+    const auto* refElementType = findTypeById((*refElement)->typeId());
+    Expect3(refElementType != nullptr, "Failed to resolve type of referenced element: " + (*refElement)->name(),
+            std::logic_error);
+    auto elementIndex = gsl::narrow<size_t>(refElement - baseElements.begin());
+    auto newRefElement = FhirElement::Builder{**refElement}.isArray(element.isArray()).getAndReset();
+    return {*baseType, *refElementType, elementIndex, std::move(newRefElement)};
 }
 
 
@@ -215,4 +218,3 @@ void FhirStructureRepository::verify()
 {
     Verifier{*this}.verify();
 }
-

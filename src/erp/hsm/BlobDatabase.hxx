@@ -26,7 +26,7 @@ class BlobDatabase
 public:
     struct Entry
     {
-        BlobType type;
+        BlobType type{};
         ErpVector name;
         ErpBlob blob;
         std::optional<std::chrono::system_clock::time_point> expiryDateTime;

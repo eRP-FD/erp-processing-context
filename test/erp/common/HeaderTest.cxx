@@ -21,7 +21,7 @@ TEST_F(HeaderTest, EmptyHeaderFields)
 }
 
 
-TEST_F(HeaderTest, FilledHeaderFields)
+TEST_F(HeaderTest, FilledHeaderFields)//NOLINT(readability-function-cognitive-complexity)
 {
     Header::keyValueMap_t headerFields;
     headerFields.insert({"key1", "value1"});
@@ -68,7 +68,7 @@ TEST_F(HeaderTest, addRemoveHeaderField)
 
 namespace
 {
-    void checkInvariantsCommon(Header& header)
+    void checkInvariantsCommon(Header& header)//NOLINT(readability-function-cognitive-complexity)
     {
         ASSERT_NO_THROW(header.checkInvariants());
         header.setStatus(HttpStatus::Continue);
@@ -139,7 +139,7 @@ TEST_F(HeaderTest, serialize)
     ASSERT_TRUE((fields=="key1: value1\r\nkey2: value2\r\n") || (fields=="key2: value2\r\nkey1: value1\r\n"));
 }
 
-TEST_F(HeaderTest, acceptHeader)
+TEST_F(HeaderTest, acceptHeader)//NOLINT(readability-function-cognitive-complexity)
 {
     Header header;
     header.addHeaderField(Header::Accept, "text/html, application/xhtml+xml, application/xml;q=0.9,*/*;q=0.8");
@@ -161,14 +161,14 @@ TEST_F(HeaderTest, moveConstructor)
     header.setStatus(HttpStatus::OK);
 
     Header header2 (std::move(header));
-    EXPECT_FALSE(header.hasHeader("test"));
+    EXPECT_FALSE(header.hasHeader("test"));//NOLINT[bugprone-use-after-move,hicpp-invalid-access-moved]
 
     EXPECT_EQ(header2.status(), HttpStatus::OK);
     ASSERT_TRUE(header2.hasHeader("test"));
     EXPECT_EQ(header2.header("test"), "value");
 }
 
-TEST_F(HeaderTest, keepAlive1_0)
+TEST_F(HeaderTest, keepAlive1_0)//NOLINT(readability-function-cognitive-complexity)
 {
     Header header(HttpMethod::GET, "/", Header::Version_1_0, {}, HttpStatus::Unknown);
 
@@ -200,7 +200,7 @@ TEST_F(HeaderTest, keepAlive1_0)
     }
 }
 
-TEST_F(HeaderTest, keepAlive1_1)
+TEST_F(HeaderTest, keepAlive1_1)//NOLINT(readability-function-cognitive-complexity)
 {
     Header header(HttpMethod::GET, "/", Header::Version_1_1, {}, HttpStatus::Unknown);
 

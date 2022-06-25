@@ -186,7 +186,7 @@ Certificate::Certificate (shared_X509 x509Certificate)
 
 Certificate Certificate::fromBinaryDer(const std::string& binaryDer)
 {
-    auto derData = reinterpret_cast<const unsigned char*>(binaryDer.data());
+    const auto* derData = reinterpret_cast<const unsigned char*>(binaryDer.data());
     auto certificate = shared_X509::make(
         d2i_X509(nullptr, &derData, static_cast<int>(binaryDer.size())));
     throwIfNot(
@@ -276,11 +276,11 @@ std::string Certificate::toBinaryDer(void) const
     const std::size_t length = BIO_get_mem_data(certificateMemory, &data);
     throwIfNot(data != nullptr && length != 0, "can not get data from certificate");
 
-    return std::string(data, length);
+    return {data, length};
 }
 
 
-Certificate::Certificate (const Certificate& other)
+Certificate::Certificate (const Certificate& other) // NOLINT(misc-no-recursion)
     : mX509Certificate(other.mX509Certificate),
       mNextCertificate()
 {
@@ -342,7 +342,7 @@ const Certificate* Certificate::getNextCertificate (void) const
 
 Certificate::Builder Certificate::build (void)
 {
-    return Builder();
+    return {};
 }
 
 
@@ -584,7 +584,7 @@ Certificate Certificate::createSelfSignedCertificateMock (
 
 Certificate Certificate::createCertificateMock (
     const Certificate& rootCertificate,
-    const shared_EVP_PKEY& rootKeyPair,
+    const shared_EVP_PKEY& rootCertificatePrivateKey,
     const shared_EVP_PKEY& keyPair)
 {
     auto certificate = Certificate::build()
@@ -600,14 +600,14 @@ Certificate Certificate::createCertificateMock (
         .build();
     showAllOpenSslErrors();
 
-    auto rootCertificatePublicKey = rootKeyPair;
-    const int status = EVP_PKEY_copy_parameters(rootCertificatePublicKey, rootKeyPair);
+    auto rootCertificatePublicKey = rootCertificatePrivateKey;
+    const int status = EVP_PKEY_copy_parameters(rootCertificatePublicKey, rootCertificatePrivateKey);
     throwIfNot(
         status == 1,
         "can not copy root key parameters");
 
     const int signatureLength = X509_sign(certificate.toX509(),
-                                          rootKeyPair.removeConst(),
+                                          rootCertificatePrivateKey.removeConst(),
                                           EVP_sha256());
     throwIfNot(
         signatureLength > 0,

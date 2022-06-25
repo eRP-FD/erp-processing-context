@@ -70,7 +70,7 @@ TEST_F(ErpTypesTest, ErpArray_create_failForExcludedStringTerminator)
 }
 
 
-TEST_F(ErpTypesTest, ErpArray_create_successForIncludedZeroByte)
+TEST_F(ErpTypesTest, ErpArray_create_successForIncludedZeroByte)//NOLINT(readability-function-cognitive-complexity)
 {
     // Provide the string_view constructor with an explicit length that includes the zero byte which now is not
     // a string terminator anymore. Rather "test\0" is just some arbitrary binary data that happens to have a

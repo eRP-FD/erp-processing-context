@@ -12,7 +12,7 @@ class Erp5833Test : public ErpWorkflowTest
 
 };
 
-TEST_F(Erp5833Test, run)
+TEST_F(Erp5833Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string kvnr;
     ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
@@ -20,7 +20,7 @@ TEST_F(Erp5833Test, run)
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
     std::string accessCode{task->accessCode()};
-    std::string qesBundle = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
+    const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
     std::optional<model::Bundle> taskBundle;
     ASSERT_NO_FATAL_FAILURE(taskBundle = taskAccept(task->prescriptionId(), accessCode));

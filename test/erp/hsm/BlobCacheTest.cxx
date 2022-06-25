@@ -11,6 +11,8 @@
 #include <atomic>
 #include <test/util/TestUtils.hxx>
 
+using namespace ::std::chrono_literals;
+
 namespace {
     std::atomic_int getBlobCallcount = 0;
     std::atomic_int getAllBlobsCallcount = 0;
@@ -22,7 +24,7 @@ class TestBlobDatabase : public BlobDatabase
 public:
     std::vector<Entry> mEntries;
 
-    virtual Entry getBlob (
+    Entry getBlob (
         BlobType type,
         BlobId id) const override
     {
@@ -34,7 +36,7 @@ public:
         Fail("unknwon blob");
     }
 
-    virtual std::vector<Entry> getAllBlobsSortedById (void) const override
+    std::vector<Entry> getAllBlobsSortedById (void) const override
     {
         getAllBlobsCallcount++;
         auto entries = mEntries;
@@ -48,7 +50,7 @@ public:
         return entries;
     }
 
-    virtual BlobId storeBlob (Entry&& newEntry) override
+    BlobId storeBlob (Entry&& newEntry) override
     {
         for (const auto& entry : mEntries)
             Expect(entry.name != newEntry.name, "blob with the same name already in the database");
@@ -58,7 +60,7 @@ public:
         return id;
     }
 
-    virtual void deleteBlob (const BlobType type, const ErpVector& name) override
+    void deleteBlob (const BlobType type, const ErpVector& name) override
     {
         for (auto iterator=mEntries.begin(); iterator!=mEntries.end(); ++iterator)
             if (iterator->name == name)
@@ -70,7 +72,7 @@ public:
         Fail("blob not found");
     }
 
-    virtual std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&&) const override
+    std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&&) const override
     {
         return {};
     }
@@ -112,13 +114,13 @@ public:
             {}, {}, {}, {}});
     }
 
-    TestBlobDatabase* database;
+    TestBlobDatabase* database = nullptr;
     std::unique_ptr<BlobCache> cache;
 };
 
 
 
-TEST_F(BlobCacheTest, getBlob_success)
+TEST_F(BlobCacheTest, getBlob_success) // NOLINT(readability-function-cognitive-complexity)
 {
     database->mEntries.emplace_back(createTestBlob());
 
@@ -142,34 +144,143 @@ TEST_F(BlobCacheTest, getBlob_success)
     EXPECT_EQ(getAllBlobsCallcount, 1);
 }
 
+TEST_F(BlobCacheTest, getBlob_allowUsedInvalidBlobs)// NOLINT(readability-function-cognitive-complexity)
+{
+    database->mEntries.emplace_back(BlobDatabase::Entry({::BlobType::TaskKeyDerivation,
+                                                         ::ErpVector::create("blob-key"),
+                                                         ::ErpBlob{"blob-data", 3},
+                                                         ::std::chrono::system_clock::now() - 5min,
+                                                         {},
+                                                         {},
+                                                         3,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
 
-TEST_F(BlobCacheTest, getBlob_failForMissingBlob)
+    ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation, 3));
+    ASSERT_NO_THROW(cache->getBlob(3));
+}
+
+TEST_F(BlobCacheTest, getBlob_ignoreNewerInvalidBlobs)// NOLINT(readability-function-cognitive-complexity)
+{
+    database->mEntries.emplace_back(createTestBlob());
+    database->mEntries.emplace_back(BlobDatabase::Entry({::BlobType::TaskKeyDerivation,
+                                                         ::ErpVector::create("blob-key"),
+                                                         ::ErpBlob{"blob-data", 3},
+                                                         {},
+                                                         ::std::chrono::system_clock::now() + 5min,
+                                                         {},
+                                                         3,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
+
+    ASSERT_NO_THROW(cache->getBlob(3));
+
+    EXPECT_NO_THROW(cache->getBlob(::BlobType::TaskKeyDerivation));
+    EXPECT_EQ(cache->getBlob(::BlobType::TaskKeyDerivation).id, 2);
+}
+
+TEST_F(BlobCacheTest, getBlob_failForMissingBlob)// NOLINT(readability-function-cognitive-complexity)
 {
     // Ask for a blob that is NOT in the database.
-    ASSERT_ANY_THROW(
-        cache->getBlob(BlobType::TaskKeyDerivation, 12));
+    ASSERT_ANY_THROW(cache->getBlob(::BlobType::CommunicationKeyDerivation));
+    ASSERT_ANY_THROW(cache->getBlob(::BlobType::CommunicationKeyDerivation, 2));
+    ASSERT_ANY_THROW(cache->getBlob(::BlobType::TaskKeyDerivation, 12));
     ASSERT_ANY_THROW(cache->getBlob(12));
 }
 
 
-TEST_F(BlobCacheTest, getBlob_failForInvalidBlob)
+TEST_F(BlobCacheTest, getBlob_failForInvalidBlob)// NOLINT(readability-function-cognitive-complexity)
 {
     database->mEntries.emplace_back(
-        BlobDatabase::Entry({
-            BlobType::TaskKeyDerivation,
-            ErpVector::create("blob-key"),
-            ErpBlob{"blob-data", 3},
-            std::chrono::system_clock::now() - std::chrono::seconds(1), // blob expired a second ago
-            {},
-            {},
-            2,
-            {}, {}, {}, {}}));
+        BlobDatabase::Entry({BlobType::TaskKeyDerivation,
+                             ErpVector::create("blob-key"),
+                             ErpBlob{"blob-data", 3},
+                             std::chrono::system_clock::now() - std::chrono::seconds(1),// blob expired a second ago
+                             {},
+                             {},
+                             2,
+                             {},
+                             {},
+                             {},
+                             {}}));
 
     EXPECT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation, 2));
     EXPECT_NO_THROW(cache->getBlob(2));
     EXPECT_ANY_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
 }
 
+TEST_F(BlobCacheTest, getEciesKeysSingle)// NOLINT(readability-function-cognitive-complexity)
+{
+    ASSERT_ANY_THROW(cache->getEciesKeys());
+
+    database->mEntries.emplace_back(BlobDatabase::Entry({::BlobType::EciesKeypair,
+                                                         ::ErpVector::create("blob-key"),
+                                                         ::ErpBlob{"blob-data", 3},
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         1,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
+
+    ASSERT_NO_THROW(cache->getEciesKeys());
+    const auto eciesKeys = cache->getEciesKeys();
+    ASSERT_EQ(eciesKeys.latest.id, 1);
+    ASSERT_FALSE(eciesKeys.fallback);
+}
+
+TEST_F(BlobCacheTest, getEciesKeysMultiple)// NOLINT(readability-function-cognitive-complexity)
+{
+    ASSERT_ANY_THROW(cache->getEciesKeys());
+
+    database->mEntries.emplace_back(BlobDatabase::Entry({::BlobType::EciesKeypair,
+                                                         ::ErpVector::create("blob-key-1"),
+                                                         ::ErpBlob{"blob-data", 3},
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         1,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
+
+    database->mEntries.emplace_back(BlobDatabase::Entry({::BlobType::EciesKeypair,
+                                                         ::ErpVector::create("blob-key-2"),
+                                                         ::ErpBlob{"blob-data", 3},
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         2,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
+
+    database->mEntries.emplace_back(BlobDatabase::Entry({::BlobType::EciesKeypair,
+                                                         ::ErpVector::create("blob-key-3"),
+                                                         ::ErpBlob{"blob-data", 3},
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         3,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
+
+    ASSERT_NO_THROW(cache->getEciesKeys());
+    const auto eciesKeys = cache->getEciesKeys();
+    ASSERT_EQ(eciesKeys.latest.id, 3);
+    ASSERT_TRUE(eciesKeys.fallback);
+    ASSERT_EQ(eciesKeys.fallback.value().id, 2);
+}
 
 TEST_F(BlobCacheTest, storeBlob_success)
 {
@@ -204,13 +315,12 @@ TEST_F(BlobCacheTest, storeBlob_failForSecondStore)
         entry.type = BlobType::TaskKeyDerivation;
         entry.name = ErpVector::create("blob-key");
         entry.blob = ErpBlob{"blob-data", 4};
-        ASSERT_ANY_THROW(
-            cache->storeBlob(std::move(entry)));
+        ASSERT_ANY_THROW(cache->storeBlob(std::move(entry)));
     }
 }
 
 
-TEST_F(BlobCacheTest, deleteBlob_success)
+TEST_F(BlobCacheTest, deleteBlob_success)// NOLINT(readability-function-cognitive-complexity)
 {
     // Add a blob to the database that is to be deleted, then pull it into the cache.
     database->mEntries.emplace_back(createTestBlob("blob-key", 2));
@@ -236,86 +346,87 @@ TEST_F(BlobCacheTest, deleteBlob_failForMissingBlob)
     const auto entry = cache->getBlob(BlobType::TaskKeyDerivation, 2);
     ASSERT_NE(entry.id, static_cast<BlobId>(0));
 
-    ASSERT_ANY_THROW(
-        cache->deleteBlob(BlobType::TaskKeyDerivation, ErpVector::create("other-blob-key")));
+    ASSERT_ANY_THROW(cache->deleteBlob(BlobType::TaskKeyDerivation, ErpVector::create("other-blob-key")));
 }
 
-
-
-TEST_F(BlobCacheTest, updateAfterKeyExpired)
+TEST_F(BlobCacheTest, updateAfterKeyExpired)// NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono;
-    using namespace std::chrono_literals;
     auto expiresAt = system_clock::now() + 200ms;
-    database->mEntries.emplace_back(
-        BlobDatabase::Entry({
-            BlobType::TaskKeyDerivation,
-            ErpVector::create("blob-key"),
-            ErpBlob{"blob-data", 3},
-            expiresAt,
-            {},
-            {},
-            2,
-            {}, {}, {}, {}}));
+    database->mEntries.emplace_back(BlobDatabase::Entry({BlobType::TaskKeyDerivation,
+                                                         ErpVector::create("blob-key"),
+                                                         ErpBlob{"blob-data", 3},
+                                                         expiresAt,
+                                                         {},
+                                                         {},
+                                                         2,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
     ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
-    waitFor([&]{ return system_clock::now() > expiresAt;});
+    waitFor([&] {
+        return system_clock::now() > expiresAt;
+    });
     ASSERT_ANY_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
     expiresAt = system_clock::now() + 5s;
-    database->mEntries.emplace_back(
-        BlobDatabase::Entry({
-            BlobType::TaskKeyDerivation,
-            ErpVector::create("blob-key"),
-            ErpBlob{"blob-data", 3},
-            expiresAt,
-            {},
-            {},
-            3,
-            {}, {}, {}, {}}));
+    database->mEntries.emplace_back(BlobDatabase::Entry({BlobType::TaskKeyDerivation,
+                                                         ErpVector::create("blob-key"),
+                                                         ErpBlob{"blob-data", 3},
+                                                         expiresAt,
+                                                         {},
+                                                         {},
+                                                         3,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
     ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
 }
 
 
-TEST_F(BlobCacheTest, updateBeforeKeyExpired)
+TEST_F(BlobCacheTest, updateBeforeKeyExpired)// NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono;
-    using namespace std::chrono_literals;
     auto expiresAt = system_clock::now() + 5s;
-    database->mEntries.emplace_back(
-        BlobDatabase::Entry({
-            BlobType::TaskKeyDerivation,
-            ErpVector::create("blob-key"),
-            ErpBlob{"blob-data", 3},
-            expiresAt,
-            {},
-            {},
-            2,
-            {}, {}, {}, {}}));
+    database->mEntries.emplace_back(BlobDatabase::Entry({BlobType::TaskKeyDerivation,
+                                                         ErpVector::create("blob-key"),
+                                                         ErpBlob{"blob-data", 3},
+                                                         expiresAt,
+                                                         {},
+                                                         {},
+                                                         2,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
     ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
     expiresAt = system_clock::now() + 5s;
-    database->mEntries.emplace_back(
-        BlobDatabase::Entry({
-            BlobType::TaskKeyDerivation,
-            ErpVector::create("blob-key"),
-            ErpBlob{"blob-data", 3},
-            expiresAt,
-            {},
-            {},
-            3,
-            {},{}, {}, {}}));
+    database->mEntries.emplace_back(BlobDatabase::Entry({BlobType::TaskKeyDerivation,
+                                                         ErpVector::create("blob-key"),
+                                                         ErpBlob{"blob-data", 3},
+                                                         expiresAt,
+                                                         {},
+                                                         {},
+                                                         3,
+                                                         {},
+                                                         {},
+                                                         {},
+                                                         {}}));
     boost::asio::io_context ioContext;
     cache->startRefresher(ioContext, 500ms);
-    std::thread contextThread{[&]{ ioContext.run();}};
-    EXPECT_NO_FATAL_FAILURE(
-        waitFor([&]{
-            auto entry = cache->getBlob(BlobType::TaskKeyDerivation);
-            return entry.id == 3;
-        });
-    );
+    std::thread contextThread{[&] {
+        ioContext.run();
+    }};
+    EXPECT_NO_FATAL_FAILURE(waitFor([&] {
+                                auto entry = cache->getBlob(BlobType::TaskKeyDerivation);
+                                return entry.id == 3;
+                            }););
     ioContext.stop();
     contextThread.join();
 }
 
-TEST_F(BlobCacheTest, filterPcrHash)
+TEST_F(BlobCacheTest, filterPcrHash)// NOLINT(readability-function-cognitive-complexity)
 {
     const auto name = ::ErpVector::create("blob-key");
     cache->storeBlob(

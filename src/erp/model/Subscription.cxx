@@ -21,7 +21,6 @@ constexpr std::string_view recipient = "recipient";
 
 constexpr std::string_view statusRequested = "requested";
 constexpr std::string_view statusActive = "active";
-constexpr std::string_view statusUnknown = "unknown";
 
 const rapidjson::Pointer resourceTypePointer("/resourceType");
 const rapidjson::Pointer idPointer("/id");

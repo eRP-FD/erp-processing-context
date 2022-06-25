@@ -10,6 +10,7 @@
 #include "erp/util/FileHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <memory>
 #include <test_config.h>
@@ -28,10 +29,10 @@ TEST(TrustStoreTest, TrustStoreTslSignerCaHandlingNewSet)
 {
     EnvironmentVariableGuard mainCaDerPathGuard(
         "ERP_TSL_INITIAL_CA_DER_PATH",
-        std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
     EnvironmentVariableGuard newCaDerPathGuard(
         "ERP_TSL_INITIAL_CA_DER_PATH_NEW",
-        std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der"));
 
     TrustStore trustStore(TslMode::TSL);
 
@@ -45,9 +46,9 @@ TEST(TrustStoreTest, TrustStoreTslSignerCaHandlingNewSet)
 TEST(TrustStoreTest, TrustStoreTslSignerCaHandlingNewStartFutureIgnored)
 {
     EnvironmentVariableGuard mainCaDerPathGuard("ERP_TSL_INITIAL_CA_DER_PATH",
-                                                std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+                                                ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
     EnvironmentVariableGuard newCaDerPathGuard("ERP_TSL_INITIAL_CA_DER_PATH_NEW",
-                                               std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");
+                                               ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der"));
     EnvironmentVariableGuard newCaDerPathGuardStart("ERP_TSL_INITIAL_CA_DER_PATH_NEW_START",
                                                     "2041-01-01T00:00:00Z");
 
@@ -64,10 +65,10 @@ TEST(TrustStoreTest, TrustStoreTslSignerCaHandlingNewStartPastSet)
 {
     EnvironmentVariableGuard mainCaDerPathGuard(
         "ERP_TSL_INITIAL_CA_DER_PATH",
-        std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
     EnvironmentVariableGuard newCaDerPathGuard(
         "ERP_TSL_INITIAL_CA_DER_PATH_NEW",
-        std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der"));
     EnvironmentVariableGuard newCaDerPathGuardStart("ERP_TSL_INITIAL_CA_DER_PATH_NEW_START",
                                                     "2020-01-01T00:00:00Z");
 

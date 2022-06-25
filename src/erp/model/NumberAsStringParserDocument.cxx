@@ -108,7 +108,7 @@ std::string model::NumberAsStringParserDocument::serializeToJsonString() const
     rj::StringBuffer buffer;
     NumberAsStringParserWriter<rj::StringBuffer> writer(buffer);
     Accept(writer);
-    return std::string(buffer.GetString());
+    return {buffer.GetString()};
 }
 
 std::string NumberAsStringParserDocument::pointerToString(const rj::Pointer& pointer)
@@ -131,7 +131,7 @@ std::string_view NumberAsStringParserDocument::getStringValueFromValue(const rj:
 
 std::string_view NumberAsStringParserDocument::getStringValueFromPointer(const rj::Pointer& pointer) const
 {
-    auto* value = pointer.Get(*this);
+    const auto* value = pointer.Get(*this);
     ModelExpect(value != nullptr, pointerToString(pointer) + " is not existing");
     ModelExpect(value->IsString(), "value is not a string");
     ModelExpect(value->GetStringLength() > 0, "at least prefix character expected");
@@ -484,7 +484,7 @@ std::optional<std::string_view> NumberAsStringParserDocument::findStringInArray(
     const auto memberAndPosition = findMemberInArray(arrayPointer, searchKey, searchValue, resultKeyPointer, ignoreValueCase);
     if (memberAndPosition.has_value())
     {
-        const auto member = std::get<0>(memberAndPosition.value());
+        const auto *const member = std::get<0>(memberAndPosition.value());
         if (member != nullptr && member->IsString())
         {
             return NumberAsStringParserDocument::getStringValueFromValue(member);
@@ -558,7 +558,7 @@ const rj::Value* NumberAsStringParserDocument::findMemberInArray(
 
 const rj::Value* NumberAsStringParserDocument::getMemberInArray(const rj::Pointer& pointerToArray, size_t index) const
 {
-    auto* array = pointerToArray.Get(*this);
+    const auto* array = pointerToArray.Get(*this);
     if (array == nullptr || array->Size() <= index)
     {
         return nullptr;
@@ -650,6 +650,6 @@ rj::Document& NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(r
     document.Accept(writer);
     document.SetObject();
     rj::StringStream s(buffer.GetString());
-    static_cast<NumberAsStringParserDocument&>(document).ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s);
+    document.ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s);
     return document;
 }

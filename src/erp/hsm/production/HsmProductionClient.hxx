@@ -8,6 +8,7 @@
 
 #include "erp/hsm/HsmClient.hxx"
 #include "erp/hsm/HsmException.hxx"
+#include "erp/hsm/HsmEciesCurveMismatchException.hxx"
 #include "erp/util/ExceptionWrapper.hxx"
 
 
@@ -16,6 +17,7 @@
 #else
     namespace hsmclient {
     #include <hsmclient/ERP_Client.h>
+    #include <hsmclient/ERP_Error.h>
     }
 #endif
 
@@ -43,41 +45,41 @@ class HsmProductionClient
 public:
     ::Nonce getNonce(const ::HsmRawSession& session, uint32_t input) override;
 
-    virtual ErpBlob getTeeToken(
+    ErpBlob getTeeToken(
         const HsmRawSession& session,
         TeeTokenRequestInput&& input) override;
 
-    virtual DeriveKeyOutput deriveTaskKey(
+    DeriveKeyOutput deriveTaskKey(
         const HsmRawSession& session,
         DeriveKeyInput&& input) override;
 
-    virtual DeriveKeyOutput deriveAuditKey(
+    DeriveKeyOutput deriveAuditKey(
         const HsmRawSession& session,
         DeriveKeyInput&& input) override;
 
-    virtual DeriveKeyOutput deriveCommsKey(
+    DeriveKeyOutput deriveCommsKey(
         const HsmRawSession& session,
         DeriveKeyInput&& input) override;
 
-    virtual ErpArray<Aes128Length> doVauEcies128(
+    ErpArray<Aes128Length> doVauEcies128(
         const HsmRawSession& session,
         DoVAUECIESInput&& input) override;
 
-    virtual SafeString getVauSigPrivateKey (
+    SafeString getVauSigPrivateKey (
         const HsmRawSession& session,
-        GetVauSigPrivateKeyInput&& arguments) override;
+        GetVauSigPrivateKeyInput&& input) override;
 
-    virtual ErpVector getRndBytes(
+    ErpVector getRndBytes(
         const HsmRawSession& session,
         size_t input) override;
 
-    virtual ErpArray<Aes256Length> unwrapHashKey(
+    ErpArray<Aes256Length> unwrapHashKey(
         const HsmRawSession& session,
         UnwrapHashKeyInput&& input) override;
 
     ::ParsedQuote parseQuote(const ::ErpVector& quote) const override;
 
-    virtual void reconnect (HsmRawSession& session) override;
+    void reconnect (HsmRawSession& session) override;
 
     static HsmRawSession connect (const HsmIdentity& identity);
     static void disconnect (HsmRawSession& session);
@@ -86,18 +88,24 @@ public:
     static std::string hsmErrorIndexString (const uint32_t errorCode);
     static std::string hsmErrorDetails (const uint32_t errorCode);
     static std::string hsmErrorMessage (const size_t status, const uint32_t errorCode);
+private:
+    static HsmRawSession logon(const hsmclient::HSMSession& connectedSession,  const HsmIdentity& identity);
 };
 
-
-#define HsmExpectSuccess(response, message, timer)                                                 \
-    if (response.returnCode!=0)                                                                    \
-    {                                                                                              \
-        std::ostringstream s;                                                                      \
-        s << message << ": error " << HsmProductionClient::hsmErrorDetails(response.returnCode);   \
-        TVLOG(1) << "throwing HSM exception at " << __FILE__ << ':' << __LINE__ << ": " << s.str();\
-        timer.notifyFailure(s.str() + " at " + __FILE__ + ":" + std::to_string(__LINE__));         \
-        const auto origin = FileNameAndLineNumber({__FILE__,__LINE__});                            \
-        throw ExceptionWrapper<HsmException>::create(origin, s.str(), response.returnCode);        \
+#define HsmExpectSuccess(response, message, timer)                                                                     \
+    {                                                                                                                  \
+        if ((response).returnCode != 0)                                                                                \
+        {                                                                                                              \
+            std::ostringstream s;                                                                                      \
+            s << (message) << ": error " << HsmProductionClient::hsmErrorDetails((response).returnCode);               \
+            TVLOG(1) << "throwing HSM exception at " << __FILE__ << ':' << __LINE__ << ": " << s.str();                \
+            (timer).notifyFailure(s.str() + " at " + __FILE__ + ":" + std::to_string(__LINE__));                       \
+            const auto origin = FileNameAndLineNumber({__FILE__, __LINE__});                                           \
+            if ((response).returnCode == ERP_ERR_ECIES_CURVE_MISMATCH)                                                 \
+                throw ExceptionWrapper<HsmEciesCurveMismatchException>::create(origin, s.str(), (response).returnCode);\
+            else                                                                                                       \
+                throw ExceptionWrapper<HsmException>::create(origin, s.str(), (response).returnCode);                  \
+        }                                                                                                              \
     }
 
 

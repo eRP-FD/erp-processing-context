@@ -19,7 +19,7 @@ public:
 
 
 
-TEST_F(ClientRequestWriterTest, toString)
+TEST_F(ClientRequestWriterTest, toString)//NOLINT(readability-function-cognitive-complexity)
 {
     // Given.
     const std::string request =

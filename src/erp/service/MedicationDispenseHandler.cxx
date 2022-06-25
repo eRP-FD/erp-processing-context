@@ -9,7 +9,6 @@
 #include "erp/model/Bundle.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/server/context/ServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
@@ -102,9 +101,9 @@ Bundle GetAllMedicationDispenseHandler::createBundle(
     Bundle bundle(BundleType::searchset, ::model::ResourceBase::NoProfile);
     for (const auto& medicationDispense : medicationDispenses)
     {
-        std::string id(medicationDispense.id().toString());
+        const std::string urn = linkBase + "/" + medicationDispense.id().toString();
         bundle.addResource(
-            linkBase + "/" + id,
+            urn,
             {},
             Bundle::SearchMode::match,
             medicationDispense.jsonDocument());

@@ -132,6 +132,8 @@ endif()
 include(GNUInstallDirs)
 
 include(cmake/install_libs_for.cmake)
+
+include(cmake/generate_pki_test_data.cmake)
 #
 # build configuration for all erp build targets
 #
@@ -139,6 +141,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(ERP_WARNING_AS_ERROR OFF CACHE BOOL "Treat all warnings as errors")
+message(NOTICE "ERP_WARNING_AS_ERROR: ${ERP_WARNING_AS_ERROR}")
 # enable std::string support in RapidJSON across all targets
 add_compile_definitions(RAPIDJSON_HAS_STDSTRING=1)
 add_compile_definitions(RAPIDJSON_SCHEMA_VERBOSE=0)
@@ -155,6 +159,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_compile_options(-D_WIN32_WINNT=0x0601)
     add_compile_options(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
     add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
+    if(ERP_WARNING_AS_ERROR)
+        add_compile_options(/WX)
+    endif()
     #Workaround: Some 3rd party libraries (e.g. openssl) are compiled with built pdb debug info but the pdb file is not generated.
     add_link_options(-ignore:4099)
     #Workaround: Couldn't figure out how the following two libraries became part of the list of libs for the linker input.
@@ -163,7 +170,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 else()
     add_compile_options(-Wall) # This may require an additional -g3 to activate debug symbols for boost::beast
     add_compile_options(-Wextra -Wpedantic)
-    add_compile_options(-Werror)
+    if(ERP_WARNING_AS_ERROR)
+        add_compile_options(-Werror)
+    endif()
     # explicitly unset 'as-needed' which should be the linker default.
     # Ubuntu overrides the default in the compiler specs, but this makes relocating the libs pulled via conan very hard
     add_link_options(-Wl,--no-as-needed)

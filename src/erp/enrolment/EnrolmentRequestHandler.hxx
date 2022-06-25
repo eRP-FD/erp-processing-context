@@ -19,6 +19,8 @@ class EnrolmentRequestHandlerBase
 
 {
 public:
+    static constexpr ::std::string_view hashAlgorithm = "SHA256";
+
     static constexpr std::string_view requestAkName = "/akName";
     static constexpr std::string_view requestBlobData = "/blob/data";
     static constexpr std::string_view requestBlobGeneration = "/blob/generation";
@@ -54,9 +56,9 @@ public:
     /**
      * Not used for the enrolment service. Always returns Operation::UNKNOWN.
      */
-    virtual Operation getOperation (void) const override;
+    Operation getOperation (void) const override;
 
-    virtual void handleRequest (EnrolmentSession& session) override;
+    void handleRequest (EnrolmentSession& session) override;
 
 protected:
     virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) = 0;
@@ -68,7 +70,7 @@ class PutBlobHandler : public EnrolmentRequestHandlerBase
 protected:
     PutBlobHandler (BlobType blobType, std::string&& endpointDisplayname);
 
-    virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
 
 private:
     const BlobType mBlobType;
@@ -81,7 +83,7 @@ class DeleteBlobHandler : public EnrolmentRequestHandlerBase
 {
 protected:
     explicit DeleteBlobHandler (BlobType type, std::string&& endpointDisplayname);
-    virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+    EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
 
 private:
     const BlobType mBlobType;
@@ -98,7 +100,7 @@ namespace enrolment
     class GetEnclaveStatus : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
@@ -108,7 +110,7 @@ namespace enrolment
     class GetEndorsementKey : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
@@ -118,21 +120,21 @@ namespace enrolment
     class GetAttestationKey : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
     class PostAuthenticationCredential : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
     class PostGetQuote : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
@@ -153,7 +155,7 @@ namespace enrolment
     class PutKnownAttestationKey : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
@@ -167,7 +169,7 @@ namespace enrolment
     class PutKnownQuote : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
@@ -181,28 +183,28 @@ namespace enrolment
     class PutEciesKeypair : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
     class DeleteEciesKeypair : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
     class PutDerivationKey : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
 
     class DeleteDerivationKey : public EnrolmentRequestHandlerBase
     {
     protected:
-        virtual EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
+        EnrolmentModel doHandleRequest (EnrolmentSession& session) override;
     };
 
     class PutKvnrHashKey : public PutBlobHandler

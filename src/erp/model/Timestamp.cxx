@@ -54,7 +54,7 @@ namespace {
     tm gmTimeWrapper(const time_t* timer)
     {
         std::lock_guard lock(gmTimeMtx);
-        return *std::gmtime(timer);
+        return *std::gmtime(timer);//NOLINT(concurrency-mt-unsafe)
     }
 
     std::pair<bool, bool> evaluateTimeZone(
@@ -393,6 +393,12 @@ std::chrono::system_clock::time_point Timestamp::toChronoTimePoint () const
     ModelExpect(::std::chrono::duration_cast<::std::chrono::seconds>(mDateAndTime.time_since_epoch()).count() >= 0l,
                 "Timestamp is before start of epoch");
     return mDateAndTime;
+}
+
+
+std::time_t Timestamp::toTimeT () const
+{
+    return std::chrono::system_clock::to_time_t(toChronoTimePoint());
 }
 
 

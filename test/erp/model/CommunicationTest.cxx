@@ -24,7 +24,7 @@ CommunicationTest::CommunicationTest() :
 {
 }
 
-TEST_F(CommunicationTest, CreateInfoReqFromJson)
+TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -72,7 +72,7 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)
     EXPECT_NO_THROW((void)communication.serializeToXmlString());
 }
 
-TEST_F(CommunicationTest, CreateReplyFromJson)
+TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -120,7 +120,7 @@ TEST_F(CommunicationTest, CreateReplyFromJson)
     EXPECT_NO_THROW((void)communication.serializeToXmlString());
 }
 
-TEST_F(CommunicationTest, CreateDispReqFromJson)
+TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -171,7 +171,7 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)
     EXPECT_NO_THROW((void)communication.serializeToXmlString());
 }
 
-TEST_F(CommunicationTest, CreateRepresentativeFromJson)
+TEST_F(CommunicationTest, CreateRepresentativeFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -222,7 +222,7 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)
     EXPECT_NO_THROW((void)communication.serializeToXmlString());
 }
 
-TEST_F(CommunicationTest, InfoReqSetId)
+TEST_F(CommunicationTest, InfoReqSetId)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -257,7 +257,7 @@ TEST_F(CommunicationTest, InfoReqSetId)
     ASSERT_EQ(communication.id(), uuid2);
 }
 
-TEST_F(CommunicationTest, InfoReqSetSender)
+TEST_F(CommunicationTest, InfoReqSetSender)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -293,7 +293,7 @@ TEST_F(CommunicationTest, InfoReqSetSender)
     ASSERT_EQ(communication.sender(), "X098765432");
 }
 
-TEST_F(CommunicationTest, InfoReqSetRecipient)
+TEST_F(CommunicationTest, InfoReqSetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -328,7 +328,7 @@ TEST_F(CommunicationTest, InfoReqSetRecipient)
     ASSERT_EQ(communication.recipient(), "PharmacyC");
 }
 
-TEST_F(CommunicationTest, InfoReqSetTimeSent)
+TEST_F(CommunicationTest, InfoReqSetTimeSent)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -361,7 +361,7 @@ TEST_F(CommunicationTest, InfoReqSetTimeSent)
     ASSERT_EQ(timestamp, communication.timeSent());
 }
 
-TEST_F(CommunicationTest, InfoReqSetTimeReceived)
+TEST_F(CommunicationTest, InfoReqSetTimeReceived)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -394,7 +394,7 @@ TEST_F(CommunicationTest, InfoReqSetTimeReceived)
     ASSERT_EQ(timestamp, communication.timeReceived());
 }
 
-TEST_F(CommunicationTest, ReplySetId)
+TEST_F(CommunicationTest, ReplySetId)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -428,7 +428,7 @@ TEST_F(CommunicationTest, ReplySetId)
     ASSERT_EQ(communication.id(), uuid2);
 }
 
-TEST_F(CommunicationTest, ReplySetSender)
+TEST_F(CommunicationTest, ReplySetSender)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -463,7 +463,7 @@ TEST_F(CommunicationTest, ReplySetSender)
     ASSERT_EQ(communication.sender(), "987654321");
 }
 
-TEST_F(CommunicationTest, ReplySetRecipient)
+TEST_F(CommunicationTest, ReplySetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -497,7 +497,7 @@ TEST_F(CommunicationTest, ReplySetRecipient)
     ASSERT_EQ(communication.recipient(), InsurantX);
 }
 
-TEST_F(CommunicationTest, ReplySetTimeSent)
+TEST_F(CommunicationTest, ReplySetTimeSent)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -529,7 +529,7 @@ TEST_F(CommunicationTest, ReplySetTimeSent)
     ASSERT_EQ(timestamp, communication.timeSent());
 }
 
-TEST_F(CommunicationTest, ReplySetTimeReceived)
+TEST_F(CommunicationTest, ReplySetTimeReceived)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -561,7 +561,7 @@ TEST_F(CommunicationTest, ReplySetTimeReceived)
     ASSERT_EQ(timestamp, communication.timeReceived());
 }
 
-TEST_F(CommunicationTest, DispReqSetId)
+TEST_F(CommunicationTest, DispReqSetId)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -596,7 +596,7 @@ TEST_F(CommunicationTest, DispReqSetId)
     ASSERT_EQ(communication.id(), uuid2);
 }
 
-TEST_F(CommunicationTest, DispReqSetSender)
+TEST_F(CommunicationTest, DispReqSetSender)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -632,7 +632,7 @@ TEST_F(CommunicationTest, DispReqSetSender)
     ASSERT_EQ(communication.sender(), InsurantB);
 }
 
-TEST_F(CommunicationTest, DispReqSetRecipient)
+TEST_F(CommunicationTest, DispReqSetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -667,7 +667,7 @@ TEST_F(CommunicationTest, DispReqSetRecipient)
     ASSERT_EQ(communication.recipient(), "PharmacyX");
 }
 
-TEST_F(CommunicationTest, DispReqSetTimeSent)
+TEST_F(CommunicationTest, DispReqSetTimeSent)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -700,7 +700,7 @@ TEST_F(CommunicationTest, DispReqSetTimeSent)
     ASSERT_EQ(timestamp, communication.timeSent());
 }
 
-TEST_F(CommunicationTest, DispReqSetTimeReceived)
+TEST_F(CommunicationTest, DispReqSetTimeReceived)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -733,7 +733,7 @@ TEST_F(CommunicationTest, DispReqSetTimeReceived)
     ASSERT_EQ(timestamp, communication.timeReceived());
 }
 
-TEST_F(CommunicationTest, RepresentativeSetId)
+TEST_F(CommunicationTest, RepresentativeSetId)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -768,7 +768,7 @@ TEST_F(CommunicationTest, RepresentativeSetId)
     ASSERT_EQ(communication.id(), uuid2);
 }
 
-TEST_F(CommunicationTest, RepresentativeSetSender)
+TEST_F(CommunicationTest, RepresentativeSetSender)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -804,7 +804,7 @@ TEST_F(CommunicationTest, RepresentativeSetSender)
     ASSERT_EQ(communication.sender(), InsurantC);
 }
 
-TEST_F(CommunicationTest, RepresentativeSetRecipient)
+TEST_F(CommunicationTest, RepresentativeSetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -839,7 +839,7 @@ TEST_F(CommunicationTest, RepresentativeSetRecipient)
     ASSERT_EQ(communication.recipient(), InsurantX);
 }
 
-TEST_F(CommunicationTest, RepresentativeSetTimeSent)
+TEST_F(CommunicationTest, RepresentativeSetTimeSent)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId("160.123.456.789.123.58")
@@ -872,7 +872,7 @@ TEST_F(CommunicationTest, RepresentativeSetTimeSent)
     ASSERT_EQ(timestamp, communication.timeSent());
 }
 
-TEST_F(CommunicationTest, RepresentativeSetTimeReceived)
+TEST_F(CommunicationTest, RepresentativeSetTimeReceived)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId("160.123.456.789.123.58")

@@ -14,12 +14,6 @@
 
 #include "test_config.h"
 
-
-// From hsm client's ERP_Error.h
-#define ERP_ERR_NOERROR                   0x00000000
-#define ERP_ERR_PERMISSION_DENIED         0xB1010001
-
-
 class HsmProductionClientTest : public testing::Test
 {
 public:
@@ -75,7 +69,7 @@ TEST_F(HsmProductionClientTest, hsmErrorDetails)
 
 TEST_F(HsmProductionClientTest, connectAsWorkUser)
 {
-    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "") == "")
+    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "").empty())
         GTEST_SKIP();
 
     ASSERT_NO_THROW(
@@ -85,7 +79,7 @@ TEST_F(HsmProductionClientTest, connectAsWorkUser)
 
 TEST_F(HsmProductionClientTest, connectAsSetupUser)
 {
-    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "") == "")
+    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "").empty())
         GTEST_SKIP();
 
     ASSERT_NO_THROW(
@@ -95,7 +89,7 @@ TEST_F(HsmProductionClientTest, connectAsSetupUser)
 
 TEST_F(HsmProductionClientTest, connectAsWorkUserWithKeyspec)
 {
-    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "") == "")
+    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "").empty())
         GTEST_SKIP();
 
     // Temporarily setup ERP_WORK as ERP_KWRK together with a keyspec file and password.

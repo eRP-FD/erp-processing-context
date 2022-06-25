@@ -39,6 +39,8 @@ public:
     [[nodiscard]] bool isMarked() const;
     [[nodiscard]] std::optional<model::ChargeItemMarkingFlag> markingFlag() const;
 
+    [[nodiscard]] std::optional<std::string_view> accessCode() const;
+
     [[nodiscard]] std::optional<model::Binary> containedBinary() const;
 
     // Please note that the prescriptionId of the task is also used as the id of the ChargeItem resource.
@@ -46,8 +48,9 @@ public:
     void setPrescriptionId(const model::PrescriptionId& prescriptionId);
     void setSubjectKvnr(const std::string_view& kvnr);
     void setEntererTelematikId(const std::string_view& telematicId);
-    void setEnteredDate(const model::Timestamp& whenHandedOver);
+    void setEnteredDate(const model::Timestamp& entered);
     void setMarkingFlag(const model::ChargeItemMarkingFlag& markingFlag);
+    void setAccessCode(const std::string_view& accessCode);
 
     void setSupportingInfoReference(SupportingInfoType supportingInfoType, const std::string_view& reference);
     void deleteSupportingInfoElement(SupportingInfoType supportingInfoType);

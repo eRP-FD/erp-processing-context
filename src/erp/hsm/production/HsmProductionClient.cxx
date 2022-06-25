@@ -14,17 +14,6 @@
 #include "erp/util/String.hxx"
 #include "erp/util/TLog.hxx"
 
-
-#ifdef __APPLE__
-#error "HSM support is only available for Linux and Windows"
-#else
-namespace hsmclient {
-#include <hsmclient/ERP_Error.h>
-}
-#endif
-
-
-
 namespace
 {
     template<int L>
@@ -172,23 +161,23 @@ namespace
 
 ErpBlob HsmProductionClient::getTeeToken(
     const HsmRawSession& session,
-    TeeTokenRequestInput&& arguments)
+    TeeTokenRequestInput&& input)
 {
     auto timer = DurationConsumer::getCurrent().getTimer("Hsm:ERP_GetTEEToken");
 
-    hsmclient::TEETokenRequestInput input;
-    setInput<TpmObjectNameLength>(input.AKName, arguments.akName);
-    setInput(input.KnownAKBlob, arguments.knownAkBlob);
-    setInput(input.KnownQuoteBlob, arguments.knownQuoteBlob);
-    setInput(input.NONCEBlob, arguments.nonceBlob);
-    setInput(input.QuoteDataLength, arguments.quoteData);
-    setInput(input.QuoteData, arguments.quoteData);
-    setInput(input.QuoteSignatureLength, arguments.quoteSignature);
-    setInput(input.QuoteSignature, arguments.quoteSignature);
+    hsmclient::TEETokenRequestInput requestInput;
+    setInput<TpmObjectNameLength>(requestInput.AKName, input.akName);
+    setInput(requestInput.KnownAKBlob, input.knownAkBlob);
+    setInput(requestInput.KnownQuoteBlob, input.knownQuoteBlob);
+    setInput(requestInput.NONCEBlob, input.nonceBlob);
+    setInput(requestInput.QuoteDataLength, input.quoteData);
+    setInput(requestInput.QuoteData, input.quoteData);
+    setInput(requestInput.QuoteSignatureLength, input.quoteSignature);
+    setInput(requestInput.QuoteSignature, input.quoteSignature);
 
     const hsmclient::SingleBlobOutput response = hsmclient::ERP_GetTEEToken(
         session.rawSession,
-        input);
+        requestInput);
         handleExpiredSession(response.returnCode);
 
     HsmExpectSuccess(response, "ERP_GetTEEToken failed", timer);
@@ -221,30 +210,30 @@ DeriveKeyOutput HsmProductionClient::deriveAuditKey(
 
 DeriveKeyOutput HsmProductionClient::deriveCommsKey(
     const HsmRawSession& session,
-    DeriveKeyInput&& arguments)
+    DeriveKeyInput&& input)
 {
     return derivePersistenceKey (
         session,
-        std::move(arguments),
+        std::move(input),
         hsmclient::ERP_DeriveCommsKey);
 }
 
 
 ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
     const HsmRawSession& session,
-    DoVAUECIESInput&& arguments)
+    DoVAUECIESInput&& input)
 {
     auto timer = DurationConsumer::getCurrent().getTimer("Hsm:ERP_DoVAUECIES128");
 
-    hsmclient::DoVAUECIESInput input;
-    setInput(input.TEEToken, arguments.teeToken);
-    setInput(input.ECIESKeyPair, arguments.eciesKeyPair);
-    setInput(input.clientPublicKeyLength, arguments.clientPublicKey);
-    setInput(input.clientPublicKeyData, arguments.clientPublicKey);
+    hsmclient::DoVAUECIESInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput(requestInput.ECIESKeyPair, input.eciesKeyPair);
+    setInput(requestInput.clientPublicKeyLength, input.clientPublicKey);
+    setInput(requestInput.clientPublicKeyData, input.clientPublicKey);
 
     const auto response = hsmclient::ERP_DoVAUECIES128(
         session.rawSession,
-        input);
+        requestInput);
     handleExpiredSession(response.returnCode);
     HsmExpectSuccess(response, "ERP_DoVAUECIES128 failed", timer);
 
@@ -254,17 +243,17 @@ ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
 
 SafeString HsmProductionClient::getVauSigPrivateKey (
     const HsmRawSession& session,
-    GetVauSigPrivateKeyInput&& arguments)
+    GetVauSigPrivateKeyInput&& input)
 {
     auto timer = DurationConsumer::getCurrent().getTimer("Hsm:ERP_GetVAUSIGPrivateKey");
 
-    hsmclient::TwoBlobGetKeyInput input;
-    setInput(input.TEEToken, arguments.teeToken);
-    setInput(input.Key, arguments.vauSigPrivateKey);
+    hsmclient::TwoBlobGetKeyInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput(requestInput.Key, input.vauSigPrivateKey);
 
     auto response = hsmclient::ERP_GetVAUSIGPrivateKey(
         session.rawSession,
-        input);
+        requestInput);
         handleExpiredSession(response.returnCode);
 
     HsmExpectSuccess(response, "ERP_GetVAUSIGPrivateKey failed", timer);
@@ -292,22 +281,22 @@ ErpVector HsmProductionClient::getRndBytes(
 
 ErpArray<Aes256Length> HsmProductionClient::unwrapHashKey(
     const HsmRawSession& session,
-    UnwrapHashKeyInput&& arguments)
+    UnwrapHashKeyInput&& input)
 {
     auto timer = DurationConsumer::getCurrent().getTimer("Hsm:ERP_UnwrapHashKey");
 
-    hsmclient::TwoBlobGetKeyInput input;
-    setInput(input.TEEToken, arguments.teeToken);
-    setInput(input.Key, arguments.key);
+    hsmclient::TwoBlobGetKeyInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput(requestInput.Key, input.key);
 
     const auto response = hsmclient::ERP_UnwrapHashKey(
         session.rawSession,
-        input);
+        requestInput);
         handleExpiredSession(response.returnCode);
 
     HsmExpectSuccess(response, "ERP_UnwrapHashKey failed", timer);
 
-    return createErpArray<Aes256Length>(response.Key);
+    return createErpArray<Aes256Length>(reinterpret_cast<const uint8_t*>(response.Key));
 }
 
 ::ParsedQuote HsmProductionClient::parseQuote(const ::ErpVector& quote) const
@@ -344,8 +333,6 @@ void HsmProductionClient::reconnect (HsmRawSession& session)
 
 HsmRawSession HsmProductionClient::connect (const HsmIdentity& identity)
 {
-    HsmRawSession session;
-    session.identity = identity.identity;
 
     const std::string hsmDeviceString = Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE);
     auto [devices,devicesBuffer] = String::splitIntoNullTerminatedArray(hsmDeviceString, ",");
@@ -376,6 +363,13 @@ HsmRawSession HsmProductionClient::connect (const HsmIdentity& identity)
             "could not connect to HSM " + hsmDeviceString
                 + " : " + HsmProductionClient::hsmErrorMessage(connectedSession.status, connectedSession.errorCode));
     }
+    return logon(connectedSession, identity);
+}
+
+HsmRawSession HsmProductionClient::logon(const hsmclient::HSMSession& connectedSession, const HsmIdentity& identity)
+{
+    HsmRawSession session;
+    session.identity = identity.identity;
 
     if (identity.keyspec.has_value() && identity.keyspec.value().size()>0)
     {
@@ -403,10 +397,8 @@ HsmRawSession HsmProductionClient::connect (const HsmIdentity& identity)
     {
         Fail("hsm " + identity.displayName() + " has neither password nor keyspec configured");
     }
-
     return session;
 }
-
 
 void HsmProductionClient::disconnect (HsmRawSession& session)
 {

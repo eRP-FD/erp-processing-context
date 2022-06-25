@@ -10,6 +10,7 @@
 #include "erp/util/FileHelper.hxx"
 #include "test/erp/tsl/TslParsingExpectations.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -21,7 +22,7 @@ class TslParsingTests : public testing::Test
 {};
 
 
-TEST_F(TslParsingTests, EmptyXmlIsNotWellformed)
+TEST_F(TslParsingTests, EmptyXmlIsNotWellformed)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_TSL_ERROR_THROW(TslParser("", TslMode::TSL, *StaticData::getXmlValidator()),
                            {TslErrorCode::TSL_NOT_WELLFORMED},
@@ -29,7 +30,7 @@ TEST_F(TslParsingTests, EmptyXmlIsNotWellformed)
 }
 
 
-TEST_F(TslParsingTests, XmlWithEmptyRootIsWellformedButNotValid)
+TEST_F(TslParsingTests, XmlWithEmptyRootIsWellformedButNotValid)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_TSL_ERROR_THROW(TslParser("<tag></tag>", TslMode::TSL, *StaticData::getXmlValidator()),
                            {TslErrorCode::TSL_SCHEMA_NOT_VALID},
@@ -37,11 +38,15 @@ TEST_F(TslParsingTests, XmlWithEmptyRootIsWellformedButNotValid)
 }
 
 
-TEST_F(TslParsingTests, TslXmlFromTestDataIsValidButManipulated)
+TEST_F(TslParsingTests, TslXmlFromTestDataIsValidButManipulated)//NOLINT(readability-function-cognitive-complexity)
 {
+    std::string manipulatedTsl =
+        String::replaceAll(
+            ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml"),
+            "<StreetAddress>Vattmannstrasse  1</StreetAddress>",
+            "<StreetAddress>Vattmannstrasse  1a</StreetAddress>");
     EXPECT_TSL_ERROR_THROW(TslParser(
-                               TslTestHelper::createValidButManipulatedTslContentsFromTemplate(
-                                   std::string{TEST_DATA_DIR} + "/tsl/TSL_tampered.xml"),
+                               manipulatedTsl,
                                TslMode::TSL,
                                *StaticData::getXmlValidator()),
                            {TslErrorCode::XML_SIGNATURE_ERROR},
@@ -49,31 +54,21 @@ TEST_F(TslParsingTests, TslXmlFromTestDataIsValidButManipulated)
 }
 
 
-TEST_F(TslParsingTests, TslXmlWithMultipleNewTslCAIsParsedCorrectlySignatureCheckFail)
+TEST_F(TslParsingTests, TslXmlWithMultipleNewTslCAIsParsedCorrectly)//NOLINT(readability-function-cognitive-complexity)
 {
-    // uses manipulated TSL to reproduce the problem, thus signature is no more valid;
-    // signature is checked at the end, verify that the TSL can be successfully loaded till the signature check
-    // the multiple new TSL signer CAs should not affect TSL loading
-    EXPECT_TSL_ERROR_THROW(TslParser(
-                               FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_multipleNewCA.xml"),
-                               TslMode::TSL,
-                               *StaticData::getXmlValidator()),
-                           {TslErrorCode::XML_SIGNATURE_ERROR},
-                           HttpStatus::InternalServerError);
+    EXPECT_NO_THROW(TslParser(
+                        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_multiple_new_cas.xml"),
+                        TslMode::TSL,
+                        *StaticData::getXmlValidator()));
 }
 
 
-TEST_F(TslParsingTests, TslXmlWithBrokenNewTslCAIsParsedCorrectlySignatureCheckFail)
+TEST_F(TslParsingTests, TslXmlWithBrokenNewTslCAIsParsedCorrectly)//NOLINT(readability-function-cognitive-complexity)
 {
-    // uses manipulated TSL to reproduce the problem, thus signature is no more valid;
-    // signature is checked at the end, verify that the TSL can be successfully loaded till the signature check
-    // the broken TSL signer CA should not affect TSL loading
-    EXPECT_TSL_ERROR_THROW(TslParser(
-                               FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_brokenNewCA.xml"),
-                               TslMode::TSL,
-                               *StaticData::getXmlValidator()),
-                           {TslErrorCode::XML_SIGNATURE_ERROR},
-                           HttpStatus::InternalServerError);
+    EXPECT_NO_THROW(TslParser(
+                        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_broken_new_ca.xml"),
+                        TslMode::TSL,
+                        *StaticData::getXmlValidator()));
 }
 
 
@@ -84,7 +79,7 @@ bool operator==(const TslParser::ServiceInformation& first, const TslParser::Ser
 }
 
 
-TEST_F(TslParsingTests, TslXmlIsCompletelyValidAndParsedCorrectly)
+TEST_F(TslParsingTests, TslXmlIsCompletelyValidAndParsedCorrectly)//NOLINT(readability-function-cognitive-complexity)
 {
     // Just use an outdated TSL.xml to test parsing
     TslParser tslParser{
@@ -133,11 +128,11 @@ TEST_F(TslParsingTests, WansimTslXmlIsParsedCorrectly)
         TslMode::TSL,
         *StaticData::getXmlValidator()};
 
-    EXPECT_EQ(tslParser.getId(), "ID31882820210526083439Z");
-    EXPECT_EQ(tslParser.getSequenceNumber(), "18828");
+    EXPECT_EQ(tslParser.getId(), "ID31008220220413120005Z");
+    EXPECT_EQ(tslParser.getSequenceNumber(), "10082");
     EXPECT_EQ(tslParser.getNextUpdate(),
               std::chrono::system_clock::time_point{
-                  model::Timestamp::fromFhirDateTime("2021-06-25T08:34:40Z").toChronoTimePoint()});
+                  model::Timestamp::fromFhirDateTime("2022-05-13T00:00:05Z").toChronoTimePoint()});
 }
 
 

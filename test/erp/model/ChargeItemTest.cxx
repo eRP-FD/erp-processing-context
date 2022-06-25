@@ -13,6 +13,7 @@
 
 namespace {
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkSetSupportingInfoReferences(model::ChargeItem& chargeItem, const model::PrescriptionId& prescriptionId)
 {
     EXPECT_NO_THROW(chargeItem.setSupportingInfoReference(
@@ -33,6 +34,7 @@ void checkSetSupportingInfoReferences(model::ChargeItem& chargeItem, const model
               prescriptionItemRef.toString());
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkCommon(model::ChargeItem& chargeItem)
 {
     EXPECT_EQ(chargeItem.prescriptionId().toString(), "160.123.456.789.123.58");
@@ -90,7 +92,7 @@ void checkCommon(model::ChargeItem& chargeItem)
 
 } // anonymous namespace
 
-TEST(ChargeItemTest, Construct)
+TEST(ChargeItemTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::ChargeItem> optChargeItem;
     ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromXml(
@@ -102,7 +104,7 @@ TEST(ChargeItemTest, Construct)
     EXPECT_FALSE(optChargeItem.value().isMarked());
 }
 
-TEST(ChargeItemTest, ConstructMarked)
+TEST(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::ChargeItem> optChargeItem;
     ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromJson(

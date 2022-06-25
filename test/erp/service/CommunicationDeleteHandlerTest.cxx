@@ -33,7 +33,7 @@ public:
 };
 
 
-TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)
+TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-function-cognitive-complexity)
 {
     A_20258.test("E-Rezept-Fachdienst - Communication löschen auf Basis Absender-ID");
 
@@ -196,7 +196,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)
     }
 }
 
-TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)
+TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-function-cognitive-complexity)
 {
     A_20259.test("E-Rezept-Fachdienst - Communication löschen mit Warnung wenn vom Empfänger bereits abgerufen");
 
@@ -370,7 +370,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)
     }
 }
 
-TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)
+TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-function-cognitive-complexity)
 {
     // Add task to database.
     //----------------------
@@ -521,7 +521,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)
     }
 }
 
-TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)
+TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability-function-cognitive-complexity)
 {
     // Add task to database.
     //----------------------

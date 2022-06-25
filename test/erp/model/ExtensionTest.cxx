@@ -18,6 +18,8 @@ class MyTestExtension : public model::Extension
 public:
     using Extension::Extension;
     static constexpr auto url = "MyTestExtension";
+
+    friend std::optional<MyTestExtension> ResourceBase::getExtension<MyTestExtension>(const std::string_view&) const;
 };
 
 TEST(ExtensionTest, extensionWithValue)

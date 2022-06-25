@@ -113,6 +113,9 @@ public:
     retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
                                       const std::optional<UrlArguments>& search) const override;
 
+    std::tuple<std::optional<model::Binary>, std::optional<model::Bundle>, std::optional<model::ChargeItem>, std::optional<model::Bundle>>
+    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id) override;
+
     std::tuple<model::ChargeItem, model::Bundle>
     retrieveChargeInformation(const model::PrescriptionId& id) const override;
     std::tuple<model::ChargeItem, model::Bundle>
@@ -137,6 +140,11 @@ private:
                                                                                  const SafeString& key);
     [[nodiscard]] std::optional<model::Bundle> getReceipt(const db_model::Task& dbTask, const SafeString& key);
 
+    [[nodiscard]] std::optional<model::ChargeItem>
+    getChargeItem(const std::optional<db_model::EncryptedBlob>& chargeItem, const SafeString& key);
+    [[nodiscard]] std::optional<model::Bundle>
+    getDispenseItem(const std::optional<db_model::EncryptedBlob>& dbDispenseItem, const SafeString& key);
+
     [[nodiscard]] static ErpVector taskKeyDerivationData(const model::PrescriptionId& taskId,
                                                          const model::Timestamp& authoredOn);
     [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId);
@@ -148,8 +156,8 @@ private:
     std::tuple<SafeString, BlobId> communicationKeyAndId(const std::string_view& identity,
                                                                        const db_model::HashedId& identityHashed);
 
-    [[nodiscard]] std::tuple<SafeString, BlobId> medicationDispenseKey(const db_model::HashedKvnr& kvnrHashed);
-    [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& kvnrHashed);
+    [[nodiscard]] std::tuple<SafeString, BlobId> medicationDispenseKey(const db_model::HashedKvnr& hashedKvnr);
+    [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& hashedKvnr);
 
     std::vector<model::ChargeItem> decryptChargeItems(const std::vector<db_model::ChargeItem>& dbChargeItems) const;
 

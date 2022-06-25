@@ -61,7 +61,7 @@ void KbvMedicationRequestValidator_V1_0_1::erp_angabeDosierung(const model::Dosa
     // (extension('https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag').empty()
     //      or extension('https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag').value.as(Boolean)=false)
     // implies text.empty()
-    static const auto constraintMessage =
+    static const auto *const constraintMessage =
         "-erp-angabeDosierung: Wenn das Dosierungskennzeichen nicht gesetzt ist, darf auch kein Text vorhanden sein.";
     const auto& dosageFlagExtension = KbvValidationUtils::checkGetExtension(
         "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag", dosage, false);

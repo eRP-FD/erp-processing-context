@@ -29,7 +29,7 @@ protected:
 };
 
 
-TEST_P(Erp6590Test, run)
+TEST_P(Erp6590Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string kbv_bundle_xml = resourceManager.getStringResource(GetParam().filename);
     std::optional<model::Task> task;
@@ -38,8 +38,10 @@ TEST_P(Erp6590Test, run)
     kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.012.564.98", task->prescriptionId().toString());
     kbv_bundle_xml = patchVersionsInBundle(kbv_bundle_xml);
     std::string accessCode{task->accessCode()};
-    ASSERT_NO_FATAL_FAILURE(taskActivate(task->prescriptionId(), accessCode, toCadesBesSignature(kbv_bundle_xml),
-                                         GetParam().expectedInnerStatus, GetParam().expectedErrorCode));
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivate(task->prescriptionId(), accessCode,
+                     toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDate("2021-04-02")),
+                     GetParam().expectedInnerStatus, GetParam().expectedErrorCode));
 }
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(samples, Erp6590Test, ::testing::Values(

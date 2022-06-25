@@ -5,46 +5,45 @@
 
 #include "erp/util/health/HealthCheck.hxx"
 
-#include "erp/server/context/SessionContext.hxx"
 #include "erp/util/ExceptionHelper.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
 
 
-void HealthCheck::update (SessionContext& session)
+void HealthCheck::update (PcServiceContext& context)
 {
-    check(ApplicationHealth::Service::Bna,          session, &checkBna);
-    check(ApplicationHealth::Service::Hsm,          session, &checkHsm);
-    check(ApplicationHealth::Service::Idp,          session, &checkIdp);
-    check(ApplicationHealth::Service::Postgres,     session, &checkPostgres);
-    check(ApplicationHealth::Service::PrngSeed,     session, &checkSeedTimer);
-    check(ApplicationHealth::Service::TeeToken,     session, &checkTeeTokenUpdater);
-    check(ApplicationHealth::Service::Tsl,          session, &checkTsl);
-    check(ApplicationHealth::Service::CFdSigErp,    session, &checkCFdSigErp);
+    check(ApplicationHealth::Service::Bna,          context, &checkBna);
+    check(ApplicationHealth::Service::Hsm,          context, &checkHsm);
+    check(ApplicationHealth::Service::Idp,          context, &checkIdp);
+    check(ApplicationHealth::Service::Postgres,     context, &checkPostgres);
+    check(ApplicationHealth::Service::PrngSeed,     context, &checkSeedTimer);
+    check(ApplicationHealth::Service::TeeToken,     context, &checkTeeTokenUpdater);
+    check(ApplicationHealth::Service::Tsl,          context, &checkTsl);
+    check(ApplicationHealth::Service::CFdSigErp,    context, &checkCFdSigErp);
 
     if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false))
-        session.serviceContext.applicationHealth().skip(
+        context.applicationHealth().skip(
             ApplicationHealth::Service::Redis,
             "DEBUG_DISABLE_DOS_CHECK=true");
     else
-        check(ApplicationHealth::Service::Redis, session, &checkRedis);
+        check(ApplicationHealth::Service::Redis, context, &checkRedis);
 
-    session.serviceContext.applicationHealth().setServiceDetails(
+    context.applicationHealth().setServiceDetails(
         ApplicationHealth::Service::Hsm, ApplicationHealth::ServiceDetail::HsmDevice,
         Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
 
     try
     {
-        session.serviceContext.applicationHealth().setServiceDetails(
+        context.applicationHealth().setServiceDetails(
             ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpTimestamp,
-            "last success " + session.serviceContext.getCFdSigErpManager().getLastValidationTimestamp());
-        session.serviceContext.applicationHealth().setServiceDetails(
+            "last success " + context.getCFdSigErpManager().getLastValidationTimestamp());
+        context.applicationHealth().setServiceDetails(
             ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpPolicy,
             String::replaceAll(
-                std::string(magic_enum::enum_name(session.serviceContext.getCFdSigErpManager().getCertificateType())),
+                std::string(magic_enum::enum_name(context.getCFdSigErpManager().getCertificateType())),
                 "_", "."));
-        session.serviceContext.applicationHealth().setServiceDetails(
+        context.applicationHealth().setServiceDetails(
             ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpExpiry,
-            session.serviceContext.getCFdSigErpManager().getCertificateNotAfterTimestamp());
+            context.getCFdSigErpManager().getCertificateNotAfterTimestamp());
     }
     catch (const std::exception& err)
     {
@@ -53,8 +52,8 @@ void HealthCheck::update (SessionContext& session)
 
     try
     {
-        session.serviceContext.registrationInterface()->updateRegistrationBasedOnApplicationHealth(
-            session.serviceContext.applicationHealth());
+        context.registrationInterface()->updateRegistrationBasedOnApplicationHealth(
+            context.applicationHealth());
     }
     catch (const std::exception& err)
     {
@@ -63,91 +62,90 @@ void HealthCheck::update (SessionContext& session)
 }
 
 
-void HealthCheck::checkBna (SessionContext& session)
+void HealthCheck::checkBna (PcServiceContext& context)
 {
-    Expect(session.serviceContext.getTslManager() != nullptr, "TslManager must be set.");
-    session.serviceContext.getTslManager()->healthCheckBna();
+    context.getTslManager().healthCheckBna();
 }
 
 
-void HealthCheck::checkHsm (SessionContext& session)
+void HealthCheck::checkHsm (PcServiceContext& context)
 {
-    auto hsmSession = session.serviceContext.getHsmPool().acquire();
+    auto hsmSession = context.getHsmPool().acquire();
     (void) hsmSession.session().getRandomData(1);
 }
 
 
-void HealthCheck::checkCFdSigErp (SessionContext& session)
+void HealthCheck::checkCFdSigErp (PcServiceContext& context)
 {
-    session.serviceContext.getCFdSigErpManager().healthCheck();
+    context.getCFdSigErpManager().healthCheck();
 }
 
 
-void HealthCheck::checkIdp (SessionContext& session)
+void HealthCheck::checkIdp (PcServiceContext& context)
 {
-    session.serviceContext.idp.healthCheck();
+    context.idp.healthCheck();
 }
 
 
-void HealthCheck::checkPostgres (SessionContext& session)
+void HealthCheck::checkPostgres (PcServiceContext& context)
 {
-    session.database()->healthCheck();
-    session.database()->commitTransaction();
+    auto connection = context.databaseFactory();
+    connection->healthCheck();
+    connection->commitTransaction();
 }
 
 
-void HealthCheck::checkRedis (SessionContext& session)
+void HealthCheck::checkRedis (PcServiceContext& context)
 {
-    session.serviceContext.getDosHandler().healthCheck();
+    context.getDosHandler().healthCheck();
 }
 
 
-void HealthCheck::checkSeedTimer (SessionContext& session)
+void HealthCheck::checkSeedTimer (PcServiceContext& context)
 {
-    session.serviceContext.getPrngSeeder()->healthCheck();
+    context.getPrngSeeder()->healthCheck();
 }
 
 
-void HealthCheck::checkTeeTokenUpdater (SessionContext& session)
+void HealthCheck::checkTeeTokenUpdater (PcServiceContext& context)
 {
-    session.serviceContext.getHsmPool().getTokenUpdater().healthCheck();
+    context.getHsmPool().getTokenUpdater().healthCheck();
 }
 
 
-void HealthCheck::checkTsl (SessionContext& session)
+void HealthCheck::checkTsl (PcServiceContext& context)
 {
-    Expect(session.serviceContext.getTslManager() != nullptr, "TslManager must be set.");
-    session.serviceContext.getTslManager()->healthCheckTsl();
+    context.getTslManager().healthCheckTsl();
 }
 
 
 void HealthCheck::check (
     const ApplicationHealth::Service service,
-    SessionContext& session,
-    void (* checkAction)(SessionContext&))
+    PcServiceContext& context,
+    void (* checkAction)(PcServiceContext&))
 {
     try
     {
-        (*checkAction)(session);
+        (*checkAction)(context);
 
-        session.serviceContext.applicationHealth().up(service);
+        context.applicationHealth().up(service);
     }
     catch (...)
     {
-        handleException(service, session);
+        handleException(service, context);
     }
 }
 
 
 void HealthCheck::handleException(
     ApplicationHealth::Service service,
-    SessionContext& session)
+    PcServiceContext& context)
 {
     ExceptionHelper::extractInformation(
-        [service, &session]
+        [service, &context]
         (std::string&& details, std::string&& location)
         {
-            session.serviceContext.applicationHealth().down(service, details + " at " + location);
+            context.applicationHealth().down(service, details + " at " + location);
         },
         std::current_exception());
 }

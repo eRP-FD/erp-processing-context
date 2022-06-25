@@ -39,7 +39,7 @@ public:
         const std::string& path,
         const std::optional<const JWT>& jwtToken,
         std::optional<std::string> accessCode = {},
-        const ContentMimeType contentMimeType = ContentMimeType::fhirJsonUtf8) const
+        const ContentMimeType& contentMimeType = ContentMimeType::fhirJsonUtf8) const
     {
         Header header = ServerTestBase::createPostHeader(path, jwtToken);
         header.addHeaderField(Header::ContentType, contentMimeType);
@@ -52,7 +52,7 @@ public:
 };
 
 
-TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)
+TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
 
@@ -174,7 +174,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)
+TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
 
@@ -244,7 +244,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)
+TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
 
@@ -369,7 +369,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReq)
+TEST_F(CommunicationPostHandlerTest, InfoReq)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({Task::Status::ready, InsurantA, {}, TaskAccessCode});
 
@@ -430,7 +430,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReq)
     ASSERT_EQ(communication.sender(), InsurantA);
 }
 
-TEST_F(CommunicationPostHandlerTest, Reply)
+TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
 
@@ -484,7 +484,7 @@ TEST_F(CommunicationPostHandlerTest, Reply)
     ASSERT_EQ(communication->sender(), mPharmacy);
 }
 
-TEST_F(CommunicationPostHandlerTest, DispReq)
+TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
 
@@ -544,7 +544,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq)
     ASSERT_EQ(communication.sender(), InsurantA);
 }
 
-TEST_F(CommunicationPostHandlerTest, Representative)
+TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
 
@@ -662,7 +662,7 @@ TEST_F(CommunicationPostHandlerTest, Representative)
     ASSERT_EQ(communicationByRepresentative.sender(), kvnrRepresentative);
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)
+TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
     auto task2 = addTaskToDatabase({ Task::Status::ready, InsurantB, {} });
@@ -710,7 +710,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)
+TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
     auto task2 = addTaskToDatabase({ Task::Status::ready, InsurantB, {} });
@@ -758,7 +758,7 @@ TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)
+TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
     auto task2 = addTaskToDatabase({ Task::Status::ready, InsurantB, {} });
@@ -806,7 +806,7 @@ TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, Representative_A_20229)
+TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability-function-cognitive-complexity)
 {
     A_20229.test("limit KVNR -> KVNR messages to 10 per task");
 
@@ -927,7 +927,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, Representative_A_20230)
+TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability-function-cognitive-complexity)
 {
     A_20230.test("restrict transfer for messages following the represantive schema to prescriptions that are ready or in-progress");
 
@@ -1108,7 +1108,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }
 
-TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant)
+TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
     A_20885_01.test("Examination of insured person and eligibility");
 
@@ -1239,7 +1239,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificationIdentity)
+TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create a client
     auto client = createClient();
@@ -1344,7 +1344,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdentity)
+TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create a client
     auto client = createClient();
@@ -1455,7 +1455,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdent
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentity)
+TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create a client
     auto client = createClient();
@@ -1563,7 +1563,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdentity)
+TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create a client
     auto client = createClient();
@@ -1674,7 +1674,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificationIdentity)
+TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create a client
     auto client = createClient();
@@ -1781,3 +1781,29 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
+
+TEST_F(CommunicationPostHandlerTest, InfoReq_MissingAboutTag)
+{
+    auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
+
+    // Create a client
+    auto client = createClient();
+
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        .setPrescriptionId(task.prescriptionId().toString())
+        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setPayload(InfoReqMessage)
+        .createJsonString(); // no "about" attribute set
+
+    const JWT jwtInsurant{mJwtBuilder.makeJwtVersicherter(InsurantA)};
+    // Create the inner request
+    ClientRequest request(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+
+    // Send the request.
+    auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+
+    // Verify and decrypt the outer response. Also the generic part of the inner response.
+    auto innerResponse = verifyOuterResponse(outerResponse);
+    EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
+}
+

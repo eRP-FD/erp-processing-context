@@ -18,7 +18,7 @@ ErrorHandler::ErrorHandler (boost::beast::error_code ec_)
 }
 
 
-void ErrorHandler::throwOnServerError (const std::string& message, std::optional<FileNameAndLineNumber> fileAndLineNumber)
+void ErrorHandler::throwOnServerError (const std::string& message, std::optional<FileNameAndLineNumber> fileAndLineNumber) const
 {
     switch(ec.value())
     {
@@ -29,14 +29,14 @@ void ErrorHandler::throwOnServerError (const std::string& message, std::optional
             std::stringstream s;
             s << message << " : " << ec.message();
             if (fileAndLineNumber.has_value())
-                throw ExceptionWrapper<ServerException>::create(std::move(fileAndLineNumber.value()), s.str());
+                throw ExceptionWrapper<ServerException>::create(fileAndLineNumber.value(), s.str());
             else
                 throw ServerException(s.str());
     }
 }
 
 
-void ErrorHandler::reportServerError (const std::string& message)
+void ErrorHandler::reportServerError (const std::string& message) const
 {
     // ssl::error::stream_truncated, also known as an SSL "short read",
     // indicates the peer closed the connection without performing the
@@ -60,4 +60,3 @@ void ErrorHandler::reportServerError (const std::string& message)
         TLOG(ERROR) << message.c_str() << ": " << ec.message().c_str();
     }
 }
-

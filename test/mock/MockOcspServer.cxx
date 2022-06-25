@@ -7,11 +7,11 @@
 
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockDatabase.hxx"
-#include "test/mock/MockOcsp.hxx"
+#include "mock/tsl/MockOcsp.hxx"
 #include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/util/FileHelper.hxx"
-#include "test/mock/UrlRequestSenderMock.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/StaticData.hxx"
 
 #include "erp/server/handler/RequestHandlerInterface.hxx"
@@ -52,7 +52,7 @@ namespace
         {
         }
 
-        virtual void handleRequest (OcspSessionContext& session) override
+        void handleRequest (OcspSessionContext& session) override
         {
             std::string responseBody =
                 MockOcsp::create(
@@ -65,7 +65,7 @@ namespace
             session.response.setBody(responseBody);
         }
 
-        virtual Operation getOperation (void) const override
+        Operation getOperation (void) const override
         {
             return Operation::UNKNOWN;
         }
@@ -80,7 +80,7 @@ namespace
 std::unique_ptr<HttpsServer> MockOcspServer::create(
     const std::string& hostIp,
     uint16_t port,
-    const std::vector<MockOcsp::CertificatePair> ocspResponderKnownCertificateCaPairs)
+    const std::vector<MockOcsp::CertificatePair>& ocspResponderKnownCertificateCaPairs)
 {
     RequestHandlerManager handlerManager;
     std::unique_ptr<RequestHandlerInterface> requestHandler =

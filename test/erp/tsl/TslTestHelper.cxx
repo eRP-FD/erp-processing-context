@@ -17,10 +17,12 @@
 #include "erp/util/String.hxx"
 #include "test/erp/service/HealthHandlerTestTslManager.hxx"
 #include "test/erp/tsl/RefreshJobTestTslManager.hxx"
-#include "test/mock/MockOcsp.hxx"
+#include "mock/tsl/MockOcsp.hxx"
+#include "test/util/ResourceManager.hxx"
+#include "mock/tsl/MockTslManager.hxx"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <chrono>
 #ifdef _WIN32
 #include <io.h>
@@ -40,14 +42,11 @@ namespace {
 #endif
 
 
-namespace
+shared_EVP_PKEY TslTestHelper::getDefaultOcspPrivateKey()
 {
-    shared_EVP_PKEY getDefaultOcspPrivateKey()
-    {
-        static const SafeString ocspPrivateKeyPem {FileHelper::readFileAsString(
-                std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/DefaultOcsp.prv.pem")};
-        return EllipticCurveUtils::pemToPrivatePublicKeyPair(ocspPrivateKeyPem);
-    }
+    static const SafeString ocspPrivateKeyPem {FileHelper::readFileAsString(
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/DefaultOcsp.prv.pem")};
+    return EllipticCurveUtils::pemToPrivatePublicKeyPair(ocspPrivateKeyPem);
 }
 
 
@@ -82,9 +81,8 @@ Certificate TslTestHelper::getDefaultOcspCertificateCa()
 
 Certificate TslTestHelper::getTslSignerCertificate()
 {
-    static const std::string tslSignerCertificateString =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");
+    static const std::string tslSignerCertificateString = ResourceManager::instance().getStringResource(
+        "test/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");
     return Certificate::fromBinaryDer(tslSignerCertificateString);
 }
 
@@ -92,62 +90,30 @@ Certificate TslTestHelper::getTslSignerCertificate()
 Certificate TslTestHelper::getTslSignerCACertificate()
 {
     static const std::string tslSignerCertificateIssuerString =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/generated_pki/sub_ca1_ec/ca.der");
+        ResourceManager::instance().getStringResource("test/generated_pki/sub_ca1_ec/ca.der");
     return Certificate::fromBinaryDer(tslSignerCertificateIssuerString);
 }
-
 
 void TslTestHelper::setOcspUrlRequestHandler(
     UrlRequestSenderMock& requestSender,
     const std::string& url,
     const std::vector<MockOcsp::CertificatePair>& ocspResponderKnownCertificateCaPairs)
 {
-    requestSender.setUrlHandler(
-        url,
-        [
-            ocspResponderKnownCertificateCaPairs,
-            ocspCertificate = getDefaultOcspCertificate(),
-            ocspPrivateKey = getDefaultOcspPrivateKey()]
-        (const std::string& request) mutable -> ClientResponse
-        {
-            const std::string responseBody =
-                MockOcsp::create(
-                    request,
-                    ocspResponderKnownCertificateCaPairs,
-                    ocspCertificate,
-                    ocspPrivateKey).toDer();
-
-            Header header;
-            header.setStatus(HttpStatus::OK);
-            header.setContentLength(responseBody.size());
-            return ClientResponse(header, responseBody);
-        });
+    requestSender.setOcspUrlRequestHandler(url, ocspResponderKnownCertificateCaPairs, getDefaultOcspCertificate(),
+                                           getDefaultOcspPrivateKey());
 }
-
 
 void TslTestHelper::setOcspUslRequestHandlerTslSigner(UrlRequestSenderMock& requestSender)
 {
-    setOcspUrlRequestHandler(
-        requestSender,
+    requestSender.setOcspUrlRequestHandler(
         "http://ocsp-testref.tsl.telematik-test/ocsp",
-        {{getTslSignerCertificate(), getTslSignerCACertificate(), MockOcsp::CertificateOcspTestMode::SUCCESS}});
+        {{getTslSignerCertificate(), getTslSignerCACertificate(), MockOcsp::CertificateOcspTestMode::SUCCESS}},
+        getDefaultOcspCertificate(), getDefaultOcspPrivateKey());
 }
-
 
 void TslTestHelper::addOcspCertificateToTrustStore(const Certificate& certificate, TrustStore& trustStore)
 {
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-    trustStore.mServiceInformationMap.emplace(
-        CertificateId{x509Certificate.getSubject(), x509Certificate.getSubjectKeyIdentifier()},
-        TslParser::ServiceInformation{
-            x509Certificate,
-            "http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP",
-            {"http://ocsp00.gematik.invalid/not-used"},
-            TslParser::AcceptanceHistoryMap{ {
-                 std::chrono::time_point<std::chrono::system_clock>(std::chrono::milliseconds(1569415137000)),
-                 true}},
-            {TslService::oid_fd_sig}});
+    MockTslManager::addOcspCertificateToTrustStore(certificate, trustStore);
 }
 
 
@@ -158,40 +124,8 @@ void TslTestHelper::addCaCertificateToTrustStore(
     const std::optional<std::string>& customSubjectKeyIdentifier,
     const std::optional<std::string>& customCertificateTypeId)
 {
-    TrustStore* trustStore = nullptr;
-    if (mode == TslMode::TSL)
-    {
-        trustStore = tslManager.mTslTrustStore.get();
-    }
-    else // TslMode::BNA
-    {
-        trustStore = tslManager.mBnaTrustStore.get();
-    }
-
-    Expect(trustStore != nullptr, "TrustStore must be set to use the method.");
-
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-    TslParser::ExtensionOidList extensionOidList =
-        (mode == TslMode::TSL
-             ? TslParser::ExtensionOidList{
-                   customCertificateTypeId.has_value()
-                       ? *customCertificateTypeId
-                       : TslService::oid_fd_sig}
-             : TslParser::ExtensionOidList{});
-
-    trustStore->mServiceInformationMap.emplace(
-        CertificateId{x509Certificate.getSubject(),
-                      customSubjectKeyIdentifier.has_value()
-                          ? *customSubjectKeyIdentifier
-                          : x509Certificate.getSubjectKeyIdentifier()},
-        TslParser::ServiceInformation{
-            x509Certificate,
-            "http://uri.etsi.org/TrstSvc/Svctype/CA/QC",
-            {"http://ocsp-testref.tsl.telematik-test/ocsp"},
-            TslParser::AcceptanceHistoryMap{{
-                std::chrono::time_point<std::chrono::system_clock>(std::chrono::milliseconds(1569415137000)),
-                true}},
-            extensionOidList});
+    MockTslManager::addCaCertificateToTrustStore(certificate, tslManager, mode, customSubjectKeyIdentifier,
+                                                 customCertificateTypeId);
 }
 
 
@@ -254,7 +188,7 @@ std::unique_ptr<TrustStore> TslTestHelper::createTslTrustStore(const std::option
     const std::string tslContentToUse =
         (tslContent.has_value()
              ? *tslContent
-             : FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml"));
+             : ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml"));
 
     Certificate ocspCertificate = getDefaultOcspCertificate();
     shared_EVP_PKEY ocspPrivateKey = getDefaultOcspPrivateKey();
@@ -290,7 +224,7 @@ std::unique_ptr<TrustStore> TslTestHelper::createOutdatedTslTrustStore(
             std::vector<std::string>{url});
 
     const std::string tslContentToUse =
-         FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_outdated.xml");
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_outdated.xml");
 
     Certificate ocspCertificate = getDefaultOcspCertificate();
     shared_EVP_PKEY ocspPrivateKey = getDefaultOcspPrivateKey();
@@ -334,7 +268,8 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
     const std::optional<Certificate>& ocspCertificate,
     std::unique_ptr<TrustStore> tslTrustStore)
 {
-    const std::string tslContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/generated_pki/tsl/TSL_valid.xml");
+    const std::string tslContent =
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
     const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = customRequestSender;
     if (requestSender == nullptr)
@@ -351,7 +286,8 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
 
     for (const auto& [url, knownCertificatesPairs] : ocspResponderKnownCertificateCaPairs)
     {
-        setOcspUrlRequestHandler(*requestSender, url, knownCertificatesPairs);
+        requestSender->setOcspUrlRequestHandler(url, knownCertificatesPairs, getDefaultOcspCertificate(),
+                                                getDefaultOcspPrivateKey());
     }
 
     std::unique_ptr<TrustStore> trustStore(std::move(tslTrustStore));
@@ -369,9 +305,11 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
         std::unique_ptr<TrustStore>{}));
     Expect(result != nullptr, "can not create TSL manager");
 
-    Certificate ocspCertificateToUse = ocspCertificate.has_value() ? *ocspCertificate : getDefaultOcspCertificate();
-    addOcspCertificateToTrustStore(ocspCertificateToUse, *result->mTslTrustStore);
-    addOcspCertificateToTrustStore(ocspCertificateToUse, *result->mBnaTrustStore);
+    result->addPostUpdateHook([=]{
+        Certificate ocspCertificateToUse = ocspCertificate.has_value() ? *ocspCertificate : getDefaultOcspCertificate();
+        addOcspCertificateToTrustStore(ocspCertificateToUse, *result->mTslTrustStore);
+        addOcspCertificateToTrustStore(ocspCertificateToUse, *result->mBnaTrustStore);
+    });
 
     return result;
 }

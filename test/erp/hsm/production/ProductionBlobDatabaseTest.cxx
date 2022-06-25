@@ -39,7 +39,7 @@ public:
         BlobDatabaseHelper::removeUnreferencedBlobs();
     }
 
-    pqxx::result execute (const std::string& query)
+    pqxx::result execute (const std::string& query) const
     {
         auto transaction = database->createTransaction();
         auto result = transaction->exec(query);
@@ -57,7 +57,7 @@ class ProductionBlobDatabaseTest
       public testing::Test
 {
 public:
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         setup();
     }
@@ -68,7 +68,7 @@ class ProductionBlobDatabaseHostIpTest
       public testing::TestWithParam<std::tuple<BlobType, bool, bool>>
 {
 public:
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         setup();
     }
@@ -77,7 +77,7 @@ public:
 /**
  * Verify that blobs with type Attestation* are stored with the current host ip.
  */
-TEST_P(ProductionBlobDatabaseHostIpTest, storeBlob)
+TEST_P(ProductionBlobDatabaseHostIpTest, storeBlob) // NOLINT(readability-function-cognitive-complexity)
 {
     const auto[blobType, isHostIpExpected, isBuildExpected] = GetParam();
 
@@ -172,7 +172,7 @@ TEST_F(ProductionBlobDatabaseTest, getAllBlobsSortedById_withoutHostIp)
 /**
  * Verify that blobs with a host ip are only retrieved if the host ip is identical to the current host ip.
  */
-TEST_F(ProductionBlobDatabaseTest, getBlob_withHostIp)
+TEST_F(ProductionBlobDatabaseTest, getBlob_withHostIp) // NOLINT(readability-function-cognitive-complexity)
 {
     const auto result1 = execute("INSERT INTO erp.blob (type, host_ip, name, data, generation) VALUES (2, '127.0.0.1', 'localhost-1', 'data-1', 1) RETURNING blob_id");
     const auto result2 = execute("INSERT INTO erp.blob (type, host_ip, name, data, generation) VALUES (2, '127.0.0.2', 'localhost-2', 'data-2', 1) RETURNING blob_id");
@@ -251,7 +251,7 @@ TEST_F(ProductionBlobDatabaseTest, noBuildForOtherBlobs)
  */
 TEST_F(ProductionBlobDatabaseTest, deleteBlob)
 {
-    size_t expectedCount;
+    size_t expectedCount = 0;
     {
         const auto countResult = execute("SELECT COUNT(*) FROM erp.blob");
         expectedCount = countResult.front()[0].as<size_t>();

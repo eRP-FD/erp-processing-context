@@ -51,7 +51,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:0.0.10'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -68,42 +68,10 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.5.0"
-                                    sh """
-                                        # Temporary workaround for SSH host verification for GitHub. TODO: include this into the docker image build
-                                        mkdir -p ~/.ssh && ssh-keyscan github.ibmgcloud.net >> ~/.ssh/known_hosts
-                                        # Do not stop on address sanitizer errors.
-                                        export halt_on_error=0
-                                        mkdir -p jenkins-build-debug
-                                        cd jenkins-build-debug
-                                        pip3 install conan --upgrade
-                                        conan --version
-                                        conan remote clean
-                                        conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force
-                                        conan user -r conan-center-binaries -p "${env.NEXUS_PASSWORD}" "${env.NEXUS_USERNAME}"
-                                        conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force
-
-                                        # Add nexus for IBM internal files and add credentials
-                                        conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force
-                                        conan user -r erp -p "${env.NEXUS_PASSWORD}" "${env.NEXUS_USERNAME}"
-
-                                        conan profile new default --detect
-                                        conan profile update settings.compiler.libcxx=libstdc++11 default
-                                        # Required at least for redis++ build process.
-                                        conan profile update settings.compiler.cppstd=17 default
-                                        conan profile update settings.compiler.version=9 default
-                                        conan profile update env.CXX=g++-9 default
-                                        conan profile update env.CC=gcc-9 default
-                                        conan install .. --build=missing
-                                        cmake -DCMAKE_BUILD_TYPE=Debug \
-                                              -DERP_BUILD_VERSION=${erp_build_version} \
-                                              -DERP_RELEASE_VERSION=${erp_release_version} \
-                                              -DERP_WITH_HSM_MOCK=ON \
-                                              ..
-                                        make clean
-                                        ${BUILD_WRAPPER_HOME}/build-wrapper-linux-x86-64 --out-dir sonar-reports \
-                                                cmake --build . -j 6 --target test --target production
-                                    """
+                                    def erp_release_version = "1.6.0"
+                                    sh "scripts/ci-build.sh " +
+                                            "--build_version='${erp_build_version}' " +
+                                            "--release_version='${erp_release_version}'"
                                 }
                             }
                         }
@@ -164,6 +132,20 @@ pipeline {
                         }
                     }
                 }
+                stage('Dependency Track') {
+                    when {
+                        anyOf {
+                            branch 'master'
+                            branch 'release/*'
+                        }
+                    }
+                    steps {
+                        dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
+                            projectVersion: "${currentBuild.displayName}", synchronous: false
+                        dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
+                            projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
+                    }
+                }
                 stage ("Run Tests") {
                     steps {
                         sh """
@@ -179,32 +161,15 @@ pipeline {
                         }
                     }
                 }
-                stage('Dependency Track') {
-                    when {
-                        anyOf {
-                            branch 'master'
-                            branch 'release/*'
-                        }
-                    }
-                    steps {
-                        dependencyTrackCpp()
-                    }
-                }
                 stage('Static Analysis') {
                     steps {
-                        sh """
-                            cd jenkins-build-debug
-                            cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-                                  -DERP_WITH_HSM_MOCK=ON \
-                                  ..
-                            export PYTHONIOENCODING=UTF-8
-                            clang-tidy --version
-                            set +e
-                            /usr/local/clang_11.0.1/share/clang/run-clang-tidy.py -config "\$(< ../.clang-tidy)" -header-filter="(src|test)/.*" -p . -j9 > ../clang-tidy.txt
-                            set -e
-                        """
+                        sh "scripts/ci-static-analysis.sh " +
+                                "--build-path=jenkins-build-debug " +
+                                "--source-path=. " +
+                                "--clang-tidy-bin=clang-tidy-12 " +
+                                "--output=clang-tidy.txt"
                         staticAnalysis("SonarQubeeRp")
-                        timeout(time: 1, unit: 'MINUTES') {
+                        timeout(time: 5, unit: 'MINUTES') {
                             waitForQualityGate abortPipeline: true
                         }
                         // Fix build folder file permissions
@@ -229,7 +194,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.5.0"
+                                def release_version = "1.6.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -265,7 +230,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.5.0"
+                                def release_version = "1.6.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +

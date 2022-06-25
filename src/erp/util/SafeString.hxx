@@ -24,7 +24,8 @@ public:
     explicit SafeString (size_t size);
     explicit SafeString (const char* value);
     explicit SafeString(char* value, size_t size);
-    explicit SafeString (unsigned char* value, size_t size);
+    explicit SafeString(unsigned char* value, size_t size);
+    explicit SafeString(std::byte* value, size_t size);
     explicit SafeString (const NoZeroFillTag&, size_t size);
 
     SafeString (const SafeString& other) = delete;
@@ -35,7 +36,7 @@ public:
 
     /// @brief move construct from anything, that has a data and a size member (string, vector, array)
     template <typename InputT, decltype((void)std::declval<InputT>().data(), std::declval<InputT>().size())* = nullptr>
-    explicit SafeString(InputT&& in);
+    explicit SafeString(InputT&& in); // NOLINT(bugprone-forwarding-reference-overload)
 
     /// @brief move from anything, that has a data and a size member (string, vector, array)
     template <typename InputT, decltype(std::declval<InputT>().data(), std::declval<InputT>().size())* = nullptr>
@@ -62,10 +63,16 @@ public:
     [[nodiscard]] operator std::string_view (void) const;
 
     /// @return const view to the managed memory, terminating \0 is guaranteed
+    [[nodiscard]] operator std::basic_string_view<std::byte> (void) const;
+
+    /// @return const view to the managed memory, terminating \0 is guaranteed
     [[nodiscard]] operator gsl::span<const char> (void) const;
 
     /// @return mutable pointer to the managed memory, terminating \0 is guaranteed
     [[nodiscard]] operator char* (void);
+
+    /// @return mutable pointer to the managed memory, terminating \0 is guaranteed
+    [[nodiscard]] explicit operator std::byte* (void);
 
     /// @return the size of the string, excluding the terminating \0
     [[nodiscard]] size_t size (void) const;
@@ -110,7 +117,7 @@ SafeString& SafeString::operator=(InputT&& in)
 }
 
 template<typename InputT, decltype((void)std::declval<InputT>().data() , std::declval<InputT>().size()) *>
-SafeString::SafeString(InputT&& in)
+SafeString::SafeString(InputT&& in) // NOLINT(bugprone-forwarding-reference-overload)
     : SafeString(in.data(), in.size())
 {
     static_assert(!std::is_reference_v<InputT>);

@@ -145,6 +145,68 @@ TEST_P(ErpTeeProtocolTest, gematik_ref_key_config) // NOLINT
     EXPECT_EQ(innerTeeRequest.header().keepAlive(), true);
 }
 
+TEST_F(ErpTeeProtocolTest, decrypt)// NOLINT(readability-function-cognitive-complexity)
+{
+    const auto cipher = ::std::string{TEST_DATA_DIR} + "/EllipticCurveUtilsTest/task_create.cipher";
+
+    auto blobCache = ::std::make_shared<BlobCache>(::std::make_unique<MockBlobDatabase>());
+    const auto& vauKeyPair = ::MockCryptography::getEciesPrivateKeyPem();
+    blobCache->storeBlob(::BlobDatabase::Entry{::BlobType::EciesKeypair,
+                                               ::ErpVector::create("ecies-1"),
+                                               ::ErpBlob{vauKeyPair, 1},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {}});
+
+    HsmPool hsm{::std::make_unique<::HsmMockFactory>(::std::make_unique<::HsmMockClient>(), blobCache),
+                ::TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), ::std::make_shared<::Timer>()};
+
+    EXPECT_NO_THROW(::ErpTeeProtocol::decrypt(::FileHelper::readFileAsString(cipher), hsm));
+
+    // generated with "openssl ecparam -genkey -name brainpoolP256r1"
+    ::SafeString wrongKey{R"(-----BEGIN EC PRIVATE KEY-----
+MHgCAQEEIF4M9ZJ46/S5yOot0RDU1rJrdM6bmk+tOSJ3gCXsqi/+oAsGCSskAwMC
+CAEBB6FEA0IABG/H/oLbhVc7AkESgRnC7V2RT5Ll1Mn89x03e08hu5vOdN7fcwWi
+Qa4UBnlfJIUiGp3wlQm5wop/n1m3NCvHXTs=
+-----END EC PRIVATE KEY-----)"};
+    blobCache->storeBlob(::BlobDatabase::Entry{::BlobType::EciesKeypair,
+                                               ::ErpVector::create("ecies-2"),
+                                               ::ErpBlob{wrongKey, 1},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {}});
+
+    EXPECT_NO_THROW(::ErpTeeProtocol::decrypt(::FileHelper::readFileAsString(cipher), hsm));
+
+
+    blobCache->storeBlob(::BlobDatabase::Entry{::BlobType::EciesKeypair,
+                                               ::ErpVector::create("ecies-3"),
+                                               ::ErpBlob{wrongKey, 1},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {},
+                                               {}});
+
+    EXPECT_ANY_THROW(::ErpTeeProtocol::decrypt(::FileHelper::readFileAsString(cipher), hsm));
+
+    blobCache->deleteBlob(::BlobType::EciesKeypair, ::ErpVector::create("ecies-1"));
+    blobCache->deleteBlob(::BlobType::EciesKeypair, ::ErpVector::create("ecies-2"));
+    blobCache->deleteBlob(::BlobType::EciesKeypair, ::ErpVector::create("ecies-3"));
+}
 
 INSTANTIATE_TEST_SUITE_P(gematik_ref_key_config, ErpTeeProtocolTest,
         testing::Values(

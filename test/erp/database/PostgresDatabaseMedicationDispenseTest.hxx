@@ -40,7 +40,7 @@ protected:
     void writeCurrentTestOutputFile(
         const std::string& testOutput,
         const std::string& fileExtension,
-        const std::string& marker = std::string());
+        const std::string& marker = std::string()) const;
     bool writeTestOutputFileEnabled = false;
 private:
     model::Task createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType = GetParam().type);

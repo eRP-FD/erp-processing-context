@@ -41,7 +41,18 @@ static constexpr XmlStringView xhtmlNamespaceUri {"http://www.w3.org/1999/xhtml"
 
 inline bool XmlStringView::operator==(const xmlChar* otherStr) const
 {
-    return otherStr && std::strncmp(mCString, reinterpret_cast<const char*>(otherStr), mSize) == 0;
+    if (!otherStr)
+    {
+        return false;
+    }
+    for (size_t i = 0; i < mSize; ++i)
+    {
+        if (otherStr[i] == 0 || otherStr[i] != mCString[i])
+        {
+            return false;
+        }
+    }
+    return otherStr[mSize] == 0;
 }
 
 inline bool operator == (const xmlChar* lhs, const XmlStringView& rhs)

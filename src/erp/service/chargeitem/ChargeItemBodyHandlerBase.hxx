@@ -26,7 +26,7 @@ public:
 
 protected:
     static std::optional<model::Binary> getDispenseItemBinary(const model::ChargeItem& chargeItem);
-    static model::Bundle createAndValidateDispenseItem(const model::Binary& containedBinary, const PcServiceContext& serviceContext);
+    static model::Bundle createAndValidateDispenseItem(const model::Binary& containedBinary, PcServiceContext& serviceContext);
     static void setDispenseItemReference(model::ChargeItem& chargeItem, const model::Bundle& dispenseItemBundle);
 };
 

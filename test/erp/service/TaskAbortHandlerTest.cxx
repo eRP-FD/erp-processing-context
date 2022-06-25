@@ -37,6 +37,7 @@ protected:
 };
 
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void TaskAbortHandlerTest::checkCreatedData(
     const model::PrescriptionId& prescriptionId,
     const std::string& communicationRecipient,
@@ -83,6 +84,7 @@ void TaskAbortHandlerTest::checkCreatedData(
     EXPECT_EQ(num, static_cast<signed long>(communicationIds.size()));
 }
 
+//NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void TaskAbortHandlerTest::checkResultingData(
     const model::PrescriptionId& prescriptionId,
     const std::string& communicationRecipient,
@@ -122,7 +124,7 @@ void TaskAbortHandlerTest::checkResultingData(
 }
 
 
-TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)
+TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string insurant = InsurantF;
     const std::string telematicId = mPharmacy;
@@ -163,7 +165,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)
 }
 
 
-TEST_F(TaskAbortHandlerTest, deletionOfCommunications)
+TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string insurant = InsurantF;
     const std::string telematicId = mPharmacy;
@@ -245,7 +247,7 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_organization)
     EXPECT_EQ(auditData.metaData().agentName(), organizationNameClaim.value());
 }
 
-TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)
+TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string kvnr = InsurantE;
     const std::string telematicId = mPharmacy;

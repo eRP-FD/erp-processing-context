@@ -36,6 +36,7 @@ public:
     const std::string& contentReference() const { return mContentReference; }
     Representation representation() const { return mRepresentation; }
     bool isArray() const { return mIsArray; }
+    [[nodiscard]] bool isBackbone() const { return mIsBackbone; }
     /// element is a root element
     /// root elements have no \<type\>; element and carry the name of their Structure's typeId (StructureDefinition/type\@value)
     bool isRoot() const
@@ -52,6 +53,7 @@ private:
     std::string mContentReference;
     Representation mRepresentation = Representation::element;
     bool mIsArray = false;
+    bool mIsBackbone = false;
 };
 
 class FhirElement::Builder
@@ -71,9 +73,16 @@ public:
 
     Builder& isArray(bool isArray_);
 
-    FhirElement getAndReset();
+    Builder& isBackbone(bool isBackbone_);
+
+    std::shared_ptr<const FhirElement> getAndReset();
+
+    Builder(const Builder&) = delete;
+    Builder& operator=(const Builder&) = delete;
+    Builder(Builder&&) = default;
+    Builder& operator=(Builder&&) = default;
 private:
-    std::unique_ptr<FhirElement> mFhirElement;
+    std::shared_ptr<FhirElement> mFhirElement;
 };
 
 std::ostream& operator << (std::ostream&, const FhirElement&);

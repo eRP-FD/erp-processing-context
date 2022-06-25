@@ -33,8 +33,8 @@ std::ostream& operator << (std::ostream& out, const TestSample& testSample)
 void append(db_model::EncryptedBlob& blob, const std::string& toAppend)
 {
     blob.insert(blob.end(),
-        reinterpret_cast<const unsigned char*>(toAppend.data()),
-        reinterpret_cast<const unsigned char*>(toAppend.data()) + toAppend.size()
+        reinterpret_cast<const std::byte*>(toAppend.data()),
+        reinterpret_cast<const std::byte*>(toAppend.data()) + toAppend.size()
     );
 }
 
@@ -137,7 +137,7 @@ TEST_P(DatabaseCodecSampleTest, decode) // NOLINT
 {
     const auto& param = GetParam();
     db_model::EncryptedBlob blob;
-    blob.push_back(1); // Version
+    blob.push_back(std::byte(1)); // Version
     append(blob, ByteHelper::fromHex(param.ivHex));
     append(blob, ByteHelper::fromHex(param.authenticationTagHex));
     append(blob, ByteHelper::fromHex(param.ciperTextHex));
@@ -159,7 +159,7 @@ public:
     db_model::EncryptedBlob makeBlob(uint8_t version)
     {
         db_model::EncryptedBlob blob;
-        blob.push_back(version);
+        blob.push_back(std::byte(version));
         append(blob, ByteHelper::fromHex(ivHex));
         append(blob, ByteHelper::fromHex(authenticationTagHex));
         append(blob, ByteHelper::fromHex(cipherTextHex));

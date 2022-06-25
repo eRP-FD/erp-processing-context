@@ -40,8 +40,8 @@ public:
     std::shared_ptr<HsmFactory> factory;
     std::shared_ptr<HsmSession> session;
     std::string name;
-    bool enabled;
-    MockBlobCache::MockTarget target;
+    bool enabled{};
+    MockBlobCache::MockTarget target{};
 };
 using ParameterSetFactory = std::function<ParameterSet(void)>;
 
@@ -89,9 +89,9 @@ namespace
                 // Run the tee token updater once, now, so that we have a valid Tee token.
                 TeeTokenUpdater::createProductionTeeTokenUpdaterFactory()
                     (
-                        [&](auto&&blob)
+                        [&](ErpBlob&& blob)
                         {
-                          parameters.session->setTeeToken(std::move(blob));
+                          parameters.session->setTeeToken(blob);
                         },
                         *parameters.factory,
                         std::make_shared<Timer>()
@@ -226,7 +226,7 @@ TEST_P(HsmSessionTest, deriveCommunicationKey_second)
     ASSERT_FALSE(response.optionalData.has_value());
 }
 
-TEST_P(HsmSessionTest, deriveCommunicationOrTaskKey)
+TEST_P(HsmSessionTest, deriveCommunicationOrTaskKey)//NOLINT(readability-function-cognitive-complexity)
 {
     BlobDatabase::Entry taskEntry;
     taskEntry.type = BlobType::TaskKeyDerivation;
@@ -381,12 +381,7 @@ TEST_P(HsmSessionTest, vauEcies128_forSimulatedHsm)
     const auto clientKeyPair = EllipticCurve::BrainpoolP256R1->createKeyPair();
 
     // 2. Call the HSM's vauEcies128 function.
-    std::string publicKeyString;
-    switch(parameters.target)
-    {
-        case MockBlobCache::MockTarget::SimulatedHsm: publicKeyString = EllipticCurveUtils::publicKeyToX962Der(clientKeyPair); break;
-        case MockBlobCache::MockTarget::MockedHsm: publicKeyString = EllipticCurveUtils::publicKeyToX962Der(clientKeyPair); break;
-    }
+    const std::string& publicKeyString = EllipticCurveUtils::publicKeyToX962Der(clientKeyPair);
     const auto serverSymmetricKey = parameters.session->vauEcies128(ErpVector::create(publicKeyString));
 
     // Symmetric AES keys don't have a structure that can be verified.
@@ -436,7 +431,7 @@ TEST_P(HsmSessionTest, getVauSigPrivateKeyCached)
 }
 
 
-TEST_P(HsmSessionTest, getVauSigPrivateKeyNotCached)
+TEST_P(HsmSessionTest, getVauSigPrivateKeyNotCached)//NOLINT(readability-function-cognitive-complexity)
 {
     if (parameters.name == "simulated")
     {
@@ -562,7 +557,7 @@ namespace {
     {
     public:
         std::atomic_size_t callCount = 0;
-        virtual ErpVector getRndBytes(const HsmRawSession&, size_t) override
+        ErpVector getRndBytes(const HsmRawSession&, size_t) override
         {
             ++callCount;
             return {};

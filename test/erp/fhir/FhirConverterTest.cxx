@@ -173,7 +173,7 @@ INSTANTIATE_TEST_SUITE_P(fhirSpecialCases , FhirConverterTest,
     SampleFiles{"ERP-8395-primary-without-value-more-values.xml"    , "ERP-8395-primary-without-value-more-values.json"},
     SampleFiles{"ERP-8395-primary-without-value-null-extension.xml" , "ERP-8395-primary-without-value-null-extension.json"},
     SampleFiles{"ERP-8395-primary-without-value-null-value.xml"     , "ERP-8395-primary-without-value-null-value.json"},
-    SampleFiles{"ERP-8395-primary-without-value-null-mixed.xml"     , "ERP-8395-primary-without-value-null-mixed.json"}
-
+    SampleFiles{"ERP-8395-primary-without-value-null-mixed.xml"     , "ERP-8395-primary-without-value-null-mixed.json"},
+    SampleFiles{"ERP-10031-basisprofil-de-r4.xml"                   , "ERP-10031-basisprofil-de-r4.json"}
     // clang-format on
 ));

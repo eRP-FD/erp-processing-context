@@ -10,8 +10,8 @@ namespace util
 {
     Buffer stringToBuffer(std::string_view string)
     {
-        auto begin = reinterpret_cast<const Buffer::value_type *>(string.data());
-        auto end = begin + string.length();
+        const auto* begin = reinterpret_cast<const Buffer::value_type *>(string.data());
+        const auto* end = begin + string.length();
         return Buffer(begin, end);
     }
 

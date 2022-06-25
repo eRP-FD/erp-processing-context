@@ -53,7 +53,7 @@ public:
     constexpr const uint8_t* data() const { return mKey.data(); }
 
     [[nodiscard]]
-    CmacSignature sign(const std::string_view& message);
+    CmacSignature sign(const std::string_view& message) const;
 
     [[nodiscard]]
     static CmacKey fromBin(const std::string_view& binString);

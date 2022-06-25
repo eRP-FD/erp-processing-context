@@ -34,7 +34,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
-    auto databaseHandle = session.database();
+    auto* databaseHandle = session.database();
 
     auto [task, healthCareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
     ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
@@ -51,6 +51,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     task->updateLastUpdate();
     A_19169.finish();
 
+    task->setHealthCarePrescriptionUuid();
     databaseHandle->updateTaskStatusAndSecret(*task);
 
     // Create response:

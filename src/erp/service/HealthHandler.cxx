@@ -17,7 +17,7 @@ void HealthHandler::handleRequest(SessionContext& session)
     std::optional<model::Health> healthResource;
     try
     {
-        HealthCheck::update(session);
+        HealthCheck::update(session.serviceContext);
         healthResource = session.serviceContext.applicationHealth().model();
     }
     catch (const std::exception& ex)

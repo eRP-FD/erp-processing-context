@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 
 
-TEST(AuditEventCreatorTest, createRepresentative)
+TEST(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::GET_Task_id_representative;
     const model::AuditEvent::Action action = model::AuditEvent::Action::read;
@@ -66,7 +66,7 @@ TEST(AuditEventCreatorTest, createRepresentative)
 }
 
 
-TEST(AuditEventCreatorTest, createPatient)
+TEST(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::POST_Task_abort_insurant;
     const model::AuditEvent::Action action = model::AuditEvent::Action::del;
@@ -117,7 +117,7 @@ TEST(AuditEventCreatorTest, createPatient)
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
-TEST(AuditEventCreatorTest, createGetMultipleResources)
+TEST(AuditEventCreatorTest, createGetMultipleResources)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::GET_MedicationDispense;
     const model::AuditEvent::Action action = model::AuditEvent::Action::read;
@@ -164,7 +164,7 @@ TEST(AuditEventCreatorTest, createGetMultipleResources)
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
-TEST(AuditEventCreatorTest, createExpiredTaskDeletion)
+TEST(AuditEventCreatorTest, createExpiredTaskDeletion)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::Task_delete_expired_id;
     const model::AuditEvent::Action action = model::AuditEvent::Action::del;
@@ -211,7 +211,7 @@ TEST(AuditEventCreatorTest, createExpiredTaskDeletion)
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
-TEST(AuditEventCreatorTest, createPostChargeItem)
+TEST(AuditEventCreatorTest, createPostChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::POST_ChargeItem;
     const model::AuditEvent::Action action = model::AuditEvent::Action::create;
@@ -263,7 +263,7 @@ TEST(AuditEventCreatorTest, createPostChargeItem)
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
-TEST(AuditEventCreatorTest, createPutChargeItemPatient)
+TEST(AuditEventCreatorTest, createPutChargeItemPatient)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::PUT_ChargeItem_id_insurant;
     const model::AuditEvent::Action action = model::AuditEvent::Action::update;
@@ -314,7 +314,7 @@ TEST(AuditEventCreatorTest, createPutChargeItemPatient)
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
-TEST(AuditEventCreatorTest, createDeleteConsent)
+TEST(AuditEventCreatorTest, createDeleteConsent)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::DELETE_Consent_id;
     const model::AuditEvent::Action action = model::AuditEvent::Action::del;
@@ -361,7 +361,7 @@ TEST(AuditEventCreatorTest, createDeleteConsent)
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
-TEST(AuditEventCreatorTest, createPostConsent)
+TEST(AuditEventCreatorTest, createPostConsent)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::AuditEventId eventId = model::AuditEventId::POST_Consent;
     const model::AuditEvent::Action action = model::AuditEvent::Action::create;

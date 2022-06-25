@@ -25,7 +25,7 @@ PreUserPseudonym PreUserPseudonym::fromUserPseudonym(const std::string_view& use
 {
     Expect(userPseudonym.size() == CmacSignature::SignatureSize * 4 + 1, "Invalid User-Pseudonym.");
     Expect(userPseudonym.at(CmacSignature::SignatureSize * 2) == '-', "Invalid User-Pseudonym Format.");
-    auto noHex = std::find_if(userPseudonym.begin() + CmacSignature::SignatureSize * 2 + 1, userPseudonym.end(), &notHexDigit);
+    const auto* noHex = std::find_if(userPseudonym.begin() + CmacSignature::SignatureSize * 2 + 1, userPseudonym.end(), &notHexDigit);
     Expect(noHex == userPseudonym.end(), "Invalid Character in User-Pseudonym CMAC");
     return PreUserPseudonym(CmacSignature::fromHex(std::string(userPseudonym.substr(0, CmacSignature::SignatureSize * 2))));
 }

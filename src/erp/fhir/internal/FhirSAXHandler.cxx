@@ -43,24 +43,24 @@ class FhirSaxHandler::Context {
 public:
     template <typename valueArgT>
     explicit Context(const FhirStructureDefinition& inType,
-                   const FhirElement& inBackBone,
+                   std::shared_ptr<const FhirElement> inBackBone,
                    std::string inName, valueArgT&& valueArg)
         : name(std::move(inName))
         , value(std::forward<valueArgT>(valueArg))
         , subObjectOfPrimitive{value.IsArray()?rapidjson::kArrayType:rapidjson::kNullType}
         , mType(&inType)
-        , mElement(&inBackBone)
+        , mElement(std::move(inBackBone))
     {
 
     }
     explicit Context(const FhirStructureDefinition& inType,
-                   const FhirElement& inBackBone,
+                   std::shared_ptr<const FhirElement> inBackBone,
                    std::string inName, rapidjson::Value&& inValue)
         : name(std::move(inName))
         , value(std::move(inValue))
         , subObjectOfPrimitive{value.IsArray()?rapidjson::kArrayType:rapidjson::kNullType}
         , mType(&inType)
-        , mElement(&inBackBone)
+        , mElement(std::move(inBackBone))
     {
 
     }
@@ -70,14 +70,14 @@ public:
                         const std::string_view& resourceTypeName);
 
     const FhirStructureDefinition& type() const { return *mType; }
-    const FhirElement& element() const { return *mElement; }
+    std::shared_ptr<const FhirElement> element() const { return mElement; }
 
     std::string name;
     bool isSubObjectOfPrimitive = false;
     rapidjson::Value value;
     rapidjson::Value subObjectOfPrimitive{rapidjson::kNullType};
     /// points to the ArrayElement handled in this context; nullptr if this context doesn't represent an array
-    const FhirElement* currentArray = nullptr;
+    std::shared_ptr<const FhirElement> currentArray = nullptr;
 
     // depth represets the depth in the XML-Tree, that are accounted for this stack instance
     // it is incremented, when a start tag doesn't push something onto the stack
@@ -85,7 +85,7 @@ public:
     size_t depth = 0;
 private:
     const FhirStructureDefinition* mType = nullptr;
-    const FhirElement* mElement = nullptr;
+    std::shared_ptr<const FhirElement> mElement = nullptr;
 };
 
 /// resources are polymorphic. This function is called, when the actual type is known
@@ -108,9 +108,7 @@ void FhirSaxHandler::Context::setResourceType(const FhirStructureRepository& rep
 
 FhirSaxHandler::FhirSaxHandler(const FhirStructureRepository& repo)
     : mStructureRepo(repo)
-    , mBackBoneType(mStructureRepo.findTypeById("BackboneElement"))
 {
-    Expect3(mBackBoneType != nullptr, "Type BackboneElement not defined.", std::logic_error);
 }
 
 FhirSaxHandler::~FhirSaxHandler() = default;
@@ -176,29 +174,27 @@ void FhirSaxHandler::startFHIRElement(const XmlStringView& localname, const Attr
     }
     auto& parentItem = mStack.back();
     const auto& parentElement = parentItem.element();
-    TVLOG(3) << "  handle subelement of: " << parentElement.name() << ":" << parentElement.typeId() << (parentElement.isArray()?"[]":"");
-    const auto* const parentElementType = mStructureRepo.findTypeById(parentElement.typeId());
-    Expect3(parentElementType != nullptr, "Failed to get Backbone Type: " + parentElement.name(), std::logic_error);
+    TVLOG(3) << "  handle subelement of: " << parentElement->name() << ":" << parentElement->typeId() << (parentElement->isArray()?"[]":"");
+    const auto* const parentElementType = mStructureRepo.findTypeById(parentElement->typeId());
+    Expect3(parentElementType != nullptr, "Failed to get Backbone Type: " + parentElement->name(), std::logic_error);
     ErpExpect(!parentElementType->isSystemType(), HttpStatus::BadRequest, "System types should not have sub-elements.");
     if (parentItem.currentArray == nullptr &&
         parentElementType->kind() == FhirStructureDefinition::Kind::primitiveType)
     {
         pushContextForSubObjectOfPrimitive(localname);
     }
-    if (parentElementType->kind() == FhirStructureDefinition::Kind::resource && !parentElement.isRoot())
+    if (parentElementType->kind() == FhirStructureDefinition::Kind::resource && !parentElement->isRoot())
     {
         parentItem.setResourceType(mStructureRepo, *this, localname);
         ++parentItem.depth;
         return;
     }
-    std::string elementId;
-    const auto& [elementType, element] = getTypeAndElement(*parentElementType, &parentItem.type(), parentElement, localname);
-    TVLOG(3) << "Element: " << element.name() << ":" << elementType.typeId() << (element.isArray()?"[]":"");
-    if (parentItem.currentArray != &element) // no need to check for .currentArray == nullptr, because &element != nullptr
+    const auto& [elementType, element] = getTypeAndElement(*parentElementType, &parentItem.type(), *parentElement, localname);
+    TVLOG(3) << "Element: " << element->name() << ":" << elementType.typeId() << (element->isArray()?"[]":"");
+    if (!parentItem.currentArray || parentItem.currentArray->name() != element->name())
     {
         pushArrayContext(parentItem, parentElement, element, localname);
     }
-    Expect3(&elementType != mBackBoneType, "elementType should not be Backbone", std::logic_error);
     pushJsonField(localname, attributes, elementType, element);
     if (elementType.kind() == FhirStructureDefinition::Kind::primitiveType)
     {
@@ -207,8 +203,8 @@ void FhirSaxHandler::startFHIRElement(const XmlStringView& localname, const Attr
     }
 }
 
-void FhirSaxHandler::pushArrayContext(const Context& parentItem, const FhirElement& parentElement,
-                                   const FhirElement& element, const XmlStringView& localname)
+void FhirSaxHandler::pushArrayContext(const Context& parentItem, std::shared_ptr<const FhirElement> parentElement,
+                                   std::shared_ptr<const FhirElement> element, const XmlStringView& localname)
 {
 
     // arrays are special case they are implemented by using two contexts
@@ -221,16 +217,16 @@ void FhirSaxHandler::pushArrayContext(const Context& parentItem, const FhirEleme
         TVLOG(3) << "  element change";
         joinTopStackElements();
     }
-    if (element.isArray())
+    if (element->isArray())
     {
         // only when entering a new array an array-context is created.
         auto& arrayItem = mStack.emplace_back(mStack.back().type(), parentElement, std::string{localname},
                                               rapidjson::kArrayType);
-        arrayItem.currentArray = &element;
+        arrayItem.currentArray = element;
     }
 }
 
-void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandler::AttributeList& attributes, const FhirStructureDefinition& type, const FhirElement& element)
+void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandler::AttributeList& attributes, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element)
 {
     auto kind = type.kind();
     auto value = attributes.findAttribute("value");
@@ -238,7 +234,7 @@ void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandle
     {
         if (!value)
         {
-            mStack.emplace_back(type, element, std::string{name}, rapidjson::kNullType);
+            mStack.emplace_back(type, std::move(element), std::string{name}, rapidjson::kNullType);
             return;
         }
         kind = systemTypeFor(type).kind();
@@ -249,26 +245,26 @@ void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandle
         case K::systemBoolean:
         {
             ErpExpect(value.has_value(), HttpStatus::BadRequest, "Missing value for system type: " + getPath());
-            pushBoolean(name, value->value(), type, element);
+            pushBoolean(name, value->value(), type, std::move(element));
             return;
         }
         case K::systemDouble:
         case K::systemInteger:
         {
             ErpExpect(value.has_value(), HttpStatus::BadRequest, "Missing value for system type: " + getPath());
-            pushNumber(name, value->value(), type, element);
+            pushNumber(name, value->value(), type, std::move(element));
             return;
         }
         case K::systemString:
         {
             ErpExpect(value.has_value(), HttpStatus::BadRequest, "Missing value for system type: " + getPath());
-            pushString(name, value->value(), type, element);
+            pushString(name, value->value(), type, std::move(element));
             return;
         }
         case K::complexType:
         case K::resource:
         {
-            pushObject(name, attributes, type, element);
+            pushObject(name, attributes, type, std::move(element));
             return;
         }
         case K::logical:
@@ -281,7 +277,7 @@ void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandle
 
 void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeList& attributes,
                          const FhirStructureDefinition& type,
-                         const FhirElement& element)
+                         std::shared_ptr<const FhirElement> element)
 {
     auto& newObject = mStack.emplace_back(type, element, std::string{name}, rapidjson::kObjectType);
     bool isSubObjectOfPrimitive = type.kind() == FhirStructureDefinition::Kind::primitiveType;
@@ -297,12 +293,12 @@ void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeLis
             {
                 continue;
             }
-            std::string elementId = makeElementId(element, attribute.localname());
-            const auto [fieldType, fieldElement] = getTypeAndElement(type, nullptr, element, attribute.localname());
-            ErpExpect(fieldElement.representation() == FhirElement::Representation::xmlAttr, HttpStatus::BadRequest,
+            std::string elementId = makeElementId(*element, attribute.localname());
+            const auto [fieldType, fieldElement] = getTypeAndElement(type, nullptr, *element, attribute.localname());
+            ErpExpect(fieldElement->representation() == FhirElement::Representation::xmlAttr, HttpStatus::BadRequest,
                       "Field on " + getPath() + " may not be represented as attribute: "s.append(attribute.localname()));
             ErpExpect(fieldType.kind() == FhirStructureDefinition::Kind::primitiveType || fieldType.isSystemType(), HttpStatus::BadRequest,
-                      "Non-primitive type for attibute " + getPath().append(attribute.localname()) + ": "s.append(fieldElement.typeId()));
+                      "Non-primitive type for attibute " + getPath().append(attribute.localname()) + ": "s.append(fieldElement->typeId()));
             auto systemType = systemTypeFor(fieldType);
             switch (systemType.kind())
             {
@@ -354,16 +350,16 @@ void FhirSaxHandler::pushContextForSubObjectOfPrimitive(const std::string_view& 
 void FhirSaxHandler::pushBoolean(const std::string_view& name,
                           const std::string_view& value,
                           const FhirStructureDefinition& type,
-                          const FhirElement& element)
+                          std::shared_ptr<const FhirElement> element)
 {
     TVLOG(3) << name << " = " << value;
     if (value == "true")
     {
-        mStack.emplace_back(type, element, std::string{name}, mResult.makeBool(true));
+        mStack.emplace_back(type, std::move(element), std::string{name}, mResult.makeBool(true));
     }
     else if (value == "false")
     {
-        mStack.emplace_back(type, element, std::string{name}, mResult.makeBool(false));
+        mStack.emplace_back(type, std::move(element), std::string{name}, mResult.makeBool(false));
     }
     else
     {
@@ -371,16 +367,16 @@ void FhirSaxHandler::pushBoolean(const std::string_view& name,
     }
 }
 
-void FhirSaxHandler::pushNumber(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, const FhirElement& element)
+void FhirSaxHandler::pushNumber(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element)
 {
     TVLOG(3) << name << " = " << value;
-    mStack.emplace_back(type, element, std::string{name}, mResult.makeNumber(value));
+    mStack.emplace_back(type, std::move(element), std::string{name}, mResult.makeNumber(value));
 }
 
-void FhirSaxHandler::pushString(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, const FhirElement& element)
+void FhirSaxHandler::pushString(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element)
 {
     TVLOG(3) << name << " = " << value;
-    mStack.emplace_back(type, element, std::string{name}, mResult.makeString(value));
+    mStack.emplace_back(type, std::move(element), std::string{name}, mResult.makeString(value));
 }
 
 const FhirStructureDefinition& FhirSaxHandler::systemTypeFor(const FhirStructureDefinition& primitiveType) const
@@ -391,7 +387,7 @@ const FhirStructureDefinition& FhirSaxHandler::systemTypeFor(const FhirStructure
     }
     Expect3(primitiveType.kind() == FhirStructureDefinition::Kind::primitiveType,
             "systemTypeFor called with structure of kind: " + to_string(primitiveType.kind()), std::logic_error);
-    const auto* const valueElement = primitiveType.findElement(primitiveType.typeId() + ".value");
+    const auto valueElement = primitiveType.findElement(primitiveType.typeId() + ".value");
     Expect3(valueElement != nullptr, "Primitive type has no value element.", std::logic_error);
     const auto* valueType = mStructureRepo.findTypeById(valueElement->typeId());
     Expect3(valueType != nullptr, "Type not found: " + valueElement->typeId(), std::logic_error);
@@ -560,9 +556,9 @@ void FhirSaxHandler::pushRootResource(const XmlStringView& resoureType)
     const auto* type = mStructureRepo.findTypeById(std::string{resoureType});
     ErpExpect(type != nullptr, HttpStatus::BadRequest, "Unknown Type: "s.append(resoureType));
     ErpExpect(type->kind() == FhirStructureDefinition::Kind::resource, HttpStatus::BadRequest, "Type is not a Resource: "s.append(resoureType));
-    const auto* backBone = type->findElement(type->typeId());
+    const auto backBone = type->findElement(type->typeId());
     Expect3(backBone != nullptr, "Element not defined: " + type->url() + "@" + type->typeId(), std::logic_error);
-    auto& state = mStack.emplace_back(*type, *backBone, std::string{resoureType}, rapidjson::kObjectType);
+    auto& state = mStack.emplace_back(*type, std::move(backBone), std::string{resoureType}, rapidjson::kObjectType);
     state.value.AddMember("resourceType", mResult.makeString(type->typeId()), mResult.GetAllocator());
 }
 
@@ -575,15 +571,15 @@ std::string FhirSaxHandler::makeElementId(const FhirElement& baseElement, const 
     return elementId;
 }
 
-std::tuple<const FhirStructureDefinition&, const FhirElement&>
+std::tuple<const FhirStructureDefinition&, std::shared_ptr<const FhirElement>>
 FhirSaxHandler::getTypeAndElement(const FhirStructureDefinition& baseType,
                            const FhirStructureDefinition* parentType,
                            const FhirElement& baseElement,
                            const std::string_view& name) const
 {
     std::string elementId;
-    const FhirElement* element = nullptr;
-    if (baseElement.isRoot() || &baseType == mBackBoneType)
+    std::shared_ptr<const FhirElement> element = nullptr;
+    if (baseElement.isBackbone())
     {
         elementId = makeElementId(baseElement, name);
         if (parentType)
@@ -610,15 +606,15 @@ FhirSaxHandler::getTypeAndElement(const FhirStructureDefinition& baseType,
     {
         const auto& contentReference = element->contentReference();
         Expect3(not contentReference.empty(), "Cannot determin type of: " + element->name(), std::logic_error);
-        const auto ref = mStructureRepo.resolveContentReference(contentReference);
+        const auto ref = mStructureRepo.resolveContentReference(*element);
         return {ref.baseType, ref.element};
     }
     Expect3(elementType != nullptr, "Could not resolve type: " + element->typeId(), std::logic_error);
-    if (parentType && elementType == mBackBoneType)
+    if (parentType && element->isBackbone())
     {
         elementType = parentType;
     }
-    return {*elementType, *element};
+    return {*elementType, element};
 }
 
 void FhirSaxHandler::startXHTMLElement(const XmlStringView localname,
@@ -632,8 +628,8 @@ void FhirSaxHandler::startXHTMLElement(const XmlStringView localname,
     ++(mStack.back().depth);
     if (!mCurrentXHTMLDoc)
     {
-        const auto [fhirType, fhirElement] = getTypeAndElement(parentType, nullptr, parentElement, localname);
-        ErpExpect(fhirElement.typeId() == "xhtml", HttpStatus::BadRequest,
+        const auto [fhirType, fhirElement] = getTypeAndElement(parentType, nullptr, *parentElement, localname);
+        ErpExpect(fhirElement->typeId() == "xhtml", HttpStatus::BadRequest,
                 "element is in xhtml namespace, but should not be represented as xhtml: "
                 + getPath() + "/"s.append(localname));
         mCurrentXHTMLDoc.reset(xmlNewDoc(reinterpret_cast<const xmlChar*>("1.1")));

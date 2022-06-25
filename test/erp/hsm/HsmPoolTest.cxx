@@ -33,7 +33,7 @@ public:
 };
 
 
-TEST_F(HsmPoolTest, poolAcquire)
+TEST_F(HsmPoolTest, poolAcquire)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(hsmPool.activeSessionCount(), 0);
     ASSERT_EQ(hsmPool.inactiveSessionCount(), 0);
@@ -50,7 +50,7 @@ TEST_F(HsmPoolTest, poolAcquire)
 }
 
 
-TEST_F(HsmPoolTest, poolAcquire_thread)
+TEST_F(HsmPoolTest, poolAcquire_thread)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(hsmPool.activeSessionCount(), 0);
     ASSERT_EQ(hsmPool.inactiveSessionCount(), 0);
@@ -99,7 +99,7 @@ TEST_F(HsmPoolTest, poolAcquire_thread)
 }
 
 
-TEST_F(HsmPoolTest, releasePool_onlyInactiveSessions)
+TEST_F(HsmPoolTest, releasePool_onlyInactiveSessions)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(hsmPool.activeSessionCount(), 0);
     ASSERT_EQ(hsmPool.inactiveSessionCount(), 0);
@@ -121,7 +121,7 @@ TEST_F(HsmPoolTest, releasePool_onlyInactiveSessions)
 }
 
 
-TEST_F(HsmPoolTest, releasePool_failToAcquire)
+TEST_F(HsmPoolTest, releasePool_failToAcquire)//NOLINT(readability-function-cognitive-complexity)
 {
     hsmPool.releasePool();
 
@@ -133,7 +133,7 @@ TEST_F(HsmPoolTest, releasePool_failToAcquire)
 }
 
 
-TEST_F(HsmPoolTest, releasePool_oneActiveSession)
+TEST_F(HsmPoolTest, releasePool_oneActiveSession)//NOLINT(readability-function-cognitive-complexity)
 {
     ASSERT_EQ(hsmPool.activeSessionCount(), 0);
     ASSERT_EQ(hsmPool.inactiveSessionCount(), 0);
@@ -168,7 +168,7 @@ namespace {
     {
     public:
         std::atomic_size_t callCount = 0;
-        virtual ErpVector getRndBytes(const HsmRawSession&, size_t) override
+        ErpVector getRndBytes(const HsmRawSession&, size_t) override
         {
             ++callCount;
             return {};

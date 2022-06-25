@@ -215,29 +215,29 @@ public:
     [[nodiscard]]
     std::optional<double> getOptionalDoubleValue(const rapidjson::Pointer& pointerToEntry) const;
 
-    [[nodiscard]] std::optional<std::string_view> getNumericAsString(const rapidjson::Pointer& pointerToEntry) const;
+    [[nodiscard]] std::optional<std::string_view> getNumericAsString(const rapidjson::Pointer& key) const;
 
     [[nodiscard]] std::optional<std::string_view> findStringInArray(
-        const rapidjson::Pointer& pointerToArray,
+        const rapidjson::Pointer& arrayPointer,
         const rapidjson::Pointer& searchKey,
         const std::string_view& searchValue,
         const rapidjson::Pointer& resultKeyPointer,
         bool ignoreValueCase = false) const;
 
     [[nodiscard]] std::optional<std::tuple<const rapidjson::Value*, std::size_t>> findMemberInArray(
-        const rapidjson::Pointer& pointerToArray,
+        const rapidjson::Pointer& arrayPointer,
         const rapidjson::Pointer& searchKey,
         const std::string_view& searchValue,
         const rapidjson::Pointer& resultKeyPointer,
         bool ignoreValueCase = false) const;
 
     [[nodiscard]] rapidjson::Value* findMemberInArray(
-        const rapidjson::Pointer& pointerToArray,
+        const rapidjson::Pointer& arrayPointer,
         const rapidjson::Pointer& searchKey,
         const std::string_view& searchValue);
 
     [[nodiscard]] const rapidjson::Value* findMemberInArray(
-        const rapidjson::Pointer& pointerToArray,
+        const rapidjson::Pointer& arrayPointer,
         const rapidjson::Pointer& searchKey,
         const std::string_view& searchValue) const;
 

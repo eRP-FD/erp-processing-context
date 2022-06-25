@@ -20,10 +20,10 @@ public:
         const std::string& path,
         std::unique_ptr<HandlerType>&& handler);
 
-    void onDeleteDo (const std::string& path, std::unique_ptr<HandlerType>&& action);
-    void onGetDo (const std::string& path, std::unique_ptr<HandlerType>&& action);
-    void onPostDo (const std::string& path, std::unique_ptr<HandlerType>&& action);
-    void onPutDo (const std::string& path, std::unique_ptr<HandlerType>&& action);
+    void onDeleteDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    void onGetDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    void onPostDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    void onPutDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
 
     struct MatchingHandler
     {

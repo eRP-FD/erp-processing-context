@@ -1,4 +1,3 @@
-
 /*
  * (C) Copyright IBM Deutschland GmbH 2021
  * (C) Copyright IBM Corp. 2021
@@ -6,6 +5,10 @@
 
 #include "EnrolmentApiClient.hxx"
 #include "erp/common/Constants.hxx"
+#include "erp/common/HttpMethod.hxx"
+#include "erp/enrolment/EnrolmentRequestHandler.hxx"
+#include "erp/model/NumberAsStringParserDocument.hxx"
+#include "erp/tpm/PcrSet.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 
@@ -21,51 +24,106 @@ auto rawEpochSeconds(const ::std::chrono::system_clock::time_point& timestamp)
 }
 
 EnrolmentApiClient::Header::Header(::HttpMethod method, ::BlobType type)
+    : ::EnrolmentApiClient::Header::Header{method, [type]() {
+                                               switch (type)
+                                               {
+                                                   case ::BlobType::EndorsementKey:
+                                                       return "/Enrolment/KnownEndorsementKey";
+                                                       break;
+                                                   case ::BlobType::AttestationPublicKey:
+                                                       return "/Enrolment/KnownAttestationKey";
+                                                       break;
+                                                   case ::BlobType::AttestationKeyPair:
+                                                       return "/Enrolment";
+                                                       break;
+                                                   case ::BlobType::Quote:
+                                                       return "/Enrolment/KnownQuote";
+                                                       break;
+                                                   case ::BlobType::EciesKeypair:
+                                                       return "/Enrolment/EciesKeypair";
+                                                       break;
+                                                   case ::BlobType::TaskKeyDerivation:
+                                                       return "/Enrolment/Task/DerivationKey";
+                                                       break;
+                                                   case ::BlobType::CommunicationKeyDerivation:
+                                                       return "/Enrolment/Communication/DerivationKey";
+                                                       break;
+                                                   case ::BlobType::AuditLogKeyDerivation:
+                                                       return "/Enrolment/AuditLog/DerivationKey";
+                                                       break;
+                                                   case ::BlobType::KvnrHashKey:
+                                                       return "/Enrolment/KvnrHashKey";
+                                                       break;
+                                                   case ::BlobType::TelematikIdHashKey:
+                                                       return "/Enrolment/TelematikIdHashKey";
+                                                       break;
+                                                   case ::BlobType::VauSig:
+                                                       return "/Enrolment/VauSig";
+                                               }
+                                               Fail("encountered unhandled blob type");
+                                           }()}
+{
+}
+
+EnrolmentApiClient::Header::Header(::HttpMethod method, ::std::string_view endpoint)
     : ::Header{method,
                "",
                ::Header::Version_1_1,
                {{::Header::Authorization,
-                 "Basic " + Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS)}},
+                 "Basic " + ::Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS)}},
                HttpStatus::Unknown}
 {
-    const auto baseEndpoint = ::std::string{"/Enrolment"};
+    Expect(! ::Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_API_CREDENTIALS).empty(),
+           "enrolment API credentials not set");
 
-    switch (type)
+    setTarget(::std::string{endpoint});
+    setKeepAlive(false);
+}
+
+EnrolmentApiClient::EnrolmentApiClient()
+    : ::HttpsClient{
+          ::Configuration::instance().serverHost(),
+          ::gsl::narrow<uint16_t>(::Configuration::instance().getIntValue(::ConfigurationKey::ENROLMENT_SERVER_PORT)),
+          ::Constants::httpTimeoutInSeconds, false}
+{
+}
+
+::EnrolmentModel EnrolmentApiClient::get(::std::string_view endpoint)
+{
+    return request(HttpMethod::GET, endpoint, {});
+}
+
+::EnrolmentModel EnrolmentApiClient::getQuote(const ::std::string& nonceBase64, const ::PcrSet& pcrSet)
+{
+    ::model::NumberAsStringParserDocument input;
+    input.setValue(::rapidjson::Pointer{::std::string{::EnrolmentRequestHandlerBase::requestNonce}}, nonceBase64);
+    for (const auto& entry : pcrSet)
     {
-        case ::BlobType::EndorsementKey:
-            setTarget(baseEndpoint + "/KnownEndorsementKey");
-            break;
-        case ::BlobType::AttestationPublicKey:
-            setTarget(baseEndpoint + "/KnownAttestationKey");
-            break;
-        case ::BlobType::AttestationKeyPair:
-            setTarget(baseEndpoint);
-            break;
-        case ::BlobType::Quote:
-            setTarget(baseEndpoint + "/KnownQuote");
-            break;
-        case ::BlobType::EciesKeypair:
-            setTarget(baseEndpoint + "/EciesKeypair");
-            break;
-        case ::BlobType::TaskKeyDerivation:
-            setTarget(baseEndpoint + "/Task/DerivationKey");
-            break;
-        case ::BlobType::CommunicationKeyDerivation:
-            setTarget(baseEndpoint + "/Communication/DerivationKey");
-            break;
-        case ::BlobType::AuditLogKeyDerivation:
-            setTarget(baseEndpoint + "/AuditLog/DerivationKey");
-            break;
-        case ::BlobType::KvnrHashKey:
-            setTarget(baseEndpoint + "/KvnrHashKey");
-            break;
-        case ::BlobType::TelematikIdHashKey:
-            setTarget(baseEndpoint + "/TelematikIdHashKey");
-            break;
-        case ::BlobType::VauSig:
-            setTarget(baseEndpoint + "/VauSig");
-            break;
+        input.addToArray(::rapidjson::Pointer{::std::string{::EnrolmentRequestHandlerBase::requestPcrSet}},
+                         rapidjson::Value{entry});
     }
+
+    input.setValue(::rapidjson::Pointer{::std::string{::EnrolmentRequestHandlerBase::requestHashAlgorithm}},
+                   ::EnrolmentRequestHandlerBase::hashAlgorithm);
+
+    return request(::HttpMethod::POST, "/Enrolment/GetQuote", input);
+}
+
+::std::string EnrolmentApiClient::authenticateCredential(::std::string_view secretBase64,
+                                                         ::std::string_view credentialBase64, ::std::string_view akName)
+{
+    ::model::NumberAsStringParserDocument input;
+    input.setValue(::rapidjson::Pointer{::std::string{::EnrolmentRequestHandlerBase::requestSecret}}, secretBase64);
+    input.setValue(::rapidjson::Pointer{::std::string{::EnrolmentRequestHandlerBase::requestCredential}},
+                   credentialBase64);
+    input.setValue(::rapidjson::Pointer{::std::string{::EnrolmentRequestHandlerBase::requestAkName}}, akName);
+
+    const auto response =
+        send(::ClientRequest{::EnrolmentApiClient::Header{HttpMethod::POST, "/Enrolment/AuthenticateCredential"},
+                             input.serializeToJsonString()});
+    Expect(response.getHeader().status() == HttpStatus::OK, "POST /Enrolment/AuthenticateCredential failed");
+
+    return ::EnrolmentModel{response.getBody()}.getString("/plainTextCredential");
 }
 
 void EnrolmentApiClient::deleteBlob(::BlobType type, ::std::string_view id)
@@ -73,10 +131,8 @@ void EnrolmentApiClient::deleteBlob(::BlobType type, ::std::string_view id)
     const auto response =
         send(::ClientRequest{::EnrolmentApiClient::Header{::HttpMethod::DELETE, type},
                              ::boost::str(::boost::format{R"({"id": "%1%"})"} % ::Base64::encode(id))});
-    if (response.getHeader().status() != HttpStatus::NoContent)
-    {
-        Fail(::std::string{"Blob deletion failed with code "}.append(toString(response.getHeader().status())));
-    }
+    Expect(response.getHeader().status() == HttpStatus::NoContent,
+           ::std::string{"Blob deletion failed with code "}.append(toString(response.getHeader().status())));
 }
 
 void EnrolmentApiClient::storeBlob(::BlobType type, ::std::string_view id, const ::ErpBlob& blob,
@@ -139,7 +195,7 @@ void EnrolmentApiClient::storeBlob(::BlobType type, ::std::string_view id, const
     }
 
     const auto response = send(ClientRequest{
-        Header{(type == ::BlobType::VauSig) ? ::HttpMethod::POST : HttpMethod::PUT, type}, request.str()});
+        Header{(type == ::BlobType::VauSig) ? ::HttpMethod::POST : ::HttpMethod::PUT, type}, request.str()});
     if (response.getHeader().status() != ::HttpStatus::Created)
     {
         ::std::string details;
@@ -153,4 +209,17 @@ void EnrolmentApiClient::storeBlob(::BlobType type, ::std::string_view id, const
                  .append(toString(response.getHeader().status()))
                  .append(details));
     }
+}
+
+::EnrolmentModel EnrolmentApiClient::request(::HttpMethod method, ::std::string_view endpoint,
+                                             const ::model::NumberAsStringParserDocument& input)
+{
+    const auto response = send(::ClientRequest{::EnrolmentApiClient::Header{method, endpoint},
+                                               input.IsNull() ? ::std::string{} : input.serializeToJsonString()});
+    Expect(response.getHeader().status() == HttpStatus::OK,
+           (::boost::format{"Request to '%1%' failed with code %2%\nInput: %3%"} % endpoint %
+            toString(response.getHeader().status()) % input.serializeToJsonString())
+               .str());
+
+    return ::EnrolmentModel{response.getBody()};
 }

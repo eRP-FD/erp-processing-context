@@ -28,6 +28,7 @@ public:
         db.commitTransaction();
     }
 
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void createChargeItem(std::string_view insurant, std::string_view pharmacy,
                           const model::Timestamp& enteredDate = model::Timestamp::now())
     {
@@ -65,7 +66,7 @@ public:
     }
 };
 
-TEST_F(DatabaseTest, chargeItem_basic)
+TEST_F(DatabaseTest, chargeItem_basic)//NOLINT(readability-function-cognitive-complexity)
 {
     // create tasks with chargeitems:
     for (const auto& insurant : insurantIds)
@@ -165,7 +166,7 @@ TEST_F(DatabaseTest, chargeItem_basic)
     }
 }
 
-TEST_F(DatabaseTest, chargeItem_search_by_pharmacy)
+TEST_F(DatabaseTest, chargeItem_search_by_pharmacy)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
     const auto& pharmacy0 = data(pharmacyIds)[0];
@@ -250,7 +251,7 @@ TEST_F(DatabaseTest, chargeItem_search_by_pharmacy)
     }
 }
 
-TEST_F(DatabaseTest, chargeItem_search_by_insurant)
+TEST_F(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
     const auto& pharmacy0 = data(pharmacyIds)[0];

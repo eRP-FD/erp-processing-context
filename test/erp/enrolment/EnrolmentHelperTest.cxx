@@ -28,7 +28,7 @@
 class MockEnrolmentManagerTest : public testing::Test
 {
 public:
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         if (Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "").empty())
         {

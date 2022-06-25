@@ -592,7 +592,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
                  ErpException);
 }
 
-TEST(MedicationDispenseTest, CorrectSchema)
+TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string json = R"(
 {
@@ -667,7 +667,7 @@ TEST(MedicationDispenseTest, CorrectSchema)
     EXPECT_EQ(medicationDispense.whenPrepared().value(), whenPrepared);
 }
 
-TEST(MedicationDispenseTest, ERP_6610_optionalTime)
+TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr auto copyToOriginalFormat = &model::NumberAsStringParserDocumentConverter::copyToOriginalFormat;
     using model::resource::ElementName;

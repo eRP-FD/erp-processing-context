@@ -17,6 +17,7 @@ class XmlValidator;
 class JsonValidator;
 class InCodeValidator;
 
+
 namespace model
 {
 class Extension;
@@ -267,13 +268,14 @@ std::optional<ExtensionT> ResourceBase::getExtension(const std::string_view& url
     return std::nullopt;
 }
 
+
 extern template class Resource<class AuditEvent>;
 extern template class Resource<class AuditMetaData>;
 extern template class Resource<class Binary>;
 extern template class Resource<class Bundle>;
-extern template class Resource<class ChargeItem>;
+extern template class Resource<class ChargeItem>; //NOLINT(bugprone-forward-declaration-namespace)
 extern template class Resource<class Composition>;
-extern template class Resource<class Communication>;
+extern template class Resource<class Communication>; //NOLINT(bugprone-forward-declaration-namespace)
 extern template class Resource<class Consent>;
 extern template class Resource<class Device>;
 extern template class Resource<class Dosage, ResourceVersion::KbvItaErp>;
@@ -292,11 +294,11 @@ extern template class Resource<class KbvMedicationRequest, ResourceVersion::KbvI
 extern template class Resource<class KbvOrganization, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvPractitioner, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvPracticeSupply, ResourceVersion::KbvItaErp>;
-extern template class Resource<class MedicationDispense>;
+extern template class Resource<class MedicationDispense>; //NOLINT(bugprone-forward-declaration-namespace)
 extern template class Resource<class MedicationDispenseBundle, ResourceVersion::NotProfiled>;
 extern template class Resource<class MetaData>;
 extern template class Resource<class OperationOutcome>;
-extern template class Resource<class Parameters>;
+extern template class Resource<class Parameters>; //NOLINT(bugprone-forward-declaration-namespace)
 extern template class Resource<class Patient, ResourceVersion::KbvItaErp>;
 extern template class Resource<class Reference>;
 extern template class Resource<class Signature>;

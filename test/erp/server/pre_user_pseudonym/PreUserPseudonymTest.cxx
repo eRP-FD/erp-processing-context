@@ -24,13 +24,13 @@ TEST(PreUserPseudonymTest, fromUserPseudonym) // NOLINT
 
 TEST(PreUserPseudonymTest, fromUserPseudonym_errors) // NOLINT
 {
-    auto empty          = "";
-    auto veryShort      = "01234";
-    auto tooShort       = "0123456789ABCDEF0123456789ABCDEF-FEDCBA9876543210FEDCBA987654321";
-    auto tooLong        = "0123456789ABCDEF0123456789ABCDEF-FEDCBA9876543210FEDCBA98765432101";
-    auto wrongDelimiter = "0123456789ABCDEF0123456789ABCDEF+FEDCBA9876543210FEDCBA9876543210";
-    auto invalidPup     = "X123456789ABCDEF0123456789ABCDEF-FEDCBA9876543210FEDCBA9876543210";
-    auto invalidUpCmac  = "0123456789ABCDEF0123456789ABCDEF-XEDCBA9876543210FEDCBA9876543210";
+    const char* const empty          = "";
+    const char* const veryShort      = "01234";
+    const char* const tooShort       = "0123456789ABCDEF0123456789ABCDEF-FEDCBA9876543210FEDCBA987654321";
+    const char* const tooLong        = "0123456789ABCDEF0123456789ABCDEF-FEDCBA9876543210FEDCBA98765432101";
+    const char* const wrongDelimiter = "0123456789ABCDEF0123456789ABCDEF+FEDCBA9876543210FEDCBA9876543210";
+    const char* const invalidPup     = "X123456789ABCDEF0123456789ABCDEF-FEDCBA9876543210FEDCBA9876543210";
+    const char* const invalidUpCmac  = "0123456789ABCDEF0123456789ABCDEF-XEDCBA9876543210FEDCBA9876543210";
     EXPECT_ANY_THROW((void)PreUserPseudonym::fromUserPseudonym(empty));
     EXPECT_ANY_THROW((void)PreUserPseudonym::fromUserPseudonym(veryShort));
     EXPECT_ANY_THROW((void)PreUserPseudonym::fromUserPseudonym(tooShort));

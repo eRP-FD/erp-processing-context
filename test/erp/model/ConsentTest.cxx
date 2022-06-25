@@ -14,9 +14,9 @@
 #include <gtest/gtest.h>
 
 
-TEST(ConsentTest, ConsentId)
+TEST(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto kvnr = "X987654321";
+    const char* const kvnr = "X987654321";
     const auto consentType = model::Consent::Type::CHARGCONS;
     const auto consentIdStr = std::string("CHARGCONS-") + kvnr;
 
@@ -35,7 +35,7 @@ TEST(ConsentTest, ConsentId)
 TEST(ConsentTest, Construct)
 {
     const auto consentType = model::Consent::Type::CHARGCONS;
-    const auto kvnr = "X123456789";
+    const char* const kvnr = "X123456789";
     const model::Timestamp dateTime = model::Timestamp::now();
     model::Consent consent(kvnr, dateTime);
     EXPECT_TRUE(consent.id().has_value());
@@ -45,7 +45,7 @@ TEST(ConsentTest, Construct)
     EXPECT_TRUE(consent.isChargingConsent());
 }
 
-TEST(ConsentTest, ConstructFromJson)
+TEST(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     auto jsonString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.json");
 
@@ -57,7 +57,7 @@ TEST(ConsentTest, ConstructFromJson)
     auto& consent = optConsent.value();
 
     EXPECT_FALSE(consent.id().has_value());
-    const auto kvnr = "X123456789";
+    const char* const kvnr = "X123456789";
     EXPECT_EQ(consent.patientKvnr(), kvnr);
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 
@@ -79,14 +79,14 @@ TEST(ConsentTest, ConstructFromJson)
     EXPECT_THROW(optConsent2.value().fillId(), model::ModelException);
 }
 
-TEST(ConsentTest, ConstructFromXml)
+TEST(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
 {
     auto consent = model::Consent::fromXml(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.xml"),
         *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir);  // TODO change to correct schema as soon as available
 
     EXPECT_FALSE(consent.id().has_value());
-    const auto kvnr = "X123456789";
+    const char* const kvnr = "X123456789";
     EXPECT_EQ(consent.patientKvnr(), kvnr);
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 

@@ -16,12 +16,14 @@
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/crypto/Jwt.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/fhir/Fhir.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/model/MetaData.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/PrescriptionId.hxx"
@@ -62,7 +64,7 @@ public:
     virtual ~ErpWorkflowTestBase();
 
     std::string toCadesBesSignature(const std::string& content,
-                                    const std::optional<model::Timestamp>& signingTime = std::nullopt);
+                                    const std::optional<model::Timestamp>& signingTime);
 
     void checkTaskMeta(const rapidjson::Value& meta);
     void checkTaskSingleIdentifier(const rapidjson::Value& id);
@@ -138,8 +140,8 @@ public:
     /// @returns {outerResponse, innerResponse}
     std::tuple<ClientResponse, ClientResponse> send(
         const RequestArguments& args,
-        std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest = {}, // used to simulate errors;
-        std::optional<std::function<void(Header&)>> manipInnerRequestHeader = {});        // used to simulate errors;
+        const std::function<void(std::string&)>& manipEncryptedInnerRequest = {}, // used to simulate errors;
+        const std::function<void(Header&)>& manipInnerRequestHeader = {});        // used to simulate errors;
 
     std::optional<model::Task> taskCreate(model::PrescriptionType workflowType = model::PrescriptionType::apothekenpflichigeArzneimittel,
                                           HttpStatus expectedOuterStatus = HttpStatus::OK,
@@ -204,7 +206,8 @@ public:
         const HttpStatus expectedStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
-    std::string makeQESBundle(const std::string& kvnr,
+    std::tuple<std::string, std::string> makeQESBundle( // returns signed and unsigned bundle
+        const std::string& kvnr,
         const model::PrescriptionId& prescriptionId,
         const model::Timestamp& timestamp);
 
@@ -280,6 +283,16 @@ public:
         const HttpStatus expectedStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
+    std::optional<model::Bundle> chargeItemGetId(
+        const JWT& jwt,
+        const ContentMimeType& contentType,
+        const model::PrescriptionId& id,
+        const std::optional<std::string_view>& accessCode,
+        const std::optional<model::KbvBundle>& expectedKbvBbundle,
+        const std::optional<model::ErxReceipt>& expectedReceipt,
+        const HttpStatus expectedStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
     void chargeItemDelete(
         const model::PrescriptionId& prescriptionId,
         const JWT& jwt,
@@ -288,7 +301,9 @@ public:
 
     void createClosedTask(
         std::optional<model::PrescriptionId>& createdId,
-        std::string& createdAccessCodee,
+        std::optional<model::KbvBundle>& usedKbvBundle,
+        std::optional<model::ErxReceipt>& closeReceipt,
+        std::string& createdAccessCode,
         std::string& createdSecret,
         const model::PrescriptionType prescriptionType,
         const std::string& kvnr);
@@ -395,8 +410,8 @@ protected:
 private:
     void sendInternal(
         std::tuple<ClientResponse, ClientResponse>& result, const RequestArguments& args,
-        std::optional<std::function<void(std::string&)>> manipEncryptedInnerRequest = {},
-        std::optional<std::function<void(Header&)>> manipInnerRequestHeader = {});
+        const std::function<void(std::string&)>& manipEncryptedInnerRequest = {},
+        const std::function<void(Header&)>& manipInnerRequestHeader = {});
     virtual std::string creatTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
                                         const JWT& jwt);
     virtual std::string creatUnvalidatedTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
@@ -529,6 +544,17 @@ private:
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
+    void chargeItemGetIdInternal(
+        std::optional<model::Bundle>& chargeItemResultBundle,
+        const JWT& jwt,
+        const ContentMimeType& contentType,
+        const model::PrescriptionId& id,
+        const std::optional<std::string_view>& accessCode,
+        const std::optional<model::KbvBundle>& expectedKbvBundle,
+        const std::optional<model::ErxReceipt>& expectedReceipt,
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
     void getMedicationDispenseForTask(
         std::optional<model::MedicationDispense>& medicationDispenseForTask,
         const model::PrescriptionId& prescriptionId,
@@ -567,6 +593,14 @@ public:
 template <typename TestClass>
 class ErpWorkflowTestTemplate : public TestClass, public ErpWorkflowTestBase {
 
+protected:
+    void SetUp() override
+    {
+        //  Preload to avoid delays caused by loading during communication potentially causing server socket timeouts
+        StaticData::getJsonValidator();
+        StaticData::getXmlValidator();
+        Fhir::instance();
+    }
 };
 
 using ErpWorkflowTest = ErpWorkflowTestTemplate<::testing::Test>;

@@ -22,7 +22,7 @@ public:
         std::unique_ptr<HsmClient>&& hsmClient,
         std::shared_ptr<BlobCache> blobCache);
 
-    virtual std::shared_ptr<HsmRawSession> rawConnect (void) override;
+    std::shared_ptr<HsmRawSession> rawConnect (void) override;
 };
 
 

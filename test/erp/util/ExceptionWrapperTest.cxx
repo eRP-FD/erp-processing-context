@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(ExceptionWrapperTest, wrapping)
+TEST(ExceptionWrapperTest, wrapping)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_THROW(throw ExceptionWrapper<std::runtime_error>::create(fileAndLine, "test"), std::runtime_error);
     EXPECT_THROW(throw ExceptionWrapper<std::logic_error>::create(fileAndLine, "test"), std::logic_error);
@@ -31,7 +31,7 @@ TEST(ExceptionWrapperTest, rootLocation)
     }
 }
 
-TEST(ExceptionWrapperTest, Expect)
+TEST(ExceptionWrapperTest, Expect)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<FileNameAndLineNumber> rootLocation;
     std::optional<FileNameAndLineNumber> location;

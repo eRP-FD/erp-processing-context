@@ -15,7 +15,7 @@
 class TslRefreshJob : public TimerJobBase
 {
 public:
-    TslRefreshJob(const std::shared_ptr<TslManager>& tslManager,
+    TslRefreshJob(TslManager& tslManager,
                   const std::chrono::steady_clock::duration interval);
     ~TslRefreshJob() noexcept override = default;
 
@@ -25,7 +25,7 @@ protected:
     void onFinish(void) override;
 
 private:
-    const std::shared_ptr<TslManager> mTslManager;
+    TslManager& mTslManager;
 };
 
 

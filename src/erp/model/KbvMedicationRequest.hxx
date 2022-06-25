@@ -12,6 +12,7 @@ namespace model
 {
 
 class Dosage;
+class Timestamp;
 
 class KbvMedicationRequest : public Resource<KbvMedicationRequest, ResourceVersion::KbvItaErp>
 {
@@ -21,7 +22,8 @@ public:
     [[nodiscard]] std::optional<std::string_view> statusCoPaymentExtension() const;
     bool isMultiplePrescription() const;
 
-    std::optional <Dosage> dosageInstruction() const;
+    std::optional<Dosage> dosageInstruction() const;
+    [[nodiscard]] model::Timestamp authoredOn() const;
 
 private:
     friend Resource<KbvMedicationRequest, ResourceVersion::KbvItaErp>;
@@ -32,10 +34,10 @@ class Dosage : public Resource<Dosage, ResourceVersion::KbvItaErp>
 {
 public:
     [[nodiscard]] std::optional<std::string_view> text() const;
+
 private:
     friend Resource<Dosage, ResourceVersion::KbvItaErp>;
     explicit Dosage(NumberAsStringParserDocument&& document);
-
 };
 
 }

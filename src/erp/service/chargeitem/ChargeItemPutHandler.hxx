@@ -28,7 +28,7 @@ private:
     void handleRequestPharmacy(
         PcSessionContext& session,
         model::ChargeItem& existingChargeItem,
-        const model::ChargeItem& newChargeItem,
+        model::ChargeItem& newChargeItem,
         const std::string& idClaim);
 };
 

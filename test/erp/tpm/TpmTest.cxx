@@ -28,7 +28,7 @@ namespace
     {
         std::function<std::unique_ptr<Tpm>(BlobCache&)> tpmFactory;
         std::unique_ptr<TpmTestHelper> testHelper;
-        bool isSimulated;
+        bool isSimulated = false;
     };
     using TestDescriptorFactory = std::function<TestDescriptor(void)>;
 
@@ -61,7 +61,7 @@ namespace
 class TpmTest : public testing::TestWithParam<TestDescriptorFactory>
 {
 public:
-    virtual void SetUp (void) override
+    void SetUp (void) override
     {
         try
         {
@@ -91,7 +91,7 @@ public:
             tpm = tpmFactory(*blobCache);
         return *tpm;
     }
-    TpmTestHelper& getTestHelper (void)
+    TpmTestHelper& getTestHelper() //NOLINT[readability-make-member-function-const]
     {
         return *testHelper;
     }

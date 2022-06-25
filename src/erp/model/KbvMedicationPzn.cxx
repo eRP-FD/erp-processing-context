@@ -13,7 +13,7 @@ KbvMedicationPzn::KbvMedicationPzn(NumberAsStringParserDocument&& document)
 {
 }
 
-const std::optional<std::string_view> KbvMedicationPzn::amountNumeratorValueAsString() const
+std::optional<std::string_view> KbvMedicationPzn::amountNumeratorValueAsString() const
 {
     static const rapidjson::Pointer amountNumeratorValuePointer(resource::ElementName::path(
         resource::elements::amount, resource::elements::numerator, resource::elements::value));
@@ -32,5 +32,12 @@ std::optional<std::string_view> KbvMedicationPzn::amountNumeratorCode() const
     static const rapidjson::Pointer amountNumeratorCodePointer(resource::ElementName::path(
         resource::elements::amount, resource::elements::numerator, resource::elements::code));
     return getOptionalStringValue(amountNumeratorCodePointer);
+}
+
+std::string_view KbvMedicationPzn::pzn() const
+{
+    static const rapidjson::Pointer pznPointer(resource::ElementName::path(
+        resource::elements::code, resource::elements::coding, 0, resource::elements::code));
+    return getStringValue(pznPointer);
 }
 }

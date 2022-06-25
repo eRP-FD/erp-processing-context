@@ -89,7 +89,7 @@ void JsonLog::finish (void)
         return;
 
     if (mShowDetails)
-        mLog << ",\"details\":\"" << escapeJson(mDetails) << '\"';
+        mLog << R"(,"details":")" << escapeJson(mDetails) << R"(")";
     mLog << '}';
 
     receiver(mLog.str());
@@ -99,7 +99,7 @@ void JsonLog::finish (void)
 JsonLog& JsonLog::message (const std::string_view text)
 {
     if (mLogReceiver)
-        mLog << ",\"message\":\"" << escapeJson(std::string(text)) << '\"';
+        mLog << R"(,"message":")" << escapeJson(std::string(text)) << R"(")";
     return *this;
 }
 

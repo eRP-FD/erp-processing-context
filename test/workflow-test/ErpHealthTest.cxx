@@ -22,13 +22,13 @@ class ErpHealthTest : public ::testing::TestWithParam<TestClient::Target> {
 public:
     void SetUp() override
     {
-        mClient = TestClient::create(nullptr, GetParam());
+        mClient = TestClient::create(StaticData::getXmlValidator(), GetParam());
     }
 protected:
     std::unique_ptr<TestClient> mClient;
 };
 
-TEST_P(ErpHealthTest, HealthCheck)
+TEST_P(ErpHealthTest, HealthCheck)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
     auto hostaddress = mClient->getHostAddress();

@@ -110,6 +110,7 @@ TEST_F(SaxParserTest, errorCallback) // NOLINT
 
 TEST_F(SaxParserTest, AttributeList) // NOLINT
 {
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     onStartElement = [&](const xmlChar*, const xmlChar*, const xmlChar*, int, const xmlChar**, int, const AttributeList& attributes)
     {
         EXPECT_EQ(attributes.size(), 4);
@@ -134,6 +135,7 @@ TEST_F(SaxParserTest, Attribute) // NOLINT
     using namespace xmlHelperLiterals;
     bool hadNoNamespace = false;
     bool hadWithNamespace = false;
+    //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     onStartElement = [&](const xmlChar* localname, const xmlChar* prefix, const xmlChar* uri, int, const xmlChar**, int, const AttributeList& attributes)
     {
         if (localname == "root"_xs)

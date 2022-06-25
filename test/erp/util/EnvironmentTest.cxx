@@ -19,7 +19,7 @@ public:
     }
 };
 
-TEST_F(EnvironmentTest, set_get_unset)
+TEST_F(EnvironmentTest, set_get_unset)//NOLINT(readability-function-cognitive-complexity)
 {
     Environment::set(envVar1, "VALUE");
     ASSERT_TRUE(Environment::get(envVar1).has_value());
@@ -52,7 +52,7 @@ TEST_F(EnvironmentTest, getString)
     EXPECT_EQ(Environment::getString(envVar1, "default2"), "some string");
 }
 
-TEST_F(EnvironmentTest, getInt)
+TEST_F(EnvironmentTest, getInt)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_EQ(Environment::getInt(envVar1, 100), 100);
     EXPECT_EQ(Environment::getInt(envVar1, 200), 200);
@@ -71,7 +71,7 @@ TEST_F(EnvironmentTest, getInt)
 }
 
 
-TEST_F(EnvironmentTest, getBool)
+TEST_F(EnvironmentTest, getBool)//NOLINT(readability-function-cognitive-complexity)
 {
     EXPECT_EQ(Environment::getBool(envVar1, true), true);
     EXPECT_EQ(Environment::getBool(envVar1, false), false);
