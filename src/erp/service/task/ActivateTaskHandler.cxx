@@ -25,6 +25,7 @@
 #include "erp/util/Uuid.hxx"
 
 #include <date/date.h>
+#include <date/tz.h>
 
 
 ActivateTaskHandler::ActivateTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -129,10 +130,9 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto signingTime = cadesBesSignature.getSigningTime();
     ErpExpect(signingTime.has_value(), HttpStatus::BadRequest, "No signingTime in PKCS7 file");
 
-    date::year_month_day signingDay{date::floor<date::days>(signingTime->toChronoTimePoint())};
     if (config.getOptionalBoolValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, true))
     {
-        checkAuthoredOnEqualsSigningDate(prescriptionBundle, signingDay);
+        checkAuthoredOnEqualsSigningDate(prescriptionBundle, *signingTime);
     }
 
     checkValidCoverage(prescriptionBundle, prescriptionId.type());
@@ -146,6 +146,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
     // A_19445 Part 1 and 4 are in $create
     A_19445_06.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
+    date::year_month_day signingDay{date::floor<date::days>(signingTime->toChronoTimePoint())};
     task->setExpiryDate(model::Timestamp{date::sys_days{signingDay + date::months{3}}});
     A_19445_06.finish();
     A_19445_06.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
@@ -260,14 +261,30 @@ void ActivateTaskHandler::checkNarcoticsMatches(const model::KbvBundle& bundle)
 }
 
 void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle,
-                                                           const date::year_month_day& signingDay)
+                                                           const model::Timestamp& signingTime)
 {
     A_22487.start("check equality of signing day and authoredOn");
+    // using German timezone was decided, but sadly did not make it into the requirement
+    // date::local_days is a date not bound to any timezone.
+    const date::local_days signingDay{
+        date::floor<date::days>(date::make_zoned("Europe/Berlin", signingTime.toChronoTimePoint()).get_local_time())};
     const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationRequest>();
     for (const auto& mr : medicationRequests)
     {
-        ErpExpect(signingDay == date::floor<date::days>(mr.authoredOn().toChronoTimePoint()), HttpStatus::BadRequest,
-                  "Ausstellungsdatum und Signaturzeitpunkt weichen voneinander ab, müssen aber taggleich sein");
+        const date::local_days authoredOn{
+            date::floor<date::days>(date::make_zoned(mr.authoredOn().toChronoTimePoint()).get_local_time())};
+
+        if (signingDay != authoredOn)
+        {
+            std::ostringstream oss;
+            oss << "KBVBundle.signature.signingDay=" << signingDay
+                << " != KBVBundle.MedicationRequest.authoredOn=" << authoredOn;
+            TVLOG(1) << oss.str();
+            ErpFailWithDiagnostics(
+                HttpStatus::BadRequest,
+                "Ausstellungsdatum und Signaturzeitpunkt weichen voneinander ab, müssen aber taggleich sein",
+                oss.str());
+        }
     }
     A_22487.finish();
 }

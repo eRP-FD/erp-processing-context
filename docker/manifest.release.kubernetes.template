@@ -62,6 +62,10 @@ fs.mount.erp_dir.type   = "chroot"
 fs.mount.erp_dir.path   = "/erp"
 fs.mount.erp_dir.uri    = "file:/erp"
 
+fs.mount.zoneinfo.type = "chroot"
+fs.mount.zoneinfo.path = "/usr/share/zoneinfo/"
+fs.mount.zoneinfo.uri  = "file:/usr/share/zoneinfo"
+
 # Allowed files can be read/written from within the gramine environment.
 sgx.allowed_files = [
 # Allow some host OS resources for proper operation.
@@ -95,6 +99,7 @@ sgx.allowed_files = [
 
 # Trusted files are signed and can only be read from within the gramine environment.
 sgx.trusted_files = [
+"file:/usr/share/zoneinfo/",
 # Host OS library locations
 "file:/lib/x86_64-linux-gnu/",
 "file:/usr/lib/x86_64-linux-gnu/",

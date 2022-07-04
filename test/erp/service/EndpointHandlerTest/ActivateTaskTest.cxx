@@ -143,31 +143,50 @@ TEST_F(ActivateTaskTest, AuthoredOnSignatureDateEquality)
     auto& resourceManager = ResourceManager::instance();
     auto task = resourceManager.getStringResource(dataPath + "/task3.json");
     auto bundleTemplate = resourceManager.getStringResource(dataPath + "/kbv_bundle_authoredOn_template.xml");
-    auto time1 = model::Timestamp::fromXsDateTime("2022-05-26T14:33:00+02:00");
-    auto time2 = model::Timestamp::fromXsDateTime("2022-05-25T14:33:00+02:00");
-    auto time3 = model::Timestamp::fromXsDateTime("2022-05-26T12:33:00+02:00");
-    auto bundle1 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", time1.toXsDate());
-    auto bundle2 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", time2.toXsDate());
-    auto bundle3 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", time3.toXsDate());
-    checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time1);
-    checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::BadRequest, time2);
-    checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time3);
-    checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::BadRequest, time1);
-    checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time2);
-    checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::BadRequest, time3);
-    checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time1);
-    checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::BadRequest, time2);
-    checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time3);
+    auto time1 = model::Timestamp::fromXsDateTime("2022-06-25T22:33:00+00:00");
+    const auto* date1 = "2022-06-26";
+    auto time2 = model::Timestamp::fromXsDateTime("2022-06-25T00:33:00+00:00");
+    const auto* date2 = "2022-06-25";
+    auto time3 = model::Timestamp::fromXsDateTime("2022-06-26T12:33:00+00:00");
+    const auto* date3 = "2022-06-26";
+    auto time4 = model::Timestamp::fromXsDateTime("2022-01-25T23:33:00+00:00");
+    const auto* date4 = "2022-01-26";
+    auto time5 = model::Timestamp::fromXsDateTime("2022-01-25T22:33:00+00:00");
+    const auto* date5 = "2022-01-25";
+    auto bundle1 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date1);
+    auto bundle2 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date2);
+    auto bundle3 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date3);
+    auto bundle4 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date4);
+    auto bundle5 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date5);
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time1));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::BadRequest, time2));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time3));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::BadRequest, time1));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time2));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::BadRequest, time3));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time1));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::BadRequest, time2));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time3));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle4, "X234567890", HttpStatus::OK, time4));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle5, "X234567890", HttpStatus::OK, time5));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle5, "X234567890", HttpStatus::BadRequest, time4));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle4, "X234567890", HttpStatus::BadRequest, time5));
 
     EnvironmentVariableGuard environmentVariableGuard3("ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE",
                                                        "false");
-    checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time1);
-    checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time2);
-    checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time3);
-    checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time1);
-    checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time2);
-    checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time3);
-    checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time1);
-    checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time2);
-    checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time3);
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time1));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time2));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time3));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time1));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time2));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time3));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time1));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time2));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time3));
 }

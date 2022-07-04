@@ -28,7 +28,7 @@ private:
     static void checkMultiplePrescription(const model::KbvBundle& bundle);
     static void checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType);
     static void checkNarcoticsMatches(const model::KbvBundle& bundle);
-    static void checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle, const date::year_month_day& signingDay);
+    static void checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle, const model::Timestamp& signingTime);
 };
 
 
