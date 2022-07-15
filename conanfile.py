@@ -48,7 +48,7 @@ class ErpProcessingContext(ConanFile):
                 'glog/0.6.0',
                 'gsl-lite/0.40.0',
                 'libxml2/2.9.14',
-                'openssl/1.1.1o@erp/stable-1',
+                'openssl/1.1.1q@erp/stable-1',
                 'rapidjson/cci.20211112',
                 'magic_enum/0.7.3',
                 'zlib/1.2.12',  # when updating this, also update /docker/manifest.*.template files
