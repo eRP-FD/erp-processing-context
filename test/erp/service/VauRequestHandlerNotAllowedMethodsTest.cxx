@@ -6,10 +6,10 @@
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/client/HttpsClient.hxx"
-#include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/Jwt.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 #include "erp/util/String.hxx"
+
 
 #include "mock/crypto/MockCryptography.hxx"
 
@@ -19,8 +19,6 @@
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include "test/util/JwtBuilder.hxx"
-
-#include <chrono>
 
 #ifdef _WINNT_
 #ifdef DELETE
@@ -203,10 +201,8 @@ TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsChargeItem)
     A_22111.test("Not allowed HTTP methods for /ChargeItem");
     std::string_view endpoint = "/ChargeItem/";
     testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
-    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     endpoint = "/ChargeItem/<id>";
     testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
-    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
 }
 
 TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsConsent)

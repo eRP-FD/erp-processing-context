@@ -14,6 +14,7 @@
 
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/crypto/OpenSslHelper.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 
 class HttpsClient;
@@ -93,6 +94,7 @@ public:
      * @param trustStore                where to look for the certificate; may be updated
      *                                  during this call
      * @param ocspResponse              optional ocsp response that should be used for OCSP check if present
+     * @param referenceTimePoint        optional timepoint to be used for OCSP response validity checks
      * @param forceOcspRequest          if true, the OCSP request must be done, provided OCSP-Response and OCSP-cache
      *                                  are ignored
      *
@@ -104,6 +106,7 @@ public:
         const UrlRequestSender& requestSender,
         TrustStore& trustStore,
         const OcspResponsePtr& ocspResponse = {},
+        const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint = std::nullopt,
         const bool forceOcspRequest = false);
 
 

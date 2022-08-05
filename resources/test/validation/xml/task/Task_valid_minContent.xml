@@ -15,6 +15,10 @@
   <authoredOn value="2020-03-02T08:25:05+00:00" />
   <lastModified value="2020-03-02T08:45:05+00:00" />
   <performerType>
-    <coding/>
+    <coding>
+      <system value="urn:ietf:rfc:3986" />
+      <code value="urn:oid:1.2.276.0.76.4.54" />
+      <display value="&#214;ffentliche Apotheke" />
+    </coding>
   </performerType>
 </Task>

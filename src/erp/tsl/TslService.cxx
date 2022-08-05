@@ -15,7 +15,7 @@
 
 #include "erp/ErpRequirements.hxx"
 #include "erp/client/UrlRequestSender.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/OcspUrl.hxx"
@@ -666,6 +666,7 @@ namespace
                                       const UrlRequestSender& requestSender,
                                       TrustStore& trustStore,
                                       const OcspResponsePtr& ocspResponse,
+                                      const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
                                       const bool forceOcspRequest)
     {
         const auto ocspUrl = getOcspUrl(certificate, certificateType, issueCertificate, trustStore);
@@ -680,7 +681,9 @@ namespace
                 trustStore,
                 hashExtensionMustBeValidated(certificateType),
                 ocspResponse,
+                referenceTimePoint,
                 forceOcspRequest),
+            referenceTimePoint,
             trustStore);
     }
 
@@ -712,7 +715,7 @@ namespace
                 tm notBeforeTm{};
                 OpenSslExpect(1 == ASN1_TIME_to_tm(notBefore, &notBeforeTm), "Can not convert ASN1 time to tm.");
 
-                const auto timestamp = model::Timestamp::fromTmInUtc(notBeforeTm);
+                const auto timestamp = fhirtools::Timestamp::fromTmInUtc(notBeforeTm);
                 X509_VERIFY_PARAM_set_time(param, timestamp.toTimeT());
             }
 
@@ -1081,6 +1084,7 @@ TslService::checkCertificate(
     const UrlRequestSender& requestSender,
     TrustStore& trustStore,
     const OcspResponsePtr& ocspResponse,
+    const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
     const bool forceOcspRequest)
 {
     VLOG(2) << "Checking Certificate: [" << certificate.toBase64() << "]";
@@ -1151,5 +1155,6 @@ TslService::checkCertificate(
         requestSender,
         trustStore,
         ocspResponse,
+        referenceTimePoint,
         forceOcspRequest);
 }

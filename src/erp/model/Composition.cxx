@@ -93,8 +93,8 @@ const rapidjson::Pointer section0Entry0ReferencePointer("/section/0/entry/0/refe
 }  // anonymous namespace
 
 
-Composition::Composition(const std::string_view& telematicId, const model::Timestamp& start,
-                         const model::Timestamp& end, const std::string_view& author,
+Composition::Composition(const std::string_view& telematicId, const fhirtools::Timestamp& start,
+                         const fhirtools::Timestamp& end, const std::string_view& author,
                          const std::string_view& prescriptionDigestIdentifier)
     : Resource<Composition>("https://gematik.de/fhir/StructureDefinition/ErxComposition",
                             []() {
@@ -136,29 +136,29 @@ std::optional<std::string_view> Composition::telematikId() const
 }
 
 
-std::optional<model::Timestamp> Composition::date() const
+std::optional<fhirtools::Timestamp> Composition::date() const
 {
     const auto value = getOptionalStringValue(datePointer);
     if (value.has_value())
-        return model::Timestamp::fromFhirDateTime(std::string(value.value()));
+        return fhirtools::Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 
 
-std::optional<model::Timestamp> Composition::periodStart() const
+std::optional<fhirtools::Timestamp> Composition::periodStart() const
 {
     const auto value = getOptionalStringValue(eventPeriodStartPointer);
     if (value.has_value())
-        return model::Timestamp::fromFhirDateTime(std::string(value.value()));
+        return fhirtools::Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 
 
-std::optional<model::Timestamp> Composition::periodEnd() const
+std::optional<fhirtools::Timestamp> Composition::periodEnd() const
 {
     const auto value = getOptionalStringValue(eventPeriodEndPointer);
     if (value.has_value())
-        return model::Timestamp::fromFhirDateTime(std::string(value.value()));
+        return fhirtools::Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 

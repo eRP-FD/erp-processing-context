@@ -10,6 +10,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
+
 namespace
 {
 size_t toSizeT(const std::string& numberString, const std::string& fieldName, bool zeroAllowed,

@@ -12,14 +12,14 @@
 
 #include "ResourceManager.hxx"
 std::string CryptoHelper::toCadesBesSignature(const std::string& content,
-                                              const std::optional<model::Timestamp>& signingTime)
+                                              const std::optional<fhirtools::Timestamp>& signingTime)
 {
     auto pem_str = qesCertificatePem();
     auto cert = Certificate::fromPem(pem_str);
     SafeString pem{std::move(pem_str)};
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(pem);
     CadesBesSignature cadesBesSignature{cert, privKey, content, signingTime};
-    return Base64::encode(cadesBesSignature.get());
+    return cadesBesSignature.getBase64();
 }
 
 std::string CryptoHelper::qesCertificatePem()

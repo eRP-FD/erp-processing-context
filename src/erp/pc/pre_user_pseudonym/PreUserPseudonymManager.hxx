@@ -9,6 +9,7 @@
 #include "erp/crypto/CMAC.hxx"
 
 #include <date/date.h>
+#include <memory>
 #include <shared_mutex>
 #include <string_view>
 #include <tuple>

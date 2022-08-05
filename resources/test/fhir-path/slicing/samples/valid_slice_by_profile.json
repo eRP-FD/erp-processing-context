@@ -1,0 +1,16 @@
+{
+    "resourceType": "SliceByProfileBase",
+    "meta": {
+        "profile": ["http://erp.test/SliceByProfile"]
+    },
+    "sub":[
+        {
+            "resourceType": "Resource",
+            "id": "slice1"
+        },
+        {
+            "resourceType": "Resource",
+            "id": "slice2"
+        }
+    ]
+}

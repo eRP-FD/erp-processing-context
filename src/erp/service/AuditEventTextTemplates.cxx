@@ -100,14 +100,18 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 20,
-          "textTemplate": "{self} hat die Einwilligung erteilt."
+          "textTemplate": "{self} hat Markierung zu Abrechnungsinformation gespeichert."
         },
         {
           "eventId": 21,
-          "textTemplate": "{self} hat die Einwilligung widerrufen."
+          "textTemplate": "{self} hat die Einwilligung erteilt."
         },
         {
           "eventId": 22,
+          "textTemplate": "{self} hat die Einwilligung widerrufen."
+        },
+        {
+          "eventId": 23,
           "textTemplate": "Veraltete Abrechnungsinformationen wurden vom Fachdienst automatisch gelöscht."
         }
       ]
@@ -197,14 +201,18 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 20,
-          "textTemplate": "{self} gave the consent."
+          "textTemplate": "{self} saved billing information flag."
         },
         {
           "eventId": 21,
-          "textTemplate": "{self} withdrew the consent."
+          "textTemplate": "{self} gave the consent."
         },
         {
           "eventId": 22,
+          "textTemplate": "{self} withdrew the consent."
+        },
+        {
+          "eventId": 23,
           "textTemplate": "Outdated charging information was deleted automatically by the service."
         }
       ]

@@ -35,7 +35,7 @@ public:
         std::string accessCode{task->accessCode()};
         ASSERT_NO_FATAL_FAILURE(
             task = taskActivate(task->prescriptionId(), accessCode,
-                                std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
+                                std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), fhirtools::Timestamp::now()))));
         ASSERT_TRUE(task.has_value());
         std::optional<Communication> infoReq;
         ASSERT_NO_FATAL_FAILURE(infoReq = communicationPost(model::Communication::MessageType::InfoReq,

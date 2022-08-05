@@ -26,8 +26,8 @@ namespace
                                             std::nullopt,
                                             serviceContext.getCFdSigErpManager().getOcspResponse()};
 
-        const model::Signature fullSignature{Base64::encode(cadesBesSignature.get()),
-                                             model::Timestamp::now(),
+        const model::Signature fullSignature{cadesBesSignature.getBase64(),
+                                             fhirtools::Timestamp::now(),
                                              authorIdentifier};
 
         bundle.setSignature(fullSignature);
@@ -48,59 +48,28 @@ void ChargeItemGetAllHandler::handleRequest (PcSessionContext& session)
     std::size_t totalSearchMatches{0};
     std::unordered_map<model::Link::Type, std::string> links;
 
-    const std::optional<std::string> idNumberClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
+    const std::optional<std::string> idNumberClaim =
+        session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(idNumberClaim.has_value(), "JWT does not contain idNumberClaim");
 
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
     Expect(professionOIDClaim.has_value(), "JWT does not contain professionOIDClaim");
 
-    if(professionOIDClaim == profession_oid::oid_versicherter)
-    {
-        A_22121.start("Search parameters for ChargeItem");
-        auto arguments = std::optional<UrlArguments>(
-            std::in_place,
-            std::vector<SearchParameter>
-            {
-                {"entered-date", "charge_item_entered_date", SearchParameter::Type::Date}
-            });
-        arguments->parse(session.request, session.serviceContext.getKeyDerivation());
+    A_22121.start("Search parameters for ChargeItem");
+    auto arguments = std::optional<UrlArguments>(
+        ::std::in_place,
+        ::std::vector<::SearchParameter>{{"entered-date", "entered_date", ::SearchParameter::Type::Date},
+                                         {"_lastUpdated", "last_modified", ::SearchParameter::Type::Date}});
+    arguments->parse(session.request, session.serviceContext.getKeyDerivation());
 
-        A_22119.start("Assure identical kvnr of access token and ChargeItem resource");
-        chargeItems = session.database()->retrieveAllChargeItemsForInsurant(idNumberClaim.value(), arguments);
-        A_22119.finish();
-        A_22121.finish();
-        totalSearchMatches =
-            responseIsPartOfMultiplePages(arguments->pagingArgument(),
-                                          chargeItems.size()) ?
-                session.database()->countChargeInformationForInsurant(idNumberClaim.value(), arguments) :
-                chargeItems.size();
-        links = arguments->getBundleLinks(getLinkBase(), "/ChargeItem", totalSearchMatches);
-    }
-    else
-    {
-        A_22121.start("Search parameters for ChargeItem");
-        auto arguments = std::optional<UrlArguments>(
-            std::in_place,
-            std::vector<SearchParameter>
-            {
-                { "entered-date", "charge_item_entered_date", SearchParameter::Type::Date },
-                { "patient", "kvnr_hashed", SearchParameter::Type::HashedIdentity }
-            });
-        arguments->parse(session.request, session.serviceContext.getKeyDerivation());
-
-        A_22120.start("Assure identical TelematikId of access token and ChargeItem resource");
-        chargeItems = session.database()->retrieveAllChargeItemsForPharmacy(idNumberClaim.value(), arguments);
-        A_22120.finish();
-        A_22121.finish();
-
-        totalSearchMatches =
-             responseIsPartOfMultiplePages(arguments->pagingArgument(),
-                                           chargeItems.size()) ?
-                 session.database()->countChargeInformationForPharmacy(idNumberClaim.value(), arguments) :
-                 chargeItems.size();
-
-        links = arguments->getBundleLinks(getLinkBase(), "/ChargeItem", totalSearchMatches);
-    }
+    A_22119.start("Assure identical kvnr of access token and ChargeItem resource");
+    chargeItems = session.database()->retrieveAllChargeItemsForInsurant(idNumberClaim.value(), arguments);
+    A_22119.finish();
+    A_22121.finish();
+    totalSearchMatches = responseIsPartOfMultiplePages(arguments->pagingArgument(), chargeItems.size())
+                             ? session.database()->countChargeInformationForInsurant(idNumberClaim.value(), arguments)
+                             : chargeItems.size();
+    links = arguments->getBundleLinks(getLinkBase(), "/ChargeItem", totalSearchMatches);
 
     A_22123.start("Create bundle for paging");
     auto bundle = createBundle(chargeItems);
@@ -121,12 +90,7 @@ model::Bundle ChargeItemGetAllHandler::createBundle(std::vector<model::ChargeIte
     model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     for (auto& chargeItem : chargeItems)
     {
-        A_22122.start("Delete all supportingInfoType");
-        chargeItem.deleteSupportingInfoElement(model::ChargeItem::SupportingInfoType::prescriptionItem);
-        chargeItem.deleteSupportingInfoElement(model::ChargeItem::SupportingInfoType::receipt);
-        chargeItem.deleteSupportingInfoElement(model::ChargeItem::SupportingInfoType::dispenseItem);
-        A_22122.finish();
-
+        A_22122.start("Do not add referenced supporting resources.");
         std::optional<model::PrescriptionId> id = chargeItem.id();
         ModelExpect(id.has_value(), "No Id assigned to chargeItem");
         bundle.addResource(
@@ -134,6 +98,7 @@ model::Bundle ChargeItemGetAllHandler::createBundle(std::vector<model::ChargeIte
             {},
             model::Bundle::SearchMode::match,
             chargeItem.jsonDocument());
+        A_22122.finish();
     }
     return bundle;
 }
@@ -161,57 +126,64 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     if (professionOIDClaim == profession_oid::oid_versicherter)
     {
-        auto [prescription, receipt, chargeItem, dispenseItem] = session.database()->retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(prescriptionId);
-        ErpExpect(prescription.has_value(), HttpStatus::NotFound, "No prescription found");
-        ErpExpect(receipt.has_value(), HttpStatus::NotFound, "No receipt found");
-        ErpExpect(chargeItem.has_value(), HttpStatus::NotFound, "No chargeItem found");
-        ErpExpect(dispenseItem.has_value(), HttpStatus::NotFound, "No dispenseItem found");
+        auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
 
         A_22125.start("Assure identical kvnr of access token and ChargeItem resource");
-        ErpExpect(chargeItem.value().subjectKvnr() == idNumberClaim.value(), HttpStatus::Forbidden,
-                    "Mismatch between access token and Kvnr");
+        ErpExpect(chargeInformation.chargeItem.subjectKvnr() == idNumberClaim.value(), HttpStatus::Forbidden,
+                  "Mismatch between access token and Kvnr");
         A_22125.finish();
 
         A_22127.start("Response for insured");
-        Expect3(prescription.value().data().has_value(), "Prescription binary has no data", std::logic_error);
+        Expect3(chargeInformation.prescription.value().data().has_value(), "Prescription binary has no data",
+                std::logic_error);
 
-        const CadesBesSignature cadesBesSignature(
-            std::string(prescription.value().data().value()), session.serviceContext.getTslManager());
+        const CadesBesSignature cadesBesSignature(std::string(chargeInformation.prescription.value().data().value()),
+                                                  session.serviceContext.getTslManager());
         auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
 
         const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
         signBundle(kbvBundle, authorIdentifier, session.serviceContext);
 
-        receipt->removeSignature();
-        signBundle(*receipt, authorIdentifier, session.serviceContext);
+        chargeInformation.receipt->removeSignature();
+        signBundle(*chargeInformation.receipt, authorIdentifier, session.serviceContext);
 
-        responseBundle.addResource(getLinkBase() + "/ChargeItem/" + prescriptionId.toString(),
-                                   {}, {}, chargeItem.value().jsonDocument());
-        responseBundle.addResource(dispenseItem.value().getId().toUrn(), {}, {}, dispenseItem.value().jsonDocument());
+        responseBundle.addResource(getLinkBase() + "/ChargeItem/" + prescriptionId.toString(), {}, {},
+                                   chargeInformation.chargeItem.jsonDocument());
+        responseBundle.addResource(chargeInformation.unsignedDispenseItem.getId().toUrn(), {}, {},
+                                   chargeInformation.unsignedDispenseItem.jsonDocument());
         responseBundle.addResource(kbvBundle.getId().toUrn(), {}, {}, kbvBundle.jsonDocument());
-        responseBundle.addResource(receipt.value().getId().toUrn(), {}, {}, receipt.value().jsonDocument());
+        responseBundle.addResource(chargeInformation.receipt->getId().toUrn(), {}, {},
+                                   chargeInformation.receipt->jsonDocument());
 
         A_22127.finish();
     }
     else
     {
-        auto [chargeItem, dispenseItem] = session.database()->retrieveChargeInformation(prescriptionId);
+        auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
+
         A_22126.start("Assure identical TelematikId of access token and ChargeItem resource");
-        ErpExpect(chargeItem.entererTelematikId() == idNumberClaim.value(), HttpStatus::Forbidden,
-                "Mismatch between access token and TelematikId");
+        ErpExpect(chargeInformation.chargeItem.entererTelematikId() == idNumberClaim.value(), HttpStatus::Forbidden,
+                  "Mismatch between access token and TelematikId");
         A_22126.finish();
 
         A_22611.start("verify pharmacy access code");
-        ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, chargeItem);
+        ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, chargeInformation.chargeItem);
         A_22611.finish();
 
-        A_22128.start("Response for pharmacy. Delete unused supportingInfoType");
-        chargeItem.deleteSupportingInfoElement(model::ChargeItem::SupportingInfoType::prescriptionItem);
-        chargeItem.deleteSupportingInfoElement(model::ChargeItem::SupportingInfoType::receipt);
+        A_22128.start("Response for pharmacy. Omit receipt and access code.");
+        chargeInformation.chargeItem.deleteAccessCode();
+        responseBundle.addResource(getLinkBase() + "/ChargeItem/" + prescriptionId.toString(), {}, {},
+                                   chargeInformation.chargeItem.jsonDocument());
 
-        responseBundle.addResource(getLinkBase() + "/ChargeItem/" + prescriptionId.toString(),
-                                   {}, {}, chargeItem.jsonDocument());
-        responseBundle.addResource(dispenseItem.getId().toUrn(), {}, {}, dispenseItem.jsonDocument());
+        Expect3(chargeInformation.prescription.has_value(), "Prescription has no data", ::std::logic_error);
+        Expect3(chargeInformation.prescription->id().has_value(), "Prescription binary has no id", ::std::logic_error);
+        Expect3(chargeInformation.prescription->data().has_value(), "Prescription binary has no data",
+                ::std::logic_error);
+        responseBundle.addResource(::Uuid{chargeInformation.prescription->id().value()}.toUrn(), {}, {},
+                                   chargeInformation.prescription->jsonDocument());
+
+        responseBundle.addResource(chargeInformation.unsignedDispenseItem.getId().toUrn(), {}, {},
+                                   chargeInformation.unsignedDispenseItem.jsonDocument());
         A_22128.finish();
     }
 

@@ -26,10 +26,10 @@ TEST(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function-c
     const std::string_view agentName = "Max Mustermann";
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
 
-    model::AuditData auditData(
-        eventId, model::AuditMetaData(agentName, kvnr), action, agentType, insurantKvnr, deviceId, prescriptionId);
+    model::AuditData auditData(eventId, model::AuditMetaData(agentName, kvnr), action, agentType, insurantKvnr,
+                               deviceId, prescriptionId, std::nullopt);
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -76,10 +76,10 @@ TEST(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognitiv
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4241);
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
 
-    model::AuditData auditData(
-        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, prescriptionId);
+    model::AuditData auditData(eventId, model::AuditMetaData({}, {}), action, agentType, insurantKvnr, deviceId,
+                               prescriptionId, std::nullopt);
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -125,10 +125,10 @@ TEST(AuditEventCreatorTest, createGetMultipleResources)//NOLINT(readability-func
     const std::int16_t deviceId = 1234;
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {} /*no prescriptionId*/);
+        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {}, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -172,12 +172,12 @@ TEST(AuditEventCreatorTest, createExpiredTaskDeletion)//NOLINT(readability-funct
     const std::int16_t deviceId = 1234;
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::machine;
     const std::string auditDataId = "audit_data_id";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
     const model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4241);
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, prescriptionId);
+        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, prescriptionId, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -220,14 +220,14 @@ TEST(AuditEventCreatorTest, createPostChargeItem)//NOLINT(readability-function-c
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
     const std::string_view telematikId = "2-2-ERP-AKTOR-ZArzt-01";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
     const model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4241);
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(std::string(telematikId)));
     const auto agentName = jwt->stringForClaim(JWT::organizationNameClaim).value();
 
-    model::AuditData auditData(
-        eventId, model::AuditMetaData(agentName, telematikId), action, agentType, insurantKvnr, deviceId, prescriptionId);
+    model::AuditData auditData(eventId, model::AuditMetaData(agentName, telematikId), action, agentType, insurantKvnr,
+                               deviceId, prescriptionId, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -273,10 +273,10 @@ TEST(AuditEventCreatorTest, createPutChargeItemPatient)//NOLINT(readability-func
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4241);
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, prescriptionId);
+        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, prescriptionId, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -316,16 +316,16 @@ TEST(AuditEventCreatorTest, createPutChargeItemPatient)//NOLINT(readability-func
 
 TEST(AuditEventCreatorTest, createDeleteConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    const model::AuditEventId eventId = model::AuditEventId::DELETE_Consent_id;
+    const model::AuditEventId eventId = model::AuditEventId::DELETE_Consent;
     const model::AuditEvent::Action action = model::AuditEvent::Action::del;
     const std::string insurantKvnr = "X123456789";
     const std::int16_t deviceId = 1234;
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {} /*no prescriptionId*/);
+        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {}, "CHARGCONS-X123456789");
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -355,9 +355,9 @@ TEST(AuditEventCreatorTest, createDeleteConsent)//NOLINT(readability-function-co
     EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_FALSE(entityWhatIdentifierSystem.has_value());
-    EXPECT_FALSE(entityWhatIdentifierValue.has_value());
+    EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(auditEvent.entityDescription(), "-");
-    EXPECT_EQ(auditEvent.entityWhatReference(), "Consent");
+    EXPECT_EQ(auditEvent.entityWhatReference(), "Consent/CHARGCONS-X123456789");
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
@@ -369,10 +369,10 @@ TEST(AuditEventCreatorTest, createPostConsent)//NOLINT(readability-function-cogn
     const std::int16_t deviceId = 1234;
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
-    const model::Timestamp recorded = model::Timestamp::now();
+    const fhirtools::Timestamp recorded = fhirtools::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {} /*no prescriptionId*/);
+        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {}, "CHARGCONS-X123456789");
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -402,9 +402,9 @@ TEST(AuditEventCreatorTest, createPostConsent)//NOLINT(readability-function-cogn
     EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_FALSE(entityWhatIdentifierSystem.has_value());
-    EXPECT_FALSE(entityWhatIdentifierValue.has_value());
+    EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(auditEvent.entityDescription(), "+");
-    EXPECT_EQ(auditEvent.entityWhatReference(), "Consent");
+    EXPECT_EQ(auditEvent.entityWhatReference(), "Consent/CHARGCONS-X123456789");
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 

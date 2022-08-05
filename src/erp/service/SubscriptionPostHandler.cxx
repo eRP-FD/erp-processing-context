@@ -57,7 +57,7 @@ void SubscriptionPostHandler::handleRequest(PcSessionContext& session)
         subscription.setChannelType(model::Subscription::ChannelType::websocket);
 
         // Allow for 12 hours lifetime until expiration.
-        const auto tNow = model::Timestamp::now();
+        const auto tNow = fhirtools::Timestamp::now();
         const auto subscriptionExpiration = tNow + hours(12);
         subscription.setEndTime(subscriptionExpiration);
 

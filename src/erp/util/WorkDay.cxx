@@ -8,9 +8,11 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/Holidays.hxx"
 
-WorkDay::WorkDay(model::Timestamp baseTime)
-    : WorkDay(
-          date::year_month_day{std::chrono::time_point_cast<date::sys_days::duration>(baseTime.toChronoTimePoint())})
+#include <date/tz.h>
+
+WorkDay::WorkDay(fhirtools::Timestamp baseTime)
+    : WorkDay(date::year_month_day{std::chrono::time_point_cast<date::sys_days::duration>(
+          date::make_zoned(fhirtools::Timestamp::GermanTimezone, baseTime.toChronoTimePoint()).get_local_time())})
 {
 }
 
@@ -40,9 +42,9 @@ WorkDay WorkDay::operator+(unsigned workingDaysToAdd)
 }
 
 
-model::Timestamp WorkDay::toTimestamp() const
+fhirtools::Timestamp WorkDay::toTimestamp() const
 {
-    return model::Timestamp(date::sys_days(mDay));
+    return fhirtools::Timestamp(date::sys_days(mDay));
 }
 
 
@@ -57,5 +59,5 @@ bool WorkDay::isWorkDay(const date::year_month_day& day)
     date::weekday weekday(day);
     if (weekday == date::Sunday)
         return false;
-    return !Holidays::instance().isHoliday(day);
+    return ! Holidays::instance().isHoliday(day);
 }

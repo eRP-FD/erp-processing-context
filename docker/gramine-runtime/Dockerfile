@@ -14,7 +14,7 @@ RUN apt-get update --fix-missing \
 
 COPY docker/files/gramine-keyring.gpg /usr/share/keyrings
 
-RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ stable main' \
+RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ 1.2 main' \
     |  tee /etc/apt/sources.list.d/gramine.list \
     && apt-get update \
     && apt-get install -y gramine

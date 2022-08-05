@@ -10,7 +10,7 @@
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 
 
@@ -64,7 +64,7 @@ std::unique_ptr<Certificate> HttpsTestClient::retrieveEciesRemoteCertificate()
             "/VAUCertificate",
             Header::Version_1_1,
             { {Header::Host, getHostHttpHeader() },
-              {Header::UserAgent, "vau-cpp-it-test"s},
+              {Header::UserAgent, "eRp-Testsuite/1.0.0 GMTIK/JMeter-Internet"s},
               {Header::Connection, Header::ConnectionClose}
             },
             HttpStatus::Unknown), std::string{});

@@ -13,6 +13,7 @@
 #include "erp/util/JwtException.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <algorithm>
 #include <boost/range/algorithm/count.hpp>
 #include <chrono>
@@ -178,7 +179,7 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     int siglen = i2d_ECDSA_SIG(sig, nullptr);
     Expect(siglen > 0, "Failed to get signature length.");
     std::vector<unsigned char> sig_der_bytes(static_cast<size_t>(siglen), 0u);
-    unsigned char* rawptr = &sig_der_bytes[0];
+    unsigned char* rawptr = sig_der_bytes.data();
     Expect(i2d_ECDSA_SIG(sig, &rawptr) != 0, "Failed call to i2d_ECDSA_SIG");
 
     A_20365.start("Verify token signature with the given public key.");

@@ -27,6 +27,7 @@
 #include "erp/service/chargeitem/ChargeItemDeleteHandler.hxx"
 #include "erp/service/chargeitem/ChargeItemPostHandler.hxx"
 #include "erp/service/chargeitem/ChargeItemPutHandler.hxx"
+#include "erp/service/chargeitem/ChargeItemPatchHandler.hxx"
 #include "erp/service/consent/ConsentGetHandler.hxx"
 #include "erp/service/consent/ConsentDeleteHandler.hxx"
 #include "erp/service/consent/ConsentPostHandler.hxx"
@@ -170,8 +171,15 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
                                   std::make_unique<ChargeItemDeleteHandler>(chargeItemOIDsExceptCreation));
         A_22113.finish();
 
+        A_22879.start("If called without specifying an <id>, issue error code 405 to prevent "
+                      "changing multiple resources in one request via a single request");
+        A_22875.start("Only 'oid_versicherter' users are allowed to call the operation");
+        handlerManager.onPatchDo("/ChargeItem/{id}", std::make_unique<ChargeItemPatchHandler>(oids{oid_versicherter}));
+        A_22875.finish();
+        A_22879.finish();
+
         A_22118.start("Register the allowed professionOIDs");
-        handlerManager.onGetDo("/ChargeItem", std::make_unique<ChargeItemGetAllHandler>(chargeItemOIDsExceptCreation));
+        handlerManager.onGetDo("/ChargeItem", std::make_unique<ChargeItemGetAllHandler>(oids{oid_versicherter}));
         A_22118.finish();
 
         A_22124.start("Register the allowed professionOIDs");
@@ -192,7 +200,7 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
         // Resource Consent (gemF_eRp_PKV_V1.0.0_CC, 6.1.5)
         const oids consentOIDs{oid_versicherter};
         A_22155.start("Register the allowed professionOIDs");
-        handlerManager.onDeleteDo("/Consent/{id}", std::make_unique<ConsentDeleteHandler>(consentOIDs));
+        handlerManager.onDeleteDo("/Consent", std::make_unique<ConsentDeleteHandler>(consentOIDs));
         A_22155.finish();
 
         A_22159.start("Register the allowed professionOIDs");

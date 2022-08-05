@@ -5,11 +5,12 @@
 
 #include "FhirSAXHandler.hxx"
 
-#include "erp/fhir/FhirStructureRepository.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/xml/XmlMemory.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/util/Constants.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <iostream>
@@ -19,6 +20,10 @@
 
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+
+using fhirtools::FhirElement;
+using fhirtools::FhirStructureDefinition;
+using fhirtools::FhirStructureRepository;
 
 namespace
 {
@@ -149,7 +154,7 @@ void FhirSaxHandler::startElement(const xmlChar* localname, const xmlChar* prefi
     (void)prefix;
     (void)nbDefaulted;
     XmlStringView localnameView{localname};
-    if (uri != Fhir::namespaceUri)
+    if (uri != fhirtools::constants::namespaceUri)
     {
         ErpExpect(!mStack.empty(), HttpStatus::BadRequest, "Not a FHIR Document.");
         if (uri == xhtmlNamespaceUri)
@@ -203,8 +208,8 @@ void FhirSaxHandler::startFHIRElement(const XmlStringView& localname, const Attr
     }
 }
 
-void FhirSaxHandler::pushArrayContext(const Context& parentItem, std::shared_ptr<const FhirElement> parentElement,
-                                   std::shared_ptr<const FhirElement> element, const XmlStringView& localname)
+void FhirSaxHandler::pushArrayContext(const Context& parentItem, const std::shared_ptr<const FhirElement>& parentElement,
+                                   const std::shared_ptr<const FhirElement>& element, const XmlStringView& localname)
 {
 
     // arrays are special case they are implemented by using two contexts
@@ -256,6 +261,9 @@ void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandle
             return;
         }
         case K::systemString:
+        case K::systemDate:
+        case K::systemTime:
+        case K::systemDateTime:
         {
             ErpExpect(value.has_value(), HttpStatus::BadRequest, "Missing value for system type: " + getPath());
             pushString(name, value->value(), type, std::move(element));
@@ -264,9 +272,10 @@ void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandle
         case K::complexType:
         case K::resource:
         {
-            pushObject(name, attributes, type, std::move(element));
+            pushObject(name, attributes, type, element);
             return;
         }
+        case K::slice:
         case K::logical:
             Fail("Unsupported structure kind: " + to_string(type.kind()));
         case K::primitiveType:
@@ -277,7 +286,7 @@ void FhirSaxHandler::pushJsonField(const std::string_view& name, const SaxHandle
 
 void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeList& attributes,
                          const FhirStructureDefinition& type,
-                         std::shared_ptr<const FhirElement> element)
+                         const std::shared_ptr<const FhirElement>& element)
 {
     auto& newObject = mStack.emplace_back(type, element, std::string{name}, rapidjson::kObjectType);
     bool isSubObjectOfPrimitive = type.kind() == FhirStructureDefinition::Kind::primitiveType;
@@ -287,7 +296,7 @@ void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeLis
     {
         auto attribute = attributes.get(i);
         auto uri = attribute.uri();
-        if (!uri.has_value() || uri.value() == Fhir::namespaceUri)
+        if (!uri.has_value() || uri.value() == fhirtools::constants::namespaceUri)
         {
             if (attribute.localname() == "value" && isSubObjectOfPrimitive)
             {
@@ -306,12 +315,16 @@ void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeLis
                 case K::primitiveType:
                 case K::complexType:
                 case K::resource:
+                case K::slice:
                 case K::logical:
                     Fail("Unexpected non-system Type on primitive type: " + fieldType.url());
                 case K::systemBoolean:
                     pushBoolean(std::string{attribute.localname()}, attribute.value(), fieldType, fieldElement);
                     break;
                 case K::systemString:
+                case FhirStructureDefinition::Kind::systemDate:
+                case FhirStructureDefinition::Kind::systemTime:
+                case FhirStructureDefinition::Kind::systemDateTime:
                     pushString(std::string{attribute.localname()}, attribute.value(), fieldType, fieldElement);
                     break;
                 case K::systemDouble:
@@ -556,7 +569,7 @@ void FhirSaxHandler::pushRootResource(const XmlStringView& resoureType)
     const auto* type = mStructureRepo.findTypeById(std::string{resoureType});
     ErpExpect(type != nullptr, HttpStatus::BadRequest, "Unknown Type: "s.append(resoureType));
     ErpExpect(type->kind() == FhirStructureDefinition::Kind::resource, HttpStatus::BadRequest, "Type is not a Resource: "s.append(resoureType));
-    const auto backBone = type->findElement(type->typeId());
+    auto backBone = type->findElement(type->typeId());
     Expect3(backBone != nullptr, "Element not defined: " + type->url() + "@" + type->typeId(), std::logic_error);
     auto& state = mStack.emplace_back(*type, std::move(backBone), std::string{resoureType}, rapidjson::kObjectType);
     state.value.AddMember("resourceType", mResult.makeString(type->typeId()), mResult.GetAllocator());
@@ -599,8 +612,8 @@ FhirSaxHandler::getTypeAndElement(const FhirStructureDefinition& baseType,
         elementId.reserve(baseElement.typeId().size() + name.size() + 1);
         elementId.append(baseElement.typeId()).append("."sv).append(name);
         element = newType->findElement(elementId);
-    }
     ErpExpect(element != nullptr, HttpStatus::BadRequest, "Element not defined: " + getPath() + elementId);
+    }
     const auto* elementType = mStructureRepo.findTypeById(element->typeId());
     if (!elementType)
     {

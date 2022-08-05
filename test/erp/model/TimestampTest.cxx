@@ -3,7 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/model/ModelException.hxx"
 
 #include <date/date.h>
@@ -13,7 +13,7 @@
 using namespace date;
 using namespace std::literals::chrono_literals;
 using namespace model;
-
+using fhirtools::Timestamp;
 
 class TimestampTest : public testing::Test
 {
@@ -370,4 +370,20 @@ TEST_F(TimestampTest, fromFhirSearchDateTime_failForInvalidFormats)//NOLINT(read
     EXPECT_THROW(Timestamp::fromFhirSearchDateTime("2022-01-29T12:345"), ModelException);
     EXPECT_THROW(Timestamp::fromFhirSearchDateTime("20YY-01-29T12:34"), ModelException);
     EXPECT_THROW(Timestamp::fromFhirSearchDateTime("2022-01-29T12:34 "), ModelException);
+}
+
+TEST_F(TimestampTest, fromGermanDate)
+{
+    auto ts = Timestamp::fromGermanDate("2022-07-12");
+    EXPECT_EQ(ts.toXsDateTime(), "2022-07-11T22:00:00.000+00:00");
+    EXPECT_EQ(ts.toXsDate(), "2022-07-11");
+    EXPECT_EQ(ts.toGermanDate(), "2022-07-12");
+}
+
+TEST_F(TimestampTest, fromGermanDate2)
+{
+    auto ts = Timestamp::fromXsDateTime("2022-07-11T22:00:00.000+00:00");
+    EXPECT_EQ(ts.toXsDateTime(), "2022-07-11T22:00:00.000+00:00");
+    EXPECT_EQ(ts.toXsDate(), "2022-07-11");
+    EXPECT_EQ(ts.toGermanDate(), "2022-07-12");
 }

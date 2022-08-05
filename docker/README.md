@@ -26,7 +26,7 @@ The build image is used during the build and provides a fixed and constant build
 
 #### Build instructions:
 ```shell
-docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0 -f docker/build/Dockerfile .
+docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1 -f docker/build/Dockerfile .
 ```
 The name of the image (in this case: erp-pc:build) must be adopted in the main Dockerfile.
 

@@ -31,7 +31,7 @@ TEST_F(Erp9008Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
     std::string accessCode{task->accessCode()};
-    const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
+    const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), fhirtools::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
     auto path = "/Communication/" + task->prescriptionId().toString();
     auto apothekenJwt = jwtApotheke();

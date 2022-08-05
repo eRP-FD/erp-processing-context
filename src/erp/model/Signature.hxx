@@ -7,7 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_SIGNATURE_HXX
 
 #include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
 
@@ -23,16 +23,18 @@ namespace model
 class Signature : public Resource<Signature>
 {
 public:
+    static constexpr auto resourceTypeName = "Signature";
+
     constexpr static const std::string_view jwsSystem = "urn:iso-astm:E1762-95:2013";
     constexpr static const std::string_view jwsCode = "1.2.840.10065.1.12.1.5";
 
     Signature(
         const std::string_view& data,
-        const model::Timestamp& when,
+        const fhirtools::Timestamp& when,
         const std::string_view& who);
 
     [[nodiscard]] std::optional<std::string_view> data() const;
-    [[nodiscard]] std::optional<model::Timestamp> when() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> when() const;
     [[nodiscard]] std::optional<std::string_view> who() const;
     [[nodiscard]] std::optional<MimeType> sigFormat() const;
     [[nodiscard]] std::optional<MimeType> targetFormat() const;

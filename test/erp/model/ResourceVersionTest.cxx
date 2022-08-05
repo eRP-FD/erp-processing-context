@@ -5,7 +5,7 @@
 
 #include "erp/model/ResourceVersion.hxx"
 #include "erp/model/ModelException.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/ErpException.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
@@ -31,7 +31,7 @@ TEST(ResourceVersionTest, currentSelectNewProfile)
     EnvironmentVariableGuard newGematikVersion{"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION", "1.1.1"};
     EnvironmentVariableGuard newKbvVersion{"ERP_FHIR_PROFILE_XML_SCHEMA_KBV_VERSION", "1.0.2"};
 
-    const auto now = ::model::Timestamp::now().toXsDateTime();
+    const auto now = ::fhirtools::Timestamp::now().toXsDateTime();
 
     EnvironmentVariableGuard renderFrom{"ERP_FHIR_PROFILE_RENDER_FROM", now};
 
@@ -48,7 +48,7 @@ TEST(ResourceVersionTest, currentSelectOldProfile)
     EnvironmentVariableGuard newGematikVersion{"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION", "1.1.1"};
     EnvironmentVariableGuard newKbvVersion{"ERP_FHIR_PROFILE_XML_SCHEMA_KBV_VERSION", "1.0.2"};
 
-    const auto future = (::model::Timestamp::now() + 24h).toXsDateTime();
+    const auto future = (::fhirtools::Timestamp::now() + 24h).toXsDateTime();
 
     EnvironmentVariableGuard renderFrom{"ERP_FHIR_PROFILE_RENDER_FROM", future};
 
@@ -63,7 +63,7 @@ TEST(ResourceVersionTest, versionizeProfile)//NOLINT(readability-function-cognit
     const auto fhirProfile = "http://hl7.org/fhir/StructureDefinition/Binary"sv;
     const auto gematikProfile = "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"sv;
     const auto kbvProfile = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Freetext"sv;
-    const auto now = ::model::Timestamp::now().toXsDateTime();
+    const auto now = ::fhirtools::Timestamp::now().toXsDateTime();
 
     EnvironmentVariableGuard enableProfile{"ERP_FHIR_PROFILE_VALID_FROM", now};
     EnvironmentVariableGuard renderProfile{"ERP_FHIR_PROFILE_RENDER_FROM", now};

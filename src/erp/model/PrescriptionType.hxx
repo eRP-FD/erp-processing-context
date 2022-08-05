@@ -20,8 +20,10 @@ enum class PrescriptionType : uint8_t
 {
     apothekenpflichigeArzneimittel = 160u,
     direkteZuweisung = 169u,
-    apothekenpflichtigeArzneimittelPkv = 200u
+    apothekenpflichtigeArzneimittelPkv = 200u,
+    direkteZuweisungPkv = 209u
 };
+
 void checkFeatureWf200(model::PrescriptionType prescriptionType);
 
 // mappings defined in A_19445

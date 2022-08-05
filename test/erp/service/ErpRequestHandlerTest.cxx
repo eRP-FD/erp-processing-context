@@ -70,6 +70,8 @@ public:
                 break;
             case SchemaType::Gem_erxCommunicationDispReq:
             case SchemaType::Gem_erxCommunicationInfoReq:
+            case SchemaType::Gem_erxCommunicationChargChangeReq:
+            case SchemaType::Gem_erxCommunicationChargChangeReply:
             case SchemaType::Gem_erxCommunicationReply:
             case SchemaType::Gem_erxCommunicationRepresentative:
                 testParseAndValidateRequestBodyT<model::Communication>(body, contentMimeType, schemaType, expectFail);

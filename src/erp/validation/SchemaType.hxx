@@ -16,6 +16,8 @@ enum class SchemaType
     fhir, // general FHIR schema
     Gem_erxCommunicationDispReq,
     Gem_erxCommunicationInfoReq,
+    Gem_erxCommunicationChargChangeReq,
+    Gem_erxCommunicationChargChangeReply,
     Gem_erxCommunicationReply,
     Gem_erxCommunicationRepresentative,
     Gem_erxCompositionElement,

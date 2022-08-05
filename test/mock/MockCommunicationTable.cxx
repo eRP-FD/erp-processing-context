@@ -35,7 +35,7 @@ MockCommunicationTable::MockCommunicationTable(MockAccountTable& accountTable)
 
 std::optional<Uuid> MockCommunicationTable::insertCommunication(
     const model::PrescriptionId& prescriptionId,
-    const model::Timestamp& timeSent,
+    const fhirtools::Timestamp& timeSent,
     const model::Communication::MessageType messageType,
     const db_model::HashedId& sender,
     const db_model::HashedId& recipient,
@@ -144,7 +144,7 @@ std::vector<Uuid> MockCommunicationTable::retrieveCommunicationIds(const db_mode
 }
 
 
-std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
 MockCommunicationTable::deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender)
 {
     std::lock_guard lock(mutex);
@@ -163,7 +163,7 @@ MockCommunicationTable::deleteCommunication(const Uuid& communicationId, const d
 }
 
 void MockCommunicationTable::markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds,
-                                                           const model::Timestamp& retrieved,
+                                                           const fhirtools::Timestamp& retrieved,
                                                            const db_model::HashedId& recipient)
 {
     std::lock_guard lock(mutex);

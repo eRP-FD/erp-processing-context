@@ -8,7 +8,6 @@
   </meta>
   <contained>
     <Binary>
-      <id value="dispense-1"/>
       <contentType value="application/pkcs7-mime"/>
       <data value="##DISPENSE_BUNDLE##"/>
     </Binary>

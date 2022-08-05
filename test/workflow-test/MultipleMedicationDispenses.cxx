@@ -40,7 +40,7 @@ public:
         ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
         std::string secret;
-        std::optional<model::Timestamp> lastModified;
+        std::optional<fhirtools::Timestamp> lastModified;
         ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModified, *prescriptionId, kvnr, accessCode, qesBundle));
         ASSERT_TRUE(lastModified.has_value());
 
@@ -51,7 +51,7 @@ public:
 
 TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT(readability-function-cognitive-complexity)
 {
-    model::Timestamp startTime = model::Timestamp::now();
+    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
     auto kvnr = generateNewRandomKVNR();
     auto task1 = createClosedTask(kvnr);
 

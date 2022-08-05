@@ -9,6 +9,7 @@
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
 #include "erp/ErpRequirements.hxx"
 
+
 class CloseTaskTestP : public EndpointHandlerTest, public testing::WithParamInterface<std::string>
 {
 };

@@ -12,6 +12,7 @@
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/xml/XmlDocument.hxx"
 #include "test_config.h"
 

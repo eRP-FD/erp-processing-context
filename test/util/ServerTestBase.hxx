@@ -60,6 +60,15 @@ public:
 
     HttpsClient createClient (void);
 
+    // T can be JWT or std::string, auto-resolved.
+    template <typename T>
+    ClientRequest makeEncryptedRequest(
+        const HttpMethod method, const std::string_view endpoint, const T& jwt1,
+        std::optional<std::string_view> xAccessCode = {},
+        std::optional<std::pair<std::string_view, std::string_view>> bodyContentType = {},
+        Header::keyValueMap_t&& headerFields = {},
+        std::optional<std::function<void(std::string&)>> requestManipulator = {}); // used to simulate faulty messages
+
     virtual Header createPostHeader (const std::string& path, const std::optional<const JWT>& jwtToken = {}) const;
     virtual Header createGetHeader (const std::string& path, const std::optional<const JWT>& jwtToken = {}) const;
     virtual Header createDeleteHeader(const std::string& path, const std::optional<const JWT>& jwtToken = {}) const;
@@ -92,7 +101,7 @@ public:
     virtual std::vector<model::MedicationDispense> closeTask(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
-        const std::optional<model::Timestamp>& medicationWhenPrepared = std::nullopt,
+        const std::optional<fhirtools::Timestamp>& medicationWhenPrepared = std::nullopt,
         size_t numMedications = 1);
     virtual void abortTask(model::Task& task);
 
@@ -109,8 +118,8 @@ public:
         CommunicationAttandee recipient = CommunicationAttandee{ActorRole::Insurant, ""};
         std::string accessCode;
         std::optional<std::string> contentString = "";
-        std::optional<model::Timestamp> sent = model::Timestamp::now();
-        std::optional<model::Timestamp> received = std::nullopt;
+        std::optional<fhirtools::Timestamp> sent = fhirtools::Timestamp::now();
+        std::optional<fhirtools::Timestamp> received = std::nullopt;
     };
 
     virtual std::vector<Uuid> addCommunicationsToDatabase(const std::vector<CommunicationDescriptor>& descriptors);
@@ -122,8 +131,8 @@ protected:
     model::MedicationDispense createMedicationDispense(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
-        const model::Timestamp& whenHandedOver = model::Timestamp::now(),
-        const std::optional<model::Timestamp>& whenPrepared = std::nullopt) const;
+        const fhirtools::Timestamp& whenHandedOver = fhirtools::Timestamp::now(),
+        const std::optional<fhirtools::Timestamp>& whenPrepared = std::nullopt) const;
 
     // Jwt of InsurantF ("X234567890"):
     std::unique_ptr<JWT> mJwt;

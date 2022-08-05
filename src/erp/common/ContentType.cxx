@@ -6,6 +6,7 @@
 #include "erp/common/ContentType.hxx"
 
 #include "erp/util/String.hxx"
+
 #include "erp/util/GLog.hxx"
 
 namespace {

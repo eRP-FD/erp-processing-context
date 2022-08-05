@@ -48,10 +48,12 @@ enum class ConfigurationKey
     SERVER_PRIVATE_KEY,
     SERVER_REQUEST_PATH,
     SERVER_PROXY_CERTIFICATE,
+    SERVICE_GENERIC_VALIDATION_MODE,
     SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD,
     SERVICE_TASK_ACTIVATE_HOLIDAYS,
     SERVICE_TASK_ACTIVATE_EASTER_CSV,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION,
+    SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
     SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE,
     SERVICE_COMMUNICATION_MAX_MESSAGES,
     SERVICE_SUBSCRIPTION_SIGNING_KEY,
@@ -125,6 +127,10 @@ enum class ConfigurationKey
 
     TOKEN_ULIMIT_CALLS,
     TOKEN_ULIMIT_TIMESPAN_MS,
+
+    REPORT_LEIPS_KEY_ENABLE,
+    REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS,
+    REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS,
 
     // Feature related configuration
     FEATURE_PKV,
@@ -359,11 +365,21 @@ using ConfigurationKeyNames = DevConfigKeyNames;
 class Configuration : public ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>
 {
 public:
+    enum class OnUnknownExtension
+    {
+        ignore, report, reject
+    };
+    enum class GenericValidationMode {
+        disable, detail_only, ignore_errors, require_success
+    };
+
     static const Configuration& instance();
     void check() const;
 
     [[nodiscard]] bool featureWf200Enabled() const;
     [[nodiscard]] bool featurePkvEnabled() const;
+    [[nodiscard]] OnUnknownExtension kbvValidationOnUnknownExtension() const;
+    [[nodiscard]] GenericValidationMode genericValidationMode() const;
 };
 
 

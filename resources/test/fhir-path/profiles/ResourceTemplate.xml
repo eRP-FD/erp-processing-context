@@ -1,0 +1,81 @@
+<StructureDefinition xmlns="http://hl7.org/fhir">
+  <id value="Resource" />
+  <url value="http://erp-test.net/test/fhir-path/profiles/ResourceTemplate"/>
+  <version value="4.0.1" />
+  <name value="Resource" />
+  <kind value="resource" />
+  <abstract value="false" />
+  <type value="Resource" />
+  <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Resource"/>
+  <derivation value="constraint"/>
+  <snapshot>
+    <element id="Resource">
+      <path value="Resource" />
+      <short value="Base Resource" />
+      <definition value="This is the base resource type for everything." />
+      <min value="0" />
+      <max value="*" />
+      <base>
+        <path value="Resource" />
+        <min value="0" />
+        <max value="*" />
+      </base>
+    </element>
+    <element id="Resource.id">
+      <path value="Resource.id" />
+      <min value="0" />
+      <max value="1" />
+      <base>
+        <path value="Resource.id" />
+        <min value="0" />
+        <max value="1" />
+      </base>
+      <type>
+        <code value="http://hl7.org/fhirpath/System.String" />
+      </type>
+    </element>
+    <element id="Resource.meta">
+      <path value="Resource.meta" />
+      <min value="0" />
+      <max value="1" />
+      <base>
+        <path value="Resource.meta" />
+        <min value="0" />
+        <max value="1" />
+      </base>
+      <type>
+        <code value="Meta" />
+      </type>
+    </element>
+    <element id="Resource.implicitRules">
+      <path value="Resource.implicitRules" />
+      <min value="0" />
+      <max value="1" />
+      <base>
+        <path value="Resource.implicitRules" />
+        <min value="0" />
+        <max value="1" />
+      </base>
+      <type>
+        <code value="uri" />
+      </type>
+    </element>
+    <element id="Resource.language">
+      <path value="Resource.language" />
+      <min value="0" />
+      <max value="1" />
+      <base>
+        <path value="Resource.language" />
+        <min value="0" />
+        <max value="1" />
+      </base>
+      <type>
+        <code value="code" />
+      </type>
+      <binding>
+        <strength value="preferred" />
+        <valueSet value="http://hl7.org/fhir/ValueSet/languages" />
+      </binding>
+    </element>
+  </snapshot>
+</StructureDefinition>

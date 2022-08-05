@@ -10,6 +10,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
+
 namespace
 {
 
@@ -84,6 +85,12 @@ AuditDataCollector& AuditDataCollector::setPrescriptionId(const model::Prescript
     return *this;
 }
 
+AuditDataCollector& AuditDataCollector::setConsentId(const std::string_view& consentId)
+{
+    mConsentId = consentId;
+    return *this;
+}
+
 model::AuditData AuditDataCollector::createData() const
 {
     const bool isEventCausedByPatient = model::isEventCausedByPatient(assertHasValue(mEventId));
@@ -93,5 +100,5 @@ model::AuditData AuditDataCollector::createData() const
                                  model::isEventCausedByRepresentative(*mEventId) ? assertHasValue(mAgentName) : mAgentName,
                              isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho)),
         assertHasValue(mAction), model::AuditEvent::AgentType::human, assertHasValue(mInsurantKvnr),
-        assertHasValue(mDeviceId), mPrescriptionId);
+        assertHasValue(mDeviceId), mPrescriptionId, mConsentId);
 }

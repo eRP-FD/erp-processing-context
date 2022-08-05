@@ -6,6 +6,7 @@
 #include "erp/model/Binary.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <gtest/gtest.h>
 
 namespace model
@@ -32,7 +33,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
 
         const auto profile = binary.getOptionalStringValue(profilePointer);
         ASSERT_TRUE(profile);
-        const auto profileParts = ::String::split(profile.value(), '|');
+        const auto profileParts = String::split(profile.value(), '|');
         ASSERT_GE(profileParts.size(), 1);
         EXPECT_EQ(profileParts[0], "https://gematik.de/fhir/StructureDefinition/ErxBinary");
 
@@ -48,7 +49,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
 
         const auto profile = binary.getOptionalStringValue(profilePointer);
         ASSERT_TRUE(profile);
-        const auto profileParts = ::String::split(profile.value(), '|');
+        const auto profileParts = String::split(profile.value(), '|');
         ASSERT_GE(profileParts.size(), 1);
         EXPECT_EQ(profileParts[0], "http://hl7.org/fhir/StructureDefinition/Binary");
 

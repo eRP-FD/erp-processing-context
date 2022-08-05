@@ -48,8 +48,7 @@ std::unordered_set<Operation> auditRelevantOperations = {
     Operation::POST_ChargeItem,
     Operation::PUT_ChargeItem_id,
     Operation::POST_Consent,
-    Operation::DELETE_Consent_id
-};
+    Operation::DELETE_Consent};
 
 
 void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
@@ -508,6 +507,19 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
                 innerServerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim).value_or("");
             outerSession.response.setHeader(Header::InnerRequestRole,
                                        std::string(profession_oid::toInnerRequestRole(professionOIDClaim)));
+
+            A_22698.start("#4,#5 Create LEI.Telematik-ID pseudonym for and set value in the outer header field.");
+            A_22975.start("Use feature only if enabled in configuration");
+            if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::REPORT_LEIPS_KEY_ENABLE, false) && professionOIDClaim != profession_oid::oid_versicherter)
+            {
+                const auto telematikId = innerServerRequest->getAccessToken().stringForClaim(JWT::idNumberClaim);
+                if (telematikId.has_value())
+                {
+                    outerSession.response.setHeader(Header::InnerRequestLeips, PseudonameKeyRefreshJob::hkdf(telematikId.value()));
+                }
+            }
+            A_22975.finish();
+            A_22698.finish();
         }
     }
     catch (const std::exception& e)

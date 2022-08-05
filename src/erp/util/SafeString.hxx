@@ -6,7 +6,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_UTIL_SAFESTRING_HXX
 #define ERP_PROCESSING_CONTEXT_UTIL_SAFESTRING_HXX
 
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 #include <memory>
 

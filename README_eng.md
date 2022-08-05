@@ -39,8 +39,8 @@ They are meant to be used exclusively for testing purposes on a server running l
 # Build image
 ```$xslt
 cd docker/build
-docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0 .
-docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0
+docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1 .
+docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1
 ```
 
 # Tools

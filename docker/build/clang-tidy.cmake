@@ -1,0 +1,8 @@
+set(CMAKE_BUILD_TYPE Release CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS clang clang-tools-extra CACHE STRING "")
+set(LLVM_LIBDIR_SUFFIX 64 CACHE STRING "")
+set(LLVM_TARGETS_TO_BUILD X86 CACHE STRING "")
+set(LLVM_BUILD_LLVM_DYLIB ON CACHE BOOL "")
+set(LLVM_LINK_LLVM_DYLIB ON CACHE BOOL "")
+set(LIBCXX_ENABLE_ASSERTIONS "NO" CACHE BOOL "Build libc++ with assertions enabled.")
+set(LLVM_TOOL_CLANG_BUILD ON CACHE BOOL "Whether to build clang-tools-extra as part of LLVM")

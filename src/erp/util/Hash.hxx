@@ -7,7 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_UTIL_HASH_HXX
 
 #include "erp/util/Buffer.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 #include <string>
 #include <vector>

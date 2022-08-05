@@ -3,10 +3,12 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/util/OpenSsl.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/util/Uuid.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <cstdio>
 #include <regex>
@@ -52,7 +54,7 @@ Uuid::Uuid ()
     mString.assign(36, ' ');
     // Writing to the trailing null byte of std::string is valid as long as we only overwrite it
     // with char() == '\0' (which snprintf does).
-    std::snprintf(mString.data(), mString.size() + 1,
+    int written = std::snprintf(mString.data(), mString.size() + 1,
                   "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
                   uuid.parts.timeLow,
                   uuid.parts.timeMid,
@@ -65,6 +67,7 @@ Uuid::Uuid ()
                   uuid.parts.node[3],
                   uuid.parts.node[4],
                   uuid.parts.node[5]);
+    Expect3(written == gsl::narrow<int>(mString.size()), "Unexpected UUID size.", std::logic_error);
 }
 
 

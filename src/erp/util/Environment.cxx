@@ -8,6 +8,7 @@
 #include "erp/util/GLog.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <set>
 
 std::optional<std::string> Environment::get (const std::string& variableName)

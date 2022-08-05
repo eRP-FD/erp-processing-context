@@ -11,6 +11,7 @@
 #include "erp/crypto/Jwt.hxx"
 
 #include "erp/util/String.hxx"
+
 #include "erp/util/Expect.hxx"
 
 namespace
@@ -95,12 +96,12 @@ model::AuditEvent AuditEventCreator::fromAuditData(
     auditEvent.setAgentType(auditData.agentType());
 
     // entity data
-    std::string prescriptionIdStr;
+    std::string resourceIdStr;
     if(auditData.prescriptionId().has_value())
     {
-        prescriptionIdStr = auditData.prescriptionId()->toString();
-        auditEvent.setEntityWhatIdentifier(model::resource::naming_system::prescriptionID, prescriptionIdStr);
-        auditEvent.setEntityDescription(prescriptionIdStr);
+        resourceIdStr = auditData.prescriptionId()->toString();
+        auditEvent.setEntityWhatIdentifier(model::resource::naming_system::prescriptionID, resourceIdStr);
+        auditEvent.setEntityDescription(resourceIdStr);
     }
     else
     {
@@ -108,7 +109,7 @@ model::AuditEvent AuditEventCreator::fromAuditData(
         // to fill it (for endpoints GET /Task or GET /MedicationDispense and the /Consent endpoints), we write a
         // fixed string "+", except for DELETE /Consent, where we write "-".
         // See ticket ERP-5081 andd question ERP-7951.
-        if(auditData.eventId() == model::AuditEventId::DELETE_Consent_id)
+        if(auditData.eventId() == model::AuditEventId::DELETE_Consent)
         {
             auditEvent.setEntityDescription("-");
         }
@@ -116,13 +117,18 @@ model::AuditEvent AuditEventCreator::fromAuditData(
         {
             auditEvent.setEntityDescription("+");
         }
+        if (auditData.consentId().has_value())
+        {
+            resourceIdStr = auditData.consentId().value();
+            auditEvent.setEntityWhatIdentifier({}, resourceIdStr);
+        }
     }
     auditEvent.setEntityName(auditData.insurantKvnr());
-    auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), prescriptionIdStr));
+    auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), resourceIdStr));
 
     // text/div
     const auto text = replaceTextTemplateVariables(
-        textResources.retrieveTextTemplate(auditData.eventId(), language), agentName, prescriptionIdStr);
+        textResources.retrieveTextTemplate(auditData.eventId(), language), agentName, resourceIdStr);
     auditEvent.setTextDiv(R"--(<div xmlns="http://www.w3.org/1999/xhtml">)--" + text + "</div>");
     auditEvent.setLanguage(language);
 

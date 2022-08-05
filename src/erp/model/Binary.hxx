@@ -21,6 +21,8 @@ namespace model
 class Binary : public Resource<Binary>
 {
 public:
+    static constexpr auto resourceTypeName = "Binary";
+
     enum class Type
     {
         Base64,

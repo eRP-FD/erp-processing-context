@@ -10,6 +10,7 @@
 #include "erp/util/GLog.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <boost/beast/core/detail/stream_traits.hpp>
 #include <boost/beast/ssl/ssl_stream.hpp>
 #include <boost/beast/core/tcp_stream.hpp>
@@ -103,7 +104,8 @@ template<class ConstBufferSequence>
     LOG(ERROR) << prefix << " : " << std::distance(buffers.begin(), buffers.end()) << " buffers";
     for (const auto& buffer : buffers)
     {
-        LOG(ERROR) << "    " << prefix << " " << buffer.size() << " [" << String::quoteNewlines(std::string((char*)buffer.data(), buffer.size())) << "]";
+        LOG(ERROR) << "    " << prefix << " " << buffer.size() << " ["
+                   << String::quoteNewlines(std::string((char*)buffer.data(), buffer.size())) << "]";
     }
 }
 

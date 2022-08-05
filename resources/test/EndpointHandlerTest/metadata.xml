@@ -68,6 +68,8 @@
       <type value="Communication"/>
       <profile value="http://hl7.org/fhir/StructureDefinition/Communication|4.0.1"/>
       <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq|1.1.1"/>
+      <supportedProfile value="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq|1.1.1"/>
+      <supportedProfile value="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply|1.1.1"/>
       <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply|1.1.1"/>
       <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq|1.1.1"/>
       <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative|1.1.1"/>

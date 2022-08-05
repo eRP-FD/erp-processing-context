@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Bundle xmlns="http://hl7.org/fhir">
-  <type value="document"/>
+  <type value="searchset"/>
   <entry>
     <resource>
       <AuditEvent>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/eRxAuditEvent" />
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent" />
           <tag>
             <display value="Valid Example with minimal data." />
           </tag>
@@ -63,7 +63,7 @@
     <resource>
       <AuditEvent>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/eRxAuditEvent" />
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent" />
           <tag>
             <display value="Valid Example with minimal data." />
           </tag>

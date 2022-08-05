@@ -1,21 +1,20 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2022
+ * (C) Copyright IBM Corp. 2022
  */
 
 #include "erp/util/String.hxx"
-
-#include "erp/util/GLog.hxx"
-#include "erp/util/Gsl.hxx"
 #include "erp/util/Expect.hxx"
-
-#include <regex>
+#include "erp/util/GLog.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
-
 #include <openssl/crypto.h>
 #include <iomanip>
+#include <regex>
+
+#include "fhirtools/util/Gsl.hxx"
+#include "fhirtools/util/VaListHelper.hxx"
 
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
@@ -357,23 +356,7 @@ std::string String::truncateUtf8 (const std::string& s, std::size_t maxLength)
 
 std::string String::vaListToString(const char* msg, va_list args)
 {
-    Expect(msg!=nullptr, "message is missing");
-    std::string message(256, '\0');
-    ssize_t len = vsnprintf(message.data(), message.size(), msg, args);
-    Expect3(len >= 0, "Failed call to vsnprintf.", std::logic_error);
-    auto size = gsl::narrow<size_t>(len);
-    if (size >= message.size())
-    {
-        message.resize(size + 1, '\0');
-        len = vsnprintf(message.data(), message.size(), msg, args);
-        Expect3(len == static_cast<ssize_t>(size), "message length changed.", std::logic_error);
-        message.resize(size);
-    }
-    else
-    {
-        message.resize(size);
-    }
-    return message;
+    return fhirtools::VaListHelper::vaListToString(msg, args);
 }
 
 std::string String::toHexString(const std::string_view& input)

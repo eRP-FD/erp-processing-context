@@ -23,7 +23,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
-#include "erp/xml/SaxHandler.hxx"
+#include "fhirtools/util/SaxHandler.hxx"
 
 
 class JWT;
@@ -54,7 +54,8 @@ protected:
     /// @brief parse and validate the request body either using TModel::fromJson or TModel::fromXml based on the provided Content-Type
     template<class TModel>
     [[nodiscard]]
-    static TModel parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType);
+    static TModel parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
+                                              bool allowGenericValidate = true);
 
     static std::string getLanguageFromHeader(const Header& requestHeader);
 
@@ -75,7 +76,8 @@ public:
 };
 
 template<class TModel>
-TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType)
+TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
+                                                      bool allowGenericValidate)
 {
     const auto& header = context.request.header();
     const auto& body = context.request.getBody();
@@ -89,13 +91,13 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& cont
     {
         auto resource = TModel::fromJson(body, context.serviceContext.getJsonValidator(),
                                          context.serviceContext.getXmlValidator(),
-                                         context.serviceContext.getInCodeValidator(), schemaType);
+                                         context.serviceContext.getInCodeValidator(), schemaType, allowGenericValidate);
         return resource;
     }
     else if (mimeType == MimeType::xml || mimeType == MimeType::fhirXml)
     {
         auto resource = TModel::fromXml(body, context.serviceContext.getXmlValidator(),
-                                        context.serviceContext.getInCodeValidator(), schemaType);
+                                        context.serviceContext.getInCodeValidator(), schemaType, allowGenericValidate);
         return resource;
     }
 

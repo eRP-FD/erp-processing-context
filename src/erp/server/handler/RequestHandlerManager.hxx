@@ -24,6 +24,7 @@ public:
     void onGetDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
     void onPostDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
     void onPutDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    void onPatchDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
 
     struct MatchingHandler
     {

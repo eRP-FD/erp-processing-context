@@ -12,6 +12,7 @@
 #include "erp/util/Configuration.hxx"
 #include "erp/util/DurationConsumer.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/util/TLog.hxx"
 
 namespace
@@ -159,6 +160,27 @@ namespace
                       nonceOutput.BlobOut.BlobGeneration}};
 }
 
+ErpBlob HsmProductionClient::generatePseudonameKey(const ::HsmRawSession& session, uint32_t input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer("Hsm:ERP_GeneratePseudonameKey");
+    const auto result = ::hsmclient::ERP_GeneratePseudonameKey(session.rawSession, ::hsmclient::UIntInput{input});
+    HsmExpectSuccess(result, "ERP_GeneratePseudonameKey failed", timer);
+    return ::ErpBlob{::std::vector<uint8_t>{result.BlobOut.BlobData, result.BlobOut.BlobData + result.BlobOut.BlobLength},
+                     result.BlobOut.BlobGeneration};
+}
+
+ErpArray<Aes256Length> HsmProductionClient::unwrapPseudonameKey(const HsmRawSession& session, UnwrapHashKeyInput&& input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer("Hsm:ERP_UnwrapPseudonameKey");
+    hsmclient::TwoBlobGetKeyInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput(requestInput.Key, input.key);
+    const auto response = hsmclient::ERP_UnwrapPseudonameKey(session.rawSession, requestInput);
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_UnwrapPseudonameKey failed", timer);
+    return createErpArray<Aes256Length>(reinterpret_cast<const uint8_t*>(response.Key));
+}
+
 ErpBlob HsmProductionClient::getTeeToken(
     const HsmRawSession& session,
     TeeTokenRequestInput&& input)
@@ -218,6 +240,10 @@ DeriveKeyOutput HsmProductionClient::deriveCommsKey(
         hsmclient::ERP_DeriveCommsKey);
 }
 
+::DeriveKeyOutput HsmProductionClient::deriveChargeItemKey(const ::HsmRawSession& session, ::DeriveKeyInput&& input)
+{
+    return derivePersistenceKey(session, ::std::move(input), ::hsmclient::ERP_DeriveChargeItemKey);
+}
 
 ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
     const HsmRawSession& session,

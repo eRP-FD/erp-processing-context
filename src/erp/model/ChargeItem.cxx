@@ -10,6 +10,7 @@
 
 #include <rapidjson/pointer.h>
 
+using namespace ::std::literals;
 
 namespace model
 {
@@ -20,9 +21,14 @@ namespace
 {
 
 const rapidjson::Pointer idPointer(ElementName::path(elements::id));
-const rapidjson::Pointer prescriptionIdValuePointer(ElementName::path(elements::identifier, 0, elements::value));
-const rapidjson::Pointer subjectKvnrValuePointer(ElementName::path(elements::subject, elements::identifier, elements::value));
-const rapidjson::Pointer entererTelematikIdValuePointer(ElementName::path(elements::enterer, elements::identifier, elements::value));
+const rapidjson::Pointer subjectKvnrSystemPointer(ElementName::path(elements::subject, elements::identifier,
+                                                                    elements::system));
+const rapidjson::Pointer subjectKvnrValuePointer(ElementName::path(elements::subject, elements::identifier,
+                                                                   elements::value));
+const rapidjson::Pointer entererTelematikIdSystemPointer(ElementName::path(elements::enterer, elements::identifier,
+                                                                           elements::system));
+const rapidjson::Pointer entererTelematikIdValuePointer(ElementName::path(elements::enterer, elements::identifier,
+                                                                          elements::value));
 const rapidjson::Pointer enteredDatePointer(ElementName::path(elements::enteredDate));
 
 const rapidjson::Pointer supportingInformationPointer(ElementName::path(elements::supportingInformation));
@@ -40,22 +46,46 @@ const rapidjson::Pointer identifierPointer(ElementName::path("identifier"));
 const rapidjson::Pointer identifierEntrySystemPointer(ElementName::path("system"));
 const rapidjson::Pointer identifierEntrySystemValuePointer(ElementName::path("value"));
 
-constexpr std::string_view secretTemplate = R"--(
+constexpr ::std::string_view charge_item_template = R"--(
 {
-  "use": "official",
+    "resourceType": "ChargeItem",
+    "meta": {
+        "profile": [""]
+    },
+    "status": "billable",
+    "code": {
+        "coding": [
+            {
+                "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
+                "code": "not-applicable"
+            }
+        ]
+    }
+}
+)--";
+
+constexpr std::string_view identifierEntryTemplate = R"--(
+{
   "system": "",
   "value": ""
 }
 )--";
 
 std::once_flag onceFlag;
-struct SecretAccessCodeTemplate;
-RapidjsonNumberAsStringParserDocument<SecretAccessCodeTemplate> SecretAccessCodeTemplate;
+
+struct ChargeItemTemplateMark;
+::RapidjsonNumberAsStringParserDocument<ChargeItemTemplateMark> chargeItemTemplate;
+
+struct IdentifierEntryTemplate;
+RapidjsonNumberAsStringParserDocument<IdentifierEntryTemplate> IdentifierEntryTemplate;
 
 void initTemplates ()
 {
-    rapidjson::StringStream stringStream{secretTemplate.data()};
-    SecretAccessCodeTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(stringStream);
+    ::rapidjson::StringStream stream(charge_item_template.data());
+    chargeItemTemplate->ParseStream<::rapidjson::kParseNumbersAsStringsFlag, ::rapidjson::CustomUtf8>(stream);
+
+    rapidjson::StringStream stringStream{identifierEntryTemplate.data()};
+    IdentifierEntryTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(stringStream);
 }
 
 }  // anonymous namespace
@@ -67,6 +97,15 @@ const std::unordered_map<ChargeItem::SupportingInfoType, std::pair<std::string_v
         { ChargeItem::SupportingInfoType::dispenseItem, { structure_definition::dispenseItem, "Abgabedatensatz" } },
         { ChargeItem::SupportingInfoType::receipt, { structure_definition::receipt,  "Quittung" } } };
 
+ChargeItem::ChargeItem()
+    : Resource<ChargeItem>{"https://gematik.de/fhir/StructureDefinition/ErxChargeItem",
+                           []() {
+                               ::std::call_once(onceFlag, initTemplates);
+                               return chargeItemTemplate;
+                           }()
+                               .instance()}
+{
+}
 
 ChargeItem::ChargeItem (NumberAsStringParserDocument&& jsonTree)
     : Resource<ChargeItem>(std::move(jsonTree))
@@ -74,38 +113,57 @@ ChargeItem::ChargeItem (NumberAsStringParserDocument&& jsonTree)
     std::call_once(onceFlag, initTemplates);
 }
 
-PrescriptionId ChargeItem::id() const
+::std::optional<PrescriptionId> ChargeItem::id() const
 {
-    std::string_view id = getStringValue(idPointer);
-    return PrescriptionId::fromString(id);
+    const auto id = getOptionalStringValue(idPointer);
+    if (id)
+    {
+        return PrescriptionId::fromString(*id);
+    }
+
+    return {};
 }
 
-PrescriptionId ChargeItem::prescriptionId() const
+::std::optional<PrescriptionId> ChargeItem::prescriptionId() const
 {
-    std::string_view identifier = getStringValue(prescriptionIdValuePointer);
-    return PrescriptionId::fromString(identifier);
+    const auto identifier =
+        findStringInArray(identifierPointer, identifierEntrySystemPointer, resource::naming_system::prescriptionID,
+                          identifierEntrySystemValuePointer);
+    if (identifier)
+    {
+
+        return PrescriptionId::fromString(*identifier);
+    }
+
+    return {};
 }
 
-std::string_view ChargeItem::subjectKvnr() const
+::std::optional<std::string_view> ChargeItem::subjectKvnr() const
 {
-    return getStringValue(subjectKvnrValuePointer);
+    return getOptionalStringValue(subjectKvnrValuePointer);
 }
 
-std::string_view ChargeItem::entererTelematikId() const
+::std::optional<std::string_view> ChargeItem::entererTelematikId() const
 {
-    return getStringValue(entererTelematikIdValuePointer);
+    return getOptionalStringValue(entererTelematikIdValuePointer);
 }
 
-Timestamp ChargeItem::enteredDate() const
+::std::optional<Timestamp> ChargeItem::enteredDate() const
 {
-    return Timestamp::fromFhirDateTime(std::string(getStringValue(enteredDatePointer)));
+    const auto timestamp = getOptionalStringValue(enteredDatePointer);
+    if (timestamp)
+    {
+        return Timestamp::fromFhirDateTime(::std::string{*timestamp});
+    }
+
+    return {};
 }
 
 std::optional<std::string_view> ChargeItem::supportingInfoReference(SupportingInfoType supportingInfoType) const
 {
-    const auto* elem = findMemberInArray(
-        supportingInformationPointer, typePointer, SupportingInfoTypeNames.at(supportingInfoType).first);
-    if(elem)
+    const auto* elem = findMemberInArray(supportingInformationPointer, typePointer,
+                                         SupportingInfoTypeNames.at(supportingInfoType).first);
+    if (elem)
         return getOptionalStringValue(*elem, referencePointer);
     return {};
 }
@@ -123,9 +181,7 @@ std::optional<model::ChargeItemMarkingFlag> ChargeItem::markingFlag() const
 
 std::optional<std::string_view> ChargeItem::accessCode() const
 {
-    return findStringInArray(identifierPointer,
-                             identifierEntrySystemPointer,
-                             resource::naming_system::accessCode,
+    return findStringInArray(identifierPointer, identifierEntrySystemPointer, resource::naming_system::accessCode,
                              identifierEntrySystemValuePointer);
 }
 
@@ -147,29 +203,57 @@ void ChargeItem::setId(const PrescriptionId& prescriptionId)
 
 void ChargeItem::setPrescriptionId(const PrescriptionId& prescriptionId)
 {
-    setValue(prescriptionIdValuePointer, prescriptionId.toString());
+    const auto existingPrescriptionId =
+        findMemberInArray(identifierPointer, identifierEntrySystemPointer, resource::naming_system::prescriptionID,
+                          identifierEntrySystemValuePointer);
+
+    if (existingPrescriptionId)
+    {
+        removeFromArray(identifierPointer, std::get<1>(existingPrescriptionId.value()));
+    }
+
+    auto copiedValue = copyValue(*IdentifierEntryTemplate);
+
+    setKeyValue(copiedValue, identifierEntrySystemValuePointer, prescriptionId.toString());
+    setKeyValue(copiedValue, identifierEntrySystemPointer, resource::naming_system::prescriptionID);
+
+    addToArray(identifierPointer, std::move(copiedValue));
 }
 
 void ChargeItem::setSubjectKvnr(const std::string_view& kvnr)
 {
+    setValue(subjectKvnrSystemPointer, ::model::resource::naming_system::gkvKvid10);
     setValue(subjectKvnrValuePointer, kvnr);
 }
 
 void ChargeItem::setEntererTelematikId(const std::string_view& telematicId)
 {
+    setValue(entererTelematikIdSystemPointer, ::model::resource::naming_system::telematicID);
     setValue(entererTelematikIdValuePointer, telematicId);
 }
 
-void ChargeItem::setEnteredDate(const model::Timestamp& entered)
+void ChargeItem::setEnteredDate(const fhirtools::Timestamp& entered)
 {
     setValue(enteredDatePointer, entered.toXsDateTime());
 }
 
-void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoType, const std::string_view& reference)
+template<class ResourceType>
+void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoType, const ResourceType& resource)
 {
+    const auto reference = [&resource]() {
+        if constexpr (::std::is_same_v<ResourceType, ::model::Bundle>)
+        {
+            return "Bundle/"s + resource.getId().toString();
+        }
+        else
+        {
+            return ::std::string{resource};
+        }
+    }();
+
     const auto supportingInfoTypeData = SupportingInfoTypeNames.at(supportingInfoType);
     auto* elem = findMemberInArray(supportingInformationPointer, typePointer, supportingInfoTypeData.first);
-    if(elem)
+    if (elem)
     {
         setKeyValue(*elem, referencePointer, reference);
     }
@@ -183,10 +267,17 @@ void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoTyp
     }
 }
 
-void ChargeItem::setMarkingFlag(const model::ChargeItemMarkingFlag& markingFlag)
+template void ChargeItem::setSupportingInfoReference<::model::Bundle>(SupportingInfoType supportingInfoType,
+                                                                      const ::model::Bundle& resource);
+template void ChargeItem::setSupportingInfoReference<::std::string>(SupportingInfoType supportingInfoType,
+                                                                    const ::std::string& resource);
+template void ChargeItem::setSupportingInfoReference<::std::string_view>(SupportingInfoType supportingInfoType,
+                                                                         const ::std::string_view& resource);
+
+void ChargeItem::setMarkingFlag(const ::model::Extension& markingFlag)
 {
-    const auto containedMarkingFlagAndPos = findMemberInArray(
-            extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
+    const auto containedMarkingFlagAndPos =
+        findMemberInArray(extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
     if (containedMarkingFlagAndPos)
     {
         removeFromArray(extensionArrayPointer, std::get<1>(containedMarkingFlagAndPos.value()));
@@ -197,7 +288,9 @@ void ChargeItem::setMarkingFlag(const model::ChargeItemMarkingFlag& markingFlag)
 
 void ChargeItem::setAccessCode(const std::string_view& accessCode)
 {
-    auto copiedValue = copyValue(*SecretAccessCodeTemplate);
+    deleteAccessCode();
+
+    auto copiedValue = copyValue(*IdentifierEntryTemplate);
 
     setKeyValue(copiedValue, identifierEntrySystemValuePointer, accessCode);
     setKeyValue(copiedValue, identifierEntrySystemPointer, resource::naming_system::accessCode);
@@ -205,14 +298,27 @@ void ChargeItem::setAccessCode(const std::string_view& accessCode)
     addToArray(identifierPointer, std::move(copiedValue));
 }
 
-void ChargeItem::deleteSupportingInfoElement(SupportingInfoType supportingInfoType)
+void ChargeItem::deleteAccessCode()
 {
-    const auto supportInfoRefAndPos = findMemberInArray(
-        supportingInformationPointer, typePointer, SupportingInfoTypeNames.at(supportingInfoType).first, referencePointer);
+    const auto existingAccessCode =
+        findMemberInArray(identifierPointer, identifierEntrySystemPointer, resource::naming_system::accessCode,
+                          identifierEntrySystemValuePointer);
+
+    if (existingAccessCode)
+    {
+        removeFromArray(identifierPointer, std::get<1>(existingAccessCode.value()));
+    }
+}
+
+void ChargeItem::deleteSupportingInfoReference(SupportingInfoType supportingInfoType)
+{
+    const auto supportInfoRefAndPos =
+        findMemberInArray(supportingInformationPointer, typePointer,
+                          SupportingInfoTypeNames.at(supportingInfoType).first, referencePointer);
     if (supportInfoRefAndPos)
     {
         removeFromArray(supportingInformationPointer, std::get<1>(supportInfoRefAndPos.value()));
-        if(valueSize(supportingInformationPointer) == 0) // array empty => remove it
+        if (valueSize(supportingInformationPointer) == 0)// array empty => remove it
         {
             removeElement(supportingInformationPointer);
         }
@@ -221,12 +327,12 @@ void ChargeItem::deleteSupportingInfoElement(SupportingInfoType supportingInfoTy
 
 void ChargeItem::deleteContainedBinary()
 {
-    const auto containedBinaryResourceAndPos = findMemberInArray(
-        containedBinaryArrayPointer, resourceTypePointer, "Binary", resourceTypePointer);
+    const auto containedBinaryResourceAndPos =
+        findMemberInArray(containedBinaryArrayPointer, resourceTypePointer, "Binary", resourceTypePointer);
     if (containedBinaryResourceAndPos)
     {
         removeFromArray(containedBinaryArrayPointer, std::get<1>(containedBinaryResourceAndPos.value()));
-        if(valueSize(containedBinaryArrayPointer) == 0) // array empty => remove it
+        if (valueSize(containedBinaryArrayPointer) == 0)// array empty => remove it
         {
             removeElement(containedBinaryArrayPointer);
         }
@@ -235,16 +341,16 @@ void ChargeItem::deleteContainedBinary()
 
 void ChargeItem::deleteMarkingFlag()
 {
-    const auto containedMarkingFlagAndPos = findMemberInArray(
-        extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
+    const auto containedMarkingFlagAndPos =
+        findMemberInArray(extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
     if (containedMarkingFlagAndPos)
     {
         removeFromArray(extensionArrayPointer, std::get<1>(containedMarkingFlagAndPos.value()));
-        if(valueSize(extensionArrayPointer) == 0) // array empty => remove it
+        if (valueSize(extensionArrayPointer) == 0)// array empty => remove it
         {
             removeElement(extensionArrayPointer);
         }
     }
 }
 
-} // namespace model
+}// namespace model

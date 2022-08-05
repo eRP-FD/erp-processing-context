@@ -1,0 +1,26 @@
+{
+  "resourceType": "DomainResource",
+  "meta": {
+    "profile": [
+      "http://erp-test.net/test/fhir-path/closedSlicingExtensions/profiles/StringAndCodeExtensionResource.xml"
+    ]
+  },
+  "text": {
+    "status": "additional",
+    "div": "<div  xmlns=\"http://www.w3.org/1999/xhtml\">Super interesting description, that makes the resource management incredibly robust!"
+  },
+  "extension": [
+    {
+      "url": "http://erp-test.net/test/fhir-path/profiles/StringExtension",
+      "valueString": "Hallo"
+    },
+    {
+      "url": "http://erp-test.net/test/fhir-path/profiles/CodeExtension",
+      "valueCode": "Welt!"
+    },
+    {
+      "url": "http://erp-test.net/test/fhir-path/profiles/IntegerExtension",
+      "valueInteger": 100
+    }
+  ]
+}

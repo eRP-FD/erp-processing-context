@@ -55,6 +55,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mTslManager(factories.tslManagerFactory(mXmlValidator))
     , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, *mTslManager, *mHsmPool))
     , mTslRefreshJob(setupTslRefreshJob(*mTslManager, configuration))
+    , mReportPseudonameKeyRefreshJob(PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(*mHsmPool, getBlobCache(), configuration))
     , mRegistrationInterface(std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(), factories.redisClientFactory()))
     , mTpmFactory(std::move(factories.tpmFactory))
 {
@@ -90,6 +91,10 @@ PcServiceContext::~PcServiceContext()
     if (mTslRefreshJob != nullptr)
     {
         mTslRefreshJob->shutdown();
+    }
+    if (mReportPseudonameKeyRefreshJob != nullptr)
+    {
+        mReportPseudonameKeyRefreshJob->shutdown();
     }
 }
 

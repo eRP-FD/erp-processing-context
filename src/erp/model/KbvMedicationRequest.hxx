@@ -6,13 +6,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVMEDICATIONREQUEST_HXX_
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVMEDICATIONREQUEST_HXX_
 
+#include "erp/database/Database.hxx"
 #include "erp/model/Resource.hxx"
 
 namespace model
 {
 
 class Dosage;
-class Timestamp;
 
 class KbvMedicationRequest : public Resource<KbvMedicationRequest, ResourceVersion::KbvItaErp>
 {
@@ -21,6 +21,7 @@ public:
     using Resource::Resource;
     [[nodiscard]] std::optional<std::string_view> statusCoPaymentExtension() const;
     bool isMultiplePrescription() const;
+    [[nodiscard]] std::optional<date::year_month_day> mvoEndDate() const;
 
     std::optional<Dosage> dosageInstruction() const;
     [[nodiscard]] model::Timestamp authoredOn() const;
@@ -33,6 +34,7 @@ private:
 class Dosage : public Resource<Dosage, ResourceVersion::KbvItaErp>
 {
 public:
+    static constexpr auto resourceTypeName = "Dosage";
     [[nodiscard]] std::optional<std::string_view> text() const;
 
 private:

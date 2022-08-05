@@ -98,6 +98,9 @@ public:
 
     virtual ::Nonce getNonce(const ::HsmRawSession& session, uint32_t input) = 0;
 
+    virtual ErpBlob generatePseudonameKey(const ::HsmRawSession& session, uint32_t input) = 0;
+    virtual ErpArray<Aes256Length> unwrapPseudonameKey(const HsmRawSession& session, UnwrapHashKeyInput&& input) = 0;
+
     virtual ErpBlob getTeeToken(
         const HsmRawSession& session,
         TeeTokenRequestInput&& input) = 0;
@@ -117,6 +120,8 @@ public:
     virtual ErpArray<Aes128Length> doVauEcies128(
         const HsmRawSession& session,
         DoVAUECIESInput&& input) = 0;
+
+    [[nodiscard]] virtual::DeriveKeyOutput deriveChargeItemKey(const::HsmRawSession& session, ::DeriveKeyInput&& input) = 0;
 
     virtual SafeString getVauSigPrivateKey (
         const HsmRawSession& session,

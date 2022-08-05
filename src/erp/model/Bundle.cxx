@@ -79,7 +79,7 @@ BundleBase<DerivedBundle, SchemaVersionType>::BundleBase(const BundleType type, 
     setId(bundleId);
 
     setValue(typePointer, magic_enum::enum_name(type));
-    setValue(timestampPointer, Timestamp::now().toXsDateTime());
+    setValue(timestampPointer, fhirtools::Timestamp::now().toXsDateTime());
 
     // Set the resource type to "Bundle".
     setValue(resourceTypePointer, valueResourceTypeBundle);
@@ -216,9 +216,9 @@ std::optional<model::Signature> BundleBase<DerivedBundle, SchemaVersionType>::ge
 
 
 template <class DerivedBundle, typename SchemaVersionType>
-Timestamp BundleBase<DerivedBundle, SchemaVersionType>::getSignatureWhen () const
+fhirtools::Timestamp BundleBase<DerivedBundle, SchemaVersionType>::getSignatureWhen () const
 {
-    return Timestamp::fromXsDateTime(std::string{getStringValue(signatureWhenPointer)});
+    return fhirtools::Timestamp::fromXsDateTime(std::string{getStringValue(signatureWhenPointer)});
 }
 
 

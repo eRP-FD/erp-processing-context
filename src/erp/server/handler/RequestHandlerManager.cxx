@@ -54,6 +54,12 @@ void RequestHandlerManager::onPutDo (const std::string& path, std::unique_ptr<Ha
 }
 
 
+void RequestHandlerManager::onPatchDo (const std::string& path, std::unique_ptr<HandlerType>&& handler)
+{
+    addRequestHandler(HttpMethod::PATCH, path, std::move(handler));
+}
+
+
 typename RequestHandlerManager::MatchingHandler RequestHandlerManager::findMatchingHandler (
    const HttpMethod method,
    const std::string& target) const

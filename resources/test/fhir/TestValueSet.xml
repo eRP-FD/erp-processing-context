@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2022
+  ~ (C) Copyright IBM Corp. 2022
+  -->
+
+<Bundle xmlns="http://hl7.org/fhir">
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/string"/>
+        <resource>
+            <ValueSet xmlns="http://hl7.org/fhir">
+                <url value="https://test/ValueSet1"/>
+                <name value="TEST_VALUESET1"/>
+                <compose>
+                    <include>
+                        <system value="https://test/CodeSystem1"/>
+                    </include>
+                </compose>
+            </ValueSet>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/string"/>
+        <resource>
+            <ValueSet xmlns="http://hl7.org/fhir">
+                <url value="https://test/ValueSet2"/>
+                <name value="TEST_VALUESET2"/>
+                <compose>
+                    <include>
+                        <system value="https://test/CodeSystem1"/>
+                        <concept>
+                            <code value="00"/>
+                        </concept>
+                        <concept>
+                            <code value="03"/>
+                        </concept>
+                    </include>
+                </compose>
+            </ValueSet>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/string"/>
+        <resource>
+            <ValueSet xmlns="http://hl7.org/fhir">
+                <url value="https://test/ValueSet3"/>
+                <name value="TEST_VALUESET3"/>
+                <compose>
+                    <include>
+                        <system value="https://test/CodeSystem1"/>
+                    </include>
+                    <include>
+                        <system value="https://test/CodeSystem2"/>
+                        <concept>
+                            <code value="UK"/>
+                        </concept>
+                    </include>
+                </compose>
+            </ValueSet>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/string"/>
+        <resource>
+            <ValueSet xmlns="http://hl7.org/fhir">
+                <url value="https://test/ValueSet4"/>
+                <name value="TEST_VALUESET4"/>
+                <compose>
+                    <include>
+                        <system value="https://test/CodeSystem4"/>
+                        <filter>
+                            <op value="is-a"/>
+                            <value value="_ActCredentialedCareCode"/>
+                        </filter>
+                    </include>
+                </compose>
+            </ValueSet>
+        </resource>
+    </entry>
+</Bundle>

@@ -8,7 +8,7 @@
 
 #include "erp/model/Resource.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
 
@@ -20,6 +20,8 @@ namespace model
 class AuditEvent : public Resource<AuditEvent>
 {
 public:
+    static constexpr auto resourceTypeName = "AuditEvent";
+
     // Type is fixed to "rest";
     enum class SubType
     {
@@ -66,7 +68,7 @@ public:
     void setTextDiv(const std::string_view& textDiv);
     void setSubTypeCode(const SubType subTypeCode);
     void setAction(const Action action);
-    void setRecorded(const Timestamp& recorded);
+    void setRecorded(const fhirtools::Timestamp& recorded);
     void setOutcome(const Outcome outcome);
     void setAgentWho(
         const std::string_view& identifierSystem,
@@ -75,7 +77,7 @@ public:
     void setAgentType(const AgentType agentType);
     void setSourceObserverReference(const std::string_view& reference);
     void setEntityWhatIdentifier(
-        const std::string_view& identifierSystem,
+        const std::optional<std::string_view>& identifierSystem,
         const std::string_view& identifierValue);
     void setEntityWhatReference(const std::string_view& reference);
     void setEntityName(const std::string_view& entityName);
@@ -86,7 +88,7 @@ public:
     [[nodiscard]] std::string_view textDiv() const;
     [[nodiscard]] SubType subTypeCode() const;
     [[nodiscard]] Action action() const;
-    [[nodiscard]] Timestamp recorded() const;
+    [[nodiscard]] fhirtools::Timestamp recorded() const;
     [[nodiscard]] Outcome outcome() const;
     [[nodiscard]] std::tuple<std::optional<std::string_view>, std::optional<std::string_view>> agentWho() const;
     [[nodiscard]] std::string_view agentName() const;

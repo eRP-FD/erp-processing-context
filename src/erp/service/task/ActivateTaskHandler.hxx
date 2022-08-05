@@ -10,6 +10,12 @@
 
 class CadesBesSignature;
 class TslManager;
+namespace model
+{
+enum class KbvStatusKennzeichen;
+class KbvBundle;
+class KBVMultiplePrescription;
+}
 
 class ActivateTaskHandler : public TaskHandlerBase
 {
@@ -18,17 +24,16 @@ public:
     void handleRequest (PcSessionContext& session) override;
 
 private:
-    /**
-     * Allows to unpack CAdES-BES signature, for testing purpose it is allowed to provide no TslManager.
-     * cadesBesSignatureFile - Path to a pkcs7File
-     */
-    static CadesBesSignature unpackCadesBesSignature(
-        const std::string& cadesBesSignatureFile, TslManager& tslManager);
-
-    static void checkMultiplePrescription(const model::KbvBundle& bundle);
+    static model::KbvBundle prescriptionBundleFromXml(PcServiceContext& serviceContext, std::string_view prescription);
+    static void checkMultiplePrescription(const std::optional<model::KBVMultiplePrescription>& mPExt,
+                                          const model::PrescriptionType prescriptionType,
+                                          std::optional<model::KbvStatusKennzeichen> legalBasisCode);
     static void checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType);
     static void checkNarcoticsMatches(const model::KbvBundle& bundle);
     static void checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle, const model::Timestamp& signingTime);
+    static HttpStatus checkExtensions(const model::KbvBundle&);
+    void setMvoExpiryAcceptDates(model::Task& task, const std::optional<date::year_month_day>& mvoEndDate,
+                                 const date::year_month_day& signingDay) const;
 };
 
 

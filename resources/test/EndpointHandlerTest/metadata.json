@@ -79,6 +79,8 @@
           "profile": "http://hl7.org/fhir/StructureDefinition/Communication",
           "supportedProfile": [
             "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq",
+            "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq",
+            "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply",
             "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply",
             "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq",
             "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"

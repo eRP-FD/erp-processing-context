@@ -51,7 +51,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -68,7 +68,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.6.0"
+                                    def erp_release_version = "1.7.0"
                                     sh "scripts/ci-build.sh " +
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'"
@@ -91,6 +91,7 @@ pipeline {
                                         boost
                                         date
                                         glog
+                                        gmp
                                         gsl-lite
                                         gtest
                                         hiredis
@@ -99,6 +100,7 @@ pipeline {
                                         libpqxx
                                         libxml2
                                         magic_enum
+                                        mpfr
                                         openssl
                                         rapidjson
                                         redis-plus-plus
@@ -141,7 +143,7 @@ pipeline {
                     }
                     steps {
                         dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
-                            projectVersion: "${currentBuild.displayName}", synchronous: false
+                            projectVersion: "${currentBuild.displayName}", synchronous: true
                         dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
                             projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
                     }
@@ -166,7 +168,7 @@ pipeline {
                         sh "scripts/ci-static-analysis.sh " +
                                 "--build-path=jenkins-build-debug " +
                                 "--source-path=. " +
-                                "--clang-tidy-bin=clang-tidy-12 " +
+                                "--clang-tidy-bin=/usr/local/bin/clang-tidy " +
                                 "--output=clang-tidy.txt"
                         staticAnalysis("SonarQubeeRp")
                         timeout(time: 5, unit: 'MINUTES') {
@@ -194,7 +196,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.6.0"
+                                def release_version = "1.7.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -230,7 +232,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.6.0"
+                                def release_version = "1.7.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +

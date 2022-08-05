@@ -20,6 +20,8 @@ namespace model
 class Device : public Resource<Device>
 {
 public:
+    static constexpr auto resourceTypeName = "Device";
+
     static constexpr uint16_t Id = 1;
     static constexpr std::string_view Name = "E-Rezept Fachdienst";
     static constexpr std::string_view Email = "betrieb@gematik.de";

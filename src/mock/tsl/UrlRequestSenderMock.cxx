@@ -77,7 +77,7 @@ void UrlRequestSenderMock::setOcspUrlRequestHandler(
 {
     setUrlHandler(url,
                   [ocspResponderKnownCertificateCaPairs, ocspCertificate = defaultOcspCertificate,
-                   ocspPrivateKey = defaultOcspPrivateKey](const std::string& request) mutable -> ClientResponse {
+                   ocspPrivateKey = std::move(defaultOcspPrivateKey)](const std::string& request) mutable -> ClientResponse {
                       const std::string responseBody = MockOcsp::create(request, ocspResponderKnownCertificateCaPairs,
                                                                         ocspCertificate, ocspPrivateKey)
                                                            .toDer();

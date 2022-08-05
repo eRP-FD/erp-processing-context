@@ -46,11 +46,11 @@ public:
     public:
         SearchMedicationDispense(db_model::MedicationDispense dbMedicationDispense,
                                  db_model::HashedTelematikId performer,
-                                 model::Timestamp whenHandedOver,
-                                 std::optional<model::Timestamp> whenPrepared);
+                                 fhirtools::Timestamp whenHandedOver,
+                                 std::optional<fhirtools::Timestamp> whenPrepared);
         db_model::HashedTelematikId performer;
-        model::Timestamp whenHandedOver;
-        std::optional<model::Timestamp> whenPrepared;
+        fhirtools::Timestamp whenHandedOver;
+        std::optional<fhirtools::Timestamp> whenPrepared;
     };
     using MedicationDispenses = std::vector<SearchMedicationDispense>;
     MedicationDispenses apply(MedicationDispenses&& medicationDispenses) const;

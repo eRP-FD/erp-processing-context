@@ -78,6 +78,7 @@ list(
         database/DatabaseModel.cxx
         database/PostgresBackend.cxx
         database/PostgresBackendHelper.cxx
+        database/PostgresBackendChargeItem.cxx
         database/PostgresBackendTask.cxx
         database/PostgresConnection.cxx
         database/RedisClient.cxx
@@ -90,12 +91,8 @@ list(
         fhir/Fhir.cxx
         fhir/FhirCanonicalizer.cxx
         fhir/FhirConverter.cxx
-        fhir/FhirElement.cxx
-        fhir/FhirStructureDefinition.cxx
-        fhir/FhirStructureRepository.cxx
         fhir/internal/FhirJsonToXmlConverter.cxx
         fhir/internal/FhirSAXHandler.cxx
-        fhir/internal/FhirStructureDefinitionParser.cxx
         hsm/ErpTypes.cxx
         hsm/HsmClient.cxx
         hsm/HsmFactory.cxx
@@ -161,13 +158,13 @@ list(
         model/Subscription.cxx
         model/Task.cxx
         model/TimePeriod.cxx
-        model/Timestamp.cxx
         pc/CFdSigErpManager.cxx
         pc/PcServiceContext.cxx
         pc/SeedTimer.cxx
         pc/pre_user_pseudonym/PreUserPseudonym.cxx
         pc/pre_user_pseudonym/PreUserPseudonymManager.cxx
         pc/telematic_pseudonym/TelematicPseudonymManager.cxx
+        pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.cxx
         registration/ApplicationHealthAndRegistrationUpdater.cxx
         registration/RegistrationManager.cxx
         server/AccessLog.cxx
@@ -213,6 +210,7 @@ list(
         service/chargeitem/ChargeItemHandlerBase.cxx
         service/chargeitem/ChargeItemPostHandler.cxx
         service/chargeitem/ChargeItemPutHandler.cxx
+        service/chargeitem/ChargeItemPatchHandler.cxx
         service/consent/ConsentDeleteHandler.cxx
         service/consent/ConsentGetHandler.cxx
         service/consent/ConsentPostHandler.cxx
@@ -283,6 +281,7 @@ list(
         util/search/SearchArgument.cxx
         util/search/SearchParameter.cxx
         util/search/SortArgument.cxx
+        util/Version.cxx
         util/search/UrlArguments.cxx
         util/WorkDay.cxx
         validation/InCodeValidator.cxx
@@ -302,7 +301,6 @@ list(
         validation/KbvPracticeSupplyValidator.cxx
         validation/KbvValidationUtils.cxx
         validation/XmlValidator.cxx
-        xml/SaxHandler.cxx
         xml/XmlDocument.cxx
         xml/XmlMemory.cxx
         )
@@ -339,6 +337,7 @@ target_include_directories (
 
 target_link_libraries (
     erp-processing-context-files
+        PUBLIC fhirtools
         PUBLIC CONAN_PKG::boost
         PUBLIC CONAN_PKG::date
         PUBLIC CONAN_PKG::glog
@@ -351,6 +350,7 @@ target_link_libraries (
         PUBLIC CONAN_PKG::redis-plus-plus
         PUBLIC CONAN_PKG::hiredis
         PUBLIC CONAN_PKG::magic_enum
+        PUBLIC CONAN_PKG::mpfr
         PUBLIC CONAN_PKG::zstd
 )
 if(ERP_WITH_HSM_TPM_PRODUCTION)
@@ -371,7 +371,8 @@ target_include_directories (
 
 target_link_libraries (
     erp-processing-context
-        PUBLIC erp-processing-context-files
+        PUBLIC
+            erp-processing-context-files
 )
 
 add_dependencies(erp-processing-context resources)

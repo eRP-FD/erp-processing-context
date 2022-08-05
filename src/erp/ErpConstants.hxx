@@ -13,9 +13,9 @@
 class ErpConstants
 {
 public:
-    static constexpr size_t DefaultBufferSize = 8192;
-    static constexpr size_t MaxBodySize = 1024 * 1024;
-    static constexpr size_t MaxResponseBodySize = 8 * 1024 * 1024;
+    static constexpr size_t DefaultBufferSize = 8192ul;
+    static constexpr size_t MaxBodySize = 1024lu * 1024ul;
+    static constexpr size_t MaxResponseBodySize = 8ul * 1024ul * 1024ul;
 
     static constexpr std::int64_t SocketTimeoutSeconds = 30;
 

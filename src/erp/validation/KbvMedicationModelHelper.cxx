@@ -6,6 +6,7 @@
 #include "erp/validation/KbvMedicationModelHelper.hxx"
 
 #include "erp/util/String.hxx"
+
 #include "erp/util/Expect.hxx"
 
 namespace model

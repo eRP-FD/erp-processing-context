@@ -14,12 +14,12 @@
 class MockConsentTable
 {
 public:
-    void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime);
-    std::optional<model::Timestamp> getConsentDateTime(const db_model::HashedKvnr & kvnr);
+    void storeConsent(const db_model::HashedKvnr& kvnr, const fhirtools::Timestamp& creationTime);
+    std::optional<fhirtools::Timestamp> getConsentDateTime(const db_model::HashedKvnr & kvnr);
     bool clearConsent(const db_model::HashedKvnr& kvnr);
 
 private:
-    std::map<db_model::HashedKvnr, model::Timestamp> mConsents;
+    std::map<db_model::HashedKvnr, fhirtools::Timestamp> mConsents;
 
 };
 

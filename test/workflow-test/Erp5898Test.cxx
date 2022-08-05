@@ -10,6 +10,7 @@
 #include "erp/util/ByteHelper.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
+
 class Erp5898Test : public ErpWorkflowTest
 {
 public:

@@ -132,6 +132,8 @@ protected:
         deleteTxn.exec("DELETE FROM erp.communication");
         deleteTxn.exec("DELETE FROM erp.task");
         deleteTxn.exec("DELETE FROM erp.task_169");
+        deleteTxn.exec("DELETE FROM erp.task_200");
+        deleteTxn.exec("DELETE FROM erp.charge_item");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.commit();
     }

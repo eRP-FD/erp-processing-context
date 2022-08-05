@@ -64,13 +64,15 @@ public:
      * @param certificate               the certificate to check
      * @param typeRestrictions          if provided, the certificate type must be in the set
      * @param ocspResponse              optional ocsp response that should be used for OCSP check if present
+     * @param referenceTimePoint        optional timepoint to be used for OCSP response validity checks
      *
      * @throws TslError in case of problems
      */
     virtual void verifyCertificate(const TslMode tslMode,
                                    X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
-                                   const OcspResponsePtr& ocspResponse = {});
+                                   const OcspResponsePtr& ocspResponse = {},
+                                   const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint = std::nullopt);
 
     /**
      * Allows to get OCSP-response for the provided certificate.

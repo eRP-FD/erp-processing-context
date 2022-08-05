@@ -10,6 +10,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <rapidjson/pointer.h>
 
 #include <regex>
@@ -17,6 +18,8 @@
 
 using namespace std::string_literals;
 using namespace model;
+using fhirtools::FhirElement;
+using fhirtools::FhirStructureDefinition;
 
 namespace rj = rapidjson;
 
@@ -67,7 +70,7 @@ void FhirCanonicalizer::serializeObject( // NOLINT(misc-no-recursion)
     size_t& immersionDepth,
     std::ostringstream& buffer,
     const FhirStructureDefinition* backboneStructDef,
-    std::shared_ptr<const FhirElement> backboneElement,
+    const std::shared_ptr<const FhirElement>& backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& objectName,
     const rj::Value& object)
@@ -129,7 +132,7 @@ void FhirCanonicalizer::serializeArray( // NOLINT(misc-no-recursion)
     size_t& immersionDepth,
     std::ostringstream& buffer,
     const FhirStructureDefinition* backboneStructDef,
-    std::shared_ptr<const FhirElement> backboneElement,
+    const std::shared_ptr<const FhirElement>& backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& arrayName,
     const rj::Value& array)
@@ -203,7 +206,7 @@ void FhirCanonicalizer::serializeValue( // NOLINT(misc-no-recursion)
     size_t& immersionDepth,
     std::ostringstream& buffer,
     const FhirStructureDefinition* backboneStructDef,
-    std::shared_ptr<const FhirElement> backboneElement,
+    const std::shared_ptr<const FhirElement>& backboneElement,
     const FhirStructureDefinition& elementStructDef,
     const std::string& name,
     const rapidjson::Value& value)
@@ -232,7 +235,7 @@ void FhirCanonicalizer::serializeValue( // NOLINT(misc-no-recursion)
 std::map<std::string, const rj::Value*> FhirCanonicalizer::getSortedMembers(
     size_t immersionDepth,
     const FhirStructureDefinition* backboneStructDef,
-    std::shared_ptr<const FhirElement> backboneElement,
+    const std::shared_ptr<const FhirElement>& backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const rj::Value& object)
 {
@@ -249,7 +252,7 @@ std::map<std::string, const rj::Value*> FhirCanonicalizer::getSortedMembers(
 }
 
 std::string FhirCanonicalizer::buildElementPath(
-    std::shared_ptr<const FhirElement> backboneElement,
+    const std::shared_ptr<const FhirElement>& backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& objectName)
 {
@@ -270,7 +273,7 @@ void FhirCanonicalizer::removeDoubleWhitespaces(std::string& value)
 bool FhirCanonicalizer::elementHasToBeRemoved(
     size_t immersionDepth,
     const FhirStructureDefinition* backboneStructDef,
-    std::shared_ptr<const FhirElement> backboneElement,
+    const std::shared_ptr<const FhirElement>& backboneElement,
     const FhirStructureDefinition& objectStructDef,
     const std::string& objectName)
 {

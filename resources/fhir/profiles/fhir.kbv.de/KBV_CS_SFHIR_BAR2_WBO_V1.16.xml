@@ -1,0 +1,1671 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<CodeSystem xmlns="http://hl7.org/fhir" xmlns:ns2="http://www.w3.org/1999/xhtml">
+    <url value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BAR2_WBO"/>
+    <identifier>
+        <system value="urn:ietf:rfc:3986"/>
+        <value value="urn:oid:1.2.276.0.76.5.114"/>
+    </identifier>
+    <version value="1.16"/>
+    <name value="KBV_CS_SFHIR_BAR2_WBO"/>
+    <status value="active"/>
+    <date value="2021-10-01"/>
+    <publisher value="Kassenärztliche Bundesvereinigung"/>
+    <contact>
+        <telecom>
+            <system value="url"/>
+            <value value="http://www.kbv.de"/>
+        </telecom>
+    </contact>
+    <description value="Fachgruppen-Codes nach Weiterbildungsordnung Bundesarztregister, BAR-Schlüsselverzeichnis Anlage 4"/>
+    <copyright value="Kassenärztliche Bundesvereinigung"/>
+    <caseSensitive value="true"/>
+    <content value="complete"/>
+    <concept>
+        <code value="001"/>
+        <display value="Praktische Ärztin/Praktischer Arzt (altes Recht vor 1987 bzw. EWG-Recht ab 86/457/EWG)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="002"/>
+        <display value="Ärztin/Arzt (ohne Facharzt-Weiterbildung ab 1986 bis 1991)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="010"/>
+        <display value="FÄ/FA Allgemeinmedizin (alte (M-)WBO, kammerindividuell, EU-Ärzte)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="020"/>
+        <display value="FÄ/FA Anästhesiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="022"/>
+        <display value="FÄ/FA Anästhesiologie und Intensivtherapie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="030"/>
+        <display value="FÄ/FA Augenheilkunde"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="040"/>
+        <display value="FÄ/FA Chirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="041"/>
+        <display value="TG Kinderchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="042"/>
+        <display value="SP Unfallchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="043"/>
+        <display value="SP Gefäßchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="044"/>
+        <display value="TG Plastische Chirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="045"/>
+        <display value="TG Thorax- und Kardiovaskularchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="046"/>
+        <display value="SP Thoraxchirurgie (Chirurgie)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="047"/>
+        <display value="TG Herz- und Gefäßchirurgie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="048"/>
+        <display value="SP Visceralchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="050"/>
+        <display value="FÄ/FA Frauenheilkunde und Geburtshilfe"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="060"/>
+        <display value="FA Hals-, Nasen-, Ohrenheilkunde"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="061"/>
+        <display value="TG Phoniatrie und Pädaudiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="062"/>
+        <display value="TG Audiologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="063"/>
+        <display value="TG Phoniatrie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="070"/>
+        <display value="FÄ/FA Haut- und Geschlechtskrankheiten"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="080"/>
+        <display value="FÄ/FA Innere Medizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="081"/>
+        <display value="SP Gastroenterologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="082"/>
+        <display value="SP Kardiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="083"/>
+        <display value="SP Pneumologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="084"/>
+        <display value="SP Endokrinologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="085"/>
+        <display value="TG Hämatologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="086"/>
+        <display value="SP Nephrologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="087"/>
+        <display value="SP Rheumatologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="088"/>
+        <display value="TG Diabetologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="089"/>
+        <display value="TG Infektions- und Tropenmedizin; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="090"/>
+        <display value="FÄ/FA Kinderheilkunde"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="091"/>
+        <display value="SP Kinder-Kardiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="092"/>
+        <display value="TG Kinderneuropsychiatrie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="093"/>
+        <display value="SP Neonatologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="094"/>
+        <display value="TG Kindergastroenterologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="095"/>
+        <display value="TG Kinderhämatologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="096"/>
+        <display value="TG Kindernephrologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="097"/>
+        <display value="TG Kinder-Lungen- u. Bronchialheilkunde; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="098"/>
+        <display value="TG Kinderrheumatologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="099"/>
+        <display value="TG Kinderdiabetologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="100"/>
+        <display value="FÄ/FA Kinder- und Jugendpsychiatrie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="102"/>
+        <display value="FÄ/FA Kinder- und Jugendpsychiatrie und -psychotherapie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="110"/>
+        <display value="FÄ/FA Laboratoriumsmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="111"/>
+        <display value="FÄ/FA Mikrobiologie und Infektionsepidemiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="112"/>
+        <display value="TG Medizinische Mikrobiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="120"/>
+        <display value="FÄ/FA Lungen- und Bronchialheilkunde"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="125"/>
+        <display value="FÄ/FA Magenärztin/Magenarzt"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="130"/>
+        <display value="FÄ/FA Mund-Kiefer-Gesichtschirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="131"/>
+        <display value="FÄ/FA Kieferchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="140"/>
+        <display value="FÄ/FA Nervenheilkunde"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="141"/>
+        <display value="FÄ/FA Psychiatrie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="142"/>
+        <display value="FÄ/FA Neurologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="144"/>
+        <display value="Psychotherapeutisch tätige Ärztin/Psychotherapeutisch tätiger Arzt (Zusatzbezeichnung)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="145"/>
+        <display value="FÄ/FA Neurologie und Psychiatrie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="146"/>
+        <display value="TG Kinderneuropsychiatrie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="147"/>
+        <display value="FÄ/FA Psychiatrie und Psychotherapie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="148"/>
+        <display value="FÄ/FA Psychotherapeutische Medizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="149"/>
+        <display value="FÄ/FA Neurologie, Psychiatrie und Psychotherapie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="150"/>
+        <display value="FÄ/FA Neurochirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="160"/>
+        <display value="FÄ/FA Orthopädie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="161"/>
+        <display value="SP Rheumatologie (der ehemaligen Orthopädie)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="170"/>
+        <display value="FÄ/FA Pathologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="171"/>
+        <display value="TG Neuropathologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="180"/>
+        <display value="FÄ/FA Pharmakologie und Toxikologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="181"/>
+        <display value="TG Klinische Pharmakologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="190"/>
+        <display value="FÄ/FA Radiologie (alte (M-)WBO)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="191"/>
+        <display value="TG Strahlentherapie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="192"/>
+        <display value="TG Neuroradiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="194"/>
+        <display value="FÄ/FA Radiologische Diagnostik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="195"/>
+        <display value="FÄ/FA Diagnostische Radiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="196"/>
+        <display value="SP Kinderradiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="197"/>
+        <display value="SP Neuroradiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="199"/>
+        <display value="FÄ/FA Strahlentherapie und Radiologische Diagnostik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="200"/>
+        <display value="FÄ/FA Urologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="210"/>
+        <display value="FÄ/FA Arbeitsmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="220"/>
+        <display value="FÄ/FA Nuklearmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="230"/>
+        <display value="FÄ/FA Öffentliches Gesundheitswesen"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="240"/>
+        <display value="FÄ/FA Rechtsmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="250"/>
+        <display value="FÄ/FA Hygiene und Umweltmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="271"/>
+        <display value="FÄ/FA Neuropathologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="281"/>
+        <display value="FÄ/FA Klinische Pharmakologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="291"/>
+        <display value="FÄ/FA Strahlentherapie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="301"/>
+        <display value="FÄ/FA Anatomie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="302"/>
+        <display value="FÄ/FA Biochemie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="303"/>
+        <display value="FÄ/FA Transfusionsmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="304"/>
+        <display value="FÄ/FA Kinderchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="305"/>
+        <display value="Medizinische Genetik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="306"/>
+        <display value="Medizinische Informatik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="307"/>
+        <display value="Pathologische Physiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="308"/>
+        <display value="FÄ/FA Physiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="309"/>
+        <display value="FÄ/FA Physiotherapie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="310"/>
+        <display value="FÄ/FA Psychotherapie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="311"/>
+        <display value="FÄ/FA Sozialhygiene; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="312"/>
+        <display value="FÄ/FA Sportmedizin; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="313"/>
+        <display value="FÄ/FA Herzchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="314"/>
+        <display value="FÄ/FA Humangenetik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="315"/>
+        <display value="FÄ/FA Immunologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="317"/>
+        <display value="Physiologische Chemie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="320"/>
+        <display value="SP Thoraxchirurgie (Herzchirurgie)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="321"/>
+        <display value="SP Echokardiologie herznaher Gefäße"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="322"/>
+        <display value="FÄ/FA Plastische Chirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="324"/>
+        <display value="FÄ/FA Phoniatrie und Pädaudiologie ((M-)WBO 1992)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="326"/>
+        <display value="SP Angiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="327"/>
+        <display value="SP Hämatologie und Internistische Onkologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="328"/>
+        <display value="SP Geriatrie (Innere Medizin); (vor 2003 in Muster-WBO der Bundesärztekammer)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="330"/>
+        <display value="FÄ/FA Physikalische und Rehabilitative Medizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="340"/>
+        <display value="FÄ/FA Ärztin/Arzt für Kinder- und Jugendmedizin; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="341"/>
+        <display value="FÄ/FA Kinder- und Jugendmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="342"/>
+        <display value="FÄ/FA Kinder- und Jugendmedizin; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="343"/>
+        <display value="FÄ/FA Kinder- und Jugendärztin/Kinder- und Jugendarzt; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="344"/>
+        <display value="FÄ/FA Fachärztin/Facharzt für Kinderheilkunde und Jugendmedizin; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="350"/>
+        <display value="Biomathematik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="351"/>
+        <display value="Biophysik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="352"/>
+        <display value="Geschichte der Medizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="353"/>
+        <display value="Industrietoxikologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="354"/>
+        <display value="Klinische Strahlenphysik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="355"/>
+        <display value="Medizinische Wissenschaftsinformation"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="356"/>
+        <display value="Medizinische Physik und Biophysik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="357"/>
+        <display value="FÄ/FA Experimentelle und diagnostische Mikrobiologie; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="358"/>
+        <display value="Fachbiologie der Medizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="359"/>
+        <display value="Fachzahnärztin/Fachzahnarzt für Mikrobiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="360"/>
+        <display value="Fachzahnärztin/Fachzahnarzt für Kieferchirurgie (§ 6 Abs. 1 BMV-Ä)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="361"/>
+        <display value="Fachzahnärztin/Fachzahnarzt für theoretisch-experimentelle Medizin (§ 6 Abs. 2 BMV-Ä)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="371"/>
+        <display value="Fachwissenschaftlerin/Fachwissenschaftler Chemie und Labordiagnostik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="372"/>
+        <display value="Fachwissenschaftlerin/Fachwissenschaftler Genetik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="373"/>
+        <display value="Fachwissenschaftlerin/Fachwissenschaftler Immunologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="374"/>
+        <display value="Fachwissenschaftlerin/Fachwissenschaftler Zytologie/Histologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="470"/>
+        <display value="Psychologische Psychotherapeutin/Psychologischer Psychotherapeut"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="471"/>
+        <display value="Kinder- und Jugendlichenpsychotherapeutin/Kinder- und Jugendlichenpsychotherapeut"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="500"/>
+        <display value="FÄ/FA Arbeitshygiene; neue Bundesländer"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="501"/>
+        <display value="FÄ/FA Blutspende- und Transfusionsmedizin; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="502"/>
+        <display value="FÄ/FA Hygiene; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="503"/>
+        <display value="SP Infektiologie (Innere Medizin); kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="504"/>
+        <display value="TG Lungen- und Bronchialheilkunde"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="505"/>
+        <display value="SP Infektiologie (Kinder- und Jugendmedizin); kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="506"/>
+        <display value="FÄ/FA Pathologische Anatomie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="510"/>
+        <display value="FÄ/FA Allgemeine Chirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="511"/>
+        <display value="FÄ/FA Gefäßchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="512"/>
+        <display value="FÄ/FA Orthopädie und Unfallchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="513"/>
+        <display value="FÄ/FA Thoraxchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="514"/>
+        <display value="FÄ/FA Visceralchirurgie/FÄ/FA Viszeralchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="515"/>
+        <display value="SP Gynäkologische Onkologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="516"/>
+        <display value="SP Gynäkologische Endokrinologie und Reproduktionsmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="517"/>
+        <display value="SP Spezielle Geburtshilfe und Perinatalmedizin"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="518"/>
+        <display value="FÄ/FA Sprach-, Stimm- und kindliche Hörstörungen"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="520"/>
+        <display value="FÄ/FA Innere und Allgemeinmedizin (Hausärztin/Hausarzt)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="521"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Angiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="522"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Endokrinologie und Diabetologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="523"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Gastroenterologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="524"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Hämatologie und Onkologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="525"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Kardiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="526"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Nephrologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="527"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Pneumologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="528"/>
+        <display value="FÄ/FA Innere Medizin und (SP) Rheumatologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="529"/>
+        <display value="TG Kardiologie und Angiologie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="530"/>
+        <display value="SP Kinder-Hämatologie und -Onkologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="531"/>
+        <display value="SP Neuropädiatrie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="532"/>
+        <display value="FÄ/FA Mikrobiologie, Virologie und Infektionsepidemiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="533"/>
+        <display value="SP Forensische Psychiatrie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="534"/>
+        <display value="FÄ/FA Psychosomatische Medizin und Psychotherapie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="535"/>
+        <display value="FÄ/FA Radiologie (neue (M-)WBO)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="536"/>
+        <display value="SP Kinder-Endokrinologie und -Diabetologie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="537"/>
+        <display value="SP Kinder-Gastroenterologie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="538"/>
+        <display value="SP Kindernephrologie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="539"/>
+        <display value="SP Kinder-Pneumologie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="540"/>
+        <display value="FÄ/FA Innere Medizin und SP gesamte Innere Medizin; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="541"/>
+        <display value="FÄ/FA Innere Medizin und SP Geriatrie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="542"/>
+        <display value="FÄ/FA Plastische und Ästhetische Chirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="543"/>
+        <display value="SP Endokrinologie und Diabetologie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="544"/>
+        <display value="FÄ/FA Allgemeinchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="545"/>
+        <display value="TG Nephrologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="546"/>
+        <display value="SP Plastische Chirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="547"/>
+        <display value="SP Geriatrie (Allgemeinmedizin); kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="548"/>
+        <display value="SP Geriatrie (Innere Medizin); kammerindividuell (seit 2013 in WBO der Landesärztekammer Rheinl.-Pfalz)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="549"/>
+        <display value="SP Geriatrie (Neurologie); kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="550"/>
+        <display value="SP Geriatrie (Psychiatrie); kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="551"/>
+        <display value="TG Endokrinologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="552"/>
+        <display value="TG Gastroenterologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="553"/>
+        <display value="TG Kardiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="554"/>
+        <display value="TG Rheumatologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="555"/>
+        <display value="FÄ/FA Dermatologie und Venerologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="556"/>
+        <display value="TG Unfallchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="557"/>
+        <display value="TG Echokardiologie herznaher Gefäße"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="558"/>
+        <display value="TG Gefäßchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="559"/>
+        <display value="TG Rheumatologie (der ehemaligen Orthopädie)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="560"/>
+        <display value="TG Thoraxchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="561"/>
+        <display value="FÄ/FA Innere Medizin und Infektiologie; kammerindividuell (WBO 2005 der Ärztekammer Mecklenburg-Vorpommern)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="562"/>
+        <display value="SP Pädiatrische Rheumatologie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="563"/>
+        <display value="SP Pulmologie in der Kinder- und Jugendmedizin; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="564"/>
+        <display value="TG Kinderkardiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="565"/>
+        <display value="TG Kinderneonatologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="566"/>
+        <display value="FÄ/FA Mikrobiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="567"/>
+        <display value="FÄ/FA Oralchirurgie; kammerindividuell"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="568"/>
+        <display value="FÄ/FA Pathobiochemie und Labordiagnostik"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="569"/>
+        <display value="FA Pharmakologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="570"/>
+        <display value="TG Kinderradiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="571"/>
+        <display value="FÄ/FA Frauenheilkunde"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="572"/>
+        <display value="FÄ/FA Gynäkologie und Geburtshilfe"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="true"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="573"/>
+        <display value="FÄ/FA Kinder -und Jugendchirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="574"/>
+        <display value="FÄ/FA Plastische, Rekonstruktive und Ästhetische Chirurgie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="575"/>
+        <display value="FÄ/FA Phoniatrie und Pädaudiologie ((M-)WBO 2018)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="576"/>
+        <display value="SP Kinder- und Jugend-Hämatologie und -Onkologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="577"/>
+        <display value="SP Kinder- und Jugend-Kardiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="578"/>
+        <display value="SP Kinder- und Jugendradiologie"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="579"/>
+        <display value="FÄ/FA Innere Medizin und Infektiologie ((M-)WBO 2018)"/>
+        <property>
+            <code value="obsolet"/>
+            <valueCode value="false"/>
+        </property>
+    </concept>
+</CodeSystem>

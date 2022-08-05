@@ -14,6 +14,8 @@
 
 #include <thread>
 
+
+
 TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
 {
     ClientResponse outerResponse;
@@ -88,7 +90,7 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
 
     // invoke /task/<id>/$accept
     std::string secret;
-    std::optional<model::Timestamp> lastModifiedDate;
+    std::optional<fhirtools::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
 
     const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
@@ -125,7 +127,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
     if(isUnsupportedFlowtype(GetParam()))
         GTEST_SKIP();
 
-    model::Timestamp startTime = model::Timestamp::now();
+    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
 
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
@@ -139,7 +141,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
     std::string secret;
-    std::optional<model::Timestamp> lastModifiedDate;
+    std::optional<fhirtools::Timestamp> lastModifiedDate;
     // invoke /task/<id>/$accept
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
 
@@ -186,7 +188,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurantProxy) // NOLINT
         GTEST_SKIP();
     }
 
-    model::Timestamp startTime = model::Timestamp::now();
+    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -227,7 +229,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurant) // NOLINT
         GTEST_SKIP();
     }
 
-    model::Timestamp startTime = model::Timestamp::now();
+    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -264,7 +266,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByPharmacy) // NOLINT
     if(isUnsupportedFlowtype(GetParam()))
         GTEST_SKIP();
 
-    model::Timestamp startTime = model::Timestamp::now();
+    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -277,7 +279,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByPharmacy) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
     std::string secret;
-    std::optional<model::Timestamp> lastModifiedDate;
+    std::optional<fhirtools::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
 
     // Pharmacy -> check of secret:
@@ -298,7 +300,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleReject) // NOLINT
     if(isUnsupportedFlowtype(GetParam()))
         GTEST_SKIP();
 
-    model::Timestamp startTime = model::Timestamp::now();
+    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -311,7 +313,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleReject) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
     std::string secret;
-    std::optional<model::Timestamp> lastModifiedDate;
+    std::optional<fhirtools::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
 
     // Reject Task
@@ -391,7 +393,7 @@ TEST_P(ErpWorkflowTestP, TaskSearchStatus) // NOLINT
     }
 
     std::string secret1;
-    std::optional<model::Timestamp> lastModifiedDate;
+    std::optional<fhirtools::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret1, lastModifiedDate, *prescriptionId1, kvnr, accessCode1, qesBundle1));
 
     {
@@ -492,9 +494,9 @@ TEST_P(ErpWorkflowTestP, TaskSearchLastModified) // NOLINT
     std::string secret1;
     std::string secret2;
     std::string secret3;
-    std::optional<model::Timestamp> lastModifiedDate1;
-    std::optional<model::Timestamp> lastModifiedDate2;
-    std::optional<model::Timestamp> lastModifiedDate3;
+    std::optional<fhirtools::Timestamp> lastModifiedDate1;
+    std::optional<fhirtools::Timestamp> lastModifiedDate2;
+    std::optional<fhirtools::Timestamp> lastModifiedDate3;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret1, lastModifiedDate1, *prescriptionId1, kvnr, accessCode1, qesBundle1));
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret2, lastModifiedDate2, *prescriptionId2, kvnr, accessCode2, qesBundle2));
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret3, lastModifiedDate3, *prescriptionId3, kvnr, accessCode3, qesBundle3));
@@ -739,7 +741,7 @@ TEST_F(ErpWorkflowTest, AuditEventFilterInsurantKvnr) // NOLINT
         std::vector<model::Communication> communications;
         ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr1, accessCode));
         std::string secret;
-        std::optional<model::Timestamp> lastModifiedDate;
+        std::optional<fhirtools::Timestamp> lastModifiedDate;
         ASSERT_NO_FATAL_FAILURE(
             checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr1, accessCode, qesBundle));
         ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr1, secret, *lastModifiedDate, communications));
@@ -775,7 +777,7 @@ TEST_F(ErpWorkflowTest, AuditEventFilterInsurantKvnr) // NOLINT
         std::vector<model::Communication> communications;
         ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr3, accessCode));
         std::string secret;
-        std::optional<model::Timestamp> lastModifiedDate;
+        std::optional<fhirtools::Timestamp> lastModifiedDate;
         ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr3, accessCode, qesBundle));
         ASSERT_NO_FATAL_FAILURE(checkTaskReject(*prescriptionId, kvnr3, accessCode, secret));
     }
@@ -841,7 +843,7 @@ TEST_P(ErpWorkflowTestP, AuditEventSearchSortPaging) // NOLINT
     std::vector<model::Communication> communications;
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
     std::string secret;
-    std::optional<model::Timestamp> lastModifiedDate;
+    std::optional<fhirtools::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
     // Reject Task
     ASSERT_NO_FATAL_FAILURE(checkTaskReject(*prescriptionId, kvnr, accessCode, secret));
@@ -915,13 +917,13 @@ TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-comp
     ASSERT_TRUE(metaData);
     if (!runsInCloudEnv())
     {
-        const auto releaseDate = model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
+        const auto releaseDate = fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
         EXPECT_EQ(metaData->date(), releaseDate);
         EXPECT_EQ(metaData->releaseDate(), releaseDate);
     }
     EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion);
 
-    const auto now = model::Timestamp::now();
+    const auto now = fhirtools::Timestamp::now();
     const auto* version = "0.3.1";
     metaData->setVersion(version);
     metaData->setDate(now);
@@ -1119,7 +1121,7 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitiv
 
 TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
 {
-    model::Timestamp startTime = model::Timestamp::now();
+    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
     ClientResponse serverResponse;
@@ -1142,7 +1144,7 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
     // Service Call #1: TaskCreate (no audit event generated.)
     using namespace std::string_view_literals;
     using model::Task;
-    using model::Timestamp;
+    using fhirtools::Timestamp;
     static const char* create =
         "<Parameters xmlns=\"http://hl7.org/fhir\">\n"
         "  <parameter>\n"
@@ -1167,7 +1169,7 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
     generateNewRandomKVNR(kvnr);
     std::string qesBundle;
     std::vector<model::Communication> communications;
-    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now())));
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, fhirtools::Timestamp::now())));
     ASSERT_FALSE(qesBundle.empty());
     std::string activateBody = R"(<Parameters xmlns="http://hl7.org/fhir">)""\n"
                                "    <parameter>\n"
@@ -1220,7 +1222,7 @@ TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWh
     std::string accessCode(task->accessCode());
 
     const std::string kvnr{"X007654321"};
-    const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
+    const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), fhirtools::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
     ASSERT_TRUE(task);
 
@@ -1275,7 +1277,7 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
     const auto prescriptionId = task->prescriptionId();
     const std::string kvnr{"X101010101"};
 
-    const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
+    const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, fhirtools::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(prescriptionId, accessCode, qesBundle));
     ASSERT_TRUE(task);
 
@@ -1521,7 +1523,7 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     std::optional<model::PrescriptionId> prescriptionId = task->prescriptionId();
     ASSERT_TRUE(prescriptionId);
     std::string qesBundle;
-    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now())));
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, fhirtools::Timestamp::now())));
 
     // invoke /task/<id>/$activate
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(*prescriptionId, std::string(task->accessCode()), qesBundle));

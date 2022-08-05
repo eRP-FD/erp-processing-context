@@ -1110,7 +1110,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
 
 TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_20885_01.test("Examination of insured person and eligibility");
+    A_20885_02.test("Examination of insured person and eligibility");
 
     // Create a client
     auto client = createClient();
@@ -1477,7 +1477,6 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Insurant, InsurantB)
-            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(ReplyMessage).createJsonString();
 
         // Pharmacy sends message to representative.

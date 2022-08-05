@@ -45,6 +45,9 @@ class HsmProductionClient
 public:
     ::Nonce getNonce(const ::HsmRawSession& session, uint32_t input) override;
 
+    ErpBlob generatePseudonameKey(const ::HsmRawSession& session, uint32_t input) override;
+    ErpArray<Aes256Length> unwrapPseudonameKey(const HsmRawSession& session, UnwrapHashKeyInput&& input) override;
+
     ErpBlob getTeeToken(
         const HsmRawSession& session,
         TeeTokenRequestInput&& input) override;
@@ -60,6 +63,8 @@ public:
     DeriveKeyOutput deriveCommsKey(
         const HsmRawSession& session,
         DeriveKeyInput&& input) override;
+
+    [[nodiscard]] ::DeriveKeyOutput deriveChargeItemKey(const::HsmRawSession& session, ::DeriveKeyInput&& input) override;
 
     ErpArray<Aes128Length> doVauEcies128(
         const HsmRawSession& session,

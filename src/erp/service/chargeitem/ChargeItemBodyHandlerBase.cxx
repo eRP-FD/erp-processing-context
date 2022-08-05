@@ -39,37 +39,35 @@ std::optional<model::Binary> ChargeItemBodyHandlerBase::getDispenseItemBinary(co
 
 
 // static
-model::Bundle ChargeItemBodyHandlerBase::createAndValidateDispenseItem(
-    const model::Binary& containedBinary,
-    PcServiceContext& serviceContext)
+::model::Bundle ChargeItemBodyHandlerBase::validatedBundleFromSigned(const ::model::Binary& containedBinary,
+                                                                     ::SchemaType schemaType,
+                                                                     ::PcServiceContext& serviceContext,
+                                                                     ::VauErrorCode onError)
 {
     try
     {
         const CadesBesSignature cadesBesSignature{containedBinary.data().value().data(),
                                                   serviceContext.getTslManager(),
                                                   true};
-        return model::Bundle::fromXml(
-            cadesBesSignature.payload(),
-            serviceContext.getXmlValidator(),
-            serviceContext.getInCodeValidator(),
-            SchemaType::fhir /* TODO correct schema */);
+        return model::Bundle::fromXml(cadesBesSignature.payload(), serviceContext.getXmlValidator(),
+                                      serviceContext.getInCodeValidator(), schemaType, false);
     }
     catch (const TslError& ex)
     {
-        VauFail(ex.getHttpStatus(), VauErrorCode::invalid_dispense, ex.what());
+        VauFail(ex.getHttpStatus(), onError, ex.what());
     }
     catch (const CadesBesSignature::UnexpectedProfessionOidException& ex)
     {
-        VauFail(HttpStatus::BadRequest, VauErrorCode::invalid_dispense, ex.what());
+        VauFail(HttpStatus::BadRequest, onError, ex.what());
     }
     catch (const CadesBesSignature::VerificationException& ex)
     {
-        VauFail(HttpStatus::BadRequest, VauErrorCode::invalid_dispense, ex.what());
+        VauFail(HttpStatus::BadRequest, onError, ex.what());
     }
     catch (const ErpException& ex)
     {
         TVLOG(1) << "ErpException: " << ex.what();
-        VauFail(ex.status(), VauErrorCode::invalid_dispense, "ErpException");
+        VauFail(ex.status(), onError, "ErpException");
     }
     catch(const std::invalid_argument& exc)
     {
@@ -77,27 +75,10 @@ model::Bundle ChargeItemBodyHandlerBase::createAndValidateDispenseItem(
     }
     catch (const std::exception& ex)
     {
-        VauFail(HttpStatus::InternalServerError, VauErrorCode::invalid_dispense, ex.what());
+        VauFail(HttpStatus::InternalServerError, onError, ex.what());
     }
     catch (...)
     {
-        VauFail(HttpStatus::InternalServerError, VauErrorCode::invalid_dispense, "unexpected throwable");
-    }
-}
-
-
-//static
-void ChargeItemBodyHandlerBase::setDispenseItemReference(
-    model::ChargeItem& chargeItem,
-    const model::Bundle& dispenseItemBundle)
-{
-    try
-    {
-        chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem,
-                                              "Bundle/" + dispenseItemBundle.getId().toString());
-    }
-    catch(const model::ModelException& exc)
-    {
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Dispense item has no id", exc.what());
+        VauFail(HttpStatus::InternalServerError, onError, "unexpected throwable");
     }
 }

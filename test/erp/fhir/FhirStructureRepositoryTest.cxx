@@ -3,10 +3,13 @@
  * (C) Copyright IBM Corp. 2021
  */
 
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "erp/util/Configuration.hxx"
+#include "test/util/ResourceManager.hxx"
+
 #include <gtest/gtest.h>
 
-#include "erp/fhir/FhirStructureRepository.hxx"
-#include "test/util/ResourceManager.hxx"
+using namespace fhirtools;
 
 class FhirStructureRepositoryTest : public ::testing::Test
 {
@@ -28,11 +31,14 @@ public:
 TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr std::string_view erxTaskUrl{"https://gematik.de/fhir/StructureDefinition/ErxTask"};
-    auto mkres= [&](const std::filesystem::path& p) { return ResourceManager::getAbsoluteFilename(p); };
+    auto mkres = [&](const std::filesystem::path& p) {
+        return ResourceManager::getAbsoluteFilename(p);
+    };
 
     auto fileList = {
         mkres("fhir/hl7.org/profiles-resources.xml"),
-        mkres("fhir/hl7.org/profiles-types.xml")
+        mkres("fhir/hl7.org/profiles-types.xml"),
+        mkres("fhir/hl7.org/valuesets.xml")
     };
 
     FhirStructureRepository repo;
@@ -54,10 +60,14 @@ TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-
     EXPECT_TRUE(repo.findTypeById("Meta"));
 
 
-
-
     EXPECT_FALSE(repo.findDefinitionByUrl(std::string{erxTaskUrl}));
-    repo.load({mkres("test/fhir/GemerxTask.xml")});
+    repo.load(
+        {mkres("test/fhir/GemerxTask.xml"),
+         mkres("fhir/profiles/de.basisprofil.r4-0.9.13/Profile-identifier-kvid10.xml"),
+         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Extension-AcceptDate.xml"),
+         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Identifier-PRESCRIPTIONID.xml"),
+         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Extension-PrescriptionType.xml"),
+         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Extension-ExpiryDate.xml")});
     const auto* const erxTask = repo.findDefinitionByUrl(std::string{erxTaskUrl});
     ASSERT_NO_FATAL_FAILURE(checkTaskFields(erxTask));
 
@@ -66,7 +76,9 @@ TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-
 
 TEST_F(FhirStructureRepositoryTest, missingBase)
 {
-    auto mkres= [&](const std::filesystem::path& p) { return ResourceManager::getAbsoluteFilename(p); };
+    auto mkres = [&](const std::filesystem::path& p) {
+        return ResourceManager::getAbsoluteFilename(p);
+    };
 
     auto fileList = {
         mkres("fhir/hl7.org/profiles-resources.xml"),
@@ -75,4 +87,17 @@ TEST_F(FhirStructureRepositoryTest, missingBase)
     FhirStructureRepository repo;
 
     EXPECT_ANY_THROW(repo.load(fileList));
+}
+
+TEST_F(FhirStructureRepositoryTest, loadFromConfiguration)
+{
+    auto strings = Configuration::instance().getArray(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
+    std::list<std::filesystem::path> fileList;
+    for (const auto& item : strings)
+    {
+        fileList.emplace_back(item);
+    }
+
+    FhirStructureRepository repo;
+    EXPECT_NO_THROW(repo.load(fileList));
 }

@@ -114,7 +114,7 @@ void UrlArguments::addDateSearchArguments(const std::string& name, const std::st
             {
                 if (rawValue == "NULL")
                 {
-                    timePeriods.emplace_back(std::optional<model::TimePeriod>());
+                    timePeriods.emplace_back();
                 }
                 else
                 {

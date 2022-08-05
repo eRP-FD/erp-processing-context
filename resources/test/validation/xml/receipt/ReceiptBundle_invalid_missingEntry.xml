@@ -2,7 +2,7 @@
 <Bundle xmlns="http://hl7.org/fhir">
   <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/erxReceipt"/>
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxReceipt"/>
   </meta>
   <identifier>
     <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>

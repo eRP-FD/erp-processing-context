@@ -16,6 +16,7 @@
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
+#include "erp/pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.hxx"
 #include "erp/service/AuditEventTextTemplates.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "erp/tsl/TslManager.hxx"
@@ -166,6 +167,7 @@ private:
     AuditEventTextTemplates mAuditEventTextTemplates;
 
     std::unique_ptr<TslRefreshJob> mTslRefreshJob;
+    std::unique_ptr<PseudonameKeyRefreshJob> mReportPseudonameKeyRefreshJob;
     std::unique_ptr<SeedTimer> mPrngSeeder;
     ApplicationHealth mApplicationHealth;
     std::shared_ptr<RegistrationInterface> mRegistrationInterface;

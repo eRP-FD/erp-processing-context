@@ -35,79 +35,10 @@ class VauRequestHandlerTest : public ServerTestBase
 public:
     explicit VauRequestHandlerTest(bool forceMockDatabase = false)
         : ServerTestBase(forceMockDatabase) {}
-    // T can be JWT or std::string, auto-resolved.
-    template <typename T>
-    ClientRequest makeEncryptedRequest(
-        const HttpMethod method, const std::string_view endpoint, const T& jwt1,
-        std::optional<std::string_view> xAccessCode = {},
-        std::optional<std::pair<std::string_view, std::string_view>> bodyContentType = {},
-        Header::keyValueMap_t&& headerFields = {},
-        std::optional<std::function<void(std::string&)>> requestManipulator = {})  // used to simulate faulty messages
-    {
-        if (headerFields.find(Header::Authorization) == headerFields.end()) {
-            headerFields.insert( getAuthorizationHeaderForJwt(jwt1) );
-        }
-
-        // Create the inner request
-        ClientRequest request(Header(
-            method,
-            static_cast<std::string>(endpoint),
-            Header::Version_1_1,
-            std::move(headerFields),
-            HttpStatus::Unknown),
-            "");
-
-        if (xAccessCode.has_value())
-        {
-            request.setHeader(Header::XAccessCode, std::string(*xAccessCode));
-        }
-        if (bodyContentType.has_value())
-        {
-            request.setBody(std::string(bodyContentType->first));
-            request.setHeader(Header::ContentType, std::string(bodyContentType->second));
-        }
-
-        // Encrypt with TEE protocol.
-
-        auto teeRequest = mTeeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, jwt1);
-        if(requestManipulator.has_value())
-            (*requestManipulator)(teeRequest);
-
-        ClientRequest encryptedRequest(Header(
-            HttpMethod::POST,
-            "/VAU/0",
-            Header::Version_1_1,
-            {},
-            HttpStatus::Unknown),
-            teeRequest);
-        encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
-        return encryptedRequest;
-    }
-
-    void SetUp (void) override
-    {
-        try
-        {
-            startServer();
-        }
-        catch(...)
-        {
-            LOG(ERROR) << "starting the server failed";
-            FAIL();
-        }
-    }
-
-
-    void TearDown (void) override
-    {
-        mServer->shutDown();
-        mServer.reset();
-    }
 
     static constexpr int timespan_ms = 4000;
     EnvironmentVariableGuard calls{"ERP_TOKEN_ULIMIT_CALLS", "5"};
     EnvironmentVariableGuard timespan{"ERP_TOKEN_ULIMIT_TIMESPAN_MS", std::to_string(timespan_ms)};
-    ClientTeeProtocol mTeeProtocol; // Renamed to avoid compiler warning "C4458: Declaration of "teeProtocol" hides class members"
 };
 
 class VauRequestHandlerTestForceMockDB : public VauRequestHandlerTest

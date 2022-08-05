@@ -6,7 +6,6 @@
 #include "erp/util/SignalHandler.hxx"
 #include "erp/util/TerminationHandler.hxx"
 
-#include "erp/util/TerminationHandler.hxx"
 #include "TLog.hxx"
 
 #ifndef _WIN32
@@ -39,13 +38,21 @@ void SignalHandler::manualTermination()
 {
     TLOG(WARNING) << "SignalHandler::manualTermination() called, raising internalTerminationSignal "
                   << internalTerminationSignal;
-    std::raise(internalTerminationSignal);
+    if (std::raise(internalTerminationSignal) != 0)
+    {
+        TLOG(ERROR) << "Failed to send signal.";
+        exit(EXIT_FAILURE); //NOLINT(concurrency-mt-unsafe)
+    }
 }
 
 void SignalHandler::gracefulShutdown()
 {
     TLOG(WARNING) << "SignalHandler::gracefulShutdown() called, raising SIGTERM";
-    std::raise(SIGTERM);
+    if (std::raise(SIGTERM) != 0)
+    {
+        TLOG(ERROR) << "Failed to send signal.";
+        exit(EXIT_FAILURE); //NOLINT(concurrency-mt-unsafe)
+    }
 }
 
 

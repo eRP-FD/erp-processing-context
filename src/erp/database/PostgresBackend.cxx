@@ -20,7 +20,6 @@
 #include <pqxx/pqxx>
 
 
-
 struct PostgresBackend::QueryDefinition
 {
     const char* name;
@@ -227,6 +226,7 @@ PostgresBackend::PostgresBackend (void)
     : mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
     , mBackendTask169(model::PrescriptionType::direkteZuweisung)
     , mBackendTask200(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+    , mBackendTask209(model::PrescriptionType::direkteZuweisungPkv)
 {
     mConnection.connectIfNeeded();
     mTransaction = mConnection.createTransaction();
@@ -369,10 +369,10 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
     }
 }
 
-std::tuple<model::PrescriptionId, model::Timestamp> PostgresBackend::createTask(model::PrescriptionType prescriptionType,
+std::tuple<model::PrescriptionId, fhirtools::Timestamp> PostgresBackend::createTask(model::PrescriptionType prescriptionType,
                                                                                 model::Task::Status taskStatus,
-                                                                                const model::Timestamp& lastUpdated,
-                                                                                const model::Timestamp& created)
+                                                                                const fhirtools::Timestamp& lastUpdated,
+                                                                                const fhirtools::Timestamp& created)
 {
     checkCommonPreconditions();
     return getTaskBackend(prescriptionType).createTask(*mTransaction, taskStatus, lastUpdated, created);
@@ -387,7 +387,7 @@ void PostgresBackend::updateTask(const model::PrescriptionId& taskId,
     getTaskBackend(taskId.type()).updateTask(*mTransaction, taskId, accessCode, blobId, salt);
 }
 
-std::tuple<BlobId, db_model::Blob, model::Timestamp>
+std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp>
 PostgresBackend::getTaskKeyData(const model::PrescriptionId& taskId)
 {
     checkCommonPreconditions();
@@ -396,7 +396,7 @@ PostgresBackend::getTaskKeyData(const model::PrescriptionId& taskId)
 
 void PostgresBackend::updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                                  model::Task::Status status,
-                                                 const model::Timestamp& lastModifiedDate,
+                                                 const fhirtools::Timestamp& lastModifiedDate,
                                                  const std::optional<db_model::EncryptedBlob>& secret)
 {
     checkCommonPreconditions();
@@ -408,9 +408,9 @@ void PostgresBackend::activateTask (
     const db_model::EncryptedBlob& encryptedKvnr,
     const db_model::HashedKvnr& hashedKvnr,
     model::Task::Status taskStatus,
-    const model::Timestamp& lastModified,
-    const model::Timestamp& expiryDate,
-    const model::Timestamp& acceptDate,
+    const fhirtools::Timestamp& lastModified,
+    const fhirtools::Timestamp& expiryDate,
+    const fhirtools::Timestamp& acceptDate,
     const db_model::EncryptedBlob& healthCareProviderPrescription)
 {
     checkCommonPreconditions();
@@ -422,12 +422,12 @@ void PostgresBackend::activateTask (
 void PostgresBackend::updateTaskMedicationDispenseReceipt(
     const model::PrescriptionId& taskId,
     const model::Task::Status& taskStatus,
-    const model::Timestamp& lastModified,
+    const fhirtools::Timestamp& lastModified,
     const db_model::EncryptedBlob& medicationDispense,
     BlobId medicationDispenseBlobId,
     const db_model::HashedTelematikId& telematikId,
-    const model::Timestamp& whenHandedOver,
-    const std::optional<model::Timestamp>& whenPrepared,
+    const fhirtools::Timestamp& whenHandedOver,
+    const std::optional<fhirtools::Timestamp>& whenPrepared,
     const db_model::EncryptedBlob& receipt)
 {
     checkCommonPreconditions();
@@ -439,7 +439,7 @@ void PostgresBackend::updateTaskMedicationDispenseReceipt(
 
 void PostgresBackend::updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                                    model::Task::Status taskStatus,
-                                                   const model::Timestamp& lastModified)
+                                                   const fhirtools::Timestamp& lastModified)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type()).updateTaskClearPersonalData(*mTransaction, taskId, taskStatus, lastModified);
@@ -452,7 +452,7 @@ std::string PostgresBackend::storeAuditEventData(db_model::AuditData& auditData)
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:storeAuditEventData");
 
     const std::string actionString(1, static_cast<char>(auditData.action));
-    const auto recorded = model::Timestamp::now();
+    const auto recorded = fhirtools::Timestamp::now();
 
     const pqxx::result result = mTransaction->exec_params(
         insertAuditEventData.query,
@@ -545,7 +545,7 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
             *agentType, static_cast<model::AuditEventId>(eventId), metaData,
             model::AuditEvent::ActionNamesReverse.at(actionStr), kvnr, deviceId, prescriptionIdRes, blobId);
         auditData.id = resultId;
-        auditData.recorded = model::Timestamp(res.at(1).as<double>());
+        auditData.recorded = fhirtools::Timestamp(res.at(1).as<double>());
         resultSet.push_back(std::move(auditData));
     }
 
@@ -639,11 +639,12 @@ uint64_t PostgresBackend::countAllTasksForPatient(
     auto count = mBackendTask.countAllTasksForPatient(*mTransaction, kvnr, search);
     count += mBackendTask169.countAllTasksForPatient(*mTransaction, kvnr, search);
     count += mBackendTask200.countAllTasksForPatient(*mTransaction, kvnr, search);
+    count += mBackendTask209.countAllTasksForPatient(*mTransaction, kvnr, search);
     return count;
 }
 
 std::optional<Uuid> PostgresBackend::insertCommunication(const model::PrescriptionId& prescriptionId,
-                                                         const model::Timestamp& timeSent,
+                                                         const fhirtools::Timestamp& timeSent,
                                                          const model::Communication::MessageType messageType,
                                                          const db_model::HashedId& sender,
                                                          const db_model::HashedId& recipient,
@@ -764,7 +765,7 @@ std::vector<db_model::Communication> PostgresBackend::retrieveCommunications (
         newComm.id = Uuid(item[0].as<std::string>());
         if (not item[1].is_null())
         {
-            newComm.received = model::Timestamp{item[1].as<double>()};
+            newComm.received = fhirtools::Timestamp{item[1].as<double>()};
         }
         newComm.communication = db_model::EncryptedBlob{item[2].as<db_model::postgres_bytea>()};
         newComm.blobId = gsl::narrow<BlobId>(item[3].as<int>());
@@ -799,13 +800,13 @@ std::vector<Uuid> PostgresBackend::retrieveCommunicationIds (const db_model::Has
     std::vector<Uuid> ids;
     ids.reserve(gsl::narrow<size_t>(results.size()));
     for (const auto& item : results)
-        ids.emplace_back(Uuid(item.at(0).as<std::string>()));
+        ids.emplace_back(item.at(0).as<std::string>());
 
     return ids;
 }
 
 
-std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend::deleteCommunication(
+std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>> PostgresBackend::deleteCommunication(
     const Uuid& communicationId,
     const db_model::HashedId& sender)
 {
@@ -827,7 +828,7 @@ std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend
         if (secondsSinceEpoch.is_null())
             return {id, {}};
         else
-            return {id, model::Timestamp(secondsSinceEpoch.as<double>())};
+            return {id, fhirtools::Timestamp(secondsSinceEpoch.as<double>())};
     }
     else
         return {{},{}};
@@ -836,7 +837,7 @@ std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend
 
 void PostgresBackend::markCommunicationsAsRetrieved (
     const std::vector<Uuid>& communicationIds,
-    const model::Timestamp& retrieved,
+    const fhirtools::Timestamp& retrieved,
     const db_model::HashedId& recipient)
 {
     checkCommonPreconditions();
@@ -894,12 +895,12 @@ PostgresBackend::insertOrReturnAccountSalt(const db_model::HashedId& accountId,
     return std::make_optional<db_model::Blob>(result[0][0].as<db_model::postgres_bytea>());
 }
 
-void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const fhirtools::Timestamp& creationTime)
 {
     mTransaction->exec_params0(::storeConsent.query, kvnr.binarystring(), creationTime.toXsDateTime());
 }
 
-std::optional<model::Timestamp> PostgresBackend::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::optional<fhirtools::Timestamp> PostgresBackend::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
 {
     const auto& result = mTransaction->exec_params(::retrieveConsentDateTime.query, kvnr.binarystring());
     if (result.empty())
@@ -908,7 +909,7 @@ std::optional<model::Timestamp> PostgresBackend::retrieveConsentDateTime(const d
     }
     Expect(result.size() == 1, "Expected exactly one row.");
     Expect(result.front().size() == 1, "Expected exactly one column.");
-    return model::Timestamp{result.front().front().as<double>()};
+    return fhirtools::Timestamp{result.front().front().as<double>()};
 }
 
 bool PostgresBackend::clearConsent(const db_model::HashedKvnr& kvnr)
@@ -917,87 +918,66 @@ bool PostgresBackend::clearConsent(const db_model::HashedKvnr& kvnr)
     return result.affected_rows() > 0;
 }
 
-void PostgresBackend::storeChargeInformation(const db_model::HashedTelematikId& pharmacyTelematikId,
-                                             model::PrescriptionId id, const model::Timestamp& enteredDate,
-                                             const db_model::EncryptedBlob& chargeItem,
-                                             const db_model::EncryptedBlob& dispenseItem)
+void PostgresBackend::storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr)
 {
-    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-           "Attemt to store Chargeinformation for non-PKV Prescription.");
+    Expect(chargeItem.prescriptionId.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+           "Attemt to store charge information for non-PKV Prescription.");
     checkCommonPreconditions();
-    mBackendTask200.storeChargeInformation(*mTransaction, pharmacyTelematikId, id, enteredDate, chargeItem,
-                                           dispenseItem);
+    mBackendChargeItem.storeChargeInformation(*mTransaction, chargeItem, kvnr);
 }
 
-std::vector<db_model::ChargeItem>
-PostgresBackend::retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
-                                                   const std::optional<UrlArguments>& search) const
+void PostgresBackend::updateChargeInformation(const ::db_model::ChargeItem& chargeItem)
 {
-    checkCommonPreconditions();
-    return mBackendTask200.retrieveAllChargeItemsForPharmacy(*mTransaction, pharmacyTelematikId, search);
+    Expect(chargeItem.prescriptionId.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+           "Attemt to update charge information for non-PKV Prescription.");
+    mBackendChargeItem.updateChargeInformation(*mTransaction, chargeItem);
 }
 
-std::vector<db_model::ChargeItem>
-PostgresBackend::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& kvnr,
-                                                   const std::optional<UrlArguments>& search) const
+::std::vector<db_model::ChargeItem>
+PostgresBackend::retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvnr& kvnr,
+                                                   const ::std::optional<UrlArguments>& search) const
 {
     checkCommonPreconditions();
-    return mBackendTask200.retrieveAllChargeItemsForInsurant(*mTransaction, kvnr, search);
+    return mBackendChargeItem.retrieveAllChargeItemsForInsurant(*mTransaction, kvnr, search);
 }
 
-std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
-PostgresBackend::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id) const
+::db_model::ChargeItem PostgresBackend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
     checkCommonPreconditions();
     Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-           "Attemt to retrieve Chargeinformation for non-PKV Prescription.");
-    return mBackendTask200.retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(*mTransaction, id);
+           "Attemt to retrieve charge information for non-PKV Prescription.");
+    return mBackendChargeItem.retrieveChargeInformation(*mTransaction, id);
 }
 
-std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-PostgresBackend::retrieveChargeInformation(const model::PrescriptionId& id) const
+::db_model::ChargeItem PostgresBackend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
 {
     checkCommonPreconditions();
     Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-           "Attemt to retrieve Chargeinformation for non-PKV Prescription.");
-    return mBackendTask200.retrieveChargeInformation(*mTransaction, id);
-}
-
-std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-PostgresBackend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
-{
-    checkCommonPreconditions();
-    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-           "Attemt to retrieve Chargeinformation for non-PKV Prescription.");
-    return mBackendTask200.retrieveChargeInformationForUpdate(*mTransaction, id);
+           "Attemt to retrieve charge information for non-PKV Prescription.");
+    return mBackendChargeItem.retrieveChargeInformationForUpdate(*mTransaction, id);
 }
 
 void PostgresBackend::deleteChargeInformation(const model::PrescriptionId& id)
 {
     checkCommonPreconditions();
-    Expect(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-           "Attemt to delete Chargeinformation for non-PKV Prescription.");
-    return mBackendTask200.deleteChargeInformation(*mTransaction, id);
+    Expect(id.isPkv(), "Attempt to delete charge information for non-PKV Prescription.");
+    mBackendChargeItem.deleteChargeInformation(*mTransaction, id);
+    getTaskBackend(id.type()).deleteChargeItemSupportingInformation(*mTransaction, id);
 }
 
 void PostgresBackend::clearAllChargeInformation(const db_model::HashedKvnr& kvnr)
 {
     checkCommonPreconditions();
-    return mBackendTask200.clearAllChargeInformation(*mTransaction, kvnr);
+    mBackendChargeItem.clearAllChargeInformation(*mTransaction, kvnr);
+    mBackendTask200.clearAllChargeItemSupportingInformation(*mTransaction, kvnr);
+    mBackendTask209.clearAllChargeItemSupportingInformation(*mTransaction, kvnr);
 }
 
 uint64_t PostgresBackend::countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
                                                             const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    return mBackendTask200.countChargeInformationForInsurant(*mTransaction, kvnr, search);
-}
-
-uint64_t PostgresBackend::countChargeInformationForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
-                                                            const std::optional<UrlArguments>& search)
-{
-    checkCommonPreconditions();
-    return mBackendTask200.countChargeInformationForPharmacy(*mTransaction, pharmacyTelematikId, search);
+    return mBackendChargeItem.countChargeInformationForInsurant(*mTransaction, kvnr, search);
 }
 
 std::optional<db_model::Blob> PostgresBackend::retrieveSaltForAccount(const db_model::HashedId& accountId,
@@ -1036,6 +1016,8 @@ PostgresBackendTask& PostgresBackend::getTaskBackend(const model::PrescriptionTy
             return mBackendTask;
         case model::PrescriptionType::direkteZuweisung:
             return mBackendTask169;
+        case model::PrescriptionType::direkteZuweisungPkv:
+            return mBackendTask209;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             return mBackendTask200;
     }

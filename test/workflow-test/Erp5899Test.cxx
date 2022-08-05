@@ -99,8 +99,9 @@ TEST_F(Erp5899Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_TRUE(task.has_value());
     std::string accessCode{task->accessCode()};
 
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle("qes_bundle.p7s")));
-    ASSERT_TRUE(task.has_value());
+    std::string qesBundle;
+    taskActivate(task->prescriptionId(), accessCode,
+                 std::get<0>(makeQESBundle("X110502414", task->prescriptionId(), model::Timestamp::now())));
 
     std::optional<model::Bundle> bundle;
     ASSERT_NO_FATAL_FAILURE(bundle = taskAccept(task->prescriptionId(), accessCode));

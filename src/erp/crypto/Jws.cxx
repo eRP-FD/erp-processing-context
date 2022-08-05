@@ -11,8 +11,9 @@
 
 #include "erp/crypto/Sha256.hxx"
 #include "erp/util/Base64.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/util/String.hxx"
+
 
 JoseHeader::JoseHeader(JoseHeader::Algorithm algorithm)
     : algorithm(algorithm)

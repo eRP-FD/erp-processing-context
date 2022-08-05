@@ -17,6 +17,30 @@ set(RESOURCE_BINARY_DIR "${CMAKE_BINARY_DIR}/bin/resources")
 set(RESOURCE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/resources")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/util/tool_config.hxx.in" "${CMAKE_CURRENT_BINARY_DIR}/tool_config.hxx")
 
+set(ERP_TEST_UTIL_SOURCES
+        util/TestConfiguration.cxx
+        util/ResourceManager.cxx
+        )
+
+add_library(erp-test-util-lib OBJECT ${ERP_TEST_UTIL_SOURCES})
+target_link_libraries(erp-test-util-lib
+        PUBLIC
+        CONAN_PKG::glog
+        CONAN_PKG::gtest
+        CONAN_PKG::gsl-lite
+        CONAN_PKG::rapidjson
+        CONAN_PKG::magic_enum
+        CONAN_PKG::boost
+        CONAN_PKG::openssl
+        )
+target_include_directories(erp-test-util-lib
+        PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_BINARY_DIR}
+        PUBLIC
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src
+        )
 
 set(ERP_TEST_LIB_SOURCES
         erp/enrolment/DerivationKeyUpdateTest.cxx
@@ -30,6 +54,7 @@ set(ERP_TEST_LIB_SOURCES
         mock/MockDatabaseProxy.cxx
         mock/MockOcspServer.cxx
         mock/MockRandom.cxx
+        mock/MockChargeItemTable.cxx
         mock/MockTaskTable.cxx
         mock/MockTerminationHandler.cxx
         mock/RegistrationMock.cxx
@@ -37,7 +62,7 @@ set(ERP_TEST_LIB_SOURCES
         util/JsonTestUtils.cxx
         workflow-test/A_19445_ProzessParameterFlowtype.cxx
         workflow-test/A_21370_CheckPrescriptionIdOnActivate.cxx
-        workflow-test/A_22068_MehrfachverordnungAblehnen.cxx
+        workflow-test/Mehrfachverordnung.cxx
         workflow-test/A_22231_BetaebungsmittelAblehnen.cxx
         workflow-test/A_22487_AuthoredOnEqualsQesSigningDate.cxx
         workflow-test/TestClient.cxx
@@ -53,6 +78,8 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp9230Test.cxx
         workflow-test/Erp9770Test.cxx
         workflow-test/Erp9777Test.cxx
+        workflow-test/Erp10081Test.cxx
+        workflow-test/Erp10101Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
         workflow-test/ErpWorkflow169Test.cxx
@@ -60,12 +87,11 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/ErpWorkflowTestFixture.cxx
         workflow-test/HttpsTestClient.cxx
         workflow-test/MultipleMedicationDispenses.cxx
+        workflow-test/RegressionTest.cxx
         util/CertificateDirLoader.cxx
         util/CryptoHelper.cxx
         util/EnvironmentVariableGuard.hxx
         util/JwtBuilder.cxx
-        util/ResourceManager.cxx
-        util/TestConfiguration.cxx
         util/StaticData.cxx
     )
 
@@ -73,6 +99,8 @@ add_library(erp-test-lib OBJECT ${ERP_TEST_LIB_SOURCES})
 target_link_libraries(erp-test-lib
     PUBLIC
         erp-tool-lib
+    PUBLIC
+        erp-test-util-lib
         CONAN_PKG::glog
         CONAN_PKG::gtest
         CONAN_PKG::gsl-lite
@@ -93,8 +121,6 @@ add_compile_definitions(RAPIDJSON_HAS_STDSTRING=1)
 add_compile_definitions(RAPIDJSON_SCHEMA_VERBOSE=0)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wno-class-varargs)
-elseif(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    add_compile_options(-Wno-class-memaccess)
 endif()
 
 add_compile_definitions(ENABLE_DEBUG_LOG)
@@ -138,6 +164,7 @@ list(
         erp/database/PostgresBackendTest.cxx
         erp/database/PostgresDatabaseCommunicationTest.cxx
         erp/database/PostgresDatabaseMedicationDispenseTest.cxx
+        erp/database/PostgresDatabaseChargeItemTest.cxx
         erp/database/PostgresDatabaseTaskTest.cxx
         erp/database/PostgresDatabaseTest.cxx
         erp/database/RedisClientTest.cxx
@@ -191,6 +218,7 @@ list(
         erp/pc/CFdSigErpManagerTest.cxx
         erp/pc/CFdSigErpTestHelper.hxx
         erp/pc/PcServiceContextTest.cxx
+        erp/pc/PseudonameKeyRefreshJobTest.cxx
         erp/requirements/A_19714_SecureTransportChannel.cxx
         erp/registration/ApplicationHealthAndRegistrationUpdaterTest.cxx
         erp/registration/RegistrationManagerTest.cxx
@@ -223,6 +251,7 @@ list(
         erp/service/SubscriptionHandlerTest.cxx
         erp/service/TaskAbortHandlerTest.cxx
         erp/service/VauRequestHandlerExternalInterfaceTest.cxx
+        erp/service/VauRequestHandlerLeipsTest.cxx
         erp/service/VauRequestHandlerNotAllowedMethodsTest.cxx
         erp/service/VauRequestHandlerProblematicJwtsTest.cxx
         erp/service/VauRequestHandlerProfessionOIDTest.cxx
@@ -268,6 +297,7 @@ list(
         erp/util/search/SearchArgumentTest.cxx
         erp/util/search/SortArgumentTest.cxx
         erp/util/search/UrlArgumentsTest.cxx
+        erp/util/VersionTest.cxx
         erp/util/WorkDayTest.cxx
         erp/validation/JsonValidatorTest.cxx
         erp/validation/KbvBundleValidationTest.cxx
@@ -333,6 +363,7 @@ target_link_libraries ( erp-test
     PUBLIC
         erp-hsm-tpm-mock
         erp-test-lib
+        erp-test-util-lib
         erp-tool-lib
         erp-processing-context-files
         enrolment-api-client
@@ -358,6 +389,7 @@ endif()
 target_link_libraries(erp-integration-test
     PRIVATE
         erp-test-lib
+        erp-test-util-lib
         erp-tool-lib
         erp-processing-context-files
         enrolment-api-client
@@ -385,6 +417,7 @@ target_link_libraries (
         erp-connection-test
         PUBLIC
         erp-test-lib
+        erp-test-util-lib
         erp-tool-lib
         erp-processing-context-files
         enrolment-api-client
@@ -392,3 +425,5 @@ target_link_libraries (
         )
 
 add_custom_target(test DEPENDS erp-test erp-integration-test erp-connection-test resources)
+
+add_subdirectory(fhirtools)

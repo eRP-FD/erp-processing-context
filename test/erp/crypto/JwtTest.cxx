@@ -15,6 +15,7 @@
 #include "erp/util/JwtException.hxx"
 #include "erp/util/SafeString.hxx"
 #include "erp/util/String.hxx"
+
 #include "mock/crypto/MockCryptography.hxx"
 #include "test_config.h"
 #include "test/util/JwtBuilder.hxx"

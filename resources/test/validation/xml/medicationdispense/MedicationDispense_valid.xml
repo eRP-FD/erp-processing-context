@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <MedicationDispense xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/erxMedicationDispense" />
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense" />
   </meta>
   <identifier>
     <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
@@ -9,7 +9,7 @@
   </identifier>
   <status value="completed" />
   <medicationReference>
-    <reference value="#med0314" />
+    <reference value="med0314" />
     <display value="Sumatriptan-1a Pharma 100 mg Tabletten" />
   </medicationReference>
   <subject>

@@ -11,8 +11,8 @@
 TEST(CompositionTest, ConstructFromData)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string_view telematicId = "12345654321";
-    const model::Timestamp start = model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
-    const model::Timestamp end = model::Timestamp::fromXsDateTime("2021-02-05T11:12:00+01:00");
+    const fhirtools::Timestamp start = fhirtools::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
+    const fhirtools::Timestamp end = fhirtools::Timestamp::fromXsDateTime("2021-02-05T11:12:00+01:00");
     const std::string_view author = "https://prescriptionserver.telematik/Device/ErxService";
     const std::string_view prescriptionDigestIdentifier = "Binary/PrescriptionDigest-160.000.080.761.527.39";
 
@@ -95,9 +95,9 @@ TEST(CompositionTest, ConstructFromJson)//NOLINT(readability-function-cognitive-
     const auto composition = model::Composition::fromJsonNoValidation(json);
 
     const std::string telematicId = "987654321";
-    const model::Timestamp start = model::Timestamp::fromXsDateTime("2021-01-20T07:23:34.328+00:00");
-    const model::Timestamp end = model::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");
-    const model::Timestamp date = model::Timestamp::fromXsDateTime("2021-03-20T07:32:34.328+00:00");
+    const fhirtools::Timestamp start = fhirtools::Timestamp::fromXsDateTime("2021-01-20T07:23:34.328+00:00");
+    const fhirtools::Timestamp end = fhirtools::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");
+    const fhirtools::Timestamp date = fhirtools::Timestamp::fromXsDateTime("2021-03-20T07:32:34.328+00:00");
     const std::string_view author = "https://prescriptionserver.telematik/Device/ErxService";
 
     EXPECT_TRUE(composition.telematikId().has_value());

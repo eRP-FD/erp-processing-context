@@ -17,7 +17,7 @@
 
 #include "C14NHelper.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "erp/util/Base64.hxx"
@@ -26,8 +26,9 @@
 #include "erp/util/GLog.hxx"
 #include "erp/util/Hash.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/xml/XmlDocument.hxx"
-#include "erp/xml/XmlHelper.hxx"
+#include "fhirtools/util/XmlHelper.hxx"
 
 using namespace xmlHelperLiterals;
 
@@ -384,7 +385,7 @@ namespace
     {
         // TODO: replace with implementation supporting xs:dateTime format
         //       for https://dth01.ibmgcloud.net/jira/browse/ERP-4816
-        auto statusStartingTime = model::Timestamp::fromFhirDateTime(
+        auto statusStartingTime = fhirtools::Timestamp::fromFhirDateTime(
             String::trim(getChildTagText(child, "StatusStartingTime", true))).toChronoTimePoint();
         Expect(
             ! expectToBeTheLatest
@@ -834,7 +835,7 @@ namespace
             const std::string dateTime = xmlDocument.getElementText(xpathLiteral_nextUpdateText);
             // TODO: replace with implementation supporting xs:dateTime format
             //       for https://dth01.ibmgcloud.net/jira/browse/ERP-4816
-            return model::Timestamp::fromFhirDateTime(String::trim(dateTime)).toChronoTimePoint();
+            return fhirtools::Timestamp::fromFhirDateTime(String::trim(dateTime)).toChronoTimePoint();
         }
         catch(const std::runtime_error& e)
         {

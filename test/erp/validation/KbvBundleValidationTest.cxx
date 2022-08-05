@@ -8,6 +8,7 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/validation/XmlValidator.hxx"
 #include "test/util/StaticData.hxx"
 

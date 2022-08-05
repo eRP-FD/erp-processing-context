@@ -159,7 +159,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_noFilter)
         {ActorRole::Representative, InsurantF},
         std::string(givenTask.accessCode()),
         RepresentativeMessageByInsurant,
-        model::Timestamp::now()});
+        fhirtools::Timestamp::now()});
 
     // Create the inner request
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantE) };
@@ -196,17 +196,17 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantE}, {ActorRole::Representative, InsurantF},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantE}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantG}, {ActorRole::Representative, InsurantE},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByRepresentative, model::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
+        RepresentativeMessageByRepresentative, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
 
     // Create the inner request
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
@@ -243,17 +243,17 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantE},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByRepresentative, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z")});
+        RepresentativeMessageByRepresentative, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z")});
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantG}, {ActorRole::Representative, InsurantE},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByRepresentative, model::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z")});
+        RepresentativeMessageByRepresentative, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z")});
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantE},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByRepresentative, model::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
+        RepresentativeMessageByRepresentative, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
 
     // Create the inner request (as InsurantF)
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(InsurantF)) };
@@ -295,12 +295,12 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySent)
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:00Z") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
@@ -333,8 +333,8 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceived)
                                     {ActorRole::Representative, InsurantG},
                                     std::string(givenTask.accessCode()),
                                     RepresentativeMessageByInsurant,
-                                    model::Timestamp::fromXsDateTime("2022-01-22T12:00:00+02:00"),
-                                    model::Timestamp::fromXsDateTime("2022-01-23T01:00:00+02:00")});
+                                    fhirtools::Timestamp::fromXsDateTime("2022-01-22T12:00:00+02:00"),
+                                    fhirtools::Timestamp::fromXsDateTime("2022-01-23T01:00:00+02:00")});
 
     {
         // search for 2022-01-22, UTC time, should be found
@@ -370,17 +370,17 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentAndReceived
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-04") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-04") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
@@ -410,25 +410,25 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedTimeRan
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
         RepresentativeMessageByInsurant,
-        model::Timestamp::fromXsDateTime("2022-02-28T23:59:56Z"), model::Timestamp::fromXsDateTime("2022-02-28T23:59:59Z") });// not found
+        fhirtools::Timestamp::fromXsDateTime("2022-02-28T23:59:56Z"), fhirtools::Timestamp::fromXsDateTime("2022-02-28T23:59:59Z") });// not found
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
         RepresentativeMessageByInsurant,
-        model::Timestamp::fromXsDateTime("2022-03-01T12:34:56Z"), model::Timestamp::fromXsDateTime("2022-03-01T12:35:00Z") });// found
+        fhirtools::Timestamp::fromXsDateTime("2022-03-01T12:34:56Z"), fhirtools::Timestamp::fromXsDateTime("2022-03-01T12:35:00Z") });// found
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
         RepresentativeMessageByInsurant,
-        model::Timestamp::fromXsDateTime("2022-02-28T23:59:59Z"), model::Timestamp::fromXsDateTime("2022-03-01T00:00:00Z") });// found
+        fhirtools::Timestamp::fromXsDateTime("2022-02-28T23:59:59Z"), fhirtools::Timestamp::fromXsDateTime("2022-03-01T00:00:00Z") });// found
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
         RepresentativeMessageByInsurant,
-        model::Timestamp::fromXsDateTime("2022-03-01T23:59:56Z"), model::Timestamp::fromXsDateTime("2022-03-02T00:00:00Z") });// not found
+        fhirtools::Timestamp::fromXsDateTime("2022-03-01T23:59:56Z"), fhirtools::Timestamp::fromXsDateTime("2022-03-02T00:00:00Z") });// not found
 
     // Send the request.
     const auto jwtInsurant = mJwtBuilder.makeJwtVersicherter(InsurantF);
@@ -458,22 +458,22 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySender)
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyA}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyB}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -503,22 +503,22 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipient)
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyA}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyB}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -543,17 +543,17 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenderAndRecipi
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-04") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-04") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Representative, InsurantG}, {ActorRole::Insurant, InsurantF},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByRepresentative, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-04") });
+        RepresentativeMessageByRepresentative, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-04") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
@@ -585,22 +585,22 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenders)
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyA}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyB}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -630,22 +630,22 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipients)
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyA}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyB}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -675,22 +675,22 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndRecip
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyA}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyB}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -720,22 +720,22 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndSent)
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyA}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
         {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyB}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -760,17 +760,17 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipientAndRec
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02") });
     const auto givenCommunication3 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-04") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-04") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
@@ -796,12 +796,12 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_keyWithoutValueIsIgnore
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-04") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-04") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
@@ -827,12 +827,12 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_ignoredValueCanContainS
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), fhirtools::Timestamp::fromXsDate("2022-01-03") });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-04") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-04") });
 
     // Send the request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
@@ -860,19 +860,19 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_sort_sentReceived)
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-04")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01"), fhirtools::Timestamp::fromXsDate("2022-01-04")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01"), fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-03"), model::Timestamp::fromXsDate("2022-01-04")}
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-03"), fhirtools::Timestamp::fromXsDate("2022-01-04")}
     });
 
     // Send the request for _sort=sent,-received"
@@ -901,19 +901,19 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_sort_receivedSent)
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-04")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01"), fhirtools::Timestamp::fromXsDate("2022-01-04")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01"), fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-03"), model::Timestamp::fromXsDate("2022-01-04")}
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-03"), fhirtools::Timestamp::fromXsDate("2022-01-04")}
         });
 
     // Send the request for _sort=sent,-received"
@@ -942,19 +942,19 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_sort_receivedSentAndSea
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-04")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01"), fhirtools::Timestamp::fromXsDate("2022-01-04")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01"), fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02"), fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-03"), model::Timestamp::fromXsDate("2022-01-04")}
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-03"), fhirtools::Timestamp::fromXsDate("2022-01-04")}
         });
 
     // Send the request for _sort=sent,-received and filter (search) by recipient=InsurantH"
@@ -980,19 +980,19 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_firstPage)//NOLI
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-04")}
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-04")}
         });
 
     // Send the request for _sort=sent,-received and filter (search) by recipient=InsurantH"
@@ -1026,19 +1026,19 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_paging_nextPage)//NOLIN
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-01")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-02")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-03")},
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-03")},
         {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
             {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
             std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-04")}
+            RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDate("2022-01-04")}
         });
 
     for (const auto& communicationId : givenCommunicationIds)
@@ -1294,7 +1294,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_pagingSearch)
     const auto givenTask = addTaskToDatabase({ model::Task::Status::draft, InsurantF });
     std::vector<Uuid> givenCommunicationIds1;
     std::vector<Uuid> givenCommunicationIds2;
-    auto ts = model::Timestamp::fromXsDateTime("2022-01-23T12:00:00Z");
+    auto ts = fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:00:00Z");
     const std::size_t messageNum = 10;
     for(unsigned int i = 0; i < messageNum; ++i)
     {
@@ -1347,12 +1347,12 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_success)
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantE}, {ActorRole::Insurant, InsurantF},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z")});
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z")});
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantE}, {ActorRole::Insurant, InsurantG},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:35:11Z")});
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:35:11Z")});
 
     // Create the inner request
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantE) };
@@ -1416,7 +1416,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_failForObjectDirectedAt
         givenTask.prescriptionId(), model::Communication::MessageType::Representative,
         {ActorRole::Insurant, InsurantG}, {ActorRole::Insurant, InsurantH},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56+01:00")});
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56+01:00")});
 
     // Create the inner request.
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantE) };
@@ -1447,7 +1447,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
         givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
         {ActorRole::Insurant, InsurantE}, {ActorRole::Pharmacists, pharmacy},
         std::string(givenTask.accessCode()),
-        RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z") });
+        RepresentativeMessageByInsurant, fhirtools::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z") });
     abortTask(givenTask);
 
     auto client = createClient();
@@ -1466,7 +1466,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
     const auto task = addTaskToDatabase({ model::Task::Status::ready, InsurantA });
 
 
-    model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
+    fhirtools::Timestamp timestamp = fhirtools::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
     for (size_t idxPatient = 0; idxPatient < 18; ++idxPatient)
     {
          const auto communication = addCommunicationToDatabase({

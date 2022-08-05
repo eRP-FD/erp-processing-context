@@ -48,6 +48,7 @@ public:
             case model::PrescriptionType::direkteZuweisung:
                 return "erp.task_169";
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            case model::PrescriptionType::direkteZuweisungPkv:
                 Fail("Not yet implemented"); // TODO implement
         }
         Fail("invalid prescription type: " + std::to_string(uintmax_t(GetParam())));
@@ -82,7 +83,7 @@ public:
         return search;
     }
 
-    UrlArguments searchForLastModified(const model::Timestamp& timestamp, const std::string& operation)
+    UrlArguments searchForLastModified(const fhirtools::Timestamp& timestamp, const std::string& operation)
     {
         auto search = UrlArguments({{"modified", "last_modified", SearchParameter::Type::Date}});
         auto request = ServerRequest(Header());
@@ -91,7 +92,7 @@ public:
         return search;
     }
 
-    UrlArguments searchForAuthoredOn(const model::Timestamp& timestamp, const std::string& operation)
+    UrlArguments searchForAuthoredOn(const fhirtools::Timestamp& timestamp, const std::string& operation)
     {
         auto search = UrlArguments({{"authored-on", "authored_on", SearchParameter::Type::Date}});
         auto request = ServerRequest(Header());
@@ -130,8 +131,8 @@ public:
 
             // assign KVNRs
             task1.setKvnr(kvnr);
-            task1.setExpiryDate(model::Timestamp::now());
-            task1.setAcceptDate(model::Timestamp::now());
+            task1.setExpiryDate(fhirtools::Timestamp::now());
+            task1.setAcceptDate(fhirtools::Timestamp::now());
             task1.setStatus(model::Task::Status::ready);
             database().activateTask(
                 task1, model::Binary(Uuid().toString(),
@@ -210,8 +211,8 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-functio
     ASSERT_TRUE(database().retrieveAllTasksForPatient(InsurantA, {}).empty());
 
     task1.setStatus(model::Task::Status::ready);
-    task1.setExpiryDate(model::Timestamp::now());
-    task1.setAcceptDate(model::Timestamp::now());
+    task1.setExpiryDate(fhirtools::Timestamp::now());
+    task1.setAcceptDate(fhirtools::Timestamp::now());
     database().activateTask(
         task1,
         model::Binary(
@@ -292,8 +293,8 @@ TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     database().commitTransaction();
     task.setPrescriptionId(id);
     task.setKvnr("X123456789");
-    task.setAcceptDate(model::Timestamp::now());
-    task.setExpiryDate(model::Timestamp::now());
+    task.setAcceptDate(fhirtools::Timestamp::now());
+    task.setExpiryDate(fhirtools::Timestamp::now());
 
     database().activateTask(task, model::Binary{Uuid().toString(), "HealthCareProviderPrescription"});
     database().commitTransaction();
@@ -347,24 +348,24 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
 
     // assign KVNRs
     task1.setKvnr(kvnr1);
-    task1.setExpiryDate(model::Timestamp::now());
-    task1.setAcceptDate(model::Timestamp::now());
+    task1.setExpiryDate(fhirtools::Timestamp::now());
+    task1.setAcceptDate(fhirtools::Timestamp::now());
     database().activateTask(
         task1,
         model::Binary(
             Uuid().toString(),
             model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile).serializeToJsonString()));
     task2.setKvnr(kvnr2);
-    task2.setExpiryDate(model::Timestamp::now());
-    task2.setAcceptDate(model::Timestamp::now());
+    task2.setExpiryDate(fhirtools::Timestamp::now());
+    task2.setAcceptDate(fhirtools::Timestamp::now());
     database().activateTask(
         task2,
         model::Binary(
             Uuid().toString(),
             model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile).serializeToJsonString()));
     task3.setKvnr(kvnr2);
-    task3.setExpiryDate(model::Timestamp::now());
-    task3.setAcceptDate(model::Timestamp::now());
+    task3.setExpiryDate(fhirtools::Timestamp::now());
+    task3.setAcceptDate(fhirtools::Timestamp::now());
     database().activateTask(
         task3,
         model::Binary(
@@ -889,7 +890,7 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     model::AuditData auditDataOrig(
         model::AuditEventId::GET_Task_id_pharmacy,
         model::AuditMetaData(agentName, telematicId),
-        model::AuditEvent::Action::read, model::AuditEvent::AgentType::human, kvnr, deviceId, id);
+        model::AuditEvent::Action::read, model::AuditEvent::AgentType::human, kvnr, deviceId, id, std::nullopt);
     const std::string createdUuid = database().storeAuditEventData(auditDataOrig);
     database().commitTransaction();
 
@@ -911,6 +912,7 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     EXPECT_EQ(entry.deviceId(), auditDataOrig.deviceId());
     EXPECT_EQ(entry.id(), auditDataOrig.id());
     EXPECT_EQ(entry.recorded(), auditDataOrig.recorded());
+    EXPECT_FALSE(entry.consentId().has_value());
 
     cleanKvnr(InsurantA, taskTableName());
 }

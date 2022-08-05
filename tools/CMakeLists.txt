@@ -20,21 +20,9 @@ target_link_libraries(erp-tool-lib
         erp-processing-context-files
     )
 
-add_executable(vau_encrypt EXCLUDE_FROM_ALL ${VAU_ENC_SOURCES})
-target_link_libraries(vau_encrypt
-    PUBLIC
-        erp-tool-lib
-        erp-test-lib
-        erp-processing-context-files
-)
-target_include_directories (
-    vau_encrypt
-        PRIVATE ${PROJECT_SOURCE_DIR}/..   # Allow a leading `test/` or `util/` in include paths.
-)
-
 add_executable(make_task_id EXCLUDE_FROM_ALL make_task_id/make_task_id.cxx)
 target_link_libraries(make_task_id
-        PUBLIC
+    PUBLIC
         erp-processing-context-files
 )
 
@@ -43,7 +31,8 @@ add_library(enrolment-api-client OBJECT
 
 target_link_libraries(enrolment-api-client
     PUBLIC
-    erp-processing-context-files)
+        erp-processing-context-files
+)
 
 target_include_directories(erp-processing-context-files
     PUBLIC ${PROJECT_SOURCE_DIR}/..)
@@ -73,10 +62,16 @@ endif()
 
 add_executable(fhirconvert EXCLUDE_FROM_ALL fhirconvert/fhirconvert_main.cxx)
 target_link_libraries(fhirconvert
-        PUBLIC
+    PUBLIC
         erp-processing-context-files
 )
 
-add_custom_target(tools DEPENDS vau_encrypt make_task_id fhirconvert resources)
+add_executable(fhirvalidate EXCLUDE_FROM_ALL fhirvalidate/fhirvalidate_main.cxx)
+target_link_libraries(fhirvalidate
+    PUBLIC
+        erp-processing-context-files
+        fhirtools
+)
 
 
+add_custom_target(tools DEPENDS make_task_id fhirconvert resources)

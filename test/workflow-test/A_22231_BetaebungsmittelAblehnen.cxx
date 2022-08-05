@@ -10,6 +10,7 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/ResourceManager.hxx"
 
+
 class A_22231_BetaebungsmittelAblehnen : public ErpWorkflowTest
 {
 };
@@ -51,9 +52,8 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_01_direkteZuweisung)//NOLINT(r
 TEST_F(A_22231_BetaebungsmittelAblehnen, category_02_apothekenpflichtigeArzneimittelPkv)//NOLINT(readability-function-cognitive-complexity)
 {
     auto& resourceManager = ResourceManager::instance();
-    auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle_category_code.xml");
+    auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle_category_code_PKV.xml");
     bundle = String::replaceAll(bundle, "###CODE###", "02");
-    bundle = String::replaceAll(bundle, "###COVERAGE###", "PKV");
     bundle = patchVersionsInBundle(bundle);
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv));

@@ -21,7 +21,7 @@ namespace
         // where there is no valid cached OCSP-Response.
         // For this reason, if the configured time interval is big enough, there is a 2 minutes time buffer,
         // the timer requests new OCSP-Response 2 minutes before the old one is outdated.
-        if (updateSeconds.count() > ocspValidationBufferSeconds * 2)
+        if (updateSeconds.count() > ocspValidationBufferSeconds * 2l)
         {
             updateSeconds -= std::chrono::seconds(ocspValidationBufferSeconds);
         }
@@ -182,7 +182,7 @@ std::string CFdSigErpManager::getLastValidationTimestamp()
         return "never successfully validated";
     }
 
-    return model::Timestamp(mLastSuccess).toXsDateTime();
+    return fhirtools::Timestamp(mLastSuccess).toXsDateTime();
 }
 
 CertificateType CFdSigErpManager::getCertificateType() const
@@ -196,7 +196,7 @@ std::string CFdSigErpManager::getCertificateNotAfterTimestamp() const
 {
     const auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
     const auto x509Certificate = X509Certificate::createFromBase64(cFdSigErp.toBase64Der());
-    return model::Timestamp::fromTmInUtc(x509Certificate.getNotAfter()).toXsDateTime();
+    return fhirtools::Timestamp::fromTmInUtc(x509Certificate.getNotAfter()).toXsDateTime();
 }
 
 

@@ -1,10 +1,10 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2022
+ * (C) Copyright IBM Corp. 2022
  */
 
-#ifndef E_LIBRARY_UTIL_STRING_HXX
-#define E_LIBRARY_UTIL_STRING_HXX
+#ifndef FHIR_PATH_STRING_HXX
+#define FHIR_PATH_STRING_HXX
 
 #include <cstdarg>
 #include <functional>
@@ -14,7 +14,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
 
 class String
 {
@@ -214,5 +213,4 @@ std::string String::concatenateItems (Items&& ... items)
     outputItems(os, std::forward<Items>(items)...);
     return os.str();
 }
-
 #endif

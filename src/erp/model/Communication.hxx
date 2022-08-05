@@ -8,7 +8,7 @@
 
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/validation/SchemaType.hxx"
 
@@ -17,12 +17,16 @@ namespace model
 class Communication : public Resource<Communication>
 {
 public:
+    static constexpr auto resourceTypeName = "Communication";
+
     enum class MessageType : int8_t
     {
         InfoReq = 0,
         Reply = 1,
         DispReq = 2,
-        Representative = 3
+        Representative = 3,
+        ChargChangeReq = 4,
+        ChargChangeReply = 5
     };
     static const std::string_view& messageTypeToString(MessageType messageType);
     static int8_t messageTypeToInt(MessageType messageType);
@@ -62,11 +66,11 @@ public:
     std::optional<std::string_view> recipient() const;
     void setRecipient(const std::string_view& recipient);
 
-    std::optional<Timestamp> timeSent() const;
-    void setTimeSent(const Timestamp& timestamp = Timestamp::now());
+    std::optional<fhirtools::Timestamp> timeSent() const;
+    void setTimeSent(const fhirtools::Timestamp& timestamp = fhirtools::Timestamp::now());
 
-    std::optional<Timestamp> timeReceived() const;
-    void setTimeReceived(const Timestamp& timestamp = Timestamp::now());
+    std::optional<fhirtools::Timestamp> timeReceived() const;
+    void setTimeReceived(const fhirtools::Timestamp& timestamp = fhirtools::Timestamp::now());
     void deleteTimeReceived();
 
     PrescriptionId prescriptionId() const;

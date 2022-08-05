@@ -4,20 +4,22 @@
  */
 
 #include "erp/service/task/AcceptTaskHandler.hxx"
-
 #include "erp/ErpRequirements.hxx"
-#include "erp/database/Database.hxx"
-#include "erp/model/Task.hxx"
-#include "erp/model/Bundle.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/Consent.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/crypto/SecureRandomGenerator.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/ByteHelper.hxx"
-
 #include "erp/common/MimeType.hxx"
+#include "erp/crypto/SecureRandomGenerator.hxx"
+#include "erp/database/Database.hxx"
+#include "erp/model/Binary.hxx"
+#include "erp/model/Bundle.hxx"
+#include "erp/model/Consent.hxx"
+#include "erp/model/KbvBundle.hxx"
+#include "erp/model/KbvMedicationRequest.hxx"
+#include "erp/model/PrescriptionId.hxx"
+#include "erp/model/Task.hxx"
+#include "erp/model/extensions/KBVMultiplePrescription.hxx"
+#include "erp/server/response/ServerResponse.hxx"
+#include "erp/util/Base64.hxx"
+#include "erp/util/ByteHelper.hxx"
+#include "erp/util/TLog.hxx"
 
 
 AcceptTaskHandler::AcceptTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -41,8 +43,13 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 
     checkTaskPreconditions(session, *task);
 
-    ErpExpect(healthCareProviderPrescription.has_value(), HttpStatus::NotFound,
-        "Healthcare provider prescription not found for prescription id");
+    ErpExpect(healthCareProviderPrescription.has_value() && healthCareProviderPrescription->data().has_value(),
+              HttpStatus::NotFound, "Healthcare provider prescription not found for prescription id");
+
+    const auto cadesBesSignature =
+        unpackCadesBesSignatureNoVerify(std::string{*healthCareProviderPrescription->data()});
+    const auto& prescription = cadesBesSignature.payload();
+    checkMultiplePrescription(model::KbvBundle::fromXmlNoValidation(prescription));
 
     A_19169.start("Set status to in-progress, create and set secret");
     task->setStatus(model::Task::Status::inprogress);
@@ -132,4 +139,29 @@ void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, 
                 "Task has invalid status " + std::string(model::Task::StatusNames.at(taskStatus)));
     }
     A_19168.finish();
+}
+
+void AcceptTaskHandler::checkMultiplePrescription(const model::KbvBundle& prescription)
+{
+    A_22635.start("check MVO period start");
+    const date::year_month_day today = floor<date::days>(std::chrono::system_clock::now());
+    const auto& medicationRequests = prescription.getResourcesByType<model::KbvMedicationRequest>();
+    if (!medicationRequests.empty())
+    {
+        auto mPExt = medicationRequests[0].getExtension<model::KBVMultiplePrescription>();
+        if (mPExt && mPExt->isMultiplePrescription())
+        {
+            const auto startDate = mPExt->startDate();
+            ErpExpect(startDate.has_value(), HttpStatus::InternalServerError,
+                      "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.start "
+                      "not present");
+            const date::year_month_day validFrom = floor<date::days>(startDate->toChronoTimePoint());
+            if (today < validFrom)
+            {
+                std::ostringstream ss;
+                ss << "Teilverordnung ab " << validFrom << " einlösbar.";
+                ErpFail(HttpStatus::Forbidden, ss.str());
+            }
+        }
+    }
 }

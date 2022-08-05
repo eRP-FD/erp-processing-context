@@ -46,7 +46,6 @@ class Bundle;
 class Communication;
 class ErxReceipt;
 class PrescriptionId;
-class Timestamp;
 }
 
 enum class CmacKeyCategory: int8_t;
@@ -67,36 +66,36 @@ public:
     ///       It has been passed through the database and has undergone the same rounding as will be done
     ///       when decrypting. Using the input parameter @p created might suffer from later rounding errors
     ///       see ERP-5602
-    virtual std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
+    virtual std::tuple<model::PrescriptionId, fhirtools::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                            model::Task::Status taskStatus,
-                                                                           const model::Timestamp& lastUpdated,
-                                                                           const model::Timestamp& created) = 0;
+                                                                           const fhirtools::Timestamp& lastUpdated,
+                                                                           const fhirtools::Timestamp& created) = 0;
 
     virtual void updateTask(const model::PrescriptionId& taskId, const db_model::EncryptedBlob& accessCode,
                             BlobId blobId, const db_model::Blob& salt) = 0;
     /// @returns BlobId, salt, authoredOn
-    virtual std::tuple<BlobId, db_model::Blob, model::Timestamp>
+    virtual std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp>
     getTaskKeyData(const model::PrescriptionId& taskId) = 0;
 
     virtual void updateTaskStatusAndSecret(const model::PrescriptionId& taskId, model::Task::Status status,
-                                           const model::Timestamp& lastModifiedDate,
+                                           const fhirtools::Timestamp& lastModifiedDate,
                                            const std::optional<db_model::EncryptedBlob>& secret) = 0;
     virtual void activateTask(const model::PrescriptionId& taskId, const db_model::EncryptedBlob& encryptedKvnr,
                               const db_model::HashedKvnr& hashedKvnr, model::Task::Status taskStatus,
-                              const model::Timestamp& lastModified, const model::Timestamp& expiryDate,
-                              const model::Timestamp& acceptDate,
+                              const fhirtools::Timestamp& lastModified, const fhirtools::Timestamp& expiryDate,
+                              const fhirtools::Timestamp& acceptDate,
                               const db_model::EncryptedBlob& healthCareProviderPrescription) = 0;
     virtual void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                                      const model::Task::Status& taskStatus,
-                                                     const model::Timestamp& lastModified,
+                                                     const fhirtools::Timestamp& lastModified,
                                                      const db_model::EncryptedBlob& medicationDispense,
                                                      BlobId medicationDispenseBlobId,
                                                      const db_model::HashedTelematikId& telematicId,
-                                                     const model::Timestamp& whenHandedOver,
-                                                     const std::optional<model::Timestamp>& whenPrepared,
+                                                     const fhirtools::Timestamp& whenHandedOver,
+                                                     const std::optional<fhirtools::Timestamp>& whenPrepared,
                                                      const db_model::EncryptedBlob& receipt) = 0;
     virtual void updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus,
-                                             const model::Timestamp& lastModified) = 0;
+                                             const fhirtools::Timestamp& lastModified) = 0;
 
     virtual std::string storeAuditEventData(db_model::AuditData& auditData) = 0;
     virtual std::vector<db_model::AuditData>
@@ -131,7 +130,7 @@ public:
      */
     virtual std::optional<Uuid>
     insertCommunication(const model::PrescriptionId& prescriptionId,
-                        const model::Timestamp& timeSent,
+                        const fhirtools::Timestamp& timeSent,
                         const model::Communication::MessageType messageType,
                         const db_model::HashedId& sender,
                         const db_model::HashedId& recipient,
@@ -177,11 +176,11 @@ public:
      * If "received" does not have a value this means that the communication has not been
      * received by the recipient.
      */
-    virtual std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+    virtual std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
     deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender) = 0;
     virtual void deleteCommunicationsForTask(const model::PrescriptionId& taskId) = 0;
     virtual void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds,
-                                               const model::Timestamp& retrieved,
+                                               const fhirtools::Timestamp& retrieved,
                                                const db_model::HashedId& recipient) = 0;
 
     [[nodiscard]]
@@ -198,32 +197,21 @@ public:
                               BlobId blobId,
                               const db_model::Blob& salt) = 0;
 
-    virtual void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) = 0;
+    virtual void storeConsent(const db_model::HashedKvnr& kvnr, const fhirtools::Timestamp& creationTime) = 0;
 
-    virtual std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) = 0;
+    virtual std::optional<fhirtools::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) = 0;
     [[nodiscard]] virtual bool clearConsent(const db_model::HashedKvnr& kvnr) = 0;
 
+    virtual void storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr) = 0;
+    virtual void updateChargeInformation(const ::db_model::ChargeItem& chargeItem) = 0;
 
-    virtual void storeChargeInformation(const db_model::HashedTelematikId& pharmacyId, model::PrescriptionId id,
-                                        const model::Timestamp& enteredDate,
-                                        const db_model::EncryptedBlob& chargeItem,
-                                        const db_model::EncryptedBlob& dispenseItem) = 0;
+    [[nodiscard]] virtual ::std::vector<::db_model::ChargeItem>
+    retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvnr& kvnr,
+                                      const ::std::optional<UrlArguments>& search) const = 0;
 
-    virtual std::vector<db_model::ChargeItem>
-    retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
-                                      const std::optional<UrlArguments>& search) const = 0;
-    virtual std::vector<db_model::ChargeItem>
-    retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& kvnr,
-                                      const std::optional<UrlArguments>& search) const = 0;
-
-    [[nodiscard]] virtual std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
-    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& Id) const = 0;
-    /// @returns: ChargeItem, DispenseItem
-    virtual std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-    retrieveChargeInformation(const model::PrescriptionId& id) const = 0;
-    /// @returns: ChargeItem, DispenseItem
-    virtual std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-    retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const = 0;
+    [[nodiscard]] virtual ::db_model::ChargeItem retrieveChargeInformation(const ::model::PrescriptionId& id) const = 0;
+    [[nodiscard]] virtual ::db_model::ChargeItem
+    retrieveChargeInformationForUpdate(const ::model::PrescriptionId& id) const = 0;
 
     virtual void deleteChargeInformation(const model::PrescriptionId& id) = 0;
 
@@ -231,12 +219,6 @@ public:
 
     virtual uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
                                              const std::optional<UrlArguments>& search) = 0;
-
-    virtual uint64_t countChargeInformationForPharmacy(const db_model::HashedTelematikId& pharmacyTelematikId,
-                                             const std::optional<UrlArguments>& search) = 0;
-
-
-
 };
 
 #endif//ERP_PROCESSING_CONTEXT_DATABASEBACKEND_HXX

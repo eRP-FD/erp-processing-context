@@ -8,6 +8,7 @@
 #include "erp/client/RootCertificates.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/util/GLog.hxx"
 
 #include <boost/asio/buffer.hpp>

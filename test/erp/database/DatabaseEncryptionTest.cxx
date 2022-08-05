@@ -45,10 +45,10 @@ protected:
     {
         auto& db = database();
         model::Task task{model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode};
-        task.setAcceptDate(model::Timestamp{1.0});
-        task.setExpiryDate(model::Timestamp{2.0});
+        task.setAcceptDate(fhirtools::Timestamp{1.0});
+        task.setExpiryDate(fhirtools::Timestamp{2.0});
         task.setKvnr(InsurantA);
-        task.updateLastUpdate(model::Timestamp{3.0});
+        task.updateLastUpdate(fhirtools::Timestamp{3.0});
         task.setStatus(model::Task::Status::completed);
         task.setSecret(secret);
         model::PrescriptionId prescriptionId = db.storeTask(task);
@@ -251,7 +251,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     auto communication = model::Communication::fromJsonNoValidation(builder.createJsonString());
     communication.setSender(InsurantA);
     communication.setRecipient(mPharmacy);
-    communication.setTimeSent(model::Timestamp{(int64_t)1612134000});
+    communication.setTimeSent(fhirtools::Timestamp{(int64_t)1612134000});
     auto id = db.insertCommunication(communication);
     ASSERT_TRUE(id.has_value());
     db.commitTransaction();
@@ -335,7 +335,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
                                model::AuditEvent::AgentType::human,
                                std::string{InsurantA},
                                4711,
-                               std::nullopt};
+                               std::nullopt, std::nullopt};
     auto& db = database();
     auto id = db.storeAuditEventData(auditData);
     db.commitTransaction();

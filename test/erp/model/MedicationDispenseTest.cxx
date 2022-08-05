@@ -656,12 +656,12 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     medicationDispense.setTelematicId(telematicId);
     EXPECT_EQ(medicationDispense.telematikId(), telematicId);
 
-    const model::Timestamp whenHandedOver = model::Timestamp::now();
+    const fhirtools::Timestamp whenHandedOver = fhirtools::Timestamp::now();
     medicationDispense.setWhenHandedOver(whenHandedOver);
     EXPECT_EQ(medicationDispense.whenHandedOver(), whenHandedOver);
 
     EXPECT_FALSE(medicationDispense.whenPrepared().has_value());
-    const model::Timestamp whenPrepared = model::Timestamp::now();
+    const fhirtools::Timestamp whenPrepared = fhirtools::Timestamp::now();
     medicationDispense.setWhenPrepared(whenPrepared);
     EXPECT_TRUE(medicationDispense.whenPrepared().has_value());
     EXPECT_EQ(medicationDispense.whenPrepared().value(), whenPrepared);
@@ -696,9 +696,8 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function
     EXPECT_NO_THROW(validate());
 
 
-    whenPrepared.Set(md, md.makeString("2020-03-20T07:13:00+05:00"));
+    whenPrepared.Set(md, md.makeString("2020-03-19T07:13:00+05:00"));
     EXPECT_NO_THROW(validate());
-
-    whenPrepared.Set(md, md.makeString("2020-03-20"));
+whenPrepared.Set(md, md.makeString("2020-03-20"));
     EXPECT_NO_THROW(validate());
 }

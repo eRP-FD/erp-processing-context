@@ -6,7 +6,7 @@
 libos.entrypoint                    = "erp-processing-context"
 libos.check_invalid_pointers        = false
 
-loader.preload                      = "file:/usr/lib/x86_64-linux-gnu/gramine/libsysdb.so"
+loader.entrypoint                   = "file:/usr/lib/x86_64-linux-gnu/gramine/libsysdb.so"
 loader.log_level                    = "warning"                   # none error warning debug trace all
 loader.log_file                     = "/var/log/erp/gramine.log"
 loader.insecure__use_cmdline_argv   = false
@@ -21,54 +21,21 @@ sgx.preheat_enclave                 = true
 sys.enable_sigterm_injection        = true         # Allow for injecting SIGTERM signal from the host.
 sys.insecure__allow_eventfd         = true
 
-# Mount host-OS directory to gramine glibc/runtime libraries (in 'uri') into in gramine visible directory /lib (in 'path').
-fs.mount.lib.type = "chroot"
-fs.mount.lib.path = "/lib"
-fs.mount.lib.uri = "file:/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/"
-
-fs.mount.root_dir.type = "chroot"
-fs.mount.root_dir.path = "/erp"      # Enclave path
-fs.mount.root_dir.uri  = "file:/erp" # Host path
-
-fs.mount.libarch.type = "chroot"
-fs.mount.libarch.path = "/lib/x86_64-linux-gnu"
-fs.mount.libarch.uri  = "file:/lib/x86_64-linux-gnu"
-
-fs.mount.ulibarch.type = "chroot"
-fs.mount.ulibarch.path = "/usr/lib/x86_64-linux-gnu"
-fs.mount.ulibarch.uri  = "file:/usr/lib/x86_64-linux-gnu"
-
-fs.mount.etc.type = "chroot"
-fs.mount.etc.path = "/etc"
-fs.mount.etc.uri = "file:/etc"
-
-fs.mount.host_conf.type = "chroot"
-fs.mount.host_conf.path = "/etc/host.conf"
-fs.mount.host_conf.uri  = "file:/etc/host.conf"
-
-fs.mount.tmp.type = "chroot"
-fs.mount.tmp.path = "/tmp"
-fs.mount.tmp.uri  = "file:/tmp"
-
-fs.mount.log_dir.type = "chroot"
-fs.mount.log_dir.path = "/var/log/erp"
-fs.mount.log_dir.uri  = "file:/var/log/erp"
-
-fs.mount.var_config.type = "chroot"
-fs.mount.var_config.path = "/var/config"
-fs.mount.var_config.uri = "file:/var/config"
-
-fs.mount.devtpmrm0.type = "chroot"
-fs.mount.devtpmrm0.path = "/dev/tpmrm0"
-fs.mount.devtpmrm0.uri  = "dev:/dev/tpmrm0"
-
-fs.mount.devtpm0.type   = "chroot"
-fs.mount.devtpm0.path   = "/dev/tpm0"
-fs.mount.devtpm0.uri    = "dev:/dev/tpm0"
-
-fs.mount.zoneinfo.type = "chroot"
-fs.mount.zoneinfo.path = "/usr/share/zoneinfo/"
-fs.mount.zoneinfo.uri  = "file:/usr/share/zoneinfo"
+fs.mounts = [
+  # Mount host-OS directory to gramine glibc/runtime libraries (in 'uri') into in gramine visible directory /lib (in 'path')
+  { "type" = "chroot", uri = "file:/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/",   path = "/lib" },
+  { "type" = "chroot", uri = "file:/erp",                                               path = "/erp" },
+  { "type" = "chroot", uri = "file:/lib/x86_64-linux-gnu",                              path = "/lib/x86_64-linux-gnu" },
+  { "type" = "chroot", uri = "file:/usr/lib/x86_64-linux-gnu",                          path = "/usr/lib/x86_64-linux-gnu" },
+  { "type" = "chroot", uri = "file:/etc",                                               path = "/etc" },
+  { "type" = "chroot", uri = "file:/etc/host.conf",                                     path = "/etc/host.conf" },
+  { "type" = "chroot", uri = "file:/tmp",                                               path = "/tmp" },
+  { "type" = "chroot", uri = "file:/var/log/erp",                                       path = "/var/log/erp" },
+  { "type" = "chroot", uri = "file:/var/config",                                        path = "/var/config" },
+  { "type" = "chroot", uri = "file:/dev/tpmrm0",                                        path = "/dev/tpmrm0" },
+  { "type" = "chroot", uri = "file:/dev/tpm0",                                          path = "/dev/tpm0" },
+  { "type" = "chroot", uri = "file:/usr/share/zoneinfo",                                path = "/usr/share/zoneinfo" }
+]
 
 # Allowed files can be read/written from within the gramine environment.
 sgx.allowed_files = [
@@ -118,14 +85,22 @@ sgx.trusted_files = [
 "file:01_production.config.json",
 "file:/var/log/erp/",
 # ERP libs
+"file:/erp/lib/libcrypto.so.1.1",
 "file:/erp/lib/libcsxapi.so",
+"file:/erp/lib/libgmp.so.10",
+"file:/erp/lib/libgmp.so.10.4.1",
+"file:/erp/lib/libgmpxx.so.4",
+"file:/erp/lib/libgmpxx.so.4.6.1",
 "file:/erp/lib/libhsmclient.so",
 "file:/erp/lib/libibmtss.so.1",
 "file:/erp/lib/libibmtss.so.1.6.0",
 "file:/erp/lib/libibmtssutils.so.1",
 "file:/erp/lib/libibmtssutils.so.1.6.0",
-"file:/erp/lib/libcrypto.so.1.1",
+"file:/erp/lib/libmpfr.so.6",
+"file:/erp/lib/libmpfr.so.6.1.0",
 "file:/erp/lib/libssl.so.1.1",
+"file:/erp/lib/libstdc++.so.6",
+"file:/erp/lib/libstdc++.so.6.0.29",
 "file:/erp/lib/libtpmclient.so",
 __ADDITIONAL_TRUST_FILES__
 ]

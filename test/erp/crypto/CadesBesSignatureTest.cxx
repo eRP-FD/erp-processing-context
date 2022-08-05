@@ -8,7 +8,7 @@
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/tsl/OcspHelper.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/TslManager.hxx"
@@ -69,6 +69,45 @@ public:
     {
         mCaDerPathGuard.reset();
     }
+
+    OcspResponsePtr getEmbeddedOcspResponse(const std::string& cmsBase64Text)
+    {
+        const auto plain = Base64::decode(cmsBase64Text);
+        auto bioIndata = shared_BIO::make();
+        Expect(plain.size() <= static_cast<size_t>(std::numeric_limits<int>::max()), "unexpected size");
+        Expect(BIO_write(bioIndata.get(), plain.data(), static_cast<int>(plain.size())) ==
+                      static_cast<int>(plain.size()), "can not write bio");
+        shared_CMS_ContentInfo contentInfo = shared_CMS_ContentInfo::make(d2i_CMS_bio(bioIndata.get(), nullptr));
+        Expect(contentInfo != nullptr, "can not create CMS_ContentInfo");
+
+        const int nidOcspResponseRevocationContainer = OBJ_txt2nid("1.3.6.1.5.5.7.16.2");
+        if (nidOcspResponseRevocationContainer != NID_undef)
+        {
+            ASN1_OBJECT* formatObject = OBJ_nid2obj(nidOcspResponseRevocationContainer);
+            Expect(formatObject != nullptr, "no format object for OCSP response revocation container");
+            int index = CMS_get_anotherRevocationInfo_by_format(contentInfo, formatObject, -1);
+            if (index >= 0)
+            {
+                ASN1_TYPE* ocspResponseAny = CMS_get0_anotherRevocationInfo(contentInfo, index);
+                Expect(ocspResponseAny != nullptr, "no ASN1_TYPE object for embedded OCSP response");
+                int objectType = ASN1_TYPE_get(ocspResponseAny);
+                Expect(objectType == V_ASN1_SEQUENCE, "unexpected object type");
+                return OcspResponsePtr(
+                    reinterpret_cast<OCSP_RESPONSE*>(
+                        ASN1_TYPE_unpack_sequence(ASN1_ITEM_rptr(OCSP_RESPONSE), ocspResponseAny)));
+            }
+            else
+            {
+                LOG(INFO) << "no valid index for revocation info";
+            }
+        }
+        else
+        {
+            LOG(INFO) << "no object for OCSP response revocation container";
+        }
+
+        return OcspResponsePtr();
+    }
 };
 
 
@@ -80,7 +119,7 @@ TEST_F(CadesBesSignatureTest, roundtrip)
     std::string signedText;
     {
         CadesBesSignature cms{cert, privKey, std::string{myText}};
-        ASSERT_NO_THROW(signedText = Base64::encode(cms.get()));
+        ASSERT_NO_THROW(signedText = cms.getBase64());
     }
     {
         const auto& testConfig = TestConfiguration::instance();
@@ -120,7 +159,7 @@ TEST_F(CadesBesSignatureTest, roundtripWithoutTsl)
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}};
-        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
     }
     {
         CadesBesSignature cadesBesSignature{signedText};
@@ -132,7 +171,7 @@ TEST_F(CadesBesSignatureTest, roundtripWithoutTsl)
 TEST_F(CadesBesSignatureTest, getSigningTime)
 {
     // Extracted manually from KBV-from-testing.p7s
-    model::Timestamp referenceTime = model::Timestamp::fromXsDateTime("2021-02-25T10:04:04Z");
+    fhirtools::Timestamp referenceTime = fhirtools::Timestamp::fromXsDateTime("2021-02-25T10:04:04Z");
 
     CadesBesSignature cadesBesSignature(
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/cadesBesSignature/KBV-from-testing.p7s"));
@@ -158,13 +197,13 @@ TEST_F(CadesBesSignatureTest, getMessageDigest)
 TEST_F(CadesBesSignatureTest, setSigningTime)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string_view myText = "The text to be signed";
-    auto signingTime = model::Timestamp::fromXsDateTime("2019-02-25T08:05:05Z");
+    auto signingTime = fhirtools::Timestamp::fromXsDateTime("2019-02-25T08:05:05Z");
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
     auto cert = Certificate::fromPem(certificate);
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}, signingTime};
-        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
     }
     {
         CadesBesSignature cadesBesSignature{signedText};
@@ -178,7 +217,6 @@ TEST_F(CadesBesSignatureTest, setSigningTime)//NOLINT(readability-function-cogni
 
 TEST_F(CadesBesSignatureTest, validateWithBna)
 {
-
     std::string_view myText = "The text to be signed";
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
         FileHelper::readFileAsString(
@@ -200,7 +238,7 @@ TEST_F(CadesBesSignatureTest, validateWithBna)
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
-        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
     }
     {
         CadesBesSignature cadesBesSignature{signedText, *manager};
@@ -209,12 +247,12 @@ TEST_F(CadesBesSignatureTest, validateWithBna)
 }
 
 
-TEST_F(CadesBesSignatureTest, GematikExampleWithOcsp)
+TEST_F(CadesBesSignatureTest, GematikExampleWithOutdatedOcsp)//NOLINT(readability-function-cognitive-complexity)
 {
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
 
-    // To accept old OCSP-Response the OCSP grace period is set to ca 50 years
-    EnvironmentVariableGuard environmentGuard("ERP_OCSP_QES_GRACE_PERIOD", "1576800000");
+    // The contained in CAdES-BES OCSP-Response is outdated, but it is valid for the
+    // time of signature creation ( reference time point ), thus it must be accepted
     const auto raw =
         FileHelper::readFileAsString(
             std::string(TEST_DATA_DIR)
@@ -225,22 +263,6 @@ TEST_F(CadesBesSignatureTest, GematikExampleWithOcsp)
 }
 
 
-TEST_F(CadesBesSignatureTest, GematikExampleWithOutdatedOcsp)//NOLINT(readability-function-cognitive-complexity)
-{
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
-
-    // The old OCSP-Response is outdated, and thus an OCSP-Request should be send.
-    // The test framework is not configured to support the OCSP-Request that should produce OCSP_NOT_AVAILABLE error.
-    const auto raw =
-        FileHelper::readFileAsString(
-            std::string(TEST_DATA_DIR)
-            + "/cadesBesSignature/4fe2013d-ae94-441a-a1b1-78236ae65680_S_SECUN_secu_kon_4.8.2_4.1.3.p7s");
-    EXPECT_TSL_ERROR_THROW(CadesBesSignature(raw, *manager),
-               {TslErrorCode::OCSP_NOT_AVAILABLE},
-               HttpStatus::InternalServerError);
-}
-
-
 TEST_F(CadesBesSignatureTest, validateGematik)
 {
     // TODO: The two certificates below, QES-noType.base64.der and QES-noTypeCA.base64.der
@@ -248,6 +270,9 @@ TEST_F(CadesBesSignatureTest, validateGematik)
     //       Hopefully we can obtain non-sensitive replacements from Achelos. If that
     //       is not possible then remove the certificates and also this test before making
     //       the source code publicly accessible.
+
+    // The contained in CAdES-BES OCSP-Response is outdated, but it is valid for the
+    // time of signature creation ( reference time point ), thus it must be accepted
     auto cert = Certificate::fromBase64Der(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-noType.base64.der"));
 
@@ -280,7 +305,7 @@ TEST_F(CadesBesSignatureTest, validateRequiredSignedFields)//NOLINT(readability-
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
-        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
     }
 
     const auto plain = Base64::decode(signedText);
@@ -359,7 +384,7 @@ TEST_F(CadesBesSignatureTest, validateQesG0NoOcspProxy)
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
-        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
     }
     {
         CadesBesSignature cadesBesSignature{signedText, *manager};
@@ -402,7 +427,7 @@ TEST_F(CadesBesSignatureTest, validateQesG0WithOcspProxy)
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
-        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
     }
     {
         CadesBesSignature cadesBesSignature{signedText, *manager};
@@ -454,33 +479,60 @@ TEST_F(CadesBesSignatureTest, validateOcspResponseInGeneratedCMS)//NOLINT(readab
             std::string{myText},
             std::nullopt,
             OcspHelper::stringToOcspResponse(ocspResponseData.response)};
-        ASSERT_NO_THROW(signedText = Base64::encode(cadesBesSignature.get()));
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
     }
 
-    const auto plain = Base64::decode(signedText);
-    auto bioIndata = shared_BIO::make();
-    ASSERT_TRUE(plain.size() <= static_cast<size_t>(std::numeric_limits<int>::max()));
-    ASSERT_TRUE(BIO_write(bioIndata.get(), plain.data(), static_cast<int>(plain.size())) ==
-                  static_cast<int>(plain.size()));
-    shared_CMS_ContentInfo contentInfo = shared_CMS_ContentInfo::make(d2i_CMS_bio(bioIndata.get(), nullptr));
-    ASSERT_NE(nullptr, contentInfo);
-
-    const int nidOcspResponseRevocationContainer = OBJ_txt2nid("1.3.6.1.5.5.7.16.2");
-    ASSERT_NE(nidOcspResponseRevocationContainer, NID_undef);
-
-    ASN1_OBJECT* formatObject = OBJ_nid2obj(nidOcspResponseRevocationContainer);
-    ASSERT_NE(formatObject, nullptr);
-    int index = CMS_get_anotherRevocationInfo_by_format(contentInfo, formatObject, -1);
-    ASSERT_TRUE(index >= 0);
-    ASN1_TYPE* ocspResponseAny = CMS_get0_anotherRevocationInfo(contentInfo, index);
-    ASSERT_NE(ocspResponseAny, nullptr);
-    int objectType = ASN1_TYPE_get(ocspResponseAny);
-    ASSERT_EQ(objectType, V_ASN1_SEQUENCE);
-    OcspResponsePtr ocspResponseFromCms(
-        reinterpret_cast<OCSP_RESPONSE*>(
-            ASN1_TYPE_unpack_sequence(ASN1_ITEM_rptr(OCSP_RESPONSE), ocspResponseAny)));
+    OcspResponsePtr ocspResponseFromCms;
+    ASSERT_NO_THROW(ocspResponseFromCms = getEmbeddedOcspResponse(signedText));
     ASSERT_NE(ocspResponseFromCms, nullptr);
 
     const std::string bioOcspResponseFromCms = OcspHelper::ocspResponseToString(*ocspResponseFromCms);
     ASSERT_EQ(ocspResponseData.response, bioOcspResponseFromCms);
+}
+
+
+TEST_F(CadesBesSignatureTest, noProvidedOcspResponseInCms)
+{
+    std::string_view myText = "The text to be signed";
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
+        FileHelper::readFileAsString(
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.prv.pem")});
+
+    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem"));
+
+    auto certCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
+        {},
+        {},
+        {
+            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+             {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    std::string signedText;
+    {
+        CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
+    }
+
+    {
+        // created cadesBesSignature does not contain embedded OCSP-Response
+        OcspResponsePtr ocspResponseFromCms;
+        ASSERT_NO_THROW(ocspResponseFromCms = getEmbeddedOcspResponse(signedText));
+        ASSERT_EQ(ocspResponseFromCms, nullptr);
+
+        // the reloading should embed OCSP-Response to the package
+        CadesBesSignature cadesBesSignature{signedText, *manager};
+        ASSERT_NO_THROW(ocspResponseFromCms = getEmbeddedOcspResponse(cadesBesSignature.getBase64()));
+        ASSERT_NE(ocspResponseFromCms, nullptr);
+
+        // validate embedded OCSP response
+        auto x509Certificate = X509Certificate::createFromBase64(cert.toBase64Der());
+        auto ocspResponseData =
+            manager->getCertificateOcspResponse(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, false);
+        const std::string bioOcspResponseFromCms = OcspHelper::ocspResponseToString(*ocspResponseFromCms);
+        ASSERT_EQ(ocspResponseData.response, bioOcspResponseFromCms);
+    }
 }

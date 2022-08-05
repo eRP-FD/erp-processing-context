@@ -13,6 +13,7 @@
 #include "erp/model/Subscription.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 #include "erp/util/String.hxx"
+
 #include "mock/crypto/MockCryptography.hxx"
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/util/ServerTestBase.hxx"
@@ -67,14 +68,14 @@ public:
 
         // Send the request.
         auto req = makeEncryptedRequest(method, endpoint, body, jwt1);
-        testEndpoint(req, expected, responseBody);
+        EXPECT_NO_FATAL_FAILURE(testEndpoint(req, expected, responseBody));
     }
 
     void testEndpoint(const HttpMethod method, const std::string_view endpoint, const std::string& body,
                       const JWT& jwt1, HttpStatus expected)
     {
         std::string responseBody;
-        testEndpoint(method, endpoint, body, jwt1, expected, responseBody);
+        EXPECT_NO_FATAL_FAILURE(testEndpoint(method, endpoint, body, jwt1, expected, responseBody));
     }
 
     SubscriptionHandlerTest()
@@ -105,13 +106,15 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionRecipientParameter)
 
     // Test request with absent GET parameter "recipient" is not allowed.
     const auto* body0 =
-        R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null", "channel": { "type": "websocket" } })--";
-    testEndpoint(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke, HttpStatus::BadRequest);
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null", "channel": { "type": "websocket" } })--";
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 
     // Test request with capitalized GET parameter name is not allowed.
     const auto* body1 =
-        R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&Recipient=123124125", "channel": { "type": "websocket" } })--";
-    testEndpoint(HttpMethod::POST, endpoint, body1, jwtOeffentliche_apotheke, HttpStatus::BadRequest);
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&Recipient=123124125", "channel": { "type": "websocket" } })--";
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body1, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 }
 
 TEST_F(SubscriptionHandlerTest, PostSubscriptionStatusParameter)
@@ -120,18 +123,21 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionStatusParameter)
 
     // Test request with status != requested is not allowed.
     const auto* body0 =
-        R"--({ "resourceType": "Subscription", "status": "active", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
-    testEndpoint(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke, HttpStatus::BadRequest);
+        R"--({ "resourceType": "Subscription", "status": "active", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 
     // Test request with empty Status is not allowed.
     const auto* body1 =
-        R"--({ "resourceType": "Subscription", "status": "", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
-    testEndpoint(HttpMethod::POST, endpoint, body1, jwtOeffentliche_apotheke, HttpStatus::BadRequest);
+        R"--({ "resourceType": "Subscription", "status": "", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body1, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 
     // Test with absent status is not allowed.
     const auto* body2 =
-        R"--({ "resourceType": "Subscription", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
-    testEndpoint(HttpMethod::POST, endpoint, body2, jwtOeffentliche_apotheke, HttpStatus::BadRequest);
+        R"--({ "resourceType": "Subscription", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body2, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 }
 
 TEST_F(SubscriptionHandlerTest, PostSubscriptionTelematikIdMismatch)
@@ -141,8 +147,9 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionTelematikIdMismatch)
     // Test request with recipient=recipient1 but the used jwt has recipient0.
     A_22363.test("Ensure that a LEI can register only for itself.");
     const auto* body0 =
-        R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&recipient=recipient1", "channel": { "type": "websocket" } })--";
-    testEndpoint(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient1", "channel": { "type": "websocket" } })--";
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke, HttpStatus::Forbidden));
     A_22363.finish();
 }
 
@@ -155,9 +162,10 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionSuccessAuth)//NOLINT(readability
 
     // Test valid request.
     const auto* body =
-        R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
     std::string responseBody;
-    testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody);
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody));
 
     rapidjson::Document response;
     const rapidjson::ParseResult parseResult = response.Parse(responseBody);
@@ -184,9 +192,10 @@ TEST_F(SubscriptionHandlerTest, Overlap)//NOLINT(readability-function-cognitive-
 
     // Test valid request.
     const auto* body =
-        R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
     std::string responseBody;
-    testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody);
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody));
 
     rapidjson::Document response;
     const rapidjson::ParseResult parseResult = response.Parse(responseBody);
@@ -214,10 +223,11 @@ TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)//NOLINT(readability-fu
     const std::string recipient = "recipient0";
     const std::string recipient1 = "recipient1";
     const std::string bodyFmt =
-        R"--({ "resourceType": "Subscription", "status": "requested", "criteria": "Communication?received=null&recipient=%1%", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=%1%", "channel": { "type": "websocket" } })--";
     const std::string body = boost::str(boost::format(bodyFmt.c_str()) % recipient);
     std::string responseBody;
-    testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody);
+    EXPECT_NO_FATAL_FAILURE(
+        testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody));
     rapidjson::Document response;
     const rapidjson::ParseResult parseResult = response.Parse(responseBody);
     ASSERT_FALSE(parseResult.IsError());
@@ -260,7 +270,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionXML)
     std::string responseBody;
     mMimeType = ContentMimeType::fhirXmlUtf8;
     auto request = makeEncryptedRequest(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke);
-    testEndpoint(request, HttpStatus::OK, responseBody);
+    EXPECT_NO_FATAL_FAILURE(testEndpoint(request, HttpStatus::OK, responseBody));
     // Skip xml validation, just get an xml object and peek on single nodes.
     model::Subscription subscription = model::Subscription::fromXmlNoValidation(responseBody);
     EXPECT_EQ(subscription.status(), model::Subscription::Status::Active);

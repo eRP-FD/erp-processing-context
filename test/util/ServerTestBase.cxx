@@ -5,11 +5,6 @@
 
 #include "test/util/ServerTestBase.hxx"
 
-#include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/MockDatabaseProxy.hxx"
-#include "test/mock/MockDatabase.hxx"
-#include "test/util/StaticData.hxx"
-#include "test_config.h"
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
@@ -30,11 +25,13 @@
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 
+#include "test_config.h"
+#include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
-#include "test/util/StaticData.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/RegistrationMock.hxx"
+#include "test/util/StaticData.hxx"
 
 
 #ifdef _WINNT_
@@ -175,6 +172,57 @@ HttpsClient ServerTestBase::createClient (void)
 }
 
 
+template<typename T>
+ClientRequest ServerTestBase::makeEncryptedRequest(const HttpMethod method, const std::string_view endpoint, const T& jwt1,
+        std::optional<std::string_view> xAccessCode,
+        std::optional<std::pair<std::string_view, std::string_view>> bodyContentType,
+        Header::keyValueMap_t&& headerFields,
+        std::optional<std::function<void(std::string&)>> requestManipulator)
+{
+    if (headerFields.find(Header::Authorization) == headerFields.end())
+    {
+        headerFields.insert(getAuthorizationHeaderForJwt(jwt1));
+    }
+
+    // Create the inner request
+    ClientRequest request(Header(method, static_cast<std::string>(endpoint), Header::Version_1_1,
+                                 std::move(headerFields), HttpStatus::Unknown),
+                          "");
+
+    if (xAccessCode.has_value())
+    {
+        request.setHeader(Header::XAccessCode, std::string(*xAccessCode));
+    }
+    if (bodyContentType.has_value())
+    {
+        request.setBody(std::string(bodyContentType->first));
+        request.setHeader(Header::ContentType, std::string(bodyContentType->second));
+    }
+
+    // Encrypt with TEE protocol.
+
+    auto teeRequest = mTeeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), request, jwt1);
+    if (requestManipulator.has_value())
+        (*requestManipulator)(teeRequest);
+
+    ClientRequest encryptedRequest(Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1, {}, HttpStatus::Unknown),
+                                   teeRequest);
+    encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
+    return encryptedRequest;
+}
+
+template ClientRequest ServerTestBase::makeEncryptedRequest<JWT>(const HttpMethod method, const std::string_view endpoint, const JWT& jwt1,
+        std::optional<std::string_view> xAccessCode,
+        std::optional<std::pair<std::string_view, std::string_view>> bodyContentType,
+        Header::keyValueMap_t&& headerFields,
+        std::optional<std::function<void(std::string&)>> requestManipulator);
+
+template ClientRequest ServerTestBase::makeEncryptedRequest<std::string>(const HttpMethod method, const std::string_view endpoint, const std::string& jwt1,
+        std::optional<std::string_view> xAccessCode,
+        std::optional<std::pair<std::string_view, std::string_view>> bodyContentType,
+        Header::keyValueMap_t&& headerFields,
+        std::optional<std::function<void(std::string&)>> requestManipulator);
+
 Header ServerTestBase::createPostHeader (const std::string& path, const std::optional<const JWT>& jwtToken) const
 {
     return Header(
@@ -312,7 +360,7 @@ JWT ServerTestBase::jwtWithProfessionOID(const std::string_view professionOID)
 
     jwtClaims = String::replaceAll(jwtClaims, "##PROFESSION-OID##", std::string(professionOID));
     // Token will expire from execution time T + 5 minutes.
-    jwtClaims = String::replaceAll(jwtClaims, "##EXP##", std::to_string( +60 * 5 + std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() )) );
+    jwtClaims = String::replaceAll(jwtClaims, "##EXP##", std::to_string( +60l * 5 + std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() )) );
     // Token is isseud  at execution time T - 1 minutes.
     jwtClaims = String::replaceAll(jwtClaims, "##IAT##", std::to_string( -60 + std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() )) );
     document.Parse(jwtClaims);
@@ -405,7 +453,7 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
     auto privKey = MockCryptography::getIdpPrivateKey();
     auto cert = MockCryptography::getIdpPublicKeyCertificate();
     CadesBesSignature cadesBesSignature{ cert, privKey, prescriptionBundleXmlString };
-    std::string encodedPrescriptionBundleXmlString = Base64::encode(cadesBesSignature.get());
+    std::string encodedPrescriptionBundleXmlString = cadesBesSignature.getBase64();
     const Binary healthCareProviderPrescriptionBinary(*task.healthCarePrescriptionUuid(), encodedPrescriptionBundleXmlString);
 
     auto database = createDatabase();
@@ -433,7 +481,7 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
     PrescriptionId prescriptionId = task.prescriptionId();
 
     const Timestamp inProgessDate = task.lastModifiedDate();
-    const Timestamp completedTimestamp = model::Timestamp::now();
+    const Timestamp completedTimestamp = fhirtools::Timestamp::now();
     const std::string linkBase = "https://127.0.0.1:8080";
     const std::string authorIdentifier = linkBase + "/Device";
     const std::string prescriptionDigestIdentifier = "Binary/TestDigest";

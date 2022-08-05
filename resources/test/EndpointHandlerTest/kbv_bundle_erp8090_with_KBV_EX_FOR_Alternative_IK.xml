@@ -279,8 +279,8 @@
         <status value="active"/>
         <type>
           <coding>
-            <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis"/>
-            <code value="###REPLACE###"/>
+            <system value="###REPLACE_SYSTEM###"/>
+            <code value="###REPLACE_CODE###"/>
           </coding>
         </type>
         <beneficiary>

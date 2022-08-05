@@ -18,6 +18,7 @@ macro(install_libs_for target install_component)
                     RESOLVED_DEPENDENCIES_VAR deps
                     DIRECTORIES ${CONAN_LIB_DIRS}
                     CONFLICTING_DEPENDENCIES_PREFIX conflicts
+                    POST_INCLUDE_REGEXES ".*/libstdc[+][+][.]so.*"
                     POST_EXCLUDE_REGEXES "^/lib(64)?/.*"
                 )
                 foreach(conflict_lib ${conflicts_FILENAMES})

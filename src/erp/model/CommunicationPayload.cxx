@@ -10,6 +10,7 @@
 
 #include "erp/util/String.hxx"
 
+
 using namespace model;
 using namespace model::resource;
 namespace rj = rapidjson;

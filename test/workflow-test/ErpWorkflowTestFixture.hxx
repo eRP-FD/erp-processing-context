@@ -28,14 +28,14 @@
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/model/AuditEvent.hxx"
 #include "erp/model/OperationOutcome.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/util/UrlHelper.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/common/MimeType.hxx"
@@ -64,7 +64,7 @@ public:
     virtual ~ErpWorkflowTestBase();
 
     std::string toCadesBesSignature(const std::string& content,
-                                    const std::optional<model::Timestamp>& signingTime);
+                                    const std::optional<fhirtools::Timestamp>& signingTime);
 
     void checkTaskMeta(const rapidjson::Value& meta);
     void checkTaskSingleIdentifier(const rapidjson::Value& id);
@@ -117,14 +117,41 @@ public:
             expectedInnerFlowType = innerFlowType;
             return std::move(*this);
         }
+        RequestArguments&& withQueryParams(std::unordered_map<std::string, std::string> queryParamsArg)
+        {
+            queryParams = std::move(queryParamsArg);
+            return std::move(*this);
+        }
+
+        std::string serializeTarget() const
+        {
+            std::string result = vauPath;
+            if (queryParams.empty())
+            {
+                return result;
+            }
+
+            result += "/?";
+            for (const auto& [key, value] : queryParams)
+            {
+                result += key;
+                result += "=";
+                result += value;
+                result += "&";
+            }
+
+            result.pop_back();
+            return result;
+        }
 
         HttpMethod method;
         std::string vauPath;
+        std::unordered_map<std::string, std::string> queryParams;
         std::string clearTextBody;
         std::string contentType;
         bool skipOuterResponseVerification = false;
         std::optional<JWT> jwt;
-        Header::keyValueMap_t headerFields = {{Header::UserAgent, std::string{"vau-cpp-it-test"}}};
+        Header::keyValueMap_t headerFields = {{Header::UserAgent, std::string{"eRp-Testsuite/1.0.0 GMTIK/JMeter-Internet"}}};
         std::string overrideExpectedInnerOperation;
         std::string overrideExpectedInnerRole;
         std::string overrideExpectedInnerClientId;
@@ -149,7 +176,7 @@ public:
                                           const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::optional<model::Task> taskActivate(const model::PrescriptionId& prescriptionId,
-        const std::string& accessCode,
+        const std::string_view& accessCode,
         const std::string& qesBundle,
         HttpStatus expectedInnerStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
@@ -158,7 +185,8 @@ public:
 
     std::optional<model::Bundle> taskAccept(const model::PrescriptionId& prescriptionId,
         const std::string& accessCode, HttpStatus expectedInnerStatus = HttpStatus::OK,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
+        const std::optional<std::string>& expectedIssueText = {});
 
     std::optional<model::ErxReceipt> taskClose(const model::PrescriptionId& prescriptionId,
         const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::OK,
@@ -209,7 +237,7 @@ public:
     std::tuple<std::string, std::string> makeQESBundle( // returns signed and unsigned bundle
         const std::string& kvnr,
         const model::PrescriptionId& prescriptionId,
-        const model::Timestamp& timestamp);
+        const fhirtools::Timestamp& timestamp);
 
     std::optional<model::MedicationDispense> medicationDispenseGet(
         const std::string& kvnr,
@@ -244,7 +272,7 @@ public:
 
     std::optional<model::Consent> consentPost(
         const std::string& kvnr,
-        const model::Timestamp& dateTime,
+        const fhirtools::Timestamp& dateTime,
         const HttpStatus expectedStatus = HttpStatus::Created,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
@@ -254,7 +282,6 @@ public:
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     void consentDelete(
-        const std::string& consentId,
         const std::string& kvnr,
         const HttpStatus expectedStatus = HttpStatus::NoContent,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
@@ -322,7 +349,7 @@ public:
 
     void checkTaskAccept(
         std::string& createdSecret,
-        std::optional<model::Timestamp>& lastModifiedDate,
+        std::optional<fhirtools::Timestamp>& lastModifiedDate,
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
         const std::string& accessCode,
@@ -333,7 +360,7 @@ public:
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
         const std::string& secret,
-        const model::Timestamp& lastModified,
+        const fhirtools::Timestamp& lastModified,
         const std::vector<model::Communication>& communications,
         size_t numMedicationDispenses = 1);
 
@@ -358,7 +385,15 @@ public:
 
     void checkAuditEvents(
         // if only a single prescription id is provided in the following vector, it is used for all elements:
-        std::vector<std::optional<model::PrescriptionId>> prescriptionIds,
+        const std::vector<std::optional<model::PrescriptionId>>& prescriptionIds,
+        const std::string& insurantKvnr,
+        const std::string& language,
+        const fhirtools::Timestamp& startTime,
+        const std::vector<std::string>& actorIdentifiers,
+        const std::unordered_set<std::size_t>& actorTelematicIdIndices,
+        const std::vector<model::AuditEvent::SubType>& expectedActions);
+    void checkAuditEvents(
+        std::vector<std::optional<std::string>> resourceIds,
         const std::string& insurantKvnr,
         const std::string& language,
         const model::Timestamp& startTime,
@@ -425,11 +460,11 @@ private:
     static void makeQESBundleInternal (std::string& qesBundle,
         const std::string& kvnr,
         const model::PrescriptionId& prescriptionId,
-        const model::Timestamp& now);
+        const fhirtools::Timestamp& now);
 
     void taskActivateInternal(std::optional<model::Task>& task,
         const model::PrescriptionId& prescriptionId,
-        const std::string& accessCode,
+        const std::string_view& accessCode,
         const std::string& qesBundle,
         HttpStatus expectedInnerStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
@@ -439,7 +474,8 @@ private:
     void taskAcceptInternal(std::optional<model::Bundle>& bundle,
         const model::PrescriptionId& prescriptionId,
         const std::string& accessCode, HttpStatus expectedInnerStatus,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+        const std::optional<std::string>& expectedIssueText);
 
     void taskCloseInternal(std::optional<model::ErxReceipt>& receipt,
         const model::PrescriptionId& prescriptionId,
@@ -507,7 +543,7 @@ private:
     void consentPostInternal(
         std::optional<model::Consent>& consent,
         const std::string& kvnr,
-        const model::Timestamp& dateTime,
+        const fhirtools::Timestamp& dateTime,
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 

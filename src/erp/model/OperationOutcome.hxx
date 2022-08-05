@@ -22,6 +22,8 @@ namespace model
 class OperationOutcome : public Resource<OperationOutcome>
 {
 public:
+    static constexpr auto resourceTypeName = "OperationOutcome";
+
     class Issue
     {
     public:

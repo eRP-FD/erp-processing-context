@@ -45,22 +45,22 @@ namespace model {
          * excursion via time_t to tm, do the arithmetic and go back to time_point.
          */
 
-        Timestamp addOneSecond (const Timestamp t)
+        fhirtools::Timestamp addOneSecond (const fhirtools::Timestamp t)
         {
-            return Timestamp(t.toChronoTimePoint() + std::chrono::seconds(1));
+            return fhirtools::Timestamp(t.toChronoTimePoint() + std::chrono::seconds(1));
         }
 
-        Timestamp addOneMinute (const Timestamp t)
+        fhirtools::Timestamp addOneMinute (const fhirtools::Timestamp t)
         {
-            return Timestamp(t.toChronoTimePoint() + std::chrono::minutes(1));
+            return fhirtools::Timestamp(t.toChronoTimePoint() + std::chrono::minutes(1));
         }
 
-        Timestamp addOneDay (const Timestamp t)
+        fhirtools::Timestamp addOneDay (const fhirtools::Timestamp t)
         {
-            return Timestamp(t.toChronoTimePoint() + std::chrono::hours(24));
+            return fhirtools::Timestamp(t.toChronoTimePoint() + std::chrono::hours(24));
         }
 
-        Timestamp addOneMonth (const Timestamp t)
+        fhirtools::Timestamp addOneMonth (const fhirtools::Timestamp t)
         {
             // To tm.
             const std::time_t timeT = std::chrono::system_clock::to_time_t(t.toChronoTimePoint());
@@ -69,10 +69,10 @@ namespace model {
             // Add a single month.
             tm.tm_mon += 1;
 
-            return Timestamp::fromTmInUtc(tm);
+            return fhirtools::Timestamp::fromTmInUtc(tm);
         }
 
-        Timestamp addOneYear (const Timestamp t)
+        fhirtools::Timestamp addOneYear (const fhirtools::Timestamp t)
         {
             // To tm.
             const std::time_t timeT = std::chrono::system_clock::to_time_t(t.toChronoTimePoint());
@@ -81,11 +81,11 @@ namespace model {
             // Add a single year.
             tm.tm_year += 1;
 
-            return Timestamp::fromTmInUtc(tm);
+            return fhirtools::Timestamp::fromTmInUtc(tm);
         }
     }
 
-TimePeriod::TimePeriod (Timestamp start, Timestamp end)
+TimePeriod::TimePeriod (fhirtools::Timestamp start, fhirtools::Timestamp end)
     : mBegin(start),
       mEnd(end)
 {
@@ -94,37 +94,37 @@ TimePeriod::TimePeriod (Timestamp start, Timestamp end)
 
 TimePeriod TimePeriod::fromFhirSearchDate (const std::string& date)
 {
-    const Timestamp timestamp = Timestamp::fromFhirSearchDateTime(date);
-    switch (Timestamp::detectType(date))
+    const fhirtools::Timestamp timestamp = fhirtools::Timestamp::fromFhirSearchDateTime(date);
+    switch (fhirtools::Timestamp::detectType(date))
     {
-        case Timestamp::Type::DateTime:
+        case fhirtools::Timestamp::Type::DateTime:
             return TimePeriod(timestamp, addOneSecond(timestamp));
 
-        case Timestamp::Type::Date:
+        case fhirtools::Timestamp::Type::Date:
             return TimePeriod(timestamp, addOneDay(timestamp));
 
-        case Timestamp::Type::DateTimeWithoutSeconds:
+        case fhirtools::Timestamp::Type::DateTimeWithoutSeconds:
             return TimePeriod(timestamp, addOneMinute(timestamp));
 
-        case Timestamp::Type::YearMonth:
+        case fhirtools::Timestamp::Type::YearMonth:
             return TimePeriod(timestamp, addOneMonth(timestamp));
 
-        case Timestamp::Type::Year:
+        case fhirtools::Timestamp::Type::Year:
             return TimePeriod(timestamp, addOneYear(timestamp));
 
         default:
-            throw std::logic_error("for search unsupported Timestamp::Type enum value");
+            throw std::logic_error("for search unsupported fhirtools::Timestamp::Type enum value");
     }
 }
 
 
-Timestamp TimePeriod::begin (void) const
+fhirtools::Timestamp TimePeriod::begin (void) const
 {
     return mBegin;
 }
 
 
-Timestamp TimePeriod::end (void) const
+fhirtools::Timestamp TimePeriod::end (void) const
 {
     return mEnd;
 }

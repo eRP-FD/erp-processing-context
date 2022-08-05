@@ -124,6 +124,29 @@ void MockBlobCache::setupBlobCacheForAllTargets (BlobCache& blobCache)
             blobCache.storeBlob(std::move(entry));
         }
     }
+
+    if (! isBlobTypeAlreadyInitialized(blobCache, ::BlobType::ChargeItemKeyDerivation))
+    {
+        auto blob = ErpBlob::fromCDump(tpm::task_derivation_key_blob_base64);
+
+        {
+            ::BlobDatabase::Entry entry;
+            entry.type = ::BlobType::ChargeItemKeyDerivation;
+            entry.name = ::ErpVector::create("charge-item-9");
+            entry.blob = ::ErpBlob{blob};
+            blobCache.storeBlob(::std::move(entry));
+        }
+
+        ++blob.generation;// Simulate another generation.
+
+        {
+            BlobDatabase::Entry entry;
+            entry.type = ::BlobType::ChargeItemKeyDerivation;
+            entry.name = ::ErpVector::create("charge-item-10");
+            entry.blob = ::std::move(blob);
+            blobCache.storeBlob(::std::move(entry));
+        }
+    }
 }
 
 

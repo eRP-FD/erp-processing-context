@@ -51,25 +51,25 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
     Communication infoReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::InfoReq,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
-        "", InfoReqMessage, model::Timestamp::now() });
+        "", InfoReqMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
 
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
         {ActorRole::Pharmacists, mPharmacy}, {ActorRole::Insurant, std::string(kvnrTask)},
-        "", ReplyMessage, model::Timestamp::now() });
+        "", ReplyMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(reply.id().value().isValidIheUuid());
 
     Communication dispReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::DispReq,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
-        std::string(task.accessCode()), DispReqMessage, model::Timestamp::now() });
+        std::string(task.accessCode()), DispReqMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(dispReq.id().value().isValidIheUuid());
 
     Communication representative = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Representative,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Representative, kvnrRepresentative},
-        std::string(task.accessCode()), RepresentativeMessageByInsurant, model::Timestamp::now() });
+        std::string(task.accessCode()), RepresentativeMessageByInsurant, fhirtools::Timestamp::now() });
     ASSERT_TRUE(representative.id().value().isValidIheUuid());
 
     // Create a client
@@ -388,25 +388,25 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
     Communication infoReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::InfoReq,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
-        "", InfoReqMessage, model::Timestamp::now() });
+        "", InfoReqMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
 
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
         {ActorRole::Pharmacists, mPharmacy}, {ActorRole::Insurant, std::string(kvnrTask)},
-        "", ReplyMessage, model::Timestamp::now() });
+        "", ReplyMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(reply.id().value().isValidIheUuid());
 
     Communication dispReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::DispReq,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
-        std::string(task.accessCode()), DispReqMessage, model::Timestamp::now() });
+        std::string(task.accessCode()), DispReqMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(dispReq.id().value().isValidIheUuid());
 
     Communication representative = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Representative,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Representative, kvnrRepresentative},
-        std::string(task.accessCode()), RepresentativeMessageByInsurant, model::Timestamp::now() });
+        std::string(task.accessCode()), RepresentativeMessageByInsurant, fhirtools::Timestamp::now() });
     ASSERT_TRUE(representative.id().value().isValidIheUuid());
 
     // Create a client
@@ -537,25 +537,25 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
     Communication infoReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::InfoReq,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
-        "", InfoReqMessage, model::Timestamp::now() });
+        "", InfoReqMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
 
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
         {ActorRole::Pharmacists, mPharmacy}, {ActorRole::Insurant, std::string(kvnrTask)},
-        "", ReplyMessage, model::Timestamp::now() });
+        "", ReplyMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(reply.id().value().isValidIheUuid());
 
     Communication dispReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::DispReq,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
-        std::string(task.accessCode()), DispReqMessage, model::Timestamp::now() });
+        std::string(task.accessCode()), DispReqMessage, fhirtools::Timestamp::now() });
     ASSERT_TRUE(dispReq.id().value().isValidIheUuid());
 
     Communication representative = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Representative,
         {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Representative, kvnrRepresentative},
-        std::string(task.accessCode()), RepresentativeMessageByInsurant, model::Timestamp::now() });
+        std::string(task.accessCode()), RepresentativeMessageByInsurant, fhirtools::Timestamp::now() });
     ASSERT_TRUE(representative.id().value().isValidIheUuid());
 
     // Create a client

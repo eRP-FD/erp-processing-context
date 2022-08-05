@@ -8,8 +8,8 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/UrlHelper.hxx"
 #include "erp/util/Uuid.hxx"
+#include "erp/util/String.hxx"
 
-#include <erp/util/String.hxx>
 #include <rapidjson/writer.h>
 #include <map>
 #include <regex>
@@ -17,6 +17,7 @@
 
 using namespace model;
 using namespace model::resource;
+using fhirtools::Timestamp;
 
 namespace rj = rapidjson;
 
@@ -37,10 +38,12 @@ const rj::Pointer Communication::identifierSystemPointer(ElementName::path(eleme
 const rj::Pointer Communication::identifierValuePointer(ElementName::path(elements::identifier, elements::value));
 
 const std::map<Communication::MessageType, std::string_view> MessageTypeToString = {
-    { Communication::MessageType::InfoReq,        "InfoReq"        },
-    { Communication::MessageType::Reply,          "Reply"          },
-    { Communication::MessageType::DispReq,        "DispReq"        },
-    { Communication::MessageType::Representative, "Representative" }
+    { Communication::MessageType::InfoReq,          "InfoReq"          },
+    { Communication::MessageType::ChargChangeReq,   "ChargChangeReq"   },
+    { Communication::MessageType::ChargChangeReply, "ChargChangeReply" },
+    { Communication::MessageType::Reply,            "Reply"            },
+    { Communication::MessageType::DispReq,          "DispReq"          },
+    { Communication::MessageType::Representative,   "Representative"   }
 };
 
 int8_t model::Communication::messageTypeToInt(Communication::MessageType messageType)
@@ -49,31 +52,39 @@ int8_t model::Communication::messageTypeToInt(Communication::MessageType message
 }
 
 const std::map<std::string_view, Communication::MessageType> StringToMessageType = {
-    {"InfoReq",         Communication::MessageType::InfoReq        },
-    {"Reply",           Communication::MessageType::Reply          },
-    {"DispReq",         Communication::MessageType::DispReq        },
-    {"Representative",  Communication::MessageType::Representative }
+    {"InfoReq",           Communication::MessageType::InfoReq          },
+    {"ChargChangeReq",    Communication::MessageType::ChargChangeReq   },
+    {"ChargChangeReply",  Communication::MessageType::ChargChangeReply },
+    {"Reply",             Communication::MessageType::Reply            },
+    {"DispReq",           Communication::MessageType::DispReq          },
+    {"Representative",    Communication::MessageType::Representative   }
 };
 
 const std::map<Communication::MessageType, std::string_view> MessageTypeToProfileUrl = {
-    { Communication::MessageType::InfoReq,        structure_definition::communicationInfoReq        },
-    { Communication::MessageType::Reply,          structure_definition::communicationReply          },
-    { Communication::MessageType::DispReq,        structure_definition::communicationDispReq        },
-    { Communication::MessageType::Representative, structure_definition::communicationRepresentative }
+    { Communication::MessageType::InfoReq,          structure_definition::communicationInfoReq          },
+    { Communication::MessageType::ChargChangeReq,   structure_definition::communicationChargChangeReq   },
+    { Communication::MessageType::ChargChangeReply, structure_definition::communicationChargChangeReply },
+    { Communication::MessageType::Reply,            structure_definition::communicationReply            },
+    { Communication::MessageType::DispReq,          structure_definition::communicationDispReq          },
+    { Communication::MessageType::Representative,   structure_definition::communicationRepresentative   }
 };
 
 const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessageType = {
-    {structure_definition::communicationInfoReq,        Communication::MessageType::InfoReq        },
-    {structure_definition::communicationReply,          Communication::MessageType::Reply          },
-    {structure_definition::communicationDispReq,        Communication::MessageType::DispReq        },
-    {structure_definition::communicationRepresentative, Communication::MessageType::Representative }
+    {structure_definition::communicationInfoReq,          Communication::MessageType::InfoReq          },
+    {structure_definition::communicationChargChangeReq,   Communication::MessageType::ChargChangeReq   },
+    {structure_definition::communicationChargChangeReply, Communication::MessageType::ChargChangeReply },
+    {structure_definition::communicationReply,            Communication::MessageType::Reply            },
+    {structure_definition::communicationDispReq,          Communication::MessageType::DispReq          },
+    {structure_definition::communicationRepresentative,   Communication::MessageType::Representative   }
 };
 
 const std::map<Communication::MessageType, bool> MessageTypeHasPrescriptonId = {
-    { Communication::MessageType::InfoReq,        false },
-    { Communication::MessageType::Reply,          false },
-    { Communication::MessageType::DispReq,        true  },
-    { Communication::MessageType::Representative, true  }
+    { Communication::MessageType::InfoReq,          false },
+    { Communication::MessageType::ChargChangeReq,   true  },
+    { Communication::MessageType::ChargChangeReply, true  },
+    { Communication::MessageType::Reply,            false },
+    { Communication::MessageType::DispReq,          true  },
+    { Communication::MessageType::Representative,   true  }
 };
 
 const std::string_view& Communication::messageTypeToString(MessageType messageType)
@@ -119,6 +130,9 @@ SchemaType Communication::messageTypeToSchemaType(MessageType messageType)
     {
     case model::Communication::MessageType::InfoReq:
         return SchemaType::Gem_erxCommunicationInfoReq;
+    case model::Communication::MessageType::ChargChangeReq:
+    case model::Communication::MessageType::ChargChangeReply:
+        return SchemaType::fhir;
     case model::Communication::MessageType::Reply:
         return SchemaType::Gem_erxCommunicationReply;
     case model::Communication::MessageType::DispReq:

@@ -23,10 +23,13 @@ class Blob;
 class HashedId;
 class HashedKvnr;
 }
+namespace fhirtools{
+class Timestamp;
+}
 
 namespace model
 {
-class Timestamp;
+using fhirtools::Timestamp;
 class PrescriptionId;
 }
 
@@ -43,12 +46,12 @@ public:
     explicit KeyDerivation(HsmPool& hsmPool);
 
     [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId,
-                                     const model::Timestamp& authoredOn,
+                                     const fhirtools::Timestamp& authoredOn,
                                      BlobId blobId,
                                      const db_model::Blob& salt);
 
     [[nodiscard]] std::tuple<SafeString, OptionalDeriveKeyData> initialTaskKey(const model::PrescriptionId& taskId,
-                                                                        const model::Timestamp& authoredOn);
+                                                                        const fhirtools::Timestamp& authoredOn);
 
     [[nodiscard]] db_model::HashedKvnr hashKvnr(std::string_view kvnr) const;
     [[nodiscard]] db_model::HashedTelematikId hashTelematikId(std::string_view tid) const;
@@ -82,6 +85,12 @@ public:
 
     [[nodiscard]] std::tuple<SafeString, OptionalDeriveKeyData> initialAuditEventKey(const db_model::HashedKvnr& kvnr);
     
+    [[nodiscard]] ::SafeString chargeItemKey(const ::model::PrescriptionId& taskId, ::BlobId blobId,
+                                             const ::db_model::Blob& salt);
+
+    [[nodiscard]] ::std::tuple<::SafeString, ::OptionalDeriveKeyData>
+    initialChargeItemKey(const ::model::PrescriptionId& prescriptionId);
+
     KeyDerivation(const KeyDerivation&) = delete;
     KeyDerivation(KeyDerivation&&) = delete;
     KeyDerivation& operator = (const KeyDerivation&) = delete;
@@ -89,7 +98,7 @@ public:
 
 private:
     [[nodiscard]] static ErpVector taskKeyDerivationData(const model::PrescriptionId& taskId,
-                                                         const model::Timestamp& authoredOn);
+                                                         const fhirtools::Timestamp& authoredOn);
     [[nodiscard]] static ErpVector medicationDispenseKeyDerivationData(const db_model::HashedKvnr& kvnr);
     [[nodiscard]] static ErpVector auditEventKeyDerivationData(const db_model::HashedKvnr& kvnr);
     [[nodiscard]] static ErpVector communicationKeyDerivationData(const std::string_view& identity,

@@ -7,7 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_XMLVALIDATOR_HXX
 
 #include "erp/model/ResourceVersion.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/validation/SchemaType.hxx"
 
 #include <libxml/xmlschemas.h>
@@ -35,11 +35,11 @@ public:
 
     void loadSchemas(const std::vector<std::string>& paths);
     void loadKbvSchemas(const std::string& version, const std::vector<std::string>& paths,
-                        const std::optional<model::Timestamp>& validFrom,
-                        const std::optional<model::Timestamp>& validUntil);
+                        const std::optional<fhirtools::Timestamp>& validFrom,
+                        const std::optional<fhirtools::Timestamp>& validUntil);
     void loadGematikSchemas(const std::string& version, const std::vector<std::string>& paths,
-                            const std::optional<model::Timestamp>& validFrom,
-                            const std::optional<model::Timestamp>& validUntil);
+                            const std::optional<fhirtools::Timestamp>& validFrom,
+                            const std::optional<fhirtools::Timestamp>& validUntil);
 
     std::unique_ptr<XmlValidatorContext>
     getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::DeGematikErezeptWorkflowR4 version) const;
@@ -52,15 +52,15 @@ public:
 
     std::unique_ptr<XmlValidatorContext> getSchemaValidationContextNoVer(SchemaType schemaType) const;
 
-    static void checkValidityTime(const std::optional<model::Timestamp>& validFrom,
-                                  const std::optional<model::Timestamp>& validUntil, const std::string& schemaNameHint);
+    static void checkValidityTime(const std::optional<fhirtools::Timestamp>& validFrom,
+                                  const std::optional<fhirtools::Timestamp>& validUntil, const std::string& schemaNameHint);
 
 private:
     std::tuple<SchemaType, SchemaPtr> loadSchema(const std::string& filePath) const;
     std::unique_ptr<XmlValidatorContext> getContext(xmlSchemaPtr schemaPtr) const;
 
     using KeyGem = std::pair<SchemaType, model::ResourceVersion::DeGematikErezeptWorkflowR4>;
-    using Value = std::tuple<SchemaPtr, std::optional<model::Timestamp>, std::optional<model::Timestamp>>;
+    using Value = std::tuple<SchemaPtr, std::optional<fhirtools::Timestamp>, std::optional<fhirtools::Timestamp>>;
     std::map<KeyGem, Value> mGematikXmlSchemaPtrs;
 
     using KeyKbv = std::pair<SchemaType, model::ResourceVersion::KbvItaErp>;

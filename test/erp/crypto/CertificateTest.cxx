@@ -7,6 +7,7 @@
 #include "erp/crypto/EllipticCurve.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/String.hxx"
+
 #include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>

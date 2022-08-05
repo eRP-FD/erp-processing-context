@@ -19,8 +19,8 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
     const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.715.74");
 
     const std::string telematicId = "12345654321";
-    const model::Timestamp start = model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
-    const model::Timestamp end = model::Timestamp::fromXsDateTime("2021-02-05T11:12:00+01:00");
+    const fhirtools::Timestamp start = fhirtools::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
+    const fhirtools::Timestamp end = fhirtools::Timestamp::fromXsDateTime("2021-02-05T11:12:00+01:00");
     const std::string author = "https://prescriptionserver.telematik/Device/ErxService";
     const std::string_view prescriptionDigestIdentifier = "Binary/PrescriptionDigest-160.000.000.004.715.74";
 
@@ -56,7 +56,7 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
         EXPECT_EQ(erxReceipt.device().version(), ErpServerInfo::ReleaseVersion);
 
         const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1";
-        const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
+        const fhirtools::Timestamp when = fhirtools::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
         const model::Signature origSignature(data, when, author);
         erxReceipt.setSignature(origSignature);
         const auto signature = erxReceipt.getSignature();
@@ -104,8 +104,8 @@ TEST(ErxReceiptTest, ConstructFromJson)//NOLINT(readability-function-cognitive-c
         const auto prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58");
 
         const std::string telematicId = "606358757";
-        const model::Timestamp start = model::Timestamp::fromXsDateTime("2020-03-20T07:23:34.328+00:00");
-        const model::Timestamp end = model::Timestamp::fromXsDateTime("2020-03-20T12:21:34.558+00:00");
+        const fhirtools::Timestamp start = fhirtools::Timestamp::fromXsDateTime("2020-03-20T07:23:34.328+00:00");
+        const fhirtools::Timestamp end = fhirtools::Timestamp::fromXsDateTime("2020-03-20T12:21:34.558+00:00");
         const std::string author = "https://prescriptionserver.telematik/Device/ErxService";
 
         const std::string_view serialNumber = "R4.0.0.287342834";
@@ -132,7 +132,7 @@ TEST(ErxReceiptTest, ConstructFromJson)//NOLINT(readability-function-cognitive-c
             ASSERT_TRUE(signature.has_value());
 
             const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1TaXR1YXRpb24ga29ubnRlIGhpZXIga3VyemZyaXN0aWcga2";
-            const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");
+            const fhirtools::Timestamp when = fhirtools::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");
 
             EXPECT_TRUE(signature->when().has_value());
             EXPECT_EQ(signature->when().value(), when);

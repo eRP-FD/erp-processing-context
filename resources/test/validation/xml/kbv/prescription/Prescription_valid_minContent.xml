@@ -35,7 +35,6 @@
   <insurance>
     <reference value="Coverage/1b1ffb6e-eb05-43d7-87eb-e7818fe9661a" />
   </insurance>
-  <dosageInstruction/>
   <dispenseRequest>
     <quantity>
       <value value="1" />

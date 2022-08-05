@@ -66,7 +66,7 @@ namespace
         if (row[gsl::narrow<pqxx::row::size_type>(columnIndex)].is_null())
             return std::nullopt;
         else
-            return model::Timestamp(row.at(gsl::narrow<pqxx::row::size_type>(columnIndex)).as<double>()).toChronoTimePoint();
+            return fhirtools::Timestamp(row.at(gsl::narrow<pqxx::row::size_type>(columnIndex)).as<double>()).toChronoTimePoint();
     }
 
     std::optional<std::string> getOptionalString (const pqxx::row& row, const size_t columnIndex)

@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h> // should be first or FRIEND_TEST would not work
 #include "erp/tsl/TrustStore.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/tsl/TslParser.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"

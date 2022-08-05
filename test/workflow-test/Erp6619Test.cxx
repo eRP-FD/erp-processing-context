@@ -35,7 +35,7 @@ public:
         std::string accessCode{task->accessCode()};
         auto prescriptionId{task->prescriptionId()};
 
-        const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
+        const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, fhirtools::Timestamp::now());
         ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, accessCode, qesBundle));
 
         {
@@ -79,7 +79,7 @@ TEST_F(Erp6619Test, DISABLED_keep_alives_parallel)
     for (size_t t = 0; t < threadCount; ++t)
     {
         auto worker = std::make_shared<TestWorker>();
-        threads.emplace_back(std::thread{[=] { worker->run(lifecycleCount); }});
+        threads.emplace_back([=] { worker->run(lifecycleCount); });
     }
 
 

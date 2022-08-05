@@ -158,7 +158,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)//NOLINT(readability-function
     CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
     const auto responseData = cFdSigErpManager.getOcspResponseData(false);
     EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
-    EXPECT_EQ(cFdSigErpManager.getLastValidationTimestamp(), model::Timestamp(responseData.timeStamp).toXsDateTime());
+    EXPECT_EQ(cFdSigErpManager.getLastValidationTimestamp(), fhirtools::Timestamp(responseData.timeStamp).toXsDateTime());
     EXPECT_NO_THROW(cFdSigErpManager.healthCheck());
     EXPECT_TRUE(cFdSigErpManager.getCertificate().toX509().isSet());
 

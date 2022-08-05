@@ -135,7 +135,7 @@ TEST_F(ClientTeeProtocolTest, testCreateRequest)//NOLINT(readability-function-co
     ASSERT_EQ(message.ciphertext.size(),
         1 // version
         + jwt.serialize().size()
-        + 128/8 * 2                        // requestId, x2 because hex encoded
+        + 128ul / 8ul * 2ul                     // requestId, x2 because hex encoded
         + AesGcm128::KeyLength * 2         // AES key,   x2 because hex encoded
         + serializedInnerRequest.size()
         + 4                                // four single space separators

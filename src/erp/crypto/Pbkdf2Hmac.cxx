@@ -15,7 +15,7 @@ std::vector<uint8_t> Pbkdf2Hmac::deriveKey(std::string_view input, const SafeStr
     const auto result = PKCS5_PBKDF2_HMAC(input.data(), gsl::narrow<int>(input.size()),
                                           reinterpret_cast<const unsigned char*>(static_cast<const char*>(salt)),
                                           gsl::narrow<int>(salt.size()), numberOfIterations, EVP_sha256(),
-                                          gsl::narrow<int>(key.size()), reinterpret_cast<unsigned char*>(&key[0]));
+                                          gsl::narrow<int>(key.size()), reinterpret_cast<unsigned char*>(key.data()));
     OpenSslExpect(result == 1, "PKCS5_PBKDF2_HMAC failed");
     return key;
 }

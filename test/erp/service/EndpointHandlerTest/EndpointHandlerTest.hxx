@@ -50,10 +50,10 @@ public:
     {
         auto* database = sessionContext.database();
         model::Task task{ model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode };
-        task.setAcceptDate(model::Timestamp{ .0 });
-        task.setExpiryDate(model::Timestamp{ .0 });
+        task.setAcceptDate(fhirtools::Timestamp{ .0 });
+        task.setExpiryDate(fhirtools::Timestamp{ .0 });
         task.setKvnr(insurant);
-        task.updateLastUpdate(model::Timestamp{ .0 });
+        task.updateLastUpdate(fhirtools::Timestamp{ .0 });
         task.setStatus(taskStatus);
         model::PrescriptionId prescriptionId = database->storeTask(task);
         task.setPrescriptionId(prescriptionId);

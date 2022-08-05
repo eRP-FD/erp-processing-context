@@ -47,7 +47,6 @@
 #if WITH_HSM_TPM_PRODUCTION > 0
 #include "erp/hsm/production/HsmProductionClient.hxx"
 #include "erp/hsm/production/HsmProductionFactory.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
 #include "erp/tpm/TpmProduction.hxx"
 #endif

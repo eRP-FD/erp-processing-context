@@ -18,7 +18,7 @@ EnrolmentData::EnrolmentStatus EnrolmentData::getEnclaveStatus (const BlobCache&
         BlobType::Quote});
     ErpExpect(result.size()==3, HttpStatus::InternalServerError, "failed to determine enclave status");
 
-    EnrolmentStatus status;
+    EnrolmentStatus status = EnrolmentStatus::NotEnrolled;
     if (result[0])
         if (result[1])
             if (result[2])

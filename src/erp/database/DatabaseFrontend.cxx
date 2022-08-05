@@ -28,6 +28,7 @@
 #include "erp/util/search/UrlArguments.hxx"
 
 using namespace model;
+using namespace ::std::literals;
 
 DatabaseFrontend::DatabaseFrontend(std::unique_ptr<DatabaseBackend>&& backend,
                                    HsmPool& hsmPool,
@@ -296,6 +297,10 @@ DatabaseFrontend::retrieveAuditEventData(const std::string& kvnr, const std::opt
     std::map<BlobId, SafeString> keys;
     for (const auto& item : dbAuditDataVec)
     {
+        std::optional<std::string> consentId =
+            item.eventId == model::AuditEventId::POST_Consent || item.eventId == model::AuditEventId::DELETE_Consent
+                ? std::make_optional<std::string>(Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr))
+                : std::nullopt;
         if (item.metaData.has_value())
         {
             Expect(item.blobId, "Blob id must be set in database if meta data exist.");
@@ -310,12 +315,12 @@ DatabaseFrontend::retrieveAuditEventData(const std::string& kvnr, const std::opt
             auto auditMetaData = AuditMetaData::fromJsonNoValidation(mCodec.decode(*item.metaData, key->second));
 
             ret.emplace_back(item.eventId, std::move(auditMetaData), item.action, item.agentType, kvnr, item.deviceId,
-                             item.prescriptionId);
+                             item.prescriptionId, consentId);
         }
         else
         {
             ret.emplace_back(item.eventId, AuditMetaData({}, {}), item.action, item.agentType, kvnr, item.deviceId,
-                item.prescriptionId);
+                item.prescriptionId, consentId);
         }
         ret.back().setId(item.id);
         ret.back().setRecorded(item.recorded);
@@ -419,7 +424,7 @@ std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communi
 {
     const std::optional<std::string_view> sender = communication.sender();
     const std::optional<std::string_view> recipient = communication.recipient();
-    const std::optional<model::Timestamp> timeSent = communication.timeSent();
+    const std::optional<fhirtools::Timestamp> timeSent = communication.timeSent();
 
     ErpExpect(sender.has_value(), HttpStatus::InternalServerError, "communication object has no 'sender' value");
     ErpExpect(recipient.has_value(), HttpStatus::InternalServerError, "communication object has no 'recipient' value");
@@ -502,7 +507,7 @@ std::vector<Uuid> DatabaseFrontend::retrieveCommunicationIds(const std::string& 
 }
 
 
-std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
 DatabaseFrontend::deleteCommunication(const Uuid& communicationId, const std::string& sender)
 {
     return mBackend->deleteCommunication(communicationId, mDerivation.hashIdentity(sender));
@@ -543,81 +548,76 @@ bool DatabaseFrontend::clearConsent(const std::string_view& kvnr)
     return mBackend->clearConsent(hashedKvnr);
 }
 
-void DatabaseFrontend::storeChargeInformation(const std::string_view& pharmacyId, const model::ChargeItem& chargeItem,
-                                              const model::Bundle& dispenseItem)
+void DatabaseFrontend::storeChargeInformation(const ::model::ChargeInformation& chargeInformation)
 {
-    //TODO ERP-8516: use appropriate encryption key
-    const auto& prescriptionId = chargeItem.id();
-    const auto& key = taskKey(prescriptionId);
-    const auto& encrypedChargeItem =
-            mCodec.encode(chargeItem.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
-    const auto& encrypedDispenseItem =
-            mCodec.encode(dispenseItem.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
-    const auto& hashedPharmacyId = mDerivation.hashTelematikId(pharmacyId);
-    mBackend->storeChargeInformation(hashedPharmacyId,
-                                     prescriptionId,
-                                     chargeItem.enteredDate(),
-                                     encrypedChargeItem,
-                                     encrypedDispenseItem);
+    ErpExpect(chargeInformation.prescription.has_value(), ::HttpStatus::BadRequest, "No prescription data found.");
+    ErpExpect(chargeInformation.unsignedPrescription.has_value(), ::HttpStatus::BadRequest,
+              "No prescription data found.");
+    ErpExpect(chargeInformation.receipt.has_value(), ::HttpStatus::BadRequest, "No receipt data found.");
+    ErpExpect(chargeInformation.chargeItem.prescriptionId().has_value(), ::HttpStatus::BadRequest,
+              "No prescription id found.");
+    ErpExpect(chargeInformation.chargeItem.accessCode().has_value(), ::HttpStatus::BadRequest, "No access code found.");
+    ErpExpect(chargeInformation.chargeItem.subjectKvnr().has_value(), ::HttpStatus::BadRequest, "No kvnr found.");
+    ErpExpect(chargeInformation.chargeItem.entererTelematikId().has_value(), ::HttpStatus::BadRequest,
+              "No enterer id found.");
+    ErpExpect(chargeInformation.chargeItem.enteredDate().has_value(), ::HttpStatus::BadRequest,
+              "No entered date found.");
+
+    const auto encryptionData = chargeItemKey(chargeInformation.chargeItem.prescriptionId().value());
+    const auto dbChargeItem = ::db_model::ChargeItem{chargeInformation, ::std::get<::BlobId>(encryptionData),
+                                                     ::std::get<::db_model::Blob>(encryptionData),
+                                                     ::std::get<::SafeString>(encryptionData), mCodec};
+    const auto& hashedKvnr = mDerivation.hashKvnr(chargeInformation.chargeItem.subjectKvnr().value());
+    mBackend->storeChargeInformation(dbChargeItem, hashedKvnr);
 }
 
-std::vector<model::ChargeItem>
-DatabaseFrontend::retrieveAllChargeItemsForPharmacy(const std::string_view& pharmacyTelematikId,
-                                                    const std::optional<UrlArguments>& search) const
+void DatabaseFrontend::updateChargeInformation(const ::model::ChargeInformation& chargeInformation)
 {
-    const auto& hashedPharmacyId = mDerivation.hashTelematikId(pharmacyTelematikId);
-    const auto& dbChargeItems = mBackend->retrieveAllChargeItemsForPharmacy(hashedPharmacyId, search);
-    return decryptChargeItems(dbChargeItems);
+    ErpExpect(chargeInformation.chargeItem.prescriptionId().has_value(), ::HttpStatus::BadRequest,
+              "No prescription id found.");
+    ErpExpect(chargeInformation.chargeItem.accessCode().has_value(), ::HttpStatus::BadRequest, "No access code found.");
+    ErpExpect(chargeInformation.chargeItem.subjectKvnr().has_value(), ::HttpStatus::BadRequest, "No kvnr found.");
+    ErpExpect(chargeInformation.chargeItem.entererTelematikId().has_value(), ::HttpStatus::BadRequest,
+              "No enterer id found.");
+    ErpExpect(chargeInformation.chargeItem.enteredDate().has_value(), ::HttpStatus::BadRequest,
+              "No entered date found.");
+
+    const auto encryptionData = chargeItemKey(chargeInformation.chargeItem.prescriptionId().value());
+    mBackend->updateChargeInformation(::db_model::ChargeItem{chargeInformation, ::std::get<::BlobId>(encryptionData),
+                                                             ::std::get<::db_model::Blob>(encryptionData),
+                                                             ::std::get<::SafeString>(encryptionData), mCodec});
 }
 
-std::vector<model::ChargeItem>
+::std::vector<::model::ChargeItem>
 DatabaseFrontend::retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
                                                     const std::optional<UrlArguments>& search) const
 {
-    const auto& insurantHash = mDerivation.hashKvnr(kvnr);
-    const auto& dbChargeItems = mBackend->retrieveAllChargeItemsForInsurant(insurantHash, search);
-    return decryptChargeItems(dbChargeItems);
+    const auto dbChargeItems = mBackend->retrieveAllChargeItemsForInsurant(mDerivation.hashKvnr(kvnr), search);
+
+    ::std::vector<::model::ChargeItem> result;
+    ::std::transform(::std::begin(dbChargeItems), ::std::end(dbChargeItems), ::std::back_inserter(result),
+                     [this](const auto& item) {
+                         const auto encryptionData = chargeItemKey(item);
+                         return item.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec).chargeItem;
+                     });
+
+    return result;
 }
 
-std::tuple<std::optional<model::Binary>, std::optional<model::Bundle>, std::optional<model::ChargeItem>, std::optional<model::Bundle>>
-DatabaseFrontend::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id)
+::model::ChargeInformation DatabaseFrontend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
-    const auto& [dbTask, dbChargeItem, dbDispenseItem] = mBackend->retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(id);
-    if (!dbTask)
-    {
-        return {};
-    }
-    const auto& keyForTask = taskKey(*dbTask);
-    return std::make_tuple(keyForTask ? getHealthcareProviderPrescription(*dbTask, *keyForTask) : std::nullopt,
-                           keyForTask ? getReceipt(*dbTask, *keyForTask) : std::nullopt,
-                           keyForTask ? getChargeItem(*dbChargeItem, *keyForTask) : std::nullopt,
-                           keyForTask ? getDispenseItem(*dbDispenseItem, *keyForTask) : std::nullopt);
+    const auto chargeItem = mBackend->retrieveChargeInformation(id);
+    const auto encryptionData = chargeItemKey(chargeItem);
+
+    return chargeItem.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec);
 }
 
-std::tuple<model::ChargeItem, model::Bundle>
-DatabaseFrontend::retrieveChargeInformation(const model::PrescriptionId& id) const
+::model::ChargeInformation DatabaseFrontend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
 {
-    const auto& [dbChargeItem, dbDispenseItem] = mBackend->retrieveChargeInformation(id);
-    //TODO ERP-8516: use appropriate encryption key
-    const auto& key = mDerivation.taskKey(dbChargeItem.prescriptionId, dbChargeItem.authoredOn, dbChargeItem.blobId,
-                                          dbChargeItem.salt);
-    const auto& chargeItemJson = mCodec.decode(dbChargeItem.chargeItem, key);
-    const auto& dispenseItemJson = mCodec.decode(dbDispenseItem, key);
-    return std::make_tuple(model::ChargeItem::fromJsonNoValidation(chargeItemJson),
-                           model::Bundle::fromJsonNoValidation(dispenseItemJson));
-}
+    const auto chargeItem = mBackend->retrieveChargeInformationForUpdate(id);
+    const auto encryptionData = chargeItemKey(chargeItem);
 
-std::tuple<model::ChargeItem, model::Bundle>
-DatabaseFrontend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
-{
-    const auto& [dbChargeItem, dbDispenseItem] = mBackend->retrieveChargeInformationForUpdate(id);
-    //TODO ERP-8516: use appropriate encryption key
-    const auto& key = mDerivation.taskKey(dbChargeItem.prescriptionId, dbChargeItem.authoredOn, dbChargeItem.blobId,
-                                          dbChargeItem.salt);
-    const auto& chargeItemJson = mCodec.decode(dbChargeItem.chargeItem, key);
-    const auto& dispenseItemJson = mCodec.decode(dbDispenseItem, key);
-    return std::make_tuple(model::ChargeItem::fromJsonNoValidation(chargeItemJson),
-                           model::Bundle::fromJsonNoValidation(dispenseItemJson));
+    return chargeItem.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec);
 }
 
 void DatabaseFrontend::deleteChargeInformation(const model::PrescriptionId& id)
@@ -635,12 +635,6 @@ uint64_t DatabaseFrontend::countChargeInformationForInsurant(const std::string& 
                                                              const std::optional<UrlArguments>& search)
 {
     return mBackend->countChargeInformationForInsurant(mDerivation.hashKvnr(kvnr), search);
-}
-
-uint64_t DatabaseFrontend::countChargeInformationForPharmacy(const std::string& pharmacyTelematikId,
-                                                             const std::optional<UrlArguments>& search)
-{
-    return mBackend->countChargeInformationForPharmacy(mDerivation.hashTelematikId(pharmacyTelematikId), search);
 }
 
 DatabaseBackend& DatabaseFrontend::getBackend()
@@ -702,15 +696,6 @@ std::optional<model::Bundle> DatabaseFrontend::getReceipt(const db_model::Task& 
         return std::nullopt;
     }
     return model::Bundle::fromJsonNoValidation(mCodec.decode(*dbTask.receipt, key));
-}
-
-std::optional<model::ChargeItem> DatabaseFrontend::getChargeItem(const std::optional<db_model::EncryptedBlob>& dbChargeItem, const SafeString& key)
-{
-    if (! dbChargeItem.has_value())
-    {
-        return std::nullopt;
-    }
-    return model::ChargeItem::fromJsonNoValidation(mCodec.decode(dbChargeItem.value(), key));
 }
 
 std::optional<model::Bundle> DatabaseFrontend::getDispenseItem(const std::optional<db_model::EncryptedBlob>& dbDispensItem, const SafeString& key)
@@ -775,6 +760,25 @@ std::tuple<SafeString, BlobId> DatabaseFrontend::medicationDispenseKey(const db_
     }
 }
 
+::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
+DatabaseFrontend::chargeItemKey(const ::model::PrescriptionId& prescriptionId) const
+{
+    A_19700.start("Get derivation key.");
+    auto [key, deriveKeyData] = mDerivation.initialChargeItemKey(prescriptionId);
+    A_19700.finish();
+
+    return {::std::move(key), deriveKeyData.blobId, ::db_model::Blob{deriveKeyData.salt}};
+}
+
+::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
+DatabaseFrontend::chargeItemKey(const ::db_model::ChargeItem& chargeItem) const
+{
+    A_19700.start("Get derivation key.");
+    auto key = mDerivation.chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt);
+    A_19700.finish();
+
+    return {::std::move(key), chargeItem.blobId, chargeItem.salt};
+}
 
 std::tuple<SafeString, BlobId> DatabaseFrontend::auditEventKey(const db_model::HashedKvnr& hashedKvnr)
 {
@@ -834,18 +838,4 @@ DatabaseFrontend::communicationKeyAndId(const std::string_view& identity, const 
         blobId = secondCallData.blobId;
     }
     return {std::move(key), blobId};
-}
-
-std::vector<model::ChargeItem>
-DatabaseFrontend::decryptChargeItems(const std::vector<db_model::ChargeItem>& dbChargeItems) const
-{
-    std::vector<model::ChargeItem> result;
-    for (const auto& dbItem : dbChargeItems)
-    {
-        //TODO ERP-8516: use appropriate encryption key
-        const auto& key = mDerivation.taskKey(dbItem.prescriptionId, dbItem.authoredOn, dbItem.blobId, dbItem.salt);
-        const auto& chargeItemJson = mCodec.decode(dbItem.chargeItem, key);
-        result.emplace_back(model::ChargeItem::fromJsonNoValidation(chargeItemJson));
-    }
-    return result;
 }

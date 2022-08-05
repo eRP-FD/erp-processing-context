@@ -55,6 +55,9 @@ public:
 
     ::Nonce getNonce(uint32_t input);
 
+    ErpBlob generatePseudonameKey(uint32_t input);
+    ErpArray<Aes256Length> unwrapPseudonameKey();
+
     void setTeeToken (const ErpBlob& teeToken);
 
     /**
@@ -91,6 +94,17 @@ public:
         const std::optional<OptionalDeriveKeyData>& secondCallData = std::nullopt);
 
     /**
+     * Derive a persistence key for a charge item resource.
+     * On the first call for a given charge item resource leave `secondCallData` empty. In this case a salt value and a blob generation
+     * id are returned. These are expected to be passed in on the second and all subsequent calls as `secondCallData`.
+     *
+     * @throws if there is any error
+     */
+    [[nodiscard]] ::DeriveKeyOutput
+    deriveChargeItemPersistenceKey(const ::ErpVector& derivationData,
+                                   const ::std::optional<OptionalDeriveKeyData>& secondCallData = ::std::nullopt);
+
+    /**
      * Return the id of the latest (newest) key derivation blob for Task (and MedicationDispense) resources.
      * This is mostly important for the decryption of MedicationDispense resources where a salt may have already been
      * generated for another MedicationDispense resource. As these solts are tied to individual blobs and a MedicationDispense
@@ -99,6 +113,7 @@ public:
     BlobId getLatestTaskPersistenceId (void) const;
     BlobId getLatestCommunicationPersistenceId (void) const;
     BlobId getLatestAuditLogPersistenceId (void) const;
+    [[nodiscard]] ::BlobId getLatestChargeItemPersistenceId() const;
 
     /**
      * Return the requested number of random bytes.

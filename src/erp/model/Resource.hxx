@@ -17,6 +17,12 @@ class XmlValidator;
 class JsonValidator;
 class InCodeValidator;
 
+namespace fhirtools
+{
+class ValidationResultList;
+class ValidatorOptions;
+}
+
 
 namespace model
 {
@@ -36,6 +42,8 @@ public:
     ResourceBase(ResourceBase&&) noexcept = default;
     ResourceBase& operator=(const ResourceBase&) = delete;
     ResourceBase& operator=(ResourceBase&&) noexcept = default;
+
+    [[nodiscard]] std::string_view getResourceType() const;
 
     template <typename ExtensionT = model::Extension>
     std::optional<ExtensionT> getExtension(const std::string_view& url = ExtensionT::url) const;
@@ -225,22 +233,27 @@ public:
     static TDerivedModel fromXmlNoValidation(std::string_view xml);
     static TDerivedModel fromXml(std::string_view xml, const XmlValidator& validator,
                                  const InCodeValidator& inCodeValidator, SchemaType schemaType,
+                                 bool allowGenericValidate = true,
                                  std::optional<SchemaVersionType> enforcedVersion = {});
     static TDerivedModel fromJsonNoValidation(std::string_view json);
     static TDerivedModel fromJson(std::string_view json, const JsonValidator& jsonValidator,
                                   const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator,
-                                  SchemaType schemaType);
+                                  SchemaType schemaType, bool allowGenericValidate = true);
     static TDerivedModel fromJson(const rapidjson::Value& json);
     static TDerivedModel fromJson(model::NumberAsStringParserDocument&& json);
 
     SchemaVersionType getSchemaVersion() const;
+
+    fhirtools::ValidationResultList genericValidate(const fhirtools::ValidatorOptions&) const;
 
 protected:
     using ResourceBase::ResourceBase;
 
 private:
     void doValidation(std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator,
-                         SchemaType schemaType, std::optional<SchemaVersionType> enforcedVersion = {}) const;
+                      SchemaType schemaType, bool allowGenericValidate = true,
+                      std::optional<SchemaVersionType> enforcedVersion = {}) const;
+    void doGenericValidation(const std::optional<ErpException>& = std::nullopt) const;
 
     friend class ResourceBase;
 };
@@ -250,8 +263,6 @@ class UnspecifiedResource : public Resource<UnspecifiedResource>
 private:
     friend Resource<UnspecifiedResource>;
     explicit UnspecifiedResource(NumberAsStringParserDocument&& document);
-public:
-    [[nodiscard]] std::string_view getResourceType() const;
 };
 
 template<typename ExtensionT>

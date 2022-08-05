@@ -9,8 +9,8 @@
 #include "erp/fhir/Fhir.hxx"
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/validation/XmlValidator.hxx"
-#include "erp/xml/SaxHandler.hxx"
-#include "erp/xml/XmlHelper.hxx"
+#include "fhirtools/util/SaxHandler.hxx"
+#include "fhirtools/util/XmlHelper.hxx"
 #include "erp/xml/XmlMemory.hxx"
 
 #include <cstdarg>
@@ -18,10 +18,11 @@
 #include <memory>
 #include <rapidjson/document.h>
 
+namespace fhirtools {
 class FhirElement;
 class FhirStructureDefinition;
 class FhirStructureRepository;
-
+}
 
 /// @brief Algorithm class for parsing FHIR XML Documents into FHIR-JSON
 ///
@@ -37,20 +38,21 @@ class FhirStructureRepository;
 /// JSON: http://hl7.org/fhir/R4/json.html
 /// @note The current implementation doesn't support subelemets in primitive types (ERP-4397) and xhtml (ERP-4468)
 class FhirSaxHandler final
-    : private SaxHandler
+    : private fhirtools::SaxHandler
 {
 public:
+    ~FhirSaxHandler() override;
+
     static model::NumberAsStringParserDocument parseXMLintoJSON(
-        const FhirStructureRepository& repo, const std::string_view& xmlDocument,
+        const fhirtools::FhirStructureRepository& repo, const std::string_view& xmlDocument,
         XmlValidatorContext* schemaValidationContext);
 
-    static void validateXML(const FhirStructureRepository& repo, const std::string_view& xmlDocument,
+    static void validateXML(const fhirtools::FhirStructureRepository& repo, const std::string_view& xmlDocument,
                             XmlValidatorContext& schemaValidationContext);
 
 private:
     class Context;
-    explicit FhirSaxHandler(const FhirStructureRepository& repo);
-    ~FhirSaxHandler() override;
+    explicit FhirSaxHandler(const fhirtools::FhirStructureRepository& repo);
 
     model::NumberAsStringParserDocument parseXMLintoJSONInternal(
         const std::string_view& xmlDocument,
@@ -82,25 +84,25 @@ private:
     // Push functions create a new context on the Parser stack
     void pushRootResource(const XmlStringView& resoureType);
 
-    void pushArrayContext(const Context& parentItem, std::shared_ptr<const FhirElement> parentElement,
-                       std::shared_ptr<const FhirElement> element, const XmlStringView& localname);
+    void pushArrayContext(const Context& parentItem, const std::shared_ptr<const fhirtools::FhirElement>& parentElement,
+                       const std::shared_ptr<const fhirtools::FhirElement>& element, const XmlStringView& localname);
 
-    void pushJsonField(const std::string_view& name, const AttributeList& attributes, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
-    void pushObject(const std::string_view& name, const SaxHandler::AttributeList& attributes, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
-    void pushString(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
-    void pushBoolean(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
-    void pushNumber(const std::string_view& name, const std::string_view& value, const FhirStructureDefinition& type, std::shared_ptr<const FhirElement> element);
+    void pushJsonField(const std::string_view& name, const AttributeList& attributes, const fhirtools::FhirStructureDefinition& type, std::shared_ptr<const fhirtools::FhirElement> element);
+    void pushObject(const std::string_view& name, const SaxHandler::AttributeList& attributes, const fhirtools::FhirStructureDefinition& type, const std::shared_ptr<const fhirtools::FhirElement>& element);
+    void pushString(const std::string_view& name, const std::string_view& value, const fhirtools::FhirStructureDefinition& type, std::shared_ptr<const fhirtools::FhirElement> element);
+    void pushBoolean(const std::string_view& name, const std::string_view& value, const fhirtools::FhirStructureDefinition& type, std::shared_ptr<const fhirtools::FhirElement> element);
+    void pushNumber(const std::string_view& name, const std::string_view& value, const fhirtools::FhirStructureDefinition& type, std::shared_ptr<const fhirtools::FhirElement> element);
 
 
-    [[nodiscard]] std::tuple<const FhirStructureDefinition&, std::shared_ptr<const FhirElement>>
-    getTypeAndElement(const FhirStructureDefinition& baseType,
-                     const FhirStructureDefinition* parentType,
-                     const FhirElement& baseElement,
+    [[nodiscard]] std::tuple<const fhirtools::FhirStructureDefinition&, std::shared_ptr<const fhirtools::FhirElement>>
+    getTypeAndElement(const fhirtools::FhirStructureDefinition& baseType,
+                     const fhirtools::FhirStructureDefinition* parentType,
+                     const fhirtools::FhirElement& baseElement,
                      const std::string_view& name) const;
 
-    const FhirStructureDefinition& systemTypeFor(const FhirStructureDefinition& primitiveType) const;
+    const fhirtools::FhirStructureDefinition& systemTypeFor(const fhirtools::FhirStructureDefinition& primitiveType) const;
 
-    static std::string makeElementId(const FhirElement& baseElement, const std::string_view& name);
+    static std::string makeElementId(const fhirtools::FhirElement& baseElement, const std::string_view& name);
 
     // return type ensures a constructor for rapidjson::Value exists, if it exists its always rapidjson::Value
     template <typename T>
@@ -122,7 +124,7 @@ private:
 
     model::NumberAsStringParserDocument mResult; ///< will contain the final result document one all Contexts have been joined
     std::list<Context> mStack; ///< holds the nested contexts back() is the current context
-    const FhirStructureRepository& mStructureRepo;
+    const fhirtools::FhirStructureRepository& mStructureRepo;
     UniqueXmlDocumentPtr mCurrentXHTMLDoc;
     xmlNodePtr mCurrentXHTMLNode = nullptr;
 };

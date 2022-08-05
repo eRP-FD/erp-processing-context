@@ -9,7 +9,9 @@
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/Configuration.hxx"
+#include "erp/util/Random.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/util/TLog.hxx"
 
 #include <sstream>
@@ -38,6 +40,21 @@ HsmMockClient::HsmMockClient (void)
 ::Nonce HsmMockClient::getNonce([[maybe_unused]] const ::HsmRawSession& session, [[maybe_unused]] uint32_t input)
 {
     return {};
+}
+
+ErpBlob HsmMockClient::generatePseudonameKey(const ::HsmRawSession& session, uint32_t input)
+{
+    (void)session;
+    ErpVector v{Random::randomBinaryData(32)};
+    ErpBlob b;
+    b.generation = input;
+    b.data = SafeString(v.data(), v.size());
+    return b;
+}
+
+ErpArray<Aes256Length> HsmMockClient::unwrapPseudonameKey(const HsmRawSession& session, UnwrapHashKeyInput&& input)
+{
+    return unwrapHashKey(session, std::move(input));
 }
 
 ErpBlob HsmMockClient::getTeeToken(
@@ -85,6 +102,12 @@ DeriveKeyOutput HsmMockClient::deriveCommsKey(
     return derivePersistenceKey(std::move(input), ::BlobType::CommunicationKeyDerivation);
 }
 
+::DeriveKeyOutput HsmMockClient::deriveChargeItemKey([[maybe_unused]] const::HsmRawSession& session, ::DeriveKeyInput&& input)
+{
+    verifyTeeToken(input.teeToken);
+
+    return derivePersistenceKey(::std::move(input), ::BlobType::ChargeItemKeyDerivation);
+}
 
 ErpArray<Aes128Length> HsmMockClient::doVauEcies128(
     const HsmRawSession&,

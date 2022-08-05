@@ -12,7 +12,7 @@
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/TslService.hxx"
 #include "erp/tsl/error/TslError.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
@@ -916,7 +916,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoHistoryIgnoreTimestamp_Success)
     // set CA StatusStartingTime to the "valid from" timestamp of the certificate
     manager->addPostUpdateHook([=]{
     TslTestHelper::setCaCertificateTimestamp(
-        model::Timestamp::fromFhirDateTime("2020-06-10T00:00:00Z").toChronoTimePoint(), certificateCA, *manager,
+        fhirtools::Timestamp::fromFhirDateTime("2020-06-10T00:00:00Z").toChronoTimePoint(), certificateCA, *manager,
         TslMode::BNA);
     });
 

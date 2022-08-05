@@ -1,6 +1,6 @@
 <Task xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/eRxTask" />
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxTask" />
     <tag>
       <display value="Valid example with ePrescription Bundle as input." />
     </tag>

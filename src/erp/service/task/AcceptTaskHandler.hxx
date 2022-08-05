@@ -17,6 +17,7 @@ public:
 
 private:
     static void checkTaskPreconditions(const PcSessionContext& session, const model::Task& task);
+    static void checkMultiplePrescription(const model::KbvBundle& prescription);
 };
 
 

@@ -10,14 +10,19 @@
 
 #include <optional>
 
+namespace fhirtools {
+class Timestamp;
+}
+
 namespace model
 {
-
-class Timestamp;
+using fhirtools::Timestamp;
 
 class Extension : public model::Resource<Extension>
 {
 public:
+    static constexpr auto resourceTypeName = "Extension";
+
     using Resource::Resource;
     [[nodiscard]] std::optional<bool> valueBoolean() const;
 
@@ -29,13 +34,16 @@ public:
 
     [[nodiscard]] std::optional<std::string_view> valueString() const;
 
-    [[nodiscard]] std::optional<model::Timestamp> valueDate() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> valueDate() const;
 
     [[nodiscard]] std::optional<double> valueRatioNumerator() const;
     [[nodiscard]] std::optional<double> valueRatioDenominator() const;
 
-    [[nodiscard]] std::optional<model::Timestamp> valuePeriodStart() const;
-    [[nodiscard]] std::optional<model::Timestamp> valuePeriodEnd() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodStart() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodEnd() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodStartGermanDate() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodEndGermanDate() const;
+
 
     [[nodiscard]] std::optional<std::string_view> valueIdentifierSystem() const;
     [[nodiscard]] std::optional<std::string_view> valueIdentifierValue() const;

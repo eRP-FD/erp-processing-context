@@ -95,7 +95,7 @@ std::string JsonMaintainNumberPrecisionTest::createJsonStringCommunicationInfoRe
                     writer.StartArray();
                         writer.StartObject();
                             writer.Key(elements::system);
-                            writer.String("https://fhir.kbv.de/NamingSystem/KBV_NS_ERP_PZN");
+                            writer.String("http://fhir.de/CodeSystem/ifa/pzn");
                             writer.Key(elements::code);
                             writer.String("06313728");
                         writer.EndObject();

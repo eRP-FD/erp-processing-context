@@ -24,7 +24,7 @@
     <resource>
       <Task>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/eRxTask" />
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxTask" />
           <tag>
             <display value="Valid example with ePrescription Bundle as input." />
           </tag>
@@ -610,7 +610,7 @@
       <Device>
         <id value="eRxService"/>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/erxDevice"/>
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
         </meta>
         <status value="active"/>
         <serialNumber value="R4.0.0.287342834"/>
@@ -713,7 +713,7 @@
       <Organization>
         <id value="cf042e44-086a-4d51-9c77-172f9a972e3b"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.2"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.3"/>
         </meta>
         <identifier>
           <system value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
@@ -760,7 +760,7 @@
     <resource>
       <MedicationDispense>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/erxMedicationDispense" />
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense" />
         </meta>
         <contained>
           <Medication>
@@ -861,7 +861,7 @@
     <resource>
       <AuditEvent>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/eRxAuditEvent" />
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent" />
           <tag>
             <display value="Valid Example with minimal data." />
           </tag>
@@ -968,7 +968,7 @@
       <Bundle>
         <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/erxReceipt"/>
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxReceipt"/>
         </meta>
         <identifier>
           <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
@@ -980,7 +980,7 @@
           <resource>
             <Composition>
               <meta>
-                <profile value="https://gematik.de/fhir/StructureDefinition/erxComposition"/>
+                <profile value="https://gematik.de/fhir/StructureDefinition/ErxComposition"/>
               </meta>
               <extension url="https://gematik.de/fhir/StructureDefinition/BeneficiaryExtension">
                 <valueIdentifier>
@@ -1015,7 +1015,7 @@
             <Device>
               <id value="eRxService"/>
               <meta>
-                <profile value="https://gematik.de/fhir/StructureDefinition/erxDevice"/>
+                <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
               </meta>
               <status value="active"/>
               <serialNumber value="R4.0.0.287342834"/>

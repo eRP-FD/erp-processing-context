@@ -37,26 +37,27 @@ using ProzessParameterFlowtype = ErpWorkflowTestTemplate<::testing::TestWithPara
 
 TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_19445_06.test("Prozessparameter - Flowtype");
+    using fn = std::optional<std::string_view> (*)(const rapidjson::Value& object, const rapidjson::Pointer& key);
+    static constexpr auto getOptionalStringValue =
+        static_cast<fn>(&model::NumberAsStringParserDocument::getOptionalStringValue);
+    A_19445_08.test("Prozessparameter - Flowtype");
     using namespace std::string_view_literals;
     using namespace model::resource;
     const auto& [params, prescriptionType] = GetParam();
-    auto signingTime = model::Timestamp::fromXsDate(std::string{params.signingTime});
-    auto acceptDate = model::Timestamp::fromXsDate(std::string{params.acceptDate});
-    auto expiryDate = model::Timestamp::fromXsDate(std::string{params.expiryDate});
+    auto signingTime = fhirtools::Timestamp::fromXsDate(std::string{params.signingTime});
+    auto acceptDate = fhirtools::Timestamp::fromGermanDate(std::string{params.acceptDate});
+    auto expiryDate = fhirtools::Timestamp::fromGermanDate(std::string{params.expiryDate});
     auto& resourceManager = ResourceManager::instance();
     auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
+    if (prescriptionType == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv){
+        bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle_PKV.xml");
+        acceptDate = fhirtools::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
+    }
     bundle = patchVersionsInBundle(bundle);
     bundle = String::replaceAll(bundle, "2021-06-08", std::string{params.signingTime});
     std::string kvnr;
     ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
     boost::replace_all(bundle, "X234567890"sv, kvnr);
-
-    if(prescriptionType == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
-    {
-        acceptDate = model::Timestamp::fromXsDate(std::string{params.acceptDatePkv});
-        boost::replace_all(bundle, "GKV"sv, "PKV");
-    }
 
     // Create Task for Workflow
     std::optional<model::Task> task;
@@ -81,6 +82,7 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
             ASSERT_EQ(flowTypeDisplay, "Muster 16 (Apothekenpflichtige Arzneimittel)");
             break;
         case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::direkteZuweisungPkv:
             ASSERT_EQ(flowTypeDisplay, "Muster 16 (Direkte Zuweisung)");
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
@@ -96,16 +98,16 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
     static const rapidjson::Pointer systemPtr{ElementName::path(elements::system)};
     static const rapidjson::Pointer codePtr{ElementName::path(elements::code)};
     static const rapidjson::Pointer displayPtr{ElementName::path(elements::display)};
-    auto performerTypeCodingSystem = taskDoc.getOptionalStringValue(*performerTypeCoding, systemPtr);
-    auto performerTypeCodingCode = taskDoc.getOptionalStringValue(*performerTypeCoding, codePtr);
-    auto performerTypeCodingDisplay = taskDoc.getOptionalStringValue(*performerTypeCoding, displayPtr);
+    auto performerTypeCodingSystem = getOptionalStringValue(*performerTypeCoding, systemPtr);
+    auto performerTypeCodingCode = getOptionalStringValue(*performerTypeCoding, codePtr);
+    auto performerTypeCodingDisplay = getOptionalStringValue(*performerTypeCoding, displayPtr);
     ASSERT_TRUE(performerTypeCodingSystem.has_value());
     ASSERT_EQ(std::string{*performerTypeCodingSystem}, "urn:ietf:rfc:3986");
     ASSERT_TRUE(performerTypeCodingCode.has_value());
     ASSERT_EQ(std::string{*performerTypeCodingCode}, "urn:oid:1.2.276.0.76.4.54");
     ASSERT_TRUE(performerTypeCodingDisplay.has_value());
     ASSERT_EQ(std::string{*performerTypeCodingDisplay}, "Öffentliche Apotheke");
-    A_19445_06.finish();
+    A_19445_08.finish();
 }
 
 std::list<Parameters> samples = {
@@ -121,3 +123,4 @@ INSTANTIATE_TEST_SUITE_P(samples, ProzessParameterFlowtype,
                           model::PrescriptionType::direkteZuweisung,
                           model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
 );
+

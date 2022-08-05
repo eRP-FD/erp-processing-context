@@ -6,6 +6,7 @@
 #include "erp/model/Patient.hxx"
 #include "erp/model/Reference.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
 
 #include <rapidjson/pointer.h>
@@ -32,13 +33,15 @@ std::string Patient::kvnr() const
     const auto* pointerValue = getValue(identifierPointer);
     ModelExpect(pointerValue && pointerValue->IsArray(), "identifier not present or not an array.");
     const auto array = pointerValue->GetArray();
+    ModelExpect(array.Size() < 2, "identifier array has cardinality 0..1");
     for (auto item = array.Begin(), end = array.End(); item != end; ++item)
     {
         const auto* typePointerValue = typePointer.Get(*item);
         ModelExpect(typePointerValue && typePointerValue->IsString(),
                     "missing identifier/system in identifier array entry");
-        if (NumberAsStringParserDocument::getStringValueFromValue(typePointerValue) ==
-            resource::naming_system::gkvKvid10)
+        if (Configuration::instance().featureWf200Enabled() ||
+            NumberAsStringParserDocument::getStringValueFromValue(typePointerValue) ==
+                resource::naming_system::gkvKvid10)
         {
             const auto* kvnrPointerValue = kvnrPointer.Get(*item);
             ModelExpect(kvnrPointerValue && kvnrPointerValue->IsString(),

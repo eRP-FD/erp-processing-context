@@ -6,7 +6,9 @@
 #include <gtest/gtest.h>
 
 #include "erp/fhir/Fhir.hxx"
-#include "erp/fhir/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+
+using namespace fhirtools;
 
 TEST(FhirStructureDefinitionTest, derivationEnum)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -37,15 +39,23 @@ TEST(FhirStructureDefinitionTest, kindEnum)//NOLINT(readability-function-cogniti
     EXPECT_EQ(stringToKind("systemString"  ), Kind::systemString );
     EXPECT_EQ(stringToKind("systemDouble"  ), Kind::systemDouble );
     EXPECT_EQ(stringToKind("systemInteger" ), Kind::systemInteger);
+    EXPECT_EQ(stringToKind("systemDate"    ), Kind::systemDate   );
+    EXPECT_EQ(stringToKind("systemTime"    ), Kind::systemTime   );
+    EXPECT_EQ(stringToKind("systemDateTime"), Kind::systemDateTime);
+    EXPECT_EQ(stringToKind("slice"         ), Kind::slice        );
 
     EXPECT_EQ(to_string(Kind::primitiveType), "primitive-type");
-    EXPECT_EQ(to_string(Kind::complexType  ), "complex-type");
-    EXPECT_EQ(to_string(Kind::resource     ), "resource");
-    EXPECT_EQ(to_string(Kind::logical      ), "logical");
-    EXPECT_EQ(to_string(Kind::systemBoolean), "systemBoolean");
-    EXPECT_EQ(to_string(Kind::systemString ), "systemString");
-    EXPECT_EQ(to_string(Kind::systemDouble ), "systemDouble");
-    EXPECT_EQ(to_string(Kind::systemInteger), "systemInteger");
+    EXPECT_EQ(to_string(Kind::complexType  ), "complex-type"  );
+    EXPECT_EQ(to_string(Kind::resource     ), "resource"      );
+    EXPECT_EQ(to_string(Kind::logical      ), "logical"       );
+    EXPECT_EQ(to_string(Kind::systemBoolean), "systemBoolean" );
+    EXPECT_EQ(to_string(Kind::systemString ), "systemString"  );
+    EXPECT_EQ(to_string(Kind::systemDouble ), "systemDouble"  );
+    EXPECT_EQ(to_string(Kind::systemInteger), "systemInteger" );
+    EXPECT_EQ(to_string(Kind::systemDate   ), "systemDate"    );
+    EXPECT_EQ(to_string(Kind::systemTime   ), "systemTime"    );
+    EXPECT_EQ(to_string(Kind::systemDateTime), "systemDateTime");
+    EXPECT_EQ(to_string(Kind::slice        ), "slice"         );
     // clang-format on
 }
 
@@ -80,8 +90,8 @@ TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitiv
         .baseDefinition(baseUrl)
         .kind(FhirStructureDefinition::Kind::resource)
         .derivation(Derivation::specialization)
-        .addElement(std::move(rootElement))
-        .addElement(std::move(valueElement))
+        .addElement(std::move(rootElement), {})
+        .addElement(std::move(valueElement), {})
         .getAndReset();
 
     EXPECT_EQ(testDefinition.url(), url);
@@ -103,6 +113,13 @@ TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitiv
     EXPECT_EQ(testElement->representation(), Representation::element);
     EXPECT_FALSE(testElement->isRoot());
     EXPECT_TRUE(testElement->isArray());
+}
+
+TEST(FhirStructureDefinitionTest, VersionTest)
+{
+    Version v1("2018-08-12");
+    Version v2("2018-08-11");
+    EXPECT_TRUE(v1 > v2);
 }
 
 

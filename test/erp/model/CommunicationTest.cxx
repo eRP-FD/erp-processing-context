@@ -4,16 +4,12 @@
  */
 
 #include "test/erp/model/CommunicationTest.hxx"
-#include "erp/util/FileHelper.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "test_config.h"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/StaticData.hxx"
 
-//#include <boost/format.hpp>
-#include <rapidjson/pointer.h>
 #include <rapidjson/stringbuffer.h>
-#include <rapidjson/writer.h>
 
 using namespace model;
 using namespace model::resource;
@@ -903,4 +899,50 @@ TEST_F(CommunicationTest, RepresentativeSetTimeReceived)//NOLINT(readability-fun
     communication.setTimeReceived(timestamp);
     EXPECT_EQ(communication.timeReceived().has_value(), true);
     ASSERT_EQ(timestamp, communication.timeReceived());
+}
+
+TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
+{
+    std::string body = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
+                           .setPrescriptionId("160.123.456.789.123.58")
+                           .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
+                           .setRecipient(ActorRole::Pharmacists, "PharmacyX")
+                           .setPayload("Some change request payload")
+                           .createJsonString();
+
+    const auto chargChangeReqComm = Communication::fromJson(
+        std::move(body),
+        *StaticData::getJsonValidator(),
+        *StaticData::getXmlValidator(),
+        *StaticData::getInCodeValidator(),
+        SchemaType::fhir, false);
+    
+    EXPECT_EQ(chargChangeReqComm.messageType(), Communication::MessageType::ChargChangeReq);
+    EXPECT_EQ(chargChangeReqComm.messageTypeAsString(), "ChargChangeReq");
+    EXPECT_EQ(chargChangeReqComm.messageTypeAsProfileUrl(), structure_definition::communicationChargChangeReq);
+    EXPECT_FALSE(chargChangeReqComm.id().has_value());
+    EXPECT_EQ(chargChangeReqComm.prescriptionId().toString(), "160.123.456.789.123.58");
+    EXPECT_FALSE(chargChangeReqComm.sender().has_value());
+    EXPECT_TRUE(chargChangeReqComm.recipient().has_value());
+    EXPECT_EQ(chargChangeReqComm.recipient(), "PharmacyX");
+    EXPECT_FALSE(chargChangeReqComm.timeSent().has_value());
+    EXPECT_FALSE(chargChangeReqComm.timeReceived().has_value());
+
+    const auto& json = chargChangeReqComm.jsonDocument();
+    EXPECT_NE(Communication::resourceTypePointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::idPointer.Get(json), nullptr);
+    EXPECT_NE(Communication::metaProfile0Pointer.Get(json), nullptr);
+    EXPECT_NE(Communication::basedOn0ReferencePointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::senderIdentifierSystemPointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::senderIdentifierValuePointer.Get(json), nullptr);
+    EXPECT_NE(Communication::recipient0IdentifierSystemPointer.Get(json), nullptr);
+    EXPECT_NE(Communication::recipient0IdentifierValuePointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::sentPointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::receivedPointer.Get(json), nullptr);
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58");
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::telematicID);
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyX");
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::metaProfile0Pointer),
+              model::ResourceVersion::versionizeProfile(structure_definition::communicationChargChangeReq));
 }

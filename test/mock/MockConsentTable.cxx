@@ -10,7 +10,7 @@
 
 #include <pqxx/except>
 
-void MockConsentTable::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+void MockConsentTable::storeConsent(const db_model::HashedKvnr& kvnr, const fhirtools::Timestamp& creationTime)
 {
     bool inserted{};
     std::tie(std::ignore, inserted) = mConsents.emplace(kvnr, creationTime);
@@ -20,7 +20,7 @@ void MockConsentTable::storeConsent(const db_model::HashedKvnr& kvnr, const mode
     }
 }
 
-std::optional<model::Timestamp> MockConsentTable::getConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::optional<fhirtools::Timestamp> MockConsentTable::getConsentDateTime(const db_model::HashedKvnr& kvnr)
 {
     auto dbConsent = mConsents.find(kvnr);
     if (dbConsent == mConsents.end())

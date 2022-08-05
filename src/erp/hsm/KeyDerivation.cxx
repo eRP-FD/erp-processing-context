@@ -15,9 +15,8 @@
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/PrescriptionType.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/SafeString.hxx"
-#include "erp/database/DatabaseModel.hxx"
 
 KeyDerivation::KeyDerivation(HsmPool& hsmPool)
     : mHsmPool(hsmPool)
@@ -27,7 +26,7 @@ KeyDerivation::KeyDerivation(HsmPool& hsmPool)
 {
 }
 
-ErpVector KeyDerivation::taskKeyDerivationData(const model::PrescriptionId& taskId, const model::Timestamp& authoredOn)
+ErpVector KeyDerivation::taskKeyDerivationData(const model::PrescriptionId& taskId, const fhirtools::Timestamp& authoredOn)
 {
     A_19700.start("Assemble derivation data for task.");
     ErpVector derivationData;
@@ -53,7 +52,7 @@ ErpVector KeyDerivation::taskKeyDerivationData(const model::PrescriptionId& task
 }
 
 SafeString KeyDerivation::taskKey(const model::PrescriptionId& taskId,
-                                  const model::Timestamp& authoredOn,
+                                  const fhirtools::Timestamp& authoredOn,
                                   BlobId blobId,
                                   const db_model::Blob& salt)
 {
@@ -69,7 +68,7 @@ SafeString KeyDerivation::taskKey(const model::PrescriptionId& taskId,
 }
 
 std::tuple<SafeString, OptionalDeriveKeyData> KeyDerivation::initialTaskKey(const model::PrescriptionId& taskId,
-                                                                     const model::Timestamp& authoredOn)
+                                                                     const fhirtools::Timestamp& authoredOn)
 {
     A_19700.start("Initial key derivation for Task.");
     auto hsmPoolSession = mHsmPool.acquire();
@@ -210,11 +209,40 @@ SafeString KeyDerivation::communicationKey(const std::string_view& identity,
     return key;
 }
 
-
-const SafeString& KeyDerivation::getPersistenceIndexKeyKvnr (void) const
+::SafeString KeyDerivation::chargeItemKey(const ::model::PrescriptionId& prescriptionId, ::BlobId blobId,
+                                          const ::db_model::Blob& salt)
 {
-    std::lock_guard lock (mPersistenceIndexKeyMutex);
-    if ( ! mPersistenceIndexKeyKvnr.has_value())
+    A_19700.start("Key derivation for ChargeItem.");
+    auto hsmPoolSession = mHsmPool.acquire();
+
+    auto key = hsmPoolSession.session()
+                   .deriveChargeItemPersistenceKey(::ErpVector::create(prescriptionId.toString()),
+                                                   ::OptionalDeriveKeyData{::ErpVector{salt}, blobId})
+                   .derivedKey;
+    A_19700.finish();
+
+    return ::SafeString(::std::move(key));//NOLINT[hicpp-move-const-arg,performance-move-const-arg]
+}
+
+::std::tuple<::SafeString, ::OptionalDeriveKeyData>
+KeyDerivation::initialChargeItemKey(const ::model::PrescriptionId& prescriptionId)
+{
+    A_19700.start("Initial key derivation for ChargeItem.");
+    auto hsmPoolSession = mHsmPool.acquire();
+    auto keyData =
+        hsmPoolSession.session().deriveChargeItemPersistenceKey(::ErpVector::create(prescriptionId.toString()));
+    Expect(keyData.optionalData, "missing salt/blob_id on initial derivation");
+    A_19700.finish();
+
+    return ::std::make_tuple(
+        ::SafeString{::std::move(keyData.derivedKey)},//NOLINT[hicpp-move-const-arg,performance-move-const-arg]
+        ::std::move(*keyData.optionalData));
+}
+
+const SafeString& KeyDerivation::getPersistenceIndexKeyKvnr(void) const
+{
+    std::lock_guard lock(mPersistenceIndexKeyMutex);
+    if (! mPersistenceIndexKeyKvnr.has_value())
         mPersistenceIndexKeyKvnr = SafeString(mHsmPool.acquire().session().getKvnrHmacKey());
     return mPersistenceIndexKeyKvnr.value();
 }

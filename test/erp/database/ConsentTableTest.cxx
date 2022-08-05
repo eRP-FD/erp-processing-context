@@ -1,7 +1,7 @@
 #include "test/erp/database/DatabaseTestFixture.hxx"
 
 #include "erp/model/Consent.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 class ConsentTableTest : public DatabaseTestFixture
 {
@@ -23,7 +23,7 @@ public:
 
 TEST_F(ConsentTableTest, createAndGet)
 {
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
+    auto timestamp = fhirtools::Timestamp::fromFhirDateTime("2021-10-03");
     { // scope
         auto db = database();
         db.storeConsent(model::Consent{kvnr1, timestamp});
@@ -53,7 +53,7 @@ TEST_F(ConsentTableTest, notFound)
     }
     { //scope
         auto db = database();
-        auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
+        auto timestamp = fhirtools::Timestamp::fromFhirDateTime("2021-10-03");
         db.storeConsent(model::Consent{kvnr1, timestamp});
         db.commitTransaction();
     }
@@ -71,7 +71,7 @@ TEST_F(ConsentTableTest, clear)
 {
     { // scope
         auto db = database();
-        auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
+        auto timestamp = fhirtools::Timestamp::fromFhirDateTime("2021-10-03");
         EXPECT_FALSE(db.clearConsent(kvnr1));
         db.storeConsent(model::Consent{kvnr1, timestamp});
         db.commitTransaction();
@@ -97,7 +97,7 @@ TEST_F(ConsentTableTest, clear)
 
 TEST_F(ConsentTableTest, duplicate)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
+    auto timestamp = fhirtools::Timestamp::fromFhirDateTime("2021-10-03");
     { // scope
         auto db = database();
         EXPECT_NO_THROW(db.storeConsent(model::Consent{kvnr1, timestamp}));

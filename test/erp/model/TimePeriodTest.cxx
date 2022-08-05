@@ -13,6 +13,7 @@ using namespace date;
 using namespace std::literals::chrono_literals;
 using namespace model;
 
+using fhirtools::Timestamp;
 
 class TimePeriodTest : public testing::Test
 {

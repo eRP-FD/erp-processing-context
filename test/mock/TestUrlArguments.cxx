@@ -12,13 +12,13 @@
 #include <unordered_set>
 
 namespace {
-    model::Timestamp timestampFromSuuid(const Uuid& uuid)
+    fhirtools::Timestamp timestampFromSuuid(const Uuid& uuid)
     {
         std::istringstream stream (uuid.toString().substr(0, 16));
         stream.imbue(std::locale::classic());
         std::chrono::system_clock::time_point result;
         date::from_stream(stream, "%Y%m%d-%H%M-%S", result);
-        return model::Timestamp{result};
+        return fhirtools::Timestamp{result};
     }
 
     template<class T>
@@ -92,14 +92,14 @@ namespace {
             else if (sortArgument.nameDb == "authored_on")
             {
                 comparisonResult = compareValues(
-                    std::optional<model::Timestamp>{taskA.authoredOn},
-                    std::optional<model::Timestamp>{taskB.authoredOn}, sortArgument.order);
+                    std::optional<fhirtools::Timestamp>{taskA.authoredOn},
+                    std::optional<fhirtools::Timestamp>{taskB.authoredOn}, sortArgument.order);
             }
             else if (sortArgument.nameDb == "last_modified")
             {
                 comparisonResult = compareValues(
-                    std::optional<model::Timestamp>{taskA.lastModified},
-                    std::optional<model::Timestamp>{taskB.lastModified}, sortArgument.order);
+                    std::optional<fhirtools::Timestamp>{taskA.lastModified},
+                    std::optional<fhirtools::Timestamp>{taskB.lastModified}, sortArgument.order);
             }
             else if (sortArgument.nameDb == "prescription_id")
             {
@@ -127,8 +127,8 @@ namespace {
             if (sortArgument.nameUrl == "date")
             {
                 comparisonResult = compareValues(
-                    std::optional<model::Timestamp>{auditEventA.recorded},
-                    std::optional<model::Timestamp>{auditEventB.recorded}, sortArgument.order);
+                    std::optional<fhirtools::Timestamp>{auditEventA.recorded},
+                    std::optional<fhirtools::Timestamp>{auditEventB.recorded}, sortArgument.order);
             }
             else if (sortArgument.nameUrl == "subtype")
             {
@@ -194,8 +194,8 @@ TestUrlArguments::SearchCommunication::SearchCommunication(db_model::Communicati
 TestUrlArguments::SearchMedicationDispense::SearchMedicationDispense(
         db_model::MedicationDispense dbMedicationDispense,
         db_model::HashedTelematikId performer,
-        model::Timestamp whenHandedOver,
-        std::optional<model::Timestamp> whenPrepared)
+        fhirtools::Timestamp whenHandedOver,
+        std::optional<fhirtools::Timestamp> whenPrepared)
     : MedicationDispense(std::move(dbMedicationDispense))
     , performer(std::move(performer))
     , whenHandedOver(whenHandedOver)
@@ -287,7 +287,7 @@ bool TestUrlArguments::matches(const std::string& parameterName, const std::opti
 
 template<>
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
-bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterName, const std::optional<model::Timestamp>& value) const
+bool TestUrlArguments::matches<fhirtools::Timestamp> (const std::string& parameterName, const std::optional<fhirtools::Timestamp>& value) const
 {
     // Default result is true, because if parameter is not mentioned by the search arguments 
     // => the value does not take part in the search 
@@ -551,8 +551,8 @@ TestUrlArguments::Tasks TestUrlArguments::applySearch (TestUrlArguments::Tasks&&
         for (auto& theTask : initialTasks)
         {
             if (matches("status", std::optional<model::Task::Status>{theTask.status})
-                && matches("authored-on", std::optional<model::Timestamp>{theTask.authoredOn})
-                && matches("modified", std::optional<model::Timestamp>{theTask.lastModified}))
+                && matches("authored-on", std::optional<fhirtools::Timestamp>{theTask.authoredOn})
+                && matches("modified", std::optional<fhirtools::Timestamp>{theTask.lastModified}))
             {
                 tasks.emplace_back(std::move(theTask));
             }
@@ -622,7 +622,7 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::applySearch (TestUrlArgum
 
         for (auto& auditEvent : auditEvents)
         {
-            if (matches("date", std::optional<model::Timestamp>{auditEvent.recorded})
+            if (matches("date", std::optional<fhirtools::Timestamp>{auditEvent.recorded})
                 && matches("subtype", std::optional<std::string_view>(std::string(1, static_cast<char>(auditEvent.action)))))
             {
                 resultAuditEvents.emplace_back(std::move(auditEvent));

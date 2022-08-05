@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -35,20 +35,18 @@ RUN conan remote clean &&\
     conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force &&\
     conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force &&\
     conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force &&\
-    conan profile new default --detect &&\
-    conan profile update settings.compiler.libcxx=libstdc++11 default &&\
-    conan profile update settings.compiler.cppstd=17 default &&\
-    conan profile update settings.compiler.version=9 default &&\
-    conan profile update env.CXX=g++-9 default &&\
-    conan profile update env.CC=gcc-9 default
-RUN conan install .. --build missing
-RUN cmake \
-    -GNinja \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DERP_WITH_HSM_MOCK=ON \
-    -DERP_BUILD_VERSION=${ERP_BUILD_VERSION} \
-    -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
-    -DCMAKE_INSTALL_PREFIX=/erp ..
+    conan profile new --detect default &&\
+    /usr/bin/echo -e '[build_requires]\nautomake/1.16.5' >> ~/.conan/profiles/default
+
+RUN CC=gcc-11 \
+    CXX=g++-11 \
+    cmake \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DERP_WITH_HSM_MOCK=ON \
+        -DERP_BUILD_VERSION=${ERP_BUILD_VERSION} \
+        -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
+        -DCMAKE_INSTALL_PREFIX=/erp ..
 RUN ninja -l$(nproc) blob-db-initialization
 RUN cmake --install . --component blob-db-initialization
 RUN cp ../scripts/enrolment-helper.sh /erp/bin

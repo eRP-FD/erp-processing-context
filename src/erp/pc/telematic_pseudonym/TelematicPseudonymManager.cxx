@@ -26,7 +26,6 @@ TelematicPseudonymManager::TelematicPseudonymManager(PcServiceContext* serviceCo
 void TelematicPseudonymManager::LoadCmacs(const date::sys_days& forDay)
 {
     using namespace date;
-    using namespace std::chrono;
 
     TVLOG(1) << "Loading CMAC for TelematicPseudonym from Database " << forDay;
     auto database = mServiceContext->databaseFactory();

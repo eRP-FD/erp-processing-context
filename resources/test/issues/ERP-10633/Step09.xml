@@ -1,0 +1,358 @@
+<Bundle xmlns="http://hl7.org/fhir">
+   <id value="52525b83-1fc3-446f-a4a1-e6b4e4c1339a"/>
+   <meta>
+      <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2"/>
+   </meta>
+   <identifier>
+      <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
+      <value value="200.000.000.000.429.45"/>
+   </identifier>
+   <type value="document"/>
+   <timestamp value="2022-07-25T10:55:59.152+02:00"/>
+   <entry>
+      <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/Composition/ed52c1e3-b700-4497-ae19-b23744e29876"/>
+      <resource>
+         <Composition xmlns="http://hl7.org/fhir">
+            <id value="ed52c1e3-b700-4497-ae19-b23744e29876"/>
+            <meta>
+               <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2"/>
+            </meta>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"/>
+                  <code value="00"/>
+               </valueCoding>
+            </extension>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_PKV_Tariff">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"/>
+                  <code value="02"/>
+               </valueCoding>
+            </extension>
+            <status value="final"/>
+            <type>
+               <coding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"/>
+                  <code value="e16A"/>
+               </coding>
+            </type>
+            <subject>
+               <reference value="http://pvs.praxis-topp-gluecklich.local/fhir/Patient/Y229270213"/>
+            </subject>
+            <date value="2022-07-25T10:55:59+02:00"/>
+            <author>
+               <reference value="http://pvs.praxis.local/fhir/Practitioner/20597e0e-cb2a-45b3-95f0-dc3dbdb617c3"/>
+               <type value="Practitioner"/>
+            </author>
+            <author>
+               <type value="Device"/>
+               <identifier>
+                  <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer"/>
+                  <value value="Y/400/1910/36/346"/>
+               </identifier>
+            </author>
+            <title value="elektronische Arzneimittelverordnung"/>
+            <custodian>
+               <reference value="http://pvs.praxis.local/fhir/Organization/d2b30a70-9830-4968-ab97-688472b6f9a3"/>
+            </custodian>
+            <section>
+               <code>
+                  <coding>
+                     <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type"/>
+                     <code value="Prescription"/>
+                  </coding>
+               </code>
+               <entry>
+                  <reference value="http://pvs.praxis-topp-gluecklich.local/fhir/MedicationRequest/e930cdee-9eb5-4b44-88b5-2a18b69f3b9a"/>
+               </entry>
+            </section>
+            <section>
+               <code>
+                  <coding>
+                     <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type"/>
+                     <code value="Coverage"/>
+                  </coding>
+               </code>
+               <entry>
+                  <reference value="http://pvs.praxis.local/fhir/Coverage/1b1ffb6e-eb05-43d7-87eb-e7818fe9661a"/>
+               </entry>
+            </section>
+         </Composition>
+      </resource>
+   </entry>
+   <entry>
+      <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/Patient/Y229270213"/>
+      <resource>
+         <Patient xmlns="http://hl7.org/fhir">
+            <id value="Y229270213"/>
+            <meta>
+               <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3"/>
+            </meta>
+            <identifier>
+               <type>
+                  <coding>
+                     <system value="http://fhir.de/CodeSystem/identifier-type-de-basis"/>
+                     <code value="GKV"/>
+                  </coding>
+               </type>
+               <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
+               <value value="Y229270213"/>
+            </identifier>
+            <name>
+               <use value="official"/>
+               <family value="Meyer"/>
+               <given value="Ludger"/>
+            </name>
+            <birthDate value="1935-06-22"/>
+            <address>
+               <type value="both"/>
+               <line value="Musterstr. 1">
+                  <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber">
+                     <valueString value="1"/>
+                  </extension>
+                  <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName">
+                     <valueString value="Musterstr."/>
+                  </extension>
+               </line>
+               <city value="Berlin"/>
+               <postalCode value="10623"/>
+            </address>
+         </Patient>
+      </resource>
+   </entry>
+   <entry>
+      <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/MedicationRequest/e930cdee-9eb5-4b44-88b5-2a18b69f3b9a"/>
+      <resource>
+         <MedicationRequest xmlns="http://hl7.org/fhir">
+            <id value="e930cdee-9eb5-4b44-88b5-2a18b69f3b9a"/>
+            <meta>
+               <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2"/>
+            </meta>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_StatusCoPayment"/>
+                  <code value="0"/>
+               </valueCoding>
+            </extension>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee">
+               <valueBoolean value="false"/>
+            </extension>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG">
+               <valueBoolean value="false"/>
+            </extension>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription">
+               <extension url="Kennzeichen">
+                  <valueBoolean value="false"/>
+               </extension>
+            </extension>
+            <status value="active"><extension url="subStatus"><valueBoolean value="true"/></extension></status>
+            <intent value="order"/>
+            <medicationReference>
+               <reference value="http://Medication/4b4b012d-bf89-4d4b-8ce9-9d65e85d647e"/>
+            </medicationReference>
+            <subject>
+               <reference value="http://pvs.praxis-topp-gluecklich.local/fhir/Patient/Y229270213"/>
+            </subject>
+            <authoredOn value="2022-07-25"/>
+            <requester>
+               <reference value="http://pvs.praxis.local/fhir/Practitioner/20597e0e-cb2a-45b3-95f0-dc3dbdb617c3"/>
+            </requester>
+            <insurance>
+               <reference value="http://pvs.praxis.local/fhir/Coverage/1b1ffb6e-eb05-43d7-87eb-e7818fe9661a"/>
+            </insurance>
+            <dosageInstruction>
+               <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag">
+                  <valueBoolean value="false"/>
+               </extension>
+            </dosageInstruction>
+            <dispenseRequest>
+               <quantity>
+                  <value value="1"/>
+                  <system value="http://unitsofmeasure.org"/>
+                  <code value="{Package}"/>
+               </quantity>
+            </dispenseRequest>
+            <substitution>
+               <allowedBoolean value="true"/>
+            </substitution>
+         </MedicationRequest>
+      </resource>
+   </entry>
+   <entry>
+      <fullUrl value="http://pvs.praxis.local/fhir/Coverage/1b1ffb6e-eb05-43d7-87eb-e7818fe9661a"/>
+      <resource>
+         <Coverage xmlns="http://hl7.org/fhir">
+            <id value="1b1ffb6e-eb05-43d7-87eb-e7818fe9661a"/>
+            <meta>
+               <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3"/>
+            </meta>
+            <extension url="http://fhir.de/StructureDefinition/gkv/besondere-personengruppe">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"/>
+                  <code value="00"/>
+               </valueCoding>
+            </extension>
+            <extension url="http://fhir.de/StructureDefinition/gkv/dmp-kennzeichen">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"/>
+                  <code value="00"/>
+               </valueCoding>
+            </extension>
+            <extension url="http://fhir.de/StructureDefinition/gkv/wop">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"/>
+                  <code value="03"/>
+               </valueCoding>
+            </extension>
+            <extension url="http://fhir.de/StructureDefinition/gkv/versichertenart">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"/>
+                  <code value="1"/>
+               </valueCoding>
+            </extension>
+            <status value="active"/>
+            <type>
+               <coding>
+                  <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis"/>
+                  <code value="PKV"/>
+               </coding>
+            </type>
+            <beneficiary>
+               <reference value="http://pvs.praxis-topp-gluecklich.local/fhir/Patient/Y229270213"/>
+            </beneficiary>
+            <payor>
+               <identifier>
+                  <system value="http://fhir.de/NamingSystem/arge-ik/iknr"/>
+                  <value value="104212059"/>
+               </identifier>
+               <display value="AOK Rheinland/Hamburg"/>
+            </payor>
+         </Coverage>
+      </resource>
+   </entry>
+   <entry>
+      <fullUrl value="http://pvs.praxis.local/fhir/Practitioner/20597e0e-cb2a-45b3-95f0-dc3dbdb617c3"/>
+      <resource>
+         <Practitioner xmlns="http://hl7.org/fhir">
+            <id value="20597e0e-cb2a-45b3-95f0-dc3dbdb617c3"/>
+            <meta>
+               <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Practitioner|1.0.3"/>
+            </meta>
+            <identifier>
+               <type>
+                  <coding>
+                     <system value="http://terminology.hl7.org/CodeSystem/v2-0203"/>
+                     <code value="LANR"/>
+                  </coding>
+               </type>
+               <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_ANR"/>
+               <value value="838382202"/>
+            </identifier>
+            <name>
+               <use value="official"/>
+               <family value="Arzt"/>
+               <given value="Hans"/>
+            </name>
+            <qualification>
+               <code>
+                  <coding>
+                     <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"/>
+                     <code value="00"/>
+                  </coding>
+               </code>
+            </qualification>
+            <qualification>
+               <code>
+                  <text value="Facharzt f&amp;#252;r Kinder- und Jugendmedizin"/>
+               </code>
+            </qualification>
+         </Practitioner>
+      </resource>
+   </entry>
+   <entry>
+      <fullUrl value="http://pvs.praxis.local/fhir/Organization/d2b30a70-9830-4968-ab97-688472b6f9a3"/>
+      <resource>
+         <Organization xmlns="http://hl7.org/fhir">
+            <id value="d2b30a70-9830-4968-ab97-688472b6f9a3"/>
+            <meta>
+               <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.3"/>
+            </meta>
+            <identifier>
+               <type>
+                  <coding>
+                     <system value="http://terminology.hl7.org/CodeSystem/v2-0203"/>
+                     <code value="BSNR"/>
+                  </coding>
+               </type>
+               <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_BSNR"/>
+               <value value="031234567"/>
+            </identifier>
+            <name value="Kinderarztpraxis"/>
+            <telecom>
+               <system value="phone"/>
+               <value value="09411234567"/>
+            </telecom>
+            <address>
+               <type value="both"/>
+               <line value="Yorckstra&amp;#223;e 15">
+                  <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber">
+                     <valueString value="15"/>
+                  </extension>
+                  <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName">
+                     <valueString value="Yorckstra&amp;#223;e"/>
+                  </extension>
+               </line>
+               <city value="Regensburg"/>
+               <postalCode value="93049"/>
+            </address>
+         </Organization>
+      </resource>
+   </entry>
+   <entry>
+      <fullUrl value="http://Medication/4b4b012d-bf89-4d4b-8ce9-9d65e85d647e"/>
+      <resource>
+         <Medication xmlns="http://hl7.org/fhir">
+            <id value="4b4b012d-bf89-4d4b-8ce9-9d65e85d647e"/>
+            <meta>
+               <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2"/>
+            </meta>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
+               <valueCoding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"/>
+                  <code value="00"/>
+               </valueCoding>
+            </extension>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine">
+               <valueBoolean value="false"/>
+            </extension>
+            <extension url="http://fhir.de/StructureDefinition/normgroesse">
+               <valueCode value="N1"/>
+            </extension>
+            <code>
+               <coding>
+                  <system value="http://fhir.de/CodeSystem/ifa/pzn"/>
+                  <code value="14220225"/>
+               </coding>
+               <text value="Sumatriptan-1a Pharma 100 mg Tabletten"/>
+            </code>
+            <form>
+               <coding>
+                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"/>
+                  <code value="TAB"/>
+               </coding>
+            </form>
+            <amount>
+               <numerator>
+                  <value value="0"/>
+                  <unit value="TAB"/>
+                  <system value="http://unitsofmeasure.org"/>
+                  <code value="{tbl}"/>
+               </numerator>
+               <denominator>
+                  <value value="1"/>
+               </denominator>
+            </amount>
+         </Medication>
+      </resource>
+   </entry>
+</Bundle>

@@ -38,13 +38,13 @@ namespace
         (void) res;
         if (old_handler.count(sig) > 0)
         {
-            signal(sig, old_handler[sig]);
+            (void)signal(sig, old_handler[sig]);
         }
         else
         {
-            signal(sig, SIG_DFL);
+            (void)signal(sig, SIG_DFL);
         }
-        raise(sig);
+        (void)raise(sig);
     }
 
     void register_signals(std::initializer_list<int> signals)

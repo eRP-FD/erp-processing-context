@@ -34,6 +34,7 @@ public:
     AuditDataCollector& setInsurantKvnr(const std::string_view& kvnr);
     AuditDataCollector& setDeviceId(const std::int16_t deviceId);
     AuditDataCollector& setPrescriptionId(const model::PrescriptionId& prescriptionId);
+    AuditDataCollector& setConsentId(const std::string_view& consentId);
 
     // throws MissingAuditDataException if mandatory data is missing:
     model::AuditData createData() const;
@@ -46,6 +47,7 @@ private:
     std::optional<std::string> mInsurantKvnr;
     std::optional<std::int16_t> mDeviceId;
     std::optional<model::PrescriptionId> mPrescriptionId;
+    std::optional<std::string> mConsentId;
 };
 
 

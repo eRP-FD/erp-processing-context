@@ -5,22 +5,24 @@
 
 #include "erp/model/Task.hxx"
 
+#include <date/tz.h>
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once
 
+#include "erp/ErpConstants.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/ResourceNames.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
 #include "erp/util/WorkDay.hxx"
 
+using  fhirtools::Timestamp;
 
 namespace model
 {
 using namespace std::string_literals;
-
 const std::string task_template = R"--(
 {
   "resourceType": "Task",
@@ -207,11 +209,11 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     A_19112.finish();
 
     A_19214.start("set Task.performerType corresponding to the value of prescriptionType");
-    A_19445_06.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_19445_08.start("set Task.performerType corresponding to the value of prescriptionType");
     setValue(performerTypePointer, PrescriptionTypePerformerType.at(prescriptionType));
     setValue(performerTypeDisplayPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
     setValue(performerTypeTextPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
-    A_19445_06.finish();
+    A_19445_08.finish();
     A_19214.finish();
 
     setValue(authoredOnPointer, Timestamp::now().toXsDateTime());
@@ -320,7 +322,7 @@ Timestamp Task::dateFromExtensionArray(std::string_view url) const
     const auto arrayEntry = findStringInArray(
         extensionArrayPointer, urlPointer, url, valueDatePointer);
     ModelExpect(arrayEntry.has_value(), std::string(url) + " is missing from extension array");
-    return Timestamp::fromXsDate(std::string(arrayEntry.value()));
+    return Timestamp::fromGermanDate(std::string(arrayEntry.value()));
 }
 
 void Task::updateLastUpdate(const Timestamp& timestamp)
@@ -382,43 +384,50 @@ void Task::setAcceptDate(const Timestamp& acceptDate)
     dateToExtensionArray(acceptDateUrl, acceptDate);
 }
 
-void Task::setAcceptDate(const Timestamp& baseTime, const KbvStatusKennzeichen& legalBasisCode,
+void Task::setAcceptDate(const Timestamp& baseTime, const std::optional<KbvStatusKennzeichen>& legalBasisCode,
                          int entlassRezeptValidityWorkingDays)
 {
-    switch(legalBasisCode)
+    if (legalBasisCode)
     {
-        case KbvStatusKennzeichen::ohneErsatzverordnungskennzeichen:
-        case KbvStatusKennzeichen::asvKennzeichen:
-        case KbvStatusKennzeichen::tssKennzeichen:
-        case KbvStatusKennzeichen::nurErsatzverordnungsKennzeichen:
-        case KbvStatusKennzeichen::asvKennzeichenMitErsatzverordnungskennzeichen:
-        case KbvStatusKennzeichen::tssKennzeichenMitErsatzverordungskennzeichen:
-            A_19445_06.start("Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 200)>");
-            setAccepDateDependentPrescriptionType(baseTime);
-            A_19445_06.finish();
-            break;
-        case KbvStatusKennzeichen::entlassmanagementKennzeichen:
-        case KbvStatusKennzeichen::entlassmanagementKennzeichenMitErsatzverordungskennzeichen:
-            A_19517_02.start("deviant accept date for Entlassrezepte");
-            // -1 because the current day is part of the duration.
-            setAcceptDate((WorkDay(baseTime) + (entlassRezeptValidityWorkingDays - 1)).toTimestamp());
-            A_19517_02.finish();
-            break;
+        switch (*legalBasisCode)
+        {
+            case KbvStatusKennzeichen::ohneErsatzverordnungskennzeichen:
+            case KbvStatusKennzeichen::asvKennzeichen:
+            case KbvStatusKennzeichen::tssKennzeichen:
+            case KbvStatusKennzeichen::nurErsatzverordnungsKennzeichen:
+            case KbvStatusKennzeichen::asvKennzeichenMitErsatzverordnungskennzeichen:
+            case KbvStatusKennzeichen::tssKennzeichenMitErsatzverordungskennzeichen:
+                break;
+            case KbvStatusKennzeichen::entlassmanagementKennzeichen:
+            case KbvStatusKennzeichen::entlassmanagementKennzeichenMitErsatzverordungskennzeichen:
+                A_19517_02.start("deviant accept date for Entlassrezepte");
+                // -1 because the current day is part of the duration.
+                setAcceptDate((WorkDay(baseTime) + (entlassRezeptValidityWorkingDays - 1)).toTimestamp());
+                A_19517_02.finish();
+                return;
+        }
     }
+    A_19445_08.start(
+        "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 200)>");
+    setAccepDateDependentPrescriptionType(baseTime);
+    A_19445_08.finish();
 }
 
 void Task::setAccepDateDependentPrescriptionType(const Timestamp& baseTime)
 {
     using namespace std::chrono_literals;
-    switch(type())
+    switch (type())
     {
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            setAcceptDate(model::Timestamp{date::sys_days{
-                date::year_month_day{date::floor<date::days>(baseTime.toChronoTimePoint())} +
-                date::months{3}}});
+            setAcceptDate(fhirtools::Timestamp{
+                date::sys_days{date::year_month_day{date::floor<date::days>(
+                                   date::make_zoned(fhirtools::Timestamp::GermanTimezone, baseTime.toChronoTimePoint())
+                                       .get_local_time())} +
+                               date::months{3}}});
             break;
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::direkteZuweisungPkv:
             setAcceptDate(baseTime + (24h * 28));
             break;
     }
@@ -433,7 +442,7 @@ void Task::dateToExtensionArray(std::string_view url, const Timestamp& date)
 
     auto newValue = copyValue(*ExtensionDateTemplate);
     setKeyValue(newValue, urlPointer, url);
-    setKeyValue(newValue, valueDatePointer, date.toXsDate());
+    setKeyValue(newValue, valueDatePointer, date.toGermanDate());
     addToArray(extensionArrayPointer, std::move(newValue));
 }
 

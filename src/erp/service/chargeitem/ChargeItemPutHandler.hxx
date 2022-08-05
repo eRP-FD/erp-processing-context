@@ -18,18 +18,11 @@ public:
     void handleRequest(PcSessionContext& session) override;
 
 private:
-    void handleRequestInsurant(
-        PcSessionContext& session,
-        model::ChargeItem& existingChargeItem,
-        const model::Bundle& existingDispenseItem,
-        const model::ChargeItem& newChargeItem,
-        const std::string& idClaim);
+    void handleRequestInsurant(PcSessionContext& session, ::model::ChargeInformation& existingChargeInformation,
+                               const model::ChargeItem& newChargeItem, const std::string& idClaim);
 
-    void handleRequestPharmacy(
-        PcSessionContext& session,
-        model::ChargeItem& existingChargeItem,
-        model::ChargeItem& newChargeItem,
-        const std::string& idClaim);
+    void handleRequestPharmacy(PcSessionContext& session, ::model::ChargeInformation& existingChargeInformation,
+                               const model::ChargeItem& newChargeItem, const std::string& idClaim);
 };
 
 

@@ -26,7 +26,7 @@ void CommunicationGetHandlerBase::markCommunicationsAsRetrieved (
 
     // Find the Communication objects which have not yet been retrieved and mark them with the current time
     // as retrieved.
-    const auto now = model::Timestamp::now();
+    const auto now = fhirtools::Timestamp::now();
     std::vector<Uuid> communicationIdsToMark;
     for (auto& communication : communications)
         if (!communication.timeReceived().has_value() && communication.recipient() == caller)

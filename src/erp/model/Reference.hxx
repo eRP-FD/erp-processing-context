@@ -14,6 +14,8 @@ namespace model
 class Reference : public Resource<Reference>
 {
 public:
+    static constexpr auto resourceTypeName = "Reference";
+
     [[nodiscard]] std::optional<std::string_view> identifierUse() const;
     [[nodiscard]] std::optional<std::string_view> identifierTypeCodingCode() const;
     [[nodiscard]] std::optional<std::string_view> identifierTypeCodingSystem() const;

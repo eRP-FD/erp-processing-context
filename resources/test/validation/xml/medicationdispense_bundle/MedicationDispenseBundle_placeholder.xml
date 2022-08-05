@@ -2,7 +2,7 @@
 <Bundle xmlns="http://hl7.org/fhir">
     <type value="collection"/>
     <entry>
-        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/MedicationDispense/ed52c1e3-b700-4497-ae19-b23744e29876"/>
+        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/MedicationDispense/975f9529-0835-4f44-9499-370625f38dfe"/>
         <resource>
             <MedicationDispense>
                 <meta>

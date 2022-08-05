@@ -6,7 +6,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TSL_X509CERTIFICATE_HXX
 #define ERP_PROCESSING_CONTEXT_TSL_X509CERTIFICATE_HXX
 
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/util/OpenSsl.hxx"
 
 #include <chrono>

@@ -5,6 +5,7 @@
 
 #include "erp/util/String.hxx"
 
+
 #include "erp/util/Base64.hxx"
 
 #include <gtest/gtest.h>
@@ -208,7 +209,7 @@ TEST_F(StringTest, removeTrailingChar)
     const std::string orig = "abcdefghijklmnopqrst";
     std::string result = orig;
 
-    for(auto iter = orig.crbegin(); iter != orig.crend(); ++iter)
+    for(auto iter = orig.crbegin(); iter != orig.crend(); ++iter) //NOLINT(modernize-loop-convert)
     {
         const auto expected = result.substr(0, result.size()-1);
         const auto removec = *iter;

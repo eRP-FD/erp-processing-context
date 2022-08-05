@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Communication xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/erxCommunicationDispReq"/>
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq"/>
   </meta>
   <contained>
     <Medication>
@@ -179,7 +179,7 @@
     <text value="test"/>
   </topic>
   <about>
-    <reference value="reference"/>
+    <reference value="#5fe6e06c-8725-46d5-aecd-e65e041ca3de"/>
     <type value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN"/>
     <identifier>
       <value value="identifier" />

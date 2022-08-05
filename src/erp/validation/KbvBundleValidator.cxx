@@ -21,6 +21,8 @@
 #include "erp/validation/KbvMedicationModelHelper.hxx"
 #include "erp/validation/KbvValidationUtils.hxx"
 
+#include <date/date.h>
+
 namespace
 {
 
@@ -392,19 +394,19 @@ void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundl
         {
             case SchemaType::KBV_PR_ERP_Medication_Compounding:
                 (void) model::KbvMedicationCompounding::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                                inCodeValidator, profile, version);
+                                                                inCodeValidator, profile, false, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_FreeText:
                 (void) model::KbvMedicationFreeText::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                             inCodeValidator, profile, version);
+                                                             inCodeValidator, profile, false, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_Ingredient:
                 (void) model::KbvMedicationIngredient::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                               inCodeValidator, profile, version);
+                                                               inCodeValidator, profile, false, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_PZN:
                 (void) model::KbvMedicationPzn::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                        inCodeValidator, profile, version);
+                                                        inCodeValidator, profile, false, version);
                 break;
             default:
                 ErpFail(HttpStatus::BadRequest, "Unsupported medication profile");

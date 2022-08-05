@@ -8,6 +8,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <rapidjson/ostreamwrapper.h>
 #include <regex>
 
@@ -66,6 +67,13 @@ bool NumberAsStringParserDocument::valueIsString(const rj::Value& value)
         return (value.GetString()[0] == prefixString);
     }
     return false;
+}
+
+std::string_view model::NumberAsStringParserDocument::valueAsString(const rapidjson::Value& value)
+{
+    ModelExpect(valueIsString(value), "value is not a string");
+    std::string_view val{value.GetString(), value.GetStringLength()};
+    return val.substr(1);
 }
 
 rj::Value NumberAsStringParserDocument::createEmptyObject()
@@ -249,7 +257,7 @@ void NumberAsStringParserDocument::setValue(const rj::Pointer& pointerToEntry, d
 }
 
 std::optional<std::string_view>
-NumberAsStringParserDocument::getOptionalStringValue(const rj::Value& object, const rj::Pointer& key) const
+NumberAsStringParserDocument::getOptionalStringValue(const rj::Value& object, const rj::Pointer& key)
 {
     const auto* pointerValue = key.Get(object);
     if (pointerValue && pointerValue->IsString())
@@ -283,7 +291,7 @@ NumberAsStringParserDocument::getNumericAsString(const rapidjson::Pointer& key) 
 }
 
 std::optional<int>
-NumberAsStringParserDocument::getOptionalIntValue(const rj::Value& object, const rj::Pointer& key) const
+NumberAsStringParserDocument::getOptionalIntValue(const rj::Value& object, const rj::Pointer& key)
 {
     const auto* pointerValue = key.Get(object);
     if (pointerValue && pointerValue->IsString())
@@ -315,7 +323,7 @@ NumberAsStringParserDocument::getOptionalIntValue(const rj::Value& object, const
 }
 
 std::optional<unsigned int>
-NumberAsStringParserDocument::getOptionalUIntValue(const rj::Value& object, const rj::Pointer& key) const
+NumberAsStringParserDocument::getOptionalUIntValue(const rj::Value& object, const rj::Pointer& key)
 {
     const auto* pointerValue = key.Get(object);
     if (pointerValue && pointerValue->IsString())
@@ -349,7 +357,7 @@ NumberAsStringParserDocument::getOptionalUIntValue(const rj::Value& object, cons
 }
 
 std::optional<int64_t>
-NumberAsStringParserDocument::getOptionalInt64Value(const rj::Value& object, const rj::Pointer& key) const
+NumberAsStringParserDocument::getOptionalInt64Value(const rj::Value& object, const rj::Pointer& key)
 {
     const auto* pointerValue = key.Get(object);
     if (pointerValue && pointerValue->IsString())
@@ -381,7 +389,7 @@ NumberAsStringParserDocument::getOptionalInt64Value(const rj::Value& object, con
 }
 
 std::optional<uint64_t>
-NumberAsStringParserDocument::getOptionalUInt64Value(const rj::Value& object, const rj::Pointer& key) const
+NumberAsStringParserDocument::getOptionalUInt64Value(const rj::Value& object, const rj::Pointer& key)
 {
     const auto* pointerValue = key.Get(object);
     if (pointerValue && pointerValue->IsString())
@@ -413,7 +421,7 @@ NumberAsStringParserDocument::getOptionalUInt64Value(const rj::Value& object, co
 }
 
 std::optional<double>
-NumberAsStringParserDocument::getOptionalDoubleValue(const rj::Value& object, const rj::Pointer& key) const
+NumberAsStringParserDocument::getOptionalDoubleValue(const rj::Value& object, const rj::Pointer& key)
 {
     const auto* pointerValue = key.Get(object);
     if (pointerValue && pointerValue->IsString())

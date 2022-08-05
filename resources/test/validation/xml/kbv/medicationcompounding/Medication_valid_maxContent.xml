@@ -51,9 +51,6 @@
       <text value="text"/>
     </itemCodeableConcept>
     <strength>
-      <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Ingredient_Amount">
-        <valueString value="12 Tabletten" />
-      </extension>
       <numerator>
         <value value="12" />
         <unit value="TAB" />

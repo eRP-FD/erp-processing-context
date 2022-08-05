@@ -14,8 +14,10 @@
 #include <string>
 #include <sstream>
 
+namespace fhirtools {
 class FhirElement;
 class FhirStructureDefinition;
+}
 
 class FhirCanonicalizer
 {
@@ -42,55 +44,55 @@ protected:
     static void serializeObject(
         size_t& immersionDepth,
         std::ostringstream& buffer,
-        const FhirStructureDefinition* backboneStructDef,
-        std::shared_ptr<const FhirElement> backboneElement,
-        const FhirStructureDefinition& objectStructDef,
+        const fhirtools::FhirStructureDefinition* backboneStructDef,
+        const std::shared_ptr<const fhirtools::FhirElement>& backboneElement,
+        const fhirtools::FhirStructureDefinition& objectStructDef,
         const std::string& objectName,
         const rapidjson::Value& object);
     static void serializeArray(
         size_t& immersionDepth,
         std::ostringstream& buffer,
-        const FhirStructureDefinition* backboneStructDef,
-        std::shared_ptr<const FhirElement> backboneElement,
-        const FhirStructureDefinition& objectStructDef,
+        const fhirtools::FhirStructureDefinition* backboneStructDef,
+        const std::shared_ptr<const fhirtools::FhirElement>& backboneElement,
+        const fhirtools::FhirStructureDefinition& objectStructDef,
         const std::string& arrayName,
         const rapidjson::Value& array);
     static void serializePrimitiveValue(
         std::ostringstream& buffer,
-        const FhirStructureDefinition& elementStructDef,
+        const fhirtools::FhirStructureDefinition& elementStructDef,
         const std::string& name,
         const rapidjson::Value& value);
 
     static void serializeValue(
         size_t& immersionDepth,
         std::ostringstream& buffer,
-        const FhirStructureDefinition* backboneStructDef,
-        std::shared_ptr<const FhirElement> backboneElement,
-        const FhirStructureDefinition& elementStructDef,
+        const fhirtools::FhirStructureDefinition* backboneStructDef,
+        const std::shared_ptr<const fhirtools::FhirElement>& backboneElement,
+        const fhirtools::FhirStructureDefinition& elementStructDef,
         const std::string& name,
         const rapidjson::Value& value);
 
     static std::map<std::string, const rapidjson::Value*> getSortedMembers(
         size_t immersionDepth,
-        const FhirStructureDefinition* backboneStructDef,
-        std::shared_ptr<const FhirElement> backboneElement,
-        const FhirStructureDefinition& objectStructDef,
+        const fhirtools::FhirStructureDefinition* backboneStructDef,
+        const std::shared_ptr<const fhirtools::FhirElement>& backboneElement,
+        const fhirtools::FhirStructureDefinition& objectStructDef,
         const rapidjson::Value& object);
 
     static std::string buildElementPath(
-        std::shared_ptr<const FhirElement> backboneElement,
-        const FhirStructureDefinition& objectStructDef,
+        const std::shared_ptr<const fhirtools::FhirElement>& backboneElement,
+        const fhirtools::FhirStructureDefinition& objectStructDef,
         const std::string& objectName);
 
     static void removeDoubleWhitespaces(std::string& value);
 
     static bool elementHasToBeRemoved(
         size_t immersionDepth,
-        const FhirStructureDefinition* backboneStructDef,
-        std::shared_ptr<const FhirElement> backboneElement,
-        const FhirStructureDefinition& objectStructDef,
+        const fhirtools::FhirStructureDefinition* backboneStructDef,
+        const std::shared_ptr<const fhirtools::FhirElement>& backboneElement,
+        const fhirtools::FhirStructureDefinition& objectStructDef,
         const std::string& objectName);
-    static bool doubleWhitespacesHaveToBeRemoved(const FhirStructureDefinition& elementStructDef);
+    static bool doubleWhitespacesHaveToBeRemoved(const fhirtools::FhirStructureDefinition& elementStructDef);
 };
 
 #endif

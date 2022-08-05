@@ -88,7 +88,7 @@ TEST_F(BoostBeastStringReaderTest, parseRequest_successWithLargeHeaderAndBody)//
     request = String::replaceAll(request, "##HEADER-VALUE##", largeHeaderValue);
 
     // Also use a large body.
-    const std::string largeBody = std::string(1024*1024, 'Y');
+    const std::string largeBody = std::string(1024ul*1024ul, 'Y');
     request = String::replaceAll(request, "##BODY##", largeBody);
     request = String::replaceAll(request, "##LENGTH##", std::to_string(largeBody.size()));
 

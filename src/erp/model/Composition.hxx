@@ -7,7 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_COMPOSITION_HXX
 
 #include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
 
@@ -36,16 +36,16 @@ public:
     static constexpr auto resourceTypeName = "Composition";
     Composition(
         const std::string_view& telematicId,
-        const model::Timestamp& start,
-        const model::Timestamp& end,
+        const fhirtools::Timestamp& start,
+        const fhirtools::Timestamp& end,
         const std::string_view& author,
         const std::string_view& prescriptionDigestIdentifier);
 
     [[nodiscard]] std::string_view id() const;
     [[nodiscard]] std::optional<std::string_view> telematikId() const;
-    [[nodiscard]] std::optional<model::Timestamp> date() const;
-    [[nodiscard]] std::optional<model::Timestamp> periodStart() const;
-    [[nodiscard]] std::optional<model::Timestamp> periodEnd() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> date() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> periodStart() const;
+    [[nodiscard]] std::optional<fhirtools::Timestamp> periodEnd() const;
     [[nodiscard]] std::optional<std::string_view> author() const;
     [[nodiscard]] std::optional<std::string_view> prescriptionDigestIdentifier() const;
     // idx may by 0 or 1

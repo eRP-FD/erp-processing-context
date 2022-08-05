@@ -154,8 +154,19 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     task->updateLastUpdate();
 
     // Update task in database and delete related HealthCareProviderPrescription, PatientConfirmation,
-    // Receipt, MedicationDispense:
+    // Receipt, MedicationDispense and ChargeItem:
     databaseHandle->updateTaskClearPersonalData(*task);
+    switch (task->prescriptionId().type())
+    {
+        case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            databaseHandle->deleteChargeInformation(task->prescriptionId());
+            break;
+        case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
+            [[fallthrough]];
+        case ::model::PrescriptionType::direkteZuweisung:
+        case ::model::PrescriptionType::direkteZuweisungPkv:
+            break;
+    }
     A_19027.finish();
 
     A_19514.start("HttpStatus 204 for successful POST");

@@ -1,0 +1,179 @@
+<?xml version="1.0"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+  <id value="DomainResource"/>
+  <url value="http://erp-test.net/test/fhir-path/closedSlicingExtensions/profiles/StringAndCodeExtensionResource.xml"/>
+  <version value="4.0.1"/>
+  <name value="DomainResource"/>
+  <kind value="resource"/>
+  <abstract value="false"/>
+  <type value="DomainResource"/>
+  <baseDefinition value="http://hl7.org/fhir/StructureDefinition/DomainResource"/>
+  <derivation value="constraint"/>
+  <snapshot>
+    <element id="DomainResource">
+      <path value="DomainResource"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="DomainResource"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+    </element>
+    <element id="DomainResource.id">
+      <path value="DomainResource.id"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.id"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="http://hl7.org/fhirpath/System.String"/>
+      </type>
+    </element>
+    <element id="DomainResource.meta">
+      <path value="DomainResource.meta"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.meta"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="Meta"/>
+      </type>
+    </element>
+    <element id="DomainResource.implicitRules">
+      <path value="DomainResource.implicitRules"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.implicitRules"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="uri"/>
+      </type>
+    </element>
+    <element id="DomainResource.language">
+      <path value="DomainResource.language"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.language"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="code"/>
+      </type>
+      <binding>
+        <strength value="preferred"/>
+        <description value="A human language."/>
+        <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
+      </binding>
+    </element>
+    <element id="DomainResource.text">
+      <path value="DomainResource.text"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="DomainResource.text"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="Narrative"/>
+      </type>
+    </element>
+    <element id="DomainResource.contained">
+      <path value="DomainResource.contained"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="DomainResource.contained"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Resource"/>
+      </type>
+    </element>
+    <element id="DomainResource.extension">
+      <path value="DomainResource.extension"/>
+      <slicing>
+        <discriminator>
+          <type value="value"/>
+          <path value="url"/>
+        </discriminator>
+        <description value="Extensions are always sliced by (at least) url"/>
+        <rules value="open"/>
+      </slicing>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="DomainResource.extension"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Extension"/>
+      </type>
+    </element>
+    <element id="DomainResource.extension:stringExtension">
+      <path value="DomainResource.extension"/>
+      <sliceName value="stringExtension"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="DomainResource.extension"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Extension"/>
+        <profile value="http://erp-test.net/test/fhir-path/profiles/StringExtension"/>
+      </type>
+    </element>
+    <element id="DomainResource.extension:codeExtension">
+      <path value="DomainResource.extension"/>
+      <sliceName value="codeExtension"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="DomainResource.extension"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Extension"/>
+        <profile value="http://erp-test.net/test/fhir-path/profiles/CodeExtension"/>
+      </type>
+    </element>
+    <element id="DomainResource.modifierExtension">
+      <path value="DomainResource.modifierExtension"/>
+      <slicing>
+        <discriminator>
+          <type value="value"/>
+          <path value="url"/>
+        </discriminator>
+        <description value="Extensions are always sliced by (at least) url"/>
+        <rules value="open"/>
+      </slicing>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="DomainResource.modifierExtension"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Extension"/>
+      </type>
+    </element>
+  </snapshot>
+</StructureDefinition>

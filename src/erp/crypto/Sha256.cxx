@@ -9,7 +9,7 @@
 #include "erp/util/Buffer.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/util/OpenSsl.hxx"
 
 std::string Sha256::fromBin(const std::string_view& data)

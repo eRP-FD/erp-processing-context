@@ -2,7 +2,7 @@
 <Organization xmlns="http://hl7.org/fhir">
   <id value="cf042e44-086a-4d51-9c77-172f9a972e3b"/>
   <meta>
-    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.2"/>
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxOrganization"/>
   </meta>
   <identifier>
     <use value="temp"/>
@@ -56,7 +56,7 @@
     </period>
   </telecom>
   <address>
-    <use value="home"/>
+    <use value="billing"/>
     <type value="physical"/>
     <text value="Präsenzadresse"/>
     <line value="Hauptstraße 24"/>

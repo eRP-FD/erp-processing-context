@@ -9,6 +9,7 @@
 #include "erp/model/ModelException.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/util/String.hxx"
+
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -36,7 +37,7 @@ TEST(ConsentTest, Construct)
 {
     const auto consentType = model::Consent::Type::CHARGCONS;
     const char* const kvnr = "X123456789";
-    const model::Timestamp dateTime = model::Timestamp::now();
+    const fhirtools::Timestamp dateTime = fhirtools::Timestamp::now();
     model::Consent consent(kvnr, dateTime);
     EXPECT_TRUE(consent.id().has_value());
     EXPECT_EQ(consent.id(), model::Consent::createIdString(consentType, kvnr));
@@ -47,6 +48,7 @@ TEST(ConsentTest, Construct)
 
 TEST(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
+    EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE", "disable"};
     auto jsonString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.json");
 
     std::optional<model::Consent> optConsent;

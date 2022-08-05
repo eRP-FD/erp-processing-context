@@ -238,11 +238,10 @@ TEST_F(ErpProcessingContextTest, DeleteChargeItem_ProfessionOIDs)
 TEST_F(ErpProcessingContextTest, GetAllChargeItems_ProfessionOIDs)
 {
     A_22118.test("Unit test of allowedForProfessionOID() function");
-    checkAllOids(HttpMethod::GET, "/ChargeItem", {
-            "1.2.276.0.76.4.49", // oid_versicherter
-            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
-            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
-    });
+    checkAllOids(HttpMethod::GET, "/ChargeItem",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
 }
 
 TEST_F(ErpProcessingContextTest, GetChargeItem_ProfessionOIDs)
@@ -274,10 +273,18 @@ TEST_F(ErpProcessingContextTest, PutChargeItem_ProfessionOIDs)
     });
 }
 
+TEST_F(ErpProcessingContextTest, PatchChargeItem_ProfessionOIDs)
+{
+    A_22144.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::PATCH, "/ChargeItem/{id}", {
+                                                          "1.2.276.0.76.4.49", // oid_versicherter
+                                                        });
+}
+
 TEST_F(ErpProcessingContextTest, DeleteConsent_ProfessionOIDs)
 {
     A_22155.test("Unit test of allowedForProfessionOID() function");
-    checkAllOids(HttpMethod::DELETE, "/Consent/{id}", {
+    checkAllOids(HttpMethod::DELETE, "/Consent/?category=CHARGCONS", {
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }

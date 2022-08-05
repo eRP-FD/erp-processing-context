@@ -6,11 +6,14 @@
 #ifndef ERP_PROCESSING_CONTEXT_DATABASEMODEL_HXX
 #define ERP_PROCESSING_CONTEXT_DATABASEMODEL_HXX
 
+#include "erp/database/DatabaseCodec.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/HsmClient.hxx"
+#include "erp/model/Bundle.hxx"
+#include "erp/model/ChargeItem.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/model/AuditData.hxx"
 
 #include <string>
@@ -85,18 +88,18 @@ public:
                   BlobId initKeyBlobId,
                   Blob initSalt,
                   model::Task::Status initStatus,
-                  const model::Timestamp& initAuthoredOn,
-                  const model::Timestamp& initLastModified);
+                  const fhirtools::Timestamp& initAuthoredOn,
+                  const fhirtools::Timestamp& initLastModified);
 
     model::PrescriptionId prescriptionId;
     BlobId blobId;
     Blob salt;
     model::Task::Status status;
-    model::Timestamp authoredOn;
-    model::Timestamp lastModified;
+    fhirtools::Timestamp authoredOn;
+    fhirtools::Timestamp lastModified;
     std::optional<EncryptedBlob> kvnr;
-    std::optional<model::Timestamp> expiryDate;
-    std::optional<model::Timestamp> acceptDate;
+    std::optional<fhirtools::Timestamp> expiryDate;
+    std::optional<fhirtools::Timestamp> acceptDate;
     std::optional<EncryptedBlob> accessCode;
     std::optional<EncryptedBlob> secret;
     std::optional<EncryptedBlob> receipt;
@@ -121,7 +124,7 @@ class Communication
 public:
     Uuid id;
     EncryptedBlob communication;
-    std::optional<model::Timestamp> received;
+    std::optional<fhirtools::Timestamp> received;
     BlobId blobId{};
     Blob salt;
 };
@@ -144,26 +147,38 @@ public:
     std::optional<BlobId> blobId;
 
     std::string id;            // filled after storing in or if loaded from DB;
-    model::Timestamp recorded; // filled after storing in or if loaded from DB;
+    fhirtools::Timestamp recorded; // filled after storing in or if loaded from DB;
 };
 
-class ChargeItem {
-public:
-    ChargeItem(model::PrescriptionId initPrescriptionId, BlobId initBlobId, Blob initSalt,
-                      model::Timestamp initAuthoredOn, db_model::EncryptedBlob initChargeItem);
+struct ChargeItem {
+    explicit ChargeItem(const ::model::PrescriptionId& id);
 
-    model::PrescriptionId prescriptionId;
-    BlobId blobId;
-    Blob salt;
-    model::Timestamp authoredOn;
-    db_model::EncryptedBlob chargeItem;
+    ChargeItem(const ::model::ChargeInformation& chargeInformation, const ::BlobId& newBlobId, const Blob& newSalt,
+               const ::SafeString& key, const ::DataBaseCodec& codec);
+
+    [[nodiscard]] ::model::ChargeInformation toChargeInformation(const ::SafeString& key,
+                                                                 const ::DataBaseCodec& codec) const;
+
+    ::model::PrescriptionId prescriptionId;
+    EncryptedBlob enterer = {};
+    ::model::Timestamp enteredDate = ::model::Timestamp::now();
+    ::model::Timestamp lastModified = ::model::Timestamp::now();
+    ::std::optional<EncryptedBlob> markingFlag = {};
+    BlobId blobId = {};
+    Blob salt = {};
+    EncryptedBlob accessCode = {};
+    EncryptedBlob kvnr = {};
+    // The following are optional because they are not set when updating a charge item.
+    // They will always exist in the database, though.
+    ::std::optional<EncryptedBlob> prescription = {};
+    ::std::optional<EncryptedBlob> prescriptionJson = {};
+    ::std::optional<EncryptedBlob> receiptXml = {};
+    ::std::optional<EncryptedBlob> receiptJson = {};
+    EncryptedBlob billingData = {};
+    EncryptedBlob billingDataJson = {};
 };
 
-} // namespace db_model
+}// namespace db_model
 
 
-
-
-
-
-#endif // ERP_PROCESSING_CONTEXT_DATABASEMODEL_HXX
+#endif// ERP_PROCESSING_CONTEXT_DATABASEMODEL_HXX

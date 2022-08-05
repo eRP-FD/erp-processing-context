@@ -258,7 +258,7 @@ public:
         {
             auto db = parent.database();
             auto& backend = db->getBackend();
-            auto now = model::Timestamp::now();
+            auto now = fhirtools::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                            model::Task::Status::draft, now, now);
             backend.updateTask(std::get<0>(task), {}, blobId, {});
@@ -271,7 +271,7 @@ public:
         {
             auto db = parent.database();
             auto& backend = db->getBackend();
-            auto now = model::Timestamp::now();
+            auto now = fhirtools::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                            model::Task::Status::draft, now, now);
             auto comm = backend.insertCommunication(std::get<model::PrescriptionId>(task),
@@ -294,7 +294,7 @@ public:
         {
             auto db = parent.database();
             auto& backend = db->getBackend();
-            auto now = model::Timestamp::now();
+            auto now = fhirtools::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                            model::Task::Status::draft, now, now);
             db_model::AuditData auditEvent(model::AuditEvent::AgentType::machine,model::AuditEventId::GET_Task, {{}},model::AuditEvent::Action::read, dummyHashedKvnr(),
@@ -308,6 +308,20 @@ public:
                 };
         }
 
+        void useChargeItemDerivationKey(::EnrolmentServerTest& parent, ::BlobId blobId)
+        {
+            ::db_model::ChargeItem chargeItem{::model::PrescriptionId::fromDatabaseId(
+                ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 0)};
+            chargeItem.blobId = blobId;
+
+            auto& backend = parent.database()->getBackend();
+            backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr("X1234567890", ::SafeString{}));
+            backend.commitTransaction();
+
+            releaseKeyBlob = [&parent, id = chargeItem.prescriptionId] {
+                parent.database()->getBackend().deleteChargeInformation(id);
+            };
+        }
 
         UseKeyBlobGuard(EnrolmentServerTest& parent, BlobType type, BlobId blobId)
         {
@@ -322,6 +336,9 @@ public:
                 case BlobType::AuditLogKeyDerivation:
                     useAuditLogDerivationKey(parent, blobId);
                     return;
+                case BlobType::ChargeItemKeyDerivation:
+                    useChargeItemDerivationKey(parent, blobId);
+                    return;
                 case BlobType::KvnrHashKey:
                 case BlobType::TelematikIdHashKey:
                 case BlobType::VauSig:
@@ -330,6 +347,7 @@ public:
                 case BlobType::AttestationKeyPair:
                 case BlobType::Quote:
                 case BlobType::EciesKeypair:
+                case BlobType::PseudonameKey:
                     Fail2("BlobType not supported by UseKeyBlobGuard", std::logic_error);
                     break;
             }
@@ -936,7 +954,8 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)//NOLINT(readabil
     struct Descriptor {std::string name; BlobType type;};
     for (const Descriptor& resource : {Descriptor{"Task",          BlobType::TaskKeyDerivation},
                                        Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
-                                       Descriptor{"AuditLog",      BlobType::AuditLogKeyDerivation}})
+                                       Descriptor{"AuditLog", BlobType::AuditLogKeyDerivation},
+                                       Descriptor{"ChargeItem", ::BlobType::ChargeItemKeyDerivation}})
     {
         std::string blobName = resource.name + "PostAndDeleteDerivationKey_success";
         std::optional<BlobId> initialBlobId;
@@ -1000,7 +1019,8 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)//NOLINT(readabi
     struct Descriptor {std::string name; BlobType type;};
     for (const Descriptor& resource : {Descriptor{"Task",          BlobType::TaskKeyDerivation},
                                        Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
-                                       Descriptor{"AuditLog",      BlobType::AuditLogKeyDerivation}})
+                                       Descriptor{"AuditLog", BlobType::AuditLogKeyDerivation},
+                                       Descriptor{"ChargeItem", ::BlobType::ChargeItemKeyDerivation}})
     {
         BlobId blobId{};
         // Upload the resource

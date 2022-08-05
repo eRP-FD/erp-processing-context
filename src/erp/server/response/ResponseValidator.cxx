@@ -39,7 +39,7 @@ namespace {
             Operation::GET_ChargeItem_id,
             Operation::POST_ChargeItem,
             Operation::PUT_ChargeItem_id,
-            Operation::DELETE_Consent_id,
+            Operation::DELETE_Consent,
             Operation::GET_Consent,
             Operation::POST_Consent,
             // <-
@@ -77,7 +77,8 @@ namespace {
             Operation::GET_ChargeItem_id,
             Operation::POST_ChargeItem,
             Operation::PUT_ChargeItem_id,
-            Operation::DELETE_Consent_id,
+            Operation::DELETE_Consent,
+            Operation::PATCH_ChargeItem_id,
             Operation::GET_Consent,
             Operation::POST_Consent,
             // <-
@@ -168,6 +169,11 @@ namespace {
                     Operation::POST_Consent,
                     // <-
                 }},
+            {HttpStatus::Accepted,
+                {
+                    Operation::POST_Task_id_activate,
+                }
+            },
             {HttpStatus::NoContent,               // 204
                 {
                     Operation::POST_Task_id_abort,
@@ -175,8 +181,8 @@ namespace {
                     Operation::DELETE_Communication_id,
                     // PKV specific:  ->
                     Operation::DELETE_ChargeItem_id,
-                    Operation::DELETE_Consent_id
-                    // <-
+                    Operation::DELETE_Consent
+             // <-
                 }},
             {HttpStatus::BadRequest,              // 400
                 allOperations},
@@ -201,8 +207,9 @@ namespace {
                     // PKV specific:  ->
                     Operation::GET_ChargeItem_id,
                     Operation::PUT_ChargeItem_id,
+                    Operation::PATCH_ChargeItem_id,
                     Operation::DELETE_ChargeItem_id,
-                    Operation::DELETE_Consent_id,
+                    Operation::DELETE_Consent,
                     Operation::GET_Consent,     // TODO not sure;
                     Operation::POST_Consent,
                     // <-
@@ -211,6 +218,7 @@ namespace {
                 {
                     // PKV specific:  ->
                     Operation::POST_ChargeItem,
+                    Operation::DELETE_Consent,
                     // <-
                     Operation::UNKNOWN
                 }},

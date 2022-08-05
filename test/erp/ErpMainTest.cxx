@@ -199,7 +199,7 @@ TEST_F(ErpMainTest, runProcessingContext_SIGTERM)
     GTEST_SKIP_("disabled in release build");
 #endif
     runApplication(
-        []{std::raise(SIGTERM);});
+        []{(void)std::raise(SIGTERM);});
     SUCCEED();
 }
 
@@ -248,7 +248,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
 
             ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
 
-            std::raise(SIGTERM);
+            (void)std::raise(SIGTERM);
         });
     SUCCEED();
 }

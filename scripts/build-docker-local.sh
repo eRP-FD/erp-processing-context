@@ -77,7 +77,7 @@ function build_local_docker {
        $DOCKERFILE          \
        docker               \
        CMakeLists.txt       \
-       conanfile.txt        \
+       conanfile.py         \
        resources            \
        scripts              \
        src                  \

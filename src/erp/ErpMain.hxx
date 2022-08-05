@@ -61,8 +61,6 @@ public:
         const std::function<void(PcServiceContext&)>& postInitializationCallback = {});
 
 private:
-    static void checkConfiguration();
-
     static std::unique_ptr<ApplicationHealthAndRegistrationUpdater> setupHeartbeatSender(PcServiceContext& serviceContext);
 
     static std::unique_ptr<SeedTimer> setupPrngSeeding (

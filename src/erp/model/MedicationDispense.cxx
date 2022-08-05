@@ -84,17 +84,17 @@ std::string_view MedicationDispense::telematikId() const
     return getStringValue(telematikIdValuePointer);
 }
 
-Timestamp MedicationDispense::whenHandedOver() const
+fhirtools::Timestamp MedicationDispense::whenHandedOver() const
 {
     std::string_view value = getStringValue(whenHandedOverPointer);
-    return Timestamp::fromFhirDateTime(std::string(value));
+    return fhirtools::Timestamp::fromFhirDateTime(std::string(value));
 }
 
-std::optional<Timestamp> MedicationDispense::whenPrepared() const
+std::optional<fhirtools::Timestamp> MedicationDispense::whenPrepared() const
 {
     std::optional<std::string_view> value = getOptionalStringValue(whenPreparedPointer);
     if (value.has_value())
-        return Timestamp::fromFhirDateTime(std::string(value.value()));
+        return fhirtools::Timestamp::fromFhirDateTime(std::string(value.value()));
     return {};
 }
 
@@ -123,12 +123,12 @@ void MedicationDispense::setTelematicId(const std::string_view& telematicId)
     setValue(telematikIdValuePointer, telematicId);
 }
 
-void MedicationDispense::setWhenHandedOver(const model::Timestamp& whenHandedOver)
+void MedicationDispense::setWhenHandedOver(const fhirtools::Timestamp& whenHandedOver)
 {
     setValue(whenHandedOverPointer, whenHandedOver.toXsDateTime());
 }
 
-void MedicationDispense::setWhenPrepared(const model::Timestamp& whenPrepared)
+void MedicationDispense::setWhenPrepared(const fhirtools::Timestamp& whenPrepared)
 {
     setValue(whenPreparedPointer, whenPrepared.toXsDateTime());
 }

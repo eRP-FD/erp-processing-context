@@ -10,14 +10,18 @@
 
 #include <rapidjson/document.h>
 
+namespace fhirtools{
+class Timestamp;
+}
 namespace model
 {
-
-class Timestamp;
+using fhirtools::Timestamp;
 
 class Subscription : public Resource<Subscription>
 {
 public:
+    static constexpr auto resourceTypeName = "Subscription";
+
     enum class Status : std::uint32_t
     {
         Unknown,
@@ -45,7 +49,7 @@ public:
     void setSubscriptionId(std::string_view subscriptionId);
 
     //! Set subscription expiration timestamp.
-    void setEndTime(const model::Timestamp& dateTime);
+    void setEndTime(const fhirtools::Timestamp& dateTime);
 
     //! Serialized Jwt.
     void setAuthorizationToken(std::string_view jwt);

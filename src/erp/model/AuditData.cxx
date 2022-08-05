@@ -8,6 +8,8 @@
 
 #include <rapidjson/pointer.h>
 
+#include <utility>
+
 
 namespace model
 {
@@ -22,7 +24,7 @@ bool isEventCausedByPatient(AuditEventId eventId)
            eventId == AuditEventId::DELETE_ChargeItem_id_insurant ||
            eventId == AuditEventId::PUT_ChargeItem_id_insurant ||
            eventId == AuditEventId::POST_Consent ||
-           eventId == AuditEventId::DELETE_Consent_id;
+           eventId == AuditEventId::DELETE_Consent;
 }
 
 bool isEventCausedByRepresentative(AuditEventId eventId)
@@ -37,7 +39,7 @@ bool isEventCausedByMaintenanceScript(AuditEventId eventId)
            eventId == AuditEventId::ChargeItem_delete_expired_id;
 }
 
-std::string createEventResourceReference(AuditEventId eventId, const std::string& prescriptionId)
+std::string createEventResourceReference(AuditEventId eventId, const std::string& resourceId)
 {
     switch(eventId)
     {
@@ -47,34 +49,35 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::GET_Task_id_representative:
         case model::AuditEventId::GET_Task_id_pharmacy:
         case model::AuditEventId::Task_delete_expired_id:
-            return "Task/" + prescriptionId;
+            return "Task/" + resourceId;
         case model::AuditEventId::POST_Task_activate:
-            return "Task/" + prescriptionId + "/$activate";
+            return "Task/" + resourceId + "/$activate";
         case model::AuditEventId::POST_Task_accept:
-            return "Task/" + prescriptionId + "/$accept";
+            return "Task/" + resourceId + "/$accept";
         case model::AuditEventId::POST_Task_reject:
-            return "Task/" + prescriptionId + "/$reject";
+            return "Task/" + resourceId + "/$reject";
         case model::AuditEventId::POST_Task_close:
-            return "Task/" + prescriptionId + "/$close";
+            return "Task/" + resourceId + "/$close";
         case model::AuditEventId::POST_Task_abort_doctor:
         case model::AuditEventId::POST_Task_abort_insurant:
         case model::AuditEventId::POST_Task_abort_representative:
         case model::AuditEventId::POST_Task_abort_pharmacy:
-            return "Task/" + prescriptionId + "/$abort";
+            return "Task/" + resourceId + "/$abort";
         case model::AuditEventId::GET_MedicationDispense:
             return "MedicationDispense";
         case model::AuditEventId::GET_MedicationDispense_id:
-            return "MedicationDispense/" + prescriptionId;
+            return "MedicationDispense/" + resourceId;
         case model::AuditEventId::POST_ChargeItem:
         case model::AuditEventId::DELETE_ChargeItem_id_insurant:
         case model::AuditEventId::DELETE_ChargeItem_id_pharmacy:
         case model::AuditEventId::PUT_ChargeItem_id_insurant:
         case model::AuditEventId::PUT_ChargeItem_id_pharmacy:
+        case model::AuditEventId::PATCH_ChargeItem_id:
         case model::AuditEventId::ChargeItem_delete_expired_id:
-            return "ChargeItem/" + prescriptionId;
+            return "ChargeItem/" + resourceId;
         case model::AuditEventId::POST_Consent:
-        case model::AuditEventId::DELETE_Consent_id:
-            return "Consent";
+        case model::AuditEventId::DELETE_Consent:
+            return "Consent/" + resourceId;
     }
     Fail2("Invalid event id", std::logic_error);
 }
@@ -127,7 +130,8 @@ AuditData::AuditData(
     AuditEvent::AgentType agentType,
     const std::string& insurantKvnr,
     const std::int16_t deviceId,
-    std::optional<PrescriptionId> prescriptionId)
+    std::optional<PrescriptionId> prescriptionId,
+    std::optional<std::string> consentId)
     : mEventId(eventId)
     , mMetaData(std::move(metaData))
     , mAction(action)
@@ -135,8 +139,9 @@ AuditData::AuditData(
     , mInsurantKvnr(insurantKvnr)
     , mDeviceId(deviceId)
     , mPrescriptionId(std::move(prescriptionId))
+    , mConsentId(std::move(consentId))
     , mId()
-    , mRecorded(model::Timestamp::now())
+    , mRecorded(fhirtools::Timestamp::now())
 {
 }
 
@@ -175,12 +180,17 @@ const std::optional<PrescriptionId>& AuditData::prescriptionId() const
     return mPrescriptionId;
 }
 
+const std::optional<std::string>& AuditData::consentId() const
+{
+    return mConsentId;
+}
+
 const std::string& AuditData::id() const
 {
     return mId;
 }
 
-const model::Timestamp& AuditData::recorded() const
+const fhirtools::Timestamp& AuditData::recorded() const
 {
     return mRecorded;
 }
@@ -190,7 +200,7 @@ void AuditData::setId(const std::string& id)
     mId = id;
 }
 
-void AuditData::setRecorded(const model::Timestamp& recorded)
+void AuditData::setRecorded(const fhirtools::Timestamp& recorded)
 {
     mRecorded = recorded;
 }

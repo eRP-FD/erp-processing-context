@@ -9,6 +9,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <cstring>
@@ -128,6 +129,23 @@ std::string PrescriptionId::deriveUuid(const uint8_t& feature) const
 PrescriptionType PrescriptionId::type() const
 {
     return mPrescriptionType;
+}
+
+bool PrescriptionId::isPkv() const
+{
+    switch (mPrescriptionType)
+    {
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            [[fallthrough]];
+        case model::PrescriptionType::direkteZuweisungPkv:
+            return true;
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+            [[fallthrough]];
+        case model::PrescriptionType::direkteZuweisung:
+            return false;
+    }
+
+    return false;
 }
 
 void PrescriptionId::validateChecksum (const PrescriptionType prescriptionType, const int64_t id, const uint8_t checksum)

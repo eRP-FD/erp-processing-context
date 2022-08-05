@@ -16,7 +16,7 @@
                 "coding": [
                     {
                         "code": "06313728",
-                        "system": "https://fhir.kbv.de/NamingSystem/KBV_NS_ERP_PZN"
+                        "system": "http://fhir.de/CodeSystem/ifa/pzn"
                     }
                 ],
                 "text": "Sumatriptan-1a Pharma 100 mg Tabletten"

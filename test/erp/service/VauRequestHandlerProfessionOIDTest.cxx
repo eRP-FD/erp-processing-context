@@ -12,6 +12,7 @@
 #include "erp/crypto/Certificate.hxx"
 #include "erp/util/String.hxx"
 
+
 #include "mock/crypto/MockCryptography.hxx"
 
 #include "test/mock/ClientTeeProtocol.hxx"
@@ -97,7 +98,7 @@ public:
             "sub": "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk"
         })";
         // Token will expire from execution time T + 5 minutes.
-        jwtClaims = String::replaceAll(jwtClaims, "##EXP##", std::to_string( +60 * 5 + std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() )) );
+        jwtClaims = String::replaceAll(jwtClaims, "##EXP##", std::to_string( +60l * 5l + std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() )) );
         // Token is issued  at execution time T - 1 minutes.
         jwtClaims = String::replaceAll(jwtClaims, "##IAT##", std::to_string( -60 + std::chrono::system_clock::to_time_t( std::chrono::system_clock::now() )) );
         document.Parse(jwtClaims);
@@ -119,8 +120,8 @@ public:
             , jwtBundeswehrapotheke(jwtWithProfessionOID(profession_oid::oid_bundeswehrapotheke))
             , teeProtocol()
             , mClient(createClient())
-            , taskId(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711).toString())
-            , taskIdNotFound(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 999999).toString())
+            , taskId(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4711).toString())
+            , taskIdNotFound(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 999999).toString())
     {
     }
 
@@ -550,8 +551,6 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsSuccess)
     A_22118.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem";
     testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::OK);
-    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::OK);
-    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::OK);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsForbidden)
@@ -565,6 +564,8 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetChargeItemSuccess)
@@ -633,17 +634,42 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemForbidden)
     testEndpoint(HttpMethod::PUT, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
 
-TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentSuccess)
+TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentMethodNotAllowed)
 {
-    A_22155.test("Valid professionOID claim in JWT");
-    const std::string_view endpoint = "/Consent/47110000-0000-0000-0000-000000000000";
+    const std::string_view endpoint = "/Consent";
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+}
+
+TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentUnknownCategory)
+{
+    const std::string_view endpoint = "/Consent/?category=unknown";
     testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::BadRequest);
+}
+
+TEST_F(VauRequestHandlerProfessionOIDTest, PatchChargeItemSuccess)
+{
+    A_22144.test("Valid professionOID claim in JWT");
+    const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::NotFound);
+}
+
+TEST_F(VauRequestHandlerProfessionOIDTest, PatchChargeItemForbidden)
+{
+    A_22144.test("Valid professionOID claim in JWT");
+    const std::string endpoint = "/ChargeItem/" + taskId;
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentForbidden)
 {
     A_22155.test("Invalid professionOID claim in JWT");
-    const std::string_view endpoint = "/Consent/47110000-0000-0000-0000-000000000000";
+    const std::string_view endpoint = "/Consent/?category=CHARGCONS";
     testEndpoint(HttpMethod::DELETE, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtArzt, HttpStatus::Forbidden);
@@ -653,6 +679,13 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentForbidden)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+}
+
+TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentSuccess)
+{
+    A_22155.test("Valid professionOID claim in JWT");
+    const std::string_view endpoint = "/Consent/?category=CHARGCONS";
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::NotFound);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetConsentSuccess)

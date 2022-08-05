@@ -39,11 +39,14 @@ class ErpProcessingContext(ConanFile):
                        'with_hsmclient': True,
                        'with_sbom': False,
                        'zlib:shared': True,
-                       'date:use_system_tz_db': True}
+                       'date:use_system_tz_db': True,
+                       'gmp:shared': True,
+                       'mpfr:shared': True}
     generators = "cmake"
     exports_sources = "."
     build_requires = []
-    requires = ['boost/1.79.0',
+    requires = ['antlr4-cppruntime/4.10.1',
+                'boost/1.79.0',
                 'date/3.0.1',  # date can be removed as soon as we use C++20
                 'glog/0.6.0',
                 'gsl-lite/0.40.0',
@@ -57,13 +60,15 @@ class ErpProcessingContext(ConanFile):
                 'zstd/1.5.2',  # database compression
                 'gtest/1.11.0',
                 'hiredis/1.0.2',
-                'redis-plus-plus/1.3.3']
+                'redis-plus-plus/1.3.3',
+                'gmp/6.2.1',
+                'mpfr/4.1.0']
 
     def requirements(self):
         if self.options.with_tpmclient:
-            self.requires('tpmclient/0.8.1')
+            self.requires('tpmclient/0.14.0')
         if self.options.with_hsmclient:
-            self.requires('hsmclient/2.0.2')
+            self.requires('hsmclient/2.3.0-B63')
 
     def build_requirements(self):
         if self.options.with_sbom:
@@ -79,4 +84,3 @@ class ErpProcessingContext(ConanFile):
             self.options['hiredis:fPIC'] = False
             self.options['with_tpmclient'] = False
             self.options['with_hsmclient'] = False
-

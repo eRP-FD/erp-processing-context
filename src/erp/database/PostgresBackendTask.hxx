@@ -20,39 +20,40 @@ public:
     static constexpr const char* TASK_160_TABLE_NAME = "erp.task";
     static constexpr const char* TASK_169_TABLE_NAME = "erp.task_169";
     static constexpr const char* TASK_200_TABLE_NAME = "erp.task_200";
+    static constexpr const char* TASK_209_TABLE_NAME = "erp.task_209";
 
     explicit PostgresBackendTask(model::PrescriptionType prescriptionType);
 
-    std::tuple<model::PrescriptionId, model::Timestamp> createTask(pqxx::work& transaction,
+    std::tuple<model::PrescriptionId, fhirtools::Timestamp> createTask(pqxx::work& transaction,
                                                                    model::Task::Status taskStatus,
-                                                                   const model::Timestamp& lastUpdated,
-                                                                   const model::Timestamp& created);
+                                                                   const fhirtools::Timestamp& lastUpdated,
+                                                                   const fhirtools::Timestamp& created);
 
     void updateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
                     const db_model::EncryptedBlob& accessCode, uint32_t blobId, const db_model::Blob& salt) const;
 
-    std::tuple<BlobId, db_model::Blob, model::Timestamp> getTaskKeyData(pqxx::work& transaction,
+    std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp> getTaskKeyData(pqxx::work& transaction,
                                                                         const model::PrescriptionId& taskId) const;
 
     void updateTaskStatusAndSecret(pqxx::work& transaction, const model::PrescriptionId& taskId,
-                                   model::Task::Status status, const model::Timestamp& lastModifiedDate,
+                                   model::Task::Status status, const fhirtools::Timestamp& lastModifiedDate,
                                    const std::optional<db_model::EncryptedBlob>& secret) const;
 
     void activateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr, const db_model::HashedKvnr& hashedKvnr,
-                      model::Task::Status taskStatus, const model::Timestamp& lastModified,
-                      const model::Timestamp& expiryDate, const model::Timestamp& acceptDate,
+                      model::Task::Status taskStatus, const fhirtools::Timestamp& lastModified,
+                      const fhirtools::Timestamp& expiryDate, const fhirtools::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription) const;
 
     void updateTaskMedicationDispenseReceipt(
         pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
-        const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
+        const fhirtools::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
         BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
-        const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
+        const fhirtools::Timestamp& whenHandedOver, const std::optional<fhirtools::Timestamp>& whenPrepared,
         const db_model::EncryptedBlob& receipt) const;
 
     void updateTaskClearPersonalData(pqxx::work& transaction, const model::PrescriptionId& taskId,
-                                     model::Task::Status taskStatus, const model::Timestamp& lastModified) const;
+                                     model::Task::Status taskStatus, const fhirtools::Timestamp& lastModified) const;
 
     std::optional<db_model::Task> retrieveTaskForUpdate(pqxx::work& transaction, const model::PrescriptionId& taskId);
     [[nodiscard]] ::std::optional<::db_model::Task>
@@ -70,34 +71,8 @@ public:
     [[nodiscard]] uint64_t countAllTasksForPatient(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
                                                    const std::optional<UrlArguments>& search) const;
 
-    void storeChargeInformation(::pqxx::work& transaction, const db_model::HashedTelematikId& pharmacyTelematikId,
-                                model::PrescriptionId id, const model::Timestamp& enteredDate,
-                                const db_model::EncryptedBlob& chargeItem, const db_model::EncryptedBlob& dispenseItem);
-
-    [[nodiscard]] std::vector<db_model::ChargeItem>
-    retrieveAllChargeItemsForInsurant(::pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
-                                      const std::optional<UrlArguments>& search) const;
-
-    [[nodiscard]] std::vector<db_model::ChargeItem>
-    retrieveAllChargeItemsForPharmacy(::pqxx::work& transaction, const db_model::HashedTelematikId& pharmacyTelematikId,
-                                      const std::optional<UrlArguments>& search) const;
-
-    [[nodiscard]] std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
-    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(::pqxx::work& transaction, const model::PrescriptionId& id) const;
-    [[nodiscard]] std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-    retrieveChargeInformation(::pqxx::work& transaction, const model::PrescriptionId& id) const;
-    [[nodiscard]] std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-    retrieveChargeInformationForUpdate(::pqxx::work& transaction, const model::PrescriptionId& id) const;
-
-    void deleteChargeInformation(::pqxx::work& transaction, const model::PrescriptionId& id);
-    void clearAllChargeInformation(::pqxx::work& transaction, const db_model::HashedKvnr& kvnr) const;
-
-    [[nodiscard]] uint64_t countChargeInformationForInsurant(pqxx::work& transaction,
-                                                             const db_model::HashedKvnr& kvnr,
-                                                             const std::optional<UrlArguments>& search) const;
-    [[nodiscard]] uint64_t countChargeInformationForPharmacy(pqxx::work& transaction,
-                                                             const db_model::HashedTelematikId& pharmacyTelematikId,
-                                                             const std::optional<UrlArguments>& search) const;
+    void deleteChargeItemSupportingInformation(::pqxx::work& transaction, const ::model::PrescriptionId& id);
+    void clearAllChargeItemSupportingInformation(::pqxx::work& transaction, const ::db_model::HashedKvnr& kvnr) const;
 
     struct TaskQueryIndexes {
         pqxx::row::size_type prescriptionIdIndex = 0;
@@ -120,25 +95,17 @@ public:
 
 private:
     std::string taskTableName() const;
-    [[nodiscard]] std::vector<db_model::ChargeItem>
-    retrieveAllChargeItems(pqxx::work& transaction, const QueryDefinition& queryDef, const db_model::HashedId& hashedId,
-                           const std::optional<UrlArguments>& search) const;
-    [[nodiscard]] db_model::ChargeItem chargeItemFromQueryResultRow(const pqxx::row& row) const;
-
 
     struct Queries {
-        QueryDefinition clearAllChargeInformation;
+        QueryDefinition clearAllChargeItemSupportingInformation;
         QueryDefinition createTask;
-        QueryDefinition deleteChargeInformation;
+        QueryDefinition deleteChargeItemSupportingInformation;
         QueryDefinition updateTask;
         QueryDefinition updateTask_secret;
         QueryDefinition updateTask_medicationDispenseReceipt;
         QueryDefinition updateTask_activateTask;
         QueryDefinition updateTask_deletePersonalData;
         QueryDefinition updateTask_storeChargeInformation;
-        QueryDefinition retrieveAllChargeItemsForInsurant;
-        QueryDefinition retrieveAllChargeItemsForPharmacy;
-        QueryDefinition retrieveChargeInformation;
         QueryDefinition retrieveTaskById;
         QueryDefinition retrieveTaskByIdPlusReceipt;
         QueryDefinition retrieveTaskByIdForUpdatePlusPrescription;
@@ -146,9 +113,6 @@ private:
         QueryDefinition retrieveTaskByIdPlusPrescriptionPlusReceipt;
         QueryDefinition countAllTasksByKvnr;
         QueryDefinition getTaskKeyData;
-        QueryDefinition countChargeInformationForInsurant;
-        QueryDefinition countChargeInformationForPharmacy;
-        QueryDefinition retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt;
     };
     Queries mQueries;
     model::PrescriptionType mPrescriptionType;

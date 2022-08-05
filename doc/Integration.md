@@ -73,6 +73,9 @@ Start the simulator `build/simulator/bin/tpm_server` (no arguments necessary) an
 to verify that the setup is OK.
 
 #Access DEV
+A connection to the IBM Kubernetes cloud can be obtained with the [ibmcloud](https://cloud.ibm.com/docs/cli?topic=cli-install-ibmcloud-cli) tool
+(with installed `container-service` plugin) using`ibmcloud login -sso`.
+The Kubernetes config can be created with `ibmcloud ks cluster config --cluster <cluster-name>`.
 
 If you want to access any or all of the services on DEV (or another cloud environment) then connect to that
 environment's kubernetes and establish these port forwards

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2022
+  ~ (C) Copyright IBM Corp. 2022
+  -->
+
+<Bundle xmlns="http://hl7.org/fhir">
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/string"/>
+        <resource>
+            <CodeSystem xmlns="http://hl7.org/fhir">
+                <url value="https://test/CodeSystem1"/>
+                <name value="TEST_CODESYSTEM1"/>
+                <caseSensitive value="true"/>
+                <content value="complete"/>
+                <concept>
+                    <code value="00"/>
+                </concept>
+                <concept>
+                    <code value="01"/>
+                </concept>
+                <concept>
+                    <code value="02"/>
+                </concept>
+                <concept>
+                    <code value="03"/>
+                </concept>
+                <concept>
+                    <code value="04"/>
+                </concept>
+            </CodeSystem>
+        </resource>
+    </entry>
+    <entry>
+        <resource>
+            <CodeSystem xmlns="http://hl7.org/fhir">
+                <url value="https://test/Codesystem2"/>
+                <name value="TEST_CODESYSTEM2"/>
+                <content value="complete"/>
+                <concept>
+                    <code value="SKT"/>
+                </concept>
+                <concept>
+                    <code value="UK"/>
+                </concept>
+            </CodeSystem>
+        </resource>
+    </entry>
+    <entry>
+        <resource>
+            <CodeSystem xmlns="http://hl7.org/fhir">
+                <url value="https://test/Codesystem3"/>
+                <name value="TEST_CODESYSTEM3"/>
+                <content value="complete"/>
+                <concept>
+                    <code value="_ActCredentialedCareCode"/>
+                    <property>
+                        <code value="notSelectable"/>
+                        <valueBoolean value="true"/>
+                    </property>
+                    <concept>
+                        <code value="SUB_1"/>
+                    </concept>
+                    <concept>
+                        <code value="SUB_2"/>
+                    </concept>
+                </concept>
+            </CodeSystem>
+        </resource>
+    </entry>
+</Bundle>

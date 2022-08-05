@@ -8,7 +8,7 @@
 #include "erp/fhir/internal/FhirJsonToXmlConverter.hxx"
 #include "erp/fhir/internal/FhirSAXHandler.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 //#include <algorithm>
 

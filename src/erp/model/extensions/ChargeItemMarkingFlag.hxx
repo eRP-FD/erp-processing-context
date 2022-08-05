@@ -15,6 +15,8 @@
 namespace model
 {
 
+class Parameters;
+
 class ChargeItemMarkingFlag : public model::Extension
 {
 public:
@@ -29,6 +31,7 @@ public:
     static bool isMarked(const MarkingContainer& markings);
 
     friend std::optional<ChargeItemMarkingFlag> ResourceBase::getExtension<ChargeItemMarkingFlag>(const std::string_view&) const;
+    friend class Parameters;
 };
 
 }

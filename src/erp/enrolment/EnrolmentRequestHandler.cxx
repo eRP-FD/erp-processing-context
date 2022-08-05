@@ -99,7 +99,8 @@ enum ResourceType
 {
     Task,
     Communication,
-    AuditLog
+    AuditLog,
+    ChargeItem
 };
 
 
@@ -110,8 +111,9 @@ BlobType getBlobTypeForResourceType (const ResourceType resourceType)
         case Task: return BlobType::TaskKeyDerivation;
         case Communication: return BlobType::CommunicationKeyDerivation;
         case AuditLog: return BlobType::AuditLogKeyDerivation;
-        default: Fail("unsupported resource type");
+        case ChargeItem: return ::BlobType::ChargeItemKeyDerivation;
     }
+    Fail("unsupported resource type");
 }
 
 

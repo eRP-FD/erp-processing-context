@@ -20,7 +20,7 @@
                 <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
                     <valueCoding>
                         <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"/>
-                        <code value="00"/>
+                        <code value="####LEGAL_BASIS_CODE####"/>
                     </valueCoding>
                 </extension>
                 <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_PKV_Tariff">
@@ -132,10 +132,10 @@
                     <extension url="Nummerierung">
                         <valueRatio>
                             <numerator>
-                                <value value="2"/>
+                                <value value="####NUMERATOR####"/>
                             </numerator>
                             <denominator>
-                                <value value="4"/>
+                                <value value="####DENOMINATOR####"/>
                             </denominator>
                         </valueRatio>
                     </extension>

@@ -79,7 +79,7 @@ model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Bina
     A_19029_03.finish();
 
     A_19029_03.start("store the signature in the bundle");
-    model::Signature signature(Base64::encode(signatureData), model::Timestamp::now(),
+    model::Signature signature(Base64::encode(signatureData), fhirtools::Timestamp::now(),
                                model::Device::createReferenceString(getLinkBase()));
     signature.setTargetFormat(MimeType::fhirJson);
     signature.setSigFormat(MimeType::jose);
@@ -120,6 +120,72 @@ void TaskHandlerBase::checkAccessCodeMatches(const ServerRequest& request, const
               "AccessCode mismatch");
     A_20703.finish();
 }
+
+CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile,
+                                                             TslManager* tslManager)
+{
+    try
+    {
+        if (tslManager)
+        {
+            A_19025.start("verify the QES signature");
+            A_20159.start("verify HBA Signature Certificate ");
+            return {cadesBesSignatureFile,
+                    *tslManager,
+                    false,
+                    {profession_oid::oid_arzt,
+                     profession_oid::oid_zahnarzt,
+                     profession_oid::oid_arztekammern}};
+            A_20159.finish();
+            A_19025.finish();
+        }
+        else
+        {
+            return CadesBesSignature(cadesBesSignatureFile);
+        }
+    }
+    catch (const TslError& ex)
+    {
+        VauFail(ex.getHttpStatus(), VauErrorCode::invalid_prescription, ex.what());
+    }
+    catch (const CadesBesSignature::UnexpectedProfessionOidException& ex)
+    {
+        A_19225.start("Report 400 because of unexpected ProfessionOIDs in QES certificate.");
+        VauFail(HttpStatus::BadRequest, VauErrorCode::invalid_prescription, ex.what());
+        A_19225.finish();
+    }
+    catch (const CadesBesSignature::VerificationException& ex)
+    {
+        VauFail(HttpStatus::BadRequest, VauErrorCode::invalid_prescription, ex.what());
+    }
+    catch (const ErpException& ex)
+    {
+        TVLOG(1) << "ErpException: " << ex.what();
+        VauFail(ex.status(), VauErrorCode::invalid_prescription, "ErpException");
+    }
+    catch (const std::exception& ex)
+    {
+        VauFail(HttpStatus::InternalServerError, VauErrorCode::invalid_prescription,
+                ex.what());
+    }
+    catch (...)
+    {
+        VauFail(HttpStatus::InternalServerError, VauErrorCode::invalid_prescription,
+                "unexpected throwable");
+    }
+}
+
+CadesBesSignature TaskHandlerBase::unpackCadesBesSignature(const std::string& cadesBesSignatureFile,
+                                                           TslManager& tslManager)
+{
+    return doUnpackCadesBesSignature(cadesBesSignatureFile, &tslManager);
+}
+
+CadesBesSignature TaskHandlerBase::unpackCadesBesSignatureNoVerify(const std::string& cadesBesSignatureFile)
+{
+    return doUnpackCadesBesSignature(cadesBesSignatureFile, nullptr);
+}
+
 
 GetAllTasksHandler::GetAllTasksHandler(const std::initializer_list<std::string_view>& allowedProfessionOIDs)
     : TaskHandlerBase(Operation::GET_Task, allowedProfessionOIDs)

@@ -7,7 +7,7 @@
 
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/util/TLog.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 #include "mock/hsm/MockBlobCache.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
@@ -76,7 +76,7 @@ public:
 
     void rememberToDeleteBlob (const BlobType type, const ErpVector& name)
     {
-        mBlobsToDelete.emplace_back(Item{type,name});
+        mBlobsToDelete.emplace_back(type,name);
     }
 
     void markAsDeleted (const BlobType type, const ErpVector& name)

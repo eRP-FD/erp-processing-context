@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Communication xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/erxCommunicationDispReq"/>
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq"/>
   </meta>
   <status value="unknown"/>
   <sent value="2020-03-12T18:01:10+00:00"/>

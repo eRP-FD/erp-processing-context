@@ -195,7 +195,7 @@ void AuditEvent::setAction(const Action action)
     setValue(actionPointer, std::string(1, static_cast<char>(action)));
 }
 
-void AuditEvent::setRecorded(const Timestamp& recorded)
+void AuditEvent::setRecorded(const fhirtools::Timestamp& recorded)
 {
     setValue(recordedPointer, recorded.toXsDateTime());
 }
@@ -231,11 +231,14 @@ void AuditEvent::setSourceObserverReference(const std::string_view& reference)
 }
 
 void AuditEvent::setEntityWhatIdentifier(
-    const std::string_view& identifierSystem,
+    const std::optional<std::string_view>& identifierSystem,
     const std::string_view& identifierValue)
 {
-    setValue(entityWhatIdentifierUsePointer, "official");
-    setValue(entityWhatIdentifierSystemPointer, identifierSystem);
+    if (identifierSystem.has_value())
+    {
+        setValue(entityWhatIdentifierUsePointer, "official");
+        setValue(entityWhatIdentifierSystemPointer, *identifierSystem);
+    }
     setValue(entityWhatIdentifierValuePointer, identifierValue);
 }
 
@@ -279,9 +282,9 @@ AuditEvent::Action AuditEvent::action() const
     return ActionNamesReverse.at(getStringValue(actionPointer));
 }
 
-Timestamp AuditEvent::recorded() const
+fhirtools::Timestamp AuditEvent::recorded() const
 {
-    return Timestamp::fromXsDateTime(std::string(getStringValue(recordedPointer)));
+    return fhirtools::Timestamp::fromXsDateTime(std::string(getStringValue(recordedPointer)));
 }
 
 AuditEvent::Outcome AuditEvent::outcome() const

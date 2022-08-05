@@ -1,0 +1,26 @@
+{
+    "resourceType": "Sliceable",
+    "meta": {
+        "profile": ["http://erp.test/SlicedByPattern"]
+    },
+    "sliced": [
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "coding": {
+                    "system": "http://erp.test/slice1/code",
+                    "code": "a_slice1_code"
+                }
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice2",
+                "coding": {
+                    "system": "http://erp.test/slice2/code",
+                    "code": "a_slice2_code"
+                }
+            }
+        }
+    ]
+}

@@ -25,6 +25,9 @@
     <extension url="unfallbetrieb">
       <valueString value="Dummy-Betrieb" />
     </extension>
+    <extension url="unfalltag">
+      <valueDate value="2021-02-27" />
+    </extension>
   </extension>
   <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription">
     <extension url="Kennzeichen">

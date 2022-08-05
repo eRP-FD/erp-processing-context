@@ -10,6 +10,7 @@
 
 #include "erp/util/String.hxx"
 
+
 #include <regex>
 
 
@@ -153,9 +154,9 @@ std::string UrlHelper::escapeUrl (const std::string_view& str)
 {
     std::string result;
     // As a heuristic reserve space for 5 escaped characters.
-    result.reserve(str.size() + 5*2);
+    result.reserve(str.size() + 5ul*2ul);
 
-  for (size_t pos = 0; pos < str.size(); ++pos) {
+  for (size_t pos = 0; pos < str.size(); ++pos) { //NOLINT(modernize-loop-convert)
     switch (str[pos]) {
       default:
         if (str[pos] >= 32 && str[pos] < 127) {

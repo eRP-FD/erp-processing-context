@@ -8,7 +8,7 @@
 
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 #include <memory>
 #include <optional>
@@ -40,6 +40,8 @@ const std::string communicationLocation = "http://prescriptionserver.telematik/C
 
 const std::string communication = "https://gematik.de/fhir/StructureDefinition/ErxCommunication";
 const std::string communicationInfoReq = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq";
+const std::string communicationChargChangeReq = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq";
+const std::string communicationChargChangeReply = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply";
 const std::string communicationReply = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply";
 const std::string communicationDispReq = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq";
 const std::string communicationRepresentative = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative";

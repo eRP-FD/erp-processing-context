@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AuditEvent xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/eRxAuditEvent" />
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent|1.1.1" />
     <tag>
       <display value="Valid Example with minimal data." />
     </tag>
   </meta>
+  <language value="de"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">Institutions- oder Organisations-Bezeichnung hat das Rezept mit der ID 160.000.000.007.182.45 eingestellt.</div>
+  </text>
   <type>
     <system value="http://terminology.hl7.org/CodeSystem/audit-event-type" />
     <version value="1.0"/>

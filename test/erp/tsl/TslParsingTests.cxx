@@ -3,7 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/tsl/TslParser.hxx"
 #include "erp/tsl/X509Certificate.hxx"
 #include "erp/tsl/error/TslError.hxx"
@@ -41,7 +41,7 @@ TEST_F(TslParsingTests, XmlWithEmptyRootIsWellformedButNotValid)//NOLINT(readabi
 TEST_F(TslParsingTests, TslXmlFromTestDataIsValidButManipulated)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string manipulatedTsl =
-        String::replaceAll(
+         String::replaceAll(
             ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml"),
             "<StreetAddress>Vattmannstrasse  1</StreetAddress>",
             "<StreetAddress>Vattmannstrasse  1a</StreetAddress>");
@@ -132,7 +132,7 @@ TEST_F(TslParsingTests, WansimTslXmlIsParsedCorrectly)
     EXPECT_EQ(tslParser.getSequenceNumber(), "10082");
     EXPECT_EQ(tslParser.getNextUpdate(),
               std::chrono::system_clock::time_point{
-                  model::Timestamp::fromFhirDateTime("2022-05-13T00:00:05Z").toChronoTimePoint()});
+                  fhirtools::Timestamp::fromFhirDateTime("2022-05-13T00:00:05Z").toChronoTimePoint()});
 }
 
 
@@ -148,5 +148,5 @@ TEST_F(TslParsingTests, WansimBnaXmlIsParsedCorrectly)
     EXPECT_EQ(tslParser.getSequenceNumber(), "29");
     EXPECT_EQ(tslParser.getNextUpdate(),
               std::chrono::system_clock::time_point{
-                  model::Timestamp::fromFhirDateTime("2022-05-25T16:40:50Z").toChronoTimePoint()});
+                  fhirtools::Timestamp::fromFhirDateTime("2022-05-25T16:40:50Z").toChronoTimePoint()});
 }

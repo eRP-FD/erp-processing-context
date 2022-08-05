@@ -8,6 +8,7 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <cstddef>
 #include <functional>
 #include <stdexcept>
@@ -211,7 +212,7 @@ Certificate Certificate::fromBase64(const std::string& base64)
 Certificate Certificate::fromPem (const std::string& pem)
 {
     auto mem = shared_BIO::make();
-    const auto trimmedPem = ::String::trim(pem);
+    const auto trimmedPem = String::trim(pem);
     const int written = BIO_write(mem, trimmedPem.data(), static_cast<int>(trimmedPem.size()));
     throwIfNot(written>=0 && static_cast<size_t>(written) == trimmedPem.size(),
                "attempt to write bytes has failed");

@@ -148,7 +148,8 @@ X509Store TslManager::getTslTrustedCertificateStore(
 void TslManager::verifyCertificate(const TslMode tslMode,
                                    X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
-                                   const OcspResponsePtr& ocspResponse)
+                                   const OcspResponsePtr& ocspResponse,
+                                   const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint)
 {
     // no mutex is necessary because trust store is thread safe
     try
@@ -162,7 +163,8 @@ void TslManager::verifyCertificate(const TslMode tslMode,
             typeRestrictions,
             *mRequestSender,
             getTrustStore(tslMode),
-            ocspResponse);
+            ocspResponse,
+            referenceTimePoint);
     }
     catch(...)
     {
@@ -200,6 +202,7 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
                 *mRequestSender,
                 getTrustStore(tslMode),
                 {},
+                std::nullopt,
                 forceOcspRequest);
 
             ocspResponse = getTrustStore(tslMode).getCachedOcspData(certificate.getSha256FingerprintHex());
@@ -210,7 +213,7 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
                        tslMode);
         }
 
-        OcspService::checkOcspStatus(ocspResponse->status, getTrustStore(tslMode));
+        OcspService::checkOcspStatus(ocspResponse->status, std::nullopt, getTrustStore(tslMode));
 
         return *ocspResponse;
     }

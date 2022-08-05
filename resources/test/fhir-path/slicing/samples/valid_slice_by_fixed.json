@@ -1,0 +1,20 @@
+{
+    "resourceType": "Sliceable",
+    "meta": {
+        "profile": ["http://erp.test/SlicedByFixed"]
+    },
+    "sliced": [
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "string": "slice1"
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice2",
+                "string": "slice2"
+            }
+        }
+    ]
+}

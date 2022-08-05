@@ -5,7 +5,9 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/fhir/FhirElement.hxx"
+#include "fhirtools/repository/FhirElement.hxx"
+
+using namespace fhirtools;
 
 TEST(FhirElementTest, representationEnum)//NOLINT(readability-function-cognitive-complexity)
 {

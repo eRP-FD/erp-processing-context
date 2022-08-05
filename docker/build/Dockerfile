@@ -13,7 +13,7 @@ RUN apt-get update --fix-missing && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get install -y  \
     openjdk-11-jre-headless \
-    gcc-9 g++-9 \
+    gcc-11 g++-11 \
     jq \
     wget \
     libgtest-dev \
@@ -27,7 +27,6 @@ RUN apt-get update --fix-missing && \
     xz-utils \
     curl \
     automake \
-    clang-tidy-12 \
     libefiboot-dev \
     libefivar-dev \
     ca-certificates \
@@ -39,11 +38,10 @@ RUN apt-get update --fix-missing && \
 RUN update-ca-certificates && \
     pip install --upgrade cmake
 
-# build gtest
-WORKDIR /usr/src/googletest
-RUN cmake .
-RUN cmake --build . --target install
+#build clang-tidy-15
 WORKDIR /root
-RUN mkdir -p ~/.ssh && ssh-keyscan github.ibmgcloud.net >> ~/.ssh/known_hosts
+COPY clang-tidy.cmake build-clang-tidy.sh /root/llvm-build/
+RUN ./llvm-build/build-clang-tidy.sh
+COPY known_hosts /root/.ssh/known_hosts
 # work around fix for CVE-2022-24765:
 RUN git config --global --add safe.directory '*'

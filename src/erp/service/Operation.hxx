@@ -37,7 +37,8 @@ enum class Operation
     GET_ChargeItem_id,
     POST_ChargeItem,
     PUT_ChargeItem_id,
-    DELETE_Consent_id,
+    DELETE_Consent,
+    PATCH_ChargeItem_id,
     GET_Consent,
     POST_Consent,
     // <-

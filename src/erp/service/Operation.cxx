@@ -34,7 +34,8 @@ namespace {
     constexpr std::string_view operationName_GET_ChargeItem_id         = "GET /ChargeItem/<id>";
     constexpr std::string_view operationName_POST_ChargeItem           = "POST /ChargeItem";
     constexpr std::string_view operationName_PUT_ChargeItem_id         = "PUT /ChargeItem/<id>";
-    constexpr std::string_view operationName_DELETE_Consent_id         = "DELETE /Consent/<id>";
+    constexpr std::string_view operationName_DELETE_Consent            = "DELETE /Consent/?category=CHARGCONS";
+    constexpr std::string_view operationName_PATCH_ChargeItem_id       = "PATCH /ChargeItem/<id>";
     constexpr std::string_view operationName_GET_Consent               = "GET /Consent";
     constexpr std::string_view operationName_POST_Consent              = "POST /Consent";
     // <-
@@ -71,7 +72,8 @@ const std::string_view& toString (Operation operation)
         case Operation::GET_ChargeItem_id:         return operationName_GET_ChargeItem_id;
         case Operation::POST_ChargeItem:           return operationName_POST_ChargeItem;
         case Operation::PUT_ChargeItem_id:         return operationName_PUT_ChargeItem_id;
-        case Operation::DELETE_Consent_id:         return operationName_DELETE_Consent_id;
+        case Operation::DELETE_Consent:            return operationName_DELETE_Consent;
+        case Operation::PATCH_ChargeItem_id:       return operationName_PATCH_ChargeItem_id;
         case Operation::GET_Consent:               return operationName_GET_Consent;
         case Operation::POST_Consent:              return operationName_POST_Consent;
         // <-

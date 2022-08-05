@@ -8,7 +8,6 @@
 #include "erp/server/handler/RequestHandlerInterface.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
-#include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/Expect.hxx"
 #include "test/util/StaticData.hxx"
 

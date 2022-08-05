@@ -3,17 +3,19 @@
  * (C) Copyright IBM Corp. 2021
  */
 
+#include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/HsmSession.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/HsmEciesCurveMismatchException.hxx"
 #include "erp/hsm/HsmSessionExpiredException.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/JsonLog.hxx"
 #include "erp/util/String.hxx"
+
 
 #if WITH_HSM_TPM_PRODUCTION > 0
 #include "erp/hsm/production/HsmProductionClient.hxx"
@@ -118,6 +120,27 @@ HsmSession::HsmSession (
     });
 }
 
+ErpBlob HsmSession::generatePseudonameKey(uint32_t input)
+{
+    return guardedRun<ErpBlob>(*this, [&] {
+        markHsmCallTime();
+        return mClient.generatePseudonameKey(*mRawSession, input);
+    });
+}
+
+ErpArray<Aes256Length> HsmSession::unwrapPseudonameKey()
+{
+    return guardedRun<ErpArray<Aes256Length>>(*this, [&]{
+        UnwrapHashKeyInput input;
+        input.teeToken = getTeeToken();
+        input.key = mBlobCache.getBlob(BlobType::PseudonameKey).blob;
+        markHsmCallTime();
+        return mClient.unwrapPseudonameKey(
+            *mRawSession,
+            std::move(input));
+    });
+}
+
 void HsmSession::setTeeToken (const ErpBlob& teeToken)
 {
     mTeeToken = teeToken;
@@ -173,6 +196,17 @@ DeriveKeyOutput HsmSession::deriveAuditLogPersistenceKey (
     });
 }
 
+::DeriveKeyOutput
+HsmSession::deriveChargeItemPersistenceKey(const ::ErpVector& derivationData,
+                                           const ::std::optional<OptionalDeriveKeyData>& secondCallData)
+{
+    return guardedRun<::DeriveKeyOutput>(*this, [&] {
+        DeriveKeyInput input = makeDeriveKeyInput(::BlobType::ChargeItemKeyDerivation, derivationData, secondCallData);
+
+        markHsmCallTime();
+        return mClient.deriveChargeItemKey(*mRawSession, ::std::move(input));
+    });
+}
 
 BlobId HsmSession::getLatestTaskPersistenceId (void) const
 {
@@ -191,6 +225,10 @@ BlobId HsmSession::getLatestAuditLogPersistenceId (void) const
     return mBlobCache.getBlob(BlobType::AuditLogKeyDerivation).id;
 }
 
+::BlobId HsmSession::getLatestChargeItemPersistenceId() const
+{
+    return mBlobCache.getBlob(::BlobType::ChargeItemKeyDerivation).id;
+}
 
 ErpVector HsmSession::getRandomData (const size_t numberOfRandomBytes)
 {
@@ -389,7 +427,7 @@ void HsmSession::keepAlive (std::chrono::system_clock::time_point threshold)
         TLOG(WARNING) << "keeping hsm session alive which was last accessed "
                  << std::chrono::duration_cast<std::chrono::milliseconds>(
                      std::chrono::system_clock::now() - mLastHsmCall).count()
-                 << " milliseconds ago at " << model::Timestamp(mLastHsmCall).toXsDateTime();
+                 << " milliseconds ago at " << fhirtools::Timestamp(mLastHsmCall).toXsDateTime();
 
         (void)getRandomData(1);
     }
@@ -407,4 +445,3 @@ void HsmSession::reconnect (void)
 {
     mClient.reconnect(*mRawSession);
 }
-

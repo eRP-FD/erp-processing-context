@@ -9,16 +9,21 @@
 #include <rapidjson/document.h>
 
 #include "erp/fhir/Fhir.hxx"
-#include "erp/fhir/FhirStructureDefinition.hxx"
-#include "erp/fhir/FhirStructureRepository.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
-#include "erp/xml/XmlHelper.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/util/Constants.hxx"
+#include "fhirtools/util/XmlHelper.hxx"
 
 using namespace std::string_literals;
 using namespace xmlHelperLiterals;
+
+using fhirtools::FhirElement;
+using fhirtools::FhirStructureDefinition;
+using fhirtools::FhirStructureRepository;
 
 UniqueXmlDocumentPtr FhirJsonToXmlConverter::jsonToXml(const FhirStructureRepository& repo,
                                                        const model::NumberAsStringParserDocument& jsonDoc)
@@ -66,7 +71,7 @@ void FhirJsonToXmlConverter::initRoot(UniqueXmlNodePtr rootNode)
     mRootNode = rootNode.get();
     Expect3(xmlDocSetRootElement(mResultDoc.get(), rootNode.release()) == nullptr,
             "no previous root node expected.", std::logic_error);
-    mFhirNamespace = xmlNewNs(mRootNode, Fhir::namespaceUri.xs_str(), nullptr);
+    mFhirNamespace = xmlNewNs(mRootNode, fhirtools::constants::namespaceUri.xs_str(), nullptr);
 }
 
 //NOLINTNEXTLINE[misc-no-recursion]
@@ -234,9 +239,14 @@ size_t FhirJsonToXmlConverter::convertSingleMember(xmlNode& targetNode, const st
         case FhirStructureDefinition::Kind::systemDouble:
         case FhirStructureDefinition::Kind::systemInteger:
         case FhirStructureDefinition::Kind::systemString:
+        case FhirStructureDefinition::Kind::systemDate:
+        case FhirStructureDefinition::Kind::systemTime:
+        case FhirStructureDefinition::Kind::systemDateTime:
             fhirElementIndex = convertPrimitive(targetNode, memberName, fhirType, fhirElementIndex, *fhirElementType,
                                                 jsonObject, subObjectOfPrimary);
             break;
+        case FhirStructureDefinition::Kind::slice:
+            Fail("Unexpected Kind::unknown");
         case FhirStructureDefinition::Kind::logical:
             Fail("Logical StructureDefinitions not supported.");
     }

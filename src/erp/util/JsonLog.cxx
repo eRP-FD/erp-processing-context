@@ -10,6 +10,7 @@
 #include "erp/util/String.hxx"
 
 
+
 namespace {
     JsonLog::LogReceiver makeDefaultLogReceiver (void)
     {

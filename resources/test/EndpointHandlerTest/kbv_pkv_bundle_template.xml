@@ -93,9 +93,9 @@
           </type>
           <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
           <value value="##KVNR##"/>
-          <assigner> 
-            <display value="Assigner"/> 
-          </assigner> 
+          <assigner>
+            <display value="assigner display"/>
+          </assigner>
         </identifier>
         <name>
           <use value="official"/>

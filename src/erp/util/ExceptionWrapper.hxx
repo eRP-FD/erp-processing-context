@@ -30,6 +30,7 @@ struct Location
 };
 
 std::ostream& operator << (std::ostream& out, const FileNameAndLineNumber& location);
+std::string to_string(const FileNameAndLineNumber& location);
 
 class ExceptionWrapperBase
 {
@@ -38,6 +39,16 @@ public:
         : location{initLocation, initRootLocation}
     {}
     virtual ~ExceptionWrapperBase() = default;
+
+    template<typename AnyExceptionT>
+    static std::optional<Location> getLocation (const AnyExceptionT& ex)
+    {
+        const auto* wrapper = dynamic_cast<const ExceptionWrapperBase*>(&ex);
+        if (wrapper != nullptr)
+            return wrapper->location;
+        else
+            return std::nullopt;
+    }
 
     const Location location;
 
@@ -58,15 +69,6 @@ public:
                                             std::forward<Arguments>(arguments)...);
     }
 
-    template<typename AnyExceptionT>
-    static std::optional<Location> getLocation (const AnyExceptionT& ex)
-    {
-        const auto* wrapper = dynamic_cast<const ExceptionWrapperBase*>(&ex);
-        if (wrapper != nullptr)
-            return wrapper->location;
-        else
-            return std::nullopt;
-    }
 
 private:
     template <typename... ExceptionArgs>
@@ -77,6 +79,5 @@ private:
     {}
 
 };
-
 
 #endif // ERP_PROCESSING_CONTEXT_EXCEPTIONWRAPPER_HXX

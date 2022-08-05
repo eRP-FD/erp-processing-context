@@ -21,19 +21,19 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
     ASSERT_TRUE(prescriptionId.has_value());
     auto kvnr = generateNewRandomKVNR();
     ASSERT_NO_FATAL_FAILURE(
-        taskActivate(*prescriptionId, accessCode, std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now()))));
+        taskActivate(*prescriptionId, accessCode, std::get<0>(makeQESBundle(kvnr, *prescriptionId, fhirtools::Timestamp::now()))));
 
     const auto jwtPharma = JwtBuilder::testBuilder().makeJwtApotheke();
     const auto telematikId = jwtPharma.stringForClaim(JWT::idNumberClaim);
 
     auto builder = CommunicationJsonStringBuilder(model::Communication::MessageType::InfoReq);
     builder.setPrescriptionId(prescriptionId->toString());
-    builder.setAbout("about");
+    builder.setAbout("#about");
     builder.setPayload("info request");
     builder.setRecipient(ActorRole::Pharmacists, *telematikId);
     builder.setSender(ActorRole::Insurant, kvnr);
-    builder.setTimeSent(model::Timestamp::now().toXsDateTime());
-    auto someReceivedTime = model::Timestamp::fromXsDate("2020-02-02");
+    builder.setTimeSent(fhirtools::Timestamp::now().toXsDateTime());
+    auto someReceivedTime = fhirtools::Timestamp::fromXsDate("2020-02-02");
     builder.setTimeReceived(someReceivedTime.toXsDateTime());
 
     RequestArguments requestArguments(HttpMethod::POST, "/Communication", builder.createJsonString(),
@@ -57,7 +57,7 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
     EXPECT_FALSE(communicationEcho.timeReceived().has_value());
 
     // Now retrieve the communication as pharmacist
-    const auto beforeReception = model::Timestamp::now();
+    const auto beforeReception = fhirtools::Timestamp::now();
     std::optional<model::Bundle> communicationBundle;
     ASSERT_NO_FATAL_FAILURE(communicationBundle =
                                 communicationsGet(jwtPharma, UrlHelper::escapeUrl("received=NULL&sender=" + kvnr)));

@@ -107,7 +107,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19233.start(
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
     const auto inProgressDate = task->lastModifiedDate();
-    const auto completedTimestamp = model::Timestamp::now();
+    const auto completedTimestamp = fhirtools::Timestamp::now();
     const auto linkBase = getLinkBase();
     const auto authorIdentifier = model::Device::createReferenceString(linkBase);
     const std::string prescriptionDigestIdentifier = "PrescriptionDigest-" + prescriptionId.toString();
@@ -138,17 +138,17 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
 
     A_19233.start("Sign the receipt with ID.FD.SIG using [RFC5652] with profile CAdES-BES ([CAdES]) ");
     std::string serialized = responseReceipt.serializeToXmlString();
-    std::string signatureData =
+    std::string base64SignatureData =
         CadesBesSignature(
             session.serviceContext.getCFdSigErp(),
             session.serviceContext.getCFdSigErpPrv(),
             serialized,
             std::nullopt,
-            session.serviceContext.getCFdSigErpManager().getOcspResponse()).get();
+            session.serviceContext.getCFdSigErpManager().getOcspResponse()).getBase64();
     A_19233.finish();
 
     A_19233.start("Set signature");
-    model::Signature signature(Base64::encode(signatureData), model::Timestamp::now(), authorIdentifier);
+    model::Signature signature(base64SignatureData, fhirtools::Timestamp::now(), authorIdentifier);
     responseReceipt.setSignature(signature);
     A_19233.finish();
 

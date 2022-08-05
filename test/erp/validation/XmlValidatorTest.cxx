@@ -13,13 +13,19 @@
 
 #include "erp/fhir/FhirConverter.hxx"
 #include "erp/model/KbvBundle.hxx"
+#include "erp/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/ErpException.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/String.hxx"
+
 #include "test_config.h"
 #include "test/util/ResourceManager.hxx"
+#include "fhirtools/validator/FhirPathValidator.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include <erp/fhir/Fhir.hxx>
+
 
 namespace fs = std::filesystem;
 
@@ -81,6 +87,8 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
             case SchemaType::Gem_erxBinary:
             case SchemaType::Gem_erxCommunicationDispReq:
             case SchemaType::Gem_erxCommunicationInfoReq:
+            case SchemaType::Gem_erxCommunicationChargChangeReq:
+            case SchemaType::Gem_erxCommunicationChargChangeReply:
             case SchemaType::Gem_erxCommunicationReply:
             case SchemaType::Gem_erxCommunicationRepresentative:
             case SchemaType::Gem_erxCompositionElement:
@@ -184,22 +192,44 @@ public:
 };
 class XmlValidatorTestParamsGematik : public XmlValidatorTestParams, public testing::TestWithParam<TestParamsGematik> {
 public:
+    fhirtools::ValidationResultList validate(const model::NumberAsStringParserDocument& doc)
+    {
+        using namespace model::resource;
+        fhirtools::ValidationResultList result;
+        static const rapidjson::Pointer resourceTypePointer{ ElementName::path(elements::resourceType) };
+        auto resourceTypeOpt = model::NumberAsStringParserDocument::getOptionalStringValue(doc, resourceTypePointer);
+        EXPECT_TRUE(resourceTypeOpt);
+        if (!resourceTypeOpt)
+        {
+            result.add(fhirtools::Severity::error, "failed to detect resource", "", nullptr);
+            return result;
+        }
+        std::string resourceType{*resourceTypeOpt};
+        auto erpElement = std::make_shared<ErpElement>(&Fhir::instance().structureRepository(),
+                                                       std::weak_ptr<fhirtools::Element>{}, resourceType, &doc);
+        result = fhirtools::FhirPathValidator::validate(erpElement, resourceType);
+        result.dumpToLog();
+        return result;
+    }
+
     void checkDocument(const std::string& document, const std::string& filename) //NOLINT(readability-function-cognitive-complexity)
     {
+        std::optional<model::NumberAsStringParserDocument> doc;
         if (GetParam().valid)
         {
             if (GetParam().schemaType == SchemaType::fhir ||
                 GetParam().schemaType == SchemaType::MedicationDispenseBundle)
             {
-                EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
-                                                                                   GetParam().schemaType))
+                EXPECT_NO_THROW(doc.emplace(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
+                                                                                   GetParam().schemaType)))
                     << "Test failed for file: " << filename;
             }
             else
             {
-                EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(
-                    document, *getXmlValidator(), GetParam().schemaType, GetParam().version))
+                EXPECT_NO_THROW(doc.emplace(FhirConverter().xmlStringToJsonWithValidation(
+                    document, *getXmlValidator(), GetParam().schemaType, GetParam().version)))
                     << "Test failed for file: " << filename;
+
             }
         }
         else
@@ -220,12 +250,23 @@ public:
                     << "Test failed for file: " << filename;
             }
         }
+        if (doc)
+        {
+            fhirtools::ValidationResultList valResult;
+            ASSERT_NO_THROW(valResult = validate(*doc))
+                << "Test failed for file: " << filename;
+            if (GetParam().valid)
+            {
+                EXPECT_LT(valResult.highestSeverity(), fhirtools::Severity::error)
+                    << "Test failed for file: " << filename;
+            }
+        }
     }
 };
 class XmlValidatorTestParamsKbv : public XmlValidatorTestParams, public testing::TestWithParam<TestParamsKbv> {};
 
 
-TEST_P(XmlValidatorTestParamsGematik, Resources)
+TEST_P(XmlValidatorTestParamsGematik, DISABLED_Resources)
 {
     for (const auto& dirEntry : fs::directory_iterator(GetParam().basePath))
     {
@@ -274,7 +315,7 @@ INSTANTIATE_TEST_SUITE_P(ValidResources, XmlValidatorTestParamsGematik,
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/task/", "Task_invalid", SchemaType::Gem_erxTask, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/chargeItem/", "ChargeItem_invalid", SchemaType::Gem_erxChargeItem, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1},
         TestParamsGematik{false, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/consent/", "Consent_invalid", SchemaType::Gem_erxConsent, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1}
-));
+), [](auto param){ return param.param.startsWith;});
 
 TEST_F(XmlValidatorTest, Erp6345)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -304,7 +345,6 @@ TEST_P(MedicationDispenseBundleTest, MedicationDispenseBundle)
             document = String::replaceAll(document, " xmlns=\"http://hl7.org/fhir\"", "");
             document = String::replaceAll(document, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "");
             const auto bundleDocument = String::replaceAll(placeholderDocument, "###PLACEHOLDER###", document);
-            std::cout << bundleDocument << std::endl;
             checkDocument(bundleDocument, dirEntry.path().filename().string());
         }
     }
@@ -321,7 +361,7 @@ INSTANTIATE_TEST_SUITE_P(
 class XmlValidatorTestPeriod : public XmlValidatorTest
 {
 public:
-    void DoTestOnePeriod(std::optional<model::Timestamp> begin, std::optional<model::Timestamp> end, bool expectSuccess)
+    void DoTestOnePeriod(std::optional<fhirtools::Timestamp> begin, std::optional<fhirtools::Timestamp> end, bool expectSuccess)
     {
         const auto& config = Configuration::instance();
         xmlValidator.loadGematikSchemas(
@@ -331,8 +371,8 @@ public:
         DoTest(expectSuccess);
     }
 
-    void DoTestTwoPeriods(std::optional<model::Timestamp> begin1, std::optional<model::Timestamp> end1,
-                          std::optional<model::Timestamp> begin2, std::optional<model::Timestamp> end2,
+    void DoTestTwoPeriods(std::optional<fhirtools::Timestamp> begin1, std::optional<fhirtools::Timestamp> end1,
+                          std::optional<fhirtools::Timestamp> begin2, std::optional<fhirtools::Timestamp> end2,
                           bool expectSuccess)
     {
         const auto& config = Configuration::instance();
@@ -384,71 +424,71 @@ TEST_F(XmlValidatorTestPeriod, ValidityPeriods_noPeriod)
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_validPeriod)
 {
     using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + -1min;
-    const auto end = model::Timestamp::now() + 1min;
+    const auto begin = fhirtools::Timestamp::now() + -1min;
+    const auto end = fhirtools::Timestamp::now() + 1min;
     DoTestOnePeriod(begin, end, true);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_validBegin)
 {
     using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + -1min;
+    const auto begin = fhirtools::Timestamp::now() + -1min;
     DoTestOnePeriod(begin, std::nullopt, true);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_validEnd)
 {
     using namespace std::chrono_literals;
-    const auto end = model::Timestamp::now() + 1min;
+    const auto end = fhirtools::Timestamp::now() + 1min;
     DoTestOnePeriod(std::nullopt, end, true);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalidPeriodEnBeforeNow)
 {
     using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + -2min;
-    const auto end = model::Timestamp::now() + -1min;
+    const auto begin = fhirtools::Timestamp::now() + -2min;
+    const auto end = fhirtools::Timestamp::now() + -1min;
     DoTestOnePeriod(begin, end, false);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalidPeriodBeginAfterNow)
 {
     using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + 1min;
-    const auto end = model::Timestamp::now() + 2min;
+    const auto begin = fhirtools::Timestamp::now() + 1min;
+    const auto end = fhirtools::Timestamp::now() + 2min;
     DoTestOnePeriod(begin, end, false);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalidBeginAfterNow)
 {
     using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + 1min;
+    const auto begin = fhirtools::Timestamp::now() + 1min;
     DoTestOnePeriod(begin, std::nullopt, false);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalidEndBeforeNow)
 {
     using namespace std::chrono_literals;
-    const auto end = model::Timestamp::now() + -1min;
+    const auto end = fhirtools::Timestamp::now() + -1min;
     DoTestOnePeriod(std::nullopt, end, false);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_valid2Periods)
 {
     using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + -1min;
-    const auto end = model::Timestamp::now() + 1min;
-    const auto end2 = model::Timestamp::now() + 2min;
+    const auto begin = fhirtools::Timestamp::now() + -1min;
+    const auto end = fhirtools::Timestamp::now() + 1min;
+    const auto end2 = fhirtools::Timestamp::now() + 2min;
     DoTestTwoPeriods(begin, end, end, end2, true);
 }
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalid2Periods)
 {
     using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + -2min;
-    const auto end = model::Timestamp::now() + -1min;
-    const auto begin2 = model::Timestamp::now() + 1min;
-    const auto end2 = model::Timestamp::now() + 2min;
+    const auto begin = fhirtools::Timestamp::now() + -2min;
+    const auto end = fhirtools::Timestamp::now() + -1min;
+    const auto begin2 = fhirtools::Timestamp::now() + 1min;
+    const auto end2 = fhirtools::Timestamp::now() + 2min;
     DoTestTwoPeriods(begin, end, begin2, end2, false);
 }
 
@@ -456,7 +496,7 @@ TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalid2Periods)
 TEST_F(XmlValidatorTest, VersionMixup)
 {
     using namespace ::std::chrono_literals;
-    const auto tomorrow = (::model::Timestamp::now() + 24h).toXsDateTime();
+    const auto tomorrow = (::fhirtools::Timestamp::now() + 24h).toXsDateTime();
     EnvironmentVariableGuard varGuard("ERP_FHIR_PROFILE_OLD_VALID_UNTIL", tomorrow);
     // <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.2" />
     auto bundle =

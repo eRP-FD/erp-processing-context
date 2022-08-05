@@ -1,0 +1,140 @@
+<StructureDefinition xmlns="http://hl7.org/fhir">
+    <url value="dummy"/>
+    <type value="Test"/>
+    <kind value="resource"/>
+    <snapshot>
+        <element id="Test">
+            <path value="Test" />
+            <min value="0" />
+            <max value="*" />
+        </element>
+        <element id="Test.resourceType">
+            <path value="Test.string" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.String" />
+            </type>
+        </element>
+        <element id="Test.string">
+            <path value="Test.string" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.String" />
+            </type>
+        </element>
+        <element id="Test.multiString">
+            <path value="Test.multiString" />
+            <min value="0" />
+            <max value="*" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.String" />
+            </type>
+        </element>
+        <element id="Test.num">
+            <path value="Test.num" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Integer" />
+            </type>
+        </element>
+        <element id="Test.multiNum">
+            <path value="Test.multiNum" />
+            <min value="0" />
+            <max value="*" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Integer" />
+            </type>
+        </element>
+        <element id="Test.dec">
+            <path value="Test.dec" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Decimal" />
+            </type>
+        </element>
+        <element id="Test.multiDec">
+            <path value="Test.multiDec" />
+            <min value="0" />
+            <max value="*" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Decimal" />
+            </type>
+        </element>
+        <element id="Test.boolean">
+            <path value="Test.boolean" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Boolean" />
+            </type>
+        </element>
+        <element id="Test.multibool">
+            <path value="Test.multibool" />
+            <min value="0" />
+            <max value="*" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Boolean" />
+            </type>
+        </element>
+        <element id="Test.intAsString">
+            <path value="Test.intAsString" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.String" />
+            </type>
+        </element>
+        <element id="Test.decimalAsString">
+            <path value="Test.decimalAsString" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.String" />
+            </type>
+        </element>
+        <element id="Test.boolAsString">
+            <path value="Test.boolAsString" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.String" />
+            </type>
+        </element>
+        <element id="Test.date">
+            <path value="Test.date" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Date" />
+            </type>
+        </element>
+        <element id="Test.dateTime">
+            <path value="Test.dateTime" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.DateTime" />
+            </type>
+        </element>
+        <element id="Test.time">
+            <path value="Test.time" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="http://hl7.org/fhirpath/System.Time" />
+            </type>
+        </element>
+        <element id="Test.quantity">
+            <path value="Test.quantity" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="Quantity" />
+            </type>
+        </element>
+    </snapshot>
+</StructureDefinition>

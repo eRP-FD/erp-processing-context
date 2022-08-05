@@ -10,7 +10,7 @@
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Resource.hxx"
 #include "erp/model/Signature.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/Expect.hxx"
 
@@ -48,6 +48,8 @@ template <class DerivedBundle, typename SchemaVersionType = ResourceVersion::DeG
 class BundleBase : public Resource<DerivedBundle, SchemaVersionType>
 {
 public:
+    static constexpr auto resourceTypeName = "Bundle";
+
     enum class SearchMode
     {
         match,
@@ -101,7 +103,7 @@ public:
     std::optional<model::Signature> getSignature() const;
 
     // returns Bundle.signature.when
-    [[nodiscard]] Timestamp getSignatureWhen() const;
+    [[nodiscard]] fhirtools::Timestamp getSignatureWhen() const;
 
     void setLink (Link::Type type, std::string_view link);
     [[nodiscard]] std::optional<std::string_view> getLink (Link::Type type) const;

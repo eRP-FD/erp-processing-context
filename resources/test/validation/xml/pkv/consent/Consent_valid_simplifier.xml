@@ -1,6 +1,6 @@
 <Consent xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/ErxConsent|1.1.0" />
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxConsent|1.1.1" />
     <tag>
       <display value="Example for a Consent Document for saving a ChargeItem" />
     </tag>

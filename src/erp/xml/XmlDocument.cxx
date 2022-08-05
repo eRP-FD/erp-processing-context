@@ -4,9 +4,9 @@
  */
 
 #include "erp/xml/XmlDocument.hxx"
-#include "erp/xml/SaxHandler.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
+#include "fhirtools/util/SaxHandler.hxx"
 
 #include <libxml/xmlschemas.h>
 #include <libxml/xpathInternals.h>

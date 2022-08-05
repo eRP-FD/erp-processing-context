@@ -3,26 +3,6 @@ This section describes how to build the `erp-processing-context` from the public
 The build is performed using mock implementations of HSM and TPM, building against the production HSM and TPM
 libraries is also possible, but requires additional dependencies, that are not in the scope of this how-to.
 
-You may need to create a conan profile matching your machine and compiler configuration. The following profile is an
-example, and is known to work under Ubuntu 20.10, with gcc-9 installed.
-```
-[settings]
-os=Linux
-os_build=Linux
-arch=x86_64
-arch_build=x86_64
-compiler=gcc
-compiler.version=9
-compiler.libcxx=libstdc++11
-compiler.cppstd=17
-build_type=Debug
-[options]
-[build_requires]
-[env]
-CXX=g++-9
-CC=gcc-9
-```
-
 Make sure to use the patched openssl, provided in this repository.
 Export the recipe, that will apply the patch, from within the folder `conan-recipes/openssl`:
 ```
@@ -33,17 +13,18 @@ Afterwards enter the erp-processing-context folder, and roughly follow these ste
 ```
 mkdir build
 cd build
-conan install .. --build missing -o with_tpmclient=False -o with_hsmclient=False [-pr <profile>]
 cmake -DERP_WITH_HSM_MOCK=ON -DERP_WITH_HSM_TPM_PRODUCTION=OFF ..
 make
 ```
+
+To use a conan profile other than the default, add `-DERP_CONAN_PROFILE=<profile-name>` to the CMake step. 
 
 The following output should be generated:
 - `bin/erp-processing-context`: The ERP server process.
 - `bin/erp-test`: Unit Tests with compiled-in erp-processing-context
 - `bin/erp-integration-test`: Tests, that can be executed against a running erp-processing-context
 
-running the erp-test test should work out of the box, starting the erp-processing-context needs a postgres database
+Running the erp-test test should work out of the box, starting the erp-processing-context needs a postgres database
 up and running. The database tables can be initialized using the script `scripts/reset_database.sh`
 
 You might encounter the following error, while starting the `erp-processing-context`, which comes from the fact, that
@@ -63,7 +44,6 @@ We use conan as package manager, so the build should be as simple as
 ```
 mkdir build
 cd build
-conan install .. --build missing
 cmake ..
 make
 ```
@@ -79,12 +59,6 @@ As some of the conan packages reside on a local Nexus and pull in local git repo
 - set up an SSH key for the local github repository
   - The process is explained here: https://docs.github.com/en/github/authenticating-to-github/adding-a-new-ssh-key-to-your-github-account
   - The keys have to be added here: https://github.ibmgcloud.net/settings/keys
-
-You may also have to configure some values in you conan profile (under ~/.conan/profiles/):
-```
-compiler.libcxx=libstdc++11
-compiler.cppstd=17
-```
 
 ## Updating TSL.xml for the tests
 

@@ -9,7 +9,7 @@
 
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/model/TimePeriod.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/util/search/SearchParameter.hxx"

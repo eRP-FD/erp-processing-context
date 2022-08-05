@@ -127,6 +127,12 @@ void BlobCache::deleteBlob(const BlobType type, const ErpVector& name)
     rebuildCache();
 }
 
+std::vector<BlobDatabase::Entry> BlobCache::getAllBlobsSortedById (void) const
+{
+    ::std::shared_lock lock(mDatabaseMutex);
+    return mDatabase->getAllBlobsSortedById();
+}
+
 void BlobCache::setPcrHash(const ::ErpVector& pcrHash)
 {
     if (mPcrHash != pcrHash)

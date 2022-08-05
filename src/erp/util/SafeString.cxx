@@ -17,6 +17,7 @@ SafeString::SafeString(const SafeString::NoZeroFillTag&, size_t size)
     : mValue(std::make_unique<char[]>(size + 1))
     , mStringLength(size)
 {
+    Expect3(size < std::numeric_limits<size_t>::max(), "size out of range", std::out_of_range);
     mValue[mStringLength] = '\0';
 }
 

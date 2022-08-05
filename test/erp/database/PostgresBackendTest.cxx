@@ -7,6 +7,7 @@
 #include "erp/util/Configuration.hxx"
 #include "erp/util/String.hxx"
 
+
 #include <gtest/gtest.h>
 #include <test/util/EnvironmentVariableGuard.hxx>
 

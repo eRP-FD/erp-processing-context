@@ -2,6 +2,7 @@
 *.d
 *.bak
 *.orig
+*~
 
 # Compiled Object files
 *.slo
@@ -12,6 +13,7 @@
 # Precompiled Headers
 *.gch
 *.pch
+compile_commands.json
 
 # Compiled Dynamic libraries
 *.so
@@ -37,3 +39,5 @@
 /.idea/
 /cmake-build-debug
 .gradle
+/.clangd/
+/.cache/

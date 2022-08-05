@@ -9,6 +9,7 @@
 #include "erp/common/HttpMethod.hxx"
 #include "erp/common/HttpStatus.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/common/MimeType.hxx"
 
 #include <unordered_map>
@@ -137,6 +138,7 @@ public:
     static const std::string InnerRequestOperation;
     static const std::string InnerRequestFlowtype;
     static const std::string InnerRequestClientId;
+    static const std::string InnerRequestLeips;
     static const std::string InnerResponseCode;
 
     // Values for selected header fiels.

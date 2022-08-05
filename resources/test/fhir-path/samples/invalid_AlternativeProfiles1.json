@@ -1,0 +1,13 @@
+{
+    "resourceType": "AlternativeProfiles",
+    "resource": [
+        {
+            "resourceType": "Resource",
+            "language": "de-DE"
+        },
+        {
+            "resourceType": "Resource",
+            "language": "de-FG"
+        }
+    ]
+}

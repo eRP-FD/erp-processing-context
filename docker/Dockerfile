@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:1.0.0 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -34,19 +34,15 @@ RUN conan remote clean &&\
     conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force &&\
     conan user -r erp -p "${CONAN_PASSWORD}" "${CONAN_LOGIN_USERNAME}" &&\
     conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force &&\
-    conan profile new default --detect &&\
-    conan profile update settings.compiler.libcxx=libstdc++11 default &&\
-    conan profile update settings.compiler.cppstd=17 default &&\
-    conan profile update settings.compiler.version=9 default &&\
-    conan profile update env.CXX=g++-9 default &&\
-    conan profile update env.CC=gcc-9 default
+    conan profile new --detect default &&\
+    /usr/bin/echo -e '[build_requires]\nautomake/1.16.5' >> ~/.conan/profiles/default
+
 
 # Build Release variant:
 FROM build AS release_build
 
 WORKDIR /build/erp-processing-context/release
-RUN conan install .. --build missing
-RUN cmake \
+RUN CC=gcc-11 CXX=g++-11 cmake \
     -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DERP_WITH_HSM_MOCK=OFF \
@@ -76,8 +72,7 @@ RUN tar -czf ./erp-processing-context.tar.gz /erp
 FROM build AS reldeb_build
 
 WORKDIR /build/erp-processing-context/reldeb
-RUN conan install .. --build missing
-RUN cmake \
+RUN CC=gcc-11 CXX=g++-11 cmake \
     -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DERP_WITH_HSM_MOCK=OFF \
@@ -106,7 +101,7 @@ RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 
 
 # Build runtime image here:
-FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.5 AS runtime
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.6 AS runtime
 
 WORKDIR /debug/erp
 COPY --from=reldeb_build /build/erp-processing-context/reldeb/erp-processing-context-debug.tar.gz .

@@ -30,6 +30,7 @@
 #include <tuple>
 #include <test/util/CryptoHelper.hxx>
 
+
 namespace {
 std::shared_ptr<Compression> compressionInstance()
 {
@@ -83,7 +84,7 @@ MockDatabase::MockDatabase(HsmPool& hsmPool)
 
 }
 
-std::tuple<BlobId, db_model::Blob, model::Timestamp>
+std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp>
 MockDatabase::getTaskKeyData(const model::PrescriptionId& taskId)
 {
     return mTasks.at(taskId.type()).getTaskKeyData(taskId);
@@ -158,7 +159,7 @@ MockDatabase::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
 
 std::optional<Uuid> MockDatabase::insertCommunication(
     const model::PrescriptionId& prescriptionId,
-    const model::Timestamp& timeSent,
+    const fhirtools::Timestamp& timeSent,
     const model::Communication::MessageType messageType,
     const db_model::HashedId& sender,
     const db_model::HashedId& recipient,
@@ -326,22 +327,6 @@ void MockDatabase::insertTask(const model::Task& task,
     newRow.receipt = optionalEncrypt(taskKey, receipt);
 }
 
-void MockDatabase::insertChargeItem(const model::PrescriptionId& prescriptionId,
-                                    const model::ChargeItem& chargeItem,
-                                    const std::string& dispenseItemXML)
-{
-    auto dispenseItem = model::Bundle::fromXmlNoValidation(dispenseItemXML);
-    const auto [blobId, salt, authoredOn] = getTaskKeyData(prescriptionId);
-    const auto key = mDerivation.taskKey(prescriptionId, authoredOn, blobId, salt);
-    const auto& encrypedChargeItem =
-        mCodec.encode(chargeItem.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
-    const auto& encrypedDispenseItem =
-        mCodec.encode(dispenseItem.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
-
-    const auto hashedTelematikId = mDerivation.hashTelematikId(chargeItem.entererTelematikId());
-    storeChargeInformation(hashedTelematikId, prescriptionId, model::Timestamp::now(), encrypedChargeItem, encrypedDispenseItem);
-}
-
 void MockDatabase::insertAuditEvent(const model::AuditEvent& auditEvent,
                                     model::AuditEventId id)
 {
@@ -447,16 +432,16 @@ void MockDatabase::fillWithStaticData ()
 
     // PKV KBV Bundles for the activated tasks:
     const auto kbvBundlePkvTemplate = resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml");
-    const auto& kbvBundlePkv1 = CryptoHelper::toCadesBesSignature(
-        replaceKvnr(replacePrescriptionId(kbvBundlePkvTemplate, pkvTaskId1.toString()), pkvKvnr1));
-    const auto healthCarePrescriptionBundlePkv1 =
-        model::Binary(taskPkv1.healthCarePrescriptionUuid().value(), kbvBundlePkv1).serializeToJsonString();
+    const auto kbvBundlePkv1Xml =
+        replaceKvnr(replacePrescriptionId(kbvBundlePkvTemplate, pkvTaskId1.toString()), pkvKvnr1);
+    const auto& kbvBundlePkv1 = CryptoHelper::toCadesBesSignature(kbvBundlePkv1Xml);
+    auto healthCarePrescriptionBundlePkv1 = model::Binary(taskPkv1.healthCarePrescriptionUuid().value(), kbvBundlePkv1);
     const auto& kbvBundlePkv1a = CryptoHelper::toCadesBesSignature(
         replaceKvnr(replacePrescriptionId(kbvBundlePkvTemplate, pkvTaskId1a.toString()), pkvKvnr1a));
     const auto healthCarePrescriptionBundlePkv1a =
         model::Binary(taskPkv1a.healthCarePrescriptionUuid().value(), kbvBundlePkv1a).serializeToJsonString();
 
-    insertTask(taskPkv1, std::nullopt, healthCarePrescriptionBundlePkv1);
+    insertTask(taskPkv1, std::nullopt, healthCarePrescriptionBundlePkv1.serializeToJsonString());
     insertTask(taskPkv1a, std::nullopt, healthCarePrescriptionBundlePkv1a);
     insertTask(taskPkv2);
 
@@ -470,11 +455,30 @@ void MockDatabase::fillWithStaticData ()
     const auto chargeItemInput = resourceManager.getStringResource(dataPath + "/charge_item_input_marked.json");
     auto chargeItem = model::ChargeItem::fromJsonNoValidation(chargeItemInput);
     const auto dispenseItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto dispenseItemBundle = ::model::Bundle::fromXmlNoValidation(dispenseItemXML);
 
+    chargeItem.setPrescriptionId(pkvTaskId1);
     chargeItem.setSubjectKvnr(pkvKvnr1);
     chargeItem.setEntererTelematikId("606358757");
+    chargeItem.setAccessCode(mockAccessCode);
 
-    insertChargeItem(pkvTaskId1, chargeItem, dispenseItemXML);
+    {
+        const auto [key, optionalDerivedKeyData] =
+            mDerivation.initialChargeItemKey(chargeItem.prescriptionId().value());
+
+        storeChargeInformation(
+            ::db_model::ChargeItem{
+                ::model::ChargeInformation{
+                    ::std::move(chargeItem), ::std::move(healthCarePrescriptionBundlePkv1),
+                    ::model::Bundle::fromXmlNoValidation(kbvBundlePkv1Xml),
+                    ::model::Binary{dispenseItemBundle.getIdentifier().toString(),
+                                    ::CryptoHelper::toCadesBesSignature(dispenseItemBundle.serializeToJsonString())},
+                    ::model::Bundle::fromXmlNoValidation(dispenseItemXML),
+                    ::model::Bundle::fromJsonNoValidation(replacePrescriptionId(
+                        ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId1.toString()))},
+                optionalDerivedKeyData.blobId, ::db_model::Blob{optionalDerivedKeyData.salt}, key, mCodec},
+            mDerivation.hashKvnr(pkvKvnr1));
+    }
 
     // data needed for creation of ChargeItem:
     // Closed task for insurant with consent (added above):
@@ -500,15 +504,34 @@ void MockDatabase::fillWithStaticData ()
         String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId3.toString()), pkvKvnr1),
                            "##DISPENSE_BUNDLE##", Base64::encode(dispenseItemXML));
     auto chargeItemForManip = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+    chargeItemForManip.setPrescriptionId(pkvTaskId3);
     chargeItemForManip.deleteContainedBinary();
-    chargeItemForManip.setAccessCode(MockDatabase::mockAccessCode);
-    insertChargeItem(pkvTaskId3, chargeItemForManip, dispenseItemXML);
+    chargeItemForManip.setAccessCode(mockAccessCode);
+
+    const auto [key, optionalData] = mDerivation.initialChargeItemKey(chargeItemForManip.prescriptionId().value());
+
+    storeChargeInformation(
+        ::db_model::ChargeItem{
+            ::model::ChargeInformation{
+                ::std::move(chargeItemForManip),
+                ::model::Binary{taskPkv3.healthCarePrescriptionUuid().value(),
+                                CryptoHelper::toCadesBesSignature(replaceKvnr(
+                                    replacePrescriptionId(kbvBundlePkvTemplate, pkvTaskId3.toString()), pkvKvnr1))},
+                ::model::Bundle::fromXmlNoValidation(
+                    replaceKvnr(replacePrescriptionId(kbvBundlePkvTemplate, pkvTaskId3.toString()), pkvKvnr1)),
+                ::model::Binary{dispenseItemBundle.getIdentifier().toString(),
+                                ::CryptoHelper::toCadesBesSignature(dispenseItemBundle.serializeToJsonString())},
+                ::model::Bundle::fromXmlNoValidation(dispenseItemXML),
+                ::model::Bundle::fromJsonNoValidation(replacePrescriptionId(
+                    ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId3.toString()))},
+            optionalData.blobId, ::db_model::Blob{optionalData.salt}, key, mCodec},
+        mDerivation.hashKvnr(pkvKvnr1));
 }
 
-std::tuple<model::PrescriptionId, model::Timestamp> MockDatabase::createTask(model::PrescriptionType prescriptionType,
+std::tuple<model::PrescriptionId, fhirtools::Timestamp> MockDatabase::createTask(model::PrescriptionType prescriptionType,
                                                                              model::Task::Status taskStatus,
-                                                                             const model::Timestamp& lastUpdated,
-                                                                             const model::Timestamp& created)
+                                                                             const fhirtools::Timestamp& lastUpdated,
+                                                                             const fhirtools::Timestamp& created)
 {
     return mTasks.at(prescriptionType).createTask(prescriptionType, taskStatus, lastUpdated, created);
 }
@@ -517,9 +540,9 @@ void MockDatabase::activateTask(const model::PrescriptionId& taskId,
                                 const db_model::EncryptedBlob& encryptedKvnr,
                                 const db_model::HashedKvnr& hashedKvnr,
                                 model::Task::Status taskStatus,
-                                const model::Timestamp& lastModified,
-                                const model::Timestamp& expiryDate,
-                                const model::Timestamp& acceptDate,
+                                const fhirtools::Timestamp& lastModified,
+                                const fhirtools::Timestamp& expiryDate,
+                                const fhirtools::Timestamp& acceptDate,
                                 const db_model::EncryptedBlob& healthCareProviderPrescription)
 {
     mTasks.at(taskId.type())
@@ -537,7 +560,7 @@ void MockDatabase::updateTask(const model::PrescriptionId& taskId,
 
 void MockDatabase::updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                              model::Task::Status taskStatus,
-                                             const model::Timestamp& lastModifiedDate,
+                                             const fhirtools::Timestamp& lastModifiedDate,
                                              const std::optional<db_model::EncryptedBlob>& taskSecret)
 {
     return mTasks.at(taskId.type()).updateTaskStatusAndSecret(taskId, taskStatus, lastModifiedDate, taskSecret);
@@ -545,12 +568,12 @@ void MockDatabase::updateTaskStatusAndSecret(const model::PrescriptionId& taskId
 
 void MockDatabase::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                                        const model::Task::Status& taskStatus,
-                                                       const model::Timestamp& lastModified,
+                                                       const fhirtools::Timestamp& lastModified,
                                                        const db_model::EncryptedBlob& medicationDispense,
                                                        BlobId medicationDispenseBlobId,
                                                        const db_model::HashedTelematikId& telematicId,
-                                                       const model::Timestamp& whenHandedOver,
-                                                       const std::optional<model::Timestamp>& whenPrepared,
+                                                       const fhirtools::Timestamp& whenHandedOver,
+                                                       const std::optional<fhirtools::Timestamp>& whenPrepared,
                                                        const db_model::EncryptedBlob& taskReceipt)
 {
     mTasks.at(taskId.type())
@@ -560,7 +583,7 @@ void MockDatabase::updateTaskMedicationDispenseReceipt(const model::Prescription
 }
 
 void MockDatabase::updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus,
-                                               const model::Timestamp& lastModified)
+                                               const fhirtools::Timestamp& lastModified)
 {
     mTasks.at(taskId.type()).updateTaskClearPersonalData(taskId, taskStatus, lastModified);
 }
@@ -569,7 +592,7 @@ std::string MockDatabase::storeAuditEventData(db_model::AuditData& auditData)
 {
     auto id = Uuid().toString();
     auditData.id = id;
-    auditData.recorded = model::Timestamp::now();
+    auditData.recorded = fhirtools::Timestamp::now();
     mAuditEventData.emplace_back(auditData);
     return id;
 }
@@ -678,12 +701,12 @@ std::optional<db_model::Blob> MockDatabase::insertOrReturnAccountSalt(const db_m
     return mAccounts.insertOrReturnAccountSalt(accountId, masterKeyType, blobId, salt);
 }
 
-void MockDatabase::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+void MockDatabase::storeConsent(const db_model::HashedKvnr& kvnr, const fhirtools::Timestamp& creationTime)
 {
     mConsents.storeConsent(kvnr, creationTime);
 }
 
-std::optional<model::Timestamp> MockDatabase::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::optional<fhirtools::Timestamp> MockDatabase::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
 {
     return mConsents.getConsentDateTime(kvnr);
 }
@@ -693,83 +716,50 @@ bool MockDatabase::clearConsent(const db_model::HashedKvnr& kvnr)
     return mConsents.clearConsent(kvnr);
 }
 
-void MockDatabase::storeChargeInformation(const db_model::HashedTelematikId& pharmacyId, model::PrescriptionId id,
-                                          const model::Timestamp& enteredDate,
-                                          const db_model::EncryptedBlob& chargeItem,
-                                          const db_model::EncryptedBlob& dispenseItem)
+void MockDatabase::storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr)
 {
-    Expect3(id.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-            "MockDatabase::storeChargeInformation(...) called with wrong prescription type: " + id.toString(),
-            std::logic_error);
-    mTasks.at(PrescriptionType::apothekenpflichtigeArzneimittelPkv)
-        .storeChargeInformation(pharmacyId, id, enteredDate, chargeItem, dispenseItem);
+    mChargeItems.storeChargeInformation(chargeItem, kvnr);
 }
 
-std::vector<db_model::ChargeItem>
-MockDatabase::retrieveAllChargeItemsForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
-                                                const std::optional<UrlArguments>& search) const
+void MockDatabase::updateChargeInformation(const ::db_model::ChargeItem& chargeItem)
 {
-    return mTasks.at(PrescriptionType::apothekenpflichtigeArzneimittelPkv)
-                .retrieveAllChargeItemsForPharmacy(requestingPharmacy, search);
+    mChargeItems.updateChargeInformation(chargeItem);
 }
 
 std::vector<db_model::ChargeItem>
 MockDatabase::retrieveAllChargeItemsForInsurant(const db_model::HashedKvnr& requestingInsurant,
                                                 const std::optional<UrlArguments>& search) const
 {
-    return mTasks.at(PrescriptionType::apothekenpflichtigeArzneimittelPkv)
-                .retrieveAllChargeItemsForInsurant(requestingInsurant, search);
+    return mChargeItems.retrieveAllChargeItemsForInsurant(requestingInsurant, search);
 }
 
-std::tuple<std::optional<db_model::Task>, std::optional<db_model::EncryptedBlob>, std::optional<db_model::EncryptedBlob>>
-MockDatabase::retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) const
+::db_model::ChargeItem MockDatabase::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
-    return mTasks.at(PrescriptionType::apothekenpflichtigeArzneimittelPkv)
-                .retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(taskId);
+    return mChargeItems.retrieveChargeInformation(id);
 }
 
-std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-MockDatabase::retrieveChargeInformation(const model::PrescriptionId& id) const
+::db_model::ChargeItem MockDatabase::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
 {
-    return mTasks.at(id.type()).retrieveChargeInformation(id);
-}
-
-std::tuple<db_model::ChargeItem, db_model::EncryptedBlob>
-MockDatabase::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
-{
-    return mTasks.at(id.type()).retrieveChargeInformationForUpdate(id);
+    return mChargeItems.retrieveChargeInformationForUpdate(id);
 }
 
 void MockDatabase::deleteChargeInformation(const model::PrescriptionId& id)
 {
-    mTasks.at(id.type()).deleteChargeInformation(id);
+    mChargeItems.deleteChargeInformation(id);
+    mTasks.at(id.type()).deleteChargeItemSupportingInformation(id);
 }
 
 void MockDatabase::clearAllChargeInformation(const db_model::HashedKvnr& insurant)
 {
-    mTasks.at(PrescriptionType::apothekenpflichtigeArzneimittelPkv).clearAllChargeInformation(insurant);
+    mChargeItems.clearAllChargeInformation(insurant);
+    mTasks.at(::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+        .clearAllChargeItemSupportingInformation(insurant);
 }
 
 uint64_t MockDatabase::countChargeInformationForInsurant(const db_model::HashedKvnr& insurant,
-                                                              const std::optional<UrlArguments>& search)
+                                                         const std::optional<UrlArguments>& search)
 {
-    uint64_t count = 0;
-    for (const auto& table: mTasks)
-    {
-        count += table.second.countChargeInformationForInsurant(insurant, search);
-    }
-    return count;
-}
-
-uint64_t MockDatabase::countChargeInformationForPharmacy(const db_model::HashedTelematikId& requestingPharmacy,
-                                                              const std::optional<UrlArguments>& search)
-{
-    uint64_t count = 0;
-    for (const auto& table: mTasks)
-    {
-        count += table.second.countChargeInformationForPharmacy(requestingPharmacy, search);
-    }
-    return count;
+    return mChargeItems.countChargeInformationForInsurant(insurant, search);
 }
 
 bool MockDatabase::isBlobUsed(BlobId blobId) const
@@ -781,11 +771,11 @@ bool MockDatabase::isBlobUsed(BlobId blobId) const
         TVLOG(0) << "Blob " << blobId << R"( is still in use by "auditdata":)" << blobUser->prescriptionId->toString();
         return true;
     }
-    bool usedInTasks =
-            std::any_of(mTasks.cbegin(), mTasks.cend(), [blobId](const auto& taskTable)
-                                                        {return taskTable.second.isBlobUsed(blobId);}
-        );
-    return mAccounts.isBlobUsed(blobId) || usedInTasks || mCommunications.isBlobUsed(blobId);
+    bool usedInTasks = std::any_of(mTasks.cbegin(), mTasks.cend(), [blobId](const auto& taskTable) {
+        return taskTable.second.isBlobUsed(blobId);
+    });
+    return mAccounts.isBlobUsed(blobId) || usedInTasks || mCommunications.isBlobUsed(blobId) ||
+           mChargeItems.isBlobUsed(blobId);
 }
 
 

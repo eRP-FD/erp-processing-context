@@ -7,7 +7,7 @@
 #include "erp/beast/BoostBeastStringWriter.hxx"
 #include "erp/client/HttpClient.hxx"
 #include "erp/client/UrlRequestSender.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/tsl/OcspHelper.hxx"
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/error/TslError.hxx"
@@ -18,6 +18,7 @@
 #include "erp/util/GLog.hxx"
 #include "erp/util/JsonLog.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/util/UrlHelper.hxx"
 
 #include <cctype>
@@ -161,6 +162,15 @@ namespace
     }
 
 
+    std::chrono::system_clock::time_point getReferenceTimePoint(
+        const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint)
+    {
+        if (referenceTimePoint.has_value())
+            return *referenceTimePoint;
+        return std::chrono::system_clock::now();
+    }
+
+
     bool isSignerInTsl (
             X509* signer,
             const TrustStore& trustStore,
@@ -209,11 +219,14 @@ namespace
      * response.
      *
      * @param producedAt is the time point, when the OCSP response was signed.
-     * @param now        is the current time point
+     * @param referenceTimePoint the reference time point to use for the check
      * @paramm gracePeriod gracePeriod for certificate
      * @see gemSpec_PKI, § 9.1.2.2 OCSP-Response - Zeiten, GS-A_5215, (a) and (b)
      */
-    bool checkProducedAt (const ASN1_GENERALIZEDTIME* producedAt, std::time_t now, const std::chrono::seconds& gracePeriod)
+    bool checkProducedAt (
+        const ASN1_GENERALIZEDTIME* producedAt,
+        std::time_t referenceTimePoint,
+        const std::chrono::seconds& gracePeriod)
     {
         Expect(producedAt != nullptr, "producedAt must not be null");
 
@@ -223,15 +236,17 @@ namespace
         }
 
         // the OCSP forwarder may cache
-        std::time_t timePoint = now - tolerance - std::chrono::duration_cast<std::chrono::seconds>(gracePeriod).count();
-        // (a) ensure, that the OCSP response is not older than (tolerance + gracePeriod)
+        std::time_t timePoint =
+            referenceTimePoint - tolerance - std::chrono::duration_cast<std::chrono::seconds>(gracePeriod).count();
+        // (a) ensure, that the OCSP response is not older than (tolerance + gracePeriod) for the reference time point
         if (X509_cmp_time(producedAt, &timePoint) < 0)
         {
             return false;   // producedAt + gracePeriod <= now - tolerance
         }
-        timePoint = now + tolerance;
 
         // (b) ensure, that the OCSP response is not signed in the future
+        std::time_t now{std::time(nullptr)};
+        timePoint = now + tolerance;
         return X509_cmp_time(producedAt, &timePoint) <= 0;  // i.e.: producedAt <= now + tolerance
     }
 
@@ -243,14 +258,17 @@ namespace
      * @param thisUpdate is the time point, when the status information is correct
      * @param nextUpdate is the time point, when new status information will be
      *                   available
-     * @param now        is the current time point
+     * @param referenceTimePoint the reference time point to use for the check
      * @paramm gracePeriod gracePeriod for certificate
      *
      * @see gemSpec_PKI, § 9.1.2.2 OCSP-Response - Zeiten, GS-A_5215, (c) and (d)
      */
     bool
-    checkValidity (const ASN1_GENERALIZEDTIME* thisUpdate, const ASN1_GENERALIZEDTIME* nextUpdate,
-                   std::time_t now, const std::chrono::seconds& gracePeriod)
+    checkValidity (
+        const ASN1_GENERALIZEDTIME* thisUpdate,
+        const ASN1_GENERALIZEDTIME* nextUpdate,
+        std::time_t referenceTimePoint,
+        const std::chrono::seconds& gracePeriod)
     {
         Expect(thisUpdate != nullptr, "thisUpdate must not be null");
 
@@ -259,6 +277,7 @@ namespace
             return false;
         }
 
+        std::time_t now{std::time(nullptr)};
         std::time_t timePoint = now + tolerance;
         // (c) ensure, that the status information is already valid
         if (X509_cmp_time(thisUpdate, &timePoint) > 0)
@@ -278,10 +297,11 @@ namespace
         }
 
         // the OCSP forwarder may cache
-        timePoint = now - tolerance - std::chrono::duration_cast<std::chrono::seconds>(gracePeriod).count();
+        timePoint =
+            referenceTimePoint - tolerance - std::chrono::duration_cast<std::chrono::seconds>(gracePeriod).count();
         // (d) ensure, that the status information was Called getOcspResponseString
         // still valid (tolerance + gracePeriod) ticks
-        // ago, i.e.: nextUpdate + gracePeriod > now - tolerance
+        // ago for the reference time point, i.e.: nextUpdate + gracePeriod > referenceTimePoint - tolerance
         return X509_cmp_time(nextUpdate, &timePoint) >= 0;
     }
 
@@ -349,7 +369,7 @@ namespace
         Expect(asn1Generalizedtime != nullptr, "asn1Generalizedtime must not be null");
         struct tm tm{};
         ASN1_TIME_to_tm(asn1Generalizedtime, &tm);
-        return model::Timestamp::fromTmInUtc(tm).toChronoTimePoint();
+        return fhirtools::Timestamp::fromTmInUtc(tm).toChronoTimePoint();
     }
 
 
@@ -358,6 +378,7 @@ namespace
             const X509Certificate& certificate,
             const OcspResponsePtr& response,
             const OcspCertidPtr& id,
+            const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
             const TrustStore& trustStore,
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
             const bool validateHashExtension)
@@ -390,7 +411,10 @@ namespace
             const std::time_t now{std::time(nullptr)};
             const std::chrono::seconds gracePeriod = getGracePeriod(trustStore.getTslMode());
 
-            TslExpect4(checkProducedAt(producedAt, now, gracePeriod),
+            TslExpect4(checkProducedAt(
+                           producedAt,
+                           std::chrono::system_clock::to_time_t(getReferenceTimePoint(referenceTimePoint)),
+                           gracePeriod),
                        "OCSP producedAt is not valid",
                        TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
                        trustStore.getTslMode());
@@ -465,64 +489,37 @@ namespace
     }
 
 
-    std::optional<OcspService::Status> checkProvidedOcspResponse(
-            const X509Certificate& certificate,
-            const OcspCertidPtr& certId,
-            TrustStore& trustStore,
-            const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
-            const bool validateHashExtension,
-            const OcspResponsePtr& providedOcspResponse)
-    {
-        if (providedOcspResponse != nullptr)
-        {
-            try
-            {
-                VLOG(2) << "Using provided OCSP response from request.";
-
-                const auto [status, gracePeriod, producedAt] = parseResponse(
-                    certificate,
-                    providedOcspResponse,
-                    certId,
-                    trustStore,
-                    ocspSignerCertificates,
-                    validateHashExtension);
-                if (status.certificateStatus == OcspService::CertificateStatus::good)
-                {
-                    // return the status only in case OCSP-response is valid
-                    // otherwise do the OCSP-request
-                    VLOG(2) << "Returning new OCSP status: " << status.to_string();
-                    trustStore.setCacheOcspData(
-                        certificate.getSha256FingerprintHex(),
-                        {status, gracePeriod, producedAt, OcspHelper::ocspResponseToString(*providedOcspResponse)});
-
-                    return status;
-                }
-                else
-                {
-                    TLOG(WARNING) << "The OCSP-response from CMS has unexpected status: "
-                                  << OcspService::toString(status.certificateStatus);
-                }
-            }
-            catch(const TslError& e)
-            {
-                // TslError means that the provided OCSP-response is invalid,
-                // do not throw the exception further and do the OCSP-request
-                TLOG(WARNING) << "The OCSP-response from CMS has validation problem: "
-                              << e.what();
-            }
-        }
-
-        return std::nullopt;
-    }
-
     OcspService::Status requestStatus(
             OcspCertidPtr certId,
             const X509Certificate& certificate,
-            const UrlRequestSender& requestSender,
-            const OcspUrl& ocspUrl,
+            const OcspResponsePtr& ocspResponse,
+            const std::optional<std::string>& serializedOcspResponse,
+            const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
             TrustStore& trustStore,
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
-            const bool validateHashExtension);
+            const bool validateHashExtension)
+    {
+        const auto [status, gracePeriod, producedAt] = parseResponse(
+                certificate,
+                ocspResponse,
+                certId,
+                referenceTimePoint,
+                trustStore,
+                ocspSignerCertificates,
+                validateHashExtension);
+
+        VLOG(2) << "Returning new OCSP status: " << status.to_string();
+        trustStore.setCacheOcspData(
+            certificate.getSha256FingerprintHex(),
+            {status,
+             gracePeriod,
+             producedAt,
+             serializedOcspResponse.has_value()
+                 ? *serializedOcspResponse
+                 : OcspHelper::ocspResponseToString(*ocspResponse)});
+        return status;
+    }
+
 
     /**
      * Gets the OCSP status of a certificate.
@@ -536,6 +533,7 @@ namespace
      *                      responders as taken from the TSL
      * @param validateHashExtension whether the response hash extension should be validated
      * @param providedOcspResponse  optional ocsp response that should be used for OCSP check if present
+     * @param referenceTimePoint        optional timepoint to be used for OCSP response validity checks
      * @param forceOcspRequest      if true the provided and cached OCSP responses are ignored and a request is done
      *
      * @return  OCSP status (good / revoked / unknown)
@@ -550,6 +548,7 @@ namespace
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
             const bool validateHashExtension,
             const OcspResponsePtr& providedOcspResponse,
+            const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
             const bool forceOcspRequest)
     {
         VLOG(2) << "OcspService: getCurrentStatusAndResponse";
@@ -563,17 +562,20 @@ namespace
 
         if ( ! forceOcspRequest)
         {
-            const std::optional<OcspService::Status> providedOcspResponseStatus = checkProvidedOcspResponse(
-                certificate,
-                certId,
-                trustStore,
-                ocspSignerCertificates,
-                validateHashExtension,
-                providedOcspResponse);
-            if (providedOcspResponseStatus.has_value())
+            // If OCSP-response is provided and OCSP-request is not forced then no OCSP-request should be done,
+            // the provided OCSP response should be valid or an error should be reported
+            if (providedOcspResponse != nullptr)
             {
-                VLOG(2) << "Returning provided OCSP status: " << providedOcspResponseStatus->to_string();
-                return *providedOcspResponseStatus;
+                VLOG(2) << "Using provided OCSP response from request.";
+                return requestStatus(
+                    std::move(certId),
+                    certificate,
+                    providedOcspResponse,
+                    std::nullopt,
+                    referenceTimePoint,
+                    trustStore,
+                    ocspSignerCertificates,
+                    validateHashExtension);
             }
 
             const auto cachedOcspData = trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
@@ -584,40 +586,21 @@ namespace
             }
         }
 
-        return requestStatus(std::move(certId), certificate, requestSender, ocspUrl, trustStore, ocspSignerCertificates,
-                             validateHashExtension);
-
-    }
-
-    OcspService::Status requestStatus(
-            OcspCertidPtr certId,
-            const X509Certificate& certificate,
-            const UrlRequestSender& requestSender,
-            const OcspUrl& ocspUrl,
-            TrustStore& trustStore,
-            const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
-            const bool validateHashExtension)
-    {
+        // send OCSP-request
         OcspRequestPtr request = createOcspRequest(certId);
-
         VLOG(2) << "Sending new OCSP request with URL: " << ocspUrl.url;
-
         const std::string response{sendOcspRequest(requestSender, ocspUrl, toBuffer(request))};
         OcspResponsePtr ocspResponse = OcspHelper::stringToOcspResponse(response);
 
-        const auto [status, gracePeriod, producedAt] = parseResponse(
-                certificate,
-                ocspResponse,
-                certId,
-                trustStore,
-                ocspSignerCertificates,
-                validateHashExtension);
-
-        VLOG(2) << "Returning new OCSP status: " << status.to_string();
-        trustStore.setCacheOcspData(
-            certificate.getSha256FingerprintHex(),
-            {status, gracePeriod, producedAt, response});
-        return status;
+        return requestStatus(
+            std::move(certId),
+            certificate,
+            ocspResponse,
+            response,
+            referenceTimePoint,
+            trustStore,
+            ocspSignerCertificates,
+            validateHashExtension);
     }
 }   // anonymous namespace
 
@@ -629,6 +612,7 @@ OcspService::getCurrentStatus (const X509Certificate& certificate,
                                TrustStore& trustStore,
                                const bool validateHashExtension,
                                const OcspResponsePtr& ocspResponse,
+                               const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
                                const bool forceOcspRequest)
 {
     const auto caInfo = trustStore.lookupCaCertificate(certificate);
@@ -638,6 +622,7 @@ OcspService::getCurrentStatus (const X509Certificate& certificate,
                                          std::nullopt,
                                          validateHashExtension,
                                          ocspResponse,
+                                         referenceTimePoint,
                                          forceOcspRequest);
 }
 
@@ -665,6 +650,7 @@ OcspService::getCurrentStatusOfTslSigner (const X509Certificate& certificate,
                                                  ocspSignerCertificates,
                                                  validateHashExtension,
                                                  OcspResponsePtr(nullptr),
+                                                 std::nullopt,
                                                  false);
         }
     }
@@ -708,7 +694,10 @@ OcspService::CertificateStatus OcspService::toCertificateStatus (const std::stri
 }
 
 
-void OcspService::checkOcspStatus (const OcspService::Status& status, const TrustStore& trustStore)
+void OcspService::checkOcspStatus (
+    const OcspService::Status& status,
+    const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
+    const TrustStore& trustStore)
 {
     TslExpect6(
         status.certificateStatus != OcspService::CertificateStatus::unknown,
@@ -720,7 +709,7 @@ void OcspService::checkOcspStatus (const OcspService::Status& status, const Trus
 
     TslExpect6(
         status.certificateStatus != OcspService::CertificateStatus::revoked
-        || std::chrono::system_clock::now() < status.revocationTime,
+        || getReferenceTimePoint(referenceTimePoint) < status.revocationTime,
         "OCSP Check failed, certificate is revoked.",
         TslErrorCode::CERT_REVOKED,
         trustStore.getTslMode(),

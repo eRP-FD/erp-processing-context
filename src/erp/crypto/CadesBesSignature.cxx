@@ -8,14 +8,23 @@
 #include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/EssCertificateHelper.hxx"
 #include "erp/pc/ProfessionOid.hxx"
+#include "erp/tsl/OcspHelper.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/util/Base64.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/ErpRequirements.hxx"
 
 
 namespace
 {
+    class SignerCertificateInfo
+    {
+    public:
+        X509* certificate;
+        std::optional<fhirtools::Timestamp> signingTimestamp;
+    };
+
+
     bool hasSignerInfosWithoutCertificate(const STACK_OF(CMS_SignerInfo)& signerInfos)
     {
         const int signerInfosCount = sk_CMS_SignerInfo_num(&signerInfos);
@@ -66,7 +75,30 @@ namespace
     }
 
 
-    std::vector<X509*> getSignerCertificates(CMS_ContentInfo& cmsContentInfo, STACK_OF(X509)* certificates)
+    std::optional<fhirtools::Timestamp> getSigningTimeFromSignerInfo(CMS_SignerInfo& signerInfo)
+    {
+        const int attributeIndex = CMS_signed_get_attr_by_NID(&signerInfo, NID_pkcs9_signingTime, -1);
+        if (attributeIndex != -1)
+        {
+            auto* x509Attributes = CMS_signed_get_attr(&signerInfo, attributeIndex);
+            ASN1_TYPE* asn1Type = X509_ATTRIBUTE_get0_type(x509Attributes, 0);
+            if (asn1Type != nullptr)
+            {
+                OpenSslExpect(asn1Type->type == V_ASN1_UTCTIME && asn1Type->value.utctime != nullptr,
+                              "Unexpected type of signingTime.");
+                tm tm{};
+                OpenSslExpect(ASN1_TIME_to_tm(asn1Type->value.utctime, &tm) == 1,
+                              "Failed to convert ASN1_UTCTIME to struct tm");
+                return fhirtools::Timestamp::fromTmInUtc(tm);
+            }
+        }
+
+        return {};
+    }
+
+
+    std::vector<SignerCertificateInfo> getSignerCertificates(
+        CMS_ContentInfo& cmsContentInfo, STACK_OF(X509)* certificates)
     {
         auto* signerInfos = CMS_get0_SignerInfos(&cmsContentInfo);
         OpenSslExpect(signerInfos != nullptr, "No signer infos is provided.");
@@ -76,7 +108,7 @@ namespace
 
         setSignerInfoOnDemand(cmsContentInfo, *signerInfos, certificates);
 
-        std::vector<X509*> signerCertificates;
+        std::vector<SignerCertificateInfo> signerCertificates;
         for (int ind = 0; ind < signerInfosCount; ind++)
         {
             auto* signerInfo = sk_CMS_SignerInfo_value(signerInfos, ind);
@@ -90,7 +122,8 @@ namespace
 
             EssCertificateHelper::verifySigningCertificateFromSignedData(*signerInfo, *signerCertificate);
 
-            signerCertificates.emplace_back(signerCertificate);
+            signerCertificates.emplace_back(
+                SignerCertificateInfo{signerCertificate, getSigningTimeFromSignerInfo(*signerInfo)});
         }
 
         return signerCertificates;
@@ -215,46 +248,73 @@ namespace
     }
 
 
+    std::tuple<TslMode, std::unordered_set<CertificateType>> getVerificationExpectations(
+        const X509Certificate& certificate,
+        const bool allowNonQESCertificate)
+    {
+        const bool isSmcBOsig = certificate.checkCertificatePolicy(TslService::oid_smc_b_osig);
+        if (allowNonQESCertificate && isSmcBOsig)
+        {
+            return {TslMode::TSL, { CertificateType::C_HCI_OSIG }};
+        }
+        else
+        {
+            return {TslMode::BNA, { CertificateType::C_HP_ENC, CertificateType::C_HP_QES }};
+        }
+    }
+
+
+    /**
+     * Verifies signer certificates ( it must be only one certificate ) of the provided CAdES-BES,
+     * and embeds the missing in the package OCSP response for QES related packages.
+     */
     void verifySignerCertificates(
         CMS_ContentInfo& cmsContentInfo,
         TslManager& tslManager,
-        bool allowNonQESCertificate,
+        const bool allowNonQESCertificate,
         const std::vector<std::string_view>& professionOids)
     {
-        OcspResponsePtr ocspResponse = getOcspResponse(cmsContentInfo);
+        OcspResponsePtr providedOcspResponse = getOcspResponse(cmsContentInfo);
 
         const auto releaseList = [] (STACK_OF(X509)* lst) {
             sk_X509_pop_free(lst, X509_free);
         };
         auto certificates = std::unique_ptr<STACK_OF(X509), std::function<void(STACK_OF(X509)*)> >(CMS_get1_certs(&cmsContentInfo), releaseList);
-        const std::vector<X509*> signerCertificates = getSignerCertificates(
+        const std::vector<SignerCertificateInfo> signerCertificateInfo = getSignerCertificates(
             cmsContentInfo, certificates.get());
 
-        for (X509* signerCertificate : signerCertificates)
+        Expect(signerCertificateInfo.size() == 1, "Multiple signatures are not expected in CAdES-BES packet.");
+
+        auto certificate = X509Certificate::createFromX509Pointer(signerCertificateInfo[0].certificate);
+        const auto [tslMode, certificateTypes] = getVerificationExpectations(certificate, allowNonQESCertificate);
+
+        std::optional<std::chrono::system_clock::time_point> referenceTimePoint;
+        if (tslMode == TslMode::BNA && signerCertificateInfo[0].signingTimestamp.has_value())
         {
-            auto certificate = X509Certificate::createFromX509Pointer(signerCertificate);
-            const bool isSmcBOsig = certificate.checkCertificatePolicy(TslService::oid_smc_b_osig);
+            referenceTimePoint = signerCertificateInfo[0].signingTimestamp->toChronoTimePoint();
+        }
 
-            TslMode tslMode{};
-            std::unordered_set<CertificateType> certificateTypes{};
-            if (allowNonQESCertificate && isSmcBOsig)
-            {
-                tslMode = TslMode::TSL;
-                certificateTypes = { CertificateType::C_HCI_OSIG };
-            }
-            else
-            {
-                tslMode = TslMode::BNA;
-                certificateTypes = { CertificateType::C_HP_ENC, CertificateType::C_HP_QES };
-            }
+        tslManager.verifyCertificate(
+            tslMode,
+            certificate,
+            certificateTypes,
+            providedOcspResponse,
+            referenceTimePoint);
 
-            tslManager.verifyCertificate(
-                tslMode,
-                certificate,
-                certificateTypes,
-                ocspResponse);
+        checkProfessionOids(certificate, professionOids);
 
-            checkProfessionOids(certificate, professionOids);
+        // if no OCSP response is provided in QES CAdES-BES, the requested OCSP response should be attached,
+        // for non QES scenario the requested OCSP response is not embedded
+        if (providedOcspResponse == nullptr && tslMode == TslMode::BNA)
+        {
+            // no ocsp request should be triggered, the ocsp response should be provided from the cache
+            TrustStore::OcspResponseData requestedOcspResponseData =
+                tslManager.getCertificateOcspResponse(tslMode, certificate, certificateTypes, false);
+            OcspResponsePtr requestedOcspResponse =
+                OcspHelper::stringToOcspResponse(requestedOcspResponseData.response);
+            OpenSslExpect(requestedOcspResponse != nullptr,
+                          "can not deserialize cached OCSP response");
+            addOcspToSignerInfo(cmsContentInfo, *requestedOcspResponse);
         }
     }
 
@@ -412,7 +472,7 @@ CadesBesSignature::CadesBesSignature(
     const Certificate& cert,
     const shared_EVP_PKEY& privateKey,
     const std::string& payload,
-    const std::optional<model::Timestamp>& signingTime,
+    const std::optional<fhirtools::Timestamp>& signingTime,
     OcspResponsePtr ocspResponse)
     : mPayload(payload),
       mCmsHandle{}
@@ -442,11 +502,12 @@ CadesBesSignature::CadesBesSignature(
 }
 
 
-std::string CadesBesSignature::get()
+std::string CadesBesSignature::getBase64() const
 {
     std::ostringstream outStream(std::ios::binary);
     auto outBio = shared_BIO::make();
-    i2d_CMS_bio(outBio.get(), mCmsHandle.get());
+    // the CMS handle is not changed, but the openssl API requires non-const pointer
+    i2d_CMS_bio(outBio.get(), const_cast<CMS_ContentInfo*>(mCmsHandle.get()));
     while (!BIO_eof(outBio.get()))
     {
         std::array<char, 4096> buffer; //NOLINT[cppcoreguidelines-pro-type-member-init,hicpp-member-init]
@@ -454,7 +515,7 @@ std::string CadesBesSignature::get()
         OpenSslExpect(bytesRead > 0, "Failed reading CMS Data");
         outStream.write(buffer.data(), bytesRead);
     }
-    return outStream.str();
+    return Base64::encode(outStream.str());
 }
 
 
@@ -464,7 +525,7 @@ const std::string& CadesBesSignature::payload() const
 }
 
 
-std::optional<model::Timestamp> CadesBesSignature::getSigningTime() const
+std::optional<fhirtools::Timestamp> CadesBesSignature::getSigningTime() const
 {
     const auto* signerInfos = CMS_get0_SignerInfos(mCmsHandle.removeConst().get());
     OpenSslExpect(signerInfos != nullptr, "Error getting signer info from CMS structure");
@@ -475,19 +536,11 @@ std::optional<model::Timestamp> CadesBesSignature::getSigningTime() const
     {
         auto* signerInfo = sk_CMS_SignerInfo_value(signerInfos, ind);
         OpenSslExpect(signerInfo != nullptr, "got nullptr from sk_CMS_SignerInfo_value");
-        const int attributeIndex = CMS_signed_get_attr_by_NID(signerInfo, NID_pkcs9_signingTime, -1);
-        auto* x509Attributes = CMS_signed_get_attr(signerInfo, attributeIndex);
-        ASN1_TYPE *asn1Type = X509_ATTRIBUTE_get0_type(x509Attributes, 0);
-        if (asn1Type != nullptr)
-        {
-            OpenSslExpect(asn1Type->type == V_ASN1_UTCTIME && asn1Type->value.utctime != nullptr,
-                          "Unexpected type of signingTime.");
-            tm tm{};
-            OpenSslExpect(ASN1_TIME_to_tm(asn1Type->value.utctime, &tm) == 1,
-                          "Failed to convert ASN1_UTCTIME to struct tm");
-            return model::Timestamp::fromTmInUtc(tm);
-        }
+        auto result = getSigningTimeFromSignerInfo(*signerInfo);
+        if (result.has_value())
+            return result;
     }
+
     return {};
 }
 
@@ -518,7 +571,7 @@ std::optional<model::Timestamp> CadesBesSignature::getSigningTime() const
     return {};
 }
 
-void CadesBesSignature::setSigningTime(const model::Timestamp& signingTime)
+void CadesBesSignature::setSigningTime(const fhirtools::Timestamp& signingTime)
 {
     using namespace std::chrono;
     auto secondsSinceEpoch = duration_cast<seconds>(signingTime.toChronoTimePoint().time_since_epoch()).count();

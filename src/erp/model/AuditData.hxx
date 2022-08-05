@@ -9,7 +9,7 @@
 #include "erp/model/Resource.hxx"
 #include "erp/model/AuditEvent.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/common/HttpStatus.hxx"
 
 
@@ -38,8 +38,9 @@ enum class AuditEventId : std::int16_t
     POST_ChargeItem,           // always caused by pharmacy;
     PUT_ChargeItem_id_insurant,
     PUT_ChargeItem_id_pharmacy,
+    PATCH_ChargeItem_id,
     POST_Consent,              // only allowed by insurant;
-    DELETE_Consent_id,         // only allowed by insurant;
+    DELETE_Consent,         // only allowed by insurant;
     ChargeItem_delete_expired_id, // deletion of expired ChargeItems by maintenance script => Id 22 used by database script!
     MAX = ChargeItem_delete_expired_id
 };
@@ -47,12 +48,14 @@ enum class AuditEventId : std::int16_t
 bool isEventCausedByPatient(AuditEventId eventId);
 bool isEventCausedByRepresentative(AuditEventId eventId);
 bool isEventCausedByMaintenanceScript(AuditEventId eventId);
-std::string createEventResourceReference(AuditEventId eventId, const std::string& prescriptionId);
+std::string createEventResourceReference(AuditEventId eventId, const std::string& resourceId);
 
 
 class AuditMetaData : public Resource<AuditMetaData>
 {
 public:
+    static constexpr auto resourceTypeName = "AuditMetaData";
+
     AuditMetaData(
         const std::optional<std::string_view>& agentName,
         const std::optional<std::string_view>& agentWho);
@@ -81,7 +84,8 @@ public:
         AuditEvent::AgentType agentType,
         const std::string& insurantKvnr,
         const std::int16_t deviceId,
-        std::optional<PrescriptionId> prescriptionId);
+        std::optional<PrescriptionId> prescriptionId,
+        std::optional<std::string> consentId);
 
     AuditEvent::AgentType agentType() const;
     AuditEventId eventId() const;
@@ -90,11 +94,12 @@ public:
     const std::string& insurantKvnr() const;
     std::int16_t deviceId() const;
     const std::optional<model::PrescriptionId>& prescriptionId() const;
+    const std::optional<std::string>& consentId() const;
     const std::string& id() const;
-    const model::Timestamp& recorded() const;
+    const fhirtools::Timestamp& recorded() const;
 
     void setId(const std::string& id);
-    void setRecorded(const model::Timestamp& recorded);
+    void setRecorded(const fhirtools::Timestamp& recorded);
 
 private:
     AuditEventId mEventId;
@@ -104,9 +109,10 @@ private:
     std::string mInsurantKvnr;
     std::int16_t mDeviceId;
     std::optional<PrescriptionId> mPrescriptionId;
+    std::optional<std::string> mConsentId;
 
     std::string mId;            // filled after storing in or if loaded from DB;
-    model::Timestamp mRecorded; // filled after storing in or if loaded from DB;
+    fhirtools::Timestamp mRecorded; // filled after storing in or if loaded from DB;
 };
 
 }  // namespace model

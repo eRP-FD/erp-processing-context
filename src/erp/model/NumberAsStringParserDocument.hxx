@@ -116,6 +116,9 @@ public:
     [[nodiscard]]
     static bool valueIsString(const rapidjson::Value& value);
 
+    [[nodiscard]]
+    static std::string_view valueAsString(const rapidjson::Value& value);
+
     static rapidjson::Value createEmptyObject();
 
     [[nodiscard]]
@@ -176,23 +179,23 @@ public:
     /**
      * Returns the string value of the given pointer by removing the string prefix.
      */
-    [[nodiscard]]
-    std::optional<std::string_view> getOptionalStringValue(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
+    [[nodiscard]] static std::optional<std::string_view> getOptionalStringValue(const rapidjson::Value& object,
+                                                                                const rapidjson::Pointer& key);
 
     /**
      * Returns the number value of the object member specified by its key. Before converting the value to the number
      * the number prefix is removed.
      */
-    [[nodiscard]]
-    std::optional<int> getOptionalIntValue(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
-    [[nodiscard]]
-    std::optional<unsigned int> getOptionalUIntValue(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
-    [[nodiscard]]
-    std::optional<int64_t> getOptionalInt64Value(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
-    [[nodiscard]]
-    std::optional<uint64_t> getOptionalUInt64Value(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
-    [[nodiscard]]
-    std::optional<double> getOptionalDoubleValue(const rapidjson::Value& object, const rapidjson::Pointer& key) const;
+    [[nodiscard]] static std::optional<int> getOptionalIntValue(const rapidjson::Value& object,
+                                                                const rapidjson::Pointer& key);
+    [[nodiscard]] static std::optional<unsigned int> getOptionalUIntValue(const rapidjson::Value& object,
+                                                                          const rapidjson::Pointer& key);
+    [[nodiscard]] static std::optional<int64_t> getOptionalInt64Value(const rapidjson::Value& object,
+                                                                      const rapidjson::Pointer& key);
+    [[nodiscard]] static std::optional<uint64_t> getOptionalUInt64Value(const rapidjson::Value& object,
+                                                                        const rapidjson::Pointer& key);
+    [[nodiscard]] static std::optional<double> getOptionalDoubleValue(const rapidjson::Value& object,
+                                                                      const rapidjson::Pointer& key);
 
     /**
      * Returns the string value of the object member specified by its key by removing the string prefix.

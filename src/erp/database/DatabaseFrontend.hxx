@@ -92,9 +92,9 @@ public:
     [[nodiscard]] uint64_t countCommunications(const std::string& user,
                                                const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::vector<Uuid> retrieveCommunicationIds(const std::string& recipient) override;
-    [[nodiscard]] std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+    [[nodiscard]] std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
     deleteCommunication(const Uuid& communicationId, const std::string& sender) override;
-    void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds, const model::Timestamp& retrieved,
+    void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds, const fhirtools::Timestamp& retrieved,
                                        const std::string& recipient) override;
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId) override;
 
@@ -102,32 +102,21 @@ public:
     std::optional<model::Consent> retrieveConsent(const std::string_view& kvnr) override;
     [[nodiscard]] bool clearConsent(const std::string_view& kvnr) override;
 
-    void storeChargeInformation(const std::string_view& pharmacyId, const model::ChargeItem& chargeItem,
-                                const model::Bundle& dispenseItem) override;
-
-    std::vector<model::ChargeItem>
-    retrieveAllChargeItemsForPharmacy(const std::string_view& pharmacyTelematikId,
-                                      const std::optional<UrlArguments>& search) const override;
+    void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) override;
+    void updateChargeInformation(const ::model::ChargeInformation& chargeInformation) override;
 
     std::vector<model::ChargeItem>
     retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
                                       const std::optional<UrlArguments>& search) const override;
 
-    std::tuple<std::optional<model::Binary>, std::optional<model::Bundle>, std::optional<model::ChargeItem>, std::optional<model::Bundle>>
-    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id) override;
-
-    std::tuple<model::ChargeItem, model::Bundle>
-    retrieveChargeInformation(const model::PrescriptionId& id) const override;
-    std::tuple<model::ChargeItem, model::Bundle>
+    [[nodiscard]] ::model::ChargeInformation retrieveChargeInformation(const model::PrescriptionId& id) const override;
+    [[nodiscard]] ::model::ChargeInformation
     retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const override;
 
     void deleteChargeInformation(const model::PrescriptionId& id) override;
     void clearAllChargeInformation(const std::string_view& kvnr) override;
 
     [[nodiscard]] uint64_t countChargeInformationForInsurant(const std::string& kvnr,
-                                                             const std::optional<UrlArguments>& search) override;
-
-    [[nodiscard]] uint64_t countChargeInformationForPharmacy(const std::string& pharmacyTelematikId,
                                                              const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]] DatabaseBackend& getBackend() override;
@@ -140,15 +129,13 @@ private:
                                                                                  const SafeString& key);
     [[nodiscard]] std::optional<model::Bundle> getReceipt(const db_model::Task& dbTask, const SafeString& key);
 
-    [[nodiscard]] std::optional<model::ChargeItem>
-    getChargeItem(const std::optional<db_model::EncryptedBlob>& chargeItem, const SafeString& key);
     [[nodiscard]] std::optional<model::Bundle>
     getDispenseItem(const std::optional<db_model::EncryptedBlob>& dbDispenseItem, const SafeString& key);
 
     [[nodiscard]] static ErpVector taskKeyDerivationData(const model::PrescriptionId& taskId,
-                                                         const model::Timestamp& authoredOn);
+                                                         const fhirtools::Timestamp& authoredOn);
     [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId);
-    [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId, const model::Timestamp& authoredOn,
+    [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId, const fhirtools::Timestamp& authoredOn,
                                      const OptionalDeriveKeyData& secondCallData);
     [[nodiscard]] std::optional<SafeString> taskKey(const db_model::Task& dbTask);
 
@@ -157,9 +144,12 @@ private:
                                                                        const db_model::HashedId& identityHashed);
 
     [[nodiscard]] std::tuple<SafeString, BlobId> medicationDispenseKey(const db_model::HashedKvnr& hashedKvnr);
-    [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& hashedKvnr);
+    [[nodiscard]] ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
+    chargeItemKey(const ::model::PrescriptionId& prescriptionId) const;
+    [[nodiscard]] ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
+    chargeItemKey(const ::db_model::ChargeItem& chargeItem) const;
 
-    std::vector<model::ChargeItem> decryptChargeItems(const std::vector<db_model::ChargeItem>& dbChargeItems) const;
+    [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& hashedKvnr);
 
     std::unique_ptr<DatabaseBackend> mBackend;
     HsmPool& mHsmPool;

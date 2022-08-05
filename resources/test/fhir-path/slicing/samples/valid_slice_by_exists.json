@@ -1,0 +1,21 @@
+{
+    "resourceType": "Sliceable",
+    "meta": {
+        "profile": ["http://erp.test/SlicedByExists"]
+    },
+    "sliced": [
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "string": "slice1"
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice2",
+                "integer": 4711
+            }
+        }
+    ]
+}
+

@@ -8,6 +8,7 @@
 #include "erp/crypto/Sha256.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/String.hxx"
+
 #include "mock/crypto/MockCryptography.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/util/StaticData.hxx"
@@ -95,7 +96,7 @@ TEST_F(JwsTest, Roundtrip)// NOLINT
     ECDSA_SIG_set0(sig, r.release(), s.release());
     int siglen = i2d_ECDSA_SIG(sig, nullptr);
     std::vector<unsigned char> sig_der_bytes(static_cast<size_t>(siglen), 0u);
-    unsigned char* rawptr = &sig_der_bytes[0];
+    unsigned char* rawptr = sig_der_bytes.data();
     i2d_ECDSA_SIG(sig, &rawptr);
     ASSERT_EQ(EVP_DigestVerifyFinal(ctx, sig_der_bytes.data(), gsl::narrow<size_t>(siglen)), 1);
 

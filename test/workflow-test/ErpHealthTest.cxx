@@ -42,7 +42,7 @@ TEST_P(ErpHealthTest, HealthCheck)//NOLINT(readability-function-cognitive-comple
 
     ClientRequest request(Header(HttpMethod::GET, std::move(outerPath), Header::Version_1_1,
                                       {{Header::Host, mClient->getHostHttpHeader()},
-                                       {Header::UserAgent, "vau-cpp-it-test"s},
+                                       {Header::UserAgent, "eRp-Testsuite/1.0.0 GMTIK/JMeter-Internet"s},
                                        {Header::ContentType, "application/octet-stream"}},
                                       HttpStatus::Unknown),
                                {});

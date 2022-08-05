@@ -4,9 +4,12 @@
  */
 
 #include "erp/model/KbvMedicationRequest.hxx"
+#include "erp/ErpConstants.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
+
+#include <date/tz.h>
 
 namespace model
 {
@@ -27,11 +30,28 @@ std::optional<std::string_view> KbvMedicationRequest::statusCoPaymentExtension()
 
 bool model::KbvMedicationRequest::isMultiplePrescription() const
 {
-    A_22068.start("Bundle.[entry.]MedicationRequest.extension:Mehrfachverordnung");
     auto multiplePrescription = getExtension<KBVMultiplePrescription>();
     bool res = multiplePrescription.has_value() && multiplePrescription->isMultiplePrescription();
-    A_22068.finish();
     return res;
+}
+
+std::optional<date::year_month_day> KbvMedicationRequest::mvoEndDate() const
+{
+    auto mPExt = getExtension<model::KBVMultiplePrescription>();
+    if (mPExt)
+    {
+        if (mPExt->isMultiplePrescription())
+        {
+            auto endDate = mPExt->endDate();
+            if (endDate.has_value())
+            {
+                return date::year_month_day{date::floor<date::days>(
+                    date::make_zoned(fhirtools::Timestamp::GermanTimezone, endDate->toChronoTimePoint())
+                        .get_local_time())};
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<Dosage> KbvMedicationRequest::dosageInstruction() const

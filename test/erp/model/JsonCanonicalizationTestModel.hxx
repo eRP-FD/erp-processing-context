@@ -7,7 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_MODEL_JSONCANONICALIZATIONTESTMODEL_HXX
 
 #include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 
 /**
  * The test resource model was introduced in order to be able to test the most diverse aspects of
@@ -41,8 +41,8 @@ public:
     [[nodiscard]] std::optional<Status> status() const;
     void setStatus(Status status);
 
-    [[nodiscard]] std::optional<model::Timestamp> timeSent() const;
-    void setTimeSent(const model::Timestamp& timestamp = model::Timestamp::now());
+    [[nodiscard]] std::optional<fhirtools::Timestamp> timeSent() const;
+    void setTimeSent(const fhirtools::Timestamp& timestamp = fhirtools::Timestamp::now());
 private:
     explicit JsonCanonicalizationTestModel(model::NumberAsStringParserDocument&& document); // internal ctor
 };

@@ -3,15 +3,15 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/xml/SaxHandler.hxx"
-#include "erp/xml/XmlHelper.hxx"
+#include "fhirtools/util/SaxHandler.hxx"
+#include "fhirtools/util/XmlHelper.hxx"
 
 #include <functional>
 #include <gtest/gtest.h>
 
 class SaxParserTest
     : public ::testing::Test
-    , public SaxHandler
+    , public fhirtools::SaxHandler
 {
 public:
     void startDocument() override { if (onStartDocument) onStartDocument(); }

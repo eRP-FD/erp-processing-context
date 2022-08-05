@@ -51,6 +51,9 @@ EnrolmentApiClient::Header::Header(::HttpMethod method, ::BlobType type)
                                                    case ::BlobType::AuditLogKeyDerivation:
                                                        return "/Enrolment/AuditLog/DerivationKey";
                                                        break;
+                                                   case ::BlobType::ChargeItemKeyDerivation:
+                                                       return "/Enrolment/ChargeItem/DerivationKey";
+                                                       break;
                                                    case ::BlobType::KvnrHashKey:
                                                        return "/Enrolment/KvnrHashKey";
                                                        break;
@@ -59,6 +62,9 @@ EnrolmentApiClient::Header::Header(::HttpMethod method, ::BlobType type)
                                                        break;
                                                    case ::BlobType::VauSig:
                                                        return "/Enrolment/VauSig";
+                                                   case ::BlobType::PseudonameKey:
+                                                       // Not allowed for enrolment.
+                                                       break;
                                                }
                                                Fail("encountered unhandled blob type");
                                            }()}

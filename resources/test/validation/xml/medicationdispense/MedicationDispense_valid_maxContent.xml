@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <MedicationDispense xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/erxMedicationDispense"/>
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"/>
   </meta>
   <contained>
     <Medication>
@@ -119,7 +119,7 @@
     <text value="test"/>
   </category>
   <medicationReference>
-    <reference value="Medication/1234"/>
+    <reference value="#5fe6e06c-8725-46d5-aecd-e65e041ca3de"/>
     <type value="type"/>
     <identifier>
       <value value="identifier" />
@@ -213,14 +213,12 @@
   </type>
   <quantity>
     <value value="12.5"/>
-    <comparator value=">"/>
     <unit value="ml"/>
     <system value="uri"/>
     <code value="code"/>
   </quantity>
   <daysSupply>
     <value value="12.5"/>
-    <comparator value=">="/>
     <unit value="ml"/>
     <system value="uri"/>
     <code value="code"/>

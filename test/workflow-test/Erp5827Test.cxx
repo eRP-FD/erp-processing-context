@@ -30,7 +30,7 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_TRUE(task.has_value());
     std::string accessCode{ task->accessCode() };
     std::string qesBundle;
-    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnrInsurant, task->prescriptionId(), model::Timestamp::now())));
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnrInsurant, task->prescriptionId(), fhirtools::Timestamp::now())));
     ASSERT_FALSE(qesBundle.empty());
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
     ASSERT_TRUE(task.has_value());
@@ -64,7 +64,7 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
         "Ja"));
     ASSERT_TRUE(reply2.has_value());
     const JWT jwtInsurant{ JwtBuilder::testBuilder().makeJwtVersicherter(kvnrInsurant) };
-    model::Timestamp timestamp = model::Timestamp::now() + std::chrono::hours(-24);
+    fhirtools::Timestamp timestamp = fhirtools::Timestamp::now() + std::chrono::hours(-24);
     std::string sent = timestamp.toXsDateTimeWithoutFractionalSeconds();
     sent = String::replaceAll(sent, ":", "%3A");
     sent = String::replaceAll(sent, "+", "%2B");

@@ -87,7 +87,7 @@ void Timer::runJobAndRepeat (
     Expect(outerJob != nullptr, "outerJob is empty");
     outerJob->expires_at(outerJob->expires_at() + repeatingDelay);
     outerJob->async_wait(
-        [this, innerJob=std::move(innerJob), outerJob = std::move(outerJob), repeatingDelay, token]
+        [this, innerJob=std::move(innerJob), outerJob, repeatingDelay, token]
             (const boost::system::error_code& error) mutable
         {
             runJobAndRepeat(std::move(innerJob), std::move(outerJob), repeatingDelay, token, error);

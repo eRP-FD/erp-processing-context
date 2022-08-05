@@ -48,23 +48,18 @@ set -x
 # Add credentials for IBM internal nexus
 conan user -r erp -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
 conan user -r conan-center-binaries -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
+conan profile new --detect default
+echo -e '[build_requires]\nautomake/1.16.5' >> ~/.conan/profiles/default
 set +x
-
-conan profile new default --detect
-conan profile update settings.compiler.libcxx=libstdc++11 default
-# Required at least for redis++ build process.
-conan profile update settings.compiler.cppstd=17 default
-conan profile update settings.compiler.version=9 default
-conan profile update env.CXX=g++-9 default
-conan profile update env.CC=gcc-9 default
-
-conan install -o with_sbom=True .. --build=missing
+export CC=gcc-11
+export CXX=g++-11
 cmake -GNinja \
       -DCMAKE_BUILD_TYPE=Debug \
       -DERP_BUILD_VERSION=${erp_build_version} \
       -DERP_RELEASE_VERSION=${erp_release_version} \
       -DERP_WITH_HSM_MOCK=ON \
       -DERP_WARNING_AS_ERROR=ON \
+      -DERP_CONAN_ARGS="-o with_sbom=True" \
       ..
 
 ninja -l$(nproc) clean

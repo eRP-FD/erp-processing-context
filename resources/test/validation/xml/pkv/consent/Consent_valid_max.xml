@@ -6,7 +6,7 @@
     <versionId value="VersionId" />
     <lastUpdated value="2020-04-16T14:44:47.082+00:00" />
     <source value="uri/source" />
-    <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice1">
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxConsent|1.1.1">
         <extension url="http://some.host.de/path">
             <valueString value="some-value1"/>
         </extension>
@@ -14,13 +14,6 @@
             <valueString value="some-value2"/>
         </extension>
     </profile>
-    <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice2"/>
-    <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice3">
-        <extension url="http://some.host.de/path">
-            <valueString value="some-value3"/>
-        </extension>
-    </profile>
-    <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice4"/>
     <tag>
         <display value="Example for PKV billing information." />
     </tag>

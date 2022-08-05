@@ -85,6 +85,8 @@ public:
      */
     void deleteBlob(BlobType type, const ErpVector& name);
 
+    std::vector<Entry> getAllBlobsSortedById (void) const;
+
     void setPcrHash(const ::ErpVector& pcrHash);
 
     void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);

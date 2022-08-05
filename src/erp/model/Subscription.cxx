@@ -4,9 +4,10 @@
  */
 
 #include "erp/model/Subscription.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/util/UrlHelper.hxx"
 
 namespace model
@@ -88,7 +89,7 @@ void Subscription::setSubscriptionId(std::string_view subscriptionId)
     setValue(idPointer, subscriptionId);
 }
 
-void Subscription::setEndTime(const model::Timestamp& dateTime)
+void Subscription::setEndTime(const fhirtools::Timestamp& dateTime)
 {
     setValue(endPointer, dateTime.toXsDateTimeWithoutFractionalSeconds());
 }

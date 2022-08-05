@@ -80,6 +80,7 @@ Blob types:
     task|taskDerivationKey
     comm|communicationDerivationKey
     audit|auditLogDerivationKey
+    charge|chargeItemDerivationKey
     kvnr|kvnrHashKey
     tid|telematikIdHashKey
     vausig
@@ -123,6 +124,7 @@ struct BlobDescriptor
     bool hasEnd;
 };
 
+// clang-format off
 static std::vector<BlobDescriptor> blobDescriptors = {
     {BlobType::EndorsementKey,             "ek",     "knownEk",                    "trustedEKSaved.blob",      "trustedEKSaved.blob",          true, false, false },
     {BlobType::AttestationPublicKey,       "ak",     "knownAk",                    "AKPub.bin",                "AKPub.bin",                    true,  false, false},
@@ -132,10 +134,11 @@ static std::vector<BlobDescriptor> blobDescriptors = {
     {BlobType::TaskKeyDerivation,          "task",   "taskDerivationKey",          "StaticDerivationKey.blob", "taskDerivationKeySaved.blob",  false, false, false},
     {BlobType::CommunicationKeyDerivation, "comm",   "communicationDerivationKey", "StaticDerivationKey.blob", "commDerivationKeySaved.blob",  false, false, false},
     {BlobType::AuditLogKeyDerivation,      "audit",  "auditLogDerivationKey",      "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
+    {::BlobType::ChargeItemKeyDerivation,  "charge", "chargeItemDerivationKey",    "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
     {BlobType::KvnrHashKey,                "kvnr",   "kvnrHashKey",                "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
     {BlobType::TelematikIdHashKey,         "tid",    "telematikIdHashKey",         "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
     {BlobType::VauSig,                     "vausig", "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false}};
-
+// clang-format on
 
 void expectArgument(const std::string& name, const int index, const int argc, const char* argv[])
 {
@@ -199,7 +202,7 @@ CommandLineArguments processCommandLine(const int argc,
         else if (argument == "-v" || argument == "--version")
         {
             ::std::cout << ::ErpServerInfo::BuildVersion << ::std::endl;
-            exit(EXIT_SUCCESS);
+            exit(EXIT_SUCCESS);//NOLINT(concurrency-mt-unsafe)
         }
         else if (argument[0] == '-')
         {
@@ -212,11 +215,13 @@ CommandLineArguments processCommandLine(const int argc,
                 arguments.blobTypes.insert({BlobType::EndorsementKey, BlobType::AttestationPublicKey, BlobType::Quote,
                                             BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
                                             BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
-                                            BlobType::KvnrHashKey, BlobType::TelematikIdHashKey, BlobType::VauSig});
+                                            ::BlobType::ChargeItemKeyDerivation, BlobType::KvnrHashKey,
+                                            BlobType::TelematikIdHashKey, BlobType::VauSig});
             else if (argument == "static")
                 arguments.blobTypes.insert({BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
                                             BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
-                                            BlobType::KvnrHashKey, BlobType::TelematikIdHashKey, BlobType::VauSig});
+                                            ::BlobType::ChargeItemKeyDerivation, BlobType::KvnrHashKey,
+                                            BlobType::TelematikIdHashKey, BlobType::VauSig});
             else if (argument == "dynamic")
                 arguments.blobTypes.insert({BlobType::EndorsementKey, BlobType::AttestationPublicKey, BlobType::Quote});
             else

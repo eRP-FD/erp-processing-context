@@ -5,7 +5,7 @@
 
 #include "Fhir.hxx"
 
-#include "erp/fhir/FhirStructureRepository.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "erp/util/Configuration.hxx"
 
 #include <algorithm>

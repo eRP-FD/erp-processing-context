@@ -8,9 +8,10 @@
 #include "erp/model/Extension.hxx"
 #include "erp/model/KbvCoverage.hxx"
 #include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
+
 
 
 namespace

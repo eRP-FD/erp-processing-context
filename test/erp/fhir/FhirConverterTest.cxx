@@ -7,7 +7,7 @@
 
 #include "erp/fhir/Fhir.hxx"
 #include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ResourceManager.hxx"
 

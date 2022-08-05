@@ -14,7 +14,8 @@
 #include "erp/client/ClientBase.hxx"
 #include "erp/tsl/OcspUrl.hxx"
 #include "erp/tsl/X509Certificate.hxx"
-#include "erp/util/Gsl.hxx"
+#include "fhirtools/model/Timestamp.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/crypto/OpenSslHelper.hxx"
 
 
@@ -88,6 +89,9 @@ public:
      *                      OCSP responses
      * @param validateHashExtension whether the hash extension should be validated
      * @param ocspResponse  optional ocsp response that should be used for OCSP check if present
+     * @param referenceTimePoint        optional timepoint to be used for OCSP response validity checks
+     * @param forceOcspRequest          if true, the OCSP request must be done, provided OCSP-Response and OCSP-cache
+     *                                  are ignored
      *
      * @return OCSP status (good / revoked / unknown) plus revocation time
      * @throws std::runtime_error on error
@@ -100,6 +104,7 @@ public:
         TrustStore& trustStore,
         const bool validateHashExtension,
         const OcspResponsePtr& ocspResponse = {},
+        const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint = std::nullopt,
         const bool forceOcspRequest = false);
 
     /**
@@ -130,7 +135,10 @@ public:
     /**
      * Checks OCSP status and throws related TslError in case it is not CertificateStatus::good
      */
-    static void checkOcspStatus (const OcspService::Status& status, const TrustStore& trustStore);
+    static void checkOcspStatus (
+        const OcspService::Status& status,
+        const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
+        const TrustStore& trustStore);
 };
 
 #endif

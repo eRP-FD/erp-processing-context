@@ -64,7 +64,7 @@ TEST_F(HsmPoolTest, poolAcquire_thread)//NOLINT(readability-function-cognitive-c
 
     for (size_t index=0; index<threadCount; ++index)
     {
-        threads.emplace_back(std::thread(
+        threads.emplace_back(
 #if defined(_MSC_VER)
             // When compiling on Windows, MSVC complains that jobCount cannot be captured implicitly as there is no standard acquisition mode defined.
             // When compiling on MAC, the compiler there complains that jobCount is not used in the lambda function - strange.
@@ -83,7 +83,7 @@ TEST_F(HsmPoolTest, poolAcquire_thread)//NOLINT(readability-function-cognitive-c
                     std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
             }
-        ));
+        );
     }
 
     for (auto& thread : threads)

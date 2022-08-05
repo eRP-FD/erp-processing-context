@@ -226,6 +226,10 @@ MetaData::MetaData()
                           {::model::ResourceVersion::versionizeProfile(
                                "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq"),
                            ::model::ResourceVersion::versionizeProfile(
+                               "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq"),
+                           ::model::ResourceVersion::versionizeProfile(
+                               "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply"),
+                           ::model::ResourceVersion::versionizeProfile(
                                "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply"),
                            ::model::ResourceVersion::versionizeProfile(
                                "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq"),
@@ -243,7 +247,7 @@ MetaData::MetaData()
         ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxDevice"));
 
     setVersion(ErpServerInfo::ReleaseVersion);
-    Timestamp releaseDate = Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
+    fhirtools::Timestamp releaseDate = fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
     setDate(releaseDate);
     setReleaseDate(releaseDate);
 }
@@ -254,9 +258,9 @@ MetaData::MetaData(NumberAsStringParserDocument&& jsonTree)
     std::call_once(onceFlag, initTemplates);
 }
 
-Timestamp MetaData::date() const
+fhirtools::Timestamp MetaData::date() const
 {
-    return Timestamp::fromXsDateTime(std::string(getStringValue(datePointer)));
+    return fhirtools::Timestamp::fromXsDateTime(std::string(getStringValue(datePointer)));
 }
 
 std::string_view MetaData::version() const
@@ -264,12 +268,12 @@ std::string_view MetaData::version() const
     return getStringValue(versionPointer);
 }
 
-Timestamp MetaData::releaseDate() const
+fhirtools::Timestamp MetaData::releaseDate() const
 {
-    return Timestamp::fromXsDateTime(std::string(getStringValue(releaseDatePointer)));
+    return fhirtools::Timestamp::fromXsDateTime(std::string(getStringValue(releaseDatePointer)));
 }
 
-void MetaData::setDate(const Timestamp& date)
+void MetaData::setDate(const fhirtools::Timestamp& date)
 {
     setValue(datePointer, date.toXsDateTime());
 }
@@ -279,7 +283,7 @@ void MetaData::setVersion(const std::string_view& version)
     setValue(versionPointer, version);
 }
 
-void MetaData::setReleaseDate(const Timestamp& releaseDate)
+void MetaData::setReleaseDate(const fhirtools::Timestamp& releaseDate)
 {
     setValue(releaseDatePointer, releaseDate.toXsDateTime());
 }

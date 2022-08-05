@@ -6,6 +6,7 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/PostgresConnection.hxx"
 #include "erp/hsm/ErpTypes.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -94,12 +95,14 @@ struct BlobSet {
     ::TestBlob task = ::TestBlob{::BlobType::TaskKeyDerivation};
     ::TestBlob communication = ::TestBlob{::BlobType::CommunicationKeyDerivation};
     ::TestBlob audit = ::TestBlob{::BlobType::AuditLogKeyDerivation};
+    ::TestBlob chargeItem = ::TestBlob{::BlobType::ChargeItemKeyDerivation};
 
     void enrol(const ::std::string& blobName, const uint32_t generation) //NOLINT(readability-function-cognitive-complexity)
     {
         ASSERT_NO_THROW(task.enrol(blobName, generation));
         ASSERT_NO_THROW(communication.enrol(blobName, generation));
         ASSERT_NO_THROW(audit.enrol(blobName, generation));
+        ASSERT_NO_THROW(chargeItem.enrol(blobName, generation));
     }
 };
 
@@ -179,6 +182,7 @@ public:
             context->getBlobCache().getBlob(getLatestBlobId(BlobType::TaskKeyDerivation).value());
             context->getBlobCache().getBlob(getLatestBlobId(BlobType::AuditLogKeyDerivation).value());
             context->getBlobCache().getBlob(getLatestBlobId(BlobType::CommunicationKeyDerivation).value());
+            context->getBlobCache().getBlob(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value());
         }
     }
 
@@ -267,6 +271,24 @@ public:
         ASSERT_NO_FATAL_FAILURE(mTest.checkTaskReject(*mPrescriptionId, mKvnr, mAccessCode, mSecret));
     }
 
+    void consent()
+    {
+        switch (mPrescriptionType)
+        {
+            case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv: {
+                ::std::cout << "Creating consent for KVNr " << mKvnr << ::std::endl;
+                mTest.forceUpdateBlobCache();
+                ASSERT_NO_FATAL_FAILURE(mTest.consentPost(mKvnr, ::model::Timestamp::now()));
+                break;
+            }
+            case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
+                [[fallthrough]];
+            case ::model::PrescriptionType::direkteZuweisung:
+            case ::model::PrescriptionType::direkteZuweisungPkv:
+                break;
+        }
+    }
+
     void close()//NOLINT(readability-function-cognitive-complexity)
     {
         ::std::cout << "Closing Task for KVNr " << mKvnr << ::std::endl;
@@ -296,6 +318,26 @@ public:
         ASSERT_NO_FATAL_FAILURE(mTest.checkAuditEventsFrom(mKvnr));
     }
 
+    void charge()
+    {
+        switch (mPrescriptionType)
+        {
+            case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv: {
+                ::std::cout << "Creating charge item for prescription id " << mPrescriptionId->toString()
+                            << ::std::endl;
+                mTest.forceUpdateBlobCache();
+                ASSERT_NO_FATAL_FAILURE(
+                    mTest.chargeItemPost(*mPrescriptionId, mKvnr, ::std::string{"606358757"}, mSecret));
+                break;
+            }
+            case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
+                [[fallthrough]];
+            case ::model::PrescriptionType::direkteZuweisung:
+            case ::model::PrescriptionType::direkteZuweisungPkv:
+                break;
+        }
+    }
+
     void abort()
     {
         ::std::cout << "Aborting Task for KVNr " << mKvnr << ::std::endl;
@@ -313,7 +355,7 @@ private:
     ::std::string mQesBundle = {};
     ::std::vector<::model::Communication> mCommunications = {};
     ::std::string mSecret;
-    ::std::optional<model::Timestamp> mLastModifiedDate;
+    ::std::optional<fhirtools::Timestamp> mLastModifiedDate;
 };
 
 TEST_F(DerivationKeyUpdateTest, Delete)//NOLINT(readability-function-cognitive-complexity)
@@ -321,6 +363,7 @@ TEST_F(DerivationKeyUpdateTest, Delete)//NOLINT(readability-function-cognitive-c
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
+    const auto initialLastChargeItemBlobId = getLatestBlobId(::BlobType::ChargeItemKeyDerivation);
 
     BlobSet blobs;
     ASSERT_NO_FATAL_FAILURE(blobs.enrol("DerivationKey_Gen0x43", 0x43));
@@ -332,10 +375,14 @@ TEST_F(DerivationKeyUpdateTest, Delete)//NOLINT(readability-function-cognitive-c
         << "No new key found.";
     ASSERT_GE(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(3), initialLastAuditBlobId.value_or(0) + 3)
         << "No new key found.";
+    ASSERT_GE(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(3),
+              initialLastChargeItemBlobId.value_or(0) + 3)
+        << "No new key found.";
 
     EXPECT_NO_THROW(blobs.task.remove());
     EXPECT_NO_THROW(blobs.communication.remove());
     EXPECT_NO_THROW(blobs.audit.remove());
+    EXPECT_NO_THROW(blobs.chargeItem.remove());
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
         TestTask task(*this, taskType);
@@ -354,6 +401,8 @@ TEST_F(DerivationKeyUpdateTest, Delete)//NOLINT(readability-function-cognitive-c
         << "Key was not deleted.";
     EXPECT_EQ(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(0), initialLastAuditBlobId.value_or(0))
         << "Key was not deleted.";
+    EXPECT_EQ(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(0), initialLastChargeItemBlobId.value_or(0))
+        << "Key was not deleted.";
 }
 
 TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)//NOLINT(readability-function-cognitive-complexity)
@@ -361,6 +410,7 @@ TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)//NOLINT(readability-function-cogn
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
+    const auto initialLastChargeItemBlobId = getLatestBlobId(::BlobType::ChargeItemKeyDerivation);
 
     BlobSet blobs;
     ASSERT_NO_FATAL_FAILURE(blobs.enrol("DerivationKey_Gen0x43", 0x43));
@@ -372,16 +422,24 @@ TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)//NOLINT(readability-function-cogn
         << "No new key found.";
     ASSERT_GE(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(3), initialLastAuditBlobId.value_or(0) + 3)
         << "No new key found.";
+    ASSERT_GE(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(3),
+              initialLastChargeItemBlobId.value_or(0) + 3)
+        << "No new key found.";
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
         TestTask task(*this, taskType);
         ASSERT_NO_FATAL_FAILURE(task.create());
         ASSERT_NO_FATAL_FAILURE(task.activate());
+        ASSERT_NO_FATAL_FAILURE(task.accept());
+        ASSERT_NO_FATAL_FAILURE(task.consent());
+        ASSERT_NO_FATAL_FAILURE(task.close());
+        ASSERT_NO_FATAL_FAILURE(task.charge());
     }));
 
     EXPECT_ANY_THROW(blobs.task.remove());
     EXPECT_ANY_THROW(blobs.communication.remove());
     EXPECT_ANY_THROW(blobs.audit.remove());
+    EXPECT_ANY_THROW(blobs.chargeItem.remove());
 
     EXPECT_GE(getLatestBlobId(::BlobType::TaskKeyDerivation).value_or(3), initialLastTaskBlobId.value_or(0) + 3)
         << "Key was wrongfully deleted.";
@@ -390,6 +448,9 @@ TEST_F(DerivationKeyUpdateTest, NoDeleteInUse)//NOLINT(readability-function-cogn
         << "Key was wrongfully deleted.";
     EXPECT_GE(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(3), initialLastAuditBlobId.value_or(0) + 3)
         << "Key was wrongfully deleted.";
+    EXPECT_GE(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(3),
+              initialLastChargeItemBlobId.value_or(0) + 3)
+        << "Key was wrongfully deleted.";
 }
 
 TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)//NOLINT(readability-function-cognitive-complexity)
@@ -397,6 +458,7 @@ TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)//NOLINT(readability-function-co
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
+    const auto initialLastChargeItemBlobId = getLatestBlobId(::BlobType::ChargeItemKeyDerivation);
 
     BlobSet blobsUnused;
     ASSERT_NO_FATAL_FAILURE(blobsUnused.enrol("DerivationKey_Gen0x43", 0x43));
@@ -408,6 +470,9 @@ TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)//NOLINT(readability-function-co
         << "No new key found.";
     ASSERT_GE(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(3), initialLastAuditBlobId.value_or(0) + 3)
         << "No new key found.";
+    ASSERT_GE(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(3),
+              initialLastChargeItemBlobId.value_or(0) + 3)
+        << "No new key found.";
 
     BlobSet blobs;
     ASSERT_NO_FATAL_FAILURE(blobs.enrol("DerivationKey_Gen0x44", 0x44));
@@ -419,22 +484,30 @@ TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)//NOLINT(readability-function-co
         << "No new key found.";
     const auto intermediateLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
     ASSERT_GE(intermediateLastAuditBlobId.value_or(6), initialLastAuditBlobId.value_or(0) + 6) << "No new key found.";
-
+    const auto intermediateLastChargeItemBlobId = getLatestBlobId(::BlobType::ChargeItemKeyDerivation);
+    ASSERT_GE(intermediateLastChargeItemBlobId.value_or(6), initialLastChargeItemBlobId.value_or(0) + 6)
+        << "No new key found.";
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
         TestTask task(*this, taskType);
         ASSERT_NO_FATAL_FAILURE(task.create());
         ASSERT_NO_FATAL_FAILURE(task.activate());
+        ASSERT_NO_FATAL_FAILURE(task.accept());
+        ASSERT_NO_FATAL_FAILURE(task.consent());
+        ASSERT_NO_FATAL_FAILURE(task.close());
+        ASSERT_NO_FATAL_FAILURE(task.charge());
     }));
 
     // blobsUnused were added, but immediately superseded by blobs and thus may be deleted
     EXPECT_NO_THROW(blobsUnused.task.remove());
     EXPECT_NO_THROW(blobsUnused.communication.remove());
     EXPECT_NO_THROW(blobsUnused.audit.remove());
+    EXPECT_NO_THROW(blobsUnused.chargeItem.remove());
     // blobs were used for tasks and may not be deleted
     EXPECT_ANY_THROW(blobs.task.remove());
     EXPECT_ANY_THROW(blobs.communication.remove());
     EXPECT_ANY_THROW(blobs.audit.remove());
+    EXPECT_ANY_THROW(blobs.chargeItem.remove());
 
     EXPECT_EQ(getLatestBlobId(::BlobType::TaskKeyDerivation).value_or(6), intermediateLastTaskBlobId.value_or(6))
         << "Key was wrongfully deleted.";
@@ -443,6 +516,9 @@ TEST_F(DerivationKeyUpdateTest, DeleteOldUnused)//NOLINT(readability-function-co
         << "Key was wrongfully deleted.";
     EXPECT_EQ(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(6), intermediateLastAuditBlobId.value_or(6))
         << "Key was wrongfully deleted.";
+    EXPECT_EQ(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(6),
+              intermediateLastChargeItemBlobId.value_or(6))
+        << "Key was wrongfully deleted.";
 }
 
 TEST_F(DerivationKeyUpdateTest, DeleteMultiple)//NOLINT(readability-function-cognitive-complexity)
@@ -450,6 +526,7 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)//NOLINT(readability-function-cog
     const auto initialLastTaskBlobId = getLatestBlobId(::BlobType::TaskKeyDerivation);
     const auto initialLastCommunicationBlobId = getLatestBlobId(::BlobType::CommunicationKeyDerivation);
     const auto initialLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
+    const auto initialLastChargeItemBlobId = getLatestBlobId(::BlobType::ChargeItemKeyDerivation);
 
     BlobSet blobsUnused;
     ASSERT_NO_FATAL_FAILURE(blobsUnused.enrol("DerivationKey_Gen0x43", 0x43));
@@ -463,6 +540,9 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)//NOLINT(readability-function-cog
         << "No new key found.";
     const auto intermediateLastAuditBlobId = getLatestBlobId(::BlobType::AuditLogKeyDerivation);
     ASSERT_GE(intermediateLastAuditBlobId.value_or(6), initialLastAuditBlobId.value_or(0) + 6) << "No new key found.";
+    const auto intermediateLastChargeItemBlobId = getLatestBlobId(::BlobType::ChargeItemKeyDerivation);
+    ASSERT_GE(intermediateLastChargeItemBlobId.value_or(6), initialLastChargeItemBlobId.value_or(0) + 6)
+        << "No new key found.";
 
     BlobSet blobsImmediatelyDeleted;
     ASSERT_NO_FATAL_FAILURE(blobsImmediatelyDeleted.enrol("DerivationKey_Gen0x45", 0x45));
@@ -475,15 +555,21 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)//NOLINT(readability-function-cog
     ASSERT_GE(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(9),
               intermediateLastAuditBlobId.value_or(6) + 3)
         << "No new key found.";
+    ASSERT_GE(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(9),
+              intermediateLastChargeItemBlobId.value_or(6) + 3)
+        << "No new key found.";
 
     EXPECT_NO_THROW(blobsImmediatelyDeleted.task.remove());
     EXPECT_NO_THROW(blobsImmediatelyDeleted.communication.remove());
     EXPECT_NO_THROW(blobsImmediatelyDeleted.audit.remove());
+    EXPECT_NO_THROW(blobsImmediatelyDeleted.chargeItem.remove());
 
     ASSERT_EQ(getLatestBlobId(::BlobType::TaskKeyDerivation).value_or(6), intermediateLastTaskBlobId.value_or(6));
     ASSERT_EQ(getLatestBlobId(::BlobType::CommunicationKeyDerivation).value_or(6),
               intermediateLastCommunicationBlobId.value_or(6));
     ASSERT_EQ(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(6), intermediateLastAuditBlobId.value_or(6));
+    ASSERT_EQ(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(6),
+              intermediateLastChargeItemBlobId.value_or(6));
 
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(forAllTaskTypes([this](::model::PrescriptionType taskType) {
@@ -493,16 +579,21 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)//NOLINT(readability-function-cog
         ASSERT_NO_FATAL_FAILURE(task.accept());
         ASSERT_NO_FATAL_FAILURE(task.reject());
         ASSERT_NO_FATAL_FAILURE(task.accept());
+        ASSERT_NO_FATAL_FAILURE(task.consent());
+        ASSERT_NO_FATAL_FAILURE(task.close());
+        ASSERT_NO_FATAL_FAILURE(task.charge());
     }));
 
     // blobsUnused were added, but immediately superseded by blobs and thus may be deleted
     EXPECT_NO_THROW(blobsUnused.task.remove());
     EXPECT_NO_THROW(blobsUnused.communication.remove());
     EXPECT_NO_THROW(blobsUnused.audit.remove());
+    EXPECT_NO_THROW(blobsUnused.chargeItem.remove());
     // blobs were used for tasks and may not be deleted
     EXPECT_ANY_THROW(blobs.task.remove());
     EXPECT_ANY_THROW(blobs.communication.remove());
     EXPECT_ANY_THROW(blobs.audit.remove());
+    EXPECT_ANY_THROW(blobs.chargeItem.remove());
 
     EXPECT_EQ(getLatestBlobId(::BlobType::TaskKeyDerivation).value_or(6), intermediateLastTaskBlobId.value_or(6))
         << "Key was wrongfully deleted.";
@@ -510,6 +601,9 @@ TEST_F(DerivationKeyUpdateTest, DeleteMultiple)//NOLINT(readability-function-cog
               intermediateLastCommunicationBlobId.value_or(6))
         << "Key was wrongfully deleted.";
     EXPECT_EQ(getLatestBlobId(::BlobType::AuditLogKeyDerivation).value_or(6), intermediateLastAuditBlobId.value_or(6))
+        << "Key was wrongfully deleted.";
+    EXPECT_EQ(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value_or(6),
+              intermediateLastChargeItemBlobId.value_or(6))
         << "Key was wrongfully deleted.";
 }
 
@@ -521,6 +615,8 @@ TEST_P(DerivationKeyUpdateTest, TaskWorkflows)//NOLINT(readability-function-cogn
         getLatestBlobId(::BlobType::CommunicationKeyDerivation, isManual, ! initialLastTaskBlobId.has_value());
     const auto initialLastAuditBlobId =
         getLatestBlobId(::BlobType::AuditLogKeyDerivation, isManual, ! initialLastCommunicationBlobId.has_value());
+    const auto initialLastChargeItemBlobId =
+        getLatestBlobId(::BlobType::ChargeItemKeyDerivation, isManual, ! initialLastAuditBlobId.has_value());
 
     BlobSet blobsA;
     BlobSet blobsB;
@@ -534,6 +630,7 @@ A set includes one of each
  - task derivation key
  - communication derivation key
  - audit derivation key
+ - charge item derivation key
 )";
         ::std::cin.get();
         resetClient();
@@ -551,6 +648,7 @@ A set includes one of each
         EXPECT_NO_THROW(blobsC.task.remove());
         EXPECT_NO_THROW(blobsC.communication.remove());
         EXPECT_NO_THROW(blobsC.audit.remove());
+        EXPECT_NO_THROW(blobsC.chargeItem.remove());
     }
 
     const auto intermediateLastTaskBlobId =
@@ -563,10 +661,14 @@ A set includes one of each
     const auto intermediateLastAuditBlobId =
         getLatestBlobId(::BlobType::AuditLogKeyDerivation, isManual, ! intermediateLastCommunicationBlobId.has_value());
     ASSERT_GE(intermediateLastAuditBlobId.value_or(6), initialLastAuditBlobId.value_or(0) + 6) << "No new key found.";
+    const auto intermediateLastChargeItemBlobId =
+        getLatestBlobId(::BlobType::ChargeItemKeyDerivation, isManual, ! intermediateLastAuditBlobId.has_value());
+    ASSERT_GE(intermediateLastChargeItemBlobId.value_or(6), initialLastChargeItemBlobId.value_or(0) + 6)
+        << "No new key found.";
 
     // Tasks with full workflow
-    ::std::array fullWorkflowActions = {&TestTask::create, &TestTask::activate, &TestTask::accept,
-                                        &TestTask::reject, &TestTask::accept,   &TestTask::close};
+    ::std::array fullWorkflowActions = {&TestTask::create, &TestTask::activate, &TestTask::accept, &TestTask::reject,
+                                        &TestTask::accept, &TestTask::consent,  &TestTask::close,  &TestTask::charge};
 
     ::std::vector<::std::pair<TestTask, ::std::size_t>> fullWorkflowTasks;
     fullWorkflowTasks.reserve(3u * fullWorkflowActions.size());
@@ -574,7 +676,7 @@ A set includes one of each
     for (auto index = 0u; index <= fullWorkflowActions.size(); ++index)
     {
         forAllTaskTypes([this, &fullWorkflowTasks, index](::model::PrescriptionType taskType) {
-            fullWorkflowTasks.emplace_back(::std::make_pair(TestTask{*this, taskType}, index));
+            fullWorkflowTasks.emplace_back(TestTask{*this, taskType}, index);
         });
     }
 
@@ -590,7 +692,7 @@ A set includes one of each
     ::std::vector<TestTask> abortTasks;
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     forAllTaskTypes([this, &abortTasks](::model::PrescriptionType taskType) {
-        abortTasks.emplace_back(TestTask{*this, taskType});
+        abortTasks.emplace_back(*this, taskType);
     });
 
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -630,6 +732,9 @@ A set includes one of each
     const auto newLastAuditBlobId =
         getLatestBlobId(::BlobType::AuditLogKeyDerivation, isManual, ! newLastCommunicationBlobId.has_value());
     ASSERT_GE(newLastAuditBlobId.value_or(12), intermediateLastAuditBlobId.value_or(9) + 3) << "No new key found.";
+    const auto newLastChargeItemBlobId =
+        getLatestBlobId(::BlobType::ChargeItemKeyDerivation, isManual, ! newLastAuditBlobId.has_value());
+    ASSERT_GE(newLastChargeItemBlobId.value_or(12), intermediateLastAuditBlobId.value_or(9) + 3) << "No new key found.";
 
     // Finish tasks
     ASSERT_NO_FATAL_FAILURE(
@@ -663,10 +768,12 @@ and press any key...)";
         EXPECT_NO_THROW(blobsA.task.remove());
         EXPECT_NO_THROW(blobsA.communication.remove());
         EXPECT_NO_THROW(blobsA.audit.remove());
+        EXPECT_NO_THROW(blobsA.chargeItem.remove());
 
         EXPECT_ANY_THROW(blobsB.task.remove());
         EXPECT_ANY_THROW(blobsB.communication.remove());
         EXPECT_ANY_THROW(blobsB.audit.remove());
+        EXPECT_ANY_THROW(blobsB.chargeItem.remove());
     }
 
     EXPECT_EQ(
@@ -681,6 +788,10 @@ and press any key...)";
     EXPECT_EQ(getLatestBlobId(::BlobType::AuditLogKeyDerivation, isManual, ! newLastCommunicationBlobId.has_value())
                   .value_or(12),
               newLastAuditBlobId.value_or(12))
+        << "Key was wrongfully deleted.";
+    EXPECT_EQ(
+        getLatestBlobId(::BlobType::ChargeItemKeyDerivation, isManual, ! newLastAuditBlobId.has_value()).value_or(12),
+        newLastChargeItemBlobId.value_or(12))
         << "Key was wrongfully deleted.";
 }
 

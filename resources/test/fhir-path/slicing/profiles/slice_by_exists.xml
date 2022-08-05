@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="SlicedByExists"/>
+  <entry>
+    <fullUrl value="http://erp.test/SlicedByExists"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SlicedByExists"/>
+        <meta>
+          <lastUpdated value="2019-11-01T09:29:23.356+11:00"/>
+        </meta>
+        <text/>
+        <url value="http://erp.test/SlicedByExists"/>
+        <version value="4.0.1"/>
+        <name value="SlicedByExists"/>
+        <kind value="complex-type"/>
+        <type value="Sliceable"/>
+        <derivation value="constraint"/>
+        <baseDefinitinon value="http://erp.test/Sliceable"/>
+        <snapshot>
+          <element id="Sliceable">
+            <path value="Sliceable"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Sliceable"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <condition value="ele-1"/>
+            <constraint>
+              <key value="ele-1"/>
+              <severity value="error"/>
+              <human value="All FHIR elements must have a @value or children"/>
+              <expression value="hasValue() or (children().count() &gt; id.count())"/>
+            </constraint>
+          </element>
+          <element id="Sliceable.id">
+            <path value="Sliceable.id"/>
+            <short value="Logical id of this artifact"/>
+            <definition value="The logical id of the resource, as used in the URL for the resource. Once assigned, this value never changes."/>
+            <comment value="The only time that a resource does not have an id is when it is being submitted to the server using a create operation."/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="id"/>
+            </type>
+            <isModifier value="false"/>
+            <isSummary value="true"/>
+          </element>
+          <element id="Sliceable.meta">
+            <path value="Sliceable.meta"/>
+            <short value="Metadata about the resource"/>
+            <definition value="The metadata about the resource. This is content that is maintained by the infrastructure. Changes to the content might not always be associated with version changes to the resource."/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Sliceable.implicitRules">
+            <path value="Sliceable.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="Sliceable.language">
+            <path value="Sliceable.language"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced">
+            <path value="Sliceable.sliced"/>
+            <slicing>
+              <discriminator>
+                <type value="exists"/>
+                <path value="smallstructure.string"/>
+              </discriminator>
+              <description value="Extensions are always sliced by (at least) url"/>
+              <rules value="open"/>
+            </slicing>
+            <min value="1"/>
+            <max value="2"/>
+            <base>
+              <path value="Sliceable.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Sliced"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice1">
+            <path value="Sliceable.sliced"/>
+            <sliceName value="slice1"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Sliceable.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Sliced"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice1.smallstructure">
+            <path value="Sliceable.sliced"/>
+            <sliceName value="slice1"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Sliceable.sliced.smallstructure"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="SmallStructure"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice1.smallstructure.id">
+            <representation value="xmlAttr"/>
+            <path value="Sliceable.sliced.smallstructure.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SmallStructure.string"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice1.smallstructure.string">
+            <path value="Sliceable.sliced.string"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="SmallStructure.smallstructure.string"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice1.smallstructure.integer">
+            <path value="Sliceable.sliced.integer"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SmallStructure.integer"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="integer"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice1.smallstructure.coding">
+            <path value="Sliceable.sliced.smallstructure.coding"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SmallStructure.coding"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Coding"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice2">
+            <path value="Sliceable.sliced"/>
+            <sliceName value="slice2"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Sliceable.sliced"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Sliced"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice2.smallstructure">
+            <path value="Sliceable.sliced"/>
+            <sliceName value="slice2"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Sliceable.sliced.smallstructure"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Sliced"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice2.smallstructure.id">
+            <representation value="xmlAttr"/>
+            <path value="Sliceable.sliced.smallstructure.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SmallStructure.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice2.smallstructure.string">
+            <path value="Sliceable.sliced.smallstructure.string"/>
+            <min value="0"/>
+            <max value="0"/>
+            <base>
+              <path value="SmallStructure.string"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice2.smallstructure.integer">
+            <path value="Sliceable.sliced.smallstructure.integer"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SmallStructure.integer"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="integer"/>
+            </type>
+          </element>
+          <element id="Sliceable.sliced:slice2.smallstructure.coding">
+            <path value="Sliceable.sliced.smallstructure.coding"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SmallStructure.coding"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Coding"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

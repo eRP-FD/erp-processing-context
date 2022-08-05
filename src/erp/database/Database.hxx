@@ -10,15 +10,21 @@
 
 #include <date/date.h>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
+
+namespace fhirtools {
+class Timestamp;
+}
 
 namespace model
 {
 class AuditData;
 class Binary;
 class Bundle;
+struct ChargeInformation;
 class ChargeItem;
 class Communication;
 class Consent;
@@ -27,7 +33,7 @@ class MedicationDispense;
 class MedicationDispenseId;
 class PrescriptionId;
 class Task;
-class Timestamp;
+using fhirtools::Timestamp;
 }
 
 class CmacKey;
@@ -142,42 +148,34 @@ public:
      * If "received" does not have a value this means that the communication has not been
      * received by the recipient.
      */
-    virtual std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> deleteCommunication (const Uuid& communicationId, const std::string& sender) = 0;
+    virtual std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>> deleteCommunication (const Uuid& communicationId, const std::string& sender) = 0;
     virtual void deleteCommunicationsForTask (const model::PrescriptionId& taskId) = 0;
     virtual void markCommunicationsAsRetrieved (
         const std::vector<Uuid>& communicationIds,
-        const model::Timestamp& retrieved,
+        const fhirtools::Timestamp& retrieved,
         const std::string& recipient) = 0;
 
     virtual void storeConsent(const model::Consent& consent) = 0;
     virtual std::optional<model::Consent> retrieveConsent(const std::string_view& kvnr) = 0;
     [[nodiscard]] virtual bool clearConsent(const std::string_view& kvnr) = 0;
 
+    virtual void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) = 0;
+    virtual void updateChargeInformation(const ::model::ChargeInformation& chargeInformation) = 0;
 
-    virtual void storeChargeInformation(const std::string_view& pharmacyId, const model::ChargeItem& chargeItem,
-                                        const model::Bundle& dispenseItem) = 0;
-
-    virtual std::vector<model::ChargeItem>
-    retrieveAllChargeItemsForPharmacy(const std::string_view& pharmacyTelematikId,
-                                      const std::optional<UrlArguments>& search) const = 0;
-    virtual std::vector<model::ChargeItem>
+    [[nodiscard]] virtual ::std::vector<::model::ChargeItem>
     retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
                                       const std::optional<UrlArguments>& search) const = 0;
 
-    [[nodiscard]] virtual std::tuple<std::optional<model::Binary>, std::optional<model::Bundle>, std::optional<model::ChargeItem>, std::optional<model::Bundle>>
-    retrieveChargeItemAndDispenseItemAndPrescriptionAndReceipt(const model::PrescriptionId& id) = 0;
-    virtual std::tuple<model::ChargeItem, model::Bundle>
+    [[nodiscard]] virtual ::model::ChargeInformation
     retrieveChargeInformation(const model::PrescriptionId& id) const = 0;
-    virtual std::tuple<model::ChargeItem, model::Bundle>
+    [[nodiscard]] virtual ::model::ChargeInformation
     retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const = 0;
 
     virtual void deleteChargeInformation(const model::PrescriptionId& id) = 0;
     virtual void clearAllChargeInformation(const std::string_view& kvnr) = 0;
     virtual uint64_t countChargeInformationForInsurant (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
-    virtual uint64_t countChargeInformationForPharmacy (const std::string& telematikId, const std::optional<UrlArguments>& search) = 0;  
 
     virtual DatabaseBackend& getBackend() = 0;
-
 };
 
 #endif

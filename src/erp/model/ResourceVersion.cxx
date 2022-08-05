@@ -5,10 +5,11 @@
 
 #include "erp/common/HttpStatus.hxx"
 #include "erp/model/ResourceVersion.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
+
 
 using namespace ::std::literals::string_view_literals;
 
@@ -71,9 +72,9 @@ std::tuple<DeGematikErezeptWorkflowR4, KbvItaErp> current()
     const auto newProfileRenderFromDateSetting =
         configuration.getOptionalStringValue(::ConfigurationKey::FHIR_PROFILE_RENDER_FROM);
 
-    const auto now = ::model::Timestamp::now();
+    const auto now = ::fhirtools::Timestamp::now();
     if (newProfileRenderFromDateSetting &&
-        (::model::Timestamp::fromXsDateTime(newProfileRenderFromDateSetting.value()) > now))
+        (::fhirtools::Timestamp::fromXsDateTime(newProfileRenderFromDateSetting.value()) > now))
     {
         const auto gematikVersion = configuration.getOptionalStringValue(
             ::ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK_VERSION, "Unknown");
@@ -95,7 +96,7 @@ std::tuple<DeGematikErezeptWorkflowR4, KbvItaErp> current()
 
 ::std::string versionizeProfile(::std::string_view profile)
 {
-    auto profileParts = ::String::split(profile, '|');
+    auto profileParts = String::split(profile, '|');
     Expect3(! profileParts.empty(), "Invalid profile selected.", ::std::logic_error);
     auto& profileValue = profileParts[0];
     const auto [gematikVersion, kbvVersion] = current();

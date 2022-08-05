@@ -2,7 +2,7 @@
 <Bundle xmlns="http://hl7.org/fhir">
   <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/erxReceipt"/>
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxReceipt"/>
   </meta>
   <identifier>
     <use value="official"/>
@@ -33,17 +33,16 @@
   </identifier>
   <type value="document"/>
   <timestamp value="2020-03-20T07:31:34.328+00:00"/>
-  <total value="1000"/>
   <link>
     <relation value="relation"/>
     <url value="url"/>
   </link>
   <entry>
-    <fullUrl value="some.uri"/>
+    <fullUrl value="some.uri1"/>
     <resource>
       <Composition> 
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/erxComposition"/>
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxComposition"/>
         </meta>
         <extension url="https://gematik.de/fhir/StructureDefinition/BeneficiaryExtension">
           <valueIdentifier>
@@ -79,12 +78,12 @@
     </resource>
   </entry>
   <entry>
-    <fullUrl value="some.uri"/>
+    <fullUrl value="some.uri2"/>
     <resource>
       <Device> 
         <id value="eRxService"/>
         <meta>
-          <profile value="https://gematik.de/fhir/StructureDefinition/erxDevice"/>
+          <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
         </meta>
         <status value="active"/>
         <serialNumber value="R4.0.0.287342834"/>

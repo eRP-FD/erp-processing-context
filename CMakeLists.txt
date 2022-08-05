@@ -16,10 +16,26 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+set(CMAKE_CXX_STANDARD 20)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+set(ERP_CONAN_PROFILE "" CACHE STRING "The conan profile to use. Leave empty for default profile.")
+
+set(ERP_WITH_HSM_TPM_PRODUCTION ON CACHE BOOL "Link against the production HSM and TPM from hsmclient and tpmclient libraries.")
+set(ERP_WITH_HSM_MOCK OFF CACHE BOOL "Link against mock implementations of HSM and TPM.")
+
+message(NOTICE "ERP_WITH_HSM_TPM_PRODUCTION: ${ERP_WITH_HSM_TPM_PRODUCTION}")
+message(NOTICE "ERP_WITH_HSM_MOCK: ${ERP_WITH_HSM_MOCK}")
+
+if (NOT ERP_WITH_HSM_TPM_PRODUCTION AND NOT ERP_WITH_HSM_MOCK)
+    message(FATAL_ERROR "either ERP_WITH_HSM_TPM_PRODUCTION or ERP_WITH_HSM_MOCK must be enabled.")
+endif()
+
 if((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
     add_compile_options(-DENABLE_DEBUG_LOG)
 endif()
-
 
 if(NOT ERP_BUILD_VERSION)
     message(WARNING "ERP_BUILD_VERSION not set.")
@@ -33,16 +49,6 @@ if(NOT ERP_RELEASE_VERSION)
     set(ERP_RELEASE_VERSION "UNRELEASED VERSION")
 else()
     message(NOTICE "ERP_RELEASE_VERSION: ${ERP_RELEASE_VERSION}")
-endif()
-
-set(ERP_WITH_HSM_TPM_PRODUCTION ON CACHE BOOL "Link against the production HSM and TPM from hsmclient and tpmclient libraries.")
-set(ERP_WITH_HSM_MOCK OFF CACHE BOOL "Link against mock implementations of HSM and TPM.")
-
-message(NOTICE "ERP_WITH_HSM_TPM_PRODUCTION: ${ERP_WITH_HSM_TPM_PRODUCTION}")
-message(NOTICE "ERP_WITH_HSM_MOCK: ${ERP_WITH_HSM_MOCK}")
-
-if (NOT ERP_WITH_HSM_TPM_PRODUCTION AND NOT ERP_WITH_HSM_MOCK)
-    message(FATAL_ERROR "either ERP_WITH_HSM_TPM_PRODUCTION or ERP_WITH_HSM_MOCK must be enabled.")
 endif()
 
 string(TIMESTAMP ERP_RELEASE_DATE "%Y-%m-%dT%H:%M:%S+00:00" UTC)
@@ -66,30 +72,68 @@ message(NOTICE "ERP_RELEASE_DATE: ${ERP_RELEASE_DATE}")
 # [build_requires]
 # [env]
 
-if(NOT ERP_WITH_HSM_TPM_PRODUCTION)
-    set(CONAN_HSM_TPM -o with_tpmclient=False -o with_hsmclient=False)
-else()
-    set(CONAN_HSM_TPM -o with_tpmclient=True -o with_hsmclient=True)
-endif()
-
-if(ERP_CONAN_PROFILE)
-    set(CONAN_PROFILE -pr ${ERP_CONAN_PROFILE})
-endif()
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+    find_program(CONAN NAMES conan DOC "The path to the conan tool.")
+    if(NOT CONAN)
+        message(FATAL_ERROR "conan is required to manage dependencies.")
+    endif()
     message(SYSTEM "installing conan packages")
+    if(NOT ERP_WITH_HSM_TPM_PRODUCTION)
+        set(CONAN_HSM_TPM -o with_tpmclient=False -o with_hsmclient=False)
+    else()
+        set(CONAN_HSM_TPM -o with_tpmclient=True -o with_hsmclient=True)
+    endif()
+
+    if(ERP_CONAN_PROFILE AND NOT "${ERP_CONAN_PROFILE}" STREQUAL "")
+        set(CONAN_PROFILE --profile "${ERP_CONAN_PROFILE}")
+    endif()
+
+    message(NOTICE "Installing conan packages")
     execute_process(
-            COMMAND           conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force
+            COMMAND           "${CONAN}" remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force
             WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     )
     execute_process(
-            COMMAND           conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force
+            COMMAND           "${CONAN}" remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force
             WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
     )
+    if (DEFINED CMAKE_CXX_COMPILER_VERSION AND NOT DEFINED CONAN_COMPILER_VERSION)
+        string(REGEX REPLACE "\\..*" "" CONAN_COMPILER_VERSION "${CMAKE_CXX_COMPILER_VERSION}")
+    endif()
+    if (NOT DEFINED CONAN_COMPILER_VERSION)
+        message(FATAL_ERROR "cannot determine compiler version. Please set CONAN_COMPILER_VERSION accordingly.")
+    endif()
     execute_process(
-            COMMAND           conan install . --build missing --install-folder "${CMAKE_BINARY_DIR}" ${CONAN_HSM_TPM} ${CONAN_PROFILE}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+        COMMAND env CONAN_CMAKE_GENERATOR=${CMAKE_GENERATOR}
+                "${CONAN}" install
+                --build missing
+                --install-folder "${CMAKE_BINARY_DIR}"
+                -s compiler.cppstd=${CMAKE_CXX_STANDARD}
+                -s compiler.libcxx=libstdc++11
+                -s compiler.version=${CONAN_COMPILER_VERSION}
+                -e CXX=${CMAKE_CXX_COMPILER}
+                -e CC=${CMAKE_C_COMPILER}
+                ${CONAN_HSM_TPM}
+                ${CONAN_PROFILE}
+                ${ERP_CONAN_ARGS}
+                "${CMAKE_SOURCE_DIR}"
     )
+endif()
+
+if (NOT DEFINED ANTLR_EXECUTABLE)
+    set(ANTLR_EXECUTABLE "${CMAKE_BINARY_DIR}/antlr-4.10.1-complete.jar" CACHE STRING
+            "Path of ANTLR4 executable. Can be either normal executable or jar file.")
+    set(ANTLR_URL "https://www.antlr.org/download/antlr-4.10.1-complete.jar" CACHE STRING
+            "Download URL for ALNTL4 genertor executable.")
+    set(ANTLR_EXECUTABLE_SHA256 "41949d41f20d31d5b8277187735dd755108df52b38db6c865108d3382040f918" CACHE STRING
+            "SHA256 hash of downloaded ANTLR4 executable")
+    if (NOT EXISTS "${ANTLR_EXECUTABLE}")
+        FILE(DOWNLOAD
+                "${ANTLR_URL}" "${ANTLR_EXECUTABLE}"
+                EXPECTED_HASH SHA256=${ANTLR_EXECUTABLE_SHA256}
+            )
+    endif()
 endif()
 
 # Note for windows users:
@@ -134,11 +178,14 @@ include(GNUInstallDirs)
 include(cmake/install_libs_for.cmake)
 
 include(cmake/generate_pki_test_data.cmake)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/antlr")
+find_package(ANTLR REQUIRED)
+
 #
 # build configuration for all erp build targets
 #
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(ERP_WARNING_AS_ERROR OFF CACHE BOOL "Treat all warnings as errors")
@@ -181,10 +228,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wno-c11-extensions)
 endif()
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-
 add_subdirectory(resources)
+add_subdirectory(src/fhirtools)
 add_subdirectory(src/erp)
 add_subdirectory(src/mock)
 add_subdirectory(tools)

@@ -5,13 +5,14 @@
 
 #include "erp/util/Configuration.hxx"
 #include "erp/ErpConstants.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/GLog.hxx"
 #include "erp/util/InvalidConfigurationException.hxx"
 #include "erp/util/String.hxx"
+
 #include "erp/validation/XmlValidator.hxx"
 
 #include <stdexcept>
@@ -111,6 +112,7 @@ namespace {
         return sortedFiles;
     }
 
+    [[maybe_unused]]
     std::string dumpConfig(const rapidjson::Document& configuration)
     {
         rapidjson::StringBuffer buffer;
@@ -173,9 +175,6 @@ namespace {
             TLOG(WARNING) << "loaded " << loaded << " configuration file" << (loaded > 1?"s":"");
         }
 
-        TVLOG(1) << "final configuration values:";
-        TVLOG(1) << dumpConfig(configuration);
-
         return configuration;
     }
 
@@ -206,12 +205,12 @@ namespace {
 
 ConfigurationBase::ConfigurationBase (const std::vector<KeyNames>& allKeyNames)
     : mDocument(parseConfigFile(ErpConstants::ConfigurationFileNameVariable, ErpConstants::ConfigurationFileSearchPathDefault))
+    , mServerPort(determineServerPort())
 {
     auto serverHost = Environment::get(ServerHostEnvVar.data());
     Expect(serverHost.has_value(),
            std::string("Environment variable \"") + ServerHostEnvVar.data() + "\" must be set.");
     mServerHost = serverHost.value();
-    mServerPort = determineServerPort();
 
     if (! mDocument.IsObject())
         return;
@@ -282,10 +281,12 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVER_PRIVATE_KEY                             , {"ERP_SERVER_PRIVATE_KEY"                             , "/erp/server/certificateKey"}},
     {ConfigurationKey::SERVER_REQUEST_PATH                            , {"ERP_SERVER_REQUEST_PATH"                            , "/erp/server/requestPath"}},
     {ConfigurationKey::SERVER_PROXY_CERTIFICATE                       , {"ERP_SERVER_PROXY_CERTIFICATE"                       , "/erp/server/proxy/certificate"}},
+    {ConfigurationKey::SERVICE_GENERIC_VALIDATION_MODE                , {"ERP_SERVICE_GENERIC_VALIDATION_MODE"                , "/erp/service/genericValidation"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD, {"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD", "/erp/service/task/activate/entlassRezeptValidityInWorkDays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS                 , {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS"                 , "/erp/service/task/activate/holidays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION           , {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION"           , "/erp/service/task/activate/kbvValidation"}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, {"ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE", "/erp/service/task/activate/authoredOnMustEqualSigningDate"}},
     {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount"}},
     {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey"}},
@@ -328,6 +329,9 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE                      , {"ERP_REDIS_CONNECTIONPOOL_SIZE"                      , "/erp/redis/connectionPoolSize"}},
     {ConfigurationKey::TOKEN_ULIMIT_CALLS                             , {"ERP_TOKEN_ULIMIT_CALLS"                             , "/erp/server/token/ulimitCalls"}},
     {ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS                       , {"ERP_TOKEN_ULIMIT_TIMESPAN_MS"                       , "/erp/server/token/ulimitTimespanMS"}},
+    {ConfigurationKey::REPORT_LEIPS_KEY_ENABLE                        , {"ERP_REPORT_LEIPS_KEY_ENABLE"                        , "/erp/report/leips/enable"}},
+    {ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS      , {"ERP_REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS"      , "/erp/report/leips/refreshIntervalSeconds"}},
+    {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL                   , {"ERP_FHIR_PROFILE_OLD_VALID_UNTIL"                   , "/erp/fhir-profile-old/valid-until"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION        , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION"        , "/erp/fhir-profile-old/kbv.ita.erp-ver"}},
@@ -620,35 +624,35 @@ std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const K
     return std::nullopt;
 }
 
-static bool allDefined(const std::optional<model::Timestamp>& oldValidUntil,
+static bool allDefined(const std::optional<fhirtools::Timestamp>& oldValidUntil,
                        const std::optional<std::string>& oldKbvVersion, const std::vector<std::string>& oldKbvSchemas,
                        const std::optional<std::string>& oldGematikVersion,
                        const std::vector<std::string>& oldGematikSchemas,
-                       const std::optional<model::Timestamp>& profileRenderFrom,
-                       const std::optional<model::Timestamp>& profileValidFrom)
+                       const std::optional<fhirtools::Timestamp>& profileRenderFrom,
+                       const std::optional<fhirtools::Timestamp>& profileValidFrom)
 {
     return oldValidUntil && profileRenderFrom && oldKbvVersion && ! oldKbvSchemas.empty() && oldGematikVersion &&
            ! oldGematikSchemas.empty() && profileValidFrom;
 }
 
-static bool noneDefined(const std::optional<model::Timestamp>& oldValidUntil,
+static bool noneDefined(const std::optional<fhirtools::Timestamp>& oldValidUntil,
                         const std::optional<std::string>& oldKbvVersion, const std::vector<std::string>& oldKbvSchemas,
                         const std::optional<std::string>& oldGematikVersion,
                         const std::vector<std::string>& oldGematikSchemas,
-                        const std::optional<model::Timestamp>& profileRenderFrom,
-                        const std::optional<model::Timestamp>& profileValidFrom)
+                        const std::optional<fhirtools::Timestamp>& profileRenderFrom,
+                        const std::optional<fhirtools::Timestamp>& profileValidFrom)
 {
     return ! oldValidUntil && ! profileRenderFrom && ! oldKbvVersion && oldKbvSchemas.empty() && ! oldGematikVersion &&
            oldGematikSchemas.empty() && ! profileValidFrom;
 }
 
-static void ensureCorrectOldProfileConfiguration(const std::optional<model::Timestamp>& oldValidUntil,
+static void ensureCorrectOldProfileConfiguration(const std::optional<fhirtools::Timestamp>& oldValidUntil,
                                                  const std::optional<std::string>& oldKbvVersion,
                                                  const std::vector<std::string>& oldKbvSchemas,
                                                  const std::optional<std::string>& oldGematikVersion,
                                                  const std::vector<std::string>& oldGematikSchemas,
-                                                 const std::optional<model::Timestamp>& profileRenderFrom,
-                                                 const std::optional<model::Timestamp>& profileValidFrom)
+                                                 const std::optional<fhirtools::Timestamp>& profileRenderFrom,
+                                                 const std::optional<fhirtools::Timestamp>& profileValidFrom)
 {
     Expect(allDefined(oldValidUntil, oldKbvVersion, oldKbvSchemas, oldGematikVersion, oldGematikSchemas,
                       profileRenderFrom, profileValidFrom) ||
@@ -675,13 +679,13 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     // This is the new profile, or the only profile if only one is supported
     const auto& profileValidFromStr =
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_VALID_FROM);
-    std::optional<model::Timestamp> profileValidfrom =
-        profileValidFromStr ? std::make_optional(model::Timestamp::fromXsDateTime(*profileValidFromStr))
+    std::optional<fhirtools::Timestamp> profileValidfrom =
+        profileValidFromStr ? std::make_optional(fhirtools::Timestamp::fromXsDateTime(*profileValidFromStr))
                              : std::nullopt;
     const auto& profileRenderFromStr =
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_RENDER_FROM);
     const auto& profileRenderFrom = profileRenderFromStr
-                                     ? std::make_optional(model::Timestamp::fromXsDateTime(*profileRenderFromStr)) : std::nullopt;
+                                     ? std::make_optional(fhirtools::Timestamp::fromXsDateTime(*profileRenderFromStr)) : std::nullopt;
     const auto& profileKbvVersion =
         configuration.getStringValue(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV_VERSION);
     const auto& profileKbvSchemas = configuration.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV);
@@ -693,7 +697,7 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     // this is the optional old profile, that is still valid for some grace-period.
     const auto& oldValidUntilStr = configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL);
     const auto& oldValidUntil =
-        oldValidUntilStr ? std::make_optional(model::Timestamp::fromXsDateTime(*oldValidUntilStr)) : std::nullopt;
+        oldValidUntilStr ? std::make_optional(fhirtools::Timestamp::fromXsDateTime(*oldValidUntilStr)) : std::nullopt;
     const auto& oldKbvVersion =
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION);
     const auto& oldKbvSchemas = configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV);
@@ -761,8 +765,11 @@ void Configuration::check() const
 {
     if (featurePkvEnabled())
     {
-        Expect3(featureWf200Enabled(), "When FEATURE_PKV is enabled, FEATURE_WORKFLOW_200 must not be disabled.", std::logic_error);
+        Expect3(featureWf200Enabled(), "When FEATURE_PKV is enabled, FEATURE_WORKFLOW_200 must not be disabled.",
+                std::logic_error);
     }
+    (void) kbvValidationOnUnknownExtension();
+    (void) genericValidationMode();
 }
 
 bool Configuration::featurePkvEnabled() const
@@ -774,4 +781,25 @@ bool Configuration::featureWf200Enabled() const
 {
     bool featurePkv = featurePkvEnabled();
     return getOptionalBoolValue(ConfigurationKey::FEATURE_WORKFLOW_200, featurePkv);
+}
+
+Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
+{
+    auto onUnknownExtensionStr =
+        getOptionalStringValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, "report");
+    auto onUnknownExtensionEnum = magic_enum::enum_cast<OnUnknownExtension>(onUnknownExtensionStr);
+    Expect3(onUnknownExtensionEnum.has_value(),
+            "invalid value for SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION: " + onUnknownExtensionStr,
+            std::logic_error);
+    return *onUnknownExtensionEnum;
+}
+
+Configuration::GenericValidationMode Configuration::genericValidationMode() const
+{
+    auto genericValidationModeStr =
+        getOptionalStringValue(ConfigurationKey::SERVICE_GENERIC_VALIDATION_MODE, "ignore_errors");
+    auto genericValidationModeEnum = magic_enum::enum_cast<GenericValidationMode>(genericValidationModeStr);
+    Expect3(genericValidationModeEnum.has_value(),
+            "invalid value for SERVICE_GENERIC_VALIDATION_MODE: " + genericValidationModeStr, std::logic_error);
+    return *genericValidationModeEnum;
 }

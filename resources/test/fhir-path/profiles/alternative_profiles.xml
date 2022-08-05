@@ -1,0 +1,266 @@
+<?xml version="1.1" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="AlternativeProfiles"/>
+  <entry>
+    <resource>
+      <StructureDefinition>
+        <id value="AlternativeProfiles"/>
+        <type value="AlternativeProfiles"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Resource"/>
+        <url value="http://erp.test/StructureDefinition/AlternativeProfiles"/>
+        <derivation value="specialization"/>
+        <kind value="resource"/>
+        <snapshot>
+          <element id="AlternativeProfiles">
+            <path value="AlternativeProfiles"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="AlternativeProfiles"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="AlternativeProfiles.id">
+            <path value="AlternativeProfiles.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="AlternativeProfiles.meta">
+            <path value="AlternativeProfiles.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="AlternativeProfiles.implicitRules">
+            <path value="AlternativeProfiles.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="AlternativeProfiles.language">
+            <path value="AlternativeProfiles.language"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+            <binding>
+              <strength value="preferred"/>
+              <description value="A human language."/>
+              <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
+            </binding>
+          </element>
+          <element id="AlternativeProfiles.resource">
+            <path value="AlternativeProfiles.resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="AlternativeProfiles.resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+              <profile value="http://erp.test/StructureDefinition/Alternative1"/>
+              <profile value="http://erp.test/StructureDefinition/Alternative2"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+      <StructureDefinition>
+        <id value="Alternative1"/>
+        <type value="Resource"/>
+        <url value="http://erp.test/StructureDefinition/Alternative1"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Resource"/>
+        <derivation value="constraint"/>
+        <kind value="resource"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <constraint>
+              <key value="Alternative1"/>
+              <severity value="error"/>
+              <human value="Must be alternative1"/>
+              <expression value="language = 'de-DE'"/>
+            </constraint>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.implicitRules">
+            <path value="Resource.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="Resource.language">
+            <path value="Resource.language"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+            <binding>
+              <strength value="preferred"/>
+              <description value="A human language."/>
+              <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
+            </binding>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+      <StructureDefinition>
+        <id value="Alternative2"/>
+        <type value="Resource"/>
+        <url value="http://erp.test/StructureDefinition/Alternative2"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Resource"/>
+        <derivation value="constraint"/>
+        <kind value="resource"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <constraint>
+              <key value="Alternative2"/>
+              <severity value="error"/>
+              <human value="Must be alternative2"/>
+              <expression value="language = 'en-US'"/>
+            </constraint>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.implicitRules">
+            <path value="Resource.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="Resource.language">
+            <path value="Resource.language"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+            <binding>
+              <strength value="preferred"/>
+              <description value="A human language."/>
+              <valueSet value="http://hl7.org/fhir/ValueSet/languages"/>
+            </binding>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

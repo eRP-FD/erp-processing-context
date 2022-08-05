@@ -123,6 +123,7 @@ public:
  * Note that these values are serialized with their numerical values to the blob database.
  * => if a numerical values changes or a new type is added then update the database table erp.blob
  */
+// clang-format off
 enum class BlobType : int8_t
 {
     EndorsementKey             =  1,
@@ -135,8 +136,11 @@ enum class BlobType : int8_t
     AuditLogKeyDerivation      =  8,
     KvnrHashKey                =  9,
     TelematikIdHashKey         = 10,
-    VauSig                     = 11
+    VauSig                     = 11,
+    ChargeItemKeyDerivation    = 12,
+    PseudonameKey              = 13
 };
+// clang-format on
 
 using BlobId = uint32_t;
 

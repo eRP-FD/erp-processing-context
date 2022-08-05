@@ -5,7 +5,7 @@
 
 #include "erp/tsl/TrustStore.hxx"
 
-#include "erp/model/Timestamp.hxx"
+#include "fhirtools/model/Timestamp.hxx"
 #include "erp/tsl/TslParser.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Configuration.hxx"
@@ -32,7 +32,7 @@ namespace
 
         // look for the latest entry in the map that is out of certificate validity period,
         // this entry represents the CA-ServiceStatus at the point of certificate validity start
-        for (auto iterator = serviceAcceptanceHistory.rbegin();
+        for (auto iterator = serviceAcceptanceHistory.rbegin(); //NOLINT(modernize-loop-convert)
              iterator != serviceAcceptanceHistory.rend();
              ++iterator)
         {
@@ -61,7 +61,7 @@ namespace
             if (isServiceAcceptable(iterator->second.serviceAcceptanceHistory, std::nullopt))
             {
                 // show the warning only for the valid certificate
-                const model::Timestamp timestamp(iterator->second.serviceAcceptanceHistory.begin()->first);
+                const fhirtools::Timestamp timestamp(iterator->second.serviceAcceptanceHistory.begin()->first);
                 LOG(WARNING) << TslError("Important: new TSL CA is going to be active from " + timestamp.toXsDateTime()
                                          + ", [" + iterator->second.certificate.toBase64() + "]",
                                          TslErrorCode::TSL_CA_UPDATE_WARNING).what();
@@ -166,7 +166,7 @@ std::vector<X509Certificate> TrustStore::getTslSignerCas() const
     {
         LOG(INFO) << "start: " << newTslSignerCaStart;
         if (newTslSignerCaStart.empty()
-            || model::Timestamp::now() > model::Timestamp::fromFhirDateTime(newTslSignerCaStart))
+            || fhirtools::Timestamp::now() > fhirtools::Timestamp::fromFhirDateTime(newTslSignerCaStart))
         {
             LOG(INFO) << "New TSL Signer CA is used.";
             tslSignerCaCerts.emplace_back(*newTslSignerCa);
