@@ -145,7 +145,14 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     if (config.getOptionalBoolValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, true))
     {
-        checkAuthoredOnEqualsSigningDate(prescriptionBundle, *signingTime);
+        try
+        {
+            checkAuthoredOnEqualsSigningDate(prescriptionBundle, *signingTime);
+        }
+        catch (const model::ModelException& m)
+        {
+            ErpFailWithDiagnostics(HttpStatus::BadRequest, "error checking authoredOn==signature date", m.what());
+        }
     }
 
     checkValidCoverage(prescriptionBundle, prescriptionId.type());
@@ -293,40 +300,51 @@ model::KbvBundle ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext
     bool kbvValidation = config.getOptionalBoolValue( ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION, true);
     auto schemaType = kbvValidation?SchemaType::KBV_PR_ERP_Bundle:SchemaType::fhir;
 
-    auto kbvBundle = model::KbvBundle::fromXmlNoValidation(prescription);
-    model::ResourceVersion::KbvItaErp schemaVersion = kbvBundle.getSchemaVersion();
     try
     {
-        auto fhirSchemaValidationContext = xmlValidator.getSchemaValidationContextNoVer(SchemaType::fhir);
-        FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), prescription, *fhirSchemaValidationContext);
-        if (kbvValidation)
+        auto kbvBundle = model::KbvBundle::fromXmlNoValidation(prescription);
+        model::ResourceVersion::KbvItaErp schemaVersion = kbvBundle.getSchemaVersion();
+        try
         {
-            const auto& schemaValidationContext = xmlValidator.getSchemaValidationContext(schemaType, schemaVersion);
-            FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), prescription, *schemaValidationContext);
-            inCodeValidator.validate(kbvBundle, schemaType, schemaVersion, xmlValidator);
+            auto fhirSchemaValidationContext = xmlValidator.getSchemaValidationContextNoVer(SchemaType::fhir);
+            FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), prescription,
+                                        *fhirSchemaValidationContext);
+            if (kbvValidation)
+            {
+                const auto& schemaValidationContext =
+                    xmlValidator.getSchemaValidationContext(schemaType, schemaVersion);
+                FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), prescription,
+                                            *schemaValidationContext);
+                inCodeValidator.validate(kbvBundle, schemaType, schemaVersion, xmlValidator);
+            }
         }
+        catch (const ErpException& erpException)
+        {
+            using enum Configuration::GenericValidationMode;
+            if (config.genericValidationMode() == disable || erpException.status() != HttpStatus::BadRequest)
+            {
+                throw;
+            }
+            fhirtools::ValidationResultList validationResult;
+            if (erpException.diagnostics())
+            {
+                validationResult.add(fhirtools::Severity::error, *erpException.diagnostics(), {}, nullptr);
+            }
+            fhirtools::ValidatorOptions valOpts;
+            valOpts.reportUnknownExtensions =
+                config.kbvValidationOnUnknownExtension() != Configuration::OnUnknownExtension::ignore;
+            validationResult.append(kbvBundle.genericValidate(valOpts));
+            auto details = validationResult.summary(fhirtools::Severity::unslicedWarning);
+            ErpFailWithDiagnostics(HttpStatus::BadRequest, erpException.what(), std::move(details));
+        }
+        // generic validation will be handled in checkExtensions
+        return kbvBundle;
     }
-    catch (const ErpException& erpException)
+    catch (const model::ModelException& er)
     {
-        using enum Configuration::GenericValidationMode;
-        if (config.genericValidationMode() == disable || erpException.status() != HttpStatus::BadRequest)
-        {
-            throw;
-        }
-        fhirtools::ValidationResultList validationResult;
-        if (erpException.diagnostics())
-        {
-            validationResult.add(fhirtools::Severity::error, *erpException.diagnostics(), {}, nullptr);
-        }
-        fhirtools::ValidatorOptions valOpts;
-        valOpts.reportUnknownExtensions =
-            config.kbvValidationOnUnknownExtension() != Configuration::OnUnknownExtension::ignore;
-        validationResult.append(kbvBundle.genericValidate(valOpts));
-        auto details = validationResult.summary(fhirtools::Severity::unslicedWarning);
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, erpException.what(), std::move(details));
+        TVLOG(1) << "runtime_error: " << er.what();
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing error", er.what());
     }
-    // generic validation will be handled in checkExtensions
-    return kbvBundle;
 }
 
 void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::KBVMultiplePrescription>& mPExt,

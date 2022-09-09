@@ -161,7 +161,12 @@ CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& 
     catch (const ErpException& ex)
     {
         TVLOG(1) << "ErpException: " << ex.what();
-        VauFail(ex.status(), VauErrorCode::invalid_prescription, "ErpException");
+        VauFail(ex.status(), VauErrorCode::invalid_prescription, ex.what());
+    }
+    catch (const model::ModelException& mo)
+    {
+        TVLOG(1) << "ModelException: " << mo.what();
+        VauFail(HttpStatus::BadRequest, VauErrorCode::invalid_prescription, "ModelException");
     }
     catch (const std::exception& ex)
     {

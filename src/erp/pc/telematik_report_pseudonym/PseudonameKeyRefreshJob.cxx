@@ -31,10 +31,13 @@ SafeString sKey{};
 
 PseudonameKeyRefreshJob::PseudonameKeyRefreshJob(HsmPool& hsmPool, BlobCache& blobCache,
                                                  const std::chrono::steady_clock::duration checkInterval,
+                                                 const std::chrono::steady_clock::duration failedCheckInterval,
                                                  const std::chrono::steady_clock::duration expireInterval)
-    : TimerJobBase("PseudonameKeyRefreshJob", checkInterval)
+    : TimerJobBase("PseudonameKeyRefreshJob", failedCheckInterval)
     , mHsmPool(hsmPool)
     , mBlobCache(blobCache)
+    , mCheckInterval(checkInterval)
+    , mFailedCheckInterval(failedCheckInterval)
     , mExpireInterval(expireInterval)
 {
     PseudonameKeyRefreshJob::executeJob();
@@ -70,7 +73,8 @@ BlobId PseudonameKeyRefreshJob::createAndStoreKey()
 void PseudonameKeyRefreshJob::executeJob()
 {
     A_22698.start("#3 Check if key needs a refresh, otherwise provide existing key.");
-    // This code is executed once per REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS.
+    // This code is executed once per REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS, when the last check succeeded
+    // or REPORT_LEIPS_KEY_FAILED_CHECK_INTERVAL_SECONDS, while the check fails.
     try
     {
         std::vector<bool> results = mBlobCache.hasValidBlobsOfType({BlobType::PseudonameKey});
@@ -96,9 +100,11 @@ void PseudonameKeyRefreshJob::executeJob()
             ErpArray<Aes256Length> key = hsmPoolSession.session().unwrapPseudonameKey();
             sKey = SafeString{key.data(), key.size()};
         }
+        setInterval(mCheckInterval);
     }
     catch (...)
     {
+        setInterval(mFailedCheckInterval);
         sKey = SafeString("");
         // Working with the BlobCache (and indirectly with BlobDatabase and HsmClient) may fail.
         // Catch any exception to make sure the server continues its operation even if this
@@ -132,8 +138,10 @@ PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(HsmPool& hsmPool, BlobCach
             ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS, 15552000)};// About 6 months per default.
         const std::chrono::seconds refreshInterval{configuration.getOptionalIntValue(
             ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS, 86400)};// 24 hours per default.
-        std::unique_ptr<PseudonameKeyRefreshJob> refreshJob =
-            std::make_unique<PseudonameKeyRefreshJob>(hsmPool, blobCache, refreshInterval, expireInterval);
+        const std::chrono::seconds failedCheckInterval{configuration.getOptionalIntValue(
+            ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS, 300)};// 5 minutes per default.
+        std::unique_ptr<PseudonameKeyRefreshJob> refreshJob = std::make_unique<PseudonameKeyRefreshJob>(
+            hsmPool, blobCache, refreshInterval, failedCheckInterval, expireInterval);
         refreshJob->start();
         return refreshJob;
     }
@@ -151,3 +159,4 @@ std::string PseudonameKeyRefreshJob::hkdf(const std::string& input)
     A_22698.finish();
     return result;
 }
+

@@ -31,7 +31,8 @@
         },
         "subscription": {
           "signingKey": "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgBwZpm6omGaV11Lev\nmIQtqZCJEGvvXz2ocHzPeNQBmQyhRANCAARBPhwSXbt0WV0HXmEwCmma6ddKPzxx\nmqS1p2Bktj9v17J9yv8lhvjiAdhQ84R/ZGDHfAUw4FA9Mue7GKnnXK5B\n-----END PRIVATE KEY-----\n"
-        }
+        },
+        "genericValidation": "ignore_errors"
       },
       "postgres": {
         "host": "localhost",
@@ -430,7 +431,8 @@
         "leips": {
           "enable": "false",
           "refreshIntervalSeconds": "15552000",
-          "checkIntervalSeconds": "86400"
+          "checkIntervalSeconds": "86400",
+          "failedCheckIntervalSeconds": "300"
         }
       },
       "admin": {

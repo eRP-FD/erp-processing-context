@@ -290,6 +290,7 @@ list(
         erp/util/StringTest.cxx
         erp/util/TerminationHandlerTest.cxx
         erp/util/ThreadNamesTest.cxx
+        erp/util/TimerJobBaseTest.cxx
         erp/util/TimerTest.cxx
         erp/util/UrlHelperTest.cxx
         erp/util/UuidTest.cxx

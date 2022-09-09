@@ -25,6 +25,15 @@ TimerJobBase::TimerJobBase (
 {
 }
 
+std::chrono::steady_clock::duration TimerJobBase::getInterval()
+{
+    return mInterval;
+}
+
+void TimerJobBase::setInterval(const std::chrono::steady_clock::duration nextInterval)
+{
+    mInterval = nextInterval;
+}
 
 void TimerJobBase::start (void)
 {

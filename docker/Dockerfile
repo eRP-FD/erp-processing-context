@@ -101,7 +101,7 @@ RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 
 
 # Build runtime image here:
-FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.6 AS runtime
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.5 AS runtime
 
 WORKDIR /debug/erp
 COPY --from=reldeb_build /build/erp-processing-context/reldeb/erp-processing-context-debug.tar.gz .

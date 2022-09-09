@@ -228,20 +228,20 @@ TEST_F(TimerTest, cancel_repeatingJobAfterFirstTrigger)
     SharedValue value;
 
     const auto token = timer.runRepeating(
-        std::chrono::milliseconds(50),
+        std::chrono::milliseconds(100),
         std::chrono::milliseconds(500),
         [&value]{value.append("test"); });
 
     ASSERT_EQ(value.updateCount(), 0);
 
     // Wait for the job to be executed once.
-    value.waitForUpdateCount(std::chrono::milliseconds(100), 1);
+    value.waitForUpdateCount(std::chrono::milliseconds(350), 1);
 
     // Now cancel to prevent a second trigger.
     timer.cancel(token);
 
     // Give the job time too be triggered again but note that that is expected not to happen.
-    value.waitForUpdateCount(std::chrono::milliseconds(1000), 2);
+    value.waitForUpdateCount(std::chrono::milliseconds(850), 2);
     ASSERT_EQ(value.updateCount(), 1);
     ASSERT_EQ(value.get(), "test");
 }

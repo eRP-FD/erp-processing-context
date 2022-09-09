@@ -51,7 +51,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.2'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -265,7 +265,7 @@ pipeline {
                         cat erp-performancetest/config-templates/TestKarten-achelos/QES.pem > resources/integration-test/QES.pem
                         echo >> resources/integration-test/QES.pem
                         cat erp-performancetest/config-templates/TestKarten-achelos/QES_prv.pem >> resources/integration-test/QES.pem
-                        tar czf erp-tests.tar.gz jenkins-build-debug resources/test resources/integration-test
+                        tar czf erp-tests.tar.gz jenkins-build-debug resources/test resources/integration-test scripts/test_report.xslt
                     """
                     archiveArtifacts artifacts: 'erp-tests.tar.gz', fingerprint: true
                 }

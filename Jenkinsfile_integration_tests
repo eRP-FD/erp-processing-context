@@ -26,7 +26,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.2'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -68,23 +68,35 @@ pipeline {
                             wget --user="${env.NEXUS_USERNAME}" --password="${env.NEXUS_PASSWORD}" "https://nexus.epa-dev.net/repository/erp-raw-releases/com/ibm/erp/erp-processing-context/${buildNumber}/erp-processing-context-${buildNumber}.tar.gz"
                             tar -xf "erp-processing-context-${buildNumber}.tar.gz" -C ./erp-processing-context
                             rm "erp-processing-context-${buildNumber}.tar.gz"
-                            mv erp-processing-context/erp/lib jenkins-build-debug/lib
+                            mv erp-processing-context/erp/lib/* jenkins-build-debug/lib
                             rm -rf erp-processing-context
                             export TEST_RESOURCE_MANAGER_PATH=`pwd`"/resources"
                             cd jenkins-build-debug/bin
                             sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./01_production.config.json
                             sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./02_development.config.json
-                            LD_LIBRARY_PATH="../lib" ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
-                            LD_LIBRARY_PATH="../lib" ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
+                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
+                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
                         """
                     }
                 }
-                archiveArtifacts artifacts: 'mvo-test-report.xml', allowEmptyArchive: true, fingerprint: true, onlyIfSuccessful: false
             }
 
             post {
                 always {
-                    junit "jenkins-build-debug/bin/erp-integration-test.xml" "jenkins-build-debug/bin/mvo-test-report.xml"
+                    sh """
+                        xsltproc scripts/test_report.xslt jenkins-build-debug/bin/mvo-test-report.xml  > mvo-test-report.html
+                    """
+                    archiveArtifacts artifacts: 'jenkins-build-debug/bin/mvo-test-report.xml, mvo-test-report.html', allowEmptyArchive: true, fingerprint: true, onlyIfSuccessful: false
+                    junit 'jenkins-build-debug/bin/*.xml'
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: false,
+                        reportDir: 'jenkins-build-debug/bin',
+                        reportFiles: 'mvo-test-report.html',
+                        reportName: 'MVO Test Report',
+                        reportTitles: ''
+                    ])
                 }
                 failure {
                     script {

@@ -9,8 +9,8 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-static constexpr std::chrono::milliseconds interval(100);
-static constexpr std::chrono::milliseconds tolerance(20);
+static constexpr std::chrono::milliseconds interval(200);
+static constexpr std::chrono::milliseconds tolerance(80);
 
 TEST(PeriodicTimerTest, countAndInterval)
 {

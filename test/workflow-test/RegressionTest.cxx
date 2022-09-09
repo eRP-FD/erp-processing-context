@@ -56,3 +56,37 @@ TEST_F(RegressionTest, Erp10669)
     EXPECT_EQ(getTaskResult->expiryDate().toGermanDate(), "2023-07-29");
     EXPECT_EQ(getTaskResult->acceptDate().toGermanDate(), "2023-07-29");
 }
+
+TEST_F(RegressionTest, Erp10892_1)
+{
+    std::string kbv_bundle_xml =
+        ResourceManager::instance().getStringResource("test/issues/ERP-10892/meta_profile_array_size.xml");
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
+    ASSERT_TRUE(task.has_value());
+    kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.012.588.26", task->prescriptionId().toString());
+    std::string accessCode{task->accessCode()};
+    std::optional<model::Task> taskActivateResult;
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivateResult = taskActivate(
+            task->prescriptionId(), accessCode,
+            toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
+            HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+}
+
+TEST_F(RegressionTest, Erp10892_2)
+{
+    std::string kbv_bundle_xml =
+        ResourceManager::instance().getStringResource("test/issues/ERP-10892/negative_timestamp.xml");
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
+    ASSERT_TRUE(task.has_value());
+    kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.012.588.26", task->prescriptionId().toString());
+    std::string accessCode{task->accessCode()};
+    std::optional<model::Task> taskActivateResult;
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivateResult = taskActivate(
+            task->prescriptionId(), accessCode,
+            toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
+            HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+}

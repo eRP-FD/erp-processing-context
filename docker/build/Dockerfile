@@ -32,6 +32,7 @@ RUN apt-get update --fix-missing && \
     ca-certificates \
     xxd \
     xmlsec1 \
+    xsltproc \
     && rm -rf /var/lib/apt/lists/*
 
 # Update certificates and install latest version of cmake

@@ -18,6 +18,7 @@ class PseudonameKeyRefreshJob : public TimerJobBase
 public:
     PseudonameKeyRefreshJob(HsmPool& hsmPool, BlobCache& blobCache,
                             const std::chrono::steady_clock::duration checkInterval,
+                            const std::chrono::steady_clock::duration failedCheckInterval,
                             const std::chrono::steady_clock::duration expireInterval);
     ~PseudonameKeyRefreshJob() noexcept override = default;
 
@@ -50,6 +51,8 @@ protected:
 private:
     HsmPool& mHsmPool;
     BlobCache& mBlobCache;
+    const std::chrono::steady_clock::duration mCheckInterval;
+    const std::chrono::steady_clock::duration mFailedCheckInterval;
     const std::chrono::steady_clock::duration mExpireInterval;
 };
 

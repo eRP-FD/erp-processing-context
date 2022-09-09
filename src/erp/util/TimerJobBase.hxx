@@ -34,6 +34,12 @@ public:
     // Stop and join cycle thread.
     virtual void shutdown();
 
+    std::chrono::steady_clock::duration getInterval();
+
+    /// @brief set next interval
+    /// NOTE: The changed interval will be active after the next executeJob() completes
+    void setInterval(const std::chrono::steady_clock::duration nextInterval);
+
 protected:
     /**
      * @param jobName               the name that should be used in job logs
@@ -79,7 +85,7 @@ private:
     mutable std::mutex mMutex;
 
     const std::string mJobName;
-    const std::chrono::steady_clock::duration mInterval;
+    std::chrono::steady_clock::duration mInterval;
 
     std::thread mJobThread;
     std::condition_variable mAbortCondition;
