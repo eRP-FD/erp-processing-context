@@ -27,20 +27,20 @@ ServerSocketHandler::ServerSocketHandler(
 
    // Open the acceptor
    mAcceptor.open(endpoint.protocol(), eh.ec);
-   eh.throwOnServerError("ServerSocketHandler open");
+   eh.throwOnServerError("ServerSocketHandler open", {__FILE__, __LINE__});
 
    // Allow address reuse
    mAcceptor.set_option(boost::asio::socket_base::reuse_address(true), eh.ec);
-   eh.throwOnServerError("ServerSocketHandler set_option");
+   eh.throwOnServerError("ServerSocketHandler set_option", {__FILE__, __LINE__});
 
    // Bind to the server address
    mAcceptor.bind(endpoint, eh.ec);
-   eh.throwOnServerError("ServerSocketHandler bind");
+   eh.throwOnServerError("ServerSocketHandler bind", {__FILE__, __LINE__});
 
    // Start listening for connections
    mAcceptor.listen(
        boost::asio::socket_base::max_listen_connections, eh.ec);
-   eh.throwOnServerError("ServerSocketHandler listen");
+   eh.throwOnServerError("ServerSocketHandler listen", {__FILE__, __LINE__});
 }
 
 
@@ -80,7 +80,7 @@ void ServerSocketHandler::on_accept (boost::beast::error_code ec, boost::asio::i
                      });
    if (ec)
    {
-       ErrorHandler(ec).throwOnServerError("on_accept");
+       ErrorHandler(ec).throwOnServerError("on_accept", {__FILE__, __LINE__});
    }
    else
    {

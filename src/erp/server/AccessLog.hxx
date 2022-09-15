@@ -34,7 +34,6 @@ public:
 
     void setInnerRequestOperation (const std::string_view& operation);
     void updateFromOuterRequest (const ServerRequest& request);
-    void updateFromInnerRequest (const ServerRequest& request);
     void updateFromInnerResponse (const ServerResponse& response);
     void updateFromOuterResponse (const ServerResponse& response);
 

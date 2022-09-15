@@ -4,6 +4,7 @@
  */
 
 #include "erp/model/TimePeriod.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <stdexcept>
 #include <chrono>
@@ -112,9 +113,10 @@ TimePeriod TimePeriod::fromFhirSearchDate (const std::string& date)
         case fhirtools::Timestamp::Type::Year:
             return TimePeriod(timestamp, addOneYear(timestamp));
 
-        default:
-            throw std::logic_error("for search unsupported fhirtools::Timestamp::Type enum value");
+        case fhirtools::Timestamp::Type::DateTimeWithFractionalSeconds:
+            break;
     }
+    Fail2("for search unsupported fhirtools::Timestamp::Type enum value", std::logic_error);
 }
 
 

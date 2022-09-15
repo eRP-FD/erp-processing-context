@@ -55,17 +55,17 @@ void Idp::healthCheck() const
 
     if (mLastUpdate == std::chrono::system_clock::time_point{})
     {
-        throw std::runtime_error("never updated");
+        Fail2("never updated", std::runtime_error);
     }
 
     const auto now = std::chrono::system_clock::now();
     if (mLastUpdate + maxLastUpdateInterval < now)
     {
-        throw std::runtime_error("last update is too old");
+        Fail2("last update is too old", std::runtime_error);
     }
 
     if (!mSignerCertificate.has_value())
     {
-        throw std::runtime_error("no valid IDP certificate");
+        Fail2("no valid IDP certificate", std::runtime_error);
     }
 }

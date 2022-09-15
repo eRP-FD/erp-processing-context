@@ -40,7 +40,7 @@ JWT::JWT(std::string jwt)
     // RFC 7519 7.2.1
     if (periods != 2)
     {
-        throw JwtInvalidFormatException("Pre-verification failed - expecting JWS Compact Serialization.");
+        Fail2("Pre-verification failed - expecting JWS Compact Serialization.", JwtInvalidFormatException);
     }
 
     auto parts = String::split(mJwt, ".");
@@ -52,7 +52,7 @@ JWT::JWT(std::string jwt)
     const rapidjson::ParseResult result = mClaims.Parse(Base64::decodeToString(mPayload));
     if (result.IsError())
     {
-        throw JwtInvalidFormatException("Pre-verification failed - erroneous claims document.");
+        Fail2("Pre-verification failed - erroneous claims document.", JwtInvalidFormatException);
     }
     A_19993.finish();
 }
@@ -90,7 +90,7 @@ void JWT::checkJwtFormat() const
     // 7.2.2
     if (mHeader.empty())
     {
-        throw JwtInvalidRfcFormatException("Pre-verification failed - JWT violates RFC 7519.");
+        Fail2("Pre-verification failed - JWT violates RFC 7519.", JwtInvalidRfcFormatException);
     }
 
     // 7.2.3, 7.2.4
@@ -111,19 +111,19 @@ void JWT::checkJwtFormat() const
     // 7.2.5
     if (!headerDict.HasMember("alg"))
     {
-        throw JwtInvalidRfcFormatException("Pre-verification failed - Missing signature algorithm name.");
+        Fail2("Pre-verification failed - Missing signature algorithm name.", JwtInvalidRfcFormatException);
     }
     const std::string alg = headerDict["alg"].GetString();
     if (alg != "BP256R1")
     {
-        throw JwtInvalidSignatureException("Pre-verification failed - unsupported signature algorithm requested.");
+        Fail2("Pre-verification failed - unsupported signature algorithm requested.", JwtInvalidSignatureException);
     }
     A_20362.finish();
 
     A_20504.start("Check for empty signature.");
     if (mSignature.empty())
     {
-        throw JwtInvalidSignatureException("Pre-verification failed - missing signature.");
+        Fail2("Pre-verification failed - missing signature.", JwtInvalidSignatureException);
     }
     A_20504.finish();
 
@@ -158,7 +158,7 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     A_20504.start("Check for problematic/corrupted signature.");
     if (binarySignature.size() != 2ul * veclen)
     {
-        throw JwtInvalidSignatureException("Verification failed - invalid binary signature.");
+        Fail2("Verification failed - invalid binary signature.", JwtInvalidSignatureException);
     }
     A_20504.finish();
     std::copy_n(std::begin(binarySignature), rvec.size(), std::begin(rvec));
@@ -187,7 +187,7 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     // Verification
     if (EVP_DigestVerifyFinal(ctx, sig_der_bytes.data(), gsl::narrow<size_t>(siglen)) != 1)
     {
-        throw JwtInvalidSignatureException("Verification failed - invalid signature or payload.");
+        Fail2("Verification failed - invalid signature or payload.", JwtInvalidSignatureException);
     }
     A_20504.finish();
     A_20365.finish();
@@ -255,7 +255,7 @@ void JWT::checkRequiredClaims() const
         {
             if (mClaims.HasMember(std::string{claim}) == false)
             {
-                throw JwtRequiredClaimException("Pre-verification failed - Missing required claims.");
+                Fail2("Pre-verification failed - Missing required claims.", JwtRequiredClaimException);
             }
         }
         A_20368.finish();
@@ -263,7 +263,7 @@ void JWT::checkRequiredClaims() const
 
     if (mClaims.HasParseError())
     {
-        throw JwtInvalidFormatException("Pre-verification failed - Problematic claims document.");
+        Fail2("Pre-verification failed - Problematic claims document.", JwtInvalidFormatException);
     }
 
     checkClaimsPresence( { JWT::professionOIDClaim} );
@@ -298,7 +298,7 @@ void JWT::checkRequiredClaims() const
                mClaims[std::string{JWT::idNumberClaim}].IsString() &&
                mClaims[std::string{JWT::jtiClaim}].IsString()))
         {
-            throw JwtInvalidFormatException("Pre-verification failed - invalid data type for claims.");
+            Fail2("Pre-verification failed - invalid data type for claims.", JwtInvalidFormatException);
         }
     }
     else
@@ -321,7 +321,7 @@ void JWT::checkRequiredClaims() const
                mClaims[std::string{JWT::idNumberClaim}].IsString() &&
                mClaims[std::string{JWT::jtiClaim}].IsString()))
         {
-            throw JwtInvalidFormatException("Pre-verification failed - invalid data type for claims.");
+            Fail2("Pre-verification failed - invalid data type for claims.", JwtInvalidFormatException);
         }
     }
     A_20370.finish();
@@ -331,7 +331,7 @@ void JWT::checkRequiredClaims() const
     Expect(acr.has_value(), "Missing required acr claim.");
     if (acr != acrContent)
     {
-        throw JwtInvalidFormatException("The provided acr claim is not supported.");
+        Fail2("The provided acr claim is not supported.", JwtInvalidFormatException);
     }
     A_19439.finish();
 }
@@ -380,18 +380,18 @@ void JWT::checkIfExpired() const
     if (now > exp)
     {
         // Expired
-        throw JwtExpiredException("Verification failed - Token expired now=" + std::to_string(now.count()) +
-                                  " exp=" + std::to_string(exp.count()));
+        Fail2("Verification failed - Token expired now=" + std::to_string(now.count()) +
+                                  " exp=" + std::to_string(exp.count()), JwtExpiredException);
     }
     else if (iat > (now + A20373_iatClaimToleranceSeconds))
     {
         // Issued for a later time than current time.
-        throw JwtExpiredException("Verification failed - Token expired (issued for a later time).");
+        Fail2("Verification failed - Token expired (issued for a later time).", JwtExpiredException);
     }
     else if (now < nbf)
     {
         // Access time violates not-before timestamp.
-        throw JwtExpiredException("Verification failed - Token nbf violated.");
+        Fail2("Verification failed - Token nbf violated.", JwtExpiredException);
     }
     A_20372.finish();
     A_20373.finish();

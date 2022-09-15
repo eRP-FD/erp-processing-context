@@ -259,18 +259,26 @@ void TslManager::disablePostUpdateHook(const size_t hookId)
 void TslManager::healthCheckTsl() const
 {
     if (! mTslTrustStore->hasTsl())
-        throw std::runtime_error("No TSL loaded");
+    {
+        Fail2("No TSL loaded", std::runtime_error);
+    }
     if (mTslTrustStore->isTslTooOld())
-        throw std::runtime_error("Loaded TSL is too old");
+    {
+        Fail2("Loaded TSL is too old", std::runtime_error);
+    }
 }
 
 
 void TslManager::healthCheckBna() const
 {
     if (! mBnaTrustStore->hasTsl())
-        throw std::runtime_error("No BNetzA loaded");
+    {
+        Fail2("No BNetzA loaded", std::runtime_error);
+    }
     if (mBnaTrustStore->isTslTooOld())
-        throw std::runtime_error("Loaded BNetzA is too old");
+    {
+        Fail2("Loaded BNetzA is too old", std::runtime_error);
+    }
 }
 
 

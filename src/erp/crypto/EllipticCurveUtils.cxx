@@ -36,7 +36,7 @@ namespace
     {
         if (1 != operationResult)
         {
-            throw std::runtime_error{"EllipticCurveUtils error"};
+            Fail2("EllipticCurveUtils error", std::runtime_error);
         }
     }
 
@@ -129,7 +129,7 @@ namespace
             const auto signatureSize = signature.size();
             if (signatureSize % 2)
             {
-                throw std::invalid_argument{"Given signature is not in XMLDSIG format"};
+                Fail2("Given signature is not in XMLDSIG format", std::invalid_argument);
             }
 
             EcdsaSignaturePtr rawSignatureResult{ECDSA_SIG_new(), ECDSA_SIG_free};
@@ -169,7 +169,7 @@ namespace
             }
         }
 
-        throw std::invalid_argument{"Unknown signature format"};
+        Fail2("Unknown signature format", std::invalid_argument);
     }
 
 
@@ -193,7 +193,7 @@ namespace
             }
         }
 
-        throw std::invalid_argument{"Unknown signature format"};
+        Fail2("Unknown signature format", std::invalid_argument);
     }
 }
 
@@ -404,7 +404,7 @@ util::Buffer EllipticCurveUtils::convertSignatureFormat(const util::Buffer& sign
 {
     if (fromFormat == toFormat)
     {
-        throw std::logic_error{"Source and destination signature formats cannot be the same"};
+        Fail2("Source and destination signature formats cannot be the same", std::logic_error);
     }
 
     return serializeSignature(unserializeSignature(signature, fromFormat), toFormat);

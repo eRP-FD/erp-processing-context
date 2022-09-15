@@ -4,6 +4,7 @@
  */
 
 #include "erp/compression/Compression.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <magic_enum.hpp>
 #include <ostream>
@@ -15,5 +16,5 @@ std::ostream& operator << (std::ostream& out, Compression::DictionaryUse dictUse
     {
         return out << magic_enum::enum_name(dictUse);
     }
-    throw std::logic_error("Undefined enum value for DictionaryUse: " + std::to_string(uintmax_t(dictUse)));
+    Fail2("Undefined enum value for DictionaryUse: " + std::to_string(uintmax_t(dictUse)), std::logic_error);
 }

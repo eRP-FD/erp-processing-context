@@ -43,7 +43,7 @@ const EC_POINT* EllipticCurvePublicKey::getPublicKey() const
     const auto* publicKeyResult = EC_KEY_get0_public_key(mKey.get());
     if (!publicKeyResult)
     {
-        throw std::logic_error{"No public key stored"};
+        Fail2("No public key stored", std::logic_error);
     }
 
     return publicKeyResult;

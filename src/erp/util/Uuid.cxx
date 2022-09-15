@@ -37,7 +37,7 @@ Uuid::Uuid ()
     //    values.
     if (!RAND_bytes(uuid.bytes, sizeof uuid))
     {
-        throw std::runtime_error("Could not generate random bytes");
+        Fail2("Could not generate random bytes", std::runtime_error);
     }
 
     // o  Set the two most significant bits (bits 6 and 7) of the

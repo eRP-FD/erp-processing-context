@@ -392,22 +392,22 @@ void TlsSession::configureSession (const bool trustCn)
     /* Clear session - this allows us to reuse the same `mSslStream` for the same peer. */
     if (!SSL_clear(mSslStream.getNativeHandle()))
     {
-        throw boost::beast::system_error{{static_cast<int>(::ERR_get_error()),
-                                          boost::asio::error::get_ssl_category()}};
+        throw ExceptionWrapper<boost::beast::system_error>::create(
+            {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
 
     /* Set SNI Hostname (many hosts need this to handshake successfully). */
     if (!SSL_set_tlsext_host_name(mSslStream.getNativeHandle(), mHostName.c_str()))
     {
-        throw boost::beast::system_error{{static_cast<int>(::ERR_get_error()),
-                                          boost::asio::error::get_ssl_category()}};
+        throw ExceptionWrapper<boost::beast::system_error>::create(
+            {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
 
     /* Verify the remote server's certificate's subject alias names. */
     if (!SSL_set1_host(mSslStream.getNativeHandle(), mHostName.c_str()))
     {
-        throw boost::beast::system_error{{static_cast<int>(::ERR_get_error()),
-                                             boost::asio::error::get_ssl_category()}};
+        throw ExceptionWrapper<boost::beast::system_error>::create(
+            {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
 
     if (!trustCn)
@@ -426,6 +426,8 @@ void TlsSession::configureSession (const bool trustCn)
     /* Make the connection on the IP address we get from a lookup. */
     boost::system::error_code errorCode =
         AsyncStreamHelper::connect(mSslStream.getLowestLayer(), mIoContext, dnsLookupResults);
-    if(errorCode)
-        throw boost::system::system_error(errorCode);
+    if (errorCode)
+    {
+        throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, errorCode);
+    }
 }

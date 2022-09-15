@@ -18,7 +18,7 @@ ErrorHandler::ErrorHandler (boost::beast::error_code ec_)
 }
 
 
-void ErrorHandler::throwOnServerError (const std::string& message, std::optional<FileNameAndLineNumber> fileAndLineNumber) const
+void ErrorHandler::throwOnServerError (const std::string& message, const FileNameAndLineNumber& fileAndLineNumber) const
 {
     switch(ec.value())
     {
@@ -28,10 +28,7 @@ void ErrorHandler::throwOnServerError (const std::string& message, std::optional
         default:
             std::stringstream s;
             s << message << " : " << ec.message();
-            if (fileAndLineNumber.has_value())
-                throw ExceptionWrapper<ServerException>::create(fileAndLineNumber.value(), s.str());
-            else
-                throw ServerException(s.str());
+            throw ExceptionWrapper<ServerException>::create(fileAndLineNumber, s.str());
     }
 }
 

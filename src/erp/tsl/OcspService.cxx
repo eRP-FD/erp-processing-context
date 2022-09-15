@@ -51,7 +51,7 @@ namespace
 
         if (!OCSP_request_add0_id(request.get(), id.get()))
         {
-            throw OcspService::OcspError("Could not create OCSP request!");
+            Fail2("Could not create OCSP request!", OcspService::OcspError);
         }
 
         // after this, id will be part of request, so it does no longer have to be freed
@@ -673,9 +673,8 @@ std::string OcspService::toString (OcspService::CertificateStatus certificateSta
             return statusRevoked;
         case CertificateStatus::unknown:
             return statusUnknown;
-        default:
-            throw std::logic_error{"Certificate Status is invalid"};
     }
+    Fail2("Certificate Status is invalid", std::logic_error);
 }
 
 

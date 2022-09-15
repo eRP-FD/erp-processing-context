@@ -30,6 +30,7 @@
 
 #include <boost/exception/diagnostic_information.hpp>
 #include <unordered_set>
+#include <typeinfo>
 
 
 namespace
@@ -77,9 +78,10 @@ void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
     catch(const std::exception& exc)
     {
         TLOG(WARNING) << "Error while storing Audit data";
-        TVLOG(1) << "Error reason:  " << exc.what();
+        const auto& typeinfo = typeid(exc).name();
+        TVLOG(1) << "Error reason:  " << exc.what() << " (" << typeinfo << ")";
         sessionContext.accessLog.locationFromException(exc);
-        sessionContext.accessLog.error("Error while storing Audit data");
+        sessionContext.accessLog.error(std::string("Error while storing Audit data (") + typeinfo + ")");
         throw;
     }
     catch(...)
@@ -321,7 +323,9 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
     {
         session.accessLog.locationFromException(e);
         errorStatus = HttpStatus::InternalServerError;
-        errorText = "vau decryption failed: std::exception";
+        const auto& typeinfo = typeid(e).name();
+        errorText = std::string("vau decryption failed: std::exception (") + typeinfo + ")";
+        TVLOG(1) << errorText << ": " << e.what();
     }
     catch (...)
     {
@@ -527,7 +531,9 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
         // outer response with error:
         ResponseBuilder(outerSession.response).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
         outerSession.accessLog.locationFromException(e);
-        outerSession.accessLog.error("preparing, encrypting or sending of response failed");
+        const auto& typeinfo = typeid(e).name();
+        outerSession.accessLog.error(
+            std::string("preparing, encrypting or sending of response failed: std::exception (") + typeinfo + ")");
     }
     catch (...)
     {
@@ -536,7 +542,6 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
         outerSession.accessLog.error("preparing, encrypting or sending of response failed");
     }
 
-    outerSession.accessLog.updateFromInnerRequest(*innerServerRequest);
     outerSession.accessLog.updateFromInnerResponse(innerServerResponse);
     outerSession.accessLog.updateFromOuterResponse(outerSession.response);
 }
@@ -660,13 +665,14 @@ void VauRequestHandler::processException(const std::exception_ptr& exception,
     }
     catch (const std::exception &e)
     {
-        TVLOG(1) << "caught std::exception " << e.what();
+        const auto& typeinfo = typeid(e).name();
+        TVLOG(1) << "caught std::exception (" << typeinfo << ") " << e.what();
         ResponseBuilder(innerResponse)
             .status(HttpStatus::InternalServerError)
             .clearBody()
             .keepAlive(false);
         outerSession.accessLog.locationFromException(e);
-        outerSession.accessLog.error(std::string("std::exception"));
+        outerSession.accessLog.error(std::string("std::exception (") + typeinfo + ")");
     }
     catch (const boost::exception &e)
     {

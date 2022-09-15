@@ -41,7 +41,9 @@ TcpStream::TcpStream (
 
     boost::system::error_code errorCode = AsyncStreamHelper::connect(*mTcpStream, *mIoContext, resolverResults);
     if(errorCode)
-        throw boost::system::system_error(errorCode);
+    {
+        throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, errorCode);
+    }
 }
 
 void TcpStream::shutdown (void)

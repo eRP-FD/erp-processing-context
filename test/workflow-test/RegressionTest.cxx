@@ -90,3 +90,28 @@ TEST_F(RegressionTest, Erp10892_2)
             toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
+
+TEST_F(RegressionTest, Erp11050)
+{
+    std::string kbv_bundle_400_xml =
+        ResourceManager::instance().getStringResource("test/issues/ERP-11050/activate_400.xml");
+    std::string kbv_bundle_500_xml =
+        ResourceManager::instance().getStringResource("test/issues/ERP-11050/activate_500.xml");
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
+    ASSERT_TRUE(task.has_value());
+    kbv_bundle_400_xml = String::replaceAll(kbv_bundle_400_xml, "160.000.000.040.283.70", task->prescriptionId().toString());
+    kbv_bundle_500_xml = String::replaceAll(kbv_bundle_500_xml, "160.000.000.040.284.67", task->prescriptionId().toString());
+    std::string accessCode{task->accessCode()};
+    std::optional<model::Task> taskActivateResult;
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivateResult = taskActivate(
+            task->prescriptionId(), accessCode,
+            toCadesBesSignature(kbv_bundle_400_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
+            HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivateResult = taskActivate(
+            task->prescriptionId(), accessCode,
+            toCadesBesSignature(kbv_bundle_500_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
+            HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+}

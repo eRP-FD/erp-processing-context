@@ -53,7 +53,7 @@ ClientResponse ClientResponseReader::read (stream_type& stream)
     auto header = readHeader(stream);
     boost::beast::error_code ec;
     boost::beast::http::read(stream, mBuffer, mParser, ec);
-    ErrorHandler(ec).throwOnServerError("clientResponseReader::readSome");
+    ErrorHandler(ec).throwOnServerError("clientResponseReader::readSome", {__FILE__, __LINE__});
 
     ClientResponse response(std::move(header), mParser.get().body());
 
@@ -72,7 +72,7 @@ Header ClientResponseReader::readHeader (stream_type& stream)
         TVLOG(1) << "content of buffer is '"
                  << std::string(reinterpret_cast<const char*>(mBuffer.data().data()), mBuffer.data().size()) << "'";
         markStreamAsClosed();
-        throw std::runtime_error("response was only partially received");
+        Fail2("response was only partially received", std::runtime_error);
     }
     else if (ec)
     {

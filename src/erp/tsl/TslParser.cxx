@@ -125,7 +125,9 @@ namespace
         }
 
         if (strict)
-            throw std::runtime_error("The text for the tag must exist");
+        {
+            Fail2("The text for the tag must exist", std::runtime_error);
+        }
 
         return {};
     }
@@ -142,7 +144,7 @@ namespace
 
         if (strict)
         {
-            throw std::runtime_error("The text for the tag " + tagName + "must exist");
+            Fail2("The text for the tag " + tagName + "must exist", std::runtime_error);
         }
 
         return {};
@@ -554,7 +556,7 @@ namespace
                 errors += ERR_error_string(error, nullptr);
             }
 
-            throw std::runtime_error(message + errors);
+            Fail2(message + errors, std::runtime_error);
         }
 
 
@@ -566,7 +568,7 @@ namespace
                 return "SHA256";
             }
 
-            throw std::runtime_error("Signature algorithm is not ECDSA-SHA256");
+            Fail2("Signature algorithm is not ECDSA-SHA256", std::runtime_error);
         }
         // GEMREQ-end A_17205
 
@@ -635,7 +637,7 @@ namespace
                     getChildAttributeValue(transforms->nodesetval->nodeTab[index], "Algorithm");
                 if (! algorithm)
                 {
-                    throw std::runtime_error{"digest transform has no Algorithm attribute"};
+                    Fail2("digest transform has no Algorithm attribute", std::runtime_error);
                 }
 
                 if (*algorithm == signatureTransformLiteral_envelopedSignatureAlgorithm)
@@ -733,7 +735,7 @@ namespace
                         xmlDocument.getAttributeValue(xpathLiteral_signatureAlgorithm),
                         signerCertificate))
                 {
-                    throw std::runtime_error{"Invalid signature"};
+                    Fail2("Invalid signature", std::runtime_error);
                 }
             }
             // GEMREQ-end A_17205
@@ -746,7 +748,7 @@ namespace
             }
             else
             {
-                throw std::runtime_error{"unexpected TSL signature algorithm "};
+                Fail2("unexpected TSL signature algorithm ", std::runtime_error);
             }
         }
     }

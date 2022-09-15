@@ -60,7 +60,9 @@ const std::string& ServerRequest::getBody (void) const
 void ServerRequest::setPathParameters (const std::vector<std::string>& keys, const std::vector<std::string>& values)
 {
     if (keys.size() != values.size())
-        throw std::runtime_error("ServerRequest::setPathParameters expects the same number of keys and values");
+    {
+        Fail2("ServerRequest::setPathParameters expects the same number of keys and values", std::runtime_error);
+    }
 
     for (size_t index=0; index<keys.size(); ++index)
         mPathParameters[keys[index]] = values[index];

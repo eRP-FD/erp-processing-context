@@ -150,7 +150,9 @@ namespace
     void extendName (X509_NAME* name, const std::vector<std::string>& parts)
     {
         if ((parts.size() % 2) != 0)
-            throw std::logic_error("expecting key/value pairs for name construction");
+        {
+            Fail2("expecting key/value pairs for name construction", std::logic_error);
+        }
 
         for (std::size_t index=0; index<parts.size(); index+=2)
         {
@@ -170,7 +172,7 @@ namespace
         if ( ! expectedTrue)
         {
             showAllOpenSslErrors();
-            throw std::runtime_error("certificate error at " + location +"\n    " + message);
+            Fail2("certificate error at " + location +"\n    " + message, std::runtime_error);
         }
     }
 
@@ -295,7 +297,9 @@ shared_EVP_PKEY Certificate::getPublicKey (void) const
     auto publicKeyRootCertificate = shared_EVP_PKEY::make(
         X509_get_pubkey(mX509Certificate.removeConst()));
     if ( ! publicKeyRootCertificate.isSet())
-        throw std::runtime_error("can not extract public key from certificate");
+    {
+        Fail2("can not extract public key from certificate", std::runtime_error);
+    }
     return publicKeyRootCertificate;
 }
 
@@ -359,12 +363,16 @@ Certificate::Builder& Certificate::Builder::withRandomSerial (void)
     auto bignum = shared_BN::make();
     const int status1 = BN_pseudo_rand(bignum, 64, 0, 0);
     if (status1 == 0)
-        throw std::runtime_error("can not create pseudo random value for random serial");
+    {
+        Fail2("can not create pseudo random value for random serial", std::runtime_error);
+    }
 
     auto ai = shared_ASN1_INTEGER::make(
         BN_to_ASN1_INTEGER(bignum, nullptr));
     if ( ! ai.isSet())
-        throw std::runtime_error("can not convert BIGNUM into ASN1 integer");
+    {
+        Fail2("can not convert BIGNUM into ASN1 integer", std::runtime_error);
+    }
 
     X509_set_serialNumber(mX509Certificate, ai);
 
@@ -479,7 +487,7 @@ Certificate::Builder& Certificate::Builder::withRegistrationNumber (
                              registrationNumber.c_str(),
                              static_cast<int>(registrationNumber.size())))
     {
-        throw std::runtime_error{"cannot set the registrationNumber into a ASN1_PRINTABLESTRING"};
+        Fail2("cannot set the registrationNumber into a ASN1_PRINTABLESTRING", std::runtime_error);
     }
 
     ProfessionInfoPtr professionInfo{PROFESSION_INFO_new(),
@@ -510,8 +518,8 @@ Certificate::Builder& Certificate::Builder::withRegistrationNumber (
     const auto admissionExtensionNid{OBJ_ln2nid("Professional Information or basis for Admission")};
     if (NID_undef == admissionExtensionNid)
     {
-        throw std::runtime_error{"cannot find the NID for the admission syntax x509v3 extension "
-                                 "[TeleTrust, OID 1.3.36.8.3.3]"};
+        Fail2("cannot find the NID for the admission syntax x509v3 extension "
+                                 "[TeleTrust, OID 1.3.36.8.3.3]", std::runtime_error);
     }
 
     if (1 != X509_add1_ext_i2d(mX509Certificate,
@@ -520,7 +528,7 @@ Certificate::Builder& Certificate::Builder::withRegistrationNumber (
                                0,
                                0))
     {
-        throw std::runtime_error{"cannot add admission syntax extension to X509 certificate"};
+        Fail2("cannot add admission syntax extension to X509 certificate", std::runtime_error);
     }
 
     return *this;

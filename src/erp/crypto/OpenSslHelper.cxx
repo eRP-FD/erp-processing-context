@@ -74,7 +74,7 @@ std::string x509NametoString(const X509_NAME* name)
     {
         showAllOpenSslErrors();
         std::string location = std::string(__FILE__) + ":" + std::to_string(__LINE__);
-        throw std::runtime_error("OpenSslHelper error at " + location + "\n    serialization of certificate failed");
+        Fail2("OpenSslHelper error at " + location + "\n    serialization of certificate failed", std::runtime_error);
     }
     return bioToString(mem.get());
 }

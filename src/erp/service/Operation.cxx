@@ -4,6 +4,7 @@
  */
 
 #include "erp/service/Operation.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <stdexcept>
 
@@ -84,7 +85,7 @@ const std::string_view& toString (Operation operation)
         case Operation::POST_VAU_up:
         case Operation::GET_Health:
         case Operation::POST_Admin_restart:
-            throw std::logic_error("Operation value is not supported");
+            Fail2("Operation value is not supported", std::logic_error);
     }
-    throw std::logic_error("Uninitialized operation enum");
+    Fail2("Uninitialized operation enum", std::logic_error);
 }

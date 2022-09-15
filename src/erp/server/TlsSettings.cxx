@@ -4,6 +4,7 @@
  */
 
 #include "erp/server/TlsSettings.hxx"
+#include "erp/util/ExceptionWrapper.hxx"
 
 #include <boost/beast/core/error.hpp>
 
@@ -44,8 +45,8 @@ void TlsSettings::setAllowedCiphersAndCurves(boost::asio::ssl::context& sslConte
     if (1 != SSL_CTX_set_cipher_list(sslContext.native_handle(),
                                      getCyphers(forcedCiphers).c_str()))
     {
-        throw boost::beast::system_error{{static_cast<int>(::ERR_get_error()),
-                                                 boost::asio::error::get_ssl_category()}};
+        throw ExceptionWrapper<boost::beast::system_error>::create(
+            {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
 
     if (1 != SSL_CTX_set1_curves_list(sslContext.native_handle(),
@@ -54,8 +55,8 @@ void TlsSettings::setAllowedCiphersAndCurves(boost::asio::ssl::context& sslConte
                                       "prime256v1:"
                                       "secp384r1"))
     {
-        throw boost::beast::system_error{{static_cast<int>(::ERR_get_error()),
-                                                 boost::asio::error::get_ssl_category()}};
+        throw ExceptionWrapper<boost::beast::system_error>::create(
+            {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
 
     /* Set allowed signature hash algorithms according to allowed cipher suites above. */
@@ -65,8 +66,8 @@ void TlsSettings::setAllowedCiphersAndCurves(boost::asio::ssl::context& sslConte
                                        "RSA+SHA384:"
                                        "RSA+SHA256"))
     {
-        throw boost::beast::system_error{{static_cast<int>(::ERR_get_error()),
-                                                 boost::asio::error::get_ssl_category()}};
+        throw ExceptionWrapper<boost::beast::system_error>::create(
+            {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
     // GEMREQ-end A_17124
     // GEMREQ-end A_15751

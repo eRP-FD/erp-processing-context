@@ -66,7 +66,7 @@ const std::string& fhirtools::to_string(FhirStructureDefinition::Derivation deri
         case Derivation::specialization: return specialization;
             // clang-format on
     }
-    throw std::logic_error("Invalid value for Derivation :" + to_string(static_cast<intmax_t>(derivation)));
+    FPFail2("Invalid value for Derivation :" + to_string(static_cast<intmax_t>(derivation)), std::logic_error);
 }
 
 FhirStructureDefinition::Derivation fhirtools::stringToDerivation(const std::string_view& str)
@@ -80,7 +80,9 @@ FhirStructureDefinition::Derivation fhirtools::stringToDerivation(const std::str
     else if (str == specialization)
         return Derivation::specialization;
     else
-        throw std::logic_error("Cannot convert string to FhirStructureDefinition::Derivation: "s.append(str));
+    {
+        FPFail2("Cannot convert string to FhirStructureDefinition::Derivation: "s.append(str), std::logic_error);
+    }
 }
 
 std::ostream& fhirtools::operator<<(std::ostream& out, FhirStructureDefinition::Derivation derivation)
@@ -185,8 +187,8 @@ bool FhirStructureDefinition::isSystemType() const
             Fail("isSystemType is not defined for " + to_string(mKind));
     }
     using std::to_string;
-    throw std::logic_error("Ivalid value for FhirStructureDefinition::Kind: " +
-                           to_string(static_cast<uintmax_t>(mKind)));
+    FPFail2("Ivalid value for FhirStructureDefinition::Kind: " +
+                           to_string(static_cast<uintmax_t>(mKind)), std::logic_error);
 }
 
 std::ostream& fhirtools::operator<<(std::ostream& out, FhirStructureDefinition::Kind kind)

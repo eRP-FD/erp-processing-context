@@ -102,12 +102,6 @@ void AccessLog::updateFromOuterRequest (const ServerRequest& request)
 }
 
 
-void AccessLog::updateFromInnerRequest (const ServerRequest& request)
-{
-    (void)request;
-}
-
-
 void AccessLog::updateFromInnerResponse (const ServerResponse& response)
 {
     mLog.keyValue(

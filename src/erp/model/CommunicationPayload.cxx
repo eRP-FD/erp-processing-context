@@ -53,7 +53,7 @@ CommunicationPayload::CommunicationPayload(const rj::Value* payloadValue) :
                         }
                         default:
                         {
-                            throw std::logic_error("Payload item type enumerator " + std::to_string(static_cast<int>(itemType)) + " not handled");
+                            Fail2("Payload item type enumerator " + std::to_string(static_cast<int>(itemType)) + " not handled", std::logic_error);
                         }
                     }
                     break;

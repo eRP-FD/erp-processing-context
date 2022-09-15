@@ -176,10 +176,8 @@ Timestamp fromFhirDateTime(const std::string& dateAndTime, bool isSearch)
             if (! isSearch)
                 ErpFail(HttpStatus::BadRequest, "missing seconds not supported by regular FHIR date");
             return fromXsDateTime(dateAndTime, isSearch, true);// seconds missing
-
-        default:
-            throw std::logic_error("unsupported Timestamp::Type enum value");
     }
+    Fail2("unsupported Timestamp::Type enum value", std::logic_error);
 }
 }
 

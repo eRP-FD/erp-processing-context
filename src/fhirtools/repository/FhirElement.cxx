@@ -118,8 +118,8 @@ const std::string& fhirtools::to_string(FhirElement::Representation representati
         case Representation::element:  return repesentation_strings::element;
             // clang-format on
     }
-    throw std::logic_error("Invalid value for FhirElement::Representation: " +
-                           std::to_string(static_cast<uintmax_t>(representation)));
+    FPFail2("Invalid value for FhirElement::Representation: " + std::to_string(static_cast<uintmax_t>(representation)),
+            std::logic_error);
 }
 
 std::ostream& fhirtools::operator<<(std::ostream& out, FhirElement::Representation representation)
@@ -144,7 +144,9 @@ FhirElement::Representation fhirtools::stringToRepresentation(const std::string_
     else if (str == repesentation_strings::element)
         return Representation::element;
     else
-        throw std::logic_error("Cannot convert string to FhirElement::Representation: "s.append(str));
+    {
+        FPFail2("Cannot convert string to FhirElement::Representation: "s.append(str), std::logic_error);
+    }
 }
 
 FhirElement::Builder& FhirElement::Builder::name(std::string name_)

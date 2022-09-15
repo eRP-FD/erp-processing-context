@@ -282,6 +282,6 @@ std::string AuditEventTextTemplates::retrieveTextTemplate(
     {
         TVLOG(1) << "No audit event text resource found for language " << language << " and event id "
                  << static_cast<std::underlying_type<model::AuditEventId>::type>(eventId);
-        throw std::logic_error("No audit event text resource found for event id / language combination");
+        Fail2("No audit event text resource found for event id / language combination", std::logic_error);
     }
 }

@@ -3,7 +3,11 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "C14NHelper.hxx"
+#include "erp/tsl/C14NHelper.hxx"
+#include "erp/util/Expect.hxx"
+#include "erp/util/GLog.hxx"
+
+#include "fhirtools/util/Gsl.hxx"
 
 #include <libxml/c14n.h>
 #include <libxml/parser.h>
@@ -11,8 +15,6 @@
 #include <numeric>
 #include <string>
 
-#include "erp/util/GLog.hxx"
-#include "fhirtools/util/Gsl.hxx"
 
 
 namespace
@@ -232,7 +234,7 @@ std::optional<std::string> C14NHelper::canonicalize(
     else
     {
         // No.
-        throw std::runtime_error("xmlC14NExecute returns " + std::to_string(executionResult));
+        Fail2("xmlC14NExecute returns " + std::to_string(executionResult), std::runtime_error);
     }
 
     return result;

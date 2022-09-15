@@ -50,7 +50,7 @@ ServerRequest ServerRequestReader::read (void)
     // Read the whole body synchronously.
     boost::beast::error_code ec;
     boost::beast::http::read(mStream, mBuffer, mParser, ec);
-    ErrorHandler(ec).throwOnServerError("ServerRequestReader::read");
+    ErrorHandler(ec).throwOnServerError("ServerRequestReader::read", {__FILE__, __LINE__});
 
     // Transfer ownership of the body string to the request object.
     request.setBody(std::move(mParser.get().body()));

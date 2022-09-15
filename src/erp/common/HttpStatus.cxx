@@ -4,6 +4,7 @@
  */
 
 #include "erp/common/HttpStatus.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <string>
 
@@ -14,7 +15,7 @@ HttpStatus fromBoostBeastStatus (uint32_t status)
 #define STATUS(boostBeastValue, value, code) case code: return HttpStatus::value;
 #include "HttpStatus.inc.hxx"
 #undef STATUS
-        default: throw std::runtime_error("unsupported status code " + std::to_string(status));
+        default: Fail2("unsupported status code " + std::to_string(status), std::runtime_error);
     }
 }
 
@@ -25,7 +26,7 @@ const char* toString (const HttpStatus status)
     switch(status)
     {
 #include "HttpStatus.inc.hxx"
-        default: throw std::logic_error("unsupported HttpStatus value");
+        default: Fail2("unsupported HttpStatus value", std::logic_error);
     }
 #undef STATUS
 }
@@ -37,7 +38,7 @@ size_t toNumericalValue (const HttpStatus status)
     switch(status)
     {
 #include "HttpStatus.inc.hxx"
-        default: throw std::logic_error("unsupported HttpStatus value");
+        default: Fail2("unsupported HttpStatus value", std::logic_error);
     }
 #undef STATUS
 

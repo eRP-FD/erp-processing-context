@@ -40,7 +40,9 @@ XmlDocument::XmlDocument (const std::string_view xml)
 
     mXPathContext = std::shared_ptr<xmlXPathContext>(xmlXPathNewContext(mDocument.get()), xmlXPathFreeContext);
     if (mXPathContext == nullptr)
-        throw std::runtime_error("can not create XPath context");
+    {
+        Fail2("can not create XPath context", std::runtime_error);
+    }
 }
 
 void XmlDocument::validateAgainstSchema(XmlValidatorContext& validatorContext) const
@@ -48,7 +50,7 @@ void XmlDocument::validateAgainstSchema(XmlValidatorContext& validatorContext) c
     Expect(validatorContext.mXmlSchemaValidCtxt != nullptr, "The context must be set.");
     if (0 != xmlSchemaValidateDoc(validatorContext.mXmlSchemaValidCtxt.get(), mDocument.get()))
     {
-        throw std::runtime_error("TSL schema validation error");
+        Fail2("TSL schema validation error", std::runtime_error);
     }
 }
 
@@ -62,21 +64,29 @@ std::shared_ptr<xmlXPathObject> XmlDocument::getXpathObject (
             xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(xPathExpression.c_str()), &xpathContext),
             xmlXPathFreeObject);
         if (xpathObject == nullptr)
-            throw std::runtime_error("can not evaluate XPath expression");
+        {
+            Fail2("can not evaluate XPath expression", std::runtime_error);
+        }
         if (xpathObject->nodesetval == nullptr)
-            throw std::runtime_error("did not find element");
+        {
+            Fail2("did not find element", std::runtime_error);
+        }
 
         const size_t resultCount = xpathObject->nodesetval->nodeNr;
         if (resultCount == 0)
-            throw std::runtime_error("did not find the requested element");
+        {
+            Fail2("did not find the requested element", std::runtime_error);
+        }
         else if (resultCount > 1)
-            throw std::runtime_error("found more than one element");
+        {
+            Fail2("found more than one element", std::runtime_error);
+        }
 
         return xpathObject;
     }
     catch (const std::runtime_error& e)
     {
-        throw std::runtime_error(std::string(e.what()) + " when processing XPath expression " + xPathExpression);
+        Fail2(std::string(e.what()) + " when processing XPath expression " + xPathExpression, std::runtime_error);
     }
 }
 
@@ -95,15 +105,19 @@ std::shared_ptr<xmlXPathObject> XmlDocument::getXpathObjects (const std::string&
             xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>((mPathHead+xPathExpression).c_str()), mXPathContext.get()),
             xmlXPathFreeObject);
         if (xpathObject == nullptr)
-            throw std::runtime_error("can not evaluate XPath expression");
+        {
+            Fail2("can not evaluate XPath expression", std::runtime_error);
+        }
         if (xpathObject->nodesetval == nullptr)
-            throw std::runtime_error("did not find element");
+        {
+            Fail2("did not find element", std::runtime_error);
+        }
 
         return xpathObject;
     }
     catch (const std::runtime_error& e)
     {
-        throw std::runtime_error(std::string(e.what()) + " when processing XPath expression " + xPathExpression);
+        Fail2(std::string(e.what()) + " when processing XPath expression " + xPathExpression, std::runtime_error);
     }
 }
 
@@ -115,7 +129,9 @@ bool XmlDocument::hasElement (const std::string& xPathExpression) const
         xmlXPathFreeObject);
 
     if (xpathObject == nullptr)
-        throw std::runtime_error("can not evaluate XPath expression");
+    {
+        Fail2("can not evaluate XPath expression", std::runtime_error);
+    }
 
     if (xpathObject->nodesetval == nullptr)
         return false;
@@ -131,7 +147,9 @@ std::string XmlDocument::getElementText (
 
     xmlNodePtr node = xpathObject->nodesetval->nodeTab[0];
     if (node==nullptr || node->content==nullptr)
-        throw std::runtime_error("empty result");
+    {
+        Fail2("empty result", std::runtime_error);
+    }
 
     return std::string(reinterpret_cast<const char*>(node->content));
 }
@@ -162,7 +180,9 @@ std::string XmlDocument::getAttributeValue(
 
     xmlNodePtr node = xpathObject->nodesetval->nodeTab[0];
     if (node==nullptr || node->children==nullptr || node->children->content==nullptr)
-        throw std::runtime_error("empty result");
+    {
+        Fail2("empty result", std::runtime_error);
+    }
 
     return std::string(reinterpret_cast<const char*>(node->children->content));
 }

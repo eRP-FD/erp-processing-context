@@ -17,7 +17,7 @@ public:
 
     explicit ErrorHandler (boost::beast::error_code ec = {});
 
-    void throwOnServerError (const std::string& message, std::optional<FileNameAndLineNumber> fileAndLineNumber = std::nullopt) const;
+    void throwOnServerError (const std::string& message, const FileNameAndLineNumber& fileAndLineNumber) const;
     void reportServerError (const std::string& message) const;
 };
 

@@ -91,7 +91,7 @@ namespace
             case ERP_UTIMACO_MESSAGING_FAILED:
             case ERP_UTIMACO_INVALID_USER_NAME:
             case ERP_UTIMACO_UNKNOWN_USER:
-                throw HsmSessionExpiredException(
+                throw ExceptionWrapper<HsmSessionExpiredException>::create({__FILE__, __LINE__},
                     "HSM session expired: " + HsmProductionClient::hsmErrorDetails(status),
                     status);
 

@@ -137,6 +137,6 @@ ClientResponse UrlRequestSender::doSend(
     }
     else
     {
-        throw std::runtime_error("unsupported protocol");
+        Fail2("unsupported protocol", std::runtime_error);
     }
 }

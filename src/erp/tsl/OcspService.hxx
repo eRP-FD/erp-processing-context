@@ -70,7 +70,7 @@ public:
                     status << "Status: Unknown";
                     break;
                 default:
-                    throw std::logic_error{"Unhandled CertificateStatus enum value"};
+                    Fail2("Unhandled CertificateStatus enum value", std::logic_error);
             }
 
             status << ", revocation time: " << std::chrono::system_clock::to_time_t(revocationTime);

@@ -144,7 +144,7 @@ CFdSigErpManager::internalGetOcspResponseData(const Certificate& certificate, co
     catch(const TslError& tslError)
     {
         // in this context TslError always means internal server error
-        throw TslError(tslError, HttpStatus::InternalServerError);
+        throw ExceptionWrapper<TslError>::create({__FILE__, __LINE__},tslError, HttpStatus::InternalServerError);
     }
 }
 
@@ -155,7 +155,7 @@ void CFdSigErpManager::healthCheck()
 
     if (mLastSuccess == std::chrono::system_clock::time_point{})
     {
-        throw std::runtime_error("never successfully validated");
+        Fail2("never successfully validated", std::runtime_error);
     }
 
     if (mLastCheckSuccessfull)
@@ -163,12 +163,12 @@ void CFdSigErpManager::healthCheck()
         const auto now = std::chrono::system_clock::now();
         if (mLastSuccess + mOcspRequestGracePeriod < now)
         {
-            throw std::runtime_error("last validation is too old");
+            Fail2("last validation is too old", std::runtime_error);
         }
     }
     else
     {
-        throw std::runtime_error("last validation has failed");
+        Fail2("last validation has failed", std::runtime_error);
     }
 }
 

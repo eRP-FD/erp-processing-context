@@ -4,6 +4,7 @@
  */
 
 #include "erp/util/ByteHelper.hxx"
+#include "erp/util/Expect.hxx"
 
 #include <stdexcept>
 
@@ -25,7 +26,9 @@ std::string ByteHelper::toHex (gsl::span<const char> buffer)
 std::string ByteHelper::fromHex (const std::string_view hexString)
 {
     if ((hexString.size()%2) == 1)
-        throw std::logic_error("hex string should have an even number of characters");
+    {
+        Fail2("hex string should have an even number of characters", std::logic_error);
+    }
     std::string s;
     s.reserve(hexString.size()/2);
     for (std::size_t index=0; index<hexString.size(); index+=2)
@@ -56,7 +59,7 @@ char ByteHelper::nibbleToChar (const int value)
         case 15: return 'f';
 
         default:
-            throw std::runtime_error("invalid nibble value");
+            Fail2("invalid nibble value", std::runtime_error);
     }
 }
 
@@ -95,6 +98,6 @@ int ByteHelper::charToNibble (const char value)
         case 'F': return 15;
 
         default:
-            throw std::runtime_error("invalid nibble value");
+            Fail2("invalid nibble value", std::runtime_error);
     }
 }

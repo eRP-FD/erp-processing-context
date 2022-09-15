@@ -500,7 +500,7 @@ TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognit
     EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "");
     EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "");
     verifyRootCause(healthDocument, cFdSigErpRootCausePointer,
-                    "std::runtime_error(never successfully validated) at unknown location");
+                    "std::runtime_error(never successfully validated) at ");
 
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }

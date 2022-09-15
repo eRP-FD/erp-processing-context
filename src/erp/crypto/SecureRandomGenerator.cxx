@@ -27,7 +27,7 @@ SafeString SecureRandomGenerator::generate (const std::size_t size)
 
     if (1 != RAND_priv_bytes(reinterpret_cast<unsigned char*>(static_cast<char*>(result)), static_cast<int>(result.size())))
     {
-        throw std::runtime_error("CSPRNG failure");
+        Fail2("CSPRNG failure", std::runtime_error);
     }
 
     return result;

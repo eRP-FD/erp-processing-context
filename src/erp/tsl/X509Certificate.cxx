@@ -257,7 +257,7 @@ std::string X509Certificate::toBase64 () const
     if (length < 0)
     {
         OPENSSL_free(buffer);
-        throw CryptoFormalError("Unable to convert certificate to string.");
+        Fail2("Unable to convert certificate to string.", CryptoFormalError);
     }
     const std::string& b64Encoded = Base64::encode(util::rawToBuffer(buffer, length));
     OPENSSL_free(buffer);
@@ -273,7 +273,7 @@ X509Certificate::createFromAsnBytes (gsl::span<const unsigned char> asnBytes)
     X509* x509 = d2i_X509(nullptr, &myBuffer, gsl::narrow_cast<long>(asnBytes.size()));
     if (!x509)
     {
-        throw CryptoFormalError("Unable to create certificate from der encoded data.");
+        Fail2("Unable to create certificate from der encoded data.", CryptoFormalError);
     }
 
     return X509Certificate(x509);
@@ -344,7 +344,7 @@ std::string X509Certificate::getFingerprint(const EVP_MD *(*digestFunction)(), c
     int rc = X509_digest(pCert.get(), digest, buf.get(), &len);
     if (rc == 0 || len != digestLength)
     {
-        throw CryptoFormalError("Unable to calculate digest of certificate.");
+        Fail2("Unable to calculate digest of certificate.", CryptoFormalError);
     }
 
     return ByteHelper::toHex({reinterpret_cast<const char*>(buf.get()),
@@ -484,12 +484,12 @@ bool X509Certificate::checkValidityPeriod (std::chrono::system_clock::time_point
     const auto* notBefore = X509_get0_notBefore(pCert.get());
     if (!notBefore)
     {
-        throw CryptoFormalError("Unable to retrieve Not Valid Before time from certificate.");
+        Fail2("Unable to retrieve Not Valid Before time from certificate.", CryptoFormalError);
     }
     const auto* notAfter = X509_get0_notAfter(pCert.get());
     if (!notAfter)
     {
-        throw CryptoFormalError("Unable to retrieve Not Valid After time from certificate.");
+        Fail2("Unable to retrieve Not Valid After time from certificate.", CryptoFormalError);
     }
 
     // compare to now
@@ -554,7 +554,7 @@ std::unique_ptr<EllipticCurvePublicKey> X509Certificate::getEllipticCurvePublicK
 {
     if (SigningAlgorithm::ellipticCurve != getSigningAlgorithm())
     {
-        throw std::logic_error{"There is no elliptic curve public key to be retrieved"};
+        Fail2("There is no elliptic curve public key to be retrieved", std::logic_error);
     }
 
     auto* evpKey = getPublicKey();
@@ -568,7 +568,7 @@ std::unique_ptr<EllipticCurvePublicKey> X509Certificate::getEllipticCurvePublicK
         }
     }
 
-    throw std::runtime_error{"Cannot retrieve elliptic curve public key"};
+    Fail2("Cannot retrieve elliptic curve public key", std::runtime_error);
 }
 
 
@@ -582,7 +582,7 @@ X509Certificate::IdentifierInformation X509Certificate::extractIdentifierInforma
     X509_NAME* name = X509_get_subject_name(pCert.get());
     if (name == nullptr)
     {
-        throw CryptoFormalError("Could not retrieve X509 subject name");
+        Fail2("Could not retrieve X509 subject name", CryptoFormalError);
     }
 
     auto findString = [name] (int nid, const std::regex& pattern)
@@ -999,7 +999,7 @@ tm X509Certificate::getNotAfter() const
     const auto* notAfter = X509_get0_notAfter(pCert.get());
     if (!notAfter)
     {
-        throw CryptoFormalError("Unable to retrieve Not Valid After time from certificate.");
+        Fail2("Unable to retrieve Not Valid After time from certificate.", CryptoFormalError);
     }
     tm notAfterTm{};
     OpenSslExpect(ASN1_TIME_to_tm(notAfter, &notAfterTm), "ASN1_TIME_to_tm failed for notAfter");

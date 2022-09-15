@@ -163,7 +163,7 @@ void FhirSaxHandler::startElement(const xmlChar* localname, const xmlChar* prefi
             return;
         }
         ErpFail(HttpStatus::BadRequest,
-                  "Unsupported namespace in xml document: "s.append(reinterpret_cast<const char*>(uri)));
+                  "Unsupported namespace in xml document: "s.append(uri?reinterpret_cast<const char*>(uri):"<null>"));
     }
     startFHIRElement(localnameView, attributes);
 }

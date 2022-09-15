@@ -22,7 +22,7 @@ namespace {
         if ( ! expectedTrue)
         {
             showAllOpenSslErrors();
-            throw std::runtime_error("EllipticCurve error at " + location +"\n    " + message);
+            Fail2("EllipticCurve error at " + location +"\n    " + message, std::runtime_error);
         }
     }
 

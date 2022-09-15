@@ -178,9 +178,10 @@ namespace {
         return configuration;
     }
 
-    InvalidConfigurationException createMissingKeyException (const KeyNames key)
+    ExceptionWrapper<InvalidConfigurationException> createMissingKeyException(const KeyNames key,
+                                                                              const FileNameAndLineNumber& location)
     {
-        return InvalidConfigurationException(
+        return ExceptionWrapper<InvalidConfigurationException>::create(location,
             "value not defined",
             std::string(key.environmentVariable),
             std::string(key.jsonPath));
@@ -407,8 +408,8 @@ std::optional<int> ConfigurationBase::getIntValueInternal(KeyNames key) const
         catch(const std::logic_error&)
         {
         }
-        throw InvalidConfigurationException(
-            "Configuration: can not convert '" + value.value() + "' to integer",
+        throw ExceptionWrapper<InvalidConfigurationException>::create({__FILE__, __LINE__},
+            std::string("Configuration: can not convert '") + value.value() + "' to integer",
             std::string(key.environmentVariable),
             std::string(key.jsonPath));
     }
@@ -437,7 +438,7 @@ int ConfigurationBase::getIntValue (const KeyNames key) const
     if (value.has_value())
         return value.value();
     else
-        throw createMissingKeyException(key);
+        throw createMissingKeyException(key, {__FILE__, __LINE__});
 }
 
 std::string ConfigurationBase::getStringValue (const KeyNames key) const
@@ -446,7 +447,7 @@ std::string ConfigurationBase::getStringValue (const KeyNames key) const
     if (value.has_value())
         return value.value();
     else
-        throw createMissingKeyException(key);
+        throw createMissingKeyException(key, {__FILE__, __LINE__});
 }
 
 
@@ -476,7 +477,7 @@ SafeString ConfigurationBase::getSafeStringValue (const KeyNames key) const
     if (value.has_value())
         return std::move(value.value());
     else
-        throw createMissingKeyException(key);
+        throw createMissingKeyException(key, {__FILE__, __LINE__});
 }
 
 
@@ -503,7 +504,7 @@ bool ConfigurationBase::getBoolValue (const KeyNames key) const
     if (value.has_value())
         return value.value();
     else
-        throw createMissingKeyException(key);
+        throw createMissingKeyException(key, {__FILE__, __LINE__});
 }
 
 
@@ -537,7 +538,7 @@ std::vector<std::string> ConfigurationBase::getArrayInternal(KeyNames key) const
     auto arr = getOptionalArrayInternal(key);
     if (arr.empty())
     {
-        throw createMissingKeyException(key);
+        throw createMissingKeyException(key, {__FILE__, __LINE__});
     }
     return arr;
 }
@@ -581,7 +582,7 @@ std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInterna
         }
         return ret;
     }
-    throw createMissingKeyException(key);
+    throw createMissingKeyException(key, {__FILE__, __LINE__});
 }
 
 std::optional<std::string> ConfigurationBase::getStringValueInternal (KeyNames key) const

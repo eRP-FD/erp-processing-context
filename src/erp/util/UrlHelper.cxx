@@ -106,7 +106,9 @@ std::vector<std::string> UrlHelper::extractPathParameters (const std::string& pa
     {
         const size_t parameterEnd = path.find('}', parameterStart);
         if (parameterEnd == std::string::npos)
-            throw std::logic_error("invalid path template, opening '{' has no '}'");
+        {
+            Fail2("invalid path template, opening '{' has no '}'", std::logic_error);
+        }
         else
         {
             parameterNames.emplace_back(path.substr(parameterStart + 1, parameterEnd - parameterStart - 1));
@@ -267,7 +269,7 @@ UrlHelper::UrlParts UrlHelper::parseUrl(const std::string &url)
         return UrlParts(sProtocol.str(), sHost.str(), port, path, sRest.str());
     }
 
-    throw std::runtime_error("Failed to parse: [" + url + "]");
+    Fail2("Failed to parse: [" + url + "]", std::runtime_error);
 }
 
 UrlHelper::UrlParts::UrlParts(std::string protocol, std::string host, int port, std::string path, std::string rest)

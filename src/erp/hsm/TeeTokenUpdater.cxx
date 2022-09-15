@@ -130,12 +130,12 @@ void TeeTokenUpdater::healthCheck() const
 {
     if (mLastUpdate.load() == decltype(mLastUpdate)::value_type())
     {
-        throw std::runtime_error("never updated successfully");
+        Fail2("never updated successfully", std::runtime_error);
     }
     const auto now = std::chrono::system_clock::now();
     if (mLastUpdate.load() + mUpdateInterval * 1.5 < now)
     {
-        throw std::runtime_error("last update is too old");
+        Fail2("last update is too old", std::runtime_error);
     }
 }
 
