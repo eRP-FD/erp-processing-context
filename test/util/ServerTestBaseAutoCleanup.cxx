@@ -57,6 +57,7 @@ void ServerTestBaseAutoCleanup::cleanupDatabase (void)
             transaction.exec("DELETE FROM erp.task where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.exec("DELETE FROM erp.task_169 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.exec("DELETE FROM erp.task_200 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
+            transaction.exec("DELETE FROM erp.task_209 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.exec("DELETE FROM erp.auditevent where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.commit();
         }

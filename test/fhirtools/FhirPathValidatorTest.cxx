@@ -45,7 +45,6 @@ public:
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-ChargeItem-erxChargeItem.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationDispReq.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationInfoReq.xml",
-            "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationReply.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationRepresentative.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Composition-GemErxComposition2.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Consent-erxConsent.xml",
@@ -311,9 +310,14 @@ using Severity = fhirtools::Severity;
 INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTest, ::testing::Values(
     Sample{"Bundle", "test/validation/xml/kbv/bundle/Bundle_valid_fromErp5822.xml", {
         // the following two are caused by missing values sets - ERP-10539
-        {std::make_tuple(Severity::warning, "Unsupported property for =: SCALE_TYP; ValueSet contains no codes after expansion"), "Bundle.entry[0].resource{Composition}.type"},
+        {std::make_tuple(Severity::warning, "ValueSet contains no codes after expansion"), "Bundle.entry[0].resource{Composition}.type"},
         {std::make_tuple(Severity::warning, "Cannot validate ValueSet binding"), "Bundle.entry[0].resource{Composition}.type"},
-      },{
+        {std::make_tuple(Severity::error, R"-(reference is not literal or invalid but must be resolvable: {"type": "Device", "identifier": {"system": "https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer", "value": "Y/400/1910/36/346"}})-"), "Bundle.entry[0].resource{Composition}.author[1]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://terminology.hl7.org/CodeSystem/v2-0203, it is empty or synthesized."), "Bundle.entry[6].resource{Practitioner}.identifier[0].type.coding[0]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://terminology.hl7.org/CodeSystem/v2-0203, it is empty or synthesized."), "Bundle.entry[4].resource{Organization}.identifier[0].type.coding[0]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://fhir.de/CodeSystem/ifa/pzn, it is empty or synthesized."), "Bundle.entry[2].resource{Medication}.code.coding[0]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART, it has not been loaded."), "Bundle.entry[0].resource{Composition}.type.coding[0]"},
+},{
         {"dom-6", "Bundle.entry[0].resource{Composition}"},
         {"dom-6", "Bundle.entry[1].resource{MedicationRequest}"},
         {"dom-6", "Bundle.entry[2].resource{Medication}"},
@@ -323,15 +327,22 @@ INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTest, ::testing::Values(
         {"dom-6", "Bundle.entry[6].resource{Practitioner}"},
         {"dom-6", "Bundle.entry[7].resource{PractitionerRole}"},
     }},
-    Sample{"Communication", "test/fhir/conversion/communication_info_req.xml", {}, {
+    Sample{"Communication", "test/fhir/conversion/communication_info_req.xml", {
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://fhir.de/CodeSystem/ifa/pzn, it is empty or synthesized."), "Communication.contained[0]{Medication}.code.coding[0]"},
+    }, {
         {"dom-6", "Communication.contained[0]{Medication}"},
         {"dom-6", "Communication"},
     }},
     Sample{"Bundle", "test/EndpointHandlerTest/kbv_bundle_unexpected_extension.xml", {
         // the following two are caused by missing values sets - ERP-10539
-        {std::make_tuple(Severity::warning, "Unsupported property for =: SCALE_TYP; ValueSet contains no codes after expansion"), "Bundle.entry[0].resource{Composition}.type"},
+        {std::make_tuple(Severity::warning, "ValueSet contains no codes after expansion"), "Bundle.entry[0].resource{Composition}.type"},
         {std::make_tuple(Severity::warning, "Cannot validate ValueSet binding"), "Bundle.entry[0].resource{Composition}.type"},
         {std::make_tuple(Severity::unslicedWarning, "element doesn't belong to any slice."), "Bundle.entry[0].resource{Composition}.extension[1]"},
+        {std::make_tuple(Severity::error, R"-(reference is not literal or invalid but must be resolvable: {"type": "Device", "identifier": {"system": "https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer", "value": "X/000/1111/22/333"}})-"), "Bundle.entry[0].resource{Composition}.author[1]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://terminology.hl7.org/CodeSystem/v2-0203, it is empty or synthesized."), "Bundle.entry[2].resource{Practitioner}.identifier[0].type.coding[0]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART, it has not been loaded."), "Bundle.entry[0].resource{Composition}.type.coding[0]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://fhir.de/CodeSystem/ifa/pzn, it is empty or synthesized."), "Bundle.entry[4].resource{Medication}.code.coding[0]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://terminology.hl7.org/CodeSystem/v2-0203, it is empty or synthesized."), "Bundle.entry[3].resource{Organization}.identifier[0].type.coding[0]"},
       },{
         {"dom-6", "Bundle.entry[0].resource{Composition}"},
         {"dom-6", "Bundle.entry[1].resource{Patient}"},
@@ -340,6 +351,11 @@ INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTest, ::testing::Values(
         {"dom-6", "Bundle.entry[4].resource{Medication}"},
         {"dom-6", "Bundle.entry[5].resource{Coverage}"},
         {"dom-6", "Bundle.entry[6].resource{MedicationRequest}"},
+    }},
+    Sample{"OperationOutcome", "test/fhir-path/samples/invalid_empty_value.xml", {
+        {std::make_tuple(Severity::error, "Attribute value must not be empty"), "OperationOutcome.issue[0].diagnostics"}
+    }, {
+        {"dom-6", "OperationOutcome"}
     }}
 ));
 // clang-format on
@@ -354,6 +370,12 @@ public:
         auto result = SampleValidationTest::fileList();
         result.merge({"test/fhir-path/profiles/alternative_profiles.xml"});
         return result;
+    }
+    ValidatorOptions validatorOptions() override
+    {
+        auto opt = SampleValidationTest::validatorOptions();
+        opt.reportUnknownExtensions = true;
+        return opt;
     }
 };
 
@@ -374,8 +396,9 @@ INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTestSamples,  ::testing::Valu
         Sample{"AlternativeProfiles", "test/fhir-path/samples/invalid_AlternativeProfiles2.json", {}, {
             {"Alternative1", "AlternativeProfiles.resource[0]{Resource}"},
             {"Alternative2", "AlternativeProfiles.resource[0]{Resource}"},
-        }}
- ));
+        }},
+        Sample{"Bundle", "test/fhir-path/samples/ERP-11476-contentReferenceTypedField.xml"}
+));
 // clang-format on
 
 TEST_F(FhirPathValidatorTest, OperationalValueSets)

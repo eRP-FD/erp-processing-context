@@ -24,7 +24,7 @@ public:
     void cleanup() override;
 protected:
     void insertTasks(
-        const std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>>& patientsAndPharmacies,
+        const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>& patientsAndPharmacies,
         std::set<std::string>& patients,
         std::set<std::string>& pharmacies,
         std::map<std::string, model::Task>& tasksByPrescriptionIds,
@@ -47,12 +47,12 @@ private:
     std::vector<model::MedicationDispense> closeTask(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
-        const std::optional<fhirtools::Timestamp>& medicationWhenPrepared = std::nullopt);
+        const std::optional<model::Timestamp>& medicationWhenPrepared = std::nullopt);
     model::MedicationDispense createMedicationDispense(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
-        const fhirtools::Timestamp& whenHandedOver,
-        const std::optional<fhirtools::Timestamp>& whenPrepared = std::nullopt);
+        const model::Timestamp& whenHandedOver,
+        const std::optional<model::Timestamp>& whenPrepared = std::nullopt);
     model::Task createTask(model::PrescriptionType prescriptionType = GetParam().type);
     void activateTask(model::Task& task);
     void acceptTask(model::Task& task);

@@ -23,7 +23,7 @@
   <status value="active" />
   <intent value="order" />
   <medicationReference>
-    <reference value="Medication/5fe6e06c-8725-46d5-aecd-e65e041ca3de" />
+    <reference value="Medication/cabe8dc4-e1b7-4d2a-bc2d-9443167f88d8" />
   </medicationReference>
   <subject>
     <reference value="Patient/9774f67f-a238-4daf-b4e6-679deeef3811" />

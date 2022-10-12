@@ -7,11 +7,11 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_METADATA_HXX
 
 #include "erp/model/Resource.hxx"
-#include "fhirtools/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
-
 #include <optional>
+
+#include "erp/model/Timestamp.hxx"
 
 namespace model
 {
@@ -25,13 +25,13 @@ public:
 
     explicit MetaData();
 
-    [[nodiscard]] fhirtools::Timestamp date() const;
+    [[nodiscard]] model::Timestamp date() const;
     [[nodiscard]] std::string_view version() const;
-    [[nodiscard]] fhirtools::Timestamp releaseDate() const;
+    [[nodiscard]] model::Timestamp releaseDate() const;
 
-    void setDate(const fhirtools::Timestamp& date);
+    void setDate(const model::Timestamp& date);
     void setVersion(const std::string_view& version);
-    void setReleaseDate(const fhirtools::Timestamp& releaseDate);
+    void setReleaseDate(const model::Timestamp& releaseDate);
 
 private:
     friend Resource<MetaData>;

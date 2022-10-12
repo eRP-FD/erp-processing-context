@@ -23,6 +23,8 @@ bool isEventCausedByPatient(AuditEventId eventId)
            eventId == AuditEventId::GET_MedicationDispense_id ||
            eventId == AuditEventId::DELETE_ChargeItem_id_insurant ||
            eventId == AuditEventId::PUT_ChargeItem_id_insurant ||
+           eventId == AuditEventId::PATCH_ChargeItem_id ||
+           eventId == AuditEventId::GET_ChargeItem_id_insurant ||
            eventId == AuditEventId::POST_Consent ||
            eventId == AuditEventId::DELETE_Consent;
 }
@@ -44,6 +46,9 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
     switch(eventId)
     {
         case model::AuditEventId::GET_Task:
+        case model::AuditEventId::GET_Tasks_by_pharmacy_with_pz:
+        case model::AuditEventId::GET_Tasks_by_pharmacy_without_pz:
+        case model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed:
             return "Task";
         case model::AuditEventId::GET_Task_id_insurant:
         case model::AuditEventId::GET_Task_id_representative:
@@ -68,11 +73,13 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::GET_MedicationDispense_id:
             return "MedicationDispense/" + resourceId;
         case model::AuditEventId::POST_ChargeItem:
+        case model::AuditEventId::GET_ChargeItem_id_insurant:
+        case model::AuditEventId::GET_ChargeItem_id_pharmacy:
+        case model::AuditEventId::PATCH_ChargeItem_id:
         case model::AuditEventId::DELETE_ChargeItem_id_insurant:
         case model::AuditEventId::DELETE_ChargeItem_id_pharmacy:
         case model::AuditEventId::PUT_ChargeItem_id_insurant:
         case model::AuditEventId::PUT_ChargeItem_id_pharmacy:
-        case model::AuditEventId::PATCH_ChargeItem_id:
         case model::AuditEventId::ChargeItem_delete_expired_id:
             return "ChargeItem/" + resourceId;
         case model::AuditEventId::POST_Consent:
@@ -87,18 +94,30 @@ namespace
 
 const rapidjson::Pointer agentNamePointer("/an");
 const rapidjson::Pointer agentWhoPointer("/aw");
+const rapidjson::Pointer pnwPzNumberPointer("/pz");
 
 }
 
 
 AuditMetaData::AuditMetaData(const std::optional<std::string_view>& agentName,
-                             const std::optional<std::string_view>& agentWho)
-    : Resource<AuditMetaData>(Resource::NoProfile)
+                             const std::optional<std::string_view>& agentWho,
+                             const std::optional<std::string_view>& pnwPzNumber)
+: Resource<AuditMetaData>(Resource::NoProfile)
 {
-    if(agentName.has_value())
+    if (agentName.has_value())
+    {
         setValue(agentNamePointer, agentName.value());
-    if(agentWho.has_value())
+    }
+
+    if (agentWho.has_value())
+    {
         setValue(agentWhoPointer, agentWho.value());
+    }
+
+    if (pnwPzNumber.has_value())
+    {
+        setValue(pnwPzNumberPointer, pnwPzNumber.value());
+    }
 }
 
 std::optional<std::string_view> AuditMetaData::agentName() const
@@ -111,9 +130,14 @@ std::optional<std::string_view> AuditMetaData::agentWho() const
     return getOptionalStringValue(agentWhoPointer);
 }
 
+std::optional<std::string_view> AuditMetaData::pnwPzNumber() const
+{
+    return getOptionalStringValue(pnwPzNumberPointer);
+}
+
 bool AuditMetaData::isEmpty() const
 {
-    return !agentName().has_value() && !agentWho().has_value();
+    return !agentName().has_value() && !agentWho().has_value() && !pnwPzNumber().has_value();
 }
 
 AuditMetaData::AuditMetaData(NumberAsStringParserDocument&& jsonTree)
@@ -141,7 +165,7 @@ AuditData::AuditData(
     , mPrescriptionId(std::move(prescriptionId))
     , mConsentId(std::move(consentId))
     , mId()
-    , mRecorded(fhirtools::Timestamp::now())
+    , mRecorded(model::Timestamp::now())
 {
 }
 
@@ -190,7 +214,7 @@ const std::string& AuditData::id() const
     return mId;
 }
 
-const fhirtools::Timestamp& AuditData::recorded() const
+const model::Timestamp& AuditData::recorded() const
 {
     return mRecorded;
 }
@@ -200,7 +224,7 @@ void AuditData::setId(const std::string& id)
     mId = id;
 }
 
-void AuditData::setRecorded(const fhirtools::Timestamp& recorded)
+void AuditData::setRecorded(const model::Timestamp& recorded)
 {
     mRecorded = recorded;
 }

@@ -82,17 +82,20 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
     ErpExpect(prescriptionId.isPkv(), HttpStatus::BadRequest, "Referenced task is not of type PKV");
     A_22731.finish();
 
-    auto existingChargeInformation = databaseHandle->retrieveChargeInformationForUpdate(prescriptionId);
+    auto [existingChargeInformation, blobId, salt] = databaseHandle->retrieveChargeInformationForUpdate(prescriptionId);
 
     A_22152.start("Validate input ChargeItem and check that common fields are unchanged");
-    const auto newChargeItem = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir, false);
+    const auto newChargeItem = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir, std::nullopt);
     checkChargeItemConsistencyCommon(existingChargeInformation.chargeItem, newChargeItem);
     A_22152.finish();
 
     A_22215.start("Check consent");
     ErpExpect(newChargeItem.subjectKvnr(), ::HttpStatus::BadRequest, "KVNR is missing");
     const auto consent = databaseHandle->retrieveConsent(newChargeItem.subjectKvnr().value());
-    ErpExpect(consent.has_value(), HttpStatus::BadRequest, "No consent exists for this patient");
+    ErpExpect(
+        consent.has_value(),
+        HttpStatus::Forbidden,
+        "Die versicherte Person hat keine Einwilligung im E-Rezept Fachdienst hinterlegt. Abrechnungsinformation kann nicht gespeichert werden.");
     A_22215.finish();
 
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
@@ -107,13 +110,13 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
 
     if(professionOIDClaim == profession_oid::oid_versicherter)
     {
-        handleRequestInsurant(session, existingChargeInformation, newChargeItem, idClaim.value());
+        handleRequestInsurant(session, existingChargeInformation, blobId, salt, newChargeItem, idClaim.value());
         auditEventId = model::AuditEventId::PUT_ChargeItem_id_insurant;
     }
     else if(professionOIDClaim == profession_oid::oid_oeffentliche_apotheke ||
             professionOIDClaim == profession_oid::oid_krankenhausapotheke)
     {
-        handleRequestPharmacy(session, existingChargeInformation, newChargeItem, idClaim.value());
+        handleRequestPharmacy(session, existingChargeInformation, blobId, salt, newChargeItem, idClaim.value());
         auditEventId = model::AuditEventId::PUT_ChargeItem_id_pharmacy;
     }
     else
@@ -134,7 +137,10 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
 
 void ChargeItemPutHandler::handleRequestInsurant(::PcSessionContext& session,
                                                  ::model::ChargeInformation& existingChargeInformation,
-                                                 const ::model::ChargeItem& newChargeItem, const ::std::string& idClaim)
+                                                 const BlobId& blobId,
+                                                 const db_model::Blob& salt,
+                                                 const ::model::ChargeItem& newChargeItem,
+                                                 const ::std::string& idClaim)
 {
     A_22145.start("Insurant: validation of Kvnr");
     ErpExpect(newChargeItem.subjectKvnr() == idClaim, HttpStatus::Forbidden,
@@ -154,33 +160,30 @@ void ChargeItemPutHandler::handleRequestInsurant(::PcSessionContext& session,
         existingChargeInformation.chargeItem.deleteMarkingFlag();
     }
 
-    session.database()->updateChargeInformation(existingChargeInformation);
+    session.database()->updateChargeInformation(existingChargeInformation, blobId, salt);
     A_22152.finish();
 }
 
 void ChargeItemPutHandler::handleRequestPharmacy(::PcSessionContext& session,
                                                  ::model::ChargeInformation& existingChargeInformation,
-                                                 const ::model::ChargeItem& newChargeItem, const ::std::string& idClaim)
+                                                 const BlobId& blobId,
+                                                 const db_model::Blob& salt,
+                                                 const ::model::ChargeItem& newChargeItem,
+                                                 const ::std::string& idClaim)
 {
     A_22146.start("Pharmacy: validation of TelematikId");
     ErpExpect(newChargeItem.entererTelematikId() == idClaim, HttpStatus::Forbidden,
               "TelematikId in ChargeItem does not match the one from the access token");
     A_22146.finish();
-    A_22147.start("Pharmacy: warn if ChargedItem is already marked by insurant");
-    const auto existingMarkingFlag = existingChargeInformation.chargeItem.markingFlag();
-    const auto existingMarkings = existingMarkingFlag.has_value() ?
-        existingMarkingFlag->getAllMarkings() : model::ChargeItemMarkingFlag::MarkingContainer() ;
-    if(model::ChargeItemMarkingFlag::isMarked(existingMarkings))
-    {
-        session.response.setHeader(Header::Warning, "Accounted");
-    }
-    A_22147.finish();
 
     A_22616.start("verify pharmacy access code");
     ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, existingChargeInformation.chargeItem, true);
     A_22616.finish();
 
     A_22152.start("Pharmacy: check that marking is unchanged");
+    const auto existingMarkingFlag = existingChargeInformation.chargeItem.markingFlag();
+    const auto existingMarkings = existingMarkingFlag.has_value() ? existingMarkingFlag->getAllMarkings()
+                                                                  : model::ChargeItemMarkingFlag::MarkingContainer();
     const auto newMarkingFlag = newChargeItem.markingFlag();
     const auto newMarkings = newMarkingFlag.has_value() ?
         newMarkingFlag->getAllMarkings() : model::ChargeItemMarkingFlag::MarkingContainer() ;
@@ -213,7 +216,7 @@ void ChargeItemPutHandler::handleRequestPharmacy(::PcSessionContext& session,
     ::std::swap(existingChargeInformation.dispenseItem, containedBinary.value());
     ::std::swap(existingChargeInformation.unsignedDispenseItem, dispenseItemBundle);
 
-    session.database()->updateChargeInformation(existingChargeInformation);
+    session.database()->updateChargeInformation(existingChargeInformation, blobId, salt);
     A_22152.finish();
     A_22148.finish();
 }

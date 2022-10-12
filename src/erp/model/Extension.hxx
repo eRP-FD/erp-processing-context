@@ -10,13 +10,9 @@
 
 #include <optional>
 
-namespace fhirtools {
-class Timestamp;
-}
-
 namespace model
 {
-using fhirtools::Timestamp;
+class Timestamp;
 
 class Extension : public model::Resource<Extension>
 {
@@ -34,15 +30,15 @@ public:
 
     [[nodiscard]] std::optional<std::string_view> valueString() const;
 
-    [[nodiscard]] std::optional<fhirtools::Timestamp> valueDate() const;
+    [[nodiscard]] std::optional<model::Timestamp> valueDate() const;
 
     [[nodiscard]] std::optional<double> valueRatioNumerator() const;
     [[nodiscard]] std::optional<double> valueRatioDenominator() const;
 
-    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodStart() const;
-    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodEnd() const;
-    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodStartGermanDate() const;
-    [[nodiscard]] std::optional<fhirtools::Timestamp> valuePeriodEndGermanDate() const;
+    [[nodiscard]] std::optional<model::Timestamp> valuePeriodStart() const;
+    [[nodiscard]] std::optional<model::Timestamp> valuePeriodEnd() const;
+    [[nodiscard]] std::optional<model::Timestamp> valuePeriodStartGermanDate() const;
+    [[nodiscard]] std::optional<model::Timestamp> valuePeriodEndGermanDate() const;
 
 
     [[nodiscard]] std::optional<std::string_view> valueIdentifierSystem() const;

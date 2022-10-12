@@ -32,7 +32,7 @@ TEST_F(ErpWorkflowTest, WF169PatientAbortOnlyCompletedTasks)//NOLINT(readability
                                       model::OperationOutcome::Issue::Type::forbidden));
 
     std::string secret;
-    std::optional<fhirtools::Timestamp> lastModifiedDate;
+    std::optional<model::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(
         checkTaskAccept(secret, lastModifiedDate, prescriptionId.value(), kvnr, accessCode, qesBundle));
 

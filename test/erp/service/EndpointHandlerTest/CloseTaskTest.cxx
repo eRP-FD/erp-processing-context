@@ -4,10 +4,23 @@
  */
 
 #include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/crypto/Sha256.hxx"
 #include "erp/erp-serverinfo.hxx"
-#include "erp/service/task/CloseTaskHandler.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
 #include "erp/ErpRequirements.hxx"
+#include "erp/service/task/CloseTaskHandler.hxx"
+#include "erp/util/Base64.hxx"
+#include "erp/util/ByteHelper.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+
+namespace {
+static constexpr fhirtools::ValidatorOptions receiptValidationOptions
+{
+    .levels{
+        .unreferencedBundledResource = fhirtools::Severity::warning,
+        .unreferencedContainedResource = fhirtools::Severity::warning
+    }
+};
+}
 
 
 class CloseTaskTestP : public EndpointHandlerTest, public testing::WithParamInterface<std::string>
@@ -47,11 +60,13 @@ TEST_P(CloseTaskTestP, CloseTask)//NOLINT(readability-function-cognitive-complex
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     ASSERT_NO_THROW((void) model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
-                                                  *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle));
+                                                  *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle,
+                                                  receiptValidationOptions));
 
     model::ErxReceipt receipt =
         model::ErxReceipt::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
-                                   *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle);
+                                   *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle,
+                                   receiptValidationOptions);
 
     jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();// need to be newly created as moved to access token
 
@@ -74,9 +89,10 @@ TEST_P(CloseTaskTestP, CloseTask)//NOLINT(readability-function-cognitive-complex
     const auto& device = deviceResources.front();
     EXPECT_EQ(device.serialNumber(), ErpServerInfo::ReleaseVersion);
     EXPECT_EQ(device.version(), ErpServerInfo::ReleaseVersion);
-
+    const auto& bundle = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/kbv_bundle_task5.xml");
+    const auto digest = Base64::encode(ByteHelper::fromHex(Sha256::fromBin(bundle)));
     const auto prescriptionDigest = receipt.prescriptionDigest();
-    EXPECT_EQ(prescriptionDigest.data(), "uqQu3nvsTNw7Gz97jkAuCzSebWyvZ4FZ5zE7TQTdxg0=");
+    EXPECT_EQ(prescriptionDigest.data(), digest);
 
     const auto signature = receipt.getSignature();
     ASSERT_TRUE(signature.has_value());

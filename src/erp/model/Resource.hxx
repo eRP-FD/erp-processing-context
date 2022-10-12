@@ -9,6 +9,7 @@
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/ResourceVersion.hxx"
 #include "erp/validation/SchemaType.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <optional>
 #include <variant>
@@ -20,7 +21,6 @@ class InCodeValidator;
 namespace fhirtools
 {
 class ValidationResultList;
-class ValidatorOptions;
 }
 
 
@@ -78,6 +78,10 @@ public:
     [[nodiscard]] std::optional<std::string_view> identifierTypeCodingSystem() const;
     [[nodiscard]] std::optional<std::string_view> identifierSystem() const;
     [[nodiscard]] std::optional<std::string_view> identifierValue() const;
+
+    [[nodiscard]] SchemaType getProfile() const;
+
+    static fhirtools::ValidatorOptions defaultValidatorOptions();
 
 protected:
     explicit ResourceBase(Profile profile);
@@ -230,30 +234,35 @@ template<class TDerivedModel, typename SchemaVersionType = ResourceVersion::DeGe
 class Resource : public ResourceBase
 {
 public:
-    static TDerivedModel fromXmlNoValidation(std::string_view xml);
-    static TDerivedModel fromXml(std::string_view xml, const XmlValidator& validator,
-                                 const InCodeValidator& inCodeValidator, SchemaType schemaType,
-                                 bool allowGenericValidate = true,
-                                 std::optional<SchemaVersionType> enforcedVersion = {});
-    static TDerivedModel fromJsonNoValidation(std::string_view json);
-    static TDerivedModel fromJson(std::string_view json, const JsonValidator& jsonValidator,
-                                  const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator,
-                                  SchemaType schemaType, bool allowGenericValidate = true);
-    static TDerivedModel fromJson(const rapidjson::Value& json);
-    static TDerivedModel fromJson(model::NumberAsStringParserDocument&& json);
+    [[nodiscard]] static TDerivedModel fromXmlNoValidation(std::string_view xml);
+    [[nodiscard]] static TDerivedModel
+    fromXml(std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator,
+            SchemaType schemaType, const std::optional<fhirtools::ValidatorOptions>& = defaultValidatorOptions(),
+            std::optional<SchemaVersionType> enforcedVersion = {});
+    [[nodiscard]] static TDerivedModel fromJsonNoValidation(std::string_view json);
+    [[nodiscard]] static TDerivedModel
+    fromJson(std::string_view json, const JsonValidator& jsonValidator, const XmlValidator& xmlValidator,
+             const InCodeValidator& inCodeValidator, SchemaType schemaType,
+             const std::optional<fhirtools::ValidatorOptions>& = defaultValidatorOptions());
+    [[nodiscard]] static TDerivedModel fromJson(const rapidjson::Value& json);
+    [[nodiscard]] static TDerivedModel fromJson(model::NumberAsStringParserDocument&& json);
 
     SchemaVersionType getSchemaVersion() const;
 
-    fhirtools::ValidationResultList genericValidate(const fhirtools::ValidatorOptions&) const;
+    [[nodiscard]] fhirtools::ValidationResultList
+    genericValidate(const fhirtools::ValidatorOptions& = defaultValidatorOptions()) const;
 
 protected:
     using ResourceBase::ResourceBase;
 
+    virtual void additionalValidation() const;
+
 private:
     void doValidation(std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator,
-                      SchemaType schemaType, bool allowGenericValidate = true,
+                      SchemaType schemaType, const std::optional<fhirtools::ValidatorOptions>&,
                       std::optional<SchemaVersionType> enforcedVersion = {}) const;
-    void doGenericValidation(const std::optional<ErpException>& = std::nullopt) const;
+    void doGenericValidation(const fhirtools::ValidatorOptions&,
+                             const std::optional<ErpException>& = std::nullopt) const;
 
     friend class ResourceBase;
 };
@@ -299,7 +308,6 @@ extern template class Resource<class KbvMedicationGeneric, ResourceVersion::KbvI
 extern template class Resource<class KbvMedicationCompounding, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvMedicationFreeText, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvMedicationIngredient, ResourceVersion::KbvItaErp>;
-extern template class Resource<class KbvMedicationModelHelper, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvMedicationPzn, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvMedicationRequest, ResourceVersion::KbvItaErp>;
 extern template class Resource<class KbvOrganization, ResourceVersion::KbvItaErp>;
@@ -319,3 +327,4 @@ extern template class Resource<class UnspecifiedResource>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_RESOURCE_HXX
+

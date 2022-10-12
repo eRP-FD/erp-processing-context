@@ -12,17 +12,6 @@
       <data value="##DISPENSE_BUNDLE##"/>
     </Binary>
   </contained>
-  <extension url="https://gematik.de/fhir/StructureDefinition/MarkingFlag">
-    <extension url="insuranceProvider">
-      <valueBoolean value="false" />
-    </extension>
-    <extension url="subsidy">
-      <valueBoolean value="false" />
-    </extension>
-    <extension url="taxOffice">
-      <valueBoolean value="false" />
-    </extension>
-  </extension>
   <identifier>
     <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
     <value value="##PRESCRIPTION_ID##" />

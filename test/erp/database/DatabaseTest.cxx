@@ -31,7 +31,7 @@ public:
 
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void createChargeItem(std::string_view insurant, std::string_view pharmacy,
-                          const fhirtools::Timestamp& enteredDate = fhirtools::Timestamp::now())
+                          const model::Timestamp& enteredDate = model::Timestamp::now())
     {
         ResourceManager& resourceManager = ResourceManager::instance();
 
@@ -41,8 +41,8 @@ public:
         std::optional<model::PrescriptionId> id;
         ASSERT_NO_THROW(id.emplace(db.storeTask(task)));
         task.setPrescriptionId(*id);
-        task.setExpiryDate(fhirtools::Timestamp::now());
-        task.setAcceptDate(fhirtools::Timestamp::now());
+        task.setExpiryDate(model::Timestamp::now());
+        task.setAcceptDate(model::Timestamp::now());
 
         std::string chargeItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_input.xml");
         chargeItemXML = String::replaceAll(chargeItemXML, "72bd741c-7ad8-41d8-97c3-9aabbdd0f5b4",
@@ -173,7 +173,7 @@ TEST_F(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function
         int64_t stamp = 0;
         for (const auto& pharmacy: pharmacyIds)
         {
-            createChargeItem(insurant, pharmacy, fhirtools::Timestamp{stamp});
+            createChargeItem(insurant, pharmacy, model::Timestamp{stamp});
             ++stamp;
         }
     }
@@ -183,12 +183,12 @@ TEST_F(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function
         auto&& db = database();
         std::vector<model::ChargeItem> chargeItems;
         ASSERT_NO_THROW(chargeItems = db.retrieveAllChargeItemsForInsurant(insurant0, urlArguments(
-            {{"entered-date"s, "eq"s + fhirtools::Timestamp{stamp}.toXsDateTimeWithoutFractionalSeconds()}})));
+            {{"entered-date"s, "eq"s + model::Timestamp{stamp}.toXsDateTimeWithoutFractionalSeconds()}})));
         EXPECT_EQ(chargeItems.size(), 1);
         for (const auto& item: chargeItems)
         {
             EXPECT_EQ(item.subjectKvnr(), insurant0);
-            EXPECT_EQ(item.enteredDate(), fhirtools::Timestamp{stamp});
+            EXPECT_EQ(item.enteredDate(), model::Timestamp{stamp});
         }
         db.commitTransaction();
     }
@@ -198,12 +198,12 @@ TEST_F(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function
         auto&& db = database();
         std::vector<model::ChargeItem> chargeItems;
         ASSERT_NO_THROW(chargeItems = db.retrieveAllChargeItemsForInsurant(insurant0, urlArguments(
-            {{"entered-date"s, "lt"s + fhirtools::Timestamp{stamp}.toXsDateTimeWithoutFractionalSeconds()}})));
+            {{"entered-date"s, "lt"s + model::Timestamp{stamp}.toXsDateTimeWithoutFractionalSeconds()}})));
         EXPECT_EQ(chargeItems.size(), stamp);
         for (const auto& item: chargeItems)
         {
             EXPECT_EQ(item.subjectKvnr(), insurant0);
-            EXPECT_LT(item.enteredDate(), fhirtools::Timestamp{stamp});
+            EXPECT_LT(item.enteredDate(), model::Timestamp{stamp});
         }
         db.commitTransaction();
     }

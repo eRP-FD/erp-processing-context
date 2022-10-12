@@ -46,27 +46,31 @@ RedisClient::RedisClient()
 
 bool RedisClient::exists(const std::string_view& key)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(String::concatenateItems("Redis:exists(", key, ")"));
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:exists(", key, ")"));
     return mConnection->exists(key);
 }
 
 std::optional<std::string> RedisClient::fieldValueForKey(const std::string_view& key,
                                                          const std::string_view& field)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(String::concatenateItems("Redis:fieldValueForKey(", key, ",", field, ")"));
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:fieldValueForKey(", key, ",", field, ")"));
     return mConnection->hget(key, field);
 }
 
 bool RedisClient::hasKeyWithField(const std::string_view& key, const std::string_view& field)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(String::concatenateItems("Redis:hasKeyWithField(", key, ",", field, ")"));
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:hasKeyWithField(", key, ",", field, ")"));
     return mConnection->hexists(key, field);
 }
 
 void RedisClient::setKeyFieldValue(const std::string_view& key, const std::string_view& field,
                                    const std::string_view& value)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(String::concatenateItems("Redis:setKeyFieldValue(", key, ",", field, ")"));
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:setKeyFieldValue(", key, ",", field, ")"));
     using namespace sw::redis;
     mConnection->hset(key, field, value);
 }
@@ -75,16 +79,21 @@ void RedisClient::setKeyExpireAt(
     const std::string_view& key,
     const std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>& timestamp)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(String::concatenateItems("Redis:setKeyExpireAt(", key, ")"));
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:setKeyExpireAt(", key, ")"));
     mConnection->pexpireat(key, timestamp);
 }
 
 int64_t RedisClient::incr(const std::string_view& key)
 {
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:incr(", key, ")"));
     return mConnection->incr(key);
 }
 
 void RedisClient::publish(const std::string_view& channel, const std::string_view& message)
 {
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:publish(", channel, ")"));
     mConnection->publish(channel, message);
 }

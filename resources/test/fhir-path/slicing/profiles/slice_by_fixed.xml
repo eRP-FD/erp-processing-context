@@ -16,7 +16,7 @@
         <kind value="complex-type"/>
         <type value="Sliceable"/>
         <derivation value="constraint"/>
-        <baseDefinitinon value="http://erp.test/Sliceable"/>
+        <baseDefinition value="http://erp.test/Sliceable"/>
         <snapshot>
           <element id="Sliceable">
             <path value="Sliceable"/>

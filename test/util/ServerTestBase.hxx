@@ -101,7 +101,7 @@ public:
     virtual std::vector<model::MedicationDispense> closeTask(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
-        const std::optional<fhirtools::Timestamp>& medicationWhenPrepared = std::nullopt,
+        const std::optional<model::Timestamp>& medicationWhenPrepared = std::nullopt,
         size_t numMedications = 1);
     virtual void abortTask(model::Task& task);
 
@@ -118,8 +118,8 @@ public:
         CommunicationAttandee recipient = CommunicationAttandee{ActorRole::Insurant, ""};
         std::string accessCode;
         std::optional<std::string> contentString = "";
-        std::optional<fhirtools::Timestamp> sent = fhirtools::Timestamp::now();
-        std::optional<fhirtools::Timestamp> received = std::nullopt;
+        std::optional<model::Timestamp> sent = model::Timestamp::now();
+        std::optional<model::Timestamp> received = std::nullopt;
     };
 
     virtual std::vector<Uuid> addCommunicationsToDatabase(const std::vector<CommunicationDescriptor>& descriptors);
@@ -131,8 +131,8 @@ protected:
     model::MedicationDispense createMedicationDispense(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
-        const fhirtools::Timestamp& whenHandedOver = fhirtools::Timestamp::now(),
-        const std::optional<fhirtools::Timestamp>& whenPrepared = std::nullopt) const;
+        const model::Timestamp& whenHandedOver = model::Timestamp::now(),
+        const std::optional<model::Timestamp>& whenPrepared = std::nullopt) const;
 
     // Jwt of InsurantF ("X234567890"):
     std::unique_ptr<JWT> mJwt;

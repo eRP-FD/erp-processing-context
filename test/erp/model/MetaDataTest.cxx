@@ -21,18 +21,10 @@ void checkProfileVersion(::std::string_view profile, ::std::string_view jsonValu
     ASSERT_GE(profileParts.size(), 1);
     EXPECT_EQ(profileParts[0], ::std::string{profile});
 
-    if (::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>() ==
-        ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1)
-    {
-        ASSERT_EQ(profileParts.size(), 1);
-    }
-    else
-    {
-        ASSERT_EQ(profileParts.size(), 2);
-        EXPECT_EQ(profileParts[1],
-                  ::model::ResourceVersion::v_str(
-                      ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()));
-    }
+    ASSERT_EQ(profileParts.size(), 2);
+    EXPECT_EQ(profileParts[1],
+              ::model::ResourceVersion::v_str(
+                  ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()));
 }
 
 TEST(MetaDataTest, Construct)//NOLINT(readability-function-cognitive-complexity)
@@ -40,14 +32,14 @@ TEST(MetaDataTest, Construct)//NOLINT(readability-function-cognitive-complexity)
     model::MetaData metaData;
 
     EXPECT_EQ(metaData.version(), ErpServerInfo::ReleaseVersion);
-    EXPECT_EQ(metaData.date(), fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
-    EXPECT_EQ(metaData.releaseDate(), fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
+    EXPECT_EQ(metaData.date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
+    EXPECT_EQ(metaData.releaseDate(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(metaData.jsonDocument()), SchemaType::fhir));
 
     const auto* version = "1.1.012a";
-    const fhirtools::Timestamp releaseDate = fhirtools::Timestamp::now();
+    const model::Timestamp releaseDate = model::Timestamp::now();
     EXPECT_NO_THROW(metaData.setVersion(version));
     EXPECT_NO_THROW(metaData.setDate(releaseDate));
     EXPECT_NO_THROW(metaData.setReleaseDate(releaseDate));
@@ -58,7 +50,7 @@ TEST(MetaDataTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 
 TEST(MetaDataTest, ProfileVersions)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto now = ::fhirtools::Timestamp::now().toXsDateTime();
+    const auto now = ::model::Timestamp::now().toXsDateTime();
     EnvironmentVariableGuard enableProfile{"ERP_FHIR_PROFILE_VALID_FROM", now};
     EnvironmentVariableGuard renderProfile{"ERP_FHIR_PROFILE_RENDER_FROM", now};
 

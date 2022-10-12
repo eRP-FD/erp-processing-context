@@ -27,9 +27,6 @@ protected:
 class KbvBundleValidator_V1_0_1 : public KbvBundleValidator
 {
 protected:
-    void doValidate(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
-                    const InCodeValidator& inCodeValidator) const override;
-
     void erp_compositionPflicht(const model::KbvBundle& kbvBundle) const;
     void erp_angabePruefnummer(const model::KbvBundle& kbvBundle) const;
     void erp_angabeZuzahlung(const model::KbvBundle& kbvBundle) const;

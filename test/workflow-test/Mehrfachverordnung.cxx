@@ -321,7 +321,7 @@ TEST_F(A_19445Test, ExpiryAcceptDate365)
     mvoPrescription = String::replaceAll(mvoPrescription, "####END_DATE####", "");
     auto signingTime = model::Timestamp::fromXsDate("2020-02-03");
     auto expectedDate =
-        date::make_zoned(fhirtools::Timestamp::GermanTimezone, floor<date::days>(date::local_days{2021_y / 02 / 02}))
+        date::make_zoned(model::Timestamp::GermanTimezone, floor<date::days>(date::local_days{2021_y / 02 / 02}))
             .get_sys_time();
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<model::Task> activatedTask;

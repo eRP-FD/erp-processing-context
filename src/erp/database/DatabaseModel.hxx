@@ -9,12 +9,12 @@
 #include "erp/database/DatabaseCodec.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/HsmClient.hxx"
+#include "erp/model/AuditData.hxx"
 #include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
-#include "fhirtools/model/Timestamp.hxx"
-#include "erp/model/AuditData.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <string>
 #include <vector>
@@ -88,18 +88,18 @@ public:
                   BlobId initKeyBlobId,
                   Blob initSalt,
                   model::Task::Status initStatus,
-                  const fhirtools::Timestamp& initAuthoredOn,
-                  const fhirtools::Timestamp& initLastModified);
+                  const model::Timestamp& initAuthoredOn,
+                  const model::Timestamp& initLastModified);
 
     model::PrescriptionId prescriptionId;
     BlobId blobId;
     Blob salt;
     model::Task::Status status;
-    fhirtools::Timestamp authoredOn;
-    fhirtools::Timestamp lastModified;
+    model::Timestamp authoredOn;
+    model::Timestamp lastModified;
     std::optional<EncryptedBlob> kvnr;
-    std::optional<fhirtools::Timestamp> expiryDate;
-    std::optional<fhirtools::Timestamp> acceptDate;
+    std::optional<model::Timestamp> expiryDate;
+    std::optional<model::Timestamp> acceptDate;
     std::optional<EncryptedBlob> accessCode;
     std::optional<EncryptedBlob> secret;
     std::optional<EncryptedBlob> receipt;
@@ -124,7 +124,7 @@ class Communication
 public:
     Uuid id;
     EncryptedBlob communication;
-    std::optional<fhirtools::Timestamp> received;
+    std::optional<model::Timestamp> received;
     BlobId blobId{};
     Blob salt;
 };
@@ -136,7 +136,6 @@ public:
               model::AuditEvent::Action action, HashedKvnr insurantKvnr, int16_t deviceId,
               std::optional<model::PrescriptionId> prescriptionId, std::optional<BlobId> blobId);
 
-
     model::AuditEvent::AgentType agentType;
     model::AuditEventId eventId;
     std::optional<EncryptedBlob> metaData;
@@ -147,7 +146,7 @@ public:
     std::optional<BlobId> blobId;
 
     std::string id;            // filled after storing in or if loaded from DB;
-    fhirtools::Timestamp recorded; // filled after storing in or if loaded from DB;
+    model::Timestamp recorded; // filled after storing in or if loaded from DB;
 };
 
 struct ChargeItem {

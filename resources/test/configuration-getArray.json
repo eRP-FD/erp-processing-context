@@ -1,8 +1,13 @@
 {
   "common" : {
     "erp" : {
-      "fhir": {
-        "structure-files": [ "value1", "value2" ]
+      "fhir-profile": {
+        "fhir": {
+          "structure-files": [
+            "value1",
+            "value2"
+          ]
+        }
       }
     }
   }

@@ -3,18 +3,17 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/tsl/X509Certificate.hxx"
-
 #include "erp/crypto/Certificate.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 #include "erp/tsl/TslService.hxx"
+#include "erp/tsl/X509Certificate.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
 
 #include <gtest/gtest.h>
-#include <string>
 #include <test_config.h>
+#include <string>
 #include <vector>
 
 
@@ -196,14 +195,14 @@ TEST_F(X509CertificateTests, CertificateValidity)//NOLINT(readability-function-c
 {
     // The certificate is valid from 2015-02-19 through 2023-02-17. Test this ...
 
-    EXPECT_FALSE(certificate.checkValidityPeriod(fhirtools::Timestamp::fromFhirDateTime("2001-12-24T00:00:00Z").toChronoTimePoint()));
-    EXPECT_FALSE(certificate.checkValidityPeriod(fhirtools::Timestamp::fromFhirDateTime("2015-02-18T00:00:00Z").toChronoTimePoint()));
+    EXPECT_FALSE(certificate.checkValidityPeriod(model::Timestamp::fromFhirDateTime("2001-12-24T00:00:00Z").toChronoTimePoint()));
+    EXPECT_FALSE(certificate.checkValidityPeriod(model::Timestamp::fromFhirDateTime("2015-02-18T00:00:00Z").toChronoTimePoint()));
 
-    EXPECT_TRUE(certificate.checkValidityPeriod(fhirtools::Timestamp::fromFhirDateTime("2015-02-20T00:00:00Z").toChronoTimePoint()));
-    EXPECT_TRUE(certificate.checkValidityPeriod(fhirtools::Timestamp::fromFhirDateTime("2023-02-16T00:00:00Z").toChronoTimePoint()));
+    EXPECT_TRUE(certificate.checkValidityPeriod(model::Timestamp::fromFhirDateTime("2015-02-20T00:00:00Z").toChronoTimePoint()));
+    EXPECT_TRUE(certificate.checkValidityPeriod(model::Timestamp::fromFhirDateTime("2023-02-16T00:00:00Z").toChronoTimePoint()));
 
-    EXPECT_FALSE(certificate.checkValidityPeriod(fhirtools::Timestamp::fromFhirDateTime("2023-03-18T00:00:00Z").toChronoTimePoint()));
-    EXPECT_FALSE(certificate.checkValidityPeriod(fhirtools::Timestamp::fromFhirDateTime("2123-12-24T00:00:00Z").toChronoTimePoint()));
+    EXPECT_FALSE(certificate.checkValidityPeriod(model::Timestamp::fromFhirDateTime("2023-03-18T00:00:00Z").toChronoTimePoint()));
+    EXPECT_FALSE(certificate.checkValidityPeriod(model::Timestamp::fromFhirDateTime("2123-12-24T00:00:00Z").toChronoTimePoint()));
 }
 
 

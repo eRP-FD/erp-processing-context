@@ -4,10 +4,10 @@
  */
 
 #include "erp/model/Health.hxx"
+#include "erp/erp-serverinfo.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "fhirtools/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
 
@@ -86,7 +86,7 @@ const rapidjson::Pointer releasePointer("/version/release");
 const rapidjson::Pointer releasedatePointer("/version/releasedate");
 const rapidjson::Pointer startupPointer("/startup");
 const rapidjson::Pointer healthCheckErrorPointer("/healthCheckError");
-const std::string startupTimestamp = fhirtools::Timestamp::now().toXsDateTime();
+const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 }
 
 Health::Health()

@@ -139,13 +139,13 @@ TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-functio
         {ActorRole::Insurant, std::string(task.kvnr().value())},
         {ActorRole::Pharmacists, telematicId},
         std::string(task.accessCode()),
-        DispReqMessage, fhirtools::Timestamp::now() }).id().value());
+        DispReqMessage, model::Timestamp::now() }).id().value());
     communicationIds.emplace_back( addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, std::string(task.kvnr().value())},
         {ActorRole::Pharmacists, telematicId},
         std::string(task.accessCode()),
-        DispReqMessage, fhirtools::Timestamp::now() }).id().value());
+        DispReqMessage, model::Timestamp::now() }).id().value());
 
     // Check prepared data before abort call
     ASSERT_NO_FATAL_FAILURE(checkCreatedData(task.prescriptionId(), telematicId, communicationIds));
@@ -180,7 +180,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-funct
         {ActorRole::Insurant, std::string(task.kvnr().value())},
         {ActorRole::Pharmacists, telematicId},
         {},
-        InfoReqMessage, fhirtools::Timestamp::now() }).id().value());
+        InfoReqMessage, model::Timestamp::now() }).id().value());
 
     // Check prepared data before abort call
     ASSERT_NO_FATAL_FAILURE(checkCreatedData(task.prescriptionId(), telematicId, communicationIds));

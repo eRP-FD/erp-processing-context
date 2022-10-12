@@ -62,6 +62,11 @@ class GetAllTasksHandler
 public:
     GetAllTasksHandler(const std::initializer_list<std::string_view>& allowedProfessionOIDs);
     void handleRequest (PcSessionContext& session) override;
+
+private:
+    model::Bundle handleRequestFromInsurant(PcSessionContext& session);
+
+    model::Bundle handleRequestFromPharmacist(PcSessionContext& session);
 };
 
 

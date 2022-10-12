@@ -7,8 +7,8 @@
 #define ERP_PROCESSING_CONTEXT_CADESBESSIGNATURE_HXX
 
 #include "erp/crypto/OpenSslHelper.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/error/TslError.hxx"
-#include "fhirtools/model/Timestamp.hxx"
 
 #include <functional>
 #include <list>
@@ -48,7 +48,7 @@ public:
         const Certificate& cert,
         const shared_EVP_PKEY& privateKey,
         const std::string& payload,
-        const std::optional<fhirtools::Timestamp>& signingTime = std::nullopt,
+        const std::optional<model::Timestamp>& signingTime = std::nullopt,
         OcspResponsePtr ocspResponse = {});
 
     /// @brief returns the the signature as Base64 encoded CMS file.
@@ -58,14 +58,14 @@ public:
     const std::string& payload() const;
 
     /// return the signingTime (OID 1.2.840.113549.1.9.5) from the CMS structure
-    std::optional<fhirtools::Timestamp> getSigningTime() const;
+    std::optional<model::Timestamp> getSigningTime() const;
 
     [[nodiscard]] ::std::optional<::std::string> getMessageDigest() const;
 
 private:
     using CmsVerifyFunction = std::function<int(CMS_ContentInfo&, BIO&)>;
 
-    void setSigningTime(const fhirtools::Timestamp& signingTime);
+    void setSigningTime(const model::Timestamp& signingTime);
     void internalInitialization(const std::string& base64Data, const CmsVerifyFunction& cmsVerifyFunction);
 
     std::string mPayload;

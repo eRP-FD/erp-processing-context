@@ -1,0 +1,35 @@
+{
+    "resourceType": "Bundle",
+    "id": "320cade4-557a-4871-b23c-710fef08273f",
+    "type": "document",
+    "entry": [
+        {
+            "fullUrl": "urn:uuid:9ec4ed88-2492-48b5-9021-b04874a904c4",
+            "resource": {
+                "resourceType": "Composition",
+                "id": "9ec4ed88-2492-48b5-9021-b04874a904c4",
+                "status": "preliminary",
+                "type": {
+                    "coding": [
+                        {
+                            "system": "http://erp.test/non-existent-system",
+                            "code": "test"
+                        }
+                    ]
+                },
+                "date": "2022-09-20T09:14:31+00:00",
+                "author": {
+                    "reference": "http://erp.test/Device/0"
+                },
+                "title": "Test Composition"
+            }
+        },
+        {
+            "fullUrl": "http://erp.test/Device/0",
+            "resource": {
+                "resourceType": "Device",
+                "id": "0"
+            }
+        }
+    ]
+}

@@ -171,6 +171,9 @@ foreach(schema ${SCHEMA_FILES})
     )
 endforeach()
 set(FHIR_PROFILES
+          "fhir/CodeSystem-flowType-supplements.xml"
+          "fhir/CodeSystem-v2-0131.xml"
+          "fhir/CodeSystem-v2-0203.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/abortOperation.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/acceptOperation.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/activateOperation.xml"
@@ -195,7 +198,6 @@ set(FHIR_PROFILES
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-ChargeItem-erxChargeItem.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationDispReq.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationInfoReq.xml"
-          "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationReply.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Communication-erxCommunicationRepresentative.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Composition-GemErxComposition2.xml"
           "fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Consent-erxConsent.xml"
@@ -465,6 +467,7 @@ set(FHIR_PROFILES
           "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_ITA_WOP_V1.00.xml"
           "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.10.xml"
           "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DMP_V1.05.xml"
+          "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.01.xml"
           "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.xml"
           "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml"
           "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_PKV_TARIFF_V1.01.xml"
@@ -474,6 +477,7 @@ set(FHIR_PROFILES
           "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_ITA_WOP_V1.00.xml"
           "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.10.xml"
           "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DMP_V1.05.xml"
+          "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_FORMULAR_ART_V1.01.xml"
           "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_NORMGROESSE_V1.00.xml"
           "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml"
           "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_PKV_TARIFF_V1.01.xml"

@@ -4,8 +4,8 @@
  */
 
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/TLog.hxx"
-#include "fhirtools/model/Timestamp.hxx"
 
 
 using model::KBVMultiplePrescription;

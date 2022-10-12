@@ -7,7 +7,7 @@
 #include "erp/beast/BoostBeastStringWriter.hxx"
 #include "erp/client/HttpClient.hxx"
 #include "erp/client/UrlRequestSender.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/OcspHelper.hxx"
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/error/TslError.hxx"
@@ -18,7 +18,6 @@
 #include "erp/util/GLog.hxx"
 #include "erp/util/JsonLog.hxx"
 #include "erp/util/String.hxx"
-
 #include "erp/util/UrlHelper.hxx"
 
 #include <cctype>
@@ -95,18 +94,8 @@ namespace
                                  const OcspUrl& url,
                                  const util::Buffer& request)
     {
-        JsonLog jsonLog(LogId::INFO, JsonLog::makeWarningLogReceiver(), true);
-        jsonLog.keyValue("log-type", "timing");
-        jsonLog.keyValue("url", url.url);
-        DurationTimer::Receiver receiver = [&jsonLog](const std::chrono::system_clock::duration duration,
-                                              const std::string& description, const std::string& sessionIdentifier) {
-            jsonLog
-                .keyValue("x-request-id", sessionIdentifier)
-                .keyValue("description", description)
-                .keyValue("duration-ms",
-                          gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::milliseconds>(duration).count()));
-        };
-        auto timer = DurationConsumer::getCurrent().getTimer("OCSP response", receiver);
+        auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryOcspRequest, "OCSP response",
+                                                             {{"url", url.url}});
 
         try
         {
@@ -124,7 +113,7 @@ namespace
             VLOG(2) << "OCSP response, status=" << response.getHeader().status()
                     << " (base-encoded):\n" << Base64::encode(response.getBody()) << "\n\n";
 
-            jsonLog.keyValue("response-code", toNumericalValue(response.getHeader().status()));
+            timer.keyValue("response-code", std::to_string(toNumericalValue(response.getHeader().status())));
 
             if (response.getHeader().status() != HttpStatus::OK)
             {
@@ -369,7 +358,7 @@ namespace
         Expect(asn1Generalizedtime != nullptr, "asn1Generalizedtime must not be null");
         struct tm tm{};
         ASN1_TIME_to_tm(asn1Generalizedtime, &tm);
-        return fhirtools::Timestamp::fromTmInUtc(tm).toChronoTimePoint();
+        return model::Timestamp::fromTmInUtc(tm).toChronoTimePoint();
     }
 
 

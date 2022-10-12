@@ -12,6 +12,7 @@ class DurationConsumer;
 #include <functional>
 #include <optional>
 #include <string>
+#include <unordered_map>
 
 
 /**
@@ -22,23 +23,30 @@ class DurationTimer
 {
 public:
     using Receiver = std::function<void(
-        std::chrono::system_clock::duration duration,
+        std::chrono::steady_clock::duration duration,
+        const std::string& category,
         const std::string& description,
-        const std::string& sessionIdentifier)>;
+        const std::string& sessionIdentifier,
+        const std::unordered_map<std::string, std::string>& keyValueMap)>;
 
     explicit DurationTimer (
         Receiver& receiver,
+        const std::string& category,
         const std::string& description,
-        const std::string& sessionIdentifier);
+        const std::string& sessionIdentifier,
+        const std::unordered_map<std::string, std::string>& keyValueMap);
     ~DurationTimer (void);
 
     void notifyFailure(const std::string& description);
+    void keyValue(const std::string& key, const std::string& value);
 
 private:
     Receiver& mReceiver;
+    std::string mCategory;
     std::string mDescription;
     std::string mSessionIdentifier;
-    std::optional<std::chrono::system_clock::time_point> mStart;
+    std::unordered_map<std::string, std::string> mKeyValueMap;
+    std::optional<std::chrono::steady_clock::time_point> mStart;
 };
 
 
@@ -50,6 +58,14 @@ private:
 class DurationConsumer
 {
 public:
+    static constexpr auto categoryRedis = "redis";
+    static constexpr auto categoryPostgres = "postgres";
+    static constexpr auto categoryUrlRequestSender = "http-client";
+    static constexpr auto categoryFhirValidation = "fhir-validation";
+    static constexpr auto categoryOcspRequest = "ocsp-request";
+    static constexpr auto categoryHsm = "hsm";
+    static constexpr auto categoryEnrolmentHelper = "enrolment";
+
     static DurationConsumer& getCurrent (void);
 
 
@@ -63,9 +79,8 @@ public:
     /**
      * Return a timer that measures how long it takes until its destructor is called.
      */
-    DurationTimer getTimer (const std::string& description);
-    // variant for a timer with a custom receiver/log level
-    DurationTimer getTimer (const std::string& description, DurationTimer::Receiver& receiver) const;
+    DurationTimer getTimer(const std::string& category, const std::string& description,
+                           const std::unordered_map<std::string, std::string>& keyValueMap = {});
 
 private:
     bool mIsInitialized = false;

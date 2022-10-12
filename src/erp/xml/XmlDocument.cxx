@@ -154,6 +154,46 @@ std::string XmlDocument::getElementText (
     return std::string(reinterpret_cast<const char*>(node->content));
 }
 
+std::optional<std::string> XmlDocument::getOptionalElementText (const std::string& xPathExpression) const
+{
+    const auto xpathObject = std::shared_ptr<xmlXPathObject>(
+        xmlXPathEvalExpression(reinterpret_cast<const xmlChar*>(
+                                   (mPathHead + xPathExpression).c_str()),
+                               mXPathContext.get()),
+        xmlXPathFreeObject);
+
+    if (!xpathObject)
+    {
+        throw std::runtime_error{
+            "can not evaluate XPath expression when processing XPath expression " + xPathExpression};
+    }
+
+    if (!xpathObject->nodesetval)
+    {
+        return std::nullopt;
+    }
+
+    const auto count = xpathObject->nodesetval->nodeNr;
+    if (!count)
+    {
+        return std::nullopt;
+    }
+
+    if (count > 1)
+    {
+        throw std::runtime_error{
+            "more than one result when processing XPath expression " + xPathExpression};
+    }
+
+    const auto* node = xpathObject->nodesetval->nodeTab[0];
+    if (!node || !node->content)
+    {
+        throw std::runtime_error{
+            "empty result when processing XPath expression " + xPathExpression};
+    }
+
+    return std::string(reinterpret_cast<const char*>(node->content));
+}
 
 xmlNodePtr XmlDocument::getNode (
     const std::string& xPathExpression) const

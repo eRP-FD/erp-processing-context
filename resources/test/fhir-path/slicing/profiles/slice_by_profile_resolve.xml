@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="SliceByProfileResolve"/>
+  <entry>
+    <fullUrl value="http://erp.test/SliceByProfileResolveBase"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceByProfileResolveBase"/>
+        <url value="http://erp.test/SliceByProfileResolveBase"/>
+        <version value="4.0.1"/>
+        <name value="SliceByProfileResolveBase"/>
+        <status value="active"/>
+        <fhirVersion value="4.0.1"/>
+        <kind value="resource"/>
+        <abstract value="true"/>
+        <type value="SliceByProfileResolveBase"/>
+        <derivation value="specialization"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Resource"/>
+        <snapshot>
+          <element id="SliceByProfileResolveBase">
+            <path value="SliceByProfileResolveBase"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceByProfileResolveBase"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SliceByProfileResolveBase.id">
+            <path value="SliceByProfileResolveBase.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.meta">
+            <path value="SliceByProfileResolveBase.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.implicitRules">
+            <path value="SliceByProfileResolveBase.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.language">
+            <path value="SliceByProfileResolveBase.language"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.subReference">
+            <path value="SliceByProfileResolveBase.subReference"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceByProfileResolveBase.subReference"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Reference"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp.test/SliceByProfileResolve"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceByProfileResolve"/>
+        <url value="http://erp.test/SliceByProfileResolve"/>
+        <version value="1.0.0"/>
+        <name value="SliceByProfileResolve"/>
+        <status value="active"/>
+        <fhirVersion value="4.0.1"/>
+        <kind value="resource"/>
+        <type value="SliceByProfileResolveBase"/>
+        <baseDefinition value="http://erp.test/SliceByProfileResolveBase"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="SliceByProfileResolveBase">
+            <path value="SliceByProfileResolveBase"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceByProfileResolveBase"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SliceByProfileResolveBase.id">
+            <path value="SliceByProfileResolveBase.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.meta">
+            <path value="SliceByProfileResolveBase.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.implicitRules">
+            <path value="SliceByProfileResolveBase.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.language">
+            <path value="SliceByProfileResolveBase.language"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.subReference">
+            <path value="SliceByProfileResolveBase.subReference"/>
+            <slicing>
+              <discriminator>
+                <type value="profile"/>
+                <path value="resolve()"/>
+              </discriminator>
+              <description value="Profile based slicing"/>
+              <rules value="closed"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceByProfileResolveBase.subReference"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Reference"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.subReference:slice1">
+            <path value="SliceByProfileResolveBase.subReference"/>
+            <sliceName value="slice1"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceByProfileResolveBase.subReference"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Reference"/>
+              <targetProfile value="http://erp.test/SliceByProfileResolve/slice1"/>
+            </type>
+          </element>
+          <element id="SliceByProfileResolveBase.subReference:slice2">
+            <path value="SliceByProfileResolveBase.subReference"/>
+            <sliceName value="slice2"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceByProfileResolveBase.subReference"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Reference"/>
+              <targetProfile value="http://erp.test/SliceByProfileResolve/slice2"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp.test/SliceByProfileResolve/slice1"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceByProfileResolveSlice1"/>
+        <url value="http://erp.test/SliceByProfileResolve/slice1"/>
+        <version value="4.0.1"/>
+        <name value="SliceByProfileResolveSlice1"/>
+        <status value="active"/>
+        <fhirVersion value="4.0.1"/>
+        <kind value="resource"/>
+        <type value="Resource"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Resource"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <constraint>
+              <key value="slice1"/>
+              <severity value="error"/>
+              <human value="This must be the slice1 resource"/>
+              <expression value="id = 'slice1'"/>
+            </constraint>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.implicitRules">
+            <path value="Resource.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="Resource.language">
+            <path value="Resource.language"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp.test/SliceByProfileResolve/slice2"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceByProfileResolveSlice2"/>
+        <url value="http://erp.test/SliceByProfileResolve/slice2"/>
+        <version value="4.0.1"/>
+        <name value="SliceByProfileResolveSlice2"/>
+        <status value="active"/>
+        <fhirVersion value="4.0.1"/>
+        <kind value="resource"/>
+        <type value="Resource"/>
+        <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Resource"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <constraint>
+              <key value="slice2"/>
+              <severity value="error"/>
+              <human value="This must be the slice2 resource"/>
+              <expression value="id = 'slice2'"/>
+            </constraint>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.implicitRules">
+            <path value="Resource.implicitRules"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.implicitRules"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="Resource.language">
+            <path value="Resource.language"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.language"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="code"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>
+
+

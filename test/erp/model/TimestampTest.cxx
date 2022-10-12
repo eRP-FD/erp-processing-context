@@ -3,7 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/model/ModelException.hxx"
 
 #include <date/date.h>
@@ -13,7 +13,7 @@
 using namespace date;
 using namespace std::literals::chrono_literals;
 using namespace model;
-using fhirtools::Timestamp;
+using model::Timestamp;
 
 class TimestampTest : public testing::Test
 {
@@ -82,6 +82,10 @@ TEST_F(TimestampTest, fromXsDateTime_success)
 
     // Time zone plus one, but hour minus one, cancel each other out.
     EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T11:34:56-01:00"), expectedDateTime);
+    EXPECT_NO_THROW(Timestamp::fromXsDateTime("0001-01-01T00:00:00Z"));
+    EXPECT_EQ(Timestamp::fromXsDateTime("0001-01-01T00:00:00Z").toXsDateTime(), "0001-01-01T00:00:00.000+00:00");
+    EXPECT_EQ(Timestamp::fromXsDateTime("0001-01-01T00:00:00Z").toXsDateTimeWithoutFractionalSeconds(),
+              "0001-01-01T00:00:00+00:00");
 }
 
 
@@ -136,6 +140,7 @@ TEST_F(TimestampTest, fromXsDateTime_failForInvalidFormats)//NOLINT(readability-
     EXPECT_THROW(Timestamp::fromXsDateTime("2022-01-29T25:61:56Z"), ModelException);
     EXPECT_THROW(Timestamp::fromXsDateTime("2022-01-29T25:34:60Z"), ModelException);
     EXPECT_THROW(Timestamp::fromXsDateTime("2022-01-29T25:34:61Z"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDateTime("1754-08-30T22:43:42.-871+00:00"), ModelException);
 }
 
 
@@ -164,10 +169,8 @@ TEST_F(TimestampTest, fromXsDateTime_withTimeZone)
 TEST_F(TimestampTest, toXsDateTime)
 {
     EXPECT_EQ(Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms).toXsDateTime(), "2022-01-29T12:34:56.123+00:00");
-
-    // Conversion with before-epoch timestamps seems to have a one-second offset. This is an acceptable corner case that should never happen in production.
     EXPECT_EQ(Timestamp(sys_days{August / 30 / 1754} + 22h + 43min + 42s + 123ms).toXsDateTime(),
-              "1754-08-30T22:43:43.123+00:00");
+              "1754-08-30T22:43:42.123+00:00");
 }
 
 TEST_F(TimestampTest, toXsDate)
@@ -278,7 +281,7 @@ TEST_F(TimestampTest, fromXsGYear_success)
     // Note that the range of the dates, covered by time_point is not specified.
     // These value have been determined experimentally.
     // Adjusting these values (that make the intervall smaller) is OK as long as a sensible range is maintained.
-    EXPECT_EQ(Timestamp::fromXsGYear("1970"), Timestamp(sys_days{January / 01 / 1970}));
+    EXPECT_EQ(Timestamp::fromXsGYear("1678"), Timestamp(sys_days{January / 01 / 1678}));
     EXPECT_EQ(Timestamp::fromXsGYear("2262"), Timestamp(sys_days{January / 01 / 2262}));
 }
 

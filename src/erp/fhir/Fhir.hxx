@@ -7,11 +7,10 @@
 #define ERP_PROCESSING_CONTEXT_FHIR_HXX
 
 #include "erp/fhir/FhirConverter.hxx"
+#include "erp/model/ResourceVersion.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/XmlHelper.hxx"
 
-//#include <set>
-//#include <memory>
 #include <string_view>
 
 class FhirConverter;
@@ -21,14 +20,25 @@ class Fhir final
 public:
     static const Fhir& instance();
 
-    const FhirConverter& converter() const { return mConverter; }
-    const fhirtools::FhirStructureRepository& structureRepository() const { return mStructureRepository; }
+    const FhirConverter& converter() const
+    {
+        return mConverter;
+    }
+    const fhirtools::FhirStructureRepository& structureRepository() const
+    {
+        const auto currentVersion = model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>();
+        Expect(mStructureRepository.contains(currentVersion),
+               "current version not configured: " + std::string{model::ResourceVersion::v_str(currentVersion)});
+        return mStructureRepository.at(currentVersion);
+    }
 
 private:
     Fhir();
+    void loadVersion(ConfigurationKey versionKey, ConfigurationKey structureKey);
 
     FhirConverter mConverter;
-    fhirtools::FhirStructureRepository mStructureRepository;
+    std::unordered_map<model::ResourceVersion::FhirProfileBundleVersion, fhirtools::FhirStructureRepository>
+        mStructureRepository;
 };
 
 

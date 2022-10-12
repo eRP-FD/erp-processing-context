@@ -8,13 +8,12 @@
 
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 
+#include <rapidjson/pointer.h>
 #include <memory>
 #include <optional>
 #include <string>
-
-#include <rapidjson/pointer.h>
 
 namespace model
 {

@@ -210,7 +210,7 @@ std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTest::closeTas
     PrescriptionId prescriptionId = task.prescriptionId();
 
     const Timestamp inProgessDate = task.lastModifiedDate();
-    const Timestamp completedTimestamp = fhirtools::Timestamp::now();
+    const Timestamp completedTimestamp = model::Timestamp::now();
     const std::string linkBase = "https://127.0.0.1:8080";
     const std::string authorIdentifier = linkBase + "/Device";
     const std::string prescriptionDigestIdentifier = "Binary/TestDigest";
@@ -366,7 +366,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
     std::string kvnrPatient = InsurantA;
     std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -405,7 +405,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
     std::string kvnrPatient = InsurantA;
     std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, Timestamp::now()}
     };
 
@@ -579,7 +579,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -628,7 +628,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {InsurantA, pharmacyA, Timestamp::now()},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, Timestamp::now()},
@@ -812,7 +812,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
 
     for (size_t idxPatient = 0; idxPatient < 70; ++idxPatient)
     {
@@ -1001,7 +1001,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
     std::string kvnrPatient = InsurantA;
     std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -1050,7 +1050,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)//NOL
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -1096,7 +1096,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)//NOL
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseMedicationDispenseTestInst, PostgresDatabaseMedicationDispenseTest,
                          testing::Values(PostgresDatabaseMedicationDispenseTestParams{1, model::PrescriptionType::apothekenpflichigeArzneimittel},
                                          PostgresDatabaseMedicationDispenseTestParams{4, model::PrescriptionType::direkteZuweisung},
-                                         PostgresDatabaseMedicationDispenseTestParams{10, model::PrescriptionType::apothekenpflichigeArzneimittel}));
+                                         PostgresDatabaseMedicationDispenseTestParams{10, model::PrescriptionType::apothekenpflichigeArzneimittel},
+                                         PostgresDatabaseMedicationDispenseTestParams{3, model::PrescriptionType::direkteZuweisungPkv}));
 
 std::ostream& operator<<(std::ostream& os, const PostgresDatabaseMedicationDispenseTestParams& params)
 {

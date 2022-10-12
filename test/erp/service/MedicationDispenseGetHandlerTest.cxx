@@ -280,7 +280,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
     std::string kvnrPatient = InsurantA;
     std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -317,7 +317,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
     std::string kvnrPatient = InsurantA;
     std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, Timestamp::now()}
     };
 
@@ -470,7 +470,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -515,7 +515,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {InsurantA, pharmacyA, Timestamp::now()},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, Timestamp::now()},
@@ -664,7 +664,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
 
     for (size_t idxPatient = 0; idxPatient < 70; ++idxPatient)
     {
@@ -829,7 +829,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetById)
     std::string kvnrPatient = InsurantA;
     std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -875,7 +875,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -927,7 +927,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskFilterById)
     std::string kvnrPatient = InsurantA;
     std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -964,7 +964,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -1006,7 +1006,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>>
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>
         patientsPharmaciesMedicationWhenPrepared = {{InsurantA, pharmacyA, std::nullopt},
                                                     {InsurantA, pharmacyB, std::nullopt},
                                                     {InsurantB, pharmacyA, std::nullopt},
@@ -1048,7 +1048,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterByIdUnknownId)
     std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
     std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>>
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>
         patientsPharmaciesMedicationWhenPrepared = {{InsurantA, pharmacyA, std::nullopt},
                                                     {InsurantA, pharmacyB, std::nullopt},
                                                     {InsurantB, pharmacyA, std::nullopt},

@@ -2,7 +2,6 @@
 // (C) Copyright IBM Corp. 2022
 
 #include "fhirtools/validator/internal/ProfileSolver.hxx"
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
@@ -15,7 +14,7 @@ using namespace fhirtools;
 class ProfileSolver::RequireOneSolver
 {
 public:
-    explicit RequireOneSolver(std::map<ProfileValidatorMapKey, std::shared_ptr<ValidationData>> profileData)
+    explicit RequireOneSolver(std::map<ProfiledElementTypeInfo, std::shared_ptr<const ValidationData>> profileData)
         : mGoodProfiles{std::move(profileData)}
     {
     }
@@ -49,8 +48,8 @@ public:
 
 private:
     bool mFailed = false;
-    std::map<ProfileValidatorMapKey, std::shared_ptr<ValidationData>> mGoodProfiles;
-    std::map<ProfileValidatorMapKey, std::shared_ptr<ValidationData>> mFailedProfiles;
+    std::map<ProfiledElementTypeInfo, std::shared_ptr<const ValidationData>> mGoodProfiles;
+    std::map<ProfiledElementTypeInfo, std::shared_ptr<const ValidationData>> mFailedProfiles;
 };
 
 fhirtools::ProfileSolver& fhirtools::ProfileSolver::operator=(fhirtools::ProfileSolver&&) noexcept = default;
@@ -66,7 +65,8 @@ void fhirtools::ProfileSolver::merge(const ProfileSolver& other)
     }
 }
 
-void fhirtools::ProfileSolver::requireOne(std::map<ProfileValidatorMapKey, std::shared_ptr<ValidationData>> profileData)
+void fhirtools::ProfileSolver::requireOne(
+    std::map<ProfiledElementTypeInfo, std::shared_ptr<const ValidationData>> profileData)
 {
     FPExpect3(! profileData.empty(), "requireOne profile-set must not be empty.", std::logic_error);
     mSolvers.emplace_back(std::move(profileData));

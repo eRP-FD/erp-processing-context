@@ -20,8 +20,8 @@ class FhirStructureDefinition;
  */
 class ValidationError {
 public:
-
-    std::variant<FhirConstraint, std::tuple<Severity, std::string>> reason;
+    using MessageReason = std::tuple<Severity, std::string>;
+    std::variant<FhirConstraint, MessageReason> reason;
     std::string fieldName;
     const FhirStructureDefinition* profile = nullptr;
     bool operator == (const ValidationError&) const = default;
@@ -34,12 +34,12 @@ public:
 class ValidationResultList
 {
 public:
-
     const std::list<ValidationError>& results() const &;
     std::list<ValidationError> results() &&;
     void add(Severity, std::string message, std::string elementFullPath, const FhirStructureDefinition* profile);
     void add(FhirConstraint constraint, std::string elementFullPath, const FhirStructureDefinition* profile);
     void append(ValidationResultList);
+    void prepend(ValidationResultList);
     void append(std::list<ValidationError>);
     Severity highestSeverity() const;
     void dumpToLog() const;

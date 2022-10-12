@@ -3,11 +3,10 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/String.hxx"
-
 #include "erp/util/TLog.hxx"
 #include "erp/validation/XmlValidator.hxx"
 
@@ -57,8 +56,8 @@ void XmlValidator::loadSchemas(const std::vector<std::string>& paths)
 
 
 void XmlValidator::loadKbvSchemas(const std::string& version, const std::vector<std::string>& paths,
-                                  const std::optional<fhirtools::Timestamp>& validFrom,
-                                  const std::optional<fhirtools::Timestamp>& validUntil)
+                                  const std::optional<model::Timestamp>& validFrom,
+                                  const std::optional<model::Timestamp>& validUntil)
 {
     for (const auto& schemaFile : paths)
     {
@@ -70,8 +69,8 @@ void XmlValidator::loadKbvSchemas(const std::string& version, const std::vector<
 
 
 void XmlValidator::loadGematikSchemas(const std::string& version, const std::vector<std::string>& paths,
-                                      const std::optional<fhirtools::Timestamp>& validFrom,
-                                      const std::optional<fhirtools::Timestamp>& validUntil)
+                                      const std::optional<model::Timestamp>& validFrom,
+                                      const std::optional<model::Timestamp>& validUntil)
 {
     for (const auto& schemaFile : paths)
     {
@@ -144,11 +143,11 @@ std::unique_ptr<XmlValidatorContext> XmlValidator::getContext(xmlSchemaPtr schem
     return xmlValidatorContext;
 }
 
-void XmlValidator::checkValidityTime(const std::optional<fhirtools::Timestamp>& validFrom,
-                                     const std::optional<fhirtools::Timestamp>& validUntil,
+void XmlValidator::checkValidityTime(const std::optional<model::Timestamp>& validFrom,
+                                     const std::optional<model::Timestamp>& validUntil,
                                      const std::string& schemaNameHint)
 {
-    const auto& now = fhirtools::Timestamp::now();
+    const auto& now = model::Timestamp::now();
     if (validFrom.has_value())
     {
         ErpExpect(*validFrom <= now, HttpStatus::BadRequest,

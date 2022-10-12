@@ -40,7 +40,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
     try
     {
         // as a first step validate using the FHIR schema, which is good enough for the XML->JSON converter
-        auto communication = parseAndValidateRequestBody<Communication>(session, SchemaType::fhir, false);
+        auto communication = parseAndValidateRequestBody<Communication>(session, SchemaType::fhir, std::nullopt);
         PrescriptionId prescriptionId = communication.prescriptionId();
         checkFeatureWf200(prescriptionId.type());
 
@@ -212,22 +212,9 @@ void CommunicationPostHandler::validateAgainstFhirProfile(
     const XmlValidator& xmlValidator,
     const InCodeValidator& inCodeValidator) const
 {
-    bool allowGenericValidation = true;
-    switch (communication.messageType())
-    {
-        using enum model::Communication::MessageType;
-        case InfoReq:
-        case Reply:
-        case DispReq:
-        case Representative:
-            allowGenericValidation = true;
-            break;
-        case ChargChangeReq:
-        case ChargChangeReply:
-            allowGenericValidation = false;
-    }
-    Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
-                           Communication::messageTypeToSchemaType(messageType), allowGenericValidation);
+    auto options = communication.canValidateGeneric()?std::make_optional(ResourceBase::defaultValidatorOptions()):std::nullopt;
+    (void)Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
+                                Communication::messageTypeToSchemaType(messageType), options);
 }
 
 void CommunicationPostHandler::validateSender(

@@ -470,7 +470,8 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
     ASSERT_NO_THROW(communication = Communication::fromXml(innerResponse.getBody(),
                                                            *StaticData::getXmlValidator(),
                                                            *StaticData::getInCodeValidator(),
-                                                           SchemaType::Gem_erxCommunicationReply));
+                                                           SchemaType::Gem_erxCommunicationReply,
+                                                           std::nullopt));
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
     ASSERT_TRUE(communication->id()->isValidIheUuid());

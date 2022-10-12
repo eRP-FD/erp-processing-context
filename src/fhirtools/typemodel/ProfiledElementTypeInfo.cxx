@@ -4,9 +4,6 @@
  **/
 
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
-
-#include <algorithm>
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/Element.hxx"
 #include "fhirtools/repository/FhirElement.hxx"
@@ -15,15 +12,17 @@
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/Constants.hxx"
 
+#include <algorithm>
+
 using fhirtools::ProfiledElementTypeInfo;
 
 ProfiledElementTypeInfo::ProfiledElementTypeInfo(const FhirStructureDefinition* profile)
-    : ProfiledElementTypeInfo{profile , profile?profile->rootElement():nullptr}
+    : ProfiledElementTypeInfo{profile, profile ? profile->rootElement() : nullptr}
 {
 }
 
 ProfiledElementTypeInfo::ProfiledElementTypeInfo(const FhirStructureDefinition* profile,
-                                             std::shared_ptr<const FhirElement> element)
+                                                 std::shared_ptr<const FhirElement> element)
     : mProfile(profile)
     , mElement(std::move(element))
 {
@@ -73,11 +72,12 @@ std::optional<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subField(const s
     subElementId.reserve(mElement->name().size() + name.size() + 1);
     subElementId.append(mElement->name()).append(1, '.').append(name);
     auto subElementDef = mProfile->findElement(subElementId);
-    return subElementDef ? std::make_optional<ProfiledElementTypeInfo>(mProfile, std::move(subElementDef)) : std::nullopt;
+    return subElementDef ? std::make_optional<ProfiledElementTypeInfo>(mProfile, std::move(subElementDef))
+                         : std::nullopt;
 }
 
 std::list<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subDefinitions(const FhirStructureRepository& repo,
-                                                                       std::string_view name) const
+                                                                           std::string_view name) const
 {
     auto subElementDef = subField(name);
     if (! subElementDef)
@@ -120,7 +120,7 @@ std::list<std::string> fhirtools::ProfiledElementTypeInfo::expandedNames(std::st
     std::string subOrigName;
     subOrigName.reserve(originalName.size() + 1 + name.size() + typePlaceholder.size());
     subOrigName.append(originalName).append(1, '.').append(name).append(typePlaceholder);
-    for (const auto& element: mProfile->elements())
+    for (const auto& element : mProfile->elements())
     {
         if (element->originalName() == subOrigName)
         {
@@ -128,6 +128,22 @@ std::list<std::string> fhirtools::ProfiledElementTypeInfo::expandedNames(std::st
         }
     }
     return result;
+}
+
+std::string_view ProfiledElementTypeInfo::elementPath() const
+{
+    const auto& typeIdLength = mProfile->typeId().size();
+    static_assert(std::is_reference_v<decltype(mElement->name())>,
+                  "name() must return a reference or we cannot return a string_view");
+    const auto& elementName = mElement->name();
+    if (mElement->name().size() == typeIdLength)
+    {
+        return {};
+    }
+    FPExpect3(elementName.size() > typeIdLength,
+              "Element name '" + elementName + "' doesn't start with it's typeId: " + mProfile->typeId(),
+              std::logic_error);
+    return {elementName.begin() + typeIdLength + 1, elementName.end()};
 }
 
 

@@ -35,15 +35,23 @@ public:
     AuditDataCollector& setDeviceId(const std::int16_t deviceId);
     AuditDataCollector& setPrescriptionId(const model::PrescriptionId& prescriptionId);
     AuditDataCollector& setConsentId(const std::string_view& consentId);
+    AuditDataCollector& setPnwPzNumber(const std::string_view& pzNumber);
 
     // throws MissingAuditDataException if mandatory data is missing:
     model::AuditData createData() const;
+
+    /**
+     * Tells whether for this mEventId an audit event should be created
+     */
+    bool shouldCreateAuditEventOnSuccess() const noexcept;
+    bool shouldCreateAuditEventOnError(HttpStatus errorCode) const noexcept;
 
 private:
     std::optional<model::AuditEventId> mEventId;
     std::optional<model::AuditEvent::Action> mAction;
     std::optional<std::string> mAgentWho;    // TelematicId or Kvnr of accessing agent;
     std::optional<std::string> mAgentName;
+    std::optional<std::string> mPnwPzNumber;
     std::optional<std::string> mInsurantKvnr;
     std::optional<std::int16_t> mDeviceId;
     std::optional<model::PrescriptionId> mPrescriptionId;

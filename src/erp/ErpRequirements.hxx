@@ -139,7 +139,7 @@ static Requirement A_22633    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfach
 static Requirement A_22634    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Beginn Einlösefrist-Pflicht");
 static Requirement A_22927    ("E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
 // PKV related:
-static Requirement A_22347    ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 200 - Prüfung Coverage Type");
+static Requirement A_22347_01 ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 200/209 - Prüfung Coverage Type");
 
 // Requirements for endpoint POST /Task/$accept
 static Requirement A_19149    ("E-Rezept-Fachdienst - Prüfung Datensatz zwischenzeitlich gelöscht");
@@ -210,7 +210,6 @@ static Requirement A_22614   ("E-Rezept-Fachdienst - Abrechnungsinformation bere
 static Requirement A_22215   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Prüfung Einwilligung");
 static Requirement A_22145   ("E-Rezept-Fachdienst – Abrechnungsinformationen ändern – Versicherter - Prüfung KVNR");
 static Requirement A_22146   ("E-Rezept-Fachdienst – Abrechnungsinformationen ändern – Apotheke - Prüfung Telematik-ID");
-static Requirement A_22147   ("E-Rezept-Fachdienst - Abrechnungsinformation ändern – Apotheke - Warnung wenn vom Versicherten markiert");
 static Requirement A_22148   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – PKV-Abgabedatensatz übernehmen");
 static Requirement A_22149   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – FHIR-Validierung PKV-Abgabedatensatz");
 static Requirement A_22150   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern - Apotheke – Signaturprüfung PKV-Abgabedatensatz");
@@ -222,8 +221,7 @@ static Requirement A_22616   ("E-Rezept-Fachdienst - Abrechnungsinformation änd
 static Requirement A_22112   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - alles Löschen verbieten");
 static Requirement A_22114   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen – Prüfung KVNR");
 static Requirement A_22115   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen – Prüfung Telematik-ID");
-static Requirement A_22116   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - Warnung wenn vom Versicherten markiert");
-static Requirement A_22117   ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
+static Requirement A_22117_01("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
 // GET /ChargeItem
 static Requirement A_22119   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen – Versicherter – Filter KVNR");
 static Requirement A_22121   ("E-Rezept-Fachdienst – Abrechnungsinformationen lesen - Suchkriterien");
@@ -295,5 +293,8 @@ static Requirement A_22383    ("E-Rezept-Fachdienst – Generierungsschlüssel �
 
 static Requirement A_22698    ("E-Rezept-Fachdienst - Erzeugung des Nutzerpseudonyms LEI");
 static Requirement A_22975    ("Performance - Rohdaten-Performance-Bericht - Konfigurationpseudonymisierte Werte der Telematik-ID");
+
+static Requirement A_23160    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - Ratelimit pro Minute");
+static Requirement A_23161    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - Ratelimit pro Tag");
 
 #endif

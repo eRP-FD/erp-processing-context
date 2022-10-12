@@ -34,7 +34,7 @@ ClientResponse UrlRequestSender::send(
     const bool trustCn) const
 {
     // TODO: add non-sensitive part of the url to the description.
-    auto timer = mDurationConsumer.getTimer("sending request");
+    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, "sending request");
 
     try
     {
@@ -59,7 +59,8 @@ ClientResponse UrlRequestSender::send(
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn) const
 {
-    auto timer = mDurationConsumer.getTimer("sending request to host " + url.mHost + ":" + std::to_string(url.mPort));
+    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender,
+                                            "sending request to host " + url.mHost + ":" + std::to_string(url.mPort));
 
     try
     {

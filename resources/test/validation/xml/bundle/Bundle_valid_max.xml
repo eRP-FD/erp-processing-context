@@ -38,7 +38,7 @@
         </type>
         <date value="2020-03-02T08:45:05+00:00"/>
         <author>
-          <reference value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
+          <reference value="Device/281a985c-f25b-4aae-91a6-41ad744080b0"/>
           <type value="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
         </author>
         <title value="Quittung"/>
@@ -48,6 +48,29 @@
             <end value="2020-03-05T08:25:05+00:00"/>
           </period>
         </event>
+        <section>
+          <entry>
+            <reference value="Bundle/2d71dd93-a293-4d47-8db5-87d458ef5ca0"/>
+          </entry>
+          <entry>
+            <reference value="Binary/3f8efb98-0b97-4c26-bf1b-a560aecc0d29"/>
+          </entry>
+          <entry>
+            <reference value="AuditEvent/7a0010c5-40c7-40df-b840-3173211f3b1f"/>
+          </entry>
+          <entry>
+            <reference value="MedicationDispense/160.123.456.789.123.58"/>
+          </entry>
+          <entry>
+            <reference value="Organization/cf042e44-086a-4d51-9c77-172f9a972e3b"/>
+          </entry>
+          <entry>
+            <reference value="Bundle/281a985c-f25b-4aae-91a6-41ad744080b0"/>
+          </entry>
+          <entry>
+            <reference value="Task/160.123.456.789.123.58"/>
+          </entry>
+        </section>
       </Composition>
     </resource>
   </entry>
@@ -170,13 +193,6 @@
               <author>
                 <reference value="Practitioner/20597e0e-cb2a-45b3-95f0-dc3dbdb617c3"/>
                 <type value="Practitioner"/>
-              </author>
-              <author>
-                <type value="Device"/>
-                <identifier>
-                  <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer"/>
-                  <value value="Y/400/1910/36/346"/>
-                </identifier>
               </author>
               <title value="elektronische Arzneimittelverordnung"/>
               <custodian>
@@ -509,7 +525,7 @@
               <type>
                 <coding>
                   <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis"/>
-                  <code value="GKV"/>
+                  <code value="PKV"/>
                 </coding>
               </type>
               <beneficiary>
@@ -553,10 +569,10 @@
     <!--      <relation value="relation"/>-->
     <!--      <url value="url"/>-->
     <!--    </link>-->
-    <fullUrl value="http://erp-test.net/Device/eRxService"/>
+    <fullUrl value="http://erp-test.net/Device/281a985c-f25b-4aae-91a6-41ad744080b0"/>
     <resource>
       <Device>
-        <id value="eRxService"/>
+        <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
         <meta>
           <profile value="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
         </meta>
@@ -871,10 +887,16 @@
                   <end value="2020-03-20T07:31:34+00:00"/>
                 </period>
               </event>
+              <section>
+                <entry>
+                  <reference value="urn:uuid:1111100000011111"/>
+                </entry>
+              </section>
             </Composition>
           </resource>
         </entry>
         <entry>
+          <fullUrl value="http://prescriptionserver.telematik/Device/eRxService"/>
           <resource>
             <Device>
               <id value="eRxService"/>

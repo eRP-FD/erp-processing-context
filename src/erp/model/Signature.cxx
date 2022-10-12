@@ -57,7 +57,7 @@ const rapidjson::Pointer typeCodePointer ("/type/0/code");
 }  // anonymous namespace
 
 
-Signature::Signature(const std::string_view& data, const fhirtools::Timestamp& when, const std::string_view& who)
+Signature::Signature(const std::string_view& data, const model::Timestamp& when, const std::string_view& who)
     : Resource<Signature>(ResourceBase::NoProfile,
                           []() {
                               std::call_once(onceFlag, initTemplates);
@@ -84,11 +84,11 @@ std::optional<std::string_view> Signature::data () const
 }
 
 
-std::optional<fhirtools::Timestamp> Signature::when() const
+std::optional<model::Timestamp> Signature::when() const
 {
     const auto value = getOptionalStringValue(whenPointer);
     if (value.has_value())
-        return fhirtools::Timestamp::fromXsDateTime(std::string(value.value()));
+        return model::Timestamp::fromXsDateTime(std::string(value.value()));
     return {};
 }
 

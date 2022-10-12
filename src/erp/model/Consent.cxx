@@ -116,7 +116,7 @@ std::pair<Consent::Type, std::string> Consent::splitIdString(const std::string_v
 
 Consent::Consent(
     const std::string_view& kvnr,
-    const fhirtools::Timestamp& dateTime)
+    const model::Timestamp& dateTime)
     : Resource<Consent>("https://gematik.de/fhir/StructureDefinition/ErxConsent",
                         []() {
                             std::call_once(onceFlag, initTemplates);
@@ -170,9 +170,9 @@ bool Consent::isChargingConsent() const
     return false;
 }
 
-fhirtools::Timestamp Consent::dateTime() const
+model::Timestamp Consent::dateTime() const
 {
-    return fhirtools::Timestamp::fromFhirDateTime(std::string(getStringValue(dateTimePointer)));
+    return model::Timestamp::fromFhirDateTime(std::string(getStringValue(dateTimePointer)));
 }
 
 void Consent::fillId()
@@ -191,7 +191,7 @@ void Consent::setPatientKvnr(const std::string_view& kvnr)
     setValue(patientKvnrValuePointer, kvnr);
 }
 
-void Consent::setDateTime(const fhirtools::Timestamp& dateTime)
+void Consent::setDateTime(const model::Timestamp& dateTime)
 {
     setValue(dateTimePointer, dateTime.toXsDateTime());
 }

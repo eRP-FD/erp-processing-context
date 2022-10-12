@@ -70,6 +70,11 @@ void fhirtools::ValidationResultList::append(fhirtools::ValidationResultList inL
     append(std::move(inList).results());
 }
 
+void fhirtools::ValidationResultList::prepend(fhirtools::ValidationResultList inList)
+{
+    mResults.splice(mResults.begin(), std::move(inList).results());
+}
+
 void fhirtools::ValidationResultList::append(std::list<ValidationError> inList)
 {
     mResults.splice(mResults.end(), std::move(inList));
@@ -85,7 +90,7 @@ void fhirtools::ValidationResultList::dumpToLog() const
             using enum fhirtools::Severity;
             case debug:
                 TVLOG(3) << item;
-                tLevel = 2;
+                tLevel = 3;
                 break;
             case info:
                 TVLOG(1) << item;

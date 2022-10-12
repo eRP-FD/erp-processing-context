@@ -79,7 +79,7 @@ BundleBase<DerivedBundle, SchemaVersionType>::BundleBase(const BundleType type, 
     setId(bundleId);
 
     setValue(typePointer, magic_enum::enum_name(type));
-    setValue(timestampPointer, fhirtools::Timestamp::now().toXsDateTime());
+    setValue(timestampPointer, model::Timestamp::now().toXsDateTime());
 
     // Set the resource type to "Bundle".
     setValue(resourceTypePointer, valueResourceTypeBundle);
@@ -216,9 +216,9 @@ std::optional<model::Signature> BundleBase<DerivedBundle, SchemaVersionType>::ge
 
 
 template <class DerivedBundle, typename SchemaVersionType>
-fhirtools::Timestamp BundleBase<DerivedBundle, SchemaVersionType>::getSignatureWhen () const
+model::Timestamp BundleBase<DerivedBundle, SchemaVersionType>::getSignatureWhen () const
 {
-    return fhirtools::Timestamp::fromXsDateTime(std::string{getStringValue(signatureWhenPointer)});
+    return model::Timestamp::fromXsDateTime(std::string{getStringValue(signatureWhenPointer)});
 }
 
 
@@ -309,7 +309,7 @@ template <class DerivedBundle, typename SchemaVersionType>
 void BundleBase<DerivedBundle, SchemaVersionType>::setTotalSearchMatches(std::size_t totalSearchMatches)
 {
     Expect3(getBundleType() == BundleType::searchset, "total shall only be set for searchsets", std::logic_error);
-    setValue(totalPointer, rapidjson::Value(totalSearchMatches));
+    setValue(totalPointer, rapidjson::Value(static_cast<std::uint64_t>(totalSearchMatches)));
 }
 
 

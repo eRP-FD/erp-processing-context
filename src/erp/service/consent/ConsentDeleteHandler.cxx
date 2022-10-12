@@ -41,6 +41,11 @@ void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
     session.database()->clearAllChargeInformation(*kvnr);
     A_22157.finish();
 
+    A_22117_01.start("Delete all charge information & communications for insurant matched by the KVNR from the ACCESS_TOKEN");
+    session.database()->clearAllChargeInformation(*kvnr);
+    session.database()->clearAllChargeItemCommunications(*kvnr);
+    A_22117_01.finish();
+
     // Collect Audit data
     session.auditDataCollector()
         .setEventId(model::AuditEventId::DELETE_Consent)

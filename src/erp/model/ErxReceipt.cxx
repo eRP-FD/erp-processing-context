@@ -66,13 +66,9 @@ ErxReceipt::ErxReceipt(const Uuid& bundleId, const std::string& selfLink, const 
     addResource("urn:uuid:" + std::string{composition.id()}, {}, {}, composition.jsonDocument());
     addResource(deviceIdentifier, {}, {}, device.jsonDocument());
 
-    const auto profileVersion = ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>();
-    if (profileVersion != ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1)
-    {
-        ModelExpect(prescriptionDigest.data().has_value(), "Missing prescription message digest.");
+    ModelExpect(prescriptionDigest.data().has_value(), "Missing prescription message digest.");
 
-        addResource(prescriptionDigestIdentifier, {}, {}, prescriptionDigest.jsonDocument());
-    }
+    addResource(prescriptionDigestIdentifier, {}, {}, prescriptionDigest.jsonDocument());
 }
 
 

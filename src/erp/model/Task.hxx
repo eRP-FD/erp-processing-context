@@ -6,14 +6,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_TASK_HXX
 #define ERP_PROCESSING_CONTEXT_TASK_HXX
 
-#include "erp/model/Resource.hxx"
-#include "erp/model/PrescriptionType.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/PrescriptionType.hxx"
+#include "erp/model/Resource.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
-
 #include <optional>
 
 namespace model
@@ -46,17 +45,17 @@ public:
 
     // For creation from database entry
     explicit Task(const PrescriptionId& id, PrescriptionType prescriptionType,
-                  fhirtools::Timestamp lastModified, fhirtools::Timestamp authoredOn, Status status);
+                  model::Timestamp lastModified, model::Timestamp authoredOn, Status status);
 
     [[nodiscard]] Status status() const;
     [[nodiscard]] std::optional<std::string_view> kvnr() const;
     [[nodiscard]] PrescriptionId prescriptionId() const;
-    [[nodiscard]] fhirtools::Timestamp authoredOn() const;
+    [[nodiscard]] model::Timestamp authoredOn() const;
     [[nodiscard]] PrescriptionType type() const;
-    [[nodiscard]] fhirtools::Timestamp lastModifiedDate() const;
+    [[nodiscard]] model::Timestamp lastModifiedDate() const;
     [[nodiscard]] std::string_view accessCode() const;
-    [[nodiscard]] fhirtools::Timestamp expiryDate() const;
-    [[nodiscard]] fhirtools::Timestamp acceptDate() const;
+    [[nodiscard]] model::Timestamp expiryDate() const;
+    [[nodiscard]] model::Timestamp acceptDate() const;
     [[nodiscard]] std::optional<std::string_view> secret() const;
     [[nodiscard]] std::optional<std::string_view> healthCarePrescriptionUuid() const;
     [[nodiscard]] std::optional<std::string_view> patientConfirmationUuid() const;
@@ -69,9 +68,9 @@ public:
     void setHealthCarePrescriptionUuid();
     void setPatientConfirmationUuid();
     void setReceiptUuid();
-    void setExpiryDate(const fhirtools::Timestamp& expiryDate);
-    void setAcceptDate(const fhirtools::Timestamp& acceptDate);
-    void setAcceptDate(const fhirtools::Timestamp& baseTime, const std::optional<KbvStatusKennzeichen>& legalBasisCode,
+    void setExpiryDate(const model::Timestamp& expiryDate);
+    void setAcceptDate(const model::Timestamp& acceptDate);
+    void setAcceptDate(const model::Timestamp& baseTime, const std::optional<KbvStatusKennzeichen>& legalBasisCode,
                        int entlassRezeptValidityWorkingDays);
     void setSecret(std::string_view secret);
     void setAccessCode(std::string_view accessCode);
@@ -83,7 +82,7 @@ public:
     void deleteAccessCode();
     void deleteSecret();
 
-    void updateLastUpdate(const fhirtools::Timestamp& timestamp = fhirtools::Timestamp::now());
+    void updateLastUpdate(const model::Timestamp& timestamp = model::Timestamp::now());
 
 private:
     friend Resource<Task>;
@@ -91,10 +90,10 @@ private:
 
     [[nodiscard]] std::optional<std::string_view> uuidFromArray(const rapidjson::Pointer& array, std::string_view code) const;
     void addUuidToArray(const rapidjson::Pointer& array, std::string_view code, std::string_view uuid);
-    void dateToExtensionArray(std::string_view url, const fhirtools::Timestamp& expiryDate);
-    [[nodiscard]] fhirtools::Timestamp dateFromExtensionArray(std::string_view url) const;
+    void dateToExtensionArray(std::string_view url, const model::Timestamp& expiryDate);
+    [[nodiscard]] model::Timestamp dateFromExtensionArray(std::string_view url) const;
 
-    void setAccepDateDependentPrescriptionType(const fhirtools::Timestamp& baseTime);
+    void setAccepDateDependentPrescriptionType(const model::Timestamp& baseTime);
 };
 
 }

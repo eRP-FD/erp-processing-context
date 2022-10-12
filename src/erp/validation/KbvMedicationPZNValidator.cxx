@@ -60,7 +60,6 @@ void KbvMedicationPZNValidator_V1_0_1::doValidate(const model::KbvMedicationPzn&
     erp_NormgroesseOderMenge(kbvMedicationpzn);
     amountNumerator_erp_begrenzungValue(kbvMedicationpzn);
     amountNumerator_erp_codeUndSystem(kbvMedicationpzn);
-    erp_begrenzungPznCode(kbvMedicationpzn);
 }
 
 void KbvMedicationPZNValidator_V1_0_1::erp_NormgroesseOderMenge(const model::KbvMedicationPzn& kbvMedicationpzn) const
@@ -122,20 +121,4 @@ void KbvMedicationPZNValidator_V1_0_1::amountNumerator_erp_codeUndSystem(
         ErpFailWithDiagnostics(HttpStatus::BadRequest,
                                constraintError(KbvMedicationPZNConstraint::erp_codeUndSystem), ex.what());
     }
-}
-
-void KbvMedicationPZNValidator_V1_0_1::erp_begrenzungPznCode(const model::KbvMedicationPzn& kbvMedicationpzn) const
-{
-    A_22925.start("PZN length constraint check");
-    const auto* errorMessageFromAfo = "Länge PZN unzulässig (muss 8-stellig sein)";
-    try
-    {
-        const auto pznString = kbvMedicationpzn.pzn();
-        ErpExpect(pznString.size() == 8, HttpStatus::BadRequest, errorMessageFromAfo);
-    }
-    catch (const model::ModelException& ex)
-    {
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, errorMessageFromAfo, ex.what());
-    }
-    A_22925.finish();
 }

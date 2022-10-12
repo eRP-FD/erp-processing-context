@@ -8,19 +8,19 @@
 #include "erp/tsl/TslManager.hxx"
 #include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/TslService.hxx"
 #include "erp/tsl/error/TslError.hxx"
-#include "fhirtools/model/Timestamp.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
+#include "mock/tsl/MockOcsp.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslParsingExpectations.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "mock/tsl/MockOcsp.hxx"
-#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -916,7 +916,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoHistoryIgnoreTimestamp_Success)
     // set CA StatusStartingTime to the "valid from" timestamp of the certificate
     manager->addPostUpdateHook([=]{
     TslTestHelper::setCaCertificateTimestamp(
-        fhirtools::Timestamp::fromFhirDateTime("2020-06-10T00:00:00Z").toChronoTimePoint(), certificateCA, *manager,
+        model::Timestamp::fromFhirDateTime("2020-06-10T00:00:00Z").toChronoTimePoint(), certificateCA, *manager,
         TslMode::BNA);
     });
 

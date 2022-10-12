@@ -49,7 +49,7 @@
         </author>
         <title value="elektronische Arzneimittelverordnung"/>
         <custodian>
-          <reference value="Organisation/c97dbd65-dadc-4eec-8ee2-fb24ec8e4f59"/>
+          <reference value="Organization/c97dbd65-dadc-4eec-8ee2-fb24ec8e4f59"/>
         </custodian>
         <section>
           <code>

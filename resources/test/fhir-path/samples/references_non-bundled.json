@@ -1,0 +1,38 @@
+{
+    "resourceType": "DomainResource",
+    "id": "root",
+    "extension": [
+        {
+            "url": "http://erp.test/referencingElement",
+            "valueReference": {
+                "reference": "#contained1"
+            }
+        }
+    ],
+    "contained": [
+        {
+            "resourceType": "DomainResource",
+            "id": "contained1",
+            "extension": [
+                {
+                    "url": "http://erp.test/contained1/referencingElement",
+                    "valueReference": {
+                        "reference": "#contained2"
+                    }
+                }
+            ]
+        },
+        {
+            "resourceType": "DomainResource",
+            "id": "contained2",
+            "extension": [
+                {
+                    "url": "http://erp.test/contained1/referencingElement",
+                    "valueReference": {
+                        "reference": "#"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -44,14 +44,21 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
     using namespace std::string_view_literals;
     using namespace model::resource;
     const auto& [params, prescriptionType] = GetParam();
-    auto signingTime = fhirtools::Timestamp::fromXsDate(std::string{params.signingTime});
-    auto acceptDate = fhirtools::Timestamp::fromGermanDate(std::string{params.acceptDate});
-    auto expiryDate = fhirtools::Timestamp::fromGermanDate(std::string{params.expiryDate});
+    auto signingTime = model::Timestamp::fromXsDate(std::string{params.signingTime});
+    auto acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDate});
+    auto expiryDate = model::Timestamp::fromGermanDate(std::string{params.expiryDate});
     auto& resourceManager = ResourceManager::instance();
     auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
-    if (prescriptionType == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv){
-        bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle_PKV.xml");
-        acceptDate = fhirtools::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
+    switch (prescriptionType)
+    {
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle_PKV.xml");
+            acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
+            break;
     }
     bundle = patchVersionsInBundle(bundle);
     bundle = String::replaceAll(bundle, "2021-06-08", std::string{params.signingTime});
@@ -82,8 +89,10 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
             ASSERT_EQ(flowTypeDisplay, "Muster 16 (Apothekenpflichtige Arzneimittel)");
             break;
         case model::PrescriptionType::direkteZuweisung:
-        case model::PrescriptionType::direkteZuweisungPkv:
             ASSERT_EQ(flowTypeDisplay, "Muster 16 (Direkte Zuweisung)");
+            break;
+        case model::PrescriptionType::direkteZuweisungPkv:
+            ASSERT_EQ(flowTypeDisplay, "PKV (Direkte Zuweisung)");
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             ASSERT_EQ(flowTypeDisplay, "PKV (Apothekenpflichtige Arzneimittel)");
@@ -121,6 +130,7 @@ INSTANTIATE_TEST_SUITE_P(samples, ProzessParameterFlowtype,
         ::testing::ValuesIn(samples),
         ::testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
                           model::PrescriptionType::direkteZuweisung,
-                          model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
+                          model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                          model::PrescriptionType::direkteZuweisungPkv))
 );
 

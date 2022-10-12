@@ -56,13 +56,17 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     // For GET /Task see gemSpec_FD_eRp_V1.1.1, 6.1.1
     A_21558.start("Register the allowed professionOIDs");
     handlerManager.onGetDo("/Task",
-            std::make_unique<GetAllTasksHandler>(oids{oid_versicherter}));
+            std::make_unique<GetAllTasksHandler>(oids{
+                               oid_versicherter,
+                               oid_oeffentliche_apotheke}));
     A_21558.finish();
 
     A_19113_01.start("Register the allowed professionOIDs");
     handlerManager.onGetDo("/Task/{id}",
-            std::make_unique<GetTaskHandler>(
-                               oids{oid_versicherter, oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
+            std::make_unique<GetTaskHandler>(oids{
+                               oid_versicherter,
+                               oid_oeffentliche_apotheke,
+                               oid_krankenhausapotheke}));
     A_19113_01.finish();
 
     // For POST /Task see gemSpec_FD_eRp_V1.1.1, 6.1.2
@@ -168,7 +172,7 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
         const oids chargeItemOIDsExceptCreation{oid_versicherter, oid_oeffentliche_apotheke, oid_krankenhausapotheke};
         A_22113.start("Register the allowed professionOIDs");
         handlerManager.onDeleteDo("/ChargeItem/{id}",
-                                  std::make_unique<ChargeItemDeleteHandler>(chargeItemOIDsExceptCreation));
+                                  std::make_unique<ChargeItemDeleteHandler>(oids{oid_versicherter}));
         A_22113.finish();
 
         A_22879.start("If called without specifying an <id>, issue error code 405 to prevent "

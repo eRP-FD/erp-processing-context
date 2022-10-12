@@ -19,14 +19,13 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
     const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.715.74");
 
     const std::string telematicId = "12345654321";
-    const fhirtools::Timestamp start = fhirtools::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
-    const fhirtools::Timestamp end = fhirtools::Timestamp::fromXsDateTime("2021-02-05T11:12:00+01:00");
+    const model::Timestamp start = model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00");
+    const model::Timestamp end = model::Timestamp::fromXsDateTime("2021-02-05T11:12:00+01:00");
     const std::string author = "https://prescriptionserver.telematik/Device/ErxService";
     const std::string_view prescriptionDigestIdentifier = "Binary/PrescriptionDigest-160.000.000.004.715.74";
 
 
-    for (const auto& profileVersion : {::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1,
-                                       ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1})
+    for (const auto& profileVersion : {::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1})
     {
         EnvironmentVariableGuard forceGematikVersion{"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION",
                                                      ::std::string{::model::ResourceVersion::v_str(profileVersion)}};
@@ -56,7 +55,7 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
         EXPECT_EQ(erxReceipt.device().version(), ErpServerInfo::ReleaseVersion);
 
         const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1";
-        const fhirtools::Timestamp when = fhirtools::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
+        const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
         const model::Signature origSignature(data, when, author);
         erxReceipt.setSignature(origSignature);
         const auto signature = erxReceipt.getSignature();
@@ -67,50 +66,37 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
         EXPECT_EQ(signature->data().value(), data);
         EXPECT_TRUE(signature->who().has_value());
         EXPECT_EQ(signature->who().value(), author);
-        if (profileVersion == ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1)
-        {
-            EXPECT_THROW(erxReceipt.prescriptionDigest(), ::model::ModelException);
-            EXPECT_FALSE(erxReceipt.composition().prescriptionDigestIdentifier().has_value());
-        }
-        else
-        {
-            const auto digest = erxReceipt.prescriptionDigest();
+        const auto digest = erxReceipt.prescriptionDigest();
 
-            EXPECT_EQ(digest.jsonDocument().getOptionalStringValue(rapidjson::Pointer{"/contentType"}),
-                      "application/octet-stream");
-            EXPECT_EQ(digest.data().value(), "Test");
-            EXPECT_TRUE(erxReceipt.composition().prescriptionDigestIdentifier().has_value());
-            EXPECT_EQ(erxReceipt.composition().prescriptionDigestIdentifier().value(), prescriptionDigestIdentifier);
-        }
+        EXPECT_EQ(digest.jsonDocument().getOptionalStringValue(rapidjson::Pointer{"/contentType"}),
+                  "application/octet-stream");
+        EXPECT_EQ(digest.data().value(), "Test");
+        EXPECT_TRUE(erxReceipt.composition().prescriptionDigestIdentifier().has_value());
+        EXPECT_EQ(erxReceipt.composition().prescriptionDigestIdentifier().value(), prescriptionDigestIdentifier);
     }
 }
 
 
 TEST(ErxReceiptTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    for (const auto& profileVersion : {::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1,
-                                       ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1})
+    for (const auto& profileVersion : {::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1})
     {
         EnvironmentVariableGuard forceGematikVersion{"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION",
                                                      ::std::string{::model::ResourceVersion::v_str(profileVersion)}};
 
-        const auto json = (profileVersion == ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1)
-                              ? FileHelper::readFileAsString(std::string(TEST_DATA_DIR) +
-                                                             "/EndpointHandlerTest/erx_receipt1_0_3_1.json")
-                              : FileHelper::readFileAsString(std::string(TEST_DATA_DIR) +
-                                                             "/EndpointHandlerTest/erx_receipt1_1_1.json");
+        const auto json =
+            FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/erx_receipt1_1_1.json");
 
         const model::ErxReceipt erxReceipt = model::ErxReceipt::fromJsonNoValidation(json);
         const auto prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58");
 
         const std::string telematicId = "606358757";
-        const fhirtools::Timestamp start = fhirtools::Timestamp::fromXsDateTime("2020-03-20T07:23:34.328+00:00");
-        const fhirtools::Timestamp end = fhirtools::Timestamp::fromXsDateTime("2020-03-20T12:21:34.558+00:00");
+        const model::Timestamp start = model::Timestamp::fromXsDateTime("2020-03-20T07:23:34.328+00:00");
+        const model::Timestamp end = model::Timestamp::fromXsDateTime("2020-03-20T12:21:34.558+00:00");
         const std::string author = "https://prescriptionserver.telematik/Device/ErxService";
 
         const std::string_view serialNumber = "R4.0.0.287342834";
-        const std::string_view version =
-            (profileVersion == ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1) ? "1.0.0" : "1.4.0";
+        const std::string_view version = "1.4.0";
 
         EXPECT_EQ(erxReceipt.prescriptionId().toDatabaseId(), prescriptionId.toDatabaseId());
 
@@ -126,32 +112,12 @@ TEST(ErxReceiptTest, ConstructFromJson)//NOLINT(readability-function-cognitive-c
         EXPECT_EQ(erxReceipt.device().serialNumber(), serialNumber);
         EXPECT_EQ(erxReceipt.device().version(), version);
 
-        if (profileVersion == ::model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1)
-        {
-            const auto signature = erxReceipt.getSignature();
-            ASSERT_TRUE(signature.has_value());
+        const auto digest = erxReceipt.prescriptionDigest();
 
-            const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1TaXR1YXRpb24ga29ubnRlIGhpZXIga3VyemZyaXN0aWcga2";
-            const fhirtools::Timestamp when = fhirtools::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");
-
-            EXPECT_TRUE(signature->when().has_value());
-            EXPECT_EQ(signature->when().value(), when);
-            EXPECT_TRUE(signature->data().has_value());
-            EXPECT_EQ(signature->data().value(), data);
-            EXPECT_TRUE(signature->who().has_value());
-            EXPECT_EQ(signature->who().value(), author);
-            EXPECT_THROW(erxReceipt.prescriptionDigest(), ::model::ModelException);
-            EXPECT_FALSE(erxReceipt.composition().prescriptionDigestIdentifier().has_value());
-        }
-        else
-        {
-            const auto digest = erxReceipt.prescriptionDigest();
-
-            EXPECT_EQ(digest.jsonDocument().getOptionalStringValue(rapidjson::Pointer{"/contentType"}),
-                      "application/octet-stream");
-            EXPECT_EQ(digest.data().value(), "Test");
-            EXPECT_TRUE(erxReceipt.composition().prescriptionDigestIdentifier().has_value());
-            EXPECT_EQ(erxReceipt.composition().prescriptionDigestIdentifier().value(), "Binary/TestDigest");
-        }
+        EXPECT_EQ(digest.jsonDocument().getOptionalStringValue(rapidjson::Pointer{"/contentType"}),
+                  "application/octet-stream");
+        EXPECT_EQ(digest.data().value(), "Test");
+        EXPECT_TRUE(erxReceipt.composition().prescriptionDigestIdentifier().has_value());
+        EXPECT_EQ(erxReceipt.composition().prescriptionDigestIdentifier().value(), "Binary/TestDigest");
     }
 }

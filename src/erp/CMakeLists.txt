@@ -82,6 +82,7 @@ list(
         database/PostgresBackendTask.cxx
         database/PostgresConnection.cxx
         database/RedisClient.cxx
+        database/redis/RateLimiter.cxx
         hsm/BlobCache.cxx
         hsm/BlobDatabase.cxx
         enrolment/EnrolmentData.cxx
@@ -158,6 +159,7 @@ list(
         model/Subscription.cxx
         model/Task.cxx
         model/TimePeriod.cxx
+        model/Timestamp.cxx
         pc/CFdSigErpManager.cxx
         pc/PcServiceContext.cxx
         pc/SeedTimer.cxx
@@ -183,7 +185,6 @@ list(
         server/request/ServerRequest.cxx
         server/request/ServerRequestReader.cxx
         server/response/ResponseBuilder.cxx
-        server/response/ResponseValidator.cxx
         server/response/ServerResponse.cxx
         server/response/ServerResponseWriter.cxx
         server/response/ValidatedServerResponse.cxx
@@ -293,7 +294,6 @@ list(
         validation/KbvMedicationFreeTextValidator.cxx
         validation/KbvMedicationIngredientValidator.cxx
         validation/KbvMedicationPZNValidator.cxx
-        validation/KbvMedicationModelHelper.cxx
         validation/KbvMedicationRequestValidator.cxx
         validation/KbvOrganizationValidator.cxx
         validation/KbvPatientValidator.cxx
@@ -350,8 +350,8 @@ target_link_libraries (
         PUBLIC CONAN_PKG::redis-plus-plus
         PUBLIC CONAN_PKG::hiredis
         PUBLIC CONAN_PKG::magic_enum
-        PUBLIC CONAN_PKG::mpfr
         PUBLIC CONAN_PKG::zstd
+        PUBLIC CONAN_PKG::zlib
 )
 if(ERP_WITH_HSM_TPM_PRODUCTION)
     target_link_libraries (

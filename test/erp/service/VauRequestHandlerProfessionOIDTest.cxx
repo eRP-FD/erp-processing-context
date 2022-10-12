@@ -165,7 +165,6 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksSuccess)
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksForbidden)
 {
     A_21558.test("Invalid professionOID claim in JWT");
-    testEndpoint(HttpMethod::GET, "/Task", jwtOeffentliche_apotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtKrankenhausapotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtZahnArzt, HttpStatus::Forbidden);
@@ -529,8 +528,6 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemNotFound)
     A_22113.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
     testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::DELETE, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemForbidden)

@@ -19,7 +19,6 @@
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ResponseBuilder.hxx"
-#include "erp/server/response/ResponseValidator.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
@@ -35,22 +34,6 @@
 
 namespace
 {
-
-std::unordered_set<Operation> auditRelevantOperations = {
-    Operation::GET_Task_id,
-    Operation::POST_Task_id_activate,
-    Operation::POST_Task_id_accept,
-    Operation::POST_Task_id_reject,
-    Operation::POST_Task_id_close,
-    Operation::POST_Task_id_abort,
-    Operation::GET_MedicationDispense,
-    Operation::GET_MedicationDispense_id,
-    Operation::DELETE_ChargeItem_id,
-    Operation::POST_ChargeItem,
-    Operation::PUT_ChargeItem_id,
-    Operation::POST_Consent,
-    Operation::DELETE_Consent};
-
 
 void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
 {
@@ -265,18 +248,25 @@ VauRequestHandler::VauRequestHandler(RequestHandlerManager&& handlers)
 void VauRequestHandler::handleRequest(PcSessionContext& session)
 {
     const auto sessionIdentifier = session.request.header().header(Header::XRequestId).value_or("unknown X-Request-Id");
-    // Set up the duration consumer that will output times spend on calls to external services without the need
+    // Set up the duration consumer that will output times spent on calls to external services without the need
     // of explicitly passing an object to the downloading code.
-    DurationConsumerGuard durationConsumerGuard (
-        sessionIdentifier,
-        []
-        (const std::chrono::system_clock::duration duration, const std::string& description, const std::string& sessionIdentifier)
-        {
-            JsonLog(LogId::INFO)
-                .keyValue("log-type", "timing")
+    DurationConsumerGuard durationConsumerGuard(
+        sessionIdentifier, [](const std::chrono::steady_clock::duration duration, const std::string& category,
+                              const std::string& description, const std::string& sessionIdentifier,
+                              const std::unordered_map<std::string, std::string>& keyValueMap) {
+            const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
+            auto log = timingLoggingEnabled ? JsonLog(LogId::INFO, JsonLog::makeWarningLogReceiver(), VLOG_IS_ON(0))
+                                            : JsonLog(LogId::INFO);
+            log.keyValue("log-type", "timing")
                 .keyValue("x-request-id", sessionIdentifier)
-                .keyValue("description", description)
-                .keyValue("duration-ms", gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::milliseconds>(duration).count()));
+                .keyValue("category", category)
+                .keyValue("description", description);
+            for (const auto& item : keyValueMap)
+            {
+                log.keyValue(item.first, item.second);
+            }
+            log.keyValue("duration-us",
+                         gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(duration).count()));
         });
 
     session.accessLog.keyValue("health", session.serviceContext.applicationHealth().isUp() ? "UP" : "DOWN");
@@ -431,16 +421,29 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         {
             matchingHandler.handlerContext->handler->preHandleRequestHook(innerSession);
 
-            // Run the secondary handler
-            A_20163.start("5 - process inner request");
-            matchingHandler.handlerContext->handler->handleRequest(innerSession);
-            A_20163.finish();
+            std::exception_ptr currExc;
+            bool shouldCreateAuditEvent = false;
+            try
+            {
+                // Run the secondary handler
+                A_20163.start("5 - process inner request");
+                matchingHandler.handlerContext->handler->handleRequest(innerSession);
+                A_20163.finish();
+                shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnSuccess();
+            }
+            catch(ErpException& exc)
+            {
+                // check if to write an audit event for error case:
+                shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnError(exc.status());
+                if(!shouldCreateAuditEvent)
+                    throw;
+                currExc = std::current_exception();
+            }
 
-            if(auditRelevantOperations.count(innerOperation))
+            if (shouldCreateAuditEvent)
             {
                 storeAuditData(innerSession, innerServerRequest->getAccessToken());
             }
-
 
             A_18936.start("commit transaction");
             auto transaction = innerSession.releaseDatabase();
@@ -450,6 +453,10 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
                 transaction.reset();
             }
             A_18936.finish();
+
+            // rethrow for error case to assure that error response is sent;
+            if (currExc)
+                std::rethrow_exception(currExc);
         }
     }
     catch(...)
@@ -466,7 +473,6 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
 {
     try
     {
-        ResponseValidator::validate(innerServerResponse, innerOperation);
         handleKeepAlive(outerSession, innerServerRequest, innerServerResponse);
 
         OuterTeeResponse outerTeeResponse =
@@ -755,7 +761,7 @@ void VauRequestHandler::handleDosCheck(PcSessionContext& session, const std::opt
     A_19992.start("Run a redis black list for the tokens sub claim.");
     Expect(exp > 0, "Missing exp field in JWT claim");
     auto exp_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::time_point<std::chrono::system_clock>() + std::chrono::seconds(exp));
-    bool isWhitelisted = session.serviceContext.getDosHandler().updateAccessCounter(sub.value(), exp_ms);
+    bool isWhitelisted = session.serviceContext.getDosHandler().updateCallsCounter(sub.value(), exp_ms);
     VauExpect(isWhitelisted, HttpStatus::TooManyRequests, VauErrorCode::brute_force, "Token with given sub used too often within certain timespan.");
     A_19992.finish();
 }

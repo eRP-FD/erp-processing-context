@@ -37,7 +37,7 @@ void ChargeItemPatchHandler::handleRequest(PcSessionContext& session)
 
     auto* databaseHandle = session.database();
     const auto prescriptionId = parseIdFromPath(session.request, session.accessLog);
-    auto existingChargeInformation = databaseHandle->retrieveChargeInformationForUpdate(prescriptionId);
+    auto [existingChargeInformation, blobId, salt] = databaseHandle->retrieveChargeInformationForUpdate(prescriptionId);
 
     A_22877.start("Only the beneficiary insured person as the authorized person changes the billing information");
     ErpExpect(existingChargeInformation.chargeItem.subjectKvnr().value() == idClaim.value(),
@@ -52,7 +52,7 @@ void ChargeItemPatchHandler::handleRequest(PcSessionContext& session)
               "Could not get charge item marking flag from resource");
 
     existingChargeInformation.chargeItem.setMarkingFlag(*markingFlag);
-    session.database()->updateChargeInformation(existingChargeInformation);
+    session.database()->updateChargeInformation(existingChargeInformation, blobId, salt);
 
     makeResponse(session, HttpStatus::OK, &existingChargeInformation.chargeItem);
 

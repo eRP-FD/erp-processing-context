@@ -24,6 +24,7 @@
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "fhirtools/util/SaxHandler.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 
 class JWT;
@@ -53,9 +54,10 @@ protected:
 
     /// @brief parse and validate the request body either using TModel::fromJson or TModel::fromXml based on the provided Content-Type
     template<class TModel>
-    [[nodiscard]]
-    static TModel parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
-                                              bool allowGenericValidate = true);
+    [[nodiscard]] static TModel
+    parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
+                                const std::optional<fhirtools::ValidatorOptions>& =
+                                    model::ResourceBase::defaultValidatorOptions());
 
     static std::string getLanguageFromHeader(const Header& requestHeader);
 
@@ -77,7 +79,7 @@ public:
 
 template<class TModel>
 TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
-                                                      bool allowGenericValidate)
+                                                      const std::optional<fhirtools::ValidatorOptions>& valOpts)
 {
     const auto& header = context.request.header();
     const auto& body = context.request.getBody();
@@ -91,13 +93,13 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& cont
     {
         auto resource = TModel::fromJson(body, context.serviceContext.getJsonValidator(),
                                          context.serviceContext.getXmlValidator(),
-                                         context.serviceContext.getInCodeValidator(), schemaType, allowGenericValidate);
+                                         context.serviceContext.getInCodeValidator(), schemaType, valOpts);
         return resource;
     }
     else if (mimeType == MimeType::xml || mimeType == MimeType::fhirXml)
     {
         auto resource = TModel::fromXml(body, context.serviceContext.getXmlValidator(),
-                                        context.serviceContext.getInCodeValidator(), schemaType, allowGenericValidate);
+                                        context.serviceContext.getInCodeValidator(), schemaType, valOpts);
         return resource;
     }
 
@@ -106,3 +108,4 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& cont
 
 
 #endif
+

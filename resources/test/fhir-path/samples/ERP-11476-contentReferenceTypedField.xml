@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
+  <type value="collection"/>
+  <entry>
+    <link>
+      <relation value="relation"/>
+      <url value="url"/>
+    </link>
+    <fullUrl value="fullurl"/>
+    <resource>
+      <Resource>
+        <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
+      </Resource>
+    </resource>
+  </entry>
+</Bundle>

@@ -34,7 +34,6 @@ private:
     void erp_NormgroesseOderMenge(const model::KbvMedicationPzn& kbvMedicationpzn) const;
     void amountNumerator_erp_begrenzungValue(const model::KbvMedicationPzn& kbvMedicationPzn) const;
     void amountNumerator_erp_codeUndSystem(const model::KbvMedicationPzn& kbvMedicationPzn) const;
-    void erp_begrenzungPznCode(const model::KbvMedicationPzn& kbvMedicationpzn) const;
 };
 
 using KbvMedicationPZNValidator_V1_0_2 = KbvMedicationPZNValidator_V1_0_1;

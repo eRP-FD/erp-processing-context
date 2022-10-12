@@ -7,7 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_CONSENT_HXX
 
 #include "erp/model/Resource.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <optional>
 
@@ -29,12 +29,12 @@ public:
     // The resource id field is filled by the constructor:
     Consent(
         const std::string_view& kvnr,
-        const fhirtools::Timestamp& dateTime);
+        const model::Timestamp& dateTime);
 
     [[nodiscard]] std::optional<std::string_view> id() const;
     [[nodiscard]] std::string_view patientKvnr() const;
     [[nodiscard]] bool isChargingConsent() const;
-    [[nodiscard]] fhirtools::Timestamp dateTime() const;
+    [[nodiscard]] model::Timestamp dateTime() const;
 
     void fillId();
 
@@ -44,7 +44,7 @@ private:
 
     void setId(const std::string_view& id);
     void setPatientKvnr(const std::string_view& kvnr);
-    void setDateTime(const fhirtools::Timestamp& dateTime);
+    void setDateTime(const model::Timestamp& dateTime);
 };
 
 }

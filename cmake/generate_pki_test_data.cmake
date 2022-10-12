@@ -28,10 +28,15 @@ mark_as_advanced(XMLSEC1)
 
 execute_process(
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_pki_test_data.sh --clean --output-dir=${CMAKE_BINARY_DIR}
-        OUTPUT_QUIET
-        ERROR_QUIET
         COMMAND_ECHO STDOUT
+        OUTPUT_VARIABLE OUTPUT_GENERATE_PKI_TEST_DATA
+        ERROR_VARIABLE ERROR_GENERATE_PKI_TEST_DATA
+        RESULT_VARIABLE RESULT_GENERATE_PKI_TEST_DATA
 )
+
+if(RESULT_GENERATE_PKI_TEST_DATA AND NOT RESULT_GENERATE_PKI_TEST_DATA EQUAL 0)
+    message(FATAL_ERROR "Failed to generate PKI test data\n${OUTPUT_GENERATE_PKI_TEST_DATA}\n${ERROR_GENERATE_PKI_TEST_DATA}")
+endif()
 
 file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/BNA_valid.xml
         DESTINATION ${CMAKE_BINARY_DIR}/resources/test/generated_pki/tsl)

@@ -4,13 +4,31 @@
  */
 
 #include "fhirtools/expression/Comparison.hxx"
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 
 namespace fhirtools
 {
+
+ComparisonOperator::ComparisonOperator(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs,
+                                       ExpressionPtr rhs)
+    : BinaryExpression(fhirStructureRepository, std::move(lhs), std::move(rhs))
+{
+    FPExpect(mLhs && mRhs, "missing mandatory argument");
+}
+
+Collection ComparisonOperator::comparison(const Element& lhs, const Element& rhs,
+                                          const std::vector<std::strong_ordering>& expected) const
+{
+    const auto result = lhs.compareTo(rhs);
+    if (! result.has_value())
+    {
+        return {};
+    }
+    return {Expression::makeBoolElement(std::ranges::find(expected, *result) != expected.end())};
+}
+
 Collection EqualityEqualsOperator::eval(const Collection& collection) const
 {
     EVAL_TRACE;
@@ -20,7 +38,8 @@ Collection EqualityEqualsOperator::eval(const Collection& collection) const
     {
         return {};
     }
-    return {makeBoolElement(lhs == rhs)};
+    const auto result = lhs.equals(rhs);
+    return result.has_value() ? Collection{makeBoolElement(*result)} : Collection{};
 }
 
 Collection EqualityNotEqualsOperator::eval(const Collection& collection) const
@@ -32,7 +51,8 @@ Collection EqualityNotEqualsOperator::eval(const Collection& collection) const
     {
         return {};
     }
-    return {makeBoolElement(lhs != rhs)};
+    const auto result = lhs.equals(rhs);
+    return result.has_value() ? Collection{makeBoolElement(! *result)} : Collection{};
 }
 
 Collection ComparisonOperatorGreaterThan::eval(const Collection& collection) const
@@ -44,15 +64,7 @@ Collection ComparisonOperatorGreaterThan::eval(const Collection& collection) con
     {
         return {};
     }
-    if (isImplicitConvertible(lhs.single()->type(), rhs.single()->type()))
-    {
-        return {makeBoolElement(*lhs.single() > *rhs.single())};
-    }
-    else if (isImplicitConvertible(rhs.single()->type(), lhs.single()->type()))
-    {
-        return {makeBoolElement(*rhs.single() < *lhs.single())};
-    }
-    FPFail("invalid operands for operator>");
+    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::greater});
 }
 
 Collection ComparisonOperatorLessThan::eval(const Collection& collection) const
@@ -64,14 +76,7 @@ Collection ComparisonOperatorLessThan::eval(const Collection& collection) const
     {
         return {};
     }
-    if (isImplicitConvertible(lhs.single()->type(), rhs.single()->type()))
-    {
-        return {makeBoolElement(*lhs.single() < *rhs.single())};
-    }
-    else if (isImplicitConvertible(rhs.single()->type(), lhs.single()->type()))
-    {
-        return {makeBoolElement(*rhs.single() > *lhs.single())};
-    }
+    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::less});
     FPFail("invalid operands for operator<");
 }
 
@@ -84,14 +89,7 @@ Collection ComparisonOperatorGreaterOrEqual::eval(const Collection& collection) 
     {
         return {};
     }
-    if (isImplicitConvertible(lhs.single()->type(), rhs.single()->type()))
-    {
-        return {makeBoolElement(*lhs.single() >= *rhs.single())};
-    }
-    else if (isImplicitConvertible(rhs.single()->type(), lhs.single()->type()))
-    {
-        return {makeBoolElement(*rhs.single() <= *lhs.single())};
-    }
+    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::greater, std::strong_ordering::equal});
     FPFail("invalid operands for operator>=");
 }
 
@@ -104,14 +102,7 @@ Collection ComparisonOperatorLessOrEqual::eval(const Collection& collection) con
     {
         return {};
     }
-    if (isImplicitConvertible(lhs.single()->type(), rhs.single()->type()))
-    {
-        return {makeBoolElement(*lhs.single() <= *rhs.single())};
-    }
-    else if (isImplicitConvertible(rhs.single()->type(), lhs.single()->type()))
-    {
-        return {makeBoolElement(*rhs.single() >= *lhs.single())};
-    }
+    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::less, std::strong_ordering::equal});
     FPFail("invalid operands for operator<=");
 }
 }

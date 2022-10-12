@@ -5,12 +5,13 @@
 #define FHIR_TOOLS_PROFILESETVALIDATOR_HXX
 
 
+#include "fhirtools/validator/internal/ProfileValidator.hxx"
+#include "fhirtools/validator/internal/ReferenceContext.hxx"
+
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
-
-#include "fhirtools/validator/internal/ProfileValidator.hxx"
 
 namespace fhirtools
 {
@@ -24,7 +25,9 @@ class FhirStructureRepository;
 class ProfileValidator;
 class ProfileValidatorCounterData;
 class ProfileValidatorCounterKey;
+class ReferenceContext;
 class SlicingChecker;
+class ValidationData;
 class ValidatorOptions;
 
 /**
@@ -45,7 +48,8 @@ class ValidatorOptions;
 class ProfileSetValidator
 {
 public:
-    explicit ProfileSetValidator(ProfiledElementTypeInfo rootPointer, const std::set<ProfiledElementTypeInfo>& defPointers,
+    explicit ProfileSetValidator(ProfiledElementTypeInfo rootPointer,
+                                 const std::set<ProfiledElementTypeInfo>& defPointers,
                                  const FhirPathValidator& validator);
     ProfileSetValidator(const ProfileSetValidator&) = delete;
     ProfileSetValidator(ProfileSetValidator&&) noexcept;
@@ -61,7 +65,17 @@ public:
 
     void typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef);
 
+    void addProfile(const FhirStructureRepository& repo, const FhirStructureDefinition* profile);
     void addProfiles(const FhirStructureRepository& repo, const std::set<const FhirStructureDefinition*>& profiles);
+
+    void requireOne(const fhirtools::FhirStructureRepository& repo,
+                    const std::set<const FhirStructureDefinition*>& profiles, std::string_view elementFullPath,
+                    const std::function<std::string()>& contextMessageGetter);
+
+    void addTargetProfiles(const ReferenceContext::ReferenceInfo& target,
+                           const std::set<const FhirStructureDefinition*>& metaProfiles,
+                           std::string_view elementFullPath);
+
 
     std::shared_ptr<ProfileSetValidator> subField(const FhirStructureRepository&, const std::string& name);
 
@@ -75,16 +89,27 @@ public:
 
     const ValidatorOptions& options() const;
 
+    ReferenceContext buildReferenceContext(const Element& element, std::string_view elementFullPath);
+
+
 private:
+    using SolverDataMap = std::map<ProfiledElementTypeInfo, std::shared_ptr<const ValidationData>>;
+    using SolverDataValue = SolverDataMap::value_type;
     explicit ProfileSetValidator(ProfileSetValidator* parent, ProfiledElementTypeInfo rootPointer);
     void createCounters(const ProfileValidator::Map& profileValidatorMap);
     void incrementCounters();
     void createSliceCheckersAndCounters();
     void createSliceCounters(const ProfileValidator& profVal, const FhirSlicing& slicing);
+    SolverDataValue createSolverDataValue(const fhirtools::FhirStructureRepository& repo,
+                                          const FhirStructureDefinition* profile, std::string_view elementFullPath,
+                                          const std::function<std::string()>& contextMessageGetter);
+    SolverDataValue createErrorSolverData(const FhirStructureDefinition* profile, std::string message,
+                                          std::string_view elementFullPath);
     ProfileValidator::Map process(ProfileValidator::Map::value_type& profVal, const Element& element,
                                   std::string_view elementFullPath);
     void finalizeChildCounters(std::string_view elementFullPath);
     void finalizeSliceCheckers(std::string_view elementFullPath);
+    std::set<ProfileValidator::MapKey> initialFailed() const;
     void propagateFailures();
 
     using CounterKey = ProfileValidatorCounterKey;
@@ -99,6 +124,8 @@ private:
     std::shared_ptr<const FhirElement> mElementInParent;
     ValidationResultList mResults;
     std::reference_wrapper<const FhirPathValidator> mValidator;
+    std::list<ProfileSolver> mSolvers;
+    std::set<const FhirStructureDefinition*> mExtraFailedProfiles;
 };
 
 

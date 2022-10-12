@@ -25,12 +25,12 @@ public:
         EXPECT_TRUE(task->findElement("Task.extension"));
         EXPECT_TRUE(task->findElement("Task.performerType"));
     }
+    static constexpr std::string_view erxTaskUrl{"https://gematik.de/fhir/StructureDefinition/ErxTask"};
 };
 
 
 TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-cognitive-complexity)
 {
-    static constexpr std::string_view erxTaskUrl{"https://gematik.de/fhir/StructureDefinition/ErxTask"};
     auto mkres = [&](const std::filesystem::path& p) {
         return ResourceManager::getAbsoluteFilename(p);
     };
@@ -59,19 +59,7 @@ TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-
     EXPECT_TRUE(repo.findTypeById("Device"));
     EXPECT_TRUE(repo.findTypeById("Meta"));
 
-
     EXPECT_FALSE(repo.findDefinitionByUrl(std::string{erxTaskUrl}));
-    repo.load(
-        {mkres("test/fhir/GemerxTask.xml"),
-         mkres("fhir/profiles/de.basisprofil.r4-0.9.13/Profile-identifier-kvid10.xml"),
-         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Extension-AcceptDate.xml"),
-         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Identifier-PRESCRIPTIONID.xml"),
-         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Extension-PrescriptionType.xml"),
-         mkres("fhir/profiles/de.gematik.erezept-workflow.r4-1.1.1/StructureDefinition-Extension-ExpiryDate.xml")});
-    const auto* const erxTask = repo.findDefinitionByUrl(std::string{erxTaskUrl});
-    ASSERT_NO_FATAL_FAILURE(checkTaskFields(erxTask));
-
-    EXPECT_FALSE(repo.findTypeById("NonsenseResource"));
 }
 
 TEST_F(FhirStructureRepositoryTest, missingBase)
@@ -100,4 +88,6 @@ TEST_F(FhirStructureRepositoryTest, loadFromConfiguration)
 
     FhirStructureRepository repo;
     EXPECT_NO_THROW(repo.load(fileList));
+    const auto* const erxTask = repo.findDefinitionByUrl(std::string{erxTaskUrl});
+    ASSERT_NO_FATAL_FAILURE(checkTaskFields(erxTask));
 }

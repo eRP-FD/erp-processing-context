@@ -13,7 +13,6 @@
 namespace fhirtools
 {
 class ProfileSetValidator;
-class ProfileValidatorMapKey;
 class FhirSlicing;
 
 
@@ -36,8 +35,8 @@ public:
 
     ValidationResultList results() &&;
     const ValidationResultList& results() const &;
-    [[nodiscard]] const std::set<ProfileValidatorMapKey>& affectedValidators() const;
-    void addAffectedValidator(const ProfileValidatorMapKey&);
+    [[nodiscard]] const std::set<ProfiledElementTypeInfo>& affectedValidators() const;
+    void addAffectedValidator(const ProfiledElementTypeInfo&);
 
 private:
     struct SliceData {
@@ -52,7 +51,7 @@ private:
     std::string mUnmatchedFullName;
     ValidationResultList mResult;
     const FhirStructureDefinition* const mBaseProfile;
-    std::set<ProfileValidatorMapKey> mAffectedValidators;
+    std::set<ProfiledElementTypeInfo> mAffectedValidators;
 };
 
 

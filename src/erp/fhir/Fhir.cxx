@@ -4,8 +4,6 @@
  */
 
 #include "Fhir.hxx"
-
-#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "erp/util/Configuration.hxx"
 
 #include <algorithm>
@@ -16,13 +14,25 @@ const Fhir& Fhir::instance()
     return theInstance;
 }
 
-Fhir::Fhir() :
-    mConverter(),
-    mStructureRepository()
+Fhir::Fhir()
+    : mConverter()
+    , mStructureRepository()
 {
-    auto filesAsString = Configuration::instance().getArray(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
+    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::ERP_FHIR_VERSION_OLD))
+    {
+        loadVersion(ConfigurationKey::ERP_FHIR_VERSION_OLD, ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD);
+    }
+    loadVersion(ConfigurationKey::ERP_FHIR_VERSION, ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
+}
+
+void Fhir::loadVersion(ConfigurationKey versionKey, ConfigurationKey structureKey)
+{
+    auto versionAsString = Configuration::instance().getStringValue(versionKey);
+    auto version = model::ResourceVersion::str_vBundled(versionAsString);
+    auto filesAsString = Configuration::instance().getArray(structureKey);
     std::list<std::filesystem::path> files;
-    std::transform(filesAsString.begin(), filesAsString.end(), std::back_inserter(files),
-                   [](const auto& str){ return std::filesystem::path{str};} );
-    mStructureRepository.load(files);
+    std::transform(filesAsString.begin(), filesAsString.end(), std::back_inserter(files), [](const auto& str) {
+        return std::filesystem::path{str};
+    });
+    mStructureRepository[version].load(files);
 }

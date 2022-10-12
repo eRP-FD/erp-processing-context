@@ -35,7 +35,7 @@ std::shared_ptr<PrimitiveElement> Expression::makeIntegerElement(size_t value) c
     return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Integer,
                                               static_cast<int32_t>(value));
 }
-std::shared_ptr<PrimitiveElement> Expression::makeDecimalElement(Element::DecimalType value) const
+std::shared_ptr<PrimitiveElement> Expression::makeDecimalElement(DecimalType value) const
 {
     return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Decimal, value);
 }
@@ -43,15 +43,15 @@ std::shared_ptr<PrimitiveElement> Expression::makeStringElement(const std::strin
 {
     return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string(value));
 }
-std::shared_ptr<PrimitiveElement> Expression::makeDateElement(const fhirtools::Timestamp& value) const
+std::shared_ptr<PrimitiveElement> Expression::makeDateElement(const fhirtools::Date& value) const
 {
     return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Date, value);
 }
-std::shared_ptr<PrimitiveElement> Expression::makeDateTimeElement(const fhirtools::Timestamp& value) const
+std::shared_ptr<PrimitiveElement> Expression::makeDateTimeElement(const fhirtools::DateTime& value) const
 {
     return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::DateTime, value);
 }
-std::shared_ptr<PrimitiveElement> Expression::makeTimeElement(const fhirtools::Timestamp& value) const
+std::shared_ptr<PrimitiveElement> Expression::makeTimeElement(const fhirtools::Time& value) const
 {
     return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Time, value);
 }

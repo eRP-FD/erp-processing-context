@@ -8,6 +8,7 @@
 #include <compare>
 #include <map>
 #include <tuple>
+#include <unordered_set>
 
 #include "fhirtools/repository/FhirElement.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
@@ -21,13 +22,11 @@ class Element;
 class FhirStructureRepository;
 class ProfileSetValidator;
 class ProfileValidator;
-class ProfileValidatorMapKey;
 class ProfileValidatorCounterData;
 class ProfileValidatorCounterKey;
 class FhirStructureDefinition;
 class FhirValueSet;
 class ValidationData;
-
 
 /**
  * @brief Key for the Counter map in ProfileSetValidator
@@ -61,7 +60,7 @@ public:
 class ProfileValidator
 {
 public:
-    using MapKey = ProfileValidatorMapKey;
+    using MapKey = ProfiledElementTypeInfo;
     using CounterKey = ProfileValidatorCounterKey;
     using CounterData = ProfileValidatorCounterData;
 
@@ -105,15 +104,20 @@ public:
     std::shared_ptr<const ValidationData> validationData() const;
 
 protected:
-    ProfileValidator(MapKey mapKey, std::set<std::shared_ptr<ValidationData>> parentData, ProfiledElementTypeInfo defPtr,
-                     std::string sliceName);
+    ProfileValidator(MapKey mapKey, std::set<std::shared_ptr<ValidationData>> parentData,
+                     ProfiledElementTypeInfo defPtr, std::string sliceName);
     void checkBinding(const Element& element, std::string_view elementFullPath);
     void validateBinding(const fhirtools::Element& element, const FhirElement::Binding& binding,
                          const FhirValueSet* bindingValueSet, std::string_view elementFullPath);
     void checkCodingBinding(const Element& codingElement, const FhirValueSet* fhirValueSet,
                             std::string_view elementFullPath, Severity errorSeverity);
-    void checkContraints(const Element& element, std::string_view elementFullPath);
+    void checkConstraints(const Element& element, std::string_view elementFullPath);
     void checkValue(const Element& element, std::string_view elementFullPath);
+    void checkValueMaxLength(const Element& element, std::string_view elementFullPath);
+    void checkValueMinValue(const Element& element, std::string_view elementFullPath);
+    void checkValueMaxValue(const Element& element, std::string_view elementFullPath);
+    void checkCoding(const Element& element, std::string_view elementFullPath);
+    void checkValueNotEmpty(const Element& element, std::string_view elementFullPath);
 
 
     std::shared_ptr<ValidationData> mData;
@@ -123,26 +127,16 @@ protected:
     ProfileSolver mSolver;
 };
 
-
-class ProfileValidatorMapKey
-{
-public:
-    const ProfiledElementTypeInfo defPtr;
-    //NOLINTNEXTLINE(hicpp-use-nullptr,modernize-use-nullptr)
-    auto operator<=>(const ProfileValidatorMapKey&) const = default;
-};
-
 class ProfileValidatorCounterData
 {
 public:
-    std::map<ProfileValidatorMapKey, ProfiledElementTypeInfo> elementMap;
+
+    std::map<ProfiledElementTypeInfo, ProfiledElementTypeInfo> elementMap;
     size_t count = 0;
     void check(ProfileValidator::Map& profMap, const ProfileValidatorCounterKey& cKey,
                std::string_view elementFullPath) const;
 };
 
-std::ostream& operator<<(std::ostream&, const ProfileValidator::MapKey&);
-std::string to_string(const ProfileValidator::MapKey&);
 std::ostream& operator<<(std::ostream& out, const ProfileValidator::CounterKey& key);
 std::string to_string(const ProfileValidator::CounterKey& key);
 

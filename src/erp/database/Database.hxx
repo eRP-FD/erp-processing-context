@@ -7,6 +7,8 @@
 #define ERP_PROCESSING_CONTEXT_DATABASE_DATABASE_HXX
 
 #include "erp/crypto/RandomSource.hxx"
+#include "erp/database/DatabaseModel.hxx"
+#include "erp/hsm/ErpTypes.hxx"
 
 #include <date/date.h>
 #include <functional>
@@ -14,10 +16,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-namespace fhirtools {
-class Timestamp;
-}
 
 namespace model
 {
@@ -33,7 +31,7 @@ class MedicationDispense;
 class MedicationDispenseId;
 class PrescriptionId;
 class Task;
-using fhirtools::Timestamp;
+class Timestamp;
 }
 
 class CmacKey;
@@ -148,11 +146,11 @@ public:
      * If "received" does not have a value this means that the communication has not been
      * received by the recipient.
      */
-    virtual std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>> deleteCommunication (const Uuid& communicationId, const std::string& sender) = 0;
+    virtual std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> deleteCommunication (const Uuid& communicationId, const std::string& sender) = 0;
     virtual void deleteCommunicationsForTask (const model::PrescriptionId& taskId) = 0;
     virtual void markCommunicationsAsRetrieved (
         const std::vector<Uuid>& communicationIds,
-        const fhirtools::Timestamp& retrieved,
+        const model::Timestamp& retrieved,
         const std::string& recipient) = 0;
 
     virtual void storeConsent(const model::Consent& consent) = 0;
@@ -160,7 +158,7 @@ public:
     [[nodiscard]] virtual bool clearConsent(const std::string_view& kvnr) = 0;
 
     virtual void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) = 0;
-    virtual void updateChargeInformation(const ::model::ChargeInformation& chargeInformation) = 0;
+    virtual void updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt) = 0;
 
     [[nodiscard]] virtual ::std::vector<::model::ChargeItem>
     retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
@@ -168,11 +166,12 @@ public:
 
     [[nodiscard]] virtual ::model::ChargeInformation
     retrieveChargeInformation(const model::PrescriptionId& id) const = 0;
-    [[nodiscard]] virtual ::model::ChargeInformation
+    [[nodiscard]] virtual std::tuple<::model::ChargeInformation, BlobId, db_model::Blob>
     retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const = 0;
 
     virtual void deleteChargeInformation(const model::PrescriptionId& id) = 0;
     virtual void clearAllChargeInformation(const std::string_view& kvnr) = 0;
+    virtual void clearAllChargeItemCommunications(const std::string_view& kvnr) = 0;
     virtual uint64_t countChargeInformationForInsurant (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     virtual DatabaseBackend& getBackend() = 0;

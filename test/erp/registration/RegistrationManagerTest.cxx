@@ -4,7 +4,7 @@
  */
 
 #include "erp/database/RedisClient.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/registration/RegistrationManager.hxx"
 #include "erp/util/health/ApplicationHealth.hxx"
 #include "test/mock/MockRedisStore.hxx"
@@ -34,7 +34,7 @@ TEST_F(RegistrationManagerTest, Registration)//NOLINT(readability-function-cogni
 
     RegistrationManager registrationManager(teeHost, teePort, std::move(uniqueRedisClient));
 
-    const fhirtools::Timestamp now = fhirtools::Timestamp::now();
+    const model::Timestamp now = model::Timestamp::now();
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     ASSERT_NO_THROW(registrationManager.registration());
@@ -45,8 +45,8 @@ TEST_F(RegistrationManagerTest, Registration)//NOLINT(readability-function-cogni
     ASSERT_TRUE(redisClient.hasKeyWithField(keyName, timestampFieldName));
     std::string startupTimeStr;
     ASSERT_NO_THROW(startupTimeStr = redisClient.fieldValueForKey(keyName, timestampFieldName).value());
-    fhirtools::Timestamp startupTime = fhirtools::Timestamp::now();
-    ASSERT_NO_THROW(startupTime = fhirtools::Timestamp((int64_t) std::stol(startupTimeStr)));
+    model::Timestamp startupTime = model::Timestamp::now();
+    ASSERT_NO_THROW(startupTime = model::Timestamp((int64_t) std::stol(startupTimeStr)));
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     ASSERT_NO_THROW(registrationManager.heartbeat());
@@ -57,8 +57,8 @@ TEST_F(RegistrationManagerTest, Registration)//NOLINT(readability-function-cogni
     ASSERT_TRUE(redisClient.hasKeyWithField(keyName, timestampFieldName));
     std::string heartbeatTimeStr;
     ASSERT_NO_THROW(heartbeatTimeStr = redisClient.fieldValueForKey(keyName, timestampFieldName).value());
-    fhirtools::Timestamp heartbeatTime = fhirtools::Timestamp::now();
-    ASSERT_NO_THROW(heartbeatTime = fhirtools::Timestamp((int64_t) std::stol(heartbeatTimeStr)));
+    model::Timestamp heartbeatTime = model::Timestamp::now();
+    ASSERT_NO_THROW(heartbeatTime = model::Timestamp((int64_t) std::stol(heartbeatTimeStr)));
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
     ASSERT_NO_THROW(registrationManager.deregistration());
@@ -69,8 +69,8 @@ TEST_F(RegistrationManagerTest, Registration)//NOLINT(readability-function-cogni
     ASSERT_TRUE(redisClient.hasKeyWithField(keyName, timestampFieldName));
     std::string deregisterTimeStr;
     ASSERT_NO_THROW(deregisterTimeStr = redisClient.fieldValueForKey(keyName, timestampFieldName).value());
-    fhirtools::Timestamp deregisterTime = fhirtools::Timestamp::now();
-    ASSERT_NO_THROW(deregisterTime = fhirtools::Timestamp((int64_t) std::stol(deregisterTimeStr)));
+    model::Timestamp deregisterTime = model::Timestamp::now();
+    ASSERT_NO_THROW(deregisterTime = model::Timestamp((int64_t) std::stol(deregisterTimeStr)));
 
     EXPECT_LT(now, startupTime);
     EXPECT_LT(startupTime, heartbeatTime);

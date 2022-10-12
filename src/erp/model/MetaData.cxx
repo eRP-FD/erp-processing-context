@@ -247,7 +247,7 @@ MetaData::MetaData()
         ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxDevice"));
 
     setVersion(ErpServerInfo::ReleaseVersion);
-    fhirtools::Timestamp releaseDate = fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
+    model::Timestamp releaseDate = model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
     setDate(releaseDate);
     setReleaseDate(releaseDate);
 }
@@ -258,9 +258,9 @@ MetaData::MetaData(NumberAsStringParserDocument&& jsonTree)
     std::call_once(onceFlag, initTemplates);
 }
 
-fhirtools::Timestamp MetaData::date() const
+model::Timestamp MetaData::date() const
 {
-    return fhirtools::Timestamp::fromXsDateTime(std::string(getStringValue(datePointer)));
+    return model::Timestamp::fromXsDateTime(std::string(getStringValue(datePointer)));
 }
 
 std::string_view MetaData::version() const
@@ -268,12 +268,12 @@ std::string_view MetaData::version() const
     return getStringValue(versionPointer);
 }
 
-fhirtools::Timestamp MetaData::releaseDate() const
+model::Timestamp MetaData::releaseDate() const
 {
-    return fhirtools::Timestamp::fromXsDateTime(std::string(getStringValue(releaseDatePointer)));
+    return model::Timestamp::fromXsDateTime(std::string(getStringValue(releaseDatePointer)));
 }
 
-void MetaData::setDate(const fhirtools::Timestamp& date)
+void MetaData::setDate(const model::Timestamp& date)
 {
     setValue(datePointer, date.toXsDateTime());
 }
@@ -283,7 +283,7 @@ void MetaData::setVersion(const std::string_view& version)
     setValue(versionPointer, version);
 }
 
-void MetaData::setReleaseDate(const fhirtools::Timestamp& releaseDate)
+void MetaData::setReleaseDate(const model::Timestamp& releaseDate)
 {
     setValue(releaseDatePointer, releaseDate.toXsDateTime());
 }

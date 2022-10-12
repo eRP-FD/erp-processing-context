@@ -3,7 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/TslParser.hxx"
 #include "erp/tsl/X509Certificate.hxx"
 #include "erp/tsl/error/TslError.hxx"
@@ -132,7 +132,7 @@ TEST_F(TslParsingTests, WansimTslXmlIsParsedCorrectly)
     EXPECT_EQ(tslParser.getSequenceNumber(), "10082");
     EXPECT_EQ(tslParser.getNextUpdate(),
               std::chrono::system_clock::time_point{
-                  fhirtools::Timestamp::fromFhirDateTime("2022-05-13T00:00:05Z").toChronoTimePoint()});
+                  model::Timestamp::fromFhirDateTime("2022-05-13T00:00:05Z").toChronoTimePoint()});
 }
 
 
@@ -148,5 +148,5 @@ TEST_F(TslParsingTests, WansimBnaXmlIsParsedCorrectly)
     EXPECT_EQ(tslParser.getSequenceNumber(), "29");
     EXPECT_EQ(tslParser.getNextUpdate(),
               std::chrono::system_clock::time_point{
-                  fhirtools::Timestamp::fromFhirDateTime("2022-05-25T16:40:50Z").toChronoTimePoint()});
+                  model::Timestamp::fromFhirDateTime("2022-05-25T16:40:50Z").toChronoTimePoint()});
 }

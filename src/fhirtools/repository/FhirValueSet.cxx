@@ -89,6 +89,12 @@ void FhirValueSet::finalize(FhirStructureRepository* repo)// NOLINT(misc-no-recu
                 mCodes.insert(
                     Code{.code = code.code, .caseSensitive = caseSensitive, .codeSystem = *include.codeSystemUrl});
             }
+            if (codeSystem->isSynthesized())
+            {
+                addError("CodeSystem " + *include.codeSystemUrl +
+                         " was synthesized with supplements but may be incomplete and will not be used for validation");
+                mCanValidate = false;
+            }
         }
     }
     for (auto& exclude : mExcludes)
@@ -113,21 +119,19 @@ void FhirValueSet::finalize(FhirStructureRepository* repo)// NOLINT(misc-no-recu
         addError("ValueSet contains no codes after expansion");
         mCanValidate = false;
     }
-    else
-    {
-        mCanValidate = true;
-    }
-    TVLOG(2) << "ValueSet \"" << mUrl << "\" finalized. Codes: " << mCodes.size() << ", canValidate: " << mCanValidate;
-    if (! mValidationWarning.empty())
-    {
-        TLOG(WARNING) << "ValueSet \"" << mUrl << "\" warning(s): " << mValidationWarning;
-    }
+    TVLOG(2) << "ValueSet \"" << mUrl << "|" << mVersion << "\" finalized. Codes: " << mCodes.size()
+             << ", canValidate: " << mCanValidate << " Warning(s): " << mValidationWarning;
+    mFinalized = true;
 }
 void FhirValueSet::finalizeIncludeFilters(const std::vector<FhirValueSet::Filter>& includeFilters,
                                           const std::string& codeSystemUrl, const FhirCodeSystem* codeSystem,
                                           bool caseSensitive)
 {
-    if (codeSystem && ! includeFilters.empty())
+    // empty or synthesized CodeSystems are incomplete, and will not be used for Validation.
+    // using them for filtered includes, is not necessary and also produces some warnings
+    // such as "CodeSystem: http://loinc.org: Unsupported property for =: SCALE_TYP" that don't matter
+    // to us, because we don't use the CodeSystem anyway.
+    if (codeSystem && ! codeSystem->isEmpty() && ! codeSystem->isSynthesized() && ! includeFilters.empty())
     {
         try
         {
@@ -184,6 +188,7 @@ void FhirValueSet::finalizeIncludeValueSets(FhirStructureRepository* repo, const
             {
                 valueSet->finalize(repo);
             }
+            addError(valueSet->getWarnings());
             for (const auto& code : valueSet->getCodes())
             {
                 mCodes.insert(code);
@@ -198,12 +203,12 @@ void FhirValueSet::finalizeIncludeValueSets(FhirStructureRepository* repo, const
 
 bool FhirValueSet::finalized() const
 {
-    return ! mCodes.empty();
+    return mFinalized;
 }
 
 bool FhirValueSet::canValidate() const
 {
-    return mCanValidate;
+    return mFinalized && mCanValidate;
 }
 
 std::string FhirValueSet::getWarnings() const

@@ -2,13 +2,14 @@
 // (C) Copyright IBM Corp. 2022
 
 #include "ValidationData.hxx"
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/validator/internal/ProfileValidator.hxx"
 
+#include <boost/algorithm/string/split.hpp>
+
 using namespace fhirtools;
 
-fhirtools::ValidationData::ValidationData(std::unique_ptr<ProfileValidatorMapKey> initMapKey)
+fhirtools::ValidationData::ValidationData(std::unique_ptr<ProfiledElementTypeInfo> initMapKey)
     : mMapKey{std::move(initMapKey)}
 {
     FPExpect3(mMapKey != nullptr, "mapKey must not be null.", std::logic_error);
@@ -59,13 +60,12 @@ void fhirtools::ValidationData::merge(const fhirtools::ValidationData& other)
     mResult.append(other.mResult);
 }
 
-const fhirtools::ProfileValidatorMapKey& fhirtools::ValidationData::mapKey()
+const fhirtools::ProfiledElementTypeInfo& fhirtools::ValidationData::mapKey()
 {
     return *mMapKey;
 }
 
-const fhirtools::ValidationResultList&
-fhirtools::ValidationData::results() const
+const fhirtools::ValidationResultList& fhirtools::ValidationData::results() const
 {
     return mResult;
 }

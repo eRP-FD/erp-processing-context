@@ -90,18 +90,22 @@ TEST_F(DurationConsumerTest, DurationConsumer)//NOLINT(readability-function-cogn
 {
     std::atomic_size_t callCount = 0;
     std::chrono::system_clock::duration duration;
+    std::string category;
     std::string description;
     std::string sessionIdentifier;
-    DurationConsumerGuard guard ("test", [&](const auto duration_, const auto& description_, const auto& sessionIdentifier_)
+    std::unordered_map<std::string, std::string> keyValueMap;
+    DurationConsumerGuard guard ("test", [&](const auto duration_, const std::string& category_, const auto& description_, const auto& sessionIdentifier_, const std::unordered_map<std::string, std::string>& keyValueMap_)
                                 {
                                     ++callCount;
                                     duration = duration_;
+                                    category = category_;
                                     description = description_;
                                     sessionIdentifier = sessionIdentifier_;
+                                    keyValueMap = keyValueMap_;
                                 });
 
     {
-        auto keepAlive = DurationConsumer::getCurrent().getTimer("test");
+        auto keepAlive = DurationConsumer::getCurrent().getTimer("category", "test", {{"key", "value"}});
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
@@ -109,9 +113,13 @@ TEST_F(DurationConsumerTest, DurationConsumer)//NOLINT(readability-function-cogn
 
     ASSERT_EQ(callCount, 1u);
     ASSERT_GT(duration.count(), 0);
+    ASSERT_EQ(category, "category");
     ASSERT_FALSE(description.empty());
     ASSERT_FALSE(sessionIdentifier.empty());
     ASSERT_EQ(description.find("failed"), std::string::npos);
+    ASSERT_EQ(keyValueMap.size(), 1);
+    ASSERT_EQ(keyValueMap.begin()->first, "key");
+    ASSERT_EQ(keyValueMap.begin()->second, "value");
 }
 
 
@@ -119,19 +127,23 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
 {
     std::atomic_size_t callCount = 0;
     std::chrono::system_clock::duration duration;
+    std::string category;
     std::string description;
     std::string sessionIdentifier;
-    DurationConsumerGuard guard ("test", [&](const auto duration_, const auto& description_, const auto& sessionIdentifier_)
+    std::unordered_map<std::string, std::string> keyValueMap;
+    DurationConsumerGuard guard ("test", [&](const auto duration_, const std::string& category_, const auto& description_, const auto& sessionIdentifier_, const std::unordered_map<std::string, std::string>& keyValueMap_)
                                 {
                                     ++callCount;
                                     duration = duration_;
+                                    category = category_;
                                     description = description_;
                                     sessionIdentifier = sessionIdentifier_;
+                                    keyValueMap = keyValueMap_;
                                 });
 
     try
     {
-        auto keepAlive = DurationConsumer::getCurrent().getTimer("test");
+        auto keepAlive = DurationConsumer::getCurrent().getTimer("category", "test", {{"key", "value"}});
         // Expect this exception to be picked up by the DurationTimer and turned into some kind of failure message.
         throw std::runtime_error("exception details");
     }
@@ -143,7 +155,11 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
 
     ASSERT_EQ(callCount, 1u);
     ASSERT_GT(duration.count(), 0);
+    ASSERT_EQ(category, "category");
     ASSERT_FALSE(sessionIdentifier.empty());
     ASSERT_NE(description.find("failed"), std::string::npos)
         << "exception is not recogonized and reported";
+    ASSERT_EQ(keyValueMap.size(), 1);
+    ASSERT_EQ(keyValueMap.begin()->first, "key");
+    ASSERT_EQ(keyValueMap.begin()->second, "value");
 }

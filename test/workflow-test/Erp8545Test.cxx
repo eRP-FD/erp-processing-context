@@ -91,7 +91,7 @@ TEST_P(Erp8545TestActivate, run)//NOLINT(readability-function-cognitive-complexi
     auto prescriptionId = task->prescriptionId();
     std::string accessCode{task->accessCode()};
     const auto& path = "/Task/" + prescriptionId.toString() + "/$activate?ac=" + accessCode;
-    const auto& [bundle, _] = makeQESBundle(kvnr, prescriptionId, fhirtools::Timestamp::now());
+    const auto& [bundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
     const auto body = std::regex_replace(GetParam(), prescriptionPlaceholder, bundle);
     const auto& [outerResponse, innerResponse] =
         send(RequestArguments{HttpMethod::POST, path, body, ContentMimeType::fhirXmlUtf8}

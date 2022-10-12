@@ -14,10 +14,7 @@ class ErpProcessingContext(ConanFile):
     license = "Nutzungsbedingungen für offenzulegende Software im Zusammenhang mit dem Fachdienst „E-Rezept“"
     url = "https://github.com/eRP-FD/erp-processing-context"
     description = "TEE processing context für den Dienst eRezept (erp). TEE = trusted execution environment oder deutsch VAU = vertrauenswürdige Ausführungsumgebung."
-    settings = {'os': ['Linux', 'Windows'],
-                'compiler': ['gcc', 'Visual Studio', 'clang'],
-                'build_type': ['Debug', 'Release', 'RelWithDebInfo'],
-                'arch': ['x86_64']}
+    settings = ['os', 'compiler', 'build_type', 'arch']
     options = {'with_tpmclient': [True, False],
                'with_hsmclient': [True, False],
                'with_sbom': [True, False]}
@@ -39,9 +36,7 @@ class ErpProcessingContext(ConanFile):
                        'with_hsmclient': True,
                        'with_sbom': False,
                        'zlib:shared': True,
-                       'date:use_system_tz_db': True,
-                       'gmp:shared': True,
-                       'mpfr:shared': True}
+                       'date:use_system_tz_db': True}
     generators = "cmake"
     exports_sources = "."
     build_requires = []
@@ -54,15 +49,13 @@ class ErpProcessingContext(ConanFile):
                 'openssl/1.1.1q@erp/stable-1',
                 'rapidjson/cci.20211112',
                 'magic_enum/0.7.3',
-                'zlib/1.2.12',  # when updating this, also update /docker/manifest.*.template files
                 'libpqxx/7.7.3',
                 'libpq/13.6',
                 'zstd/1.5.2',  # database compression
                 'gtest/1.11.0',
                 'hiredis/1.0.2',
                 'redis-plus-plus/1.3.3',
-                'gmp/6.2.1',
-                'mpfr/4.1.0']
+                'zlib/1.2.12']
 
     def requirements(self):
         if self.options.with_tpmclient:

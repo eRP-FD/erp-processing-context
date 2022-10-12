@@ -32,23 +32,16 @@
           </coding>
         </type>
         <subject>
-          <reference value="Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7"/>
+          <reference value="http://erp-test.net/duplicateUrl"/>
         </subject>
         <date value="2021-06-08T13:43:44+02:00"/>
         <author>
           <reference value="Practitioner/6e6c209e-1b86-43e0-9794-f54ec147fc49"/>
           <type value="Practitioner"/>
         </author>
-        <author>
-          <type value="Device"/>
-          <identifier>
-            <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer"/>
-            <value value="X/000/1111/22/333"/>
-          </identifier>
-        </author>
         <title value="elektronische Arzneimittelverordnung"/>
         <custodian>
-          <reference value="Organisation/71146e2d-f1df-45b3-aa45-3bcb44d20928"/>
+          <reference value="http://pvs.praxis.local/fhir/Organization/71146e2d-f1df-45b3-aa45-3bcb44d20928"/>
         </custodian>
         <section>
           <code>
@@ -58,7 +51,7 @@
             </coding>
           </code>
           <entry>
-            <reference value="MedicationRequest/005cd690-7473-4bf4-a502-30a32f2e7623"/>
+            <reference value="http://pvs.praxis.local/fhir/MedicationRequest/005cd690-7473-4bf4-a502-30a32f2e7623"/>
           </entry>
         </section>
         <section>
@@ -69,7 +62,7 @@
             </coding>
           </code>
           <entry>
-            <reference value="Coverage/312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
+            <reference value="http://pvs.praxis.local/fhir/Coverage/312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
           </entry>
         </section>
       </Composition>
@@ -279,7 +272,7 @@
         <type>
           <coding>
             <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis"/>
-            <code value="GKV"/>
+            <code value="PKV"/>
           </coding>
         </type>
         <beneficiary>
@@ -290,7 +283,7 @@
             <system value="http://fhir.de/NamingSystem/arge-ik/iknr"/>
             <value value="109500969"/>
           </identifier>
-          <display value="Test GKV-SV"/>
+          <display value="Test PKV-SV"/>
         </payor>
       </Coverage>
     </resource>

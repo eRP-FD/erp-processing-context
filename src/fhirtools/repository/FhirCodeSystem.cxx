@@ -34,6 +34,10 @@ const std::vector<FhirCodeSystem::Code>& FhirCodeSystem::getCodes() const
 {
     return mCodes;
 }
+bool FhirCodeSystem::isEmpty() const
+{
+    return mCodes.empty();
+}
 FhirCodeSystem::ContentType FhirCodeSystem::getContentType() const
 {
     return mContentType;
@@ -125,7 +129,7 @@ const FhirCodeSystem::Code& FhirCodeSystem::getCode(const std::string& code) con
 }
 std::vector<std::string> FhirCodeSystem::resolveEquals(const std::string& value, const std::string& property) const
 {
-    FPExpect(property == "parent", "Unsupported property for =: " + property);
+    FPExpect(property == "parent", "CodeSystem: " + mUrl + ": Unsupported property for =: " + property);
     std::vector<std::string> ret;
     for (const auto& item : mCodes)
     {
@@ -138,6 +142,10 @@ std::vector<std::string> FhirCodeSystem::resolveEquals(const std::string& value,
         }
     }
     return ret;
+}
+bool FhirCodeSystem::isSynthesized() const
+{
+    return mSynthesized;
 }
 bool FhirCodeSystem::containsCode(const std::string_view& code) const
 {
@@ -224,6 +232,11 @@ FhirCodeSystem::Builder& FhirCodeSystem::Builder::supplements(const std::string&
              "CodeSystem.supplement only expected for CodeSystem.content=supplement, but is " +
                  std::string{magic_enum::enum_name(mCodeSystem->mContentType)});
     mCodeSystem->mSupplements = canonical;
+    return *this;
+}
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::synthesized()
+{
+    mCodeSystem->mSynthesized = true;
     return *this;
 }
 FhirCodeSystem FhirCodeSystem::Builder::getAndReset()

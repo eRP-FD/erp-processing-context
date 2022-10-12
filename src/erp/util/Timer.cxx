@@ -12,6 +12,7 @@
 #include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/system_timer.hpp>
 
+#include "erp/util/JsonLog.hxx"
 
 class Timer::TimerJob : public boost::asio::system_timer
 {
@@ -55,6 +56,7 @@ Timer::JobToken Timer::runAt (std::chrono::system_clock::time_point absoluteTime
             else
             {
                 TLOG(ERROR) << "error during Timer::runAt: " << error;
+                JsonLog(LogId::INTERNAL_ERROR).message("error during Timer::runAt: ").keyValue("code", error.to_string());
             }
             removeJob(token);
         });
@@ -114,6 +116,8 @@ Timer::JobToken Timer::runRepeating (
 
 void Timer::shutDown (void)
 {
+    TLOG(WARNING) << "shutdown timer thread";
+    JsonLog(LogId::INTERNAL_WARNING).message("shutdown timer thread");
     if ( ! mIoContext.stopped())
         mIoContext.stop();
     if (mTimerThread.joinable())

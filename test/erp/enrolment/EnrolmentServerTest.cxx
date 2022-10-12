@@ -258,7 +258,7 @@ public:
         {
             auto db = parent.database();
             auto& backend = db->getBackend();
-            auto now = fhirtools::Timestamp::now();
+            auto now = model::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                            model::Task::Status::draft, now, now);
             backend.updateTask(std::get<0>(task), {}, blobId, {});
@@ -271,7 +271,7 @@ public:
         {
             auto db = parent.database();
             auto& backend = db->getBackend();
-            auto now = fhirtools::Timestamp::now();
+            auto now = model::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                            model::Task::Status::draft, now, now);
             auto comm = backend.insertCommunication(std::get<model::PrescriptionId>(task),
@@ -294,7 +294,7 @@ public:
         {
             auto db = parent.database();
             auto& backend = db->getBackend();
-            auto now = fhirtools::Timestamp::now();
+            auto now = model::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                            model::Task::Status::draft, now, now);
             db_model::AuditData auditEvent(model::AuditEvent::AgentType::machine,model::AuditEventId::GET_Task, {{}},model::AuditEvent::Action::read, dummyHashedKvnr(),

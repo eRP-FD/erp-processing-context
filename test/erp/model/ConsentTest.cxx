@@ -37,7 +37,7 @@ TEST(ConsentTest, Construct)
 {
     const auto consentType = model::Consent::Type::CHARGCONS;
     const char* const kvnr = "X123456789";
-    const fhirtools::Timestamp dateTime = fhirtools::Timestamp::now();
+    const model::Timestamp dateTime = model::Timestamp::now();
     model::Consent consent(kvnr, dateTime);
     EXPECT_TRUE(consent.id().has_value());
     EXPECT_EQ(consent.id(), model::Consent::createIdString(consentType, kvnr));

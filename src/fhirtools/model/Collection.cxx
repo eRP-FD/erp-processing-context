@@ -52,7 +52,7 @@ Collection::value_type Collection::boolean() const
 bool Collection::contains(const value_type& element) const
 {
     return std::ranges::any_of(*this, [&element](const auto& item) {
-        return *item == *element;
+        return item->type() == element->type() && item->compareTo(*element) == std::strong_ordering::equal;
     });
 }
 
@@ -79,26 +79,33 @@ std::ostream& fhirtools::Collection::json(std::ostream& inStr)
     return inStr;
 }
 
-
-bool Collection::operator==(const Collection& rhs) const
+std::optional<bool> fhirtools::Collection::equals(const Collection& rhs) const
 {
+    if (empty() || rhs.empty())
+    {
+        return {};
+    }
     if (size() != rhs.size())
     {
         return false;
+    }
+    if (size() == 1 && rhs.size() == 1)
+    {
+        return single()->equals(*rhs.single());
     }
     for (size_t i = 0, end = size(); i < end; ++i)
     {
         const auto& lhs = operator[](i);
         if (isImplicitConvertible(lhs->type(), rhs[i]->type()))
         {
-            if (*lhs != *rhs[i])
+            if (lhs->equals(*rhs[i]) != true)
             {
                 return false;
             }
         }
         else if (isImplicitConvertible(rhs[i]->type(), lhs->type()))
         {
-            if (*rhs[i] != *lhs)
+            if (rhs[i]->equals(*lhs) != true)
             {
                 return false;
             }
@@ -109,11 +116,6 @@ bool Collection::operator==(const Collection& rhs) const
         }
     }
     return true;
-}
-
-bool Collection::operator!=(const Collection& rhs) const
-{
-    return ! operator==(rhs);
 }
 
 std::ostream& fhirtools::operator<<(std::ostream& os, const Collection& collection)

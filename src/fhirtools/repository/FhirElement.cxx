@@ -73,6 +73,44 @@ const std::optional<fhirtools::FhirSlicing>& FhirElement::slicing() const
     return mSlicing;
 }
 
+bool fhirtools::FhirElement::hasMaxLength() const
+{
+    return mMaxLength.has_value();
+}
+size_t fhirtools::FhirElement::maxLength() const
+{
+    return mMaxLength.value_or(std::numeric_limits<size_t>::max());
+}
+std::optional<int> fhirtools::FhirElement::minValueInteger() const
+{
+    return mMinValue.has_value() && std::holds_alternative<int>(*mMinValue)
+               ? std::make_optional(std::get<int>(*mMinValue))
+               : std::nullopt;
+}
+std::optional<int> fhirtools::FhirElement::maxValueInteger() const
+{
+    return mMaxValue.has_value() && std::holds_alternative<int>(*mMaxValue)
+               ? std::make_optional(std::get<int>(*mMaxValue))
+               : std::nullopt;
+}
+std::optional<fhirtools::DecimalType> fhirtools::FhirElement::minValueDecimal() const
+{
+    return mMinValue.has_value() && std::holds_alternative<DecimalType>(*mMinValue)
+               ? std::make_optional(std::get<DecimalType>(*mMinValue))
+               : std::nullopt;
+}
+std::optional<fhirtools::DecimalType> fhirtools::FhirElement::maxValueDecimal() const
+{
+    return mMaxValue.has_value() && std::holds_alternative<DecimalType>(*mMaxValue)
+               ? std::make_optional(std::get<DecimalType>(*mMaxValue))
+               : std::nullopt;
+}
+
+const std::set<std::string>& fhirtools::FhirElement::referenceTargetProfiles() const
+{
+    return mReferenceTargetProfiles;
+}
+
 FhirElement::Builder::Builder()
     : mFhirElement(std::make_unique<FhirElement>())
 {
@@ -173,6 +211,12 @@ FhirElement::Builder& FhirElement::Builder::addProfile(std::string profile)
     return *this;
 }
 
+fhirtools::FhirElement::Builder & fhirtools::FhirElement::Builder::setProfiles(std::list<std::string> profiles)
+{
+    mFhirElement->mProfiles = std::move(profiles);
+    return *this;
+}
+
 FhirElement::Builder& FhirElement::Builder::contentReference(std::string contentReference_)
 {
     mFhirElement->mContentReference = std::move(contentReference_);
@@ -264,7 +308,41 @@ FhirElement::Builder& fhirtools::FhirElement::Builder::bindingValueSet(const std
     {
         mFhirElement->mBinding->valueSetVersion = Version{parts[1]};
     }
-    TVLOG(2) << "New Binding to " << canonical;
+    TVLOG(2) << mFhirElement->mName << ": New Binding to " << canonical;
+    return *this;
+}
+
+FhirElement::Builder& fhirtools::FhirElement::Builder::maxLength(size_t maxLength)
+{
+    mFhirElement->mMaxLength = maxLength;
+    return *this;
+}
+FhirElement::Builder& fhirtools::FhirElement::Builder::minValueInteger(int minValue)
+{
+    mFhirElement->mMinValue = minValue;
+    return *this;
+}
+FhirElement::Builder& fhirtools::FhirElement::Builder::maxValueInteger(int maxValue)
+{
+    mFhirElement->mMaxValue = maxValue;
+    return *this;
+}
+
+FhirElement::Builder& fhirtools::FhirElement::Builder::minValueDecimal(const std::string& decimalAsString)
+{
+    mFhirElement->mMinValue = DecimalType(decimalAsString);
+    return *this;
+}
+FhirElement::Builder& fhirtools::FhirElement::Builder::maxValueDecimal(const std::string& decimalAsString)
+{
+    mFhirElement->mMaxValue = DecimalType(decimalAsString);
+    return *this;
+}
+
+FhirElement::Builder& fhirtools::FhirElement::Builder::addTargetProfile(std::string&& targetProfile)
+{
+    TVLOG(2) << "target profile: " << targetProfile;
+    mFhirElement->mReferenceTargetProfiles.emplace(std::move(targetProfile));
     return *this;
 }
 

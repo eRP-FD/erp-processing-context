@@ -3,13 +3,13 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "erp/hsm/ErpTypes.hxx"
-#include "erp/hsm/HsmSession.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/hsm/BlobCache.hxx"
+#include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/HsmEciesCurveMismatchException.hxx"
+#include "erp/hsm/HsmSession.hxx"
 #include "erp/hsm/HsmSessionExpiredException.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
@@ -427,7 +427,7 @@ void HsmSession::keepAlive (std::chrono::system_clock::time_point threshold)
         TLOG(WARNING) << "keeping hsm session alive which was last accessed "
                  << std::chrono::duration_cast<std::chrono::milliseconds>(
                      std::chrono::system_clock::now() - mLastHsmCall).count()
-                 << " milliseconds ago at " << fhirtools::Timestamp(mLastHsmCall).toXsDateTime();
+                 << " milliseconds ago at " << model::Timestamp(mLastHsmCall).toXsDateTime();
 
         (void)getRandomData(1);
     }

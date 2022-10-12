@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <ranges>
 #include <string>
 #include <string_view>
 
@@ -74,6 +75,20 @@ inline bool operator != (const xmlChar* lhs, const XmlStringView& rhs)
 inline bool operator != (const XmlStringView& lhs, const xmlChar* rhs)
 {
     return not(lhs == rhs);
+}
+
+template <std::ranges::contiguous_range T>
+inline bool operator == (const XmlStringView& lhs, const T& rhs)
+requires requires(const T& rhs) {{*rhs.begin()} -> std::same_as<const char&>;}
+{
+    return std::string_view{lhs} == std::string_view{rhs.begin(), rhs.end()};
+}
+
+template <std::ranges::contiguous_range T>
+inline bool operator == (const T& lhs, const XmlStringView& rhs)
+requires requires(const T& lhs) {{*lhs.begin()} -> std::same_as<const char&>;}
+{
+    return std::string_view{lhs.begin(), lhs.end()} == std::string_view{rhs};
 }
 
 namespace xmlHelperLiterals {

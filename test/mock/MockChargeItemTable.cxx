@@ -12,11 +12,19 @@
 void MockChargeItemTable::storeChargeInformation(const ::db_model::ChargeItem& chargeItem,
                                                  const ::db_model::HashedKvnr& kvnr)
 {
-    Expect3(chargeItem.prescriptionId.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-            "MockDatabase::storeChargeInformation(...) called with wrong prescription type: " +
-                chargeItem.prescriptionId.toString(),
-            std::logic_error);
+    switch(chargeItem.prescriptionId.type())
+    {
 
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            Fail2("MockDatabase::storeChargeInformation(...) called with wrong prescription type: " +
+                      chargeItem.prescriptionId.toString(),
+                  std::logic_error);
+            break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            break;
+    }
     mChargeItems.emplace_back(chargeItem, kvnr);
 }
 

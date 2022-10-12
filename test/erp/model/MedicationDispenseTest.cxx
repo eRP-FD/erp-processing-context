@@ -656,12 +656,12 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     medicationDispense.setTelematicId(telematicId);
     EXPECT_EQ(medicationDispense.telematikId(), telematicId);
 
-    const fhirtools::Timestamp whenHandedOver = fhirtools::Timestamp::now();
+    const model::Timestamp whenHandedOver = model::Timestamp::now();
     medicationDispense.setWhenHandedOver(whenHandedOver);
     EXPECT_EQ(medicationDispense.whenHandedOver(), whenHandedOver);
 
     EXPECT_FALSE(medicationDispense.whenPrepared().has_value());
-    const fhirtools::Timestamp whenPrepared = fhirtools::Timestamp::now();
+    const model::Timestamp whenPrepared = model::Timestamp::now();
     medicationDispense.setWhenPrepared(whenPrepared);
     EXPECT_TRUE(medicationDispense.whenPrepared().has_value());
     EXPECT_EQ(medicationDispense.whenPrepared().value(), whenPrepared);

@@ -1,0 +1,56 @@
+{
+    "resourceType": "Bundle",
+    "id": "root",
+    "type": "collection",
+    "entry": [
+        {
+            "fullUrl": "http://erp.test/DomainResource/0815",
+            "resource": {
+                "resourceType": "DomainResource",
+                "id": "0815",
+                "extension": {
+                    "url": "http://erp.test/ReferenceExtension",
+                    "valueReference": {
+                        "reference": "DomainResource/4711"
+                    }
+                }
+            }
+        },
+        {
+            "fullUrl": "http://erp.test/Bundle/4711",
+            "resource": {
+                "resourceType": "Bundle",
+                "id": "4711",
+                "type": "collection",
+                "link": [
+                    {
+                        "extension": {
+                            "url": "http://erp.test/ReferenceExtension",
+                            "valueReference": {
+                                "reference": "http://erp.test/DomainResource/4711"
+                            }
+                        },
+                        "relation": "next",
+                        "url": "http://erp.test/Bundle/4711?page=2"
+                    }
+                ],
+                "entry": [
+                    {
+                        "fullUrl": "http://erp.test/inner/DomainResource/0815",
+                        "resource": {
+                            "resourceType": "DomainResource",
+                            "id": "0815",
+                            "extension": {
+                                "url": "http://erp.test/ReferenceExtension",
+                                "valueReference": {
+                                    "reference": "http://erp.test/Bundle/4711",
+                                    "display": "this reference is in a nested Bundle and therefore not in the same reference context"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

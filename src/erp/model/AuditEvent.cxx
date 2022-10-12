@@ -5,8 +5,8 @@
 
 #include "erp/model/AuditEvent.hxx"
 
-#include "erp/util/RapidjsonDocument.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/RapidjsonDocument.hxx"
 
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once
@@ -195,7 +195,7 @@ void AuditEvent::setAction(const Action action)
     setValue(actionPointer, std::string(1, static_cast<char>(action)));
 }
 
-void AuditEvent::setRecorded(const fhirtools::Timestamp& recorded)
+void AuditEvent::setRecorded(const model::Timestamp& recorded)
 {
     setValue(recordedPointer, recorded.toXsDateTime());
 }
@@ -282,9 +282,9 @@ AuditEvent::Action AuditEvent::action() const
     return ActionNamesReverse.at(getStringValue(actionPointer));
 }
 
-fhirtools::Timestamp AuditEvent::recorded() const
+model::Timestamp AuditEvent::recorded() const
 {
-    return fhirtools::Timestamp::fromXsDateTime(std::string(getStringValue(recordedPointer)));
+    return model::Timestamp::fromXsDateTime(std::string(getStringValue(recordedPointer)));
 }
 
 AuditEvent::Outcome AuditEvent::outcome() const

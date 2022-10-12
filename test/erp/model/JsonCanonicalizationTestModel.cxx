@@ -93,16 +93,16 @@ void JsonCanonicalizationTestModel::setStatus(Status status)
     setValue(statusPointer, statusToString(status));
 }
 
-std::optional<fhirtools::Timestamp> JsonCanonicalizationTestModel::timeSent() const
+std::optional<model::Timestamp> JsonCanonicalizationTestModel::timeSent() const
 {
     const auto optionalValue = getOptionalStringValue(sentPointer);
     if (optionalValue.has_value())
-        return fhirtools::Timestamp::fromFhirDateTime(std::string(optionalValue.value()));
+        return model::Timestamp::fromFhirDateTime(std::string(optionalValue.value()));
     else
         return {};
 }
 
-void JsonCanonicalizationTestModel::setTimeSent(const fhirtools::Timestamp& timestamp)
+void JsonCanonicalizationTestModel::setTimeSent(const model::Timestamp& timestamp)
 {
     setValue(sentPointer, timestamp.toXsDateTime());
 }

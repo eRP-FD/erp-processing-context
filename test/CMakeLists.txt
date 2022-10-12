@@ -80,6 +80,8 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp9777Test.cxx
         workflow-test/Erp10081Test.cxx
         workflow-test/Erp10101Test.cxx
+        workflow-test/Erp10941Test.cxx
+        workflow-test/Erp11031Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
         workflow-test/ErpWorkflow169Test.cxx
@@ -240,6 +242,7 @@ list(
         erp/service/CommunicationGetHandlerTest.cxx
         erp/service/CommunicationPostHandlerTest.cxx
         erp/service/EndpointErrorTest.cxx
+        erp/service/EndpointHandlerTest/AcceptTaskTest.cxx
         erp/service/EndpointHandlerTest/ActivateTaskTest.cxx
         erp/service/EndpointHandlerTest/CloseTaskTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx

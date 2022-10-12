@@ -34,7 +34,7 @@ class FriendlyResourceBase : public ResourceBase
 
 TEST(ResourceBaseTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto [gematikVersion, kbvVersion] = ResourceVersion::current();
+    const auto [gematikVersion, kbvVersion, _] = ResourceVersion::current();
 
     const ::std::array<::std::pair<::std::string_view, ::std::string_view>, 3> profileTypes = {
         ::std::make_pair("https://gematik.de/fhir/StructureDefinition/ErxReceipt"sv,
@@ -50,20 +50,10 @@ TEST(ResourceBaseTest, Constructor)//NOLINT(readability-function-cognitive-compl
         ASSERT_NO_THROW(resource.reset(new FriendlyResourceBase{type.first}));
         const auto profile = resource->getOptionalStringValue(::rapidjson::Pointer{"/meta/profile/0"});
         ASSERT_TRUE(profile);
-        if (ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>() ==
-            ResourceVersion::DeGematikErezeptWorkflowR4::v1_0_3_1)
-        {
-            const auto profileParts = String::split(profile.value(), '|');
-            ASSERT_EQ(profileParts.size(), 1);
-            EXPECT_EQ(profileParts[0], type.first);
-        }
-        else
-        {
-            const auto profileParts = String::split(profile.value(), '|');
-            ASSERT_EQ(profileParts.size(), 2);
-            EXPECT_EQ(profileParts[0], type.first);
-            EXPECT_EQ(profileParts[1], type.second);
-        }
+        const auto profileParts = String::split(profile.value(), '|');
+        ASSERT_EQ(profileParts.size(), 2);
+        EXPECT_EQ(profileParts[0], type.first);
+        EXPECT_EQ(profileParts[1], type.second);
     }
 
     {
@@ -78,15 +68,18 @@ class ResourceGenericValidationTest : public ::testing::TestWithParam<Configurat
 {
 protected:
     template<typename ResourceT = model::Parameters>
-    ResourceT fromXml(std::string_view xml, SchemaType schemaType = SchemaType::fhir)
+    ResourceT fromXml(std::string_view xml, SchemaType schemaType = SchemaType::fhir,
+                      const fhirtools::ValidatorOptions& valOpts = {})
     {
-        return ResourceT::fromXml(xml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), schemaType);
+        return ResourceT::fromXml(xml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), schemaType,
+                                  valOpts);
     }
     template<typename ResourceT = model::Parameters>
-    ResourceT fromJson(std::string_view json, SchemaType schemaType = SchemaType::fhir)
+    ResourceT fromJson(std::string_view json, SchemaType schemaType = SchemaType::fhir,
+                       const fhirtools::ValidatorOptions& valOpts = {})
     {
         return ResourceT::fromJson(json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                                   *StaticData::getInCodeValidator(), schemaType);
+                                   *StaticData::getInCodeValidator(), schemaType, valOpts);
     }
 
 
@@ -144,7 +137,6 @@ protected:
     {
         return Fhir::instance().converter().xmlStringToJson(badBundleXML()).serializeToJsonString();
     }
-
 
 
     template<typename T>
@@ -272,6 +264,11 @@ TEST_P(ResourceGenericValidationTest, genericValidationModeXMLKbvBundle)
     "Bundle.entry[0].resource{Composition}.extension[0].valueCoding.code: "
         "error: missing mandatory element "
         "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis:valueCoding|1.0.3); "
+    "Bundle.entry[0].resource{Composition}.subject: "
+        "error: Cannot match profile to Element 'Composition': "
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3 "
+            "(referenced resource Bundle.entry[0].resource{Composition} must match one of: "
+                "[\"https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3\"]); "
     "Bundle: "
         "error: bdl-7: FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles) "
         "(from profile: http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1); "
@@ -283,19 +280,23 @@ TEST_P(ResourceGenericValidationTest, genericValidationModeXMLKbvBundle)
 
     EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
                                                  std::string{magic_enum::enum_name(GetParam())}};
+    fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true,
+                                        .levels{.unreferencedBundledResource = fhirtools::Severity::warning,
+                                                .mandatoryResolvableReferenceFailure = fhirtools::Severity::warning}};
     std::optional<model::Parameters> params;
-    EXPECT_NO_THROW(fromXml<model::KbvBundle>(goodBundleXML(), SchemaType::KBV_PR_ERP_Bundle));
+    EXPECT_NO_THROW(fromXml<model::KbvBundle>(goodBundleXML(), SchemaType::KBV_PR_ERP_Bundle, options));
     if (GetParam() == Configuration::GenericValidationMode::require_success)
     {
-        EXPECT_THROW(fromXml<model::KbvBundle>(genericFailBundleXML(), SchemaType::KBV_PR_ERP_Bundle), ErpException);
+        EXPECT_THROW(fromXml<model::KbvBundle>(genericFailBundleXML(), SchemaType::KBV_PR_ERP_Bundle, options),
+                                               ErpException);
     }
     else
     {
-        EXPECT_NO_THROW(fromXml<model::KbvBundle>(genericFailBundleXML(), SchemaType::KBV_PR_ERP_Bundle));
+        EXPECT_NO_THROW(fromXml<model::KbvBundle>(genericFailBundleXML(), SchemaType::KBV_PR_ERP_Bundle, options));
     }
     EXPECT_NO_FATAL_FAILURE(withDiagnosticCheck(
         [&] {
-            fromXml<model::KbvBundle>(badBundleXML(), SchemaType::KBV_PR_ERP_Bundle);
+            fromXml<model::KbvBundle>(badBundleXML(), SchemaType::KBV_PR_ERP_Bundle, options);
         },
         message, {}, fullDiagnostics));
 }
@@ -324,6 +325,11 @@ TEST_P(ResourceGenericValidationTest, genericValidationModeJsonKbvBundle)
     "Bundle.entry[0].resource{Composition}.extension[0].valueCoding.code: "
         "error: missing mandatory element "
         "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis:valueCoding|1.0.3); "
+    "Bundle.entry[0].resource{Composition}.subject: "
+        "error: Cannot match profile to Element 'Composition': "
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3 "
+            "(referenced resource Bundle.entry[0].resource{Composition} must match one of: "
+                "[\"https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3\"]); "
     "Bundle: "
         "error: bdl-7: FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles) "
         "(from profile: http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1); "
@@ -335,19 +341,23 @@ TEST_P(ResourceGenericValidationTest, genericValidationModeJsonKbvBundle)
 
     EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
                                                  std::string{magic_enum::enum_name(GetParam())}};
+    fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true,
+                                        .levels{.unreferencedBundledResource = fhirtools::Severity::warning,
+                                                .mandatoryResolvableReferenceFailure = fhirtools::Severity::warning}};
     std::optional<model::Parameters> params;
-    EXPECT_NO_THROW(fromJson<model::KbvBundle>(goodBundleJSON(), SchemaType::KBV_PR_ERP_Bundle));
+    EXPECT_NO_THROW(fromJson<model::KbvBundle>(goodBundleJSON(), SchemaType::KBV_PR_ERP_Bundle, options));
     if (GetParam() == Configuration::GenericValidationMode::require_success)
     {
-        EXPECT_THROW(fromJson<model::KbvBundle>(genericFailBundleJSON(), SchemaType::KBV_PR_ERP_Bundle), ErpException);
+        EXPECT_THROW(fromJson<model::KbvBundle>(genericFailBundleJSON(), SchemaType::KBV_PR_ERP_Bundle, options),
+                     ErpException);
     }
     else
     {
-        EXPECT_NO_THROW(fromJson<model::KbvBundle>(genericFailBundleJSON(), SchemaType::KBV_PR_ERP_Bundle));
+        EXPECT_NO_THROW(fromJson<model::KbvBundle>(genericFailBundleJSON(), SchemaType::KBV_PR_ERP_Bundle, options));
     }
     EXPECT_NO_FATAL_FAILURE(withDiagnosticCheck(
         [&] {
-            fromJson<model::KbvBundle>(badBundleJSON(), SchemaType::KBV_PR_ERP_Bundle);
+            fromJson<model::KbvBundle>(badBundleJSON(), SchemaType::KBV_PR_ERP_Bundle, options);
         },
         message, {}, fullDiagnostics));
 }

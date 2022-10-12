@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script generates a test PKI -- root CA, sub CA ( TSL signer ) and uses them to sign TSL templates.
 # Input data can be found in resources/test/generated_pki_input/, the generated data are put
@@ -26,7 +26,6 @@ multipleNewCA="multipleNewCA"
 brokenNewCA="brokenNewCA"
 validBeforeOutdated="validBeforeOutdated"
 
-: "${OPENSSL:=openssl}"
 
 function printUsage()
 {

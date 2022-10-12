@@ -99,7 +99,8 @@
     <xs:restriction base="xs:string">
       <xs:enumeration value="160" />
       <xs:enumeration value="169" />
-      <xs:enumeration value="200"/>
+      <xs:enumeration value="200" />
+      <xs:enumeration value="209" />
     </xs:restriction>
   </xs:simpleType>
   <xs:simpleType name="WorkflowTypeDisplayEnum" final="restriction" >
@@ -107,6 +108,7 @@
       <xs:enumeration value="Muster 16 (Apothekenpflichtige Arzneimittel)" />
       <xs:enumeration value="Muster 16 (Direkte Zuweisung)" />
       <xs:enumeration value="PKV (Apothekenpflichtige Arzneimittel)" />
+      <xs:enumeration value="PKV (Direkte Zuweisung)" />
     </xs:restriction>
   </xs:simpleType>
   <xs:simpleType name="string-primitive">

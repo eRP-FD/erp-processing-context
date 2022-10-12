@@ -57,6 +57,106 @@ TEST_F(RegressionTest, Erp10669)
     EXPECT_EQ(getTaskResult->acceptDate().toGermanDate(), "2023-07-29");
 }
 
+TEST_F(RegressionTest, Erp10835)
+{
+    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
+    auto task = taskCreate(model::PrescriptionType::direkteZuweisungPkv);
+    ASSERT_TRUE(task.has_value());
+    auto kvnr = generateNewRandomKVNR();
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivate(task->prescriptionId(), task->accessCode(),
+                     std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
+    ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, model::Timestamp::now()));
+    const auto acceptBundle = taskAccept(task->prescriptionId(), std::string{task->accessCode()});
+    ASSERT_TRUE(acceptBundle);
+    const auto acceptedTasks = acceptBundle->getResourcesByType<model::Task>();
+    ASSERT_EQ(acceptedTasks.size(), 1);
+    ASSERT_NO_FATAL_FAILURE(
+        taskClose(task->prescriptionId(), std::string{acceptedTasks[0].secret().value_or("")}, kvnr));
+    ASSERT_NO_FATAL_FAILURE(chargeItemPost(task->prescriptionId(), kvnr, "3-SMC-B-Testkarte-883110000120312",
+                                           std::string{acceptedTasks[0].secret().value_or("")}));
+}
+
+class RegressionTestErp8170 : public ErpWorkflowTest
+{
+protected:
+    std::string medicationDispense(const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense,
+                                   const std::string&) override
+    {
+        auto medicationDispense =
+            ResourceManager::instance().getStringResource("test/issues/ERP-8170/MedicationDispense.xml");
+        medicationDispense =
+            String::replaceAll(medicationDispense, "160.000.074.296.321.22", prescriptionIdForMedicationDispense);
+        medicationDispense = String::replaceAll(medicationDispense, "X110455449", kvnr);
+        medicationDispense = String::replaceAll(medicationDispense, "3-SMC-B-Testkarte-883110000116298",
+                                                jwtApotheke().stringForClaim(JWT::idNumberClaim).value());
+        return medicationDispense;
+    }
+};
+
+TEST_F(RegressionTestErp8170, Erp8170)
+{
+    auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
+    ASSERT_TRUE(task.has_value());
+    auto kvnr = generateNewRandomKVNR();
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivate(task->prescriptionId(), task->accessCode(),
+                     std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
+    const auto acceptBundle = taskAccept(task->prescriptionId(), std::string{task->accessCode()});
+    ASSERT_TRUE(acceptBundle);
+    const auto acceptedTasks = acceptBundle->getResourcesByType<model::Task>();
+    ASSERT_EQ(acceptedTasks.size(), 1);
+    ASSERT_NO_FATAL_FAILURE(
+        taskClose(task->prescriptionId(), std::string{acceptedTasks[0].secret().value_or("")}, kvnr));
+}
+
+TEST_F(RegressionTest, Erp11116)
+{
+    auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
+    ASSERT_TRUE(task.has_value());
+    auto kvnr = generateNewRandomKVNR();
+    auto accessCode = task->accessCode();
+
+    std::string kbv_bundle_xml = ResourceManager::instance().getStringResource(
+        "test/issues/ERP-11116/bundle.xml");
+    kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.009.652.07", task->prescriptionId().toString());
+    kbv_bundle_xml = patchVersionsInBundle(kbv_bundle_xml);
+
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivate(task->prescriptionId(), accessCode,
+                     toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
+                     HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+}
+
+TEST_F(RegressionTest, Erp11142)
+{
+    auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
+    ASSERT_TRUE(task.has_value());
+    auto kvnr = generateNewRandomKVNR();
+    auto accessCode = task->accessCode();
+
+    std::string kbv_bundle_xml = ResourceManager::instance().getStringResource(
+        "test/issues/ERP-11142/Bundle_invalid_missing_meta_profile_version.xml");
+    kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.012.230.33", task->prescriptionId().toString());
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivate(task->prescriptionId(), accessCode,
+                     toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
+                     HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
+                     "parsing / validation error", "KBV resources must always define a profile version"));
+
+    // additional test with duplicate version, KBV_PR_ERP_Bundle|1.0.3|1.0.3
+    kbv_bundle_xml = String::replaceAll(
+        kbv_bundle_xml, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" +
+            std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())) + "|" +
+            std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())));
+    ASSERT_NO_FATAL_FAILURE(taskActivate(
+        task->prescriptionId(), accessCode,
+        toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
+        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
+        "parsing / validation error", "Invalid meta/profile: more than one | separator found."));
+}
+
 TEST_F(RegressionTest, Erp10892_1)
 {
     std::string kbv_bundle_xml =

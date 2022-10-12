@@ -11,6 +11,7 @@
 #include "fhirtools/expression/Expression.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
+#include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
@@ -28,8 +29,6 @@ public:
         auto fileList = {ResourceManager::getAbsoluteFilename("test/fhir-path/structure-definition.xml"),
                          ResourceManager::getAbsoluteFilename("fhir/hl7.org/profiles-types.xml")};
 
-        EXPECT_NO_THROW(repo.load(fileList));
-
         testResource = model::NumberAsStringParserDocument::fromJson(
             ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
 
@@ -42,7 +41,7 @@ public:
         ASSERT_EQ(result[0]->type(), Element::Type::Boolean);
         ASSERT_EQ(result[0]->asBool(), expected) << result;
     }
-    FhirStructureRepository repo;
+    const FhirStructureRepository& repo = DefaultFhirStructureRepository::getWithTest();
     model::NumberAsStringParserDocument testResource;
     std::shared_ptr<ErpElement> rootElement;
 };
@@ -54,7 +53,6 @@ public:
         : communicationResource(model::Communication::fromXmlNoValidation(
               ResourceManager::instance().getStringResource("test/fhir/conversion/communication_info_req.xml")))
     {
-        EXPECT_NO_THROW(repo.load({ResourceManager::getAbsoluteFilename("fhir/hl7.org/profiles-resources.xml")}));
         //NOLINTNEXTLINE(readability-qualified-auto) - make sure the return type is reference
         auto& testCommDoc = communicationResource.jsonDocument();
         communicationElement =
@@ -71,7 +69,6 @@ public:
         : bundleResource(model::KbvBundle::fromXmlNoValidation(ResourceManager::instance().getStringResource(
               "test/validation/xml/kbv/bundle/Bundle_valid_fromErp5822.xml")))
     {
-        EXPECT_NO_THROW(repo.load({ResourceManager::getAbsoluteFilename("fhir/hl7.org/profiles-resources.xml")}));
         //NOLINTNEXTLINE(readability-qualified-auto) - make sure the return type is reference
         auto& testDoc = bundleResource.jsonDocument();
         bundleElement = std::make_shared<ErpElement>(&repo, std::weak_ptr<Element>{}, "Bundle", &testDoc);
@@ -133,8 +130,8 @@ TEST_F(FhirPathParserTest, unionOperator)
     EXPECT_EQ(result[0]->asInt(), 1);
     EXPECT_EQ(result[1]->asInt(), 5);
     EXPECT_EQ(result[2]->asInt(), 42);
-    EXPECT_EQ(result[3]->asDecimal(), Element::DecimalType(0.1));
-    EXPECT_EQ(result[4]->asDecimal(), Element::DecimalType(3.14));
+    EXPECT_EQ(result[3]->asDecimal(), DecimalType("0.1"));
+    EXPECT_EQ(result[4]->asDecimal(), DecimalType("3.14"));
 }
 
 TEST_F(FhirPathParserTest, orOperator)
@@ -424,7 +421,7 @@ TEST_F(FhirPathParserTest, as)
         ASSERT_TRUE(expressions);
         auto result = expressions->eval({rootElement});
         ASSERT_EQ(result.size(), 1);
-        ASSERT_EQ(result.single()->asDecimal(), Element::DecimalType(1.2));
+        ASSERT_EQ(result.single()->asDecimal(), DecimalType("1.2"));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "dec as `http://hl7.org/fhirpath/System.Integer`");
@@ -432,6 +429,13 @@ TEST_F(FhirPathParserTest, as)
         auto result = expressions->eval({rootElement});
         ASSERT_EQ(result.size(), 0);
     }
+}
+
+TEST_F(FhirPathParserTest, compileError)
+{
+    std::string_view expression =
+        R"(conformsTo("http://fhir.de/StructureDefinition/identifier-iknr") implies value.matches('[0-9]{9}'))";
+    ASSERT_THROW((void)FhirPathParser::parse(&repo, expression), std::logic_error);
 }
 
 TEST_F(FhirPathParserTestCommunication, testele_1)
@@ -471,14 +475,14 @@ TEST_F(FhirPathParserTestCommunication, testref_1)
     ASSERT_EQ(result.single()->asBool(), true);
 }
 
-TEST_F(FhirPathParserTestCommunication, DISABLED_testref_1_2) // disabled due to ERP-10520
+TEST_F(FhirPathParserTestCommunication, testref_1_2)
 {
     const char constraint[] = "reference.startsWith('#').not() or (reference.substring(1).trace('url') in "
                             "%rootResource.contained.id.trace('ids'))";
 
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval(communicationElement->subElements("sender"));
+    auto result = expressions->eval(communicationElement->subElements("about"));
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -491,6 +495,26 @@ TEST_F(FhirPathParserTestCommunication, test_dom_3)
         "or descendants().where(reference = "
         "'#').exists() or descendants().where(as(canonical) = '#').exists() or descendants().where(as(canonical) = "
         "'#').exists()).not()).trace('unmatched', id).empty()";
+    auto expressions = FhirPathParser::parse(&repo, constraint);
+    ASSERT_TRUE(expressions);
+    auto result = expressions->eval({communicationElement});
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result.single()->asBool(), true);
+}
+
+TEST_F(FhirPathParserTestCommunication, resolve)
+{
+    const char constraint[] = "contained.contains(about.resolve())";
+    auto expressions = FhirPathParser::parse(&repo, constraint);
+    ASSERT_TRUE(expressions);
+    auto result = expressions->eval({communicationElement});
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result.single()->asBool(), true);
+}
+
+TEST_F(FhirPathParserTestCommunication, resolveid)
+{
+    const char constraint[] = "about.resolve().id = '5fe6e06c-8725-46d5-aecd-e65e041ca3de'";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
     auto result = expressions->eval({communicationElement});
@@ -539,4 +563,50 @@ TEST_F(FhirPathParserTestBundle, test_org_1)
     auto result = expressions->eval(bundleElement->subElements("entry")[4]->subElements("resource"));
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
+}
+
+TEST_F(FhirPathParserTestBundle, resolve)
+{
+    const char expression[] =
+        "entry.where(fullUrl = 'https://e-rezept.de/Composition/7d101376-cafa-43d8-bae9-a2b4511b1bb7')"
+            ".resource.as(Composition).subject.resolve()"
+        " = "
+        "entry.where(fullUrl = 'https://e-rezept.de/Patient/66251aee-a81a-40ca-8938-79d8557b822c')"
+            ".resource.as(Patient)";
+    auto expressions = FhirPathParser::parse(&repo, expression);
+    ASSERT_TRUE(expressions);
+    auto result = expressions->eval({bundleElement});
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result.single()->asBool(), true);
+}
+
+TEST_F(FhirPathParserTestBundle, ofTypePatient)
+{
+    const char expression[] = "entry.resource.ofType(Patient)";
+    auto expressions = FhirPathParser::parse(&repo, expression);
+    ASSERT_TRUE(expressions);
+    auto result = expressions->eval({bundleElement});
+    ASSERT_EQ(result.size(), 1);
+}
+
+TEST_F(FhirPathParserTestBundle, ofTypeString)
+{
+    const char expression[] = "ofType(string)";
+    auto expressions = FhirPathParser::parse(&repo, expression);
+    ASSERT_TRUE(expressions);
+    auto result = expressions->eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"),
+                                     std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 2)});
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result.single()->asString(), "hello");
+}
+
+TEST_F(FhirPathParserTestBundle, ofTypeInteger)
+{
+    const char expression[] = "ofType(positiveInt)";
+    auto expressions = FhirPathParser::parse(&repo, expression);
+    ASSERT_TRUE(expressions);
+    auto result = expressions->eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"),
+                                     std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 2)});
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_EQ(result.single()->asInt(), 2);
 }

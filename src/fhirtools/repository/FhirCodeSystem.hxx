@@ -41,12 +41,14 @@ public:
     [[nodiscard]] const Version& getVersion() const;
     [[nodiscard]] bool isCaseSensitive() const;
     [[nodiscard]] const std::vector<Code>& getCodes() const;
+    [[nodiscard]] bool isEmpty() const;
     [[nodiscard]] bool containsCode(const std::string_view& code) const;
     [[nodiscard]] ContentType getContentType() const;
     [[nodiscard]] const std::string& getSupplements() const;
     [[nodiscard]] std::vector<std::string> resolveIsA(const std::string& value, const std::string& property) const;
     [[nodiscard]] std::vector<std::string> resolveIsNotA(const std::string& value, const std::string& property) const;
     [[nodiscard]] std::vector<std::string> resolveEquals(const std::string& value, const std::string& property) const;
+    [[nodiscard]] bool isSynthesized() const;
 
 private:
     bool isA(const Code& code, const std::string& value) const;
@@ -55,10 +57,11 @@ private:
     std::string mUrl;
     std::string mName;
     Version mVersion;
-    bool mCaseSensitive{};
+    bool mCaseSensitive{false};
     std::vector<Code> mCodes;
     ContentType mContentType{};
     std::string mSupplements;
+    bool mSynthesized{false};
 };
 
 class FhirCodeSystem::Builder
@@ -74,6 +77,7 @@ public:
     Builder& code(const std::string& code);
     Builder& contentType(const std::string& content);
     Builder& supplements(const std::string& canonical);
+    Builder& synthesized();
 
     FhirCodeSystem getAndReset();
 

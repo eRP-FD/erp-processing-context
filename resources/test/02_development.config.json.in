@@ -12,6 +12,14 @@
       },
       "tsl": {
         "initialCaDerPath": "@CMAKE_BINARY_DIR@/test/generated_pki/sub_ca1_ec/ca.der"
+      },
+      "timingCategories": ["all"],
+      "fhir-profile": {
+        "fhir": {
+          "structure-files": [
+            "@ERP_FHIR_RESOURCE_DIR@CodeSystem-flowType-supplements.xml"
+          ]
+        }
       }
     },
     "debug": {
@@ -27,16 +35,6 @@
       "use-idp-updater-mock": "true",
       "additional-xml-schema": {
         "de.gematik.erezept-workflow.r4": {
-          "1.0.3-1": [
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/auditevent/Gem_erxAuditEvent.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/binary/Gem_erxBinary.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/composition/Gem_erxCompositionElement.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/device/Gem_erxDevice.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/medicationdispense/Gem_erxMedicationDispense.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/organization/Gem_erxOrganizationElement.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/receipt/Gem_erxReceiptBundle.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.0.3-1/xml/task/Gem_erxTask.xsd"
-          ],
           "1.1.1": [
             "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/auditevent/Gem_erxAuditEvent.xsd",
             "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/binary/Gem_erxBinary.xsd",
@@ -49,14 +47,6 @@
           ]
         },
         "kbv.ita.erp": {
-          "1.0.1": [
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Coverage.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_HumanName.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Organization.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Patient.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_Practitioner.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.1/xml/KBV_PR_FOR_PractitionerRole.xsd"
-          ],
           "1.0.2": [
             "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Coverage.xsd",
             "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_HumanName.xsd",

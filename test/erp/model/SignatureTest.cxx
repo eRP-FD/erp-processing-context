@@ -11,7 +11,7 @@
 TEST(SignatureTest, ConstructFromData)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1";
-    const fhirtools::Timestamp when = fhirtools::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
+    const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
     const std::string who = "https://prescriptionserver.telematik/Device/ErxService";
     const model::Signature signature(data, when, who);
 
@@ -48,7 +48,7 @@ TEST(SignatureTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     const auto signature = model::Signature::fromJsonNoValidation(json);
 
     const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1TaXR1YXRpb24ga29ubnRlIGhpZXIga3VyemZyaXN0aWcga2";
-    const fhirtools::Timestamp when = fhirtools::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");
+    const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-01-20T07:31:34.328+00:00");
     const std::string who = "https://prescriptionserver.telematik/Device/ErxService";
 
     EXPECT_TRUE(signature.when().has_value());

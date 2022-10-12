@@ -3,14 +3,14 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include <gtest/gtest.h> // should be first or FRIEND_TEST would not work
+#include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/TrustStore.hxx"
-#include "fhirtools/model/Timestamp.hxx"
 #include "erp/tsl/TslParser.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
-#include "test/util/StaticData.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <memory>
 #include <test_config.h>

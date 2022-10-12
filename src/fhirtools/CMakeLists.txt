@@ -7,10 +7,8 @@ target_link_libraries(fhirtools
         CONAN_PKG::boost
         CONAN_PKG::date
         CONAN_PKG::glog
-        CONAN_PKG::gmp
         CONAN_PKG::gsl-lite
         CONAN_PKG::magic_enum
-        CONAN_PKG::mpfr
         CONAN_PKG::rapidjson
         CONAN_PKG::libxml2
         CONAN_PKG::openssl # only needed because we include Expect.hxx from erp
@@ -39,10 +37,11 @@ target_sources(fhirtools
         expression/Math.cxx
         expression/StringManipulation.cxx
         model/Collection.cxx
+        model/DateTime.cxx
         model/Element.cxx
         model/erp/ErpElement.cxx
-        model/Timestamp.cxx
         model/ValueElement.cxx
+        parser/ErrorListener.cxx
         parser/FhirPathParser.cxx
         repository/FhirCodeSystem.cxx
         repository/FhirConstraint.cxx
@@ -53,12 +52,15 @@ target_sources(fhirtools
         repository/FhirStructureRepository.cxx
         repository/internal/FhirStructureDefinitionParser.cxx
         util/SaxHandler.cxx
+        util/Utf8Helper.cxx
         util/VaListHelper.cxx
         typemodel/ProfiledElementTypeInfo.cxx
         validator/FhirPathValidator.cxx
         validator/internal/ProfileSetValidator.cxx
         validator/internal/ProfileSolver.cxx
         validator/internal/ProfileValidator.cxx
+        validator/internal/ReferenceContext.cxx
+        validator/internal/ReferenceFinder.cxx
         validator/internal/SlicingChecker.cxx
         validator/internal/ValidationData.cxx
         validator/ValidationResult.cxx

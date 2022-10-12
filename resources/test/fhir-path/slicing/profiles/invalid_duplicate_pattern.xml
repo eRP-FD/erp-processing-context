@@ -214,7 +214,7 @@
             <type>
               <code value="http://hl7.org/fhirpath/System.String"/>
             </type>
-            <patterrnUri value="http://erp.test/ExtensionUrl/DuplicatePatternExt1"/>
+            <patternUri value="http://erp.test/ExtensionUrl/DuplicatePatternExt1"/>
           </element>
           <element id="Extension.value[x]">
             <path value="Extension.value[x]"/>

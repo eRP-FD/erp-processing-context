@@ -27,7 +27,8 @@ public:
         auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
         bundle = patchVersionsInBundle(bundle);
         auto kbvBundle = model::KbvBundle::fromXml(bundle, *StaticData::getXmlValidator(),
-                                                *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle);
+                                                *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                                                {{.allowNonLiteralAuthorReference = true}});
         const auto bundlePrescriptionId = kbvBundle.getIdentifier().toString();
         return toCadesBesSignature(boost::replace_all_copy(bundle, bundlePrescriptionId, id),
                                    model::Timestamp::fromXsDate("2021-06-08"));
@@ -112,4 +113,6 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)//NOLINT(readability-functi
 
 INSTANTIATE_TEST_SUITE_P(WorkflowTypes, A_21370_CheckPrescriptionIdOnActivate,
                          ::testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                           model::PrescriptionType::direkteZuweisung)); // TODO add apothekenpflichtigeArzneimittelPkv
+                                           model::PrescriptionType::direkteZuweisung,
+                                           model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                           model::PrescriptionType::direkteZuweisungPkv));

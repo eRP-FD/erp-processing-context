@@ -18,6 +18,8 @@ public:
     using Resource<KbvBundle, ResourceVersion::KbvItaErp>::fromXml;
     using Resource<KbvBundle, ResourceVersion::KbvItaErp>::fromJson;
     using Resource<KbvBundle, ResourceVersion::KbvItaErp>::fromJsonNoValidation;
+
+    void additionalValidation() const override;
 };
 
 }

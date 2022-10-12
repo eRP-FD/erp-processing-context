@@ -12,13 +12,13 @@
 #include "erp/model/KbvMedicationFreeText.hxx"
 #include "erp/model/KbvMedicationIngredient.hxx"
 #include "erp/model/KbvMedicationPzn.hxx"
+#include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/KbvOrganization.hxx"
 #include "erp/model/KbvPracticeSupply.hxx"
 #include "erp/model/KbvPractitioner.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/extensions/KBVEXFORLegalBasis.hxx"
-#include "erp/validation/KbvMedicationModelHelper.hxx"
 #include "erp/validation/KbvValidationUtils.hxx"
 
 #include <date/date.h>
@@ -81,22 +81,6 @@ void KbvBundleValidator::validate(const model::ResourceBase& resource, const Xml
                                   const InCodeValidator& inCodeValidator) const
 {
     doValidate(dynamic_cast<const model::KbvBundle&>(resource), xmlValidator, inCodeValidator);
-}
-
-void KbvBundleValidator_V1_0_1::doValidate(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
-                                           const InCodeValidator& inCodeValidator) const
-{
-    erp_compositionPflicht(kbvBundle);
-    erp_angabePruefnummer(kbvBundle);
-    erp_angabeZuzahlung(kbvBundle);
-    erp_angabePLZ(kbvBundle);
-    erp_angabeNrAusstellendePerson(kbvBundle);
-    erp_angabeBestriebsstaettennr(kbvBundle);
-    erp_angabeRechtsgrundlage(kbvBundle);
-    // -erp-versionComposition is enforced by xsd
-    ikKostentraegerBgUkPflicht(kbvBundle);
-
-    validateEntries(kbvBundle, xmlValidator, inCodeValidator, model::ResourceVersion::KbvItaErp::v1_0_1);
 }
 
 void KbvBundleValidator_V1_0_1::validateEntries(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
@@ -386,7 +370,7 @@ void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundl
                                                            const model::ResourceVersion::KbvItaErp& version) const
 {
     // there are four different profiles for the Medication Resource, which cannot be distinguished in xsd.
-    const auto& medications = kbvBundle.getResourcesByType<model::KbvMedicationModelHelper>();
+    const auto& medications = kbvBundle.getResourcesByType<model::KbvMedicationGeneric>();
     for (const auto& medication : medications)
     {
         const auto profile = medication.getProfile();
@@ -394,19 +378,19 @@ void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundl
         {
             case SchemaType::KBV_PR_ERP_Medication_Compounding:
                 (void) model::KbvMedicationCompounding::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                                inCodeValidator, profile, false, version);
+                                                                inCodeValidator, profile, std::nullopt, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_FreeText:
                 (void) model::KbvMedicationFreeText::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                             inCodeValidator, profile, false, version);
+                                                             inCodeValidator, profile, std::nullopt, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_Ingredient:
                 (void) model::KbvMedicationIngredient::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                               inCodeValidator, profile, false, version);
+                                                               inCodeValidator, profile, std::nullopt, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_PZN:
                 (void) model::KbvMedicationPzn::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                        inCodeValidator, profile, false, version);
+                                                        inCodeValidator, profile, std::nullopt, version);
                 break;
             default:
                 ErpFail(HttpStatus::BadRequest, "Unsupported medication profile");

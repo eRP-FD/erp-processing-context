@@ -31,12 +31,12 @@ public:
 protected:
     std::shared_ptr<PrimitiveElement> makeIntegerElement(int32_t value) const;
     std::shared_ptr<PrimitiveElement> makeIntegerElement(size_t value) const;
-    std::shared_ptr<PrimitiveElement> makeDecimalElement(Element::DecimalType value) const;
+    std::shared_ptr<PrimitiveElement> makeDecimalElement(DecimalType value) const;
     std::shared_ptr<PrimitiveElement> makeStringElement(const std::string_view& value) const;
     std::shared_ptr<PrimitiveElement> makeBoolElement(bool value) const;
-    std::shared_ptr<PrimitiveElement> makeDateElement(const Timestamp& value) const;
-    std::shared_ptr<PrimitiveElement> makeDateTimeElement(const Timestamp& value) const;
-    std::shared_ptr<PrimitiveElement> makeTimeElement(const Timestamp& value) const;
+    std::shared_ptr<PrimitiveElement> makeDateElement(const Date& value) const;
+    std::shared_ptr<PrimitiveElement> makeDateTimeElement(const DateTime& value) const;
+    std::shared_ptr<PrimitiveElement> makeTimeElement(const Time& value) const;
     std::shared_ptr<PrimitiveElement> makeQuantityElement(const Element::QuantityType& value) const;
 
     const FhirStructureRepository* mFhirStructureRepository;

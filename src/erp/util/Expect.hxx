@@ -36,16 +36,18 @@ namespace local
     }
 
 
-    template<class Exception, class ... Arguments>
+    template<class Exception, class ... Arguments, typename MessageFuncT>
     void throwIfNot (
         const bool expectedTrue,
-        const std::string& expression,
-        const std::string& message,
+        const char* expression,
+        const MessageFuncT& messageFunc,
         const FileNameAndLineNumber& fileNameAndLineNumber,
         Arguments&& ... arguments)
     {
         if (!expectedTrue)
         {
+            [[unlikely]];
+            auto message = messageFunc();
             TVLOG(1) << message << " at " << fileNameAndLineNumber.fileName << ':'
                     << fileNameAndLineNumber.line << "\n    " << expression
                     << " did not evaluate to true";
@@ -54,16 +56,18 @@ namespace local
         }
     }
 
-    template<class Exception, class ... Arguments>
+    template<class Exception, class ... Arguments, typename MessageFuncT>
     void throwIfNotWithOpenSslErrors (
         const bool expectedTrue,
-        const std::string& expression,
-        const std::string& message,
+        const char* expression,
+        const MessageFuncT& messageFunc,
         const FileNameAndLineNumber& fileNameAndLineNumber,
         Arguments&& ... arguments)
     {
         if (!expectedTrue)
         {
+            [[unlikely]];
+            std::string message{messageFunc()};
             // collect OpenSSL errors
             std::string errors;
             while (unsigned long error = ERR_get_error())
@@ -95,7 +99,7 @@ namespace local
  * name and line number so that the origin of the exception can be easily determined.
  */
 #define Expect(expression, message) \
-    local::throwIfNot<std::runtime_error>(static_cast<bool>(expression), #expression, message, fileAndLine)
+    local::throwIfNot<std::runtime_error>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine)
 
 #define Fail(message) \
     local::logAndThrow<std::runtime_error>(message, fileAndLine)
@@ -113,11 +117,11 @@ namespace local
  * Variant of the Expect macro that accepts an additional status value that will be returned with the HTTP response.
  */
 #define ErpExpect(expression, errorStatus, message) \
-    local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, message, fileAndLine, errorStatus)
+    local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine, errorStatus)
 #define ErpExpectWithDiagnostics(expression, errorStatus, message, diagnostics) \
-    local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, message, fileAndLine, errorStatus, diagnostics)
+    local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine, errorStatus, diagnostics)
 #define VauExpect(expression, errorStatus, vauError, message) \
-    local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, message, fileAndLine, errorStatus, vauError)
+    local::throwIfNot<ErpException>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine, errorStatus, vauError)
 
 #define ErpFail(errorStatus, message) \
     local::logAndThrow<ErpException>(message, fileAndLine, errorStatus)
@@ -132,7 +136,7 @@ namespace local
  * Variant of the Expect macro that should be used for errors originating in model classes.
  */
 #define ModelExpect(expression, message) \
-    local::throwIfNot<::model::ModelException>(static_cast<bool>(expression), #expression, message, fileAndLine)
+    local::throwIfNot<::model::ModelException>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine)
 
 #define ModelFail(message) \
     local::logAndThrow<::model::ModelException>(message, fileAndLine)
@@ -143,23 +147,23 @@ namespace local
  * this macro (and the other macros in this file) could probably be improved considerably.
  */
 #define Expect3(expression, message, exceptionClass) \
-    local::throwIfNot<exceptionClass>(static_cast<bool>(expression), #expression, message, fileAndLine)
+    local::throwIfNot<exceptionClass>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine)
 
 /**
  * Variant of the Expect macro that collects the openssl errors and add it to the message.
  */
 #define OpenSslExpect(expression, message) \
-    local::throwIfNotWithOpenSslErrors<std::runtime_error>(static_cast<bool>(expression), #expression, message, fileAndLine)
+    local::throwIfNotWithOpenSslErrors<std::runtime_error>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine)
 
 /**
  * Variant of the Expect macro that should be used for TSL related errors.
  */
 #define TslExpect(expression, message, errorCode) \
-    local::throwIfNot<TslError>(static_cast<bool>(expression), #expression, message, fileAndLine, errorCode)
+    local::throwIfNot<TslError>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine, errorCode)
 #define TslExpect4(expression, message, errorCode, tslMode) \
-    local::throwIfNot<TslError>(static_cast<bool>(expression), #expression, message, fileAndLine, errorCode, tslMode)
+    local::throwIfNot<TslError>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine, errorCode, tslMode)
 #define TslExpect6(expression, message, errorCode, tslMode, tslId, tslSequenceNumber) \
-    local::throwIfNot<TslError>(static_cast<bool>(expression), #expression, message, fileAndLine, errorCode, tslMode, tslId, tslSequenceNumber)
+    local::throwIfNot<TslError>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine, errorCode, tslMode, tslId, tslSequenceNumber)
 
 #define TslFail(message, errorCode) \
     local::logAndThrow<TslError>(message, fileAndLine, errorCode)

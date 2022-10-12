@@ -92,9 +92,9 @@ public:
     [[nodiscard]] uint64_t countCommunications(const std::string& user,
                                                const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::vector<Uuid> retrieveCommunicationIds(const std::string& recipient) override;
-    [[nodiscard]] std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
+    [[nodiscard]] std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
     deleteCommunication(const Uuid& communicationId, const std::string& sender) override;
-    void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds, const fhirtools::Timestamp& retrieved,
+    void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds, const model::Timestamp& retrieved,
                                        const std::string& recipient) override;
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId) override;
 
@@ -103,18 +103,19 @@ public:
     [[nodiscard]] bool clearConsent(const std::string_view& kvnr) override;
 
     void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) override;
-    void updateChargeInformation(const ::model::ChargeInformation& chargeInformation) override;
+    void updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt) override;
 
     std::vector<model::ChargeItem>
     retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
                                       const std::optional<UrlArguments>& search) const override;
 
     [[nodiscard]] ::model::ChargeInformation retrieveChargeInformation(const model::PrescriptionId& id) const override;
-    [[nodiscard]] ::model::ChargeInformation
+    [[nodiscard]] std::tuple<::model::ChargeInformation, BlobId, db_model::Blob>
     retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const override;
 
     void deleteChargeInformation(const model::PrescriptionId& id) override;
     void clearAllChargeInformation(const std::string_view& kvnr) override;
+    void clearAllChargeItemCommunications(const std::string_view& kvnr) override;
 
     [[nodiscard]] uint64_t countChargeInformationForInsurant(const std::string& kvnr,
                                                              const std::optional<UrlArguments>& search) override;
@@ -133,9 +134,9 @@ private:
     getDispenseItem(const std::optional<db_model::EncryptedBlob>& dbDispenseItem, const SafeString& key);
 
     [[nodiscard]] static ErpVector taskKeyDerivationData(const model::PrescriptionId& taskId,
-                                                         const fhirtools::Timestamp& authoredOn);
+                                                         const model::Timestamp& authoredOn);
     [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId);
-    [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId, const fhirtools::Timestamp& authoredOn,
+    [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId, const model::Timestamp& authoredOn,
                                      const OptionalDeriveKeyData& secondCallData);
     [[nodiscard]] std::optional<SafeString> taskKey(const db_model::Task& dbTask);
 
@@ -147,7 +148,7 @@ private:
     [[nodiscard]] ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
     chargeItemKey(const ::model::PrescriptionId& prescriptionId) const;
     [[nodiscard]] ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
-    chargeItemKey(const ::db_model::ChargeItem& chargeItem) const;
+    chargeItemKey(const model::PrescriptionId& prescriptionId, const BlobId& blobId, const db_model::Blob& salt) const;
 
     [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& hashedKvnr);
 

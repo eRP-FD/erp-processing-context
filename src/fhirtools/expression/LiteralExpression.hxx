@@ -57,7 +57,7 @@ class LiteralDecimalExpression : public LiteralExpression
 {
 public:
     explicit LiteralDecimalExpression(const FhirStructureRepository* fhirStructureRepository,
-                                      Element::DecimalType value);
+                                      DecimalType value);
 };
 
 // http://hl7.org/fhirpath/N1/#date

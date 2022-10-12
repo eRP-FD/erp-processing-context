@@ -203,18 +203,18 @@ std::string SearchArgument::dateValueAsString(size_t idx) const
     const auto& timestamp = std::get<std::vector<std::optional<model::TimePeriod>>>(values)[idx];
     if (timestamp.has_value())
     {
-        switch(fhirtools::Timestamp::detectType(originalValues[idx]))
+        switch(model::Timestamp::detectType(originalValues[idx]))
         {
-            case fhirtools::Timestamp::Type::DateTimeWithFractionalSeconds:
+            case model::Timestamp::Type::DateTimeWithFractionalSeconds:
                 return timestamp->begin().toXsDateTime();
-            case fhirtools::Timestamp::Type::DateTime:
+            case model::Timestamp::Type::DateTime:
             default:
                 return timestamp->begin().toXsDateTimeWithoutFractionalSeconds();
-            case fhirtools::Timestamp::Type::Date:
+            case model::Timestamp::Type::Date:
                 return timestamp->begin().toXsDate();
-            case fhirtools::Timestamp::Type::YearMonth:
+            case model::Timestamp::Type::YearMonth:
                 return timestamp->begin().toXsGYearMonth();
-            case fhirtools::Timestamp::Type::Year:
+            case model::Timestamp::Type::Year:
                 return timestamp->begin().toXsGYear();
         }
     }

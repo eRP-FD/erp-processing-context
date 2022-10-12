@@ -43,6 +43,11 @@ Collection PercentRootResource::eval(const Collection& collection) const
     }
     return {};
 }
+ExtensionFunction::ExtensionFunction(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg)
+    : UnaryExpression(fhirStructureRepository, std::move(arg))
+{
+    FPExpect(mArg, "missing mandatory argument");
+}
 Collection ExtensionFunction::eval(const Collection& collection) const
 {
     EVAL_TRACE;
@@ -79,9 +84,13 @@ Collection ExtensionFunction::eval(const Collection& collection) const
 Collection HasValue::eval(const Collection& collection) const
 {
     EVAL_TRACE;
-    if (! GetValue(mFhirStructureRepository).eval(collection).empty())
+    if (collection.size() == 1)
     {
-        return {makeBoolElement(true)};
+        const auto& element = collection.single();
+        if (element->hasValue())
+        {
+            return {makeBoolElement(true)};
+        }
     }
     return {makeBoolElement(false)};
 }
@@ -89,14 +98,9 @@ Collection HasValue::eval(const Collection& collection) const
 Collection GetValue::eval(const Collection& collection) const
 {
     EVAL_TRACE;
-    if (collection.size() == 1)
+    if (HasValue(mFhirStructureRepository).eval(collection).boolean())
     {
-        const auto& element = collection.single();
-        if (element->type() != Element::Type::Structured &&
-            element->getStructureDefinition()->kind() == FhirStructureDefinition::Kind::primitiveType)
-        {
-            return {element};
-        }
+        return collection;
     }
     return {};
 }
@@ -104,10 +108,24 @@ Collection GetValue::eval(const Collection& collection) const
 Collection Resolve::eval(const Collection& collection) const
 {
     EVAL_TRACE;
-    // TODO ERP-10520: call resolver
-    FPFail("resolve() not implemented");
+    static constexpr std::string_view elementPathIsNotUsed{"n/a"};
+    Collection result;
+    for (const auto& item: collection)
+    {
+        const auto& [element, _] = item->resolveReference(elementPathIsNotUsed);
+        if (element)
+        {
+            result.emplace_back(std::move(element));
+        }
+    }
+    return result;
 }
 
+ConformsTo::ConformsTo(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg)
+    : UnaryExpression(fhirStructureRepository, std::move(arg))
+{
+    FPExpect(mArg, "missing mandatory argument");
+}
 Collection ConformsTo::eval(const Collection& collection) const
 {
     EVAL_TRACE;

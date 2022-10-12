@@ -20,6 +20,8 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -137,6 +139,7 @@ void ServerTestBase::SetUp (void)
         deleteTxn.exec("DELETE FROM erp.task");
         deleteTxn.exec("DELETE FROM erp.task_169");
         deleteTxn.exec("DELETE FROM erp.task_200");
+        deleteTxn.exec("DELETE FROM erp.task_209");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.commit();
     }
@@ -160,6 +163,7 @@ void ServerTestBase::TearDown (void)
         deleteTxn.exec("DELETE FROM erp.task");
         deleteTxn.exec("DELETE FROM erp.task_169");
         deleteTxn.exec("DELETE FROM erp.task_200");
+        deleteTxn.exec("DELETE FROM erp.task_209");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.commit();
     }
@@ -432,8 +436,8 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
         String::replaceAll(prescriptionBundleXmlString, "##kvnrPatient##", kvnrPatient);
 
     auto prescriptionBundle = KbvBundle::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
-                                                 *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle);
-
+                                                 *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                                                 {{.allowNonLiteralAuthorReference = true}});
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
     ASSERT_FALSE(patients.empty());
@@ -481,7 +485,7 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
     PrescriptionId prescriptionId = task.prescriptionId();
 
     const Timestamp inProgessDate = task.lastModifiedDate();
-    const Timestamp completedTimestamp = fhirtools::Timestamp::now();
+    const Timestamp completedTimestamp = model::Timestamp::now();
     const std::string linkBase = "https://127.0.0.1:8080";
     const std::string authorIdentifier = linkBase + "/Device";
     const std::string prescriptionDigestIdentifier = "Binary/TestDigest";

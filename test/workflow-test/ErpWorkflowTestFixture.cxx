@@ -18,6 +18,8 @@
 #include "test/util/ResourceManager.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/util/Expect.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <random>
 #include <regex>
@@ -28,26 +30,34 @@
 namespace
 {
 
+static constexpr fhirtools::ValidatorOptions receiptValidationOptions
+{
+    .levels{
+        .unreferencedBundledResource = fhirtools::Severity::warning,
+        .unreferencedContainedResource = fhirtools::Severity::warning
+    }
+};
+
 template<class TModelElem>
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void modelElemfromString(
     std::optional<TModelElem>& result,
     const std::string_view& str,
     const std::string& contentType,
-    SchemaType schemaType, bool allowGenericValidate = true)
+    SchemaType schemaType, const std::optional<fhirtools::ValidatorOptions>& valOpts = fhirtools::ValidatorOptions{})
 {
     if (contentType == std::string(ContentMimeType::fhirXmlUtf8))
     {
         ASSERT_NO_THROW(
             result = TModelElem::fromXml(str, *ErpWorkflowTestBase::getXmlValidator(),
-                                         *StaticData::getInCodeValidator(), schemaType, allowGenericValidate));
+                                         *StaticData::getInCodeValidator(), schemaType, valOpts));
     }
     else
     {
         ASSERT_NO_THROW(
             result = TModelElem::fromJson(str, *ErpWorkflowTestBase::getJsonValidator(),
                                           *ErpWorkflowTestBase::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                          schemaType, allowGenericValidate));
+                                          schemaType, valOpts));
     }
 }
 
@@ -83,7 +93,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
     const std::string& accessCode)
 {
     // repare QES-Bundle for invokation of POST /task/<id>/$activate
-    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, prescriptionId, fhirtools::Timestamp::now())));
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, prescriptionId, model::Timestamp::now())));
     ASSERT_FALSE(qesBundle.empty());
     std::optional<model::Task> task;
     // invoke /task/<id>/$activate
@@ -152,8 +162,16 @@ void ErpWorkflowTestBase::checkTaskActivate(
         "Wir haben das Medikament."));
     if (communicationResponse.has_value()) communications.emplace_back(std::move(communicationResponse.value()));
 
-    // communications below not possible for WF169, because the access code is not delivered to the patient.
-    if (task.value().type() == model::PrescriptionType::direkteZuweisung) return;
+    // communications below not possible for WF169,209, because the access code is not delivered to the patient.
+    switch(task.value().type())
+    {
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            break;
+        case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            return;
+    }
     ASSERT_NO_FATAL_FAILURE(communicationResponse = communicationPost(
         model::Communication::MessageType::Representative, task.value(),
         ActorRole::Insurant, kvnr,
@@ -177,7 +195,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskAccept(
     std::string& createdSecret,
-    std::optional<fhirtools::Timestamp>& lastModifiedDate,
+    std::optional<model::Timestamp>& lastModifiedDate,
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
     const std::string& accessCode,
@@ -247,7 +265,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
     const std::string& secret,
-    const fhirtools::Timestamp& lastModified,
+    const model::Timestamp& lastModified,
     const std::vector<model::Communication>& communications,
     size_t numMedicationDispenses)
 {
@@ -315,9 +333,10 @@ void ErpWorkflowTestBase::checkTaskClose(
     const auto bundles = taskBundle->getResourcesByType<model::Bundle>("Bundle");
     ASSERT_EQ(bundles.size(), 1);  // 1.: Receipt bundle
     std::optional<model::ErxReceipt> receipt;
-    ASSERT_NO_THROW(receipt = model::ErxReceipt::fromXml(bundles.back().serializeToXmlString(), *getXmlValidator(),
-                                                         *StaticData::getInCodeValidator(),
-                                                         SchemaType::Gem_erxReceiptBundle));
+    ASSERT_NO_THROW(
+        receipt = model::ErxReceipt::fromXml(bundles.back().serializeToXmlString(), *getXmlValidator(),
+                                             *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle,
+                                             receiptValidationOptions));
     ASSERT_TRUE(receipt);
     // Must be the same as the result from the service call:
     EXPECT_EQ(canonicalJson(receipt->serializeToJsonString()), canonicalJson(closeReceipt->serializeToJsonString()));
@@ -467,7 +486,7 @@ void ErpWorkflowTestBase::checkAuditEvents(const std::vector<std::optional<model
 }
 void ErpWorkflowTestBase::checkAuditEvents(std::vector<std::optional<std::string>> resourceIds,
                                            const std::string& insurantKvnr, const std::string& language,
-                                           const fhirtools::Timestamp& startTime,
+                                           const model::Timestamp& startTime,
                                            const std::vector<std::string>& actorIdentifiers,
                                            const std::unordered_set<std::size_t>& actorTelematicIdIndices,
                                            const std::vector<model::AuditEvent::SubType>& expectedActions)
@@ -627,7 +646,7 @@ std::string ErpWorkflowTestBase::getAuthorizationBearerValueForJwt(const JWT& jw
 }
 
 std::string ErpWorkflowTestBase::toCadesBesSignature(const std::string& content,
-                                                     const std::optional<fhirtools::Timestamp>& signingTime)
+                                                     const std::optional<model::Timestamp>& signingTime)
 {
     return CryptoHelper::toCadesBesSignature(content, signingTime);
 }
@@ -727,17 +746,23 @@ void ErpWorkflowTestBase::communicationsGetInternal(std::optional<model::Bundle>
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     ASSERT_NO_FATAL_FAILURE(
-        modelElemfromString<model::Bundle>(
-            communicationsBundle, serverResponse.getBody(), *serverResponse.getHeader().contentType(), SchemaType::fhir));
+        modelElemfromString<model::Bundle>(communicationsBundle,
+                                           serverResponse.getBody(),
+                                           *serverResponse.getHeader().contentType(),
+                                           SchemaType::fhir,
+                                           std::nullopt));
 
     if (communicationsBundle->getResourceCount() > 0)
     {
         for (const auto& communication :
              communicationsBundle->getResourcesByType<model::Communication>("Communication"))
         {
+            auto messageType = communication.messageType();
+            bool allowGenericValidation = model::Communication::canValidateGeneric(messageType);
             ASSERT_NO_THROW((void) model::Communication::fromXml(
                 communication.serializeToXmlString(), *getXmlValidator(), *StaticData::getInCodeValidator(),
-                model::Communication::messageTypeToSchemaType(communication.messageType())));
+                model::Communication::messageTypeToSchemaType(messageType),
+                allowGenericValidation?std::make_optional<fhirtools::ValidatorOptions>():std::nullopt));
         }
     }
 }
@@ -861,25 +886,12 @@ void ErpWorkflowTestBase::communicationPostInternal(
     requestArguments.expectedInnerStatus = HttpStatus::Created;
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(requestArguments));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
-    bool allowGenericValidation = true;
-    switch (messageType)
-    {
-        using enum model::Communication::MessageType;
-        case InfoReq:
-        case Reply:
-        case DispReq:
-        case Representative:
-            allowGenericValidation = true;
-            break;
-        case ChargChangeReq:
-        case ChargChangeReply:
-            allowGenericValidation = false;
-    }
-
+    bool allowGenericValidation = model::Communication::canValidateGeneric(messageType);
     ASSERT_NO_FATAL_FAILURE(
         modelElemfromString<model::Communication>(
             communicationResponse, serverResponse.getBody(), *serverResponse.getHeader().contentType(),
-            model::Communication::messageTypeToSchemaType(messageType), allowGenericValidation));
+            model::Communication::messageTypeToSchemaType(messageType),
+            allowGenericValidation?std::make_optional<fhirtools::ValidatorOptions>():std::nullopt));
 }
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -941,7 +953,7 @@ void ErpWorkflowTestBase::medicationDispenseGetAllInternal(std::optional<model::
             medicationDispenseBundle->getResourcesByType<model::MedicationDispense>("MedicationDispense");
         for (const auto& md: medicationDispenses)
         {
-            ASSERT_NO_THROW(model::MedicationDispense::fromXml(md.serializeToXmlString(), *getXmlValidator(),
+            ASSERT_NO_THROW((void)model::MedicationDispense::fromXml(md.serializeToXmlString(), *getXmlValidator(),
                                                                *StaticData::getInCodeValidator(),
                                                                SchemaType::Gem_erxMedicationDispense));
         }
@@ -954,16 +966,26 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
                                       const std::string& kvnr,
                                       const std::string& searchArguments,
                                       const HttpStatus expectedStatus,
-                                      const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+                                      const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
+                                      const std::optional<std::string>& expectedErrorText,
+                                      const std::optional<std::string>& encodedPnw)
 {
     using namespace std::string_view_literals;
-    RequestArguments args(HttpMethod::GET, "/Task", {});
+
+    std::string endpointPath{"/Task"};
+    if (encodedPnw.has_value())
+    {
+        endpointPath += "?KVNR=" + kvnr + "&PNW=" + *encodedPnw;
+    }
+
+    RequestArguments args(HttpMethod::GET, endpointPath, {});
     if (!searchArguments.empty())
     {
         args.vauPath.append("?").append(searchArguments);
     }
 
-    args.jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    args.jwt = encodedPnw.has_value() ? JwtBuilder::testBuilder().makeJwtApotheke()
+                                      : JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(args.jwt.value()));
     args.expectedInnerStatus = expectedStatus;
     ClientResponse response;
@@ -973,8 +995,16 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
     {
         auto contentType = response.getHeader().header(Header::ContentType);
         ASSERT_TRUE(contentType);
-        EXPECT_EQ(contentType.value(), "application/fhir+json;charset=utf-8"sv);
-        ASSERT_NO_THROW(taskBundle = model::Bundle::fromJsonNoValidation(response.getBody()));
+
+        std::string expectedContentType{"application/fhir+"};
+        expectedContentType += encodedPnw.has_value() ? "xml" : "json";
+        expectedContentType += ";charset=utf-8";
+        EXPECT_EQ(contentType.value(), expectedContentType);
+
+        const auto deserializationFunction = encodedPnw.has_value() ? model::Bundle::fromXmlNoValidation
+                                                                    : model::Bundle::fromJsonNoValidation;
+
+        ASSERT_NO_THROW(taskBundle = deserializationFunction(response.getBody()));
         ASSERT_TRUE(taskBundle);
 
         ASSERT_NO_THROW(getJsonValidator()->validate(
@@ -985,8 +1015,12 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
             const auto tasks = taskBundle->getResourcesByType<model::Task>("Task");
             for (const auto& task : tasks)
             {
-                ASSERT_NO_THROW(model::Task::fromXml(task.serializeToXmlString(), *getXmlValidator(),
-                                                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+                // TODO: ERP-10782: re-enable validation for WF 209
+                if (model::PrescriptionType::direkteZuweisungPkv != task.prescriptionId().type())
+                {
+                    ASSERT_NO_THROW((void)model::Task::fromXml(task.serializeToXmlString(), *getXmlValidator(),
+                                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+                }
                 ASSERT_FALSE(task.healthCarePrescriptionUuid().has_value());
                 ASSERT_FALSE(task.patientConfirmationUuid().has_value());
                 ASSERT_FALSE(task.receiptUuid().has_value());
@@ -997,7 +1031,11 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
     else
     {
         Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
-        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(response.getBody(), true/*isJson*/, expectedErrorCode.value()));
+        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(
+            response.getBody(),
+            !encodedPnw.has_value() /*isJson*/,
+            expectedErrorCode.value(),
+            expectedErrorText));
     }
 }
 
@@ -1061,17 +1099,28 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
         {
             auto tasks = taskBundle->getResourcesByType<model::Task>("Task");
             ASSERT_EQ(tasks.size(), 1);
-            ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *getXmlValidator(),
-                                                 *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+
+            // TODO: ERP-10782: re-enable validation for WF 209
+            if (model::PrescriptionType::direkteZuweisungPkv == prescriptionId.type())
+            {
+                ASSERT_NO_THROW((void)model::Task::fromXmlNoValidation(tasks[0].serializeToXmlString()));
+            }
+            else
+            {
+                ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *getXmlValidator(),
+                                                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+            }
 
             auto patientConfirmationOrReceipt = taskBundle->getResourcesByType<model::Bundle>("Bundle");
             if (! patientConfirmationOrReceipt.empty())
             {
                 if (!isPatient)
                 {
-                    ASSERT_NO_THROW(model::ErxReceipt::fromXml(patientConfirmationOrReceipt[0].serializeToXmlString(),
-                                                               *getXmlValidator(), *StaticData::getInCodeValidator(),
-                                                               SchemaType::Gem_erxReceiptBundle));
+                    ASSERT_NO_THROW(
+                        (void)model::ErxReceipt::fromXml(patientConfirmationOrReceipt[0].serializeToXmlString(),
+                                                         *getXmlValidator(), *StaticData::getInCodeValidator(),
+                                                         SchemaType::Gem_erxReceiptBundle, receiptValidationOptions)
+                                    );
                     ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
                     ASSERT_FALSE(tasks[0].patientConfirmationUuid().has_value());
                     if (tasks[0].status() == model::Task::Status::completed)
@@ -1085,9 +1134,12 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
                 }
                 else
                 {
-                    ASSERT_NO_THROW(model::KbvBundle::fromXml(patientConfirmationOrReceipt[0].serializeToXmlString(),
-                                                              *getXmlValidator(), *StaticData::getInCodeValidator(),
-                                                              SchemaType::KBV_PR_ERP_Bundle));
+                    std::optional<model::KbvBundle> kbvBundle;
+                    ASSERT_NO_THROW(kbvBundle.emplace(
+                            model::KbvBundle::fromXml(patientConfirmationOrReceipt[0].serializeToXmlString(),
+                                                      *getXmlValidator(), *StaticData::getInCodeValidator(),
+                                                      SchemaType::KBV_PR_ERP_Bundle,
+                                                      {{.allowNonLiteralAuthorReference = true}})));
                     ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
                     ASSERT_TRUE(tasks[0].patientConfirmationUuid().has_value());
                     ASSERT_FALSE(tasks[0].receiptUuid().has_value());
@@ -1153,7 +1205,16 @@ bool ErpWorkflowTestBase::runsInCloudEnv() const
 bool ErpWorkflowTestBase::isUnsupportedFlowtype(const model::PrescriptionType workflowType)
 {
     bool featurePkvEnabled = Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false);
-    return workflowType == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv && !featurePkvEnabled;
+    switch (workflowType)
+    {
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            return ! featurePkvEnabled;
+    }
+    return false;
 }
 
 
@@ -1195,7 +1256,7 @@ void ErpWorkflowTestBase::taskCloseInternal(std::optional<model::ErxReceipt>& re
     {
         ASSERT_NO_THROW(receipt = model::ErxReceipt::fromXml(serverResponse.getBody(), *getXmlValidator(),
                                                              *StaticData::getInCodeValidator(),
-                                                             SchemaType::Gem_erxReceiptBundle));
+                                                             SchemaType::Gem_erxReceiptBundle, receiptValidationOptions));
     }
     else
     {
@@ -1224,9 +1285,18 @@ void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundl
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
-        ASSERT_NO_THROW(bundle = model::Bundle::fromXml(serverResponse.getBody(),
-                                                        *getXmlValidator(), *StaticData::getInCodeValidator(),
-                                                        SchemaType::fhir));
+        // TODO: ERP-10782: re-enable validation for WF 209
+        if (model::PrescriptionType::direkteZuweisungPkv == prescriptionId.type())
+        {
+            ASSERT_NO_THROW(bundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
+        }
+        else
+        {
+            ASSERT_NO_THROW(bundle = model::Bundle::fromXml(serverResponse.getBody(),
+                                                            *getXmlValidator(),
+                                                            *StaticData::getInCodeValidator(),
+                                                            SchemaType::fhir));
+        }
     }
     else
     {
@@ -1277,263 +1347,56 @@ void ErpWorkflowTestBase::taskActivateInternal(std::optional<model::Task>& task,
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
-        ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
-                                                    *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+        // TODO: ERP-10782: re-enable validation for WF 209
+        if (model::PrescriptionType::direkteZuweisungPkv == prescriptionId.type())
+        {
+            ASSERT_NO_THROW(task = model::Task::fromXmlNoValidation(serverResponse.getBody()));
+        }
+        else
+        {
+            ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
+                                                 *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+        }
     }
     else
     {
         Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
         ASSERT_NO_FATAL_FAILURE(
-            checkOperationOutcome(serverResponse.getBody(), false/*isJson*/, expectedErrorCode.value(),
+            checkOperationOutcome(serverResponse.getBody(), false /*isJson*/, expectedErrorCode.value(),
                                   expectedIssueText, expectedIssueDiagnostics)
         );
     }
 }
 void ErpWorkflowTestBase::makeQESBundleInternal(std::string& qesBundle, const std::string& kvnr,
                                             const model::PrescriptionId& prescriptionId,
-                                            const fhirtools::Timestamp& now)
+                                            const model::Timestamp& now)
 {
+    qesBundle = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/kbv_bundle_template.xml");
     std::string kvType = "GKV";
     std::string patientIdentifierAssigner;
-    if(prescriptionId.type() == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+    switch(prescriptionId.type())
     {
-        kvType = "PKV";
-        patientIdentifierAssigner = R"(
-                    <assigner>
-                        <display value="Assigning organization"/>
-                    </assigner>)";
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            qesBundle = std::regex_replace(qesBundle, std::regex{"###INSURANCE_TYPE###"}, "GKV");
+            qesBundle = std::regex_replace(qesBundle, std::regex{"###PKV_ASSIGNER###"}, "");
+            break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            qesBundle = std::regex_replace(qesBundle, std::regex{"###INSURANCE_TYPE###"}, "PKV");
+            qesBundle = std::regex_replace(qesBundle, std::regex{"###PKV_ASSIGNER###"}, R"(
+                        <assigner>
+                            <display value="Assigning organization"/>
+                        </assigner>)");
+            break;
     }
-
-    qesBundle = R"(
-<Bundle xmlns="http://hl7.org/fhir">
-    <id value="281a985c-f25b-4aae-91a6-41ad744080b0"/>
-    <meta>
-        <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|)" + std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())) + R"("/>
-    </meta>
-    <identifier>
-        <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
-        <value value=")" + prescriptionId.toString() + R"("/>
-    </identifier>
-    <type value="document"/>
-    <timestamp value=")" + now.toXsDateTime() + R"("/>
-    <entry>
-        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/Composition/5e709fc5-c233-456c-bf81-20534cbf9565" />
-        <resource>
-          <Composition>
-            <id value="5e709fc5-c233-456c-bf81-20534cbf9565" />
-            <meta>
-              <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|)" + std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())) + R"("/>
-            </meta>
-            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
-              <valueCoding>
-                <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN" />
-                <code value="00" />
-              </valueCoding>
-            </extension>
-            <status value="final" />
-            <type>
-              <coding>
-                <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART" />
-                <code value="e16A" />
-              </coding>
-            </type>
-            <subject>
-              <reference value="Patient/9774f67f-a238-4daf-b4e6-679deeef3811" />
-            </subject>
-            <date value="2020-02-03T11:30:02Z" />
-            <author>
-              <reference value="Practitioner/20597e0e-cb2a-45b3-95f0-dc3dbdb617c3" />
-              <type value="Practitioner" />
-            </author>
-            <author>
-              <type value="Device" />
-              <identifier>
-                <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer" />
-                <value value="Y/400/1910/36/346" />
-              </identifier>
-            </author>
-            <title value="elektronische Arzneimittelverordnung" />
-            <custodian>
-              <reference value="Organization/cf042e44-086a-4d51-9c77-172f9a972e3b" />
-            </custodian>
-            <section>
-              <code>
-                <coding>
-                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type" />
-                  <code value="Prescription" />
-                </coding>
-              </code>
-              <entry>
-                <!--  Referenz auf Verordnung (MedicationRequest)  -->
-                <reference value="MedicationRequest/931e9384-1b80-41f0-a40b-d2ced5e6d856" />
-              </entry>
-            </section>
-            <section>
-              <code>
-                <coding>
-                  <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type" />
-                  <code value="Coverage" />
-                </coding>
-              </code>
-              <entry>
-                <!--  Referenz auf Krankenkasse/KostentrĂ¤ger   -->
-                <reference value="Coverage/1b1ffb6e-eb05-43d7-87eb-e7818fe9661a" />
-              </entry>
-            </section>
-          </Composition>
-        </resource>
-      </entry>
-    <entry>
-        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/Patient/9774f67f-a238-4daf-b4e6-679deeef3811"/>
-        <resource>
-            <Patient>
-                <id value="9774f67f-a238-4daf-b4e6-679deeef3811"/>
-                <meta>
-                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3"/>
-                </meta>
-                <identifier>
-                    <type>
-                        <coding>
-                            <system value="http://fhir.de/CodeSystem/identifier-type-de-basis"/>
-                            <code value=")" + kvType + R"("/>
-                        </coding>
-                    </type>
-                    <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
-                    <value value=")" + kvnr + R"("/>)" + patientIdentifierAssigner + R"(
-                </identifier>
-                <name>
-                    <use value="official"/>
-                    <family value="Ludger Königsstein">
-                        <extension url="http://hl7.org/fhir/StructureDefinition/humanname-own-name">
-                            <valueString value="Königsstein"/>
-                        </extension>
-                    </family>
-                    <given value="Ludger"/>
-                </name>
-                <birthDate value="1935-06-22"/>
-                <address>
-                    <type value="both"/>
-                    <line value="Musterstr. 1">
-                        <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName">
-                            <valueString value="Musterstr."/>
-                        </extension>
-                        <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber">
-                            <valueString value="1"/>
-                        </extension>
-                    </line>
-                    <city value="Berlin"/>
-                    <postalCode value="10623"/>
-                </address>
-            </Patient>
-        </resource>
-    </entry>
-    <entry>
-        <fullUrl value="http://pvs.praxis-topp-gluecklich.local/fhir/Coverage/312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
-        <resource>
-            <Coverage>
-                <id value="312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
-                <meta>
-                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3"/>
-                </meta>
-                <extension url="http://fhir.de/StructureDefinition/gkv/versichertenart">
-                    <valueCoding>
-                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"/>
-                        <code value="1"/>
-                    </valueCoding>
-                </extension>
-                <extension url="http://fhir.de/StructureDefinition/gkv/besondere-personengruppe">
-                    <valueCoding>
-                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"/>
-                        <code value="00"/>
-                    </valueCoding>
-                </extension>
-                <extension url="http://fhir.de/StructureDefinition/gkv/dmp-kennzeichen">
-                    <valueCoding>
-                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"/>
-                        <code value="00"/>
-                    </valueCoding>
-                </extension>
-                <status value="active"/>
-                <type>
-                    <coding>
-                        <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis"/>
-                        <code value=")" + kvType + R"("/>
-                    </coding>
-                </type>
-                <beneficiary>
-                    <reference value="Patient/9774f67f-a238-4daf-b4e6-679deeef3811"/>
-                </beneficiary>
-                <payor>
-                    <identifier>
-                        <system value="http://fhir.de/NamingSystem/arge-ik/iknr"/>
-                        <value value="109500969"/>
-                    </identifier>
-                    <display value="Test KV"/>
-                </payor>
-            </Coverage>
-        </resource>
-    </entry>
-    <entry>
-        <fullUrl value="http://pvs.praxis.local/fhir/MedicationRequest/005cd690-7473-4bf4-a502-30a32f2e7623"/>
-        <resource>
-            <MedicationRequest>
-                <id value="005cd690-7473-4bf4-a502-30a32f2e7623"/>
-                <meta>
-                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2"/>
-                </meta>
-                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee">
-                    <valueBoolean value="false"/>
-                </extension>
-                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG">
-                    <valueBoolean value="false"/>
-                </extension>
-                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription">
-                    <extension url="Kennzeichen">
-                        <valueBoolean value="false"/>
-                    </extension>
-                </extension>
-                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
-                    <valueCoding>
-                        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_StatusCoPayment"/>
-                        <code value="0"/>
-                    </valueCoding>
-                </extension>
-                <status value="active"/>
-                <intent value="order"/>
-                <medicationReference>
-                    <reference value="Medication/4980b470-e8e5-44bf-a53a-47ade2561cdb"/>
-                </medicationReference>
-                <subject>
-                    <reference value="Patient/9774f67f-a238-4daf-b4e6-679deeef3811"/>
-                </subject>
-                <authoredOn value="2021-06-08"/>
-                <requester>
-                    <reference value="Practitioner/6e6c209e-1b86-43e0-9794-f54ec147fc49"/>
-                </requester>
-                <insurance>
-                    <reference value="Converage/312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
-                </insurance>
-                <dosageInstruction>
-                    <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag">
-                        <valueBoolean value="true"/>
-                    </extension>
-                    <text value="1x t&#xE4;glich"/>
-                </dosageInstruction>
-                <dispenseRequest>
-                    <quantity>
-                        <value value="1"/>
-                        <system value="http://unitsofmeasure.org"/>
-                        <code value="{Package}"/>
-                    </quantity>
-                </dispenseRequest>
-                <substitution>
-                    <allowedBoolean value="false"/>
-                </substitution>
-            </MedicationRequest>
-        </resource>
-        </entry>
-</Bundle>
-)";
+    std::string bundleVersion{v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())};
+    std::string compositionVersion{v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())};
+    qesBundle = std::regex_replace(qesBundle, std::regex{"###PRESCRIPTION_ID###"}, prescriptionId.toString());
+    qesBundle = std::regex_replace(qesBundle, std::regex{"###TIMESTAMP###"}, now.toXsDateTime());
+    qesBundle = std::regex_replace(qesBundle, std::regex{"###BUNDLE_VERSION###"}, bundleVersion);
+    qesBundle = std::regex_replace(qesBundle, std::regex{"###COMPOSITION_VERSION###"}, compositionVersion);
+    qesBundle = std::regex_replace(qesBundle, std::regex{"###INSURANT_KVNR###"}, kvnr);
 }
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -1544,7 +1407,7 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
 {
     using namespace std::string_view_literals;
     using model::Task;
-    using fhirtools::Timestamp;
+    using model::Timestamp;
 
     std::string create =
         "<Parameters xmlns=\"http://hl7.org/fhir\">\n"
@@ -1588,8 +1451,16 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus) << serverResponse.getBody();
     if (serverResponse.getHeader().status() == HttpStatus::Created)
     {
-        ASSERT_NO_THROW(task = Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
-                                             *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+        // TODO: ERP-10782: re-enable validation for WF 209
+        if (model::PrescriptionType::direkteZuweisungPkv == workflowType)
+        {
+            ASSERT_NO_THROW(task = Task::fromXmlNoValidation(serverResponse.getBody()));
+        }
+        else
+        {
+            ASSERT_NO_THROW(task = Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
+                                                 *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+        }
     }
     else if(expectedErrorCode.has_value())
     {
@@ -1632,7 +1503,7 @@ void ErpWorkflowTestBase::auditEventGetInternal(
         auto auditEvents = auditEventBundle->getResourcesByType<model::AuditEvent>("AuditEvent");
         for (const auto& auditEvent : auditEvents)
         {
-            ASSERT_NO_THROW(model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *getXmlValidator(),
+            ASSERT_NO_THROW((void)model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *getXmlValidator(),
                                                        *StaticData::getInCodeValidator(),
                                                        SchemaType::Gem_erxAuditEvent));
         }
@@ -1685,7 +1556,7 @@ void ErpWorkflowTestBase::deviceGetInternal(
 void ErpWorkflowTestBase::consentPostInternal(
     std::optional<model::Consent>& consent,
     const std::string& kvnr,
-    const fhirtools::Timestamp& dateTime,
+    const model::Timestamp& dateTime,
     const HttpStatus expectedStatus,
     const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
 {
@@ -1706,8 +1577,9 @@ void ErpWorkflowTestBase::consentPostInternal(
 
     if(expectedStatus == HttpStatus::Created)
     {
-         ASSERT_NO_THROW(consent = model::Consent::fromJson(serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(), SchemaType::Gem_erxConsent, false));
+         ASSERT_NO_THROW( consent = model::Consent::fromJson(
+                serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(), *StaticData::getInCodeValidator(),
+                SchemaType::Gem_erxConsent, std::nullopt));
     }
     else
     {
@@ -1737,8 +1609,9 @@ void ErpWorkflowTestBase::consentGetInternal(
     if(expectedStatus == HttpStatus::OK)
     {
         std::optional<model::Bundle> consentBundle;
-        ASSERT_NO_THROW(consentBundle = model::Bundle::fromJson(serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(),
-                                                                *StaticData::getInCodeValidator(), SchemaType::fhir, false));
+        ASSERT_NO_THROW(consentBundle = model::Bundle::fromJson(
+                serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(), *StaticData::getInCodeValidator(),
+                SchemaType::fhir, std::nullopt));
         ASSERT_TRUE(consentBundle.has_value());
         ASSERT_LE(consentBundle->getResourceCount(), 1);
         if(consentBundle->getResourceCount() == 1)
@@ -1763,11 +1636,13 @@ void ErpWorkflowTestBase::chargeItemPostInternal(
     const std::string& telematikId,
     const std::string& secret,
     const HttpStatus expectedStatus,
-    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+    const std::optional<std::string>& templateFile)
 {
     auto& resourceManager = ResourceManager::instance();
     const auto dispenseBundleString = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
-    const auto chargeItemTemplate = resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_POST_template.xml");
+    const auto chargeItemTemplate = resourceManager.getStringResource(
+            templateFile.has_value() ? *templateFile : "test/EndpointHandlerTest/charge_item_POST_template.xml");
 
     const auto serviceContext = StaticData::makePcServiceContext();
 
@@ -1813,7 +1688,8 @@ void ErpWorkflowTestBase::chargeItemPostInternal(
     if(expectedStatus == HttpStatus::Created)
     {
         ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromXml(
-            serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir, false));
+                serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(),
+                SchemaType::fhir, std::nullopt));
     }
     else
     {
@@ -1887,7 +1763,7 @@ void ErpWorkflowTestBase::chargeItemPutInternal(
         EXPECT_EQ(resultContentType.value(), static_cast<std::string>(contentType));
         ASSERT_NO_FATAL_FAILURE(
             modelElemfromString<model::ChargeItem>(resultChargeItem, serverResponse.getBody(), *resultContentType,
-                                                   SchemaType::fhir, false));
+                                                   SchemaType::fhir, std::nullopt));
     }
     else
     {
@@ -1929,16 +1805,16 @@ void ErpWorkflowTestBase::chargeItemsGetInternal(
         EXPECT_EQ(resultContentType.value(), static_cast<std::string>(contentType));
 
         ASSERT_NO_FATAL_FAILURE(modelElemfromString<model::Bundle>(chargeItemsBundle, response.getBody(),
-                                                                   *resultContentType, SchemaType::fhir, false));
+                                                                   *resultContentType, SchemaType::fhir, std::nullopt));
 
         if(chargeItemsBundle->getResourceCount() > 0)
         {
             const auto chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
             for (const auto& chargeItem : chargeItems)
             {
-                ASSERT_NO_THROW(model::ChargeItem::fromXml(chargeItem.serializeToXmlString(), *getXmlValidator(),
+                ASSERT_NO_THROW((void)model::ChargeItem::fromXml(chargeItem.serializeToXmlString(), *getXmlValidator(),
                                                            *StaticData::getInCodeValidator(),
-                                                           SchemaType::fhir, false));
+                                                           SchemaType::fhir, std::nullopt));
             }
         }
     }
@@ -1986,14 +1862,14 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
 
         ASSERT_NO_FATAL_FAILURE(
             modelElemfromString<model::Bundle>(chargeItemResultBundle, response.getBody(), *resultContentType,
-                                               SchemaType::fhir, false));
+                                               SchemaType::fhir, std::nullopt));
 
         ASSERT_GE(chargeItemResultBundle->getResourceCount(), 2);
         const auto chargeItems = chargeItemResultBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
         ASSERT_EQ(chargeItems.size(), 1);
         ASSERT_NO_THROW(
-            model::ChargeItem::fromXml(chargeItems[0].serializeToXmlString(), *getXmlValidator(),
-                                       *StaticData::getInCodeValidator(), SchemaType::fhir, false));
+            (void)model::ChargeItem::fromXml(chargeItems[0].serializeToXmlString(), *getXmlValidator(),
+                                       *StaticData::getInCodeValidator(), SchemaType::fhir, std::nullopt));
 
         const auto professionOIDClaim = jwt.stringForClaim(JWT::professionOIDClaim);
         if(professionOIDClaim == profession_oid::oid_versicherter)
@@ -2018,7 +1894,8 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
                 CadesBesSignature cms(certs, signatureData);
                 std::optional<model::KbvBundle> kbvBundleFromSignature;
                 ASSERT_NO_THROW(kbvBundleFromSignature = model::KbvBundle::fromXml(
-                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle));
+                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                    SchemaType::KBV_PR_ERP_Bundle, {{.allowNonLiteralAuthorReference = true}}));
                 EXPECT_FALSE(kbvBundleFromSignature->getSignature().has_value());
                 EXPECT_EQ(expectedKbvBundle->serializeToJsonString(), kbvBundleFromSignature->serializeToJsonString());
             }
@@ -2031,7 +1908,8 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
                 CadesBesSignature cms(certs, signatureData);
                 std::optional<model::ErxReceipt> receiptFromSignature;
                 ASSERT_NO_THROW(receiptFromSignature = model::ErxReceipt::fromXml(
-                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle));
+                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                    SchemaType::Gem_erxReceiptBundle, receiptValidationOptions));
                 EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
                 EXPECT_EQ(expectedReceipt->serializeToJsonString(), receiptFromSignature->serializeToJsonString());
             }
@@ -2418,18 +2296,20 @@ ErpWorkflowTestBase::taskGetId(const model::PrescriptionId& prescriptionId, cons
     return taskBundle;
 }
 std::optional<model::Bundle> ErpWorkflowTestBase::taskGet(const std::string& kvnr,
-                                                      const std::string& searchArguments,
-                                                      const HttpStatus expectedStatus,
-                                                      const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+                                                          const std::string& searchArguments,
+                                                          const HttpStatus expectedStatus,
+                                                          const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
+                                                          const std::optional<std::string>& expectedErrorText,
+                                                          const std::optional<std::string>& encodedPnw)
 {
     std::optional<model::Bundle> taskBundle;
-    taskGetInternal(taskBundle, kvnr, searchArguments, expectedStatus, expectedErrorCode);
+    taskGetInternal(taskBundle, kvnr, searchArguments, expectedStatus, expectedErrorCode, expectedErrorText, encodedPnw);
     return taskBundle;
 }
 std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(
     const std::string& kvnr,
     const model::PrescriptionId& prescriptionId,
-    const fhirtools::Timestamp& timestamp)
+    const model::Timestamp& timestamp)
 {
     std::string qesBundle;
     makeQESBundleInternal(qesBundle, kvnr, prescriptionId, timestamp);
@@ -2551,7 +2431,7 @@ std::optional<model::Device> ErpWorkflowTestBase::deviceGet(const ContentMimeTyp
 
 std::optional<model::Consent> ErpWorkflowTestBase::consentPost(
     const std::string& kvnr,
-    const fhirtools::Timestamp& dateTime,
+    const model::Timestamp& dateTime,
     const HttpStatus expectedStatus,
     const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
 {
@@ -2601,10 +2481,19 @@ std::optional<model::ChargeItem> ErpWorkflowTestBase::chargeItemPost(
     const std::string& telematikId,
     const std::string& secret,
     const HttpStatus expectedStatus,
-    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode)
+    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+    const std::optional<std::string>& templateFile)
 {
     std::optional<model::ChargeItem> chargeItem;
-    chargeItemPostInternal(chargeItem, prescriptionId, kvnr, telematikId, secret, expectedStatus, expectedErrorCode);
+    chargeItemPostInternal(
+        chargeItem,
+        prescriptionId,
+        kvnr,
+        telematikId,
+        secret,
+        expectedStatus,
+        expectedErrorCode,
+        templateFile);
     return chargeItem;
 }
 
@@ -2694,7 +2583,7 @@ void ErpWorkflowTestBase::createClosedTask(
     ASSERT_TRUE(createdId.has_value());
 
     std::tuple<std::string, std::string> qesBundle;
-    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, fhirtools::Timestamp::now()));
+    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, model::Timestamp::now()));
     ASSERT_NO_THROW(usedKbvBundle = model::KbvBundle::fromXmlNoValidation(std::get<1>(qesBundle)));
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(*createdId, createdAccessCode, std::get<0>(qesBundle)));
@@ -2769,3 +2658,4 @@ void ErpWorkflowTestBase::writeCurrentTestOutputFile(
     fileName += "." + fileExtension;
     FileHelper::writeFile(fileName, testOutput);
 }
+

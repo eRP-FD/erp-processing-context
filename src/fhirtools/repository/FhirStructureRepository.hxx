@@ -28,7 +28,7 @@ public:
 
     /// @brief loads the content of the files containing FHIR-FhirStructureDefinitions or Bundles thereof in XML format
     /// @note after the files are loaded a basic check is performed, all baseDefinitions and element types must be resolvable
-    void load(const std::list<std::filesystem::path>& files);
+    void load(const std::list<std::filesystem::path>& filesAndDirectories);
 
     /// @brief gets a StructureDefinition by url\@value.
     /// This can also be a profile
@@ -68,9 +68,14 @@ public:
     std::tuple<ProfiledElementTypeInfo, size_t>
     resolveBaseContentReference(std::string_view elementId) const;
 
+    FhirStructureRepository(const FhirStructureRepository&) = delete;
+    FhirStructureRepository(FhirStructureRepository&&) = delete;
+    FhirStructureRepository& operator = (const FhirStructureRepository&) = delete;
+    FhirStructureRepository& operator = (FhirStructureRepository&&) = delete;
 private:
     class Verifier;
 
+    void loadFile(std::list<FhirCodeSystem>& supplements, const std::filesystem::path& file);
     void addSystemTypes();
     const FhirStructureDefinition* addSystemType(FhirStructureDefinition::Kind kind, const std::string_view& url);
     const FhirStructureDefinition* addDefinition(std::unique_ptr<FhirStructureDefinition>&& definition);

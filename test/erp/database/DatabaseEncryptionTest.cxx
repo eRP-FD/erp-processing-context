@@ -45,10 +45,10 @@ protected:
     {
         auto& db = database();
         model::Task task{model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode};
-        task.setAcceptDate(fhirtools::Timestamp{1.0});
-        task.setExpiryDate(fhirtools::Timestamp{2.0});
+        task.setAcceptDate(model::Timestamp{1.0});
+        task.setExpiryDate(model::Timestamp{2.0});
         task.setKvnr(InsurantA);
-        task.updateLastUpdate(fhirtools::Timestamp{3.0});
+        task.updateLastUpdate(model::Timestamp{3.0});
         task.setStatus(model::Task::Status::completed);
         task.setSecret(secret);
         model::PrescriptionId prescriptionId = db.storeTask(task);
@@ -251,7 +251,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     auto communication = model::Communication::fromJsonNoValidation(builder.createJsonString());
     communication.setSender(InsurantA);
     communication.setRecipient(mPharmacy);
-    communication.setTimeSent(fhirtools::Timestamp{(int64_t)1612134000});
+    communication.setTimeSent(model::Timestamp{(int64_t)1612134000});
     auto id = db.insertCommunication(communication);
     ASSERT_TRUE(id.has_value());
     db.commitTransaction();
@@ -309,12 +309,14 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
 TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr std::string_view agentName{"Max Mustermann"};
+    static constexpr std::string_view pnwPzNumber{"ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY="};
+
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
     A_19688.test("no unencrypted personal data in table erp.auditevent.");
-    struct col {// no enum class to allow inplicit cast to int
+    struct col { // no enum class to allow implicit cast to int
         enum index
         {
             id,
@@ -330,7 +332,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
         };
     };
     model::AuditData auditData{model::AuditEventId::GET_Task,
-                               model::AuditMetaData{agentName, InsurantA},
+                               model::AuditMetaData{agentName, InsurantA, pnwPzNumber},
                                model::AuditEvent::Action::read,
                                model::AuditEvent::AgentType::human,
                                std::string{InsurantA},
@@ -370,6 +372,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
                         model::AuditMetaData::fromJsonNoValidation(getDBCodec().decode(encryptedMetaData, key)));
     EXPECT_EQ(decryptedMetaData->agentWho(), InsurantA);
     EXPECT_EQ(decryptedMetaData->agentName(), agentName);
+    EXPECT_EQ(decryptedMetaData->pnwPzNumber(), pnwPzNumber);
     //  8: blob_id integer NOT NULL
     //     not encrypted
     A_19688.finish();

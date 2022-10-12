@@ -7,6 +7,7 @@
 
 #include <list>
 #include <memory>
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -14,14 +15,16 @@ namespace fhirtools
 {
 
 class Element;
-class ProfiledElementTypeInfo;
+class Expression;
 class FhirElement;
 class FhirSlice;
 class FhirSliceDiscriminator;
 class FhirStructureDefinition;
 class FhirStructureRepository;
+class ProfiledElementTypeInfo;
 class ValueElement;
 
+using ExpressionPtr = std::shared_ptr<Expression>;
 
 /**
  * @brief Provides information about slices for an element
@@ -110,15 +113,28 @@ public:
                                                                     const FhirStructureDefinition* def) const;
 
 private:
-    static std::list<ProfiledElementTypeInfo> resolveElements(const FhirStructureRepository& repo,
-                                                            const FhirStructureDefinition* def, std::string_view path);
-
-    static std::shared_ptr<const FhirElement> resolveElement(const FhirStructureDefinition* def, std::string_view path);
-    static std::list<ProfiledElementTypeInfo> resolveFromValues(const FhirStructureRepository& repo,
-                                                              const std::shared_ptr<const FhirElement>& element,
+    static std::list<ProfiledElementTypeInfo> collect(const FhirStructureRepository& repo,
+                                                      const FhirStructureDefinition* def, std::string_view path);
+    static std::list<ProfiledElementTypeInfo> collectElements(const FhirStructureRepository& repo,
+                                                              const ProfiledElementTypeInfo& parentDef,
                                                               std::string_view path);
-    static std::list<std::shared_ptr<const ValueElement>> resolveFromValues(std::shared_ptr<const ValueElement> element,
+    static std::list<ProfiledElementTypeInfo> collectSubElements(const FhirStructureRepository& repo,
+                                                                 const ProfiledElementTypeInfo& parentDef,
+                                                                 std::string_view path);
+
+    static std::shared_ptr<const FhirElement> collectElement(const FhirStructureDefinition* def, std::string_view path);
+    static std::list<ProfiledElementTypeInfo> collectFromValues(const FhirStructureRepository& repo,
+                                                                const std::shared_ptr<const FhirElement>& element,
+                                                                std::string_view path);
+    static std::list<std::shared_ptr<const ValueElement>> collectFromValues(std::shared_ptr<const ValueElement> element,
                                                                             std::string_view path);
+    static std::list<ProfiledElementTypeInfo> collectFromResolve(const FhirStructureRepository& repo,
+                                                                 const ProfiledElementTypeInfo& parentDef,
+                                                                 std::string_view path);
+
+    [[nodiscard]] std::shared_ptr<FhirSlicing::Condition>
+    valueishCondition(const FhirStructureRepository& repo, std::list<ProfiledElementTypeInfo> elementInfos,
+                      const FhirStructureDefinition* def, ExpressionPtr) const;
 
     DiscriminatorType mType = DiscriminatorType::value;
     std::string mPath;

@@ -104,13 +104,20 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
     if (NOT DEFINED CONAN_COMPILER_VERSION)
         message(FATAL_ERROR "cannot determine compiler version. Please set CONAN_COMPILER_VERSION accordingly.")
     endif()
+
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        set(COMPILER_LIBCXX_SETTING "libc++")
+    else()
+        set(COMPILER_LIBCXX_SETTING "libstdc++11")
+    endif()
+
     execute_process(
         COMMAND env CONAN_CMAKE_GENERATOR=${CMAKE_GENERATOR}
                 "${CONAN}" install
                 --build missing
                 --install-folder "${CMAKE_BINARY_DIR}"
                 -s compiler.cppstd=${CMAKE_CXX_STANDARD}
-                -s compiler.libcxx=libstdc++11
+                -s compiler.libcxx=${COMPILER_LIBCXX_SETTING}
                 -s compiler.version=${CONAN_COMPILER_VERSION}
                 -e CXX=${CMAKE_CXX_COMPILER}
                 -e CC=${CMAKE_C_COMPILER}
@@ -222,7 +229,9 @@ else()
     endif()
     # explicitly unset 'as-needed' which should be the linker default.
     # Ubuntu overrides the default in the compiler specs, but this makes relocating the libs pulled via conan very hard
-    add_link_options(-Wl,--no-as-needed)
+    if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+        add_link_options(-Wl,--no-as-needed)
+    endif()
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wno-c11-extensions)

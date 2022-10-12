@@ -18,7 +18,7 @@ TEST(AuditEventTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
     const std::string_view textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">Praxis Dr. Frankenstein hat ein E-Rezept eingestellt.</div>";
     const auto subTypeCode = model::AuditEvent::SubType::update;
     const auto action = model::AuditEvent::Action::update;
-    const auto recorded = fhirtools::Timestamp::now();
+    const auto recorded = model::Timestamp::now();
     const auto outcome = model::AuditEvent::Outcome::success;
     const auto whoIdentifierSystem = model::resource::naming_system::telematicID;
     const std::string_view whoIdentifierValue = "3-SMC-XXXX-883110000120312";
@@ -75,7 +75,7 @@ TEST(AuditEventTest, ConstructFromJson)//NOLINT(readability-function-cognitive-c
         "<div xmlns=\"http://www.w3.org/1999/xhtml\">Praxis Dr. Frankenstein hat das Rezept mit der ID " + std::string(whatIdentifierValue) + " eingestellt.</div>";
     const auto subTypeCode = model::AuditEvent::SubType::update;
     const auto action = model::AuditEvent::Action::update;
-    const auto recorded = fhirtools::Timestamp::fromXsDateTime("2021-03-15T15:24:38.396+00:00");
+    const auto recorded = model::Timestamp::fromXsDateTime("2021-03-15T15:24:38.396+00:00");
     const auto outcome = model::AuditEvent::Outcome::success;
     const auto whoIdentifierSystem = model::resource::naming_system::telematicID;
     const std::string_view whoIdentifierValue = "3-SMC-XXXX-883110000120312";

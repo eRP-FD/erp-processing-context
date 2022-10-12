@@ -8,7 +8,7 @@
 #include "erp/model/Extension.hxx"
 #include "erp/model/KbvCoverage.hxx"
 #include "erp/model/Resource.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
@@ -265,9 +265,16 @@ void KbvValidationUtils::checkIknr(const std::string_view& iknr)
     // ik-1
     // matches('[0-9]{8,9}')
     const auto *const constraintError = "Eine IK muss 8- (ohne Prüfziffer) oder 9-stellig (mit Prüfziffer) sein";
-    ErpExpectWithDiagnostics(iknr.size() == 8 || iknr.size() == 9, HttpStatus::BadRequest, constraintError,
-                             std::string(iknr));
-    checkNumeric(iknr, constraintError);
+    try
+    {
+        ErpExpectWithDiagnostics(iknr.size() == 8 || iknr.size() == 9, HttpStatus::BadRequest, constraintError,
+                                 std::string(iknr));
+        checkNumeric(iknr, constraintError);
+    }
+    catch (const ErpException& ex)
+    {
+        TLOG(WARNING) << ex.what();
+    }
 }
 
 void KbvValidationUtils::checkZanr(const std::string_view& zanr)
@@ -275,8 +282,15 @@ void KbvValidationUtils::checkZanr(const std::string_view& zanr)
     // zanr-2
     // matches('[0-9]{9}')
     const auto *const constraintError = "Die KZVAbrechnungsnummer muss 9-stellig numerisch sein";
-    ErpExpectWithDiagnostics(zanr.size() == 9, HttpStatus::BadRequest, constraintError, std::string(zanr));
-    checkNumeric(zanr, constraintError);
+    try
+    {
+        ErpExpectWithDiagnostics(zanr.size() == 9, HttpStatus::BadRequest, constraintError, std::string(zanr));
+        checkNumeric(zanr, constraintError);
+    }
+    catch (const ErpException& ex)
+    {
+        TLOG(WARNING) << ex.what();
+    }
 }
 
 void KbvValidationUtils::checkKvnr(const std::string_view& kvnr)
@@ -285,10 +299,17 @@ void KbvValidationUtils::checkKvnr(const std::string_view& kvnr)
     // matches('^[A-Z][0-9]{9}$')
     const auto *const constraintError =
         "Der unveränderliche Teil der KVID muss 10-stellig sein und mit einem Großbuchstaben anfangen";
-    ErpExpectWithDiagnostics(kvnr.size() == 10, HttpStatus::BadRequest, constraintError, std::string(kvnr));
-    ErpExpectWithDiagnostics(kvnr[0] >= 'A' && kvnr[0] <= 'Z', HttpStatus::BadRequest, constraintError,
-                             std::string(kvnr));
-    checkNumeric(kvnr.substr(1), constraintError);
+    try
+    {
+        ErpExpectWithDiagnostics(kvnr.size() == 10, HttpStatus::BadRequest, constraintError, std::string(kvnr));
+        ErpExpectWithDiagnostics(kvnr[0] >= 'A' && kvnr[0] <= 'Z', HttpStatus::BadRequest, constraintError,
+                                 std::string(kvnr));
+        checkNumeric(kvnr.substr(1), constraintError);
+    }
+    catch (const ErpException& ex)
+    {
+        TLOG(WARNING) << ex.what();
+    }
 }
 
 void KbvValidationUtils::checkLanr(const std::string_view& lanr)
@@ -296,8 +317,15 @@ void KbvValidationUtils::checkLanr(const std::string_view& lanr)
     // lanr-1: Eine LANR muss neunstellig numerisch sein
     //matches('[0-9]{9}')
     const auto *const constraintError = "Eine LANR muss neunstellig numerisch sein";
-    ErpExpectWithDiagnostics(lanr.size() == 9, HttpStatus::BadRequest, constraintError, std::string(lanr));
-    checkNumeric(lanr, constraintError);
+    try
+    {
+        ErpExpectWithDiagnostics(lanr.size() == 9, HttpStatus::BadRequest, constraintError, std::string(lanr));
+        checkNumeric(lanr, constraintError);
+    }
+    catch (const ErpException& ex)
+    {
+        TLOG(WARNING) << ex.what();
+    }
 }
 
 void KbvValidationUtils::checkFamilyName(const std::optional<model::UnspecifiedResource>& familyName)
@@ -419,8 +447,15 @@ void KbvValidationUtils::add4(const std::optional<std::string_view>& line,
     {
         const auto& ext =
             _line->getExtension<model::Extension>("http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-postBox");
-        ErpExpect((! ext || line) || type == "postal" || type.empty(), HttpStatus::BadRequest,
-                  ::constraintError(KbvAddressLineConstraint::add_4));
+        try
+        {
+            ErpExpect((! ext || line) || type == "postal" || type.empty(), HttpStatus::BadRequest,
+                      ::constraintError(KbvAddressLineConstraint::add_4));
+        }
+        catch (const ErpException& ex)
+        {
+            TLOG(WARNING) << ex.what();
+        }
     }
 }
 void KbvValidationUtils::add5(const std::optional<std::string_view>& line,

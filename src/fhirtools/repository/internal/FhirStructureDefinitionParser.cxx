@@ -111,9 +111,15 @@ void FhirStructureDefinitionParser::startElement(const xmlChar* localname, const
         {
             mStack.emplace_back(ElementType::ValueSet, localname);
         }
+        else if (localname == "NamingSystem"_xs || localname == "OperationDefinition"_xs ||
+                 localname == "ImplementationGuide"_xs || localname == "ConceptMap"_xs)
+        {
+            TVLOG(2) << "skipping unneeded element: " + std::string{XmlStringView{localname}};
+            mStack.emplace_back(ElementType::Ignored, localname);
+        }
         else
         {
-            Fail("Document is not a FHIR Structure Definition or Bundle thereof.");
+            Fail("Unsupported Document type: " + std::string{XmlStringView{localname}});
         }
         return;
     }
@@ -437,7 +443,7 @@ void FhirStructureDefinitionParser::handleElementSubTree(const xmlChar* localnam
         {
             mElementBuilder.contentReference(valueAttributeFrom(attributes));
         }
-        else if (localname == "max"_xs || localname == "min"_xs)
+        else if (localname == "max"_xs || localname == "min"_xs || localname ==  "maxLength"_xs)
         {
             const auto val = valueAttributeFrom(attributes);
             if (val == "*" && localname == "max"_xs)
@@ -458,11 +464,48 @@ void FhirStructureDefinitionParser::handleElementSubTree(const xmlChar* localnam
                 {
                     mElementBuilder.cardinalityMin(uintVal);
                 }
-                else
+                else if (localname == "max"_xs)
                 {
                     mElementBuilder.cardinalityMax(uintVal);
                 }
+                else if (localname == "maxLength"_xs)
+                {
+                    mElementBuilder.maxLength(uintVal);
+                }
             }
+        }
+        else if (localname == "minValueInteger"_xs || localname == "maxValueInteger"_xs)
+        {
+            int intVal{};
+            const auto val = valueAttributeFrom(attributes);
+            const auto* end = val.data() + val.size();
+            const auto res = std::from_chars(val.data(), end, intVal);
+            Expect3(res.ec == std::errc{} && res.ptr == end,
+                    "failed to convert value for "s.append(localnameView) + ": " +
+                        (res.ec == std::errc{} ? "trailing characters" : std::make_error_code(res.ec).message()) +
+                        " in '" + val + "'",
+                    std::logic_error);
+            if (localname == "minValueInteger"_xs)
+            {
+                mElementBuilder.minValueInteger(intVal);
+            }
+            else if (localname == "maxValueInteger"_xs)
+            {
+                mElementBuilder.maxValueInteger(intVal);
+            }
+        }
+        else if (localname == "minValueDecimal"_xs)
+        {
+            mElementBuilder.minValueDecimal(valueAttributeFrom(attributes));
+        }
+        else if (localname =="maxValueDecimal"_xs)
+        {
+            mElementBuilder.maxValueDecimal(valueAttributeFrom(attributes));
+        }
+        else if (localnameView.starts_with("minValue") || localnameView.starts_with("maxValue"))
+        {
+            // more min/maxValue[x] cases can be implemented when needed.
+            Fail("unsupported: " + std::string(localnameView));
         }
     }
 }
@@ -526,6 +569,10 @@ void FhirStructureDefinitionParser::handleTypeSubtree(const xmlChar* localname, 
     else if (localname == "profile"_xs)
     {
         mElementBuilder.addProfile(valueAttributeFrom(attributes));
+    }
+    else if (localname == "targetProfile"_xs)
+    {
+        mElementBuilder.addTargetProfile(valueAttributeFrom(attributes));
     }
 }
 

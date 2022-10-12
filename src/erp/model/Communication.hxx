@@ -8,7 +8,7 @@
 
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/validation/SchemaType.hxx"
 
@@ -66,11 +66,11 @@ public:
     std::optional<std::string_view> recipient() const;
     void setRecipient(const std::string_view& recipient);
 
-    std::optional<fhirtools::Timestamp> timeSent() const;
-    void setTimeSent(const fhirtools::Timestamp& timestamp = fhirtools::Timestamp::now());
+    std::optional<model::Timestamp> timeSent() const;
+    void setTimeSent(const model::Timestamp& timestamp = model::Timestamp::now());
 
-    std::optional<fhirtools::Timestamp> timeReceived() const;
-    void setTimeReceived(const fhirtools::Timestamp& timestamp = fhirtools::Timestamp::now());
+    std::optional<model::Timestamp> timeReceived() const;
+    void setTimeReceived(const model::Timestamp& timestamp = model::Timestamp::now());
     void deleteTimeReceived();
 
     PrescriptionId prescriptionId() const;
@@ -83,6 +83,9 @@ public:
     std::optional<std::string_view> contentString(uint32_t idx = 0) const;
 
     void verifyPayload() const;
+
+    bool canValidateGeneric() const;
+    static bool canValidateGeneric(MessageType messageType);
 
 private:
     friend Resource<Communication>;

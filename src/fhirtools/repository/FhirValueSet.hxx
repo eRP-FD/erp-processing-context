@@ -73,9 +73,9 @@ public:
     // Warnings may occur during loading and finalization. These Warnings are reported during each validation.
     [[nodiscard]] std::string getWarnings() const;
 
+    void addError(const std::string& error);
 
 private:
-    void addError(const std::string& error);
     void finalizeIncludeValueSets(FhirStructureRepository* repo, const std::set<std::string>& valueSets);
     void finalizeIncludeCodes(const std::set<std::string>& codes, bool caseSensitive, const std::string& codeSystemUrl);
     void finalizeIncludeFilters(const std::vector<FhirValueSet::Filter>& includeFilters,
@@ -90,7 +90,8 @@ private:
     std::vector<IncludeOrExclude> mExcludes;
     std::vector<Expansion> mExpands;
     std::string mValidationWarning;
-    bool mCanValidate = false;
+    bool mCanValidate = true;
+    bool mFinalized = false;
 
     // after finalize():
     std::set<Code> mCodes;

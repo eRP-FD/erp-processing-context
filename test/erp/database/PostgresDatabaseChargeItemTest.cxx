@@ -207,7 +207,7 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
     ASSERT_TRUE(chargeInformation.size() == 1u);
     ASSERT_TRUE(chargeInformation[0].chargeItem.prescriptionId());
 
-    auto chargeInformationForUpdate =
+    auto [chargeInformationForUpdate, blobId, salt] =
         database().retrieveChargeInformationForUpdate(chargeInformation[0].chargeItem.prescriptionId().value());
     database().commitTransaction();
 
@@ -226,7 +226,7 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
                         ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
     chargeInformationForUpdate.unsignedDispenseItem = ::std::move(dispenseItem);
 
-    database().updateChargeInformation(chargeInformationForUpdate);
+    database().updateChargeInformation(chargeInformationForUpdate, blobId, salt);
     database().commitTransaction();
 
     const auto chargeInformationFromDatabase =
@@ -339,7 +339,7 @@ TEST_F(PostgresBackendChargeItemTest, DeleteChargeInformation)
     EXPECT_ANY_THROW((void) database().retrieveChargeInformation(*prescriptionId));
     database().commitTransaction();
 
-    A_22117.test("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
+    A_22117_01.test("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
     {
         auto checkTransaction = createTransaction();
         const auto result = checkTransaction.exec_params("SELECT FROM erp.task_200 "
@@ -401,7 +401,7 @@ TEST_F(PostgresBackendChargeItemTest, ClearAllChargeInformation)
         (void) database().retrieveChargeInformation(chargeInformation[2].chargeItem.prescriptionId().value()));
     database().commitTransaction();
 
-    A_22117.test("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
+    A_22117_01.test("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
     {
         auto checkTransaction = createTransaction();
         const auto result = checkTransaction.exec_params("SELECT FROM erp.task_200 "

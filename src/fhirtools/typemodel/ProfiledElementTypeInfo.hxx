@@ -45,6 +45,7 @@ public:
     [[nodiscard]] const std::shared_ptr<const FhirElement>& element() const;
     [[nodiscard]] bool isResource() const;
     [[nodiscard]] std::list<std::string> expandedNames(std::string_view name) const;
+    [[nodiscard]] std::string_view elementPath() const;
 
     //NOLINTNEXTLINE(hicpp-use-nullptr,modernize-use-nullptr)
     auto operator<=>(const ProfiledElementTypeInfo&) const = default;

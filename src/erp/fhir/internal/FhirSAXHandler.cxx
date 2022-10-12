@@ -394,18 +394,7 @@ void FhirSaxHandler::pushString(const std::string_view& name, const std::string_
 
 const FhirStructureDefinition& FhirSaxHandler::systemTypeFor(const FhirStructureDefinition& primitiveType) const
 {
-    if (primitiveType.isSystemType())
-    {
-        return primitiveType;
-    }
-    Expect3(primitiveType.kind() == FhirStructureDefinition::Kind::primitiveType,
-            "systemTypeFor called with structure of kind: " + to_string(primitiveType.kind()), std::logic_error);
-    const auto valueElement = primitiveType.findElement(primitiveType.typeId() + ".value");
-    Expect3(valueElement != nullptr, "Primitive type has no value element.", std::logic_error);
-    const auto* valueType = mStructureRepo.findTypeById(valueElement->typeId());
-    Expect3(valueType != nullptr, "Type not found: " + valueElement->typeId(), std::logic_error);
-    Expect3(valueType->isSystemType(), "Value attribute of " + primitiveType.url() + " is not a system type", std::logic_error);
-    return *valueType;
+    return primitiveType.primitiveToSystemType(mStructureRepo);
 }
 
 

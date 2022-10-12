@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="TestCodeSystem"/>
+  <url value="http://erp.test/TestCodeSystem"/>
+  <version value="0.1"/>
+  <name value="TestCodeSystem"/>
+  <status value="draft"/>
+  <content value="complete"/>
+  <count value="2"/>
+  <concept>
+    <code value="Test1"/>
+    <display value="Test1 concept"/>
+  </concept>
+  <concept>
+    <code value="Test2"/>
+    <display value="Test2 concept"/>
+  </concept>
+</CodeSystem>

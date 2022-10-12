@@ -14,7 +14,7 @@ TEST_F(ErpWorkflowTest, WF200Consent)//NOLINT(readability-function-cognitive-com
     if(isUnsupportedFlowtype(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
         GTEST_SKIP();
 
-    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
+    model::Timestamp startTime = model::Timestamp::now();
 
     const std::string kvnr = generateNewRandomKVNR();
 
@@ -91,7 +91,7 @@ TEST_F(ErpWorkflowTest, WF200TaskAcceptWithConsent)//NOLINT(readability-function
     if(isUnsupportedFlowtype(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
         GTEST_SKIP();
 
-    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
+    model::Timestamp startTime = model::Timestamp::now();
 
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
@@ -105,11 +105,11 @@ TEST_F(ErpWorkflowTest, WF200TaskAcceptWithConsent)//NOLINT(readability-function
     std::vector<model::Communication> communications;
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
-    const auto now = fhirtools::Timestamp::now();
+    const auto now = model::Timestamp::now();
     ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, now));
 
     std::string secret;
-    std::optional<fhirtools::Timestamp> lastModifiedDate;
+    std::optional<model::Timestamp> lastModifiedDate;
     // invoke /task/<id>/$accept
     ASSERT_NO_FATAL_FAILURE(
         checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle, true/*withConsent*/));
@@ -146,9 +146,11 @@ void checkEqualityMarking(
     const model::ChargeItem& chargeItem1,
     const model::ChargeItem& chargeItem2)
 {
-    ASSERT_TRUE(chargeItem1.markingFlag().has_value());
-    ASSERT_TRUE(chargeItem2.markingFlag().has_value());
-    EXPECT_EQ(chargeItem1.markingFlag()->getAllMarkings(), chargeItem2.markingFlag()->getAllMarkings());
+    ASSERT_TRUE(chargeItem1.markingFlag().has_value() == chargeItem2.markingFlag().has_value());
+    if (chargeItem1.markingFlag().has_value())
+    {
+        EXPECT_EQ(chargeItem1.markingFlag()->getAllMarkings(), chargeItem2.markingFlag()->getAllMarkings());
+    }
 }
 
 void checkEqualitySupportingInfoReference(
@@ -188,7 +190,7 @@ TEST_F(ErpWorkflowTest, WF200ChargeItem)//NOLINT(readability-function-cognitive-
     if (isUnsupportedFlowtype(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
         GTEST_SKIP();
 
-    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
+    model::Timestamp startTime = model::Timestamp::now();
     const std::string kvnr = generateNewRandomKVNR();
 
     // Create consent
@@ -266,8 +268,8 @@ TEST_F(ErpWorkflowTest, WF200ChargeItem)//NOLINT(readability-function-cognitive-
         EXPECT_FALSE(chargeItemFromBundle[0].containedBinary());
     }
 
-    // Pharmacy deletes first charge item
-    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionIds[0], jwtApotheke()));
+    // Insurant deletes first charge item
+    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionIds[0], jwtInsurant));
     // Insurant deletes third charge item
     ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionIds[2], jwtInsurant));
 
@@ -293,9 +295,6 @@ TEST_F(ErpWorkflowTest, WF200ChargeItem)//NOLINT(readability-function-cognitive-
     EXPECT_EQ(chargeItems.size(), 1);
     ASSERT_NO_FATAL_FAILURE(checkEqualityBasic(chargeItems[0], *createdChargeItems[1]));
     ASSERT_NO_FATAL_FAILURE(checkEqualitySupportingInfoReference(chargeItems[0], *createdChargeItems[1]));
-    EXPECT_TRUE(chargeItems[0].markingFlag()->getAllMarkings()["insuranceProvider"]);
-    EXPECT_FALSE(chargeItems[0].markingFlag()->getAllMarkings()["subsidy"]);
-    EXPECT_TRUE(chargeItems[0].markingFlag()->getAllMarkings()["taxOffice"]);
     EXPECT_FALSE(chargeItems[0].containedBinary());
 
     // Change of dispense item by pharmacy
@@ -332,10 +331,15 @@ TEST_F(ErpWorkflowTest, WF200ChargeItem)//NOLINT(readability-function-cognitive-
           prescriptionIds[1]->toString(), prescriptionIds[1]->toString(), prescriptionIds[1]->toString(),
           prescriptionIds[2]->toString(), prescriptionIds[2]->toString(), prescriptionIds[2]->toString(),
           prescriptionIds[3]->toString(), prescriptionIds[3]->toString(), prescriptionIds[3]->toString(),
-          prescriptionIds[0]->toString(), prescriptionIds[1]->toString(), prescriptionIds[2]->toString(), prescriptionIds[3]->toString(),
-          prescriptionIds[0]->toString(), prescriptionIds[2]->toString(),
-          prescriptionIds[1]->toString(),
-          prescriptionIds[1]->toString() },
+          prescriptionIds[0]->toString(), prescriptionIds[1]->toString(), prescriptionIds[2]->toString(), prescriptionIds[3]->toString(), // POST ChargeItem for each task
+          prescriptionIds[0]->toString(), prescriptionIds[1]->toString(), prescriptionIds[2]->toString(), prescriptionIds[3]->toString(), // GET ChargeItem by insurant for each task
+          prescriptionIds[0]->toString(), prescriptionIds[1]->toString(), prescriptionIds[2]->toString(), prescriptionIds[3]->toString(), // GET ChargeItem by pharmacy for each task
+          prescriptionIds[0]->toString(), prescriptionIds[2]->toString(), // DELETE ChargeItem
+          prescriptionIds[1]->toString(), // PUT ChargeItem
+          prescriptionIds[1]->toString(), // GET ChargeItem by insurant
+          prescriptionIds[1]->toString(), // PUT ChargeItem
+          prescriptionIds[1]->toString(), // GET ChargeItem by insurant
+        },
         kvnr, "de", startTime,
         { kvnr, // POST Consent
           telematicIdDoctor, telematicIdPharmacy, telematicIdPharmacy, // Task activate/accept/close
@@ -343,20 +347,28 @@ TEST_F(ErpWorkflowTest, WF200ChargeItem)//NOLINT(readability-function-cognitive-
           telematicIdDoctor, telematicIdPharmacy, telematicIdPharmacy, // Task activate/accept/close
           telematicIdDoctor, telematicIdPharmacy, telematicIdPharmacy, // Task activate/accept/close
           telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, // 4 * POST ChargeItem
-          telematicIdPharmacy, kvnr, // DELETE ChargeItem by pharmacy / insurant
+          kvnr, kvnr, kvnr, kvnr, // GET ChargeItem by insurant
+          telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, // GET ChargeItem by pharmacy
+          kvnr, kvnr, // DELETE ChargeItem by insurant
           kvnr, // PUT ChargeItem by insurant
-          telematicIdPharmacy // PUT ChargeItem by pharmacy
+          kvnr, // GET ChargeItem by insurant
+          telematicIdPharmacy, // PUT ChargeItem by pharmacy
+          kvnr // GET ChargeItem by insurant
         },
-        { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20 },
+        { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 21, 22, 23, 24, 29 },
         { model::AuditEvent::SubType::create,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::create, model::AuditEvent::SubType::create, model::AuditEvent::SubType::create, model::AuditEvent::SubType::create,
+          model::AuditEvent::SubType::read, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read,
+          model::AuditEvent::SubType::read, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::del, model::AuditEvent::SubType::del,
           model::AuditEvent::SubType::update,
-          model::AuditEvent::SubType::update });
+          model::AuditEvent::SubType::read,
+          model::AuditEvent::SubType::update,
+          model::AuditEvent::SubType::read});
 }
 
 TEST_F(ErpWorkflowTest, WF200CommunicationsChargChange)
@@ -455,4 +467,104 @@ TEST_F(ErpWorkflowTest, WF200CommunicationsChargChange)
                                 "Test request"));
 
     ASSERT_TRUE(commChangeChargeItemReq.has_value());
+}
+
+TEST_F(ErpWorkflowTest, WF200DeleteConsentRemovesChargeItemsAndCommunications)
+{
+    if (isUnsupportedFlowtype(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv))
+        GTEST_SKIP();
+
+    std::optional<model::PrescriptionId> prescriptionId{};
+    std::string accessCode{};
+    ASSERT_NO_FATAL_FAILURE(
+        checkTaskCreate(prescriptionId, accessCode, model::PrescriptionType::apothekenpflichtigeArzneimittelPkv));
+
+    std::string qesBundle{};
+    const std::string kvnr = generateNewRandomKVNR();
+    std::vector<model::Communication> communications{};
+    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+
+    const auto now = model::Timestamp::now();
+    ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, now));
+
+    std::optional<model::Bundle> acceptResultBundle;
+    ASSERT_NO_FATAL_FAILURE(acceptResultBundle = taskAccept(*prescriptionId, accessCode));
+    ASSERT_TRUE(acceptResultBundle);
+    ASSERT_EQ(acceptResultBundle->getResourceCount(), 3);
+    const auto tasks = acceptResultBundle->getResourcesByType<model::Task>("Task");
+    ASSERT_EQ(tasks.size(), 1);
+    ASSERT_EQ(tasks[0].prescriptionId().toString(), prescriptionId->toString());
+    ASSERT_EQ(tasks[0].status(), model::Task::Status::inprogress);
+    EXPECT_FALSE(tasks[0].patientConfirmationUuid().has_value());
+    const auto secretOpt = tasks[0].secret();
+    ASSERT_TRUE(secretOpt.has_value());
+    const std::string secret{*secretOpt};
+    const auto binaryResources = acceptResultBundle->getResourcesByType<model::Binary>("Binary");
+    ASSERT_EQ(binaryResources.size(), 1);
+    ASSERT_TRUE(binaryResources[0].data().has_value());
+
+    // the persisted CMS could be extended with embedded OCSP response
+    try
+    {
+        CadesBesSignature cms1(std::string(binaryResources[0].data().value()));
+        CadesBesSignature cms2(qesBundle);
+
+        ASSERT_EQ(cms1.payload(), cms2.payload());
+        ASSERT_EQ(cms1.getMessageDigest(), cms2.getMessageDigest());
+        ASSERT_EQ(cms1.getSigningTime(), cms2.getSigningTime());
+    }
+    catch(const std::exception& e)
+    {
+        FAIL() << "exception by qes payload validation: " << e.what();
+    }
+
+    ASSERT_EQ(std::string(*binaryResources[0].id()), std::string(*tasks[0].healthCarePrescriptionUuid()));
+
+    std::optional<model::Bundle> taskBundle;
+    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(*prescriptionId, "x-dummy", secret));
+    ASSERT_TRUE(taskBundle);
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(getTaskFromBundle(task, *taskBundle));
+    ASSERT_TRUE(task);
+    EXPECT_EQ(task->status(), model::Task::Status::inprogress);
+    ASSERT_TRUE(task->secret().has_value());
+    ASSERT_EQ(secret, task->secret().value());
+
+    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, task->lastModifiedDate(), communications));
+
+    auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    ASSERT_TRUE(telematikId.has_value());
+
+    std::optional<model::ChargeItem> chargeItem{};
+    ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(task->prescriptionId(), kvnr, *telematikId, secret));
+    ASSERT_TRUE(chargeItem.has_value());
+
+    A_22734.test("check existence of charge item for the communication");
+    std::optional<model::Communication> commChangeChargeItemReq;
+    ASSERT_NO_FATAL_FAILURE(commChangeChargeItemReq = communicationPost(
+                                model::Communication::MessageType::ChargChangeReq,
+                                *task,
+                                ActorRole::Insurant,
+                                kvnr,
+                                ActorRole::Pharmacists,
+                                *telematikId,
+                                "Test request"));
+
+    ASSERT_TRUE(commChangeChargeItemReq.has_value());
+    ASSERT_TRUE(commChangeChargeItemReq->id().has_value());
+
+    // Delete consent
+    ASSERT_NO_FATAL_FAILURE(consentDelete(kvnr));
+
+    // Assure that consent does no longer exists
+    std::optional<model::Consent> consent{};
+    ASSERT_NO_FATAL_FAILURE(consent = consentGet(kvnr));
+    ASSERT_FALSE(consent.has_value());
+
+    // assure that all charging data for this kvnr are deleted together will all communications
+    std::optional<model::Bundle> chargeItemsBundle;
+    const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(jwtInsurant, ContentMimeType::fhirJsonUtf8));
+    EXPECT_EQ(chargeItemsBundle->getResourceCount(), 0);
+    EXPECT_FALSE(communicationGet(jwtInsurant, commChangeChargeItemReq->id().value()).has_value());
 }

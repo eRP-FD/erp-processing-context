@@ -23,13 +23,10 @@ class Blob;
 class HashedId;
 class HashedKvnr;
 }
-namespace fhirtools{
-class Timestamp;
-}
 
 namespace model
 {
-using fhirtools::Timestamp;
+class Timestamp;
 class PrescriptionId;
 }
 
@@ -46,12 +43,12 @@ public:
     explicit KeyDerivation(HsmPool& hsmPool);
 
     [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId,
-                                     const fhirtools::Timestamp& authoredOn,
+                                     const model::Timestamp& authoredOn,
                                      BlobId blobId,
                                      const db_model::Blob& salt);
 
     [[nodiscard]] std::tuple<SafeString, OptionalDeriveKeyData> initialTaskKey(const model::PrescriptionId& taskId,
-                                                                        const fhirtools::Timestamp& authoredOn);
+                                                                        const model::Timestamp& authoredOn);
 
     [[nodiscard]] db_model::HashedKvnr hashKvnr(std::string_view kvnr) const;
     [[nodiscard]] db_model::HashedTelematikId hashTelematikId(std::string_view tid) const;
@@ -98,7 +95,7 @@ public:
 
 private:
     [[nodiscard]] static ErpVector taskKeyDerivationData(const model::PrescriptionId& taskId,
-                                                         const fhirtools::Timestamp& authoredOn);
+                                                         const model::Timestamp& authoredOn);
     [[nodiscard]] static ErpVector medicationDispenseKeyDerivationData(const db_model::HashedKvnr& kvnr);
     [[nodiscard]] static ErpVector auditEventKeyDerivationData(const db_model::HashedKvnr& kvnr);
     [[nodiscard]] static ErpVector communicationKeyDerivationData(const std::string_view& identity,

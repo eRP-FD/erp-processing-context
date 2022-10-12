@@ -6,6 +6,11 @@
 #ifndef FHIR_TOOLS_FHIR_PATH_FHIRPATHVALIDATOR_HXX
 #define FHIR_TOOLS_FHIR_PATH_FHIRPATHVALIDATOR_HXX
 
+#include "fhirtools/model/Element.hxx"
+#include "fhirtools/repository/FhirConstraint.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
+
 #include <iosfwd>
 #include <list>
 #include <memory>
@@ -13,16 +18,12 @@
 #include <string>
 #include <variant>
 
-#include "fhirtools/model/Element.hxx"
-#include "fhirtools/repository/FhirConstraint.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
-
 namespace fhirtools
 {
+class FhirStructureRepository;
 class ProfileSetValidator;
 class ProfiledElementTypeInfo;
-class FhirStructureRepository;
+class ReferenceContext;
 
 /**
  * @brief Provides functions to Validate a FHIR-Structures starting from a given element.
@@ -38,32 +39,36 @@ public:
                                                                    const std::set<std::string>& profileUrls,
                                                                    const ValidatorOptions& = {});
 
-// internal use
+    // internal use
     const ValidatorOptions& options() const;
     const ProfiledElementTypeInfo& extensionRootDefPtr() const;
     const ProfiledElementTypeInfo& elementExtensionDefPtr() const;
 
 private:
-    FhirPathValidator(const ValidatorOptions& options,
-                      std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
-                      std::unique_ptr<ProfiledElementTypeInfo> initElementExtensionDefPtr);
+    FhirPathValidator(const ValidatorOptions& options, std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
+                      std::unique_ptr<ProfiledElementTypeInfo> initElementExtensionDefPtr,
+                      const FhirStructureRepository& repo);
     static FhirPathValidator create(const ValidatorOptions&, const FhirStructureRepository*);
     void validateInternal(const std::shared_ptr<const Element>& element, const std::string& elementFullPath);
 
-    void validateAllSubElements(const std::shared_ptr<const Element>& element, ProfileSetValidator& elementInfo,
-                                const std::string& elementFullPath);
+    void validateAllSubElements(const std::shared_ptr<const Element>& element, ReferenceContext& referenceContext,
+                                ProfileSetValidator& elementInfo, const std::string& elementFullPath);
     void processSubElements(const std::shared_ptr<const Element>& element, const std::string& subName,
-                            const std::vector<std::shared_ptr<const Element>>& subElements,
+                            const std::vector<std::shared_ptr<const Element>>& subElements, ReferenceContext&,
                             fhirtools::ProfileSetValidator& elementInfo, const std::string& subFullPathBase);
-    void validateElement(const std::shared_ptr<const Element>& element, ProfileSetValidator&,
+    void validateElement(const std::shared_ptr<const Element>& element, ReferenceContext&, ProfileSetValidator&,
                          const std::string& elementFullPath);
-    std::set<const FhirStructureDefinition*> profiles(const std::shared_ptr<const Element>& element,
-                                                      const std::string& elementFullPath);
+    void validateResource(const std::shared_ptr<const Element>& element, ReferenceContext&, ProfileSetValidator&,
+                         const std::string& elementFullPath);
+    std::set<const FhirStructureDefinition*> profiles(const Element& element, std::string_view elementFullPath);
+    void addProfiles(const Element& element, fhirtools::ProfileSetValidator& profileSetValidator,
+                     fhirtools::ReferenceContext& parentReferenceContext, std::string_view elementFullPath);
 
     ValidationResultList result;
     const ValidatorOptions& mOptions;
     const std::unique_ptr<const ProfiledElementTypeInfo> mExtensionRootDefPtr;
     const std::unique_ptr<const ProfiledElementTypeInfo> mElementExtensionDefPtr;
+    const FhirStructureRepository& mRepo;
 };
 
 

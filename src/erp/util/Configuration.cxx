@@ -5,24 +5,25 @@
 
 #include "erp/util/Configuration.hxx"
 #include "erp/ErpConstants.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/GLog.hxx"
 #include "erp/util/InvalidConfigurationException.hxx"
 #include "erp/util/String.hxx"
-
 #include "erp/validation/XmlValidator.hxx"
 
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
 
 // Compile the rapidjson assert so that it calls Expects() and will throw an exception instead of just aborting (crashing)
 // the application.
 #undef RAPIDJSON_ASSERT
 #define RAPIDJSON_ASSERT(x) Expect(x, "rapidjson error")
+#include <boost/algorithm/string/predicate.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/pointer.h>
 #include <rapidjson/prettywriter.h>
@@ -268,7 +269,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT                    , {"ERP_ENROLMENT_ACTIVATE_FOR_PORT"                    , "/erp/enrolment/server/activateForPort"}},
     {ConfigurationKey::ENROLMENT_API_CREDENTIALS                      , {"ERP_ENROLMENT_API_CREDENTIALS"                      , "/erp/enrolment/api/credentials"}},
     {ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS                 , {"ERP_ENTROPY_FETCH_INTERVAL_SECONDS"                 , "/erp/entropy_fetch_interval_seconds"}},
-    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir/structure-files"}},
     {ConfigurationKey::IDP_REGISTERED_FD_URI                          , {"ERP_IDP_REGISTERED_FD_URI"                          , "/erp/idp/registeredFdUri"}},
     {ConfigurationKey::IDP_CERTIFICATE_MAX_AGE_HOURS                  , {"ERP_IDP_CERTIFICATE_MAX_AGE_HOURS"                  , "/erp/idp/certificateMaxAgeHours"}},
     {ConfigurationKey::IDP_UPDATE_ENDPOINT                            , {"ERP_IDP_UPDATE_ENDPOINT"                            , "/erp/idp/updateEndpoint"}},
@@ -288,6 +288,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION           , {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION"           , "/erp/service/task/activate/kbvValidation"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension"}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF", "/erp/service/task/activate/kbvValidationNonLiteralAuthorRef"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, {"ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE", "/erp/service/task/activate/authoredOnMustEqualSigningDate"}},
     {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount"}},
     {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey"}},
@@ -334,18 +335,23 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS      , {"ERP_REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS"      , "/erp/report/leips/refreshIntervalSeconds"}},
     {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds"}},
     {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds"}},
+    {ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_SHORT              , {"ERP_REPORT_ALL_TASKS_RATE_LIMIT_SHORT"              , "/erp/report/getAllTasksRateLimiter/shortTermCalls"}},
+    {ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_LONG               , {"ERP_REPORT_ALL_TASKS_RATE_LIMIT_LONG"               , "/erp/report/getAllTasksRateLimiter/longTermCalls"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL                   , {"ERP_FHIR_PROFILE_OLD_VALID_UNTIL"                   , "/erp/fhir-profile-old/valid-until"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION        , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION"        , "/erp/fhir-profile-old/kbv.ita.erp-ver"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV                , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_KBV"                , "/erp/fhir-profile-old/kbv.ita.erp"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK_VERSION    , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK_VERSION"    , "/erp/fhir-profile-old/de.gematik.erezept-workflow.r4-ver"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK            , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK"            , "/erp/fhir-profile-old/de.gematik.erezept-workflow.r4"}},
+    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD                 , {"ERP_FHIR_STRUCTURE_DEFINITIONS_OLD"                 , "/erp/fhir-profile-old/fhir/structure-files"}},
+    {ConfigurationKey::ERP_FHIR_VERSION_OLD                           , {"ERP_FHIR_VERSION_OLD"                               , "/erp/fhir-profile-old/erp-fhir-version"}},
+    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir-profile/fhir/structure-files"}},
+    {ConfigurationKey::ERP_FHIR_VERSION                               , {"ERP_FHIR_VERSION"                                   , "/erp/fhir-profile/erp-fhir-version"}},
     {ConfigurationKey::FHIR_PROFILE_VALID_FROM                        , {"ERP_FHIR_PROFILE_VALID_FROM"                        , "/erp/fhir-profile/valid-from"}},
     {ConfigurationKey::FHIR_PROFILE_RENDER_FROM                       , {"ERP_FHIR_PROFILE_RENDER_FROM"                       , "/erp/fhir-profile/render-from"}},
-    {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV_VERSION            , {"ERP_FHIR_PROFILE_XML_SCHEMA_KBV_VERSION"            , "/erp/fhir-profile/kbv.ita.erp-ver"}},
     {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV                    , {"ERP_FHIR_PROFILE_XML_SCHEMA_KBV"                    , "/erp/fhir-profile/kbv.ita.erp"}},
-    {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION        , {"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION"        , "/erp/fhir-profile/de.gematik.erezept-workflow.r4-ver"}},
     {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK                , {"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK"                , "/erp/fhir-profile/de.gematik.erezept-workflow.r4"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "erp/fhir-validation/levels/unreferenced-bundled-resource"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "erp/fhir-validation/levels/unreferenced-contained-resource"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "erp/fhir-validation/levels/mandatory-resolvable-reference-failure"}},
     {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds"}},
     {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device"}},
     {ConfigurationKey::HSM_MAX_SESSION_COUNT                          , {"ERP_HSM_MAX_SESSION_COUNT"                          , "/erp/hsm/max-session-count"}},
@@ -363,6 +369,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::DEPRECATED_HSM_PASSWORD                        , {"ERP_HSM_PASWORD"                                    , "/erp/hsm/password"}},
     {ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS                       , {"ERP_TEE_TOKEN_UPDATE_SECONDS"                       , "/erp/hsm/tee-token/update-seconds"}},
     {ConfigurationKey::TEE_TOKEN_RETRY_SECONDS                        , {"ERP_TEE_TOKEN_RETRY_SECONDS"                        , "/erp/hsm/tee-token/retry-seconds"}},
+    {ConfigurationKey::TIMING_CATEGORIES                              , {"ERP_TIMING_CATEGORIES"                              , "/erp/timingCategories"}},
     {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir"}},
     {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds"}},
     {ConfigurationKey::FEATURE_PKV                                    , {"ERP_FEATURE_PKV"                                    , "/erp/feature/pkv"}},
@@ -371,6 +378,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port"}},
     {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds"}},
     {ConfigurationKey::ADMIN_CREDENTIALS                              , {"ERP_ADMIN_CREDENTIALS"                              , "/erp/admin/credentials"}},
+    {ConfigurationKey::PNW_ALLOWED_RESULTS                            , {"ERP_SERVICE_PNW_ALLOWED_RESULTS"                    , "/erp/pnw_allowed_results"}},
     });
     // clang-format on
 }
@@ -626,39 +634,38 @@ std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const K
     return std::nullopt;
 }
 
-static bool allDefined(const std::optional<fhirtools::Timestamp>& oldValidUntil,
-                       const std::optional<std::string>& oldKbvVersion, const std::vector<std::string>& oldKbvSchemas,
-                       const std::optional<std::string>& oldGematikVersion,
+static bool allDefined(const std::optional<model::Timestamp>& oldValidUntil,
+                       const std::optional<std::string>& oldErpFhirVersion, const std::vector<std::string>& oldKbvSchemas,
                        const std::vector<std::string>& oldGematikSchemas,
-                       const std::optional<fhirtools::Timestamp>& profileRenderFrom,
-                       const std::optional<fhirtools::Timestamp>& profileValidFrom)
+                       const std::optional<model::Timestamp>& profileRenderFrom,
+                       const std::optional<model::Timestamp>& profileValidFrom)
 {
-    return oldValidUntil && profileRenderFrom && oldKbvVersion && ! oldKbvSchemas.empty() && oldGematikVersion &&
+    return oldValidUntil && profileRenderFrom && oldErpFhirVersion && ! oldKbvSchemas.empty() &&
            ! oldGematikSchemas.empty() && profileValidFrom;
 }
 
-static bool noneDefined(const std::optional<fhirtools::Timestamp>& oldValidUntil,
-                        const std::optional<std::string>& oldKbvVersion, const std::vector<std::string>& oldKbvSchemas,
-                        const std::optional<std::string>& oldGematikVersion,
+static bool noneDefined(const std::optional<model::Timestamp>& oldValidUntil,
+                        const std::optional<std::string>& oldErpFhirVersion, const std::vector<std::string>& oldKbvSchemas,
                         const std::vector<std::string>& oldGematikSchemas,
-                        const std::optional<fhirtools::Timestamp>& profileRenderFrom,
-                        const std::optional<fhirtools::Timestamp>& profileValidFrom)
+                        const std::optional<model::Timestamp>& profileRenderFrom,
+                        const std::optional<model::Timestamp>& profileValidFrom)
 {
-    return ! oldValidUntil && ! profileRenderFrom && ! oldKbvVersion && oldKbvSchemas.empty() && ! oldGematikVersion &&
-           oldGematikSchemas.empty() && ! profileValidFrom;
+    const auto now = model::Timestamp::now();
+    return (! oldValidUntil || *oldValidUntil <= now) && (! profileRenderFrom || *profileRenderFrom <= now) &&
+           ! oldErpFhirVersion && oldKbvSchemas.empty() && oldGematikSchemas.empty() &&
+           (! profileValidFrom || *profileValidFrom <= now);
 }
 
-static void ensureCorrectOldProfileConfiguration(const std::optional<fhirtools::Timestamp>& oldValidUntil,
-                                                 const std::optional<std::string>& oldKbvVersion,
+static void ensureCorrectOldProfileConfiguration(const std::optional<model::Timestamp>& oldValidUntil,
+                                                 const std::optional<std::string>& oldErpFhirVersion,
                                                  const std::vector<std::string>& oldKbvSchemas,
-                                                 const std::optional<std::string>& oldGematikVersion,
                                                  const std::vector<std::string>& oldGematikSchemas,
-                                                 const std::optional<fhirtools::Timestamp>& profileRenderFrom,
-                                                 const std::optional<fhirtools::Timestamp>& profileValidFrom)
+                                                 const std::optional<model::Timestamp>& profileRenderFrom,
+                                                 const std::optional<model::Timestamp>& profileValidFrom)
 {
-    Expect(allDefined(oldValidUntil, oldKbvVersion, oldKbvSchemas, oldGematikVersion, oldGematikSchemas,
+    Expect(allDefined(oldValidUntil, oldErpFhirVersion, oldKbvSchemas, oldGematikSchemas,
                       profileRenderFrom, profileValidFrom) ||
-               noneDefined(oldValidUntil, oldKbvVersion, oldKbvSchemas, oldGematikVersion, oldGematikSchemas,
+               noneDefined(oldValidUntil, oldErpFhirVersion, oldKbvSchemas, oldGematikSchemas,
                            profileRenderFrom, profileValidFrom),
            "configuration for next schema incomplete, all values must be defined: FHIR_PROFILE_OLD_VALID_UNTIL, "
            "FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION, FHIR_PROFILE_OLD_XML_SCHEMA_KBV, "
@@ -681,49 +688,42 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     // This is the new profile, or the only profile if only one is supported
     const auto& profileValidFromStr =
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_VALID_FROM);
-    std::optional<fhirtools::Timestamp> profileValidfrom =
-        profileValidFromStr ? std::make_optional(fhirtools::Timestamp::fromXsDateTime(*profileValidFromStr))
+    std::optional<model::Timestamp> profileValidfrom =
+        profileValidFromStr ? std::make_optional(model::Timestamp::fromXsDateTime(*profileValidFromStr))
                              : std::nullopt;
     const auto& profileRenderFromStr =
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_RENDER_FROM);
     const auto& profileRenderFrom = profileRenderFromStr
-                                     ? std::make_optional(fhirtools::Timestamp::fromXsDateTime(*profileRenderFromStr)) : std::nullopt;
-    const auto& profileKbvVersion =
-        configuration.getStringValue(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV_VERSION);
+                                     ? std::make_optional(model::Timestamp::fromXsDateTime(*profileRenderFromStr)) : std::nullopt;
     const auto& profileKbvSchemas = configuration.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV);
-    const auto& profileGematikVersion =
-        configuration.getStringValue(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION);
+    const auto& erpFhirVersion = configuration.getStringValue(ConfigurationKey::ERP_FHIR_VERSION);
     const auto& profileGematikSchemas =
         configuration.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK);
 
     // this is the optional old profile, that is still valid for some grace-period.
     const auto& oldValidUntilStr = configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL);
     const auto& oldValidUntil =
-        oldValidUntilStr ? std::make_optional(fhirtools::Timestamp::fromXsDateTime(*oldValidUntilStr)) : std::nullopt;
-    const auto& oldKbvVersion =
-        configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION);
+        oldValidUntilStr ? std::make_optional(model::Timestamp::fromXsDateTime(*oldValidUntilStr)) : std::nullopt;
     const auto& oldKbvSchemas = configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV);
-    const auto& oldGematikVersion =
-        configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK_VERSION);
+    const auto& oldErpFhirVersion = configuration.getOptionalStringValue(ConfigurationKey::ERP_FHIR_VERSION_OLD);
     const auto& oldGematikSchemas =
         configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK);
 
-    ensureCorrectOldProfileConfiguration(oldValidUntil, oldKbvVersion, oldKbvSchemas, oldGematikVersion,
-                                         oldGematikSchemas, profileRenderFrom, profileValidfrom);
+    ensureCorrectOldProfileConfiguration(oldValidUntil, oldErpFhirVersion, oldKbvSchemas, oldGematikSchemas,
+                                         profileRenderFrom, profileValidfrom);
 
     // check that the configured versions do actually exist
-    (void)model::ResourceVersion::str_vKbv(profileKbvVersion);
-    (void)model::ResourceVersion::str_vGematik(profileGematikVersion);
+    (void)model::ResourceVersion::str_vBundled(erpFhirVersion);
 
-    if (oldValidUntilStr)
+
+    if (oldValidUntilStr && oldErpFhirVersion)
     {
-        (void)model::ResourceVersion::str_vKbv(*oldKbvVersion);
-        (void)model::ResourceVersion::str_vGematik(*oldGematikVersion);
-        xmlValidator.loadKbvSchemas(*oldKbvVersion, oldKbvSchemas, std::nullopt, oldValidUntil);
-        xmlValidator.loadGematikSchemas(*oldGematikVersion, oldGematikSchemas, std::nullopt, oldValidUntil);
+        (void)model::ResourceVersion::str_vBundled(*oldErpFhirVersion);
+        xmlValidator.loadKbvSchemas(*oldErpFhirVersion, oldKbvSchemas, std::nullopt, oldValidUntil);
+        xmlValidator.loadGematikSchemas(*oldErpFhirVersion, oldGematikSchemas, std::nullopt, oldValidUntil);
     }
-    xmlValidator.loadKbvSchemas(profileKbvVersion, profileKbvSchemas, profileValidfrom, std::nullopt);
-    xmlValidator.loadGematikSchemas(profileGematikVersion, profileGematikSchemas, profileValidfrom, std::nullopt);
+    xmlValidator.loadKbvSchemas(erpFhirVersion, profileKbvSchemas, profileValidfrom, std::nullopt);
+    xmlValidator.loadGematikSchemas(erpFhirVersion, profileGematikSchemas, profileValidfrom, std::nullopt);
 
 }
 
@@ -771,7 +771,14 @@ void Configuration::check() const
                 std::logic_error);
     }
     (void) kbvValidationOnUnknownExtension();
+    (void) kbvValidationNonLiteralAuthorRef();
     (void) genericValidationMode();
+    (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
+                                            fhirtools::Severity::error);
+    (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
+                                            fhirtools::Severity::error);
+    (void) getOptional<fhirtools::Severity>(
+        ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, fhirtools::Severity::error);
 }
 
 bool Configuration::featurePkvEnabled() const
@@ -787,21 +794,36 @@ bool Configuration::featureWf200Enabled() const
 
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
 {
-    auto onUnknownExtensionStr =
-        getOptionalStringValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, "report");
-    auto onUnknownExtensionEnum = magic_enum::enum_cast<OnUnknownExtension>(onUnknownExtensionStr);
-    Expect3(onUnknownExtensionEnum.has_value(),
-            "invalid value for SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION: " + onUnknownExtensionStr,
-            std::logic_error);
-    return *onUnknownExtensionEnum;
+    return getOptional<OnUnknownExtension>(ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
+                                           OnUnknownExtension::report);
 }
+
+Configuration::NonLiteralAutherRefMode Configuration::kbvValidationNonLiteralAuthorRef() const
+{
+    return getOptional<NonLiteralAutherRefMode>(
+        ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, NonLiteralAutherRefMode::allow);
+}
+
 
 Configuration::GenericValidationMode Configuration::genericValidationMode() const
 {
-    auto genericValidationModeStr =
-        getOptionalStringValue(ConfigurationKey::SERVICE_GENERIC_VALIDATION_MODE, "ignore_errors");
-    auto genericValidationModeEnum = magic_enum::enum_cast<GenericValidationMode>(genericValidationModeStr);
-    Expect3(genericValidationModeEnum.has_value(),
-            "invalid value for SERVICE_GENERIC_VALIDATION_MODE: " + genericValidationModeStr, std::logic_error);
-    return *genericValidationModeEnum;
+    return getOptional<GenericValidationMode>(ConfigurationKey::SERVICE_GENERIC_VALIDATION_MODE,
+                                              GenericValidationMode::ignore_errors);
 }
+
+bool Configuration::timingLoggingEnabled(const std::string& category) const
+{
+    static const std::unordered_set<std::string> configArray = [this] {
+        auto array = getArray(ConfigurationKey::TIMING_CATEGORIES);
+        std::unordered_set<std::string> s;
+        std::ranges::copy(array, std::inserter(s, s.begin()));
+        return s;
+    }();
+    static const bool allEnabled = configArray.contains("all");
+    return allEnabled || configArray.contains(category);
+}
+
+
+template fhirtools::Severity
+    ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>::getOptional<fhirtools::Severity>(
+        ConfigurationKey, std::type_identity_t<fhirtools::Severity>) const;

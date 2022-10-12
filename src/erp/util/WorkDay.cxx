@@ -10,9 +10,9 @@
 
 #include <date/tz.h>
 
-WorkDay::WorkDay(fhirtools::Timestamp baseTime)
+WorkDay::WorkDay(model::Timestamp baseTime)
     : WorkDay(date::year_month_day{std::chrono::time_point_cast<date::sys_days::duration>(
-          date::make_zoned(fhirtools::Timestamp::GermanTimezone, baseTime.toChronoTimePoint()).get_local_time())})
+          date::make_zoned(model::Timestamp::GermanTimezone, baseTime.toChronoTimePoint()).get_local_time())})
 {
 }
 
@@ -42,9 +42,9 @@ WorkDay WorkDay::operator+(unsigned workingDaysToAdd)
 }
 
 
-fhirtools::Timestamp WorkDay::toTimestamp() const
+model::Timestamp WorkDay::toTimestamp() const
 {
-    return fhirtools::Timestamp(date::sys_days(mDay));
+    return model::Timestamp(date::sys_days(mDay));
 }
 
 

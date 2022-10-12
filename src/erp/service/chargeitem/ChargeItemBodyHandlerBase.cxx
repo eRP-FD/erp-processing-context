@@ -50,7 +50,7 @@ std::optional<model::Binary> ChargeItemBodyHandlerBase::getDispenseItemBinary(co
                                                   serviceContext.getTslManager(),
                                                   true};
         return model::Bundle::fromXml(cadesBesSignature.payload(), serviceContext.getXmlValidator(),
-                                      serviceContext.getInCodeValidator(), schemaType, false);
+                                      serviceContext.getInCodeValidator(), schemaType, std::nullopt);
     }
     catch (const TslError& ex)
     {

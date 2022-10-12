@@ -33,7 +33,7 @@ class ExtensionFunction : public UnaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "extension";
-    using UnaryExpression::UnaryExpression;
+    explicit ExtensionFunction(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg);
     Collection eval(const Collection& collection) const override;
 };
 
@@ -84,7 +84,7 @@ class ConformsTo : public UnaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "conformsTo";
-    using UnaryExpression::UnaryExpression;
+    explicit ConformsTo(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg);
     Collection eval(const Collection& collection) const override;
 };
 

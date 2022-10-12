@@ -114,16 +114,12 @@
       <authority value="http://hl7.org/fhir/workflow" />
       <uri value="http://terminology.hl7.org/CodeSystem/consentscope"/>
   </policy>
-  <policyRule> 
-    <coding> 
-      <system value="http://terminology.hl7.org/CodeSystem/v3-ActCode"/> 
-      <version value="1.1.0"/>
-      <code value="hipaa-restrictions"/> 
-      <display value="hipaa restrictions"/>
-      <userSelected value="true"/>
-    </coding> 
-    <text value="policyRule example"/>
-  </policyRule>   
+    <policyRule>
+        <coding>
+            <system value="http://terminology.hl7.org/CodeSystem/v3-ActCode" />
+            <code value="OPTIN" />
+        </coding>
+    </policyRule>
   <verification>
     <verified value="true"/>
     <verifiedWith>

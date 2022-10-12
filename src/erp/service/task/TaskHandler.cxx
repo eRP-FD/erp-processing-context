@@ -4,22 +4,299 @@
  */
 
 #include "TaskHandler.hxx"
-
 #include "erp/ErpRequirements.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/crypto/Jws.hxx"
-#include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/KbvBundle.hxx"
 #include "erp/model/Device.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/model/ModelException.hxx"
 #include "erp/model/Signature.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/service/AuditEventCreator.hxx"
+#include "erp/xml/XmlDocument.hxx"
 #include "erp/util/Base64.hxx"
+#include "erp/util/Configuration.hxx"
+#include "erp/util/String.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
+#include "erp/util/Configuration.hxx"
 
+#include <zlib.h>
+
+#include <algorithm>
+#include <cstddef>
+#include <chrono>
+#include <ctime>
+#include <sstream>
+
+namespace
+{
+    constexpr std::size_t decompressBufferSize = 2048;
+    constexpr std::string_view xPathExpression_TSText = "/ns:PN/ns:TS/text()";
+    constexpr std::string_view xPathExpression_EText = "/ns:PN/ns:E/text()";
+    constexpr std::string_view xPathExpression_PZText = "/ns:PN/ns:PZ/text()";
+
+    using namespace std::chrono_literals;
+
+    /**
+     * This function takes the fully-encoded PNW (gzipped XML + base64 encoded + URL encoded)
+     * and performs only the URL decoding; thus its output is expected to be a base64 representation.
+     */
+    std::string urlDecodePnw(const std::string& encodedPnw)
+    {
+        std::string result{};
+        result.reserve(encodedPnw.size());
+
+        for (std::size_t itr = 0; itr < encodedPnw.size(); ++itr)
+        {
+            if (encodedPnw[itr] == '%')
+            {
+                ErpExpect(itr + 3 <= encodedPnw.size(),
+                          HttpStatus::Forbidden,
+                          "Failed decoding or uncompressing the PNW");
+
+                int value{};
+                std::istringstream stream{encodedPnw.substr(itr + 1, 2)};
+
+                ErpExpect(stream >> std::hex >> value,
+                          HttpStatus::Forbidden,
+                          "Failed decoding or uncompressing the PNW");
+
+                result += static_cast<char>(value);
+                itr += 2;
+            }
+            else
+            {
+                result += encodedPnw[itr];
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * This function takes a gzipped binary representation of the PNW and inflates it.
+     */
+    std::string ungzipPnw(const std::string& data)
+    {
+        // Initialize deflation. Let zlib choose alloc and free functions.
+        z_stream stream{};
+        stream.zalloc = Z_NULL;
+        stream.zfree = Z_NULL;
+        stream.opaque = Z_NULL;
+        stream.avail_in = 0;
+        stream.next_in = Z_NULL;
+
+        // Initialize zlib decompression for gzip.
+        Expect(inflateInit2(&stream, 16 + MAX_WBITS) == Z_OK, "could not initialize decompression for gzip");
+
+        // Setup `text` as input buffer.
+        stream.avail_in = data.size();
+        stream.next_in = const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(data.data()));
+        uint8_t buffer[decompressBufferSize];
+
+        int inflateEndResult = Z_OK;
+        std::string dataResult{};
+
+        {
+            // ensure that inflateEnd() is called also when exceptions are thrown
+            auto inflateFinally = gsl::finally(
+                [&stream, &inflateEndResult]() { inflateEndResult = inflateEnd(&stream); });
+            do
+            {
+                // Set up `buffer` as output buffer.
+                stream.avail_out = sizeof(buffer);
+                stream.next_out = buffer;
+
+                // Inflate the next part of the input. This will either use up all remaining input or fill
+                // up the output buffer.
+                const int result = inflate(&stream, Z_NO_FLUSH);
+                Expect(result >= Z_OK, "decompression failed");
+
+                // Not expecting the compression to have used a training dictionary
+                ErpExpect(result != Z_NEED_DICT,
+                          HttpStatus::Forbidden,
+                          "Failed decoding or uncompressing the PNW");
+
+                // Append the decompressed data to the result string.
+                const size_t decompressedSize = sizeof(buffer) - stream.avail_out;
+                dataResult += std::string{reinterpret_cast<char*>(buffer), decompressedSize};
+
+                // Exit when all input and output has been processed. This avoids one last
+                // call to inflate().
+                if (result == Z_STREAM_END)
+                {
+                    break;
+                }
+            } while (true);
+        }
+
+        // Release any dynamic memory.
+        Expect(inflateEndResult == Z_OK, "finishing decompression failed");
+
+        return dataResult;
+    }
+
+    std::vector<std::size_t> getPnwAllowedResultValues()
+    {
+        const auto& configuration = Configuration::instance();
+        const auto allowedResultValues = configuration.getStringValue(ConfigurationKey::PNW_ALLOWED_RESULTS);
+
+        const auto stringValues = String::split(allowedResultValues, ',');
+        std::vector<std::size_t> integerValues(stringValues.size());
+        std::transform(
+            stringValues.cbegin(),
+            stringValues.cend(),
+            integerValues.begin(),
+            [](const auto& stringValue)
+            {
+                return std::stoul(stringValue);
+            });
+
+        return integerValues;
+    }
+
+    /**
+     * This function validates the values of the PNW (the timestamp and the 'result') according to
+     * the business logic rules: the timestamp must not be older than 30 minutes (relative to current timestamp),
+     * while the 'result value' has to be one of the known configurable (known before-hand) values.
+     *
+     * These two (timestamp and result) are gotten from the PNW XML document by parsing it and using XPath expressions.
+     * Example of how they can look like within the document:
+     *
+     * <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+     * <PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0">
+     *     <TS>20220803083914</TS>
+     *     <E>3</E>
+     * </PN>
+     *
+     */
+    void validatePnwData(const model::Timestamp& timestamp, const std::size_t resultValue)
+    {
+        const auto timestampPushedForwardHalfHour = timestamp + 30min;
+        const auto currentTimestamp = model::Timestamp::now();
+
+        ErpExpect(timestampPushedForwardHalfHour >= currentTimestamp,
+                  HttpStatus::Forbidden,
+                  "PNW is older than 30 minutes");
+
+        static const auto allowedResultValues = getPnwAllowedResultValues();
+        const auto findItr = std::find(allowedResultValues.cbegin(), allowedResultValues.cend(), resultValue);
+        ErpExpect(allowedResultValues.cend() != findItr,
+                  HttpStatus::Forbidden,
+                  "Ergebnis im Prüfungsnachweis ist nicht gültig.");
+    }
+
+    std::optional<std::string> validatePnw(const std::string& pnw)
+    {
+        std::optional<XmlDocument> pnwDocument{};
+
+        try
+        {
+            pnwDocument.emplace(pnw);
+            pnwDocument->registerNamespace("ns", "http://ws.gematik.de/fa/vsdm/pnw/v1.0");
+        }
+        catch (const std::exception& ex)
+        {
+            ErpFailWithDiagnostics(
+                HttpStatus::Forbidden,
+                "Failed parsing PNW XML.",
+                ex.what());
+        }
+
+        std::optional<model::Timestamp> pnwTimestamp{};
+
+        try
+        {
+            const auto timestamp = pnwDocument->getElementText(xPathExpression_TSText.data());
+
+            tm tm{};
+            ErpExpect(strptime(timestamp.c_str(), "%Y%m%d%H%M%S", &tm),
+                      HttpStatus::Forbidden,
+                      "Failed parsing TS in PNW.");
+
+            pnwTimestamp.emplace(model::Timestamp::fromTmInUtc(tm));
+        }
+        catch (const std::exception& ex)
+        {
+            ErpFailWithDiagnostics(
+                HttpStatus::Forbidden,
+                "Failed parsing TS in PNW.",
+                ex.what());
+        }
+
+        std::optional<std::size_t> pnwResultValue{};
+
+        try
+        {
+            const auto resultValue = pnwDocument->getElementText(xPathExpression_EText.data());
+            pnwResultValue = std::stoul(resultValue);
+        }
+        catch (const std::exception& ex)
+        {
+            ErpFailWithDiagnostics(
+                HttpStatus::Forbidden,
+                "Ergebnis im Prüfungsnachweis ist nicht gültig.",
+                ex.what());
+        }
+
+        std::optional<std::string> pnwPzNumber{};
+
+        try
+        {
+            pnwPzNumber = pnwDocument->getOptionalElementText(xPathExpression_PZText.data());
+        }
+        catch (const std::exception& ex)
+        {
+            ErpFailWithDiagnostics(
+                HttpStatus::Forbidden,
+                "Failed parsing PNW XML.",
+                ex.what());
+        }
+
+        validatePnwData(*pnwTimestamp, *pnwResultValue);
+
+        return pnwPzNumber;
+    }
+
+    /**
+     * This function performs full decoding, decompression, parsing and validation of the PNW data.
+     * It also returns the "PZ" data from the PNW XML, if one exists.
+     */
+    std::optional<std::string> decodeAndValidatePnw(const std::string& encodedPnw)
+    {
+        std::optional<std::string> ungzippedPnw{};
+
+        try
+        {
+            const auto urlDecodedPnw = urlDecodePnw(encodedPnw);
+            const auto gzippedPnw = Base64::decodeToString(urlDecodedPnw);
+            ungzippedPnw = ungzipPnw(gzippedPnw);
+        }
+        catch (const std::exception& ex)
+        {
+            ErpFailWithDiagnostics(
+                HttpStatus::Forbidden,
+                "Failed decoding PNW data.",
+                ex.what());
+        }
+
+        return validatePnw(*ungzippedPnw);
+    }
+
+    UrlArguments getTaskStatusReadyUrlArgumentsFilter(const KeyDerivation& keyDerivation)
+    {
+        ServerRequest dummyRequest{Header{}};
+        dummyRequest.setQueryParameters({{"status", "ready"}});
+
+        UrlArguments result{{{"status", SearchParameter::Type::TaskStatus}}};
+        result.parse(dummyRequest, keyDerivation);
+
+        return result;
+    }
+}
 
 TaskHandlerBase::TaskHandlerBase(const Operation operation,
                                  const std::initializer_list<std::string_view>& allowedProfessionOIDs)
@@ -79,7 +356,7 @@ model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Bina
     A_19029_03.finish();
 
     A_19029_03.start("store the signature in the bundle");
-    model::Signature signature(Base64::encode(signatureData), fhirtools::Timestamp::now(),
+    model::Signature signature(Base64::encode(signatureData), model::Timestamp::now(),
                                model::Device::createReferenceString(getLinkBase()));
     signature.setTargetFormat(MimeType::fhirJson);
     signature.setSigFormat(MimeType::jose);
@@ -202,6 +479,25 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
+    std::optional<model::Bundle> response{};
+
+    const auto& accessToken = session.request.getAccessToken();
+    if (accessToken.stringForClaim(JWT::professionOIDClaim) == profession_oid::oid_versicherter)
+    {
+        response = handleRequestFromInsurant(session);
+    }
+    else
+    {
+        response = handleRequestFromPharmacist(session);
+    }
+
+    A_19514.start("HttpStatus 200 for successful GET");
+    makeResponse(session, HttpStatus::OK, &response.value());
+    A_19514.finish();
+}
+
+model::Bundle GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
+{
     const auto& accessToken = session.request.getAccessToken();
 
     A_19115.start("retrieve KVNR from ACCESS_TOKEN");
@@ -213,11 +509,11 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
     auto arguments = std::optional<UrlArguments>(
         std::in_place,
         std::vector<SearchParameter>
-            {
-                {"status", "status",SearchParameter::Type::TaskStatus},
-                {"authored-on", "authored_on", SearchParameter::Type::Date},
-                {"modified", "last_modified",SearchParameter::Type::Date},
-            });
+        {
+            {"status", "status",SearchParameter::Type::TaskStatus},
+            {"authored-on", "authored_on", SearchParameter::Type::Date},
+            {"modified", "last_modified",SearchParameter::Type::Date},
+        });
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
 
     auto* databaseHandle = session.database();
@@ -227,8 +523,9 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
 
     model::Bundle responseBundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     std::size_t totalSearchMatches =
-        responseIsPartOfMultiplePages(arguments->pagingArgument(), resultSet.size()) ?
-        databaseHandle->countAllTasksForPatient(kvnr.value(), arguments) : resultSet.size();
+        responseIsPartOfMultiplePages(arguments->pagingArgument(), resultSet.size())
+            ? databaseHandle->countAllTasksForPatient(kvnr.value(), arguments)
+            : resultSet.size();
 
     const auto links = arguments->getBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
     for (const auto& link : links)
@@ -245,19 +542,103 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
             // in C_10499 the response bundle has changed to only contain tasks, no patient confirmation
             // and no receipt any longer
             responseBundle.addResource(makeFullUrl("/Task/" + task.prescriptionId().toString()),
-                {}, model::Bundle::SearchMode::match, task.jsonDocument());
+                                       {}, model::Bundle::SearchMode::match, task.jsonDocument());
         }
     }
 
     responseBundle.setTotalSearchMatches(totalSearchMatches);
 
-    A_19514.start("HttpStatus 200 for successful GET");
-    makeResponse(session, HttpStatus::OK, &responseBundle);
-    A_19514.finish();
-
     // No Audit data collected and no Audit event created for GET /Task (since ERP-8507).
+
+    return responseBundle;
 }
 
+model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
+{
+    const std::optional<std::string> telematikId = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
+    ErpExpect(telematikId.has_value(), HttpStatus::BadRequest, "No valid Telematik-ID in JWT");
+
+    using namespace std::chrono;
+    const auto timespan = time_point_cast<milliseconds>(time_point<system_clock>() + 5s).time_since_epoch().count();
+    const auto dailyTimespan =
+        time_point_cast<milliseconds>(time_point<system_clock>() + 24h).time_since_epoch().count();
+
+    A_23161.start("Rate limit per day");
+    {
+        auto longValue = Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_LONG);
+        RateLimiter rateLimiterDaily(session.serviceContext.getRedisClient(), "ERP-PC-DAY", longValue, dailyTimespan);
+        const auto now = system_clock::now();
+        auto exp = time_point_cast<seconds>(now + 24h).time_since_epoch();
+        auto exp_ms = time_point<system_clock, milliseconds>(exp);
+        ErpExpect(
+            rateLimiterDaily.updateCallsCounter(telematikId.value(), exp_ms),
+            HttpStatus::TooManyRequests,
+            "Zugriffslimit erreicht - Nächster Abruf mit eGK morgen möglich.");
+    }
+    A_23161.finish();
+
+    A_23160.start("Rate limit per minute");
+    {
+        auto shortValue = Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_SHORT);
+        RateLimiter rateLimiter(session.serviceContext.getRedisClient(), "ERP-PC-MINUTE", shortValue, timespan);
+        const auto now = system_clock::now();
+        auto exp = time_point_cast<seconds>(now + 1min).time_since_epoch();
+        auto exp_ms = time_point<system_clock, milliseconds>(exp);
+        ErpExpect(rateLimiter.updateCallsCounter(telematikId.value(), exp_ms), HttpStatus::TooManyRequests, "Zugriffslimit erreicht - Nächster Abruf mit eGK in 1 Minute möglich.");
+    }
+    A_23160.finish();
+
+    const auto kvnr = session.request.getQueryParameter("KVNR");
+    ErpExpect(kvnr.has_value() && 10 == kvnr->length(),
+              HttpStatus::BadRequest,
+              "Missing or invalid KVNR query parameter");
+
+    // We set audit relevant data here because we need it in case of missing or invalid PNW:
+    session.auditDataCollector()
+        .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed) // Default, will be overridden after successful decoding PNW;
+        .setInsurantKvnr(*kvnr)
+        .setAction(model::AuditEvent::Action::read);
+
+    const auto pnw = session.request.getQueryParameter("PNW");
+    ErpExpect(pnw.has_value() && !pnw->empty(),
+              HttpStatus::Forbidden,
+              "Missing or invalid PNW query parameter");
+
+    const auto pnwPzNumber = decodeAndValidatePnw(*pnw);
+
+    const auto statusReadyFilter = getTaskStatusReadyUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
+    auto* database = session.database();
+    auto tasks = database->retrieveAllTasksForPatient(kvnr.value(), statusReadyFilter);
+
+    for (auto& task : tasks) {
+        const auto [taskWithAccessCode, data] = database->retrieveTaskAndPrescription(task.prescriptionId());
+        task.setAccessCode(taskWithAccessCode->accessCode());
+    }
+
+    model::Bundle responseBundle{model::BundleType::searchset, model::ResourceBase::NoProfile};
+    responseBundle.setTotalSearchMatches(tasks.size());
+
+    for (const auto& task : tasks)
+    {
+        responseBundle.addResource(
+            makeFullUrl("/Task/" + task.prescriptionId().toString()),
+            {},
+            model::Bundle::SearchMode::match,
+            task.jsonDocument());
+    }
+
+    // Collect Audit data
+    if (pnwPzNumber.has_value())
+    {
+        session.auditDataCollector().setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_with_pz).setPnwPzNumber(*pnwPzNumber);
+    }
+    else
+    {
+        session.auditDataCollector().setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_without_pz);
+    }
+
+    return responseBundle;
+}
 
 GetTaskHandler::GetTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOIDs)
     : TaskHandlerBase(Operation::GET_Task_id, allowedProfessionOIDs)
@@ -336,9 +717,15 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     A_20702_01.finish();
 
     A_21360.start("remove access code from task if workflow is 169");
-    if (task->type() == model::PrescriptionType::direkteZuweisung)
+    switch (task->type())
     {
-        task->deleteAccessCode();
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            break;
+        case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            task->deleteAccessCode();
+            break;
     }
     A_21360.finish();
 

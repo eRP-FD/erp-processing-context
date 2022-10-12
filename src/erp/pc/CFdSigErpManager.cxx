@@ -182,7 +182,7 @@ std::string CFdSigErpManager::getLastValidationTimestamp()
         return "never successfully validated";
     }
 
-    return fhirtools::Timestamp(mLastSuccess).toXsDateTime();
+    return model::Timestamp(mLastSuccess).toXsDateTime();
 }
 
 CertificateType CFdSigErpManager::getCertificateType() const
@@ -196,7 +196,7 @@ std::string CFdSigErpManager::getCertificateNotAfterTimestamp() const
 {
     const auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
     const auto x509Certificate = X509Certificate::createFromBase64(cFdSigErp.toBase64Der());
-    return fhirtools::Timestamp::fromTmInUtc(x509Certificate.getNotAfter()).toXsDateTime();
+    return model::Timestamp::fromTmInUtc(x509Certificate.getNotAfter()).toXsDateTime();
 }
 
 

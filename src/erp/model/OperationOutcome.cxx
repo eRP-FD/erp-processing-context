@@ -100,9 +100,9 @@ void OperationOutcome::addIssue(Issue&& issue)
     auto entry = createEmptyObject();
     setKeyValue(entry, issueSeverityPointer, magic_enum::enum_name(issue.severity));
     setKeyValue(entry, issueCodePointer, Issue::typeToString(issue.code));
-    if(issue.detailsText.has_value())
+    if(issue.detailsText.has_value() && !issue.detailsText->empty())
         setKeyValue(entry, issueDetailsTextPointer, issue.detailsText.value());
-    if(issue.diagnostics.has_value())
+    if(issue.diagnostics.has_value() && !issue.diagnostics->empty())
         setKeyValue(entry, issueDiagnosticsPointer, issue.diagnostics.value());
 
     if(!issue.expression.empty())

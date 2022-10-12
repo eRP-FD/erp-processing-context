@@ -264,7 +264,6 @@ void DatabaseFrontend::updateTaskClearPersonalData(const model::Task& task)
 
 std::string DatabaseFrontend::storeAuditEventData(model::AuditData& auditData)
 {
-
     auto hashedKvnr = mDerivation.hashKvnr(auditData.insurantKvnr());
 
     std::optional<db_model::EncryptedBlob> encryptedMeta;
@@ -272,13 +271,16 @@ std::string DatabaseFrontend::storeAuditEventData(model::AuditData& auditData)
     if (!auditData.metaData().isEmpty())
     {
         auto [keyForAuditData, blobId] = auditEventKey(hashedKvnr);
-        encryptedMeta = mCodec.encode(auditData.metaData().serializeToJsonString(), keyForAuditData,
+        encryptedMeta = mCodec.encode(auditData.metaData().serializeToJsonString(),
+                                      keyForAuditData,
                                       Compression::DictionaryUse::Default_json);
         auditEventBlobId = blobId;
     }
+
     db_model::AuditData dbAuditData(auditData.agentType(), auditData.eventId(), std::move(encryptedMeta),
                                     auditData.action(), std::move(hashedKvnr), auditData.deviceId(),
                                     auditData.prescriptionId(), auditEventBlobId);
+
     auto id = mBackend->storeAuditEventData(dbAuditData);
     auditData.setId(id);
     auditData.setRecorded(dbAuditData.recorded);
@@ -319,12 +321,13 @@ DatabaseFrontend::retrieveAuditEventData(const std::string& kvnr, const std::opt
         }
         else
         {
-            ret.emplace_back(item.eventId, AuditMetaData({}, {}), item.action, item.agentType, kvnr, item.deviceId,
+            ret.emplace_back(item.eventId, AuditMetaData({}, {}, {}), item.action, item.agentType, kvnr, item.deviceId,
                 item.prescriptionId, consentId);
         }
         ret.back().setId(item.id);
         ret.back().setRecorded(item.recorded);
     }
+
     return ret;
 }
 
@@ -424,7 +427,7 @@ std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communi
 {
     const std::optional<std::string_view> sender = communication.sender();
     const std::optional<std::string_view> recipient = communication.recipient();
-    const std::optional<fhirtools::Timestamp> timeSent = communication.timeSent();
+    const std::optional<model::Timestamp> timeSent = communication.timeSent();
 
     ErpExpect(sender.has_value(), HttpStatus::InternalServerError, "communication object has no 'sender' value");
     ErpExpect(recipient.has_value(), HttpStatus::InternalServerError, "communication object has no 'recipient' value");
@@ -507,7 +510,7 @@ std::vector<Uuid> DatabaseFrontend::retrieveCommunicationIds(const std::string& 
 }
 
 
-std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
+std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
 DatabaseFrontend::deleteCommunication(const Uuid& communicationId, const std::string& sender)
 {
     return mBackend->deleteCommunication(communicationId, mDerivation.hashIdentity(sender));
@@ -571,7 +574,7 @@ void DatabaseFrontend::storeChargeInformation(const ::model::ChargeInformation& 
     mBackend->storeChargeInformation(dbChargeItem, hashedKvnr);
 }
 
-void DatabaseFrontend::updateChargeInformation(const ::model::ChargeInformation& chargeInformation)
+void DatabaseFrontend::updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt)
 {
     ErpExpect(chargeInformation.chargeItem.prescriptionId().has_value(), ::HttpStatus::BadRequest,
               "No prescription id found.");
@@ -582,7 +585,7 @@ void DatabaseFrontend::updateChargeInformation(const ::model::ChargeInformation&
     ErpExpect(chargeInformation.chargeItem.enteredDate().has_value(), ::HttpStatus::BadRequest,
               "No entered date found.");
 
-    const auto encryptionData = chargeItemKey(chargeInformation.chargeItem.prescriptionId().value());
+    const auto encryptionData = chargeItemKey(chargeInformation.chargeItem.prescriptionId().value(), blobId, salt);
     mBackend->updateChargeInformation(::db_model::ChargeItem{chargeInformation, ::std::get<::BlobId>(encryptionData),
                                                              ::std::get<::db_model::Blob>(encryptionData),
                                                              ::std::get<::SafeString>(encryptionData), mCodec});
@@ -597,7 +600,7 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const std::string_view& kvnr
     ::std::vector<::model::ChargeItem> result;
     ::std::transform(::std::begin(dbChargeItems), ::std::end(dbChargeItems), ::std::back_inserter(result),
                      [this](const auto& item) {
-                         const auto encryptionData = chargeItemKey(item);
+                         const auto encryptionData = chargeItemKey(item.prescriptionId, item.blobId, item.salt);
                          return item.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec).chargeItem;
                      });
 
@@ -607,17 +610,20 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const std::string_view& kvnr
 ::model::ChargeInformation DatabaseFrontend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
     const auto chargeItem = mBackend->retrieveChargeInformation(id);
-    const auto encryptionData = chargeItemKey(chargeItem);
+    const auto encryptionData = chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt);
 
     return chargeItem.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec);
 }
 
-::model::ChargeInformation DatabaseFrontend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
+std::tuple<::model::ChargeInformation, BlobId, db_model::Blob> DatabaseFrontend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
 {
-    const auto chargeItem = mBackend->retrieveChargeInformationForUpdate(id);
-    const auto encryptionData = chargeItemKey(chargeItem);
+    auto chargeItem = mBackend->retrieveChargeInformationForUpdate(id);
+    const auto encryptionData = chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt);
 
-    return chargeItem.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec);
+    return std::make_tuple(
+        chargeItem.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec),
+        chargeItem.blobId,
+        std::move(chargeItem.salt));
 }
 
 void DatabaseFrontend::deleteChargeInformation(const model::PrescriptionId& id)
@@ -629,6 +635,12 @@ void DatabaseFrontend::clearAllChargeInformation(const std::string_view& kvnr)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
     mBackend->clearAllChargeInformation(hashedKvnr);
+}
+
+void DatabaseFrontend::clearAllChargeItemCommunications(const std::string_view& kvnr)
+{
+    const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
+    mBackend->clearAllChargeItemCommunications(hashedKvnr);
 }
 
 uint64_t DatabaseFrontend::countChargeInformationForInsurant(const std::string& kvnr,
@@ -771,13 +783,13 @@ DatabaseFrontend::chargeItemKey(const ::model::PrescriptionId& prescriptionId) c
 }
 
 ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
-DatabaseFrontend::chargeItemKey(const ::db_model::ChargeItem& chargeItem) const
+DatabaseFrontend::chargeItemKey(const model::PrescriptionId& prescriptionId, const BlobId& blobId, const db_model::Blob& salt) const
 {
     A_19700.start("Get derivation key.");
-    auto key = mDerivation.chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt);
+    auto key = mDerivation.chargeItemKey(prescriptionId, blobId, salt);
     A_19700.finish();
 
-    return {::std::move(key), chargeItem.blobId, chargeItem.salt};
+    return {::std::move(key), blobId, salt};
 }
 
 std::tuple<SafeString, BlobId> DatabaseFrontend::auditEventKey(const db_model::HashedKvnr& hashedKvnr)

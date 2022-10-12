@@ -30,12 +30,12 @@ public:
     [[nodiscard]] bool hasSubElement(const std::string& name) const override;
     [[nodiscard]] std::vector<std::string> subElementNames() const override;
     [[nodiscard]] Element::QuantityType asQuantity() const override;
-    [[nodiscard]] Timestamp asDateTime() const override;
-    [[nodiscard]] Timestamp asTime() const override;
-    [[nodiscard]] Timestamp asDate() const override;
+    [[nodiscard]] DateTime asDateTime() const override;
+    [[nodiscard]] Time asTime() const override;
+    [[nodiscard]] Date asDate() const override;
     [[nodiscard]] std::string asString() const override;
     [[nodiscard]] bool asBool() const override;
-    [[nodiscard]] Element::DecimalType asDecimal() const override;
+    [[nodiscard]] DecimalType asDecimal() const override;
     [[nodiscard]] int32_t asInt() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
     [[nodiscard]] std::string resourceType() const override;

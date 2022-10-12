@@ -3,18 +3,18 @@
  * (C) Copyright IBM Corp. 2021
  */
 
-#include "FhirStructureRepository.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "erp/fhir/Fhir.hxx"
+#include "fhirtools/FPExpect.hxx"
+#include "fhirtools/model/ValueElement.hxx"
+#include "fhirtools/repository/internal/FhirStructureDefinitionParser.hxx"
+#include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
+#include "fhirtools/util/Constants.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <ranges>
 #include <set>
 #include <utility>
-
-#include "fhirtools/FPExpect.hxx"
-#include "fhirtools/repository/internal/FhirStructureDefinitionParser.hxx"
-#include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
-#include "fhirtools/util/Constants.hxx"
 
 using fhirtools::FhirStructureDefinition;
 using fhirtools::FhirStructureRepository;
@@ -23,7 +23,7 @@ using fhirtools::FhirStructureRepository;
 class FhirStructureRepository::Verifier
 {
 public:
-    explicit Verifier(const FhirStructureRepository& repo)
+    explicit Verifier(FhirStructureRepository& repo)
         : mRepo{repo}
     {
     }
@@ -64,7 +64,7 @@ public:
         }
 
         //verifyValueSetsFull();
-        verifyValueSetsBoundOnly();
+        verifyValueSetsRequiredOnly();
         if (! unresolvedCodeSystems.empty())
         {
             LOG(ERROR) << R"(Could not resolve CodeSystems: [")" + boost::join(unresolvedCodeSystems, R"(", ")") +
@@ -77,9 +77,9 @@ public:
         Expect3(mVerfied, "FHIR-Structure-Repository verification failed", std::logic_error);
     }
 
-    const std::set<std::string>& getBoundValueSets() const
+    const std::set<std::string>& getRequiredValueSets() const
     {
-        return boundValueSets;
+        return requiredValueSets;
     }
 
 private:
@@ -88,12 +88,27 @@ private:
         const auto& baseDefinition = def.baseDefinition();
         if (! baseDefinition.empty())
         {
+            if (def.derivation() == FhirStructureDefinition::Derivation::basetype)
+            {
+                LOG(ERROR) << "Structure definition has derivation 'basetype', but baseDefinition is defined: "
+                           << def.url() << '|' << def.version();
+                mVerfied = false;
+            }
             const auto* baseType = mRepo.findDefinitionByUrl(baseDefinition);
             if (! baseType)
             {
                 unresolvedBase.insert(baseDefinition);
                 LOG(ERROR) << "Failed to resolve base type for " << def.url() << '|' << def.version() << ": "
                            << baseDefinition;
+            }
+        }
+        else
+        {
+            if (def.derivation() != FhirStructureDefinition::Derivation::basetype)
+            {
+                LOG(ERROR) << "Profile has derivation '" << def.derivation()
+                           << "', but baseDefinition is not defined: " << def.url() << '|' << def.version();
+                mVerfied = false;
             }
         }
         for (const auto& element : def.elements())
@@ -129,6 +144,7 @@ private:
         verifyBinding(element);
         verifySlicing(def, element);
         parseConstraints(def, element);
+        verifyFixedCodeSystems(element);
     }
 
     void verifyElementProfiles(const FhirStructureDefinition& def, const FhirElement& element)
@@ -142,24 +158,35 @@ private:
                            << element.originalName() << ": " << profile;
             }
         }
+        for (const auto& profile : element.referenceTargetProfiles())
+        {
+            if (! mRepo.findDefinitionByUrl(profile))
+            {
+                unresolvedProfiles.emplace(profile);
+                LOG(ERROR) << "Failed to resolve targetProfile type for " << def.url() << '|' << def.version() << "@"
+                           << element.originalName() << ": " << profile;
+            }
+        }
     }
 
     void verifyBinding(const FhirElement& element)
     {
-        if (element.hasBinding() && element.binding().strength != FhirElement::BindingStrength::example)
+        if (element.hasBinding() && element.binding().strength == FhirElement::BindingStrength::required)
         {
             const auto* valueSet = mRepo.findValueSet(element.binding().valueSetUrl, element.binding().valueSetVersion);
             if (tryResolve(element.binding().valueSetUrl, element.binding().valueSetVersion,
                            element.binding().strength))
             {
-                boundValueSets.insert(element.binding().valueSetUrl);
+                const auto verStr =
+                    (element.binding().valueSetVersion.has_value() ? "|" + *element.binding().valueSetVersion : "");
+                requiredValueSets.insert(element.binding().valueSetUrl + verStr);
                 for (const auto& include : valueSet->getIncludes())
                 {
                     for (const auto& item : include.valueSets)
                     {
                         if (tryResolve(item, {}, element.binding().strength))
                         {
-                            boundValueSets.insert(item);
+                            requiredValueSets.insert(item);
                         }
                     }
                 }
@@ -269,6 +296,57 @@ private:
         }
     }
 
+    void verifyFixedCodeSystems(const FhirElement& element)
+    {
+        if (element.pattern() != nullptr)
+        {
+            ValueElement valueElement(&mRepo, element.pattern());
+            verifyFixedCodeSystems(element, valueElement);
+        }
+        if (element.fixed() != nullptr)
+        {
+            ValueElement valueElement(&mRepo, element.fixed());
+            verifyFixedCodeSystems(element, valueElement);
+        }
+    }
+
+    void verifyFixedCodeSystems(const FhirElement& element, const ValueElement& fixedOrPattern)
+    {
+        if (element.typeId() == "CodeableConcept")
+        {
+            auto fixedCodings = fixedOrPattern.subElements("coding");
+            for (const auto& fixedCoding : fixedCodings)
+            {
+                auto codingSystems = fixedCoding->subElements("system");
+                if (codingSystems.size() == 1)
+                {
+                    verifyFixedCodeSystems(codingSystems[0]->asString());
+                }
+            }
+        }
+        else if (element.typeId() == "Coding")
+        {
+            auto codingSystems = fixedOrPattern.subElements("system");
+            if (codingSystems.size() == 1)
+            {
+                verifyFixedCodeSystems(codingSystems[0]->asString());
+            }
+        }
+        else if (element.name().ends_with("coding.system"))
+        {
+            verifyFixedCodeSystems(fixedOrPattern.asString());
+        }
+    }
+
+    void verifyFixedCodeSystems(const std::string& codeSystemUrl)
+    {
+        auto codeSystem = mRepo.findCodeSystem(codeSystemUrl, {});
+        if (! codeSystem || codeSystem->isSynthesized())
+        {
+            unresolvedCodeSystems.insert(codeSystemUrl);
+        }
+    }
+
     void verifyValueSetsFull()
     {
         for (const auto& valueSet : mRepo.mValueSetsByKey)
@@ -277,40 +355,40 @@ private:
         }
     }
 
-    void verifyValueSetsBoundOnly()
+    void verifyValueSetsRequiredOnly()
     {
-        for (const auto& valueSetUrl : boundValueSets)
+        for (const auto& valueSetUrl : requiredValueSets)
         {
-            const auto* valueSet = mRepo.findValueSet(valueSetUrl, {});
+            FhirValueSet* valueSet = mRepo.findValueSet(valueSetUrl, {});
             verifyValueSet(valueSetUrl, valueSet);
         }
     }
 
-    void verifyValueSet(const std::string& valueSetUrl, const FhirValueSet* valueSet)
+    void verifyValueSet(const std::string& valueSetUrl, FhirValueSet* valueSet)
     {
         verifyValueSetIncludes(valueSetUrl, valueSet);
         verifyValueSetExcludes(valueSetUrl, valueSet);
     }
-    void verifyValueSetExcludes(const std::string& valueSetUrl, const FhirValueSet* valueSet)
+    void verifyValueSetExcludes(const std::string& valueSetUrl, FhirValueSet* valueSet)
     {
         for (const auto& exclude : valueSet->getExcludes())
         {
             if (exclude.codeSystemUrl.has_value())
             {
                 const auto* codeSystem = mRepo.findCodeSystem(*exclude.codeSystemUrl, {});
-                verifyValueSetCodeSystem(valueSetUrl, codeSystem, exclude.codes, *exclude.codeSystemUrl);
+                verifyValueSetCodeSystem(valueSetUrl, valueSet, codeSystem, exclude.codes, *exclude.codeSystemUrl);
             }
             FPExpect(exclude.valueSets.empty(), "Not implemented: ValueSet.compose.exclude.valueSet");
         }
     }
-    void verifyValueSetIncludes(const std::string& valueSetUrl, const FhirValueSet* valueSet)
+    void verifyValueSetIncludes(const std::string& valueSetUrl, FhirValueSet* valueSet)
     {
         for (const auto& include : valueSet->getIncludes())
         {
             if (include.codeSystemUrl.has_value())
             {
                 const auto* codeSystem = mRepo.findCodeSystem(*include.codeSystemUrl, {});
-                verifyValueSetCodeSystem(valueSetUrl, codeSystem, include.codes, *include.codeSystemUrl);
+                verifyValueSetCodeSystem(valueSetUrl, valueSet, codeSystem, include.codes, *include.codeSystemUrl);
             }
             for (const auto& referencedValueSet : include.valueSets)
             {
@@ -321,8 +399,9 @@ private:
             }
         }
     }
-    void verifyValueSetCodeSystem(const std::string& valueSetUrl, const fhirtools::FhirCodeSystem* codeSystem,
-                                  const std::set<std::string>& codes, const std::basic_string<char>& codeSystemUrl)
+    void verifyValueSetCodeSystem(const std::string& valueSetUrl, FhirValueSet* valueSet,
+                                  const fhirtools::FhirCodeSystem* codeSystem, const std::set<std::string>& codes,
+                                  const std::basic_string<char>& codeSystemUrl)
     {
         if (codeSystem != nullptr)
         {
@@ -343,11 +422,12 @@ private:
             if (codes.empty())
             {
                 unresolvedCodeSystems.insert(codeSystemUrl);
+                valueSet->addError("Unresolved CodeSystem " + codeSystemUrl);
             }
         }
     }
 
-    const FhirStructureRepository& mRepo;
+    FhirStructureRepository& mRepo;
     bool mVerfied = true;
     FhirConstraint::ExpressionCache mExpressionCache;
     std::set<std::string> unresolvedBase;
@@ -355,7 +435,7 @@ private:
     std::set<std::string> elementsWithUnresolvedType;
     std::set<std::string> unresolvedProfiles;
     std::set<std::string> unresolvedBindings;
-    std::set<std::string> boundValueSets;
+    std::set<std::string> requiredValueSets;
     std::set<std::string> unresolvedCodeSystems;
     std::set<std::string> unresolvedValueSets;
 };
@@ -385,52 +465,81 @@ FhirStructureRepository::FhirStructureRepository()
 
 FhirStructureRepository::~FhirStructureRepository() = default;
 
-void FhirStructureRepository::load(const std::list<std::filesystem::path>& files)
+void FhirStructureRepository::load(const std::list<std::filesystem::path>& filesAndDirectories)
 {
     TVLOG(1) << "Loading FHIR structure definitions.";
     std::list<FhirCodeSystem> supplements;
-    for (const auto& file : files)
+    for (const auto& file : filesAndDirectories)
     {
-        try
+        if (is_regular_file(file))
         {
-            TVLOG(2) << "loading: " << file;
-            auto [definitions, codeSystems, valueSets] = FhirStructureDefinitionParser::parse(file);
-            for (auto&& def : definitions)
+            loadFile(supplements, file);
+        }
+        else if (is_directory(file))
+        {
+            for (const auto& dirEntry : std::filesystem::directory_iterator{file})
             {
-                addDefinition(std::make_unique<FhirStructureDefinition>(std::move(def)));
-            }
-            for (auto&& codeSystem : codeSystems)
-            {
-                if (codeSystem.getContentType() == FhirCodeSystem::ContentType::supplement)
-                {
-                    supplements.emplace_back(std::move(codeSystem));
-                }
-                else
-                {
-                    addCodeSystem(std::make_unique<FhirCodeSystem>(std::move(codeSystem)));
-                }
-            }
-            for (auto&& valueSet : valueSets)
-            {
-                addValueSet(std::make_unique<FhirValueSet>(std::move(valueSet)));
+                FPExpect(dirEntry.is_regular_file(), "only regular files supported in profile directories.");
+                loadFile(supplements, dirEntry.path());
             }
         }
-        catch (const std::exception& ex)
+        else
         {
-            Fail2(file.string() + ": " + ex.what(), std::logic_error);
+            FPFail("unsupported path: " + file.string());
         }
     }
     processCodeSystemSupplements(supplements);
     TVLOG(2) << "done loading";
     Verifier verifier(*this);
     verifier.verify();
-    for (const auto& valueSetUrl : verifier.getBoundValueSets())
+    const auto& requiredValueSets = verifier.getRequiredValueSets();
+    for (const auto& valueSetKeyValue : mValueSetsByKey)
     {
-        auto* valueSet = findValueSet(valueSetUrl, {});
+        auto& valueSet = valueSetKeyValue.second;
         if (! valueSet->finalized())
         {
             valueSet->finalize(this);
+            if (! valueSet->getWarnings().empty())
+            {
+                const auto valueSetFullUrl = valueSet->getUrl() + "|" + valueSet->getVersion();
+                if (requiredValueSets.contains(valueSetFullUrl) || requiredValueSets.contains(valueSet->getUrl()))
+                {
+                    TLOG(ERROR) << "Required Valueset " << valueSetFullUrl
+                                << " finalization with errors: " << valueSet->getWarnings();
+                }
+            }
         }
+    }
+}
+void FhirStructureRepository::loadFile(std::list<FhirCodeSystem>& supplements, const std::filesystem::path& file)
+{
+    try
+    {
+        TVLOG(2) << "loading: " << file;
+        auto [definitions, codeSystems, valueSets] = FhirStructureDefinitionParser::parse(file);
+        for (auto&& def : definitions)
+        {
+            addDefinition(std::make_unique<FhirStructureDefinition>(std::move(def)));
+        }
+        for (auto&& codeSystem : codeSystems)
+        {
+            if (codeSystem.getContentType() == FhirCodeSystem::ContentType::supplement)
+            {
+                supplements.emplace_back(std::move(codeSystem));
+            }
+            else
+            {
+                addCodeSystem(std::make_unique<FhirCodeSystem>(std::move(codeSystem)));
+            }
+        }
+        for (auto&& valueSet : valueSets)
+        {
+            addValueSet(std::make_unique<FhirValueSet>(std::move(valueSet)));
+        }
+    }
+    catch (const std::exception& ex)
+    {
+        Fail2(file.string() + ": " + ex.what(), std::logic_error);
     }
 }
 
@@ -718,11 +827,12 @@ void fhirtools::FhirStructureRepository::processCodeSystemSupplements(const std:
                 cs = codeSystem->second.get();
             }
         }
+        auto builder = cs ? FhirCodeSystem::Builder(*cs) : FhirCodeSystem::Builder();
         if (cs == nullptr)
         {
             VLOG(1) << "CodeSystem.supplements not found, synthesizing: " << supplement.getSupplements();
+            builder.synthesized();
         }
-        auto builder = cs ? FhirCodeSystem::Builder(*cs) : FhirCodeSystem::Builder();
         builder.url(supplement.getSupplements());
         for (const auto& code : supplement.getCodes())
         {

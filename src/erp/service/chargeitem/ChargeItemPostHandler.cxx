@@ -83,7 +83,24 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     Expect3(telematikIdClaim.has_value(), "JWT does not contain TelematikId", std::logic_error); // should not happen because of JWT verification;
 
     A_22136.start("Validate input ChargeItem resource");
-    auto chargeItem = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir, false);
+    std::optional<model::ChargeItem> chargeItemOptional{};
+    std::optional<model::ChargeItemMarkingFlag> markingFlag{};
+    try
+    {
+        chargeItemOptional = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir, std::nullopt);
+        markingFlag = chargeItemOptional->markingFlag();
+    }
+    catch (const model::ModelException& exc)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Invalid charge item provided", exc.what());
+    }
+
+    auto& chargeItem = *chargeItemOptional;
+    ErpExpect(
+        !markingFlag.has_value(),
+        HttpStatus::BadRequest,
+        "Marking flag should not be set in POST ChargeItem by pharmacy");
+
     // TODO in unserem Schema is Binary == Gem_erxBinary mit contentType == application/pkcs7-mime, aber laut https://simplifier.net/erezept-workflow/GemerxBinary für
     // "PCKS signed ePrescription Bundle". Im PKV-Feature-Dokument wird contentType für das containedbinary nicht spezifiziert.
     // In ActivateTask wird die Signatur für Prescription im Enveloping gesendet, d.h. "signed data are sub-element of signature"
@@ -94,7 +111,10 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 
     A_22133.start("Check consent");
     const auto consent = databaseHandle->retrieveConsent(kvnr.value());
-    ErpExpect(consent.has_value(), HttpStatus::BadRequest, "No consent exists for this patient");
+    ErpExpect(
+        consent.has_value(),
+        HttpStatus::Forbidden,
+        "Die versicherte Person hat keine Einwilligung im E-Rezept Fachdienst hinterlegt. Abrechnungsinformation kann nicht gespeichert werden.");
     A_22133.finish();
 
     A_22134.start("KBV prescription bundle");
@@ -135,7 +155,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     A_22137.finish();
 
     A_22143.start("Fill ChargeItem.enteredDate");
-    chargeItem.setEnteredDate(fhirtools::Timestamp::now());
+    chargeItem.setEnteredDate(model::Timestamp::now());
     A_22143.finish();
 
     chargeItem.setId(prescriptionId);

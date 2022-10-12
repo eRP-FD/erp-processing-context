@@ -40,7 +40,7 @@ public:
         ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
         std::string secret;
-        std::optional<fhirtools::Timestamp> lastModified;
+        std::optional<model::Timestamp> lastModified;
         ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModified, *prescriptionId, kvnr, accessCode, qesBundle));
         ASSERT_TRUE(lastModified.has_value());
 
@@ -51,7 +51,7 @@ public:
 
 TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT(readability-function-cognitive-complexity)
 {
-    fhirtools::Timestamp startTime = fhirtools::Timestamp::now();
+    model::Timestamp startTime = model::Timestamp::now();
     auto kvnr = generateNewRandomKVNR();
     auto task1 = createClosedTask(kvnr);
 
@@ -271,4 +271,6 @@ INSTANTIATE_TEST_SUITE_P(MultipleMedicationDispensesTestPInst, MultipleMedicatio
                                          Params{model::PrescriptionType::direkteZuweisung, 2},
                                          Params{model::PrescriptionType::direkteZuweisung, 4},
                                          Params{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 5},
-                                         Params{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 6}));
+                                         Params{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 6},
+                                         Params{model::PrescriptionType::direkteZuweisungPkv, 3},
+                                         Params{model::PrescriptionType::direkteZuweisungPkv, 8}));

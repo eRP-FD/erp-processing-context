@@ -229,6 +229,23 @@ fhirtools::FhirStructureDefinition::findElementAndIndex(const std::string& eleme
     return {nullptr, 0};
 }
 
+const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStructureRepository& repo) const
+{
+    const FhirStructureDefinition* parent{};
+    if (kind() == Kind::slice)
+    {
+        parent = repo.findTypeById(typeId());
+        Expect3(parent != nullptr, "base type for slice '" + url() + "' not found: " + typeId(), std::logic_error);
+    }
+    else
+    {
+        parent = repo.findDefinitionByUrl(baseDefinition());
+        Expect3(parent != nullptr, "base definition not found for '" + url() + "': " + baseDefinition(),
+                std::logic_error);
+    }
+    return parent;
+}
+
 bool FhirStructureDefinition::isDerivedFrom(const fhirtools::FhirStructureRepository& repo,
                                             const fhirtools::FhirStructureDefinition& baseProfile) const
 {
@@ -246,20 +263,32 @@ bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepository& repo,
     {
         return false;
     }
+    return parentType(repo)->isDerivedFrom(repo, baseUrl);
+}
 
-    const FhirStructureDefinition* baseType{};
-    if (kind() == Kind::slice)
+const FhirStructureDefinition* FhirStructureDefinition::baseType(const FhirStructureRepository& repo) const
+{
+    if (derivation() != Derivation::constraint)
     {
-        baseType = repo.findTypeById(typeId());
-        Expect3(baseType != nullptr, "base type for slice '" + url() + "' not found: " + typeId(), std::logic_error);
+        return this;
     }
-    else
+    return parentType(repo)->baseType(repo);
+}
+
+const FhirStructureDefinition& FhirStructureDefinition::primitiveToSystemType(const FhirStructureRepository& repo) const
+{
+    if (isSystemType())
     {
-        baseType = repo.findDefinitionByUrl(baseDefinition());
-        Expect3(baseType != nullptr, "base definition not found for '" + url() + "': " + baseDefinition(),
-                std::logic_error);
+        return *this;
     }
-    return baseType->isDerivedFrom(repo, baseUrl);
+    Expect3(kind() == FhirStructureDefinition::Kind::primitiveType,
+            "systemTypeFor called with structure of kind: " + to_string(kind()), std::logic_error);
+    const auto valueElement = findElement(typeId() + ".value");
+    Expect3(valueElement != nullptr, "Primitive type has no value element.", std::logic_error);
+    const auto* valueType = repo.findTypeById(valueElement->typeId());
+    Expect3(valueType != nullptr, "Type not found: " + valueElement->typeId(), std::logic_error);
+    Expect3(valueType->isSystemType(), "Value attribute of " + url() + " is not a system type", std::logic_error);
+    return *valueType;
 }
 
 class FhirStructureDefinition::Builder::FhirSlicingBuilder : public FhirSlicing::Builder
@@ -415,9 +444,8 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         {
             const auto originalName = prev->originalName();
             //NOLINTNEXTLINE(modernize-loop-convert) -- std::views::reverse fails in clang-tidy, too
-            for (auto eIt =  mStructureDefinition->mElements.rbegin(),
-                end = mStructureDefinition->mElements.rend();
-                eIt != end; ++eIt)
+            for (auto eIt = mStructureDefinition->mElements.rbegin(), end = mStructureDefinition->mElements.rend();
+                 eIt != end; ++eIt)
             {
                 auto& e = *eIt;
                 if (e->originalName() != originalName)
@@ -442,7 +470,7 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         mFhirSlicingBuilders.emplace(mStructureDefinition->mElements.size(),
                                      FhirSlicingBuilder{*element->slicing(), element->name()});
     }
-    if (element->typeId().empty() && element->contentReference().empty() && !mStructureDefinition->isSystemType())
+    if (element->typeId().empty() && element->contentReference().empty() && ! mStructureDefinition->isSystemType())
     {
         Expect3(mStructureDefinition->kind() == Kind::slice,
                 "non-slice elements must have type or contentReference here.", std::logic_error);

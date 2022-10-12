@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="TestValueSet"/>
+  <url value="http://erp.test/TestValueSet"/>
+  <version value="0.1"/>
+  <name value="TestValueSet"/>
+  <status value="draft"/>
+  <compose>
+    <include>
+      <system value="http://erp.test/TestCodeSystem"/>
+    </include>
+  </compose>
+</ValueSet>
+

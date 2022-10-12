@@ -8,13 +8,15 @@
 #include <gtest/gtest.h>
 
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "test/fhirtools/DefaultFhirStructureRepository.hxx"
+
 
 using namespace fhirtools;
 
 class FhirValueSetTest : public ::testing::Test
 {
 public:
-    FhirStructureRepository repo;
+    const FhirStructureRepository& repo = DefaultFhirStructureRepository::get();
 };
 
 TEST_F(FhirValueSetTest, OperatorSpaceship)
@@ -44,8 +46,9 @@ TEST_F(FhirValueSetTest, OperatorSpaceshipCaseInSensitive)
 }
 
 
-TEST_F(FhirValueSetTest, Contains)
+TEST(FhirValueSetTestContains, run)
 {
+    FhirStructureRepository repo;
     FhirValueSet::Builder builder;
     builder.url("test");
     builder.name("test");

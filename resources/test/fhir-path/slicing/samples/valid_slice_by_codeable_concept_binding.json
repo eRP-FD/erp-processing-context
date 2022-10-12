@@ -1,0 +1,72 @@
+{
+    "resourceType": "Sliceable",
+    "meta": {
+        "profile": ["http://erp.test/SliceByCodeableConceptBinding"]
+    },
+    "sliced": [
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "codeableConcept": {
+                    "coding": [
+                        {
+                            "system":"http://erp.test/TestCodeSystem",
+                            "code":"Test1"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "doesNotBelongToSlice",
+                "codeableConcept": {
+                    "coding": [
+                        {
+                            "system":"http://erp.test/TestCodeSystem",
+                            "code":"Test1"
+                        },
+                        {
+                            "system":"http://erp.test/TestCodeSystem",
+                            "code":"WrongCode"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice2",
+                "codeableConcept": {
+                    "coding": [
+                        {
+                            "system":"http://erp.test/TestCodeSystem",
+                            "code":"Test1"
+                        },
+                        {
+                            "system":"http://erp.test/TestCodeSystem",
+                            "code":"Test2"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice2",
+                "codeableConcept": {
+                    "coding": [
+                        {
+                            "system":"http://erp.test/WrongCodeSystem",
+                            "code":"Test1"
+                        },
+                        {
+                            "system":"http://erp.test/TestCodeSystem",
+                            "code":"Test2"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}

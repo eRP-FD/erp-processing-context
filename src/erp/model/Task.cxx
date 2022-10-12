@@ -4,21 +4,20 @@
  */
 
 #include "erp/model/Task.hxx"
+#include "erp/ErpConstants.hxx"
+#include "erp/ErpRequirements.hxx"
+#include "erp/model/Composition.hxx"
+#include "erp/model/ResourceNames.hxx"
+#include "erp/model/Timestamp.hxx"
+#include "erp/util/Expect.hxx"
+#include "erp/util/RapidjsonDocument.hxx"
+#include "erp/util/WorkDay.hxx"
 
 #include <date/tz.h>
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once
 
-#include "erp/ErpConstants.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/model/Composition.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "fhirtools/model/Timestamp.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
-#include "erp/util/WorkDay.hxx"
-
-using  fhirtools::Timestamp;
+using  model::Timestamp;
 
 namespace model
 {
@@ -419,15 +418,15 @@ void Task::setAccepDateDependentPrescriptionType(const Timestamp& baseTime)
     switch (type())
     {
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            setAcceptDate(fhirtools::Timestamp{
+        case model::PrescriptionType::direkteZuweisungPkv:
+            setAcceptDate(model::Timestamp{
                 date::sys_days{date::year_month_day{date::floor<date::days>(
-                                   date::make_zoned(fhirtools::Timestamp::GermanTimezone, baseTime.toChronoTimePoint())
+                                   date::make_zoned(model::Timestamp::GermanTimezone, baseTime.toChronoTimePoint())
                                        .get_local_time())} +
                                date::months{3}}});
             break;
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
-        case model::PrescriptionType::direkteZuweisungPkv:
             setAcceptDate(baseTime + (24h * 28));
             break;
     }

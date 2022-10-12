@@ -10,7 +10,6 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
-
 namespace
 {
 
@@ -29,9 +28,9 @@ AuditDataCollector& AuditDataCollector::fillFromAccessToken(const JWT& accessTok
     A_19391.start("Use name of caller for audit logging");
     A_19392.start("Use id of caller for audit logging");
 
-    const auto idNumberClaim = accessToken.stringForClaim(JWT::idNumberClaim);
+    auto idNumberClaim = accessToken.stringForClaim(JWT::idNumberClaim);
     Expect3(idNumberClaim.has_value(), "Missing idNumberClaim", std::logic_error);
-    mAgentWho = idNumberClaim.value();
+    mAgentWho = std::move(idNumberClaim);
 
     const auto professionOIDClaim = accessToken.stringForClaim(JWT::professionOIDClaim);
     Expect3(professionOIDClaim.has_value(), "Missing professionOIDClaim", std::logic_error);
@@ -91,14 +90,42 @@ AuditDataCollector& AuditDataCollector::setConsentId(const std::string_view& con
     return *this;
 }
 
+AuditDataCollector& AuditDataCollector::setPnwPzNumber(const std::string_view& pzNumber)
+{
+    mPnwPzNumber = pzNumber;
+    return *this;
+}
+
 model::AuditData AuditDataCollector::createData() const
 {
-    const bool isEventCausedByPatient = model::isEventCausedByPatient(assertHasValue(mEventId));
+    Expect3(mEventId.has_value(), "Event ID should not be missing", std::logic_error);
+
+    const auto isEventIdGetAllTasksWithPzNumber = (model::AuditEventId::GET_Tasks_by_pharmacy_with_pz == mEventId);
+    Expect3(isEventIdGetAllTasksWithPzNumber == mPnwPzNumber.has_value(),
+            "PNW PZ number should be present if and only if event ID is GET_Tasks_by_pharmacy_with_pz",
+            std::logic_error);
+
+    const bool isEventCausedByPatient = model::isEventCausedByPatient(*mEventId);
     return model::AuditData(
         *mEventId,
         model::AuditMetaData(isEventCausedByPatient ? std::optional<std::string>() :
                                  model::isEventCausedByRepresentative(*mEventId) ? assertHasValue(mAgentName) : mAgentName,
-                             isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho)),
+                             isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho),
+                             !isEventIdGetAllTasksWithPzNumber ? std::optional<std::string>() : assertHasValue(mPnwPzNumber)),
         assertHasValue(mAction), model::AuditEvent::AgentType::human, assertHasValue(mInsurantKvnr),
-        assertHasValue(mDeviceId), mPrescriptionId, mConsentId);
+        assertHasValue(mDeviceId),
+        mPrescriptionId,
+        mConsentId);
+}
+
+bool AuditDataCollector::shouldCreateAuditEventOnSuccess() const noexcept
+{
+    return mEventId.has_value();
+}
+
+bool AuditDataCollector::shouldCreateAuditEventOnError(HttpStatus errorCode) const noexcept
+{
+    return errorCode == HttpStatus::Forbidden &&
+           mEventId.has_value() &&
+           *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed;
 }

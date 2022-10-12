@@ -29,6 +29,7 @@ namespace
         xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {});
     }
 
+#ifndef __APPLE__
     std::map<int, sighandler_t> old_handler;
 
     void erp_signal_handler(int sig)
@@ -54,17 +55,20 @@ namespace
             old_handler[sig] = signal(sig, &erp_signal_handler);
         }
     }
+#endif
 }
 
 
 int main (const int, const char* argv[], char** /*environment*/)
 {
+#ifndef __APPLE__
     register_signals({SIGILL, SIGABRT, SIGSEGV, SIGFPE, SIGINT, SIGTERM
 #ifdef SIGSYS
                       ,SIGSYS
 #endif
     }
     );
+#endif
 
     int exitCode = EXIT_FAILURE;
 

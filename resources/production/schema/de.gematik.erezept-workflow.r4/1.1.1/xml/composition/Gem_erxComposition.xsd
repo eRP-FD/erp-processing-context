@@ -112,7 +112,7 @@
           <xs:element name="text" minOccurs="0" type="Narrative"/>
           <xs:element name="mode" minOccurs="0" type="ListMode"/>
           <xs:element name="orderedBy" minOccurs="0" type="CodeableConcept"/>
-          <xs:element name="entry" type="Reference"/>
+          <xs:element name="entry" minOccurs="0" type="Reference"/>
           <xs:element name="emptyReason" minOccurs="0" type="CodeableConcept"/>
           <xs:element name="section" type="Gem_erxComposition.Section" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>

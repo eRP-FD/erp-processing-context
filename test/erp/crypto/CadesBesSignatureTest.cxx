@@ -8,7 +8,7 @@
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/OcspHelper.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/TslManager.hxx"
@@ -17,16 +17,17 @@
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
 #include "erp/util/SafeString.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/EnvironmentVariableGuard.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestConfiguration.hxx"
 
+
 #include "test_config.h"
-#include "test/util/ResourceManager.hxx"
 
 using namespace ::std::string_view_literals;
 
@@ -171,7 +172,7 @@ TEST_F(CadesBesSignatureTest, roundtripWithoutTsl)
 TEST_F(CadesBesSignatureTest, getSigningTime)
 {
     // Extracted manually from KBV-from-testing.p7s
-    fhirtools::Timestamp referenceTime = fhirtools::Timestamp::fromXsDateTime("2021-02-25T10:04:04Z");
+    model::Timestamp referenceTime = model::Timestamp::fromXsDateTime("2021-02-25T10:04:04Z");
 
     CadesBesSignature cadesBesSignature(
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/cadesBesSignature/KBV-from-testing.p7s"));
@@ -197,7 +198,7 @@ TEST_F(CadesBesSignatureTest, getMessageDigest)
 TEST_F(CadesBesSignatureTest, setSigningTime)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string_view myText = "The text to be signed";
-    auto signingTime = fhirtools::Timestamp::fromXsDateTime("2019-02-25T08:05:05Z");
+    auto signingTime = model::Timestamp::fromXsDateTime("2019-02-25T08:05:05Z");
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
     auto cert = Certificate::fromPem(certificate);
     std::string signedText;

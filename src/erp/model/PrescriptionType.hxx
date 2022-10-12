@@ -30,19 +30,23 @@ void checkFeatureWf200(model::PrescriptionType prescriptionType);
 static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypeDisplay{
     {PrescriptionType::apothekenpflichigeArzneimittel, "Muster 16 (Apothekenpflichtige Arzneimittel)"},
     {PrescriptionType::direkteZuweisung, "Muster 16 (Direkte Zuweisung)"},
-    {PrescriptionType::apothekenpflichtigeArzneimittelPkv, "PKV (Apothekenpflichtige Arzneimittel)"}};
+    {PrescriptionType::apothekenpflichtigeArzneimittelPkv, "PKV (Apothekenpflichtige Arzneimittel)"},
+    {PrescriptionType::direkteZuweisungPkv, "PKV (Direkte Zuweisung)"}};
 
 static const std::unordered_map<PrescriptionType, std::string> PrescriptionTypePerformerType{
     {PrescriptionType::apothekenpflichigeArzneimittel,
      "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)},
     {PrescriptionType::direkteZuweisung, "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)},
     {PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+     "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)},
+    {PrescriptionType::direkteZuweisungPkv,
      "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)}};
 
 static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypePerformerDisplay{
     {PrescriptionType::apothekenpflichigeArzneimittel, "Öffentliche Apotheke"},
     {PrescriptionType::direkteZuweisung, "Öffentliche Apotheke"},
-    {PrescriptionType::apothekenpflichtigeArzneimittelPkv, "Öffentliche Apotheke"}};
+    {PrescriptionType::apothekenpflichtigeArzneimittelPkv, "Öffentliche Apotheke"},
+    {PrescriptionType::direkteZuweisungPkv, "Öffentliche Apotheke"}};
 }
 
 // the default supported enum range needs to be customized. The default range is [-128,128]
@@ -51,7 +55,7 @@ namespace magic_enum::customize
 template<>
 struct enum_range<model::PrescriptionType> {
     static constexpr int min = 160;// Must be greater than `INT16_MIN`.
-    static constexpr int max = 200;// Must be less than `INT16_MAX`.
+    static constexpr int max = 209;// Must be less than `INT16_MAX`.
 };
 }// namespace magic_enum
 

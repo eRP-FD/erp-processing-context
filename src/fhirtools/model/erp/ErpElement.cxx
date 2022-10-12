@@ -5,25 +5,24 @@
 
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "erp/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/FPExpect.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
 #include <utility>
 
-#include "fhirtools/FPExpect.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-
 using fhirtools::Element;
-using fhirtools::ProfiledElementTypeInfo;
 using fhirtools::FhirStructureDefinition;
 using fhirtools::FhirStructureRepository;
 using fhirtools::PrimitiveElement;
+using fhirtools::ProfiledElementTypeInfo;
 
 ErpElement::ErpElement(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
                        const std::string& elementId, const rapidjson::Value* value,
                        const rapidjson::Value* primitiveTypeObject)
-    : ErpElement(fhirStructureRepository, std::move(parent), ProfiledElementTypeInfo{fhirStructureRepository, elementId},
-                 value, primitiveTypeObject)
+    : ErpElement(fhirStructureRepository, std::move(parent),
+                 ProfiledElementTypeInfo{fhirStructureRepository, elementId}, value, primitiveTypeObject)
 {
 }
 
@@ -70,7 +69,7 @@ int32_t ErpElement::asInt() const
     return asPrimitiveElement().asInt();
 }
 
-Element::DecimalType ErpElement::asDecimal() const
+fhirtools::DecimalType ErpElement::asDecimal() const
 {
     return asPrimitiveElement().asDecimal();
 }
@@ -90,17 +89,17 @@ std::string ErpElement::asString() const
     return asPrimitiveElement().asString();
 }
 
-fhirtools::Timestamp ErpElement::asDate() const
+fhirtools::Date ErpElement::asDate() const
 {
     return asPrimitiveElement().asDate();
 }
 
-fhirtools::Timestamp ErpElement::asTime() const
+fhirtools::Time ErpElement::asTime() const
 {
     return asPrimitiveElement().asTime();
 }
 
-fhirtools::Timestamp ErpElement::asDateTime() const
+fhirtools::DateTime ErpElement::asDateTime() const
 {
     return asPrimitiveElement().asDateTime();
 }
@@ -261,34 +260,37 @@ PrimitiveElement ErpElement::asPrimitiveElement() const
             return PrimitiveElement(mFhirStructureRepository, type(),
                                     model::NumberAsStringParserDocument::getOptionalIntValue(*mValue, {}).value());
         case Type::Decimal:
-            return PrimitiveElement(mFhirStructureRepository, type(),
-                                    DecimalType(model::NumberAsStringParserDocument::getStringValueFromValue(mValue)));
+            return PrimitiveElement(
+                mFhirStructureRepository, type(),
+                fhirtools::DecimalType(model::NumberAsStringParserDocument::getStringValueFromValue(mValue)));
         case Type::String:
             return PrimitiveElement(mFhirStructureRepository, type(),
                                     std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue)));
         case Type::Boolean:
             return PrimitiveElement(mFhirStructureRepository, type(), mValue->GetBool());
         case Type::Date:
-            return PrimitiveElement(mFhirStructureRepository, type(),
-                                    fhirtools::Timestamp::fromFhirDateTime(std::string(
-                                        model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
+            return PrimitiveElement(
+                mFhirStructureRepository, type(),
+                fhirtools::Date(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
         case Type::DateTime:
-            return PrimitiveElement(mFhirStructureRepository, type(),
-                                    fhirtools::Timestamp::fromFhirPathDateTimeLiteral(std::string(
-                                        model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
+            return PrimitiveElement(
+                mFhirStructureRepository, type(),
+                fhirtools::DateTime(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
         case Type::Time:
-            return PrimitiveElement(mFhirStructureRepository, type(),
-                                    fhirtools::Timestamp::fromFhirPathTimeLiteral(std::string(
-                                        model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
+            return PrimitiveElement(
+                mFhirStructureRepository, type(),
+                fhirtools::Time(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
         case Type::Structured:
             break;
         case Type::Quantity: {
-            const auto value =
-                model::NumberAsStringParserDocument::getOptionalDoubleValue(*mValue, rapidjson::Pointer("/value"));
-            FPExpect(value.has_value(), "Quantity value not defined");
+            const auto* valueElement = rapidjson::Pointer("/value").Get(*mValue);
+            FPExpect(valueElement, "Quantity value not defined");
+            const auto value = model::NumberAsStringParserDocument::getStringValueFromValue(valueElement);
+            FPExpect(! value.empty(), "Quantity value not defined");
             const auto unit =
                 model::NumberAsStringParserDocument::getOptionalStringValue(*mValue, rapidjson::Pointer("/unit"));
-            return PrimitiveElement(mFhirStructureRepository, type(), QuantityType(value.value(), unit.value_or("")));
+            return PrimitiveElement(mFhirStructureRepository, type(),
+                                    QuantityType(fhirtools::DecimalType(value), unit.value_or("")));
         }
     }
     FPFail("not convertible to primitive");

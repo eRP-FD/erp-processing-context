@@ -9,7 +9,7 @@
 
 #include "erp/crypto/Certificate.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/tsl/TslService.hxx"
 #include "erp/util/Configuration.hxx"
@@ -58,7 +58,7 @@ std::string TslTestHelper::createValidButManipulatedTslContentsFromTemplate(cons
     const auto nextUpdateTime = std::chrono::system_clock::now() + std::chrono::hours(1);
 
     return String::replaceAll(
-        content, "##NEXT-UPDATE-TIME##", fhirtools::Timestamp(nextUpdateTime).toXsDateTime());
+        content, "##NEXT-UPDATE-TIME##", model::Timestamp(nextUpdateTime).toXsDateTime());
 }
 
 

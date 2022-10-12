@@ -120,20 +120,16 @@ sgx.trusted_files = [
 # ERP libs
 "file:/debug/erp/lib/libcrypto.so.1.1",
 "file:/debug/erp/lib/libcsxapi.so",
-"file:/debug/erp/lib/libgmp.so.10",
-"file:/debug/erp/lib/libgmp.so.10.4.1",
-"file:/debug/erp/lib/libgmpxx.so.4",
-"file:/debug/erp/lib/libgmpxx.so.4.6.1",
 "file:/debug/erp/lib/libhsmclient.so",
 "file:/debug/erp/lib/libibmtss.so.1",
 "file:/debug/erp/lib/libibmtss.so.1.6.0",
 "file:/debug/erp/lib/libibmtssutils.so.1",
 "file:/debug/erp/lib/libibmtssutils.so.1.6.0",
-"file:/debug/erp/lib/libmpfr.so.6",
-"file:/debug/erp/lib/libmpfr.so.6.1.0",
 "file:/debug/erp/lib/libssl.so.1.1",
 "file:/debug/erp/lib/libstdc++.so.6",
 "file:/debug/erp/lib/libstdc++.so.6.0.29",
 "file:/debug/erp/lib/libtpmclient.so",
+"file:/debug/erp/lib/libz.so.1",
+"file:/debug/erp/lib/libz.so.1.2.12",
 __ADDITIONAL_TRUST_FILES__
 ]

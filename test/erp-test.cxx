@@ -23,12 +23,15 @@ int main(int argc, char** argv)
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
     Environment::set("ERP_FEATURE_PKV", "true");
 
-    const auto yesterday = (::fhirtools::Timestamp::now() + -24h).toXsDateTime();
+    const auto yesterday = (::model::Timestamp::now() + -24h).toXsDateTime();
     Environment::set("ERP_FHIR_PROFILE_VALID_FROM", yesterday);
     Environment::set("ERP_FHIR_PROFILE_RENDER_FROM", yesterday);
     Environment::set("ERP_FHIR_PROFILE_OLD_VALID_UNTIL", yesterday);
     Environment::set("ERP_SERVICE_GENERIC_VALIDATION_MODE", "require_success");
     Environment::set("ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "reject");
+    Environment::set("FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "error");
+    Environment::set("FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "error");
+    Environment::set("FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "error");
 
     TestClient::setFactory(&EndpointTestClient::factory);
     GLogConfiguration::init_logging(argv[0]);

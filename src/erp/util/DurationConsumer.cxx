@@ -11,12 +11,16 @@
 
 DurationTimer::DurationTimer (
     Receiver& receiver,
+    const std::string& category,
     const std::string& description,
-    const std::string& sessionIdentifier)
+    const std::string& sessionIdentifier,
+    const std::unordered_map<std::string, std::string>& keyValueMap)
     : mReceiver(receiver),
+      mCategory(category),
       mDescription(description),
       mSessionIdentifier(sessionIdentifier),
-      mStart(std::chrono::system_clock::now())
+      mKeyValueMap(keyValueMap),
+      mStart(std::chrono::steady_clock::now())
 {
 }
 
@@ -31,34 +35,38 @@ DurationTimer::~DurationTimer (void)
     }
     else
     {
-        const auto end = std::chrono::system_clock::now();
+        const auto end = std::chrono::steady_clock::now();
         if (mStart.has_value() && mReceiver)
-            mReceiver(end-mStart.value(), mDescription + " was successful", mSessionIdentifier);
+        {
+            mReceiver(end - mStart.value(), mCategory, mDescription + " was successful", mSessionIdentifier,
+                      mKeyValueMap);
+        }
     }
 }
 
 
 void DurationTimer::notifyFailure(const std::string& description)
 {
-    const auto end = std::chrono::system_clock::now();
+    const auto end = std::chrono::steady_clock::now();
     if (mStart.has_value() && mReceiver)
     {
-        mReceiver(end-mStart.value(), mDescription + " failed: " + description, mSessionIdentifier);
+        mReceiver(end - mStart.value(), mCategory, mDescription + " failed: " + description, mSessionIdentifier,
+                  mKeyValueMap);
         mStart = std::nullopt;
     }
 }
 
-
-DurationTimer DurationConsumer::getTimer (const std::string& description)
+void DurationTimer::keyValue(const std::string& key, const std::string& value)
 {
-    return DurationTimer(mReceiver, description, mSessionIdentifier.value_or("unknown"));
+    mKeyValueMap[key] = value;
 }
 
-DurationTimer DurationConsumer::getTimer(const std::string& description, DurationTimer::Receiver& receiver) const
-{
-    return DurationTimer(receiver, description, mSessionIdentifier.value_or("unknown"));
-}
 
+DurationTimer DurationConsumer::getTimer(const std::string& category, const std::string& description,
+                                         const std::unordered_map<std::string, std::string>& keyValueMap)
+{
+    return DurationTimer(mReceiver, category, description, mSessionIdentifier.value_or("unknown"), keyValueMap);
+}
 
 DurationConsumer& DurationConsumer::getCurrent (void)
 {

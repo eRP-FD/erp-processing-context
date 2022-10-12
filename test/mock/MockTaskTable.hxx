@@ -8,7 +8,7 @@
 
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/model/Task.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "test/mock/TestUrlArguments.hxx"
 
 #include <map>
@@ -22,13 +22,13 @@ class MockTaskTable {
 public:
 
     struct Row {
-        Row(fhirtools::Timestamp initAuthoredOn, fhirtools::Timestamp initLastModified);
-        fhirtools::Timestamp authoredOn;
-        fhirtools::Timestamp lastModified;
+        Row(model::Timestamp initAuthoredOn, model::Timestamp initLastModified);
+        model::Timestamp authoredOn;
+        model::Timestamp lastModified;
         std::optional<db_model::EncryptedBlob> kvnr = std::nullopt;
         std::optional<db_model::HashedKvnr> kvnrHashed = std::nullopt;
-        std::optional<fhirtools::Timestamp> expiryDate = std::nullopt;
-        std::optional<fhirtools::Timestamp> acceptDate = std::nullopt;
+        std::optional<model::Timestamp> expiryDate = std::nullopt;
+        std::optional<model::Timestamp> acceptDate = std::nullopt;
         std::optional<model::Task::Status> status = std::nullopt;
         std::optional<int32_t> taskKeyBlobId = std::nullopt;
         std::optional<db_model::Blob> salt = std::nullopt;
@@ -36,8 +36,8 @@ public:
         std::optional<db_model::EncryptedBlob> secret = std::nullopt;
         std::optional<db_model::EncryptedBlob> healthcareProviderPrescription = std::nullopt;
         std::optional<db_model::EncryptedBlob> receipt = std::nullopt;
-        std::optional<fhirtools::Timestamp> whenHandedOver = std::nullopt;
-        std::optional<fhirtools::Timestamp> whenPrepared = std::nullopt;
+        std::optional<model::Timestamp> whenHandedOver = std::nullopt;
+        std::optional<model::Timestamp> whenPrepared = std::nullopt;
         std::optional<db_model::HashedTelematikId> performer = std::nullopt;
         std::optional<int32_t> medicationDispenseKeyBlobId = std::nullopt;
         std::optional<db_model::EncryptedBlob> medicationDispenseBundle = std::nullopt;
@@ -46,46 +46,46 @@ public:
     explicit MockTaskTable(MockAccountTable& accountTable, const model::PrescriptionType& prescriptionType);
 
     Row& createRow(const model::PrescriptionId& taskId,
-                   const fhirtools::Timestamp& lastUpdated,
-                   const fhirtools::Timestamp& created);
+                   const model::Timestamp& lastUpdated,
+                   const model::Timestamp& created);
 
-    std::tuple<model::PrescriptionId, fhirtools::Timestamp> createTask(model::PrescriptionType prescriptionType,
+    std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                    model::Task::Status taskStatus,
-                                                                   const fhirtools::Timestamp& lastUpdated,
-                                                                   const fhirtools::Timestamp& created);
+                                                                   const model::Timestamp& lastUpdated,
+                                                                   const model::Timestamp& created);
 
     void updateTask(const model::PrescriptionId& taskId,
                     const db_model::EncryptedBlob& accessCode,
                     BlobId blobId,
                     const db_model::Blob& salt);
     /// @returns blobId, salt, authoredOn
-    std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp>
+    std::tuple<BlobId, db_model::Blob, model::Timestamp>
     getTaskKeyData(const model::PrescriptionId& taskId);
 
     void updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                    model::Task::Status taskStatus,
-                                   const fhirtools::Timestamp& lastModifiedDate,
+                                   const model::Timestamp& lastModifiedDate,
                                    const std::optional<db_model::EncryptedBlob>& taskSecret);
     void activateTask(const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr,
                       const db_model::HashedKvnr& hashedKvnr,
                       model::Task::Status taskStatus,
-                      const fhirtools::Timestamp& lastModified,
-                      const fhirtools::Timestamp& expiryDate,
-                      const fhirtools::Timestamp& acceptDate,
+                      const model::Timestamp& lastModified,
+                      const model::Timestamp& expiryDate,
+                      const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription);
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
-                                             const fhirtools::Timestamp& lastModified,
+                                             const model::Timestamp& lastModified,
                                              const db_model::EncryptedBlob& medicationDispense,
                                              BlobId medicationDispenseBlobId,
                                              const db_model::HashedTelematikId& telematicId,
-                                             const fhirtools::Timestamp& whenHandedOver,
-                                             const std::optional<fhirtools::Timestamp>& whenPrepared,
+                                             const model::Timestamp& whenHandedOver,
+                                             const std::optional<model::Timestamp>& whenPrepared,
                                              const db_model::EncryptedBlob& receipt);
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus,
-                                     const fhirtools::Timestamp& lastModified);
+                                     const model::Timestamp& lastModified);
 
 
     std::optional<db_model::Task> retrieveTaskBasics (const model::PrescriptionId& taskId);

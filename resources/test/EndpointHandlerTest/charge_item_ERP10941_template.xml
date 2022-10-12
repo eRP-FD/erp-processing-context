@@ -1,0 +1,59 @@
+<ChargeItem xmlns="http://hl7.org/fhir">
+  <meta>
+    <profile value="https://gematik.de/fhir/StructureDefinition/ErxChargeItem|1.1.1" />
+    <tag>
+      <display value="Example for PKV billing information." />
+    </tag>
+  </meta>
+  <contained>
+    <Binary>
+      <contentType value="application/pkcs7-mime"/>
+      <data value="##DISPENSE_BUNDLE##"/>
+    </Binary>
+  </contained>
+  <extension url="https://gematik.de/fhir/StructureDefinition/MarkingFlag">
+    <extension url="insuranceProvider">
+      <valueBoolean value="false"/>
+    </extension>
+    <extension url="subsidy">
+      <valueBoolean value="false"/>
+    </extension>
+    <extension url="taxOffice">
+      <valueBoolean value="false"/>
+    </extension>
+  </extension>
+  <extension url="https://gematik.de/fhir/StructureDefinition/MarkingFlag">
+    <extension url="insuranceProvider">
+      <valueBoolean value="true"/>
+    </extension>
+    <extension url="subsidy">
+      <valueBoolean value="true"/>
+    </extension>
+    <extension url="taxOffice">
+      <valueBoolean value="true"/>
+    </extension>
+  </extension>
+  <identifier>
+    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+    <value value="##PRESCRIPTION_ID##" />
+  </identifier>
+  <status value="billable"/>
+  <code>
+    <coding>
+      <system value="http://terminology.hl7.org/CodeSystem/data-absent-reason"/>
+      <code value="not-applicable"/>
+    </coding>
+  </code>
+  <subject>
+    <identifier>
+      <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
+      <value value="##KVNR##" />
+    </identifier>
+  </subject>
+  <enterer>
+    <identifier>
+      <system value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
+      <value value="606358757"/>
+    </identifier>
+  </enterer>
+</ChargeItem>

@@ -3,11 +3,14 @@ add_executable(fhirtools-test
 
         ClosedSliceExtensionsTest.cxx
         CollectionTest.cxx
+        DateTimeTest.cxx
+        DefaultFhirStructureRepository.cxx
         ElementTest.cxx
         ExpressionTest.cxx
         FhirPathParserTest.cxx
         FhirPathValidatorTest.cxx
         FhirValueSetTest.cxx
+        ReferenceTest.cxx
         SlicingValidationTest.cxx
         )
 

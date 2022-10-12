@@ -10,12 +10,9 @@
 
 #include <rapidjson/document.h>
 
-namespace fhirtools{
-class Timestamp;
-}
 namespace model
 {
-using fhirtools::Timestamp;
+class Timestamp;
 
 class Subscription : public Resource<Subscription>
 {
@@ -49,7 +46,7 @@ public:
     void setSubscriptionId(std::string_view subscriptionId);
 
     //! Set subscription expiration timestamp.
-    void setEndTime(const fhirtools::Timestamp& dateTime);
+    void setEndTime(const model::Timestamp& dateTime);
 
     //! Serialized Jwt.
     void setAuthorizationToken(std::string_view jwt);

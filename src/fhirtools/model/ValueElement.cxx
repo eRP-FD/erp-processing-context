@@ -90,17 +90,17 @@ Element::QuantityType ValueElement::asQuantity() const
     return asPrimitiveElement()->asQuantity();
 }
 
-fhirtools::Timestamp ValueElement::asDateTime() const
+fhirtools::DateTime ValueElement::asDateTime() const
 {
     return asPrimitiveElement()->asDateTime();
 }
 
-fhirtools::Timestamp ValueElement::asTime() const
+fhirtools::Time ValueElement::asTime() const
 {
     return asPrimitiveElement()->asTime();
 }
 
-fhirtools::Timestamp ValueElement::asDate() const
+fhirtools::Date ValueElement::asDate() const
 {
     return asPrimitiveElement()->asDate();
 }
@@ -115,7 +115,7 @@ bool ValueElement::asBool() const
     return asPrimitiveElement()->asBool();
 }
 
-Element::DecimalType ValueElement::asDecimal() const
+fhirtools::DecimalType ValueElement::asDecimal() const
 {
     return asPrimitiveElement()->asDecimal();
 }
@@ -190,13 +190,13 @@ std::shared_ptr<PrimitiveElement> ValueElement::asPrimitiveElement(Element::Type
             return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType, value == "true");
         case Type::Date:
             return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType,
-                                                      Timestamp::fromFhirDateTime(value));
+                                                      Date(value));
         case Type::DateTime:
             return {std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType,
-                                                       Timestamp::fromFhirPathDateTimeLiteral(value))};
+                                                       DateTime(value))};
         case Type::Time:
             return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType,
-                                                      Timestamp::fromFhirPathTimeLiteral(value));
+                                                      Time(value));
         case Type::Structured:
             break;
         case Type::Quantity: {

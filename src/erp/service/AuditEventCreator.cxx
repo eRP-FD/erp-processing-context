@@ -58,11 +58,21 @@ std::tuple<std::string, std::string, std::string> evalAgentData(
 std::string replaceTextTemplateVariables(
     const std::string& text,
     const std::string& agentName,
-    const std::string& prescriptionId)
+    const std::string& prescriptionId,
+    const std::optional<std::string_view>& pnwPzNumber)
 {
     std::string result = String::replaceAll(text, std::string(AuditEventTextTemplates::selfVariableName), agentName);
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::agentNameVariableName), agentName);
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::prescriptionIdVariableName), prescriptionId);
+
+    if (pnwPzNumber.has_value())
+    {
+        result = String::replaceAll(
+            result,
+            std::string(AuditEventTextTemplates::pzNumberVariableName),
+            pnwPzNumber->data());
+    }
+
     return result;
 }
 
@@ -107,28 +117,43 @@ model::AuditEvent AuditEventCreator::fromAuditData(
     {
         // entity.description is mandatory according to the profile. If we don't have a unique prescriptionID
         // to fill it (for endpoints GET /Task or GET /MedicationDispense and the /Consent endpoints), we write a
-        // fixed string "+", except for DELETE /Consent, where we write "-".
-        // See ticket ERP-5081 andd question ERP-7951.
-        if(auditData.eventId() == model::AuditEventId::DELETE_Consent)
+        // fixed string "+", except for POST and DELETE /Consent, where we write "CHARGCONS".
+        // See ticket ERP-5081, question ERP-7951 and ticket ERP-10743
+
+        const auto eventId = auditData.eventId();
+        if(model::AuditEventId::POST_Consent == eventId || model::AuditEventId::DELETE_Consent == eventId)
         {
-            auditEvent.setEntityDescription("-");
+            auditEvent.setEntityDescription("CHARGCONS");
         }
         else
         {
             auditEvent.setEntityDescription("+");
         }
+
         if (auditData.consentId().has_value())
         {
             resourceIdStr = auditData.consentId().value();
             auditEvent.setEntityWhatIdentifier({}, resourceIdStr);
         }
     }
+
     auditEvent.setEntityName(auditData.insurantKvnr());
     auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), resourceIdStr));
 
+    const auto isEventIdGetAllTasksWithPzNumber = (model::AuditEventId::GET_Tasks_by_pharmacy_with_pz ==
+                                                   auditData.eventId());
+
+    Expect3(isEventIdGetAllTasksWithPzNumber == auditData.metaData().pnwPzNumber().has_value(),
+            "PNW PZ number should be present if and only if event ID is GET_Tasks_by_pharmacy_with_pz",
+            std::logic_error);
+
     // text/div
     const auto text = replaceTextTemplateVariables(
-        textResources.retrieveTextTemplate(auditData.eventId(), language), agentName, resourceIdStr);
+        textResources.retrieveTextTemplate(auditData.eventId(), language),
+        agentName,
+        resourceIdStr,
+        auditData.metaData().pnwPzNumber());
+
     auditEvent.setTextDiv(R"--(<div xmlns="http://www.w3.org/1999/xhtml">)--" + text + "</div>");
     auditEvent.setLanguage(language);
 

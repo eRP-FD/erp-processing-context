@@ -1,0 +1,44 @@
+{
+    "resourceType": "Sliceable",
+    "meta": {
+        "profile": ["http://erp.test/SliceByCodingBinding"]
+    },
+    "sliced": [
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "coding": {
+                    "system":"http://erp.test/TestCodeSystem",
+                    "code":"Test1"
+                }
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "doesNotBelongToSlice",
+                "coding": {
+                    "system":"http://erp.test/WrongCodeSystem",
+                    "code":"Test1"
+                }
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "coding": {
+                    "system":"http://erp.test/TestCodeSystem",
+                    "code":"Test2"
+                }
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "coding": {
+                    "system":"http://erp.test/TestCodeSystem",
+                    "code":"WrongCode"
+                }
+            }
+        }
+    ]
+}

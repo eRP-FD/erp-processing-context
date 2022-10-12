@@ -52,7 +52,7 @@ LiteralIntegerExpression::LiteralIntegerExpression(const FhirStructureRepository
 }
 
 LiteralDecimalExpression::LiteralDecimalExpression(const FhirStructureRepository* fhirStructureRepository,
-                                                   Element::DecimalType value)
+                                                   DecimalType value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Decimal, value))
 {
@@ -62,7 +62,7 @@ LiteralDateExpression::LiteralDateExpression(const FhirStructureRepository* fhir
                                              const std::string& value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Date,
-                                                           Timestamp::fromFhirDateTime(value)))
+                                                           Date(value)))
 {
 }
 
@@ -70,7 +70,7 @@ LiteralTimeExpression::LiteralTimeExpression(const FhirStructureRepository* fhir
                                              const std::string& value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Time,
-                                                           Timestamp::fromFhirPathTimeLiteral(value)))
+                                                           Time(value)))
 {
 }
 
@@ -78,7 +78,7 @@ LiteralDateTimeExpression::LiteralDateTimeExpression(const FhirStructureReposito
                                                      const std::string& value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::DateTime,
-                                                           Timestamp::fromFhirPathDateTimeLiteral(value)))
+                                                           DateTime(value)))
 {
 }
 

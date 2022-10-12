@@ -24,36 +24,36 @@ public:
 
     explicit PostgresBackendTask(model::PrescriptionType prescriptionType);
 
-    std::tuple<model::PrescriptionId, fhirtools::Timestamp> createTask(pqxx::work& transaction,
+    std::tuple<model::PrescriptionId, model::Timestamp> createTask(pqxx::work& transaction,
                                                                    model::Task::Status taskStatus,
-                                                                   const fhirtools::Timestamp& lastUpdated,
-                                                                   const fhirtools::Timestamp& created);
+                                                                   const model::Timestamp& lastUpdated,
+                                                                   const model::Timestamp& created);
 
     void updateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
                     const db_model::EncryptedBlob& accessCode, uint32_t blobId, const db_model::Blob& salt) const;
 
-    std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp> getTaskKeyData(pqxx::work& transaction,
+    std::tuple<BlobId, db_model::Blob, model::Timestamp> getTaskKeyData(pqxx::work& transaction,
                                                                         const model::PrescriptionId& taskId) const;
 
     void updateTaskStatusAndSecret(pqxx::work& transaction, const model::PrescriptionId& taskId,
-                                   model::Task::Status status, const fhirtools::Timestamp& lastModifiedDate,
+                                   model::Task::Status status, const model::Timestamp& lastModifiedDate,
                                    const std::optional<db_model::EncryptedBlob>& secret) const;
 
     void activateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr, const db_model::HashedKvnr& hashedKvnr,
-                      model::Task::Status taskStatus, const fhirtools::Timestamp& lastModified,
-                      const fhirtools::Timestamp& expiryDate, const fhirtools::Timestamp& acceptDate,
+                      model::Task::Status taskStatus, const model::Timestamp& lastModified,
+                      const model::Timestamp& expiryDate, const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription) const;
 
     void updateTaskMedicationDispenseReceipt(
         pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
-        const fhirtools::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
+        const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
         BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
-        const fhirtools::Timestamp& whenHandedOver, const std::optional<fhirtools::Timestamp>& whenPrepared,
+        const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
         const db_model::EncryptedBlob& receipt) const;
 
     void updateTaskClearPersonalData(pqxx::work& transaction, const model::PrescriptionId& taskId,
-                                     model::Task::Status taskStatus, const fhirtools::Timestamp& lastModified) const;
+                                     model::Task::Status taskStatus, const model::Timestamp& lastModified) const;
 
     std::optional<db_model::Task> retrieveTaskForUpdate(pqxx::work& transaction, const model::PrescriptionId& taskId);
     [[nodiscard]] ::std::optional<::db_model::Task>

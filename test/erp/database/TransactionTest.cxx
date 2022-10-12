@@ -32,8 +32,8 @@ TEST_F(TransactionTest, rollback)
         BlobId blobId = blobCache()->getBlob(BlobType::TaskKeyDerivation).id;
         PostgresBackend database;
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                                               model::Task::Status::draft, fhirtools::Timestamp::now(),
-                                                               fhirtools::Timestamp::now())));
+                                                               model::Task::Status::draft, model::Timestamp::now(),
+                                                               model::Timestamp::now())));
         database.updateTask(
             *prescriptionId,
             db_model::EncryptedBlob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("accessCode"))),
@@ -61,8 +61,8 @@ TEST_F(TransactionTest, commit)
         BlobId blobId = blobCache()->getBlob(BlobType::TaskKeyDerivation).id;
         PostgresBackend database;
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                                               model::Task::Status::draft, fhirtools::Timestamp::now(),
-                                                               fhirtools::Timestamp::now())));
+                                                               model::Task::Status::draft, model::Timestamp::now(),
+                                                               model::Timestamp::now())));
         database.updateTask(
             *prescriptionId,
             db_model::EncryptedBlob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("accessCode"))),

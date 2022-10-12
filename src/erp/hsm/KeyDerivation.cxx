@@ -4,19 +4,18 @@
  */
 
 #include "erp/hsm/KeyDerivation.hxx"
-
-#include <boost/endian/conversion.hpp>
-#include <date/date.h>
-
-#include "erp/database/DatabaseModel.hxx"
 #include "erp/ErpRequirements.hxx"
+#include "erp/database/DatabaseModel.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/HsmClient.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/PrescriptionType.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/SafeString.hxx"
+
+#include <boost/endian/conversion.hpp>
+#include <date/date.h>
 
 KeyDerivation::KeyDerivation(HsmPool& hsmPool)
     : mHsmPool(hsmPool)
@@ -26,7 +25,7 @@ KeyDerivation::KeyDerivation(HsmPool& hsmPool)
 {
 }
 
-ErpVector KeyDerivation::taskKeyDerivationData(const model::PrescriptionId& taskId, const fhirtools::Timestamp& authoredOn)
+ErpVector KeyDerivation::taskKeyDerivationData(const model::PrescriptionId& taskId, const model::Timestamp& authoredOn)
 {
     A_19700.start("Assemble derivation data for task.");
     ErpVector derivationData;
@@ -52,7 +51,7 @@ ErpVector KeyDerivation::taskKeyDerivationData(const model::PrescriptionId& task
 }
 
 SafeString KeyDerivation::taskKey(const model::PrescriptionId& taskId,
-                                  const fhirtools::Timestamp& authoredOn,
+                                  const model::Timestamp& authoredOn,
                                   BlobId blobId,
                                   const db_model::Blob& salt)
 {
@@ -68,7 +67,7 @@ SafeString KeyDerivation::taskKey(const model::PrescriptionId& taskId,
 }
 
 std::tuple<SafeString, OptionalDeriveKeyData> KeyDerivation::initialTaskKey(const model::PrescriptionId& taskId,
-                                                                     const fhirtools::Timestamp& authoredOn)
+                                                                     const model::Timestamp& authoredOn)
 {
     A_19700.start("Initial key derivation for Task.");
     auto hsmPoolSession = mHsmPool.acquire();

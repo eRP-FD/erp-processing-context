@@ -6,7 +6,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TIMEPERIOD_HXX
 #define ERP_PROCESSING_CONTEXT_TIMEPERIOD_HXX
 
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <chrono>
 
@@ -30,16 +30,16 @@ namespace model {
 class TimePeriod
 {
 public:
-    TimePeriod (fhirtools::Timestamp start, fhirtools::Timestamp end);
+    TimePeriod (model::Timestamp start, model::Timestamp end);
 
     static TimePeriod fromFhirSearchDate (const std::string& date);
 
-    fhirtools::Timestamp begin (void) const;
-    fhirtools::Timestamp end (void) const;
+    model::Timestamp begin (void) const;
+    model::Timestamp end (void) const;
 
 private:
-    const fhirtools::Timestamp mBegin;
-    const fhirtools::Timestamp mEnd;
+    const model::Timestamp mBegin;
+    const model::Timestamp mEnd;
 };
 
 }

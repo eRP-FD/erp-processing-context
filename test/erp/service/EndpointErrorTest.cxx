@@ -75,37 +75,6 @@ private:
 };
 
 
-TEST_F(EndpointErrorTest, testStatusCodeHandling_operationGetTask)
-{
-    const std::vector<std::pair<uint32_t,uint32_t>> knownStatusCodes = {
-        // Progress or Success status codes (100-103 and 200-226) are not handled via exception and are therefore not
-        // be covered by this test.
-        {300, 308},
-        {400, 408}, /** 409 is not supported for this operation */ {410, 451},
-        {500, 511}};
-
-    const std::set<uint32_t> supportedStatusCodes = {
-        200, 201, 204,
-        400, 401, 403, 404, 406, 408, 409, 410, 429};
-
-    // Make requests where the handler will throw an ErpException with the status code that
-    // is given in the request path.
-    // Depending on whether this status code is supported, i.e. listed in Table 1 of requirement A_19514
-    // we expect as response status code
-    // - the status code in the request path if it is in the Gematik list
-    // - 500 (Internal Server Error) in all other cases.
-    setMockedOperation(Operation::GET_Task_id);
-    for (const auto& range : knownStatusCodes)
-    {
-        for (uint32_t status=range.first; status<=range.second; ++status)
-        {
-            bool expectResponseBody = status == 500 || supportedStatusCodes.count(status);
-            testStatusCode(status, expectResponseBody ? status : 500, expectResponseBody);
-        }
-    }
-}
-
-
 TEST_F(EndpointErrorTest, testStatusCodeHandling_operationPostTaskIdAccept)
 {
     const std::vector<uint32_t> statusCodes = {

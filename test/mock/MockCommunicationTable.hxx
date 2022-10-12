@@ -37,7 +37,7 @@ public:
 
     std::optional<Uuid>
     insertCommunication(const model::PrescriptionId& prescriptionId,
-                        const fhirtools::Timestamp& timeSent,
+                        const model::Timestamp& timeSent,
                         const model::Communication::MessageType messageType,
                         const db_model::HashedId& sender,
                         const db_model::HashedId& recipient,
@@ -61,12 +61,13 @@ public:
 
     std::vector<Uuid> retrieveCommunicationIds(const db_model::HashedId& recipient);
 
-    std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
+    std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
     deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender);
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId);
+    void deleteChargeItemCommunicationsForKvnr(const db_model::HashedKvnr& hashedKvnr);
 
     void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds,
-                                       const fhirtools::Timestamp& retrieved,
+                                       const model::Timestamp& retrieved,
                                        const db_model::HashedId& recipient);
 
     bool isBlobUsed(BlobId blobId) const;
@@ -85,7 +86,7 @@ public:
         db_model::HashedId sender;
         db_model::HashedId recipient;
         model::Communication::MessageType messageType;
-        std::optional<fhirtools::Timestamp> received;
+        std::optional<model::Timestamp> received;
         int64_t prescriptionId = 0;
         BlobId senderBlobId;
         db_model::EncryptedBlob messageForSender;

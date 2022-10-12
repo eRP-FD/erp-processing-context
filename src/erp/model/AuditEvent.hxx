@@ -6,12 +6,11 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_AUDITEVENT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_AUDITEVENT_HXX
 
-#include "erp/model/Resource.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Resource.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
-
 #include <optional>
 
 namespace model
@@ -68,7 +67,7 @@ public:
     void setTextDiv(const std::string_view& textDiv);
     void setSubTypeCode(const SubType subTypeCode);
     void setAction(const Action action);
-    void setRecorded(const fhirtools::Timestamp& recorded);
+    void setRecorded(const model::Timestamp& recorded);
     void setOutcome(const Outcome outcome);
     void setAgentWho(
         const std::string_view& identifierSystem,
@@ -88,7 +87,7 @@ public:
     [[nodiscard]] std::string_view textDiv() const;
     [[nodiscard]] SubType subTypeCode() const;
     [[nodiscard]] Action action() const;
-    [[nodiscard]] fhirtools::Timestamp recorded() const;
+    [[nodiscard]] model::Timestamp recorded() const;
     [[nodiscard]] Outcome outcome() const;
     [[nodiscard]] std::tuple<std::optional<std::string_view>, std::optional<std::string_view>> agentWho() const;
     [[nodiscard]] std::string_view agentName() const;

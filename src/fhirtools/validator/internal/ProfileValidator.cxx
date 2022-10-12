@@ -4,9 +4,6 @@
 #include "fhirtools/validator/internal/ProfileValidator.hxx"
 #include "erp/util/ExceptionWrapper.hxx"
 #include "erp/util/TLog.hxx"
-
-#include <utility>
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/Functions.hxx"
 #include "fhirtools/model/ValueElement.hxx"
@@ -14,8 +11,13 @@
 #include "fhirtools/repository/FhirElement.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/util/Utf8Helper.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
 #include "fhirtools/validator/internal/ValidationData.hxx"
+
+#include <boost/algorithm/string/split.hpp>
+#include <regex>
+#include <utility>
 
 using namespace fhirtools;
 fhirtools::ProfileValidatorCounterKey::ProfileValidatorCounterKey(std::string initName, std::string initSlice)
@@ -110,7 +112,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         result.emplace(std::move(key), std::move(validator));
         return result;
     }
-    std::map<MapKey, std::shared_ptr<ValidationData>> profilesKeys;
+    std::map<MapKey, std::shared_ptr<const ValidationData>> profilesKeys;
     for (const auto& url : subField->element()->profiles())
     {
         const auto* prof = repo.findDefinitionByUrl(url);
@@ -145,9 +147,14 @@ void fhirtools::ProfileValidator::typecast(const fhirtools::FhirStructureReposit
 //NOLINTNEXTLINE(misc-no-recursion)
 ProfileValidator::ProcessingResult ProfileValidator::process(const Element& element, std::string_view elementFullPath)
 {
-    checkContraints(element, elementFullPath);
+    checkConstraints(element, elementFullPath);
     checkBinding(element, elementFullPath);
     checkValue(element, elementFullPath);
+    checkValueMaxLength(element, elementFullPath);
+    checkValueMinValue(element, elementFullPath);
+    checkValueMaxValue(element, elementFullPath);
+    checkCoding(element, elementFullPath);
+    checkValueNotEmpty(element, elementFullPath);
     const auto& slicing = mDefPtr.element()->slicing();
     if (slicing)
     {
@@ -168,10 +175,10 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
                 Expect3(subSlices.sliceProfiles.empty(), "Slice rootElement cannot be sliced.", std::logic_error);
                 mData->add(Severity::debug, "detected slice: " + slice.name(), std::string{elementFullPath},
                            ptr.profile());
-                if (!profile.rootElement()->profiles().empty())
+                if (! profile.rootElement()->profiles().empty())
                 {
                     TVLOG(3) << "RootElement of " << profile.url() << "|" << profile.version() << " has profiles";
-                    std::map<MapKey, std::shared_ptr<ValidationData>> profilesKeys;
+                    std::map<MapKey, std::shared_ptr<const ValidationData>> profilesKeys;
                     for (const auto& url : ptr.element()->profiles())
                     {
                         const auto* prof = element.getFhirStructureRepository()->findDefinitionByUrl(url);
@@ -193,7 +200,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
     return {};
 }
 
-void fhirtools::ProfileValidator::checkContraints(const fhirtools::Element& element, std::string_view elementFullPath)
+void fhirtools::ProfileValidator::checkConstraints(const fhirtools::Element& element, std::string_view elementFullPath)
 {
     for (const auto& constraint : mDefPtr.element()->getConstraints())
     {
@@ -227,7 +234,7 @@ void ProfileValidator::checkValue(const Element& element, std::string_view eleme
     if (const auto& fixed = mDefPtr.element()->fixed(); fixed)
     {
         ValueElement fixedVal{element.getFhirStructureRepository(), fixed};
-        if (element != fixedVal)
+        if (element.equals(fixedVal) != true)
         {
             std::ostringstream msg;
             msg << "value must match fixed value: ";
@@ -250,6 +257,118 @@ void ProfileValidator::checkValue(const Element& element, std::string_view eleme
     }
 }
 
+void ProfileValidator::checkValueMaxLength(const Element& element, std::string_view elementFullPath)
+{
+    if (mDefPtr.element()->hasMaxLength())
+    {
+        const auto maxLength = mDefPtr.element()->maxLength();
+        const auto length = Utf8Helper::utf8Length(element.asString());
+        if (length > maxLength)
+        {
+            mData->add(Severity::error,
+                       "maxLength exceeded, maxLength=" + std::to_string(maxLength) +
+                           ", length=" + std::to_string(length),
+                       std::string{elementFullPath}, mDefPtr.profile());
+        }
+    }
+}
+
+void ProfileValidator::checkValueMinValue(const Element& element, std::string_view elementFullPath)
+{
+    if (const auto& minValueInteger = mDefPtr.element()->minValueInteger();
+        minValueInteger.has_value() && element.type() == Element::Type::Integer)
+    {
+        const auto valueInteger = element.asInt();
+        if (valueInteger < *minValueInteger)
+        {
+            mData->add(Severity::error,
+                       "minValueInteger exceeded, minValueInteger=" + std::to_string(*minValueInteger) +
+                           ", valueInteger=" + std::to_string(valueInteger),
+                       std::string{elementFullPath}, mDefPtr.profile());
+        }
+    }
+    else if (const auto& minValueDecimal = mDefPtr.element()->minValueDecimal();
+             minValueDecimal.has_value() && element.type() == Element::Type::Decimal)
+    {
+        const auto valueDecimal = element.asDecimal();
+        if (valueDecimal < minValueDecimal)
+        {
+            mData->add(Severity::error,
+                       "minValueDecimal exceeded, minValueDecimal=" + minValueDecimal->str() +
+                           ", valueDecimal=" + valueDecimal.str(),
+                       std::string{elementFullPath}, mDefPtr.profile());
+        }
+    }
+}
+
+void ProfileValidator::checkValueMaxValue(const Element& element, std::string_view elementFullPath)
+{
+    if (const auto& maxValueInteger = mDefPtr.element()->maxValueInteger();
+        maxValueInteger.has_value() && element.type() == Element::Type::Integer)
+    {
+        const auto valueInteger = element.asInt();
+        if (valueInteger > *maxValueInteger)
+        {
+            mData->add(Severity::error,
+                       "maxValueInteger exceeded, maxValueInteger=" + std::to_string(*maxValueInteger) +
+                           ", valueInteger=" + std::to_string(valueInteger),
+                       std::string{elementFullPath}, mDefPtr.profile());
+        }
+    }
+    else if (const auto& maxValueDecimal = mDefPtr.element()->maxValueDecimal();
+             maxValueDecimal.has_value() && element.type() == Element::Type::Decimal)
+    {
+        const auto valueDecimal = element.asDecimal();
+        if (valueDecimal > maxValueDecimal)
+        {
+            mData->add(Severity::error,
+                       "maxValueDecimal exceeded, maxValueDecimal=" + maxValueDecimal->str() +
+                           ", valueDecimal=" + valueDecimal.str(),
+                       std::string{elementFullPath}, mDefPtr.profile());
+        }
+    }
+}
+
+void ProfileValidator::checkCoding(const Element& element, std::string_view elementFullPath)
+{
+    if (! mDefPtr.element()->hasBinding() && mDefPtr.element()->typeId() == "Coding")
+    {
+        const auto systemSubElement = element.subElements("system");
+        const auto codeSubElement = element.subElements("code");
+        if (systemSubElement.size() == 1 && codeSubElement.size() == 1)
+        {
+            const auto* codeSystem =
+                element.getFhirStructureRepository()->findCodeSystem(systemSubElement[0]->asString(), {});
+            if (codeSystem)
+            {
+                if (! codeSystem->isEmpty() && ! codeSystem->isSynthesized())
+                {
+                    if (! codeSystem->containsCode(codeSubElement[0]->asString()))
+                    {
+                        mData->add(Severity::error,
+                                   "Code " + codeSubElement[0]->asString() + " is not part of CodeSystem " +
+                                       systemSubElement[0]->asString(),
+                                   std::string{elementFullPath}, mDefPtr.profile());
+                    }
+                }
+                else
+                {
+                    mData->add(Severity::warning,
+                               "Can not validate CodeSystem " + systemSubElement[0]->asString() +
+                                   ", it is empty or synthesized.",
+                               std::string{elementFullPath}, mDefPtr.profile());
+                }
+            }
+            else
+            {
+                mData->add(Severity::warning,
+                           "Can not validate CodeSystem " + systemSubElement[0]->asString() +
+                               ", it has not been loaded.",
+                           std::string{elementFullPath}, mDefPtr.profile());
+            }
+        }
+    }
+}
 
 void ProfileValidator::checkBinding(const Element& element, std::string_view elementFullPath)
 {
@@ -354,6 +473,18 @@ void fhirtools::ProfileValidator::checkCodingBinding(const Element& codingElemen
     }
 }
 
+void ProfileValidator::checkValueNotEmpty(const Element& element, std::string_view elementFullPath)
+{
+    if (element.hasValue())
+    {
+        if (element.asString().empty())
+        {
+            mData->add(Severity::error, "Attribute value must not be empty", std::string{elementFullPath},
+                       mDefPtr.profile());
+        }
+    }
+}
+
 void fhirtools::ProfileValidator::appendResults(fhirtools::ValidationResultList results)
 {
     mData->append(std::move(results));
@@ -449,18 +580,4 @@ std::ostream& fhirtools::operator<<(std::ostream& out, const ProfileValidator::C
         out << ':' << key.slice;
     }
     return out;
-}
-
-std::ostream& fhirtools::operator<<(std::ostream& out, const ProfileValidator::MapKey& mapKey)
-{
-    out << '(' << mapKey.defPtr.profile()->url() << '|' << mapKey.defPtr.profile()->version()
-        << mapKey.defPtr.element()->originalName() << ')';
-    return out;
-}
-
-std::string fhirtools::to_string(const ProfileValidator::MapKey& mapKey)
-{
-    std::ostringstream strm;
-    strm << mapKey;
-    return strm.str();
 }

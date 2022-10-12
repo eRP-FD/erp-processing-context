@@ -41,8 +41,8 @@ pip3 install conan --upgrade
 pip3 install --user packageurl-python
 conan --version
 conan remote clean
-conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force
 conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force
+conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force
 conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force
 set -x
 # Add credentials for IBM internal nexus
@@ -65,5 +65,5 @@ cmake -GNinja \
 ninja -l$(nproc) clean
 
 "${BUILD_WRAPPER_HOME}/build-wrapper-linux-x86-64" --out-dir sonar-reports \
-        ninja -l$(nproc) test production
+        ninja -l$(nproc) test production fhirtools-test
 

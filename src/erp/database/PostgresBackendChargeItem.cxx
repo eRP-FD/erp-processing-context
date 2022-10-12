@@ -111,7 +111,8 @@ void PostgresBackendChargeItem::storeChargeInformation(::pqxx::work& transaction
 {
     TVLOG(2) << mQueries.storeChargeInformation.query;
 
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:storeChargeInformation");
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                        "PostgreSQL:storeChargeInformation");
 
     const auto markingFlag = [&chargeItem]() -> ::std::optional<::db_model::postgres_bytea_view> {
         if (chargeItem.markingFlag)
@@ -140,7 +141,8 @@ void PostgresBackendChargeItem::updateChargeInformation(::pqxx::work& transactio
 {
     TVLOG(2) << mQueries.updateChargeInformation.query;
 
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer("PostgreSQL:updateChargeInformation");
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                        "PostgreSQL:updateChargeInformation");
 
     const auto markingFlag =
         chargeItem.markingFlag ? ::std::make_optional(chargeItem.markingFlag->binarystring()) : ::std::nullopt;
@@ -156,7 +158,8 @@ void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::work& transactio
 {
     TVLOG(2) << mQueries.deleteChargeInformation.query;
 
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer("PostgreSQL:deleteChargeInformation");
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                          "PostgreSQL:deleteChargeInformation");
 
     transaction.exec_params0(mQueries.deleteChargeInformation.query, static_cast<uint32_t>(id.type()),
                              id.toDatabaseId());
@@ -167,7 +170,8 @@ void PostgresBackendChargeItem::clearAllChargeInformation(::pqxx::work& transact
 {
     TVLOG(2) << mQueries.clearAllChargeInformation.query;
 
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer("PostgreSQL:clearAllChargeInformation");
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                          "PostgreSQL:clearAllChargeInformation");
 
     transaction.exec_params0(mQueries.clearAllChargeInformation.query, kvnr.binarystring());
 }
@@ -198,7 +202,8 @@ PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::work& tran
     }
     TVLOG(2) << query;
     TVLOG(2) << "hashedId = " << kvnr.toHex();
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer("PostgreSQL:retrieveAllChargeItems");
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                          "PostgreSQL:retrieveAllChargeItems");
 
     const auto dbResult = transaction.exec_params(query, kvnr.binarystring());
 
@@ -216,8 +221,8 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
                                                                       const ::db_model::HashedKvnr& kvnr,
                                                                       const ::std::optional<UrlArguments>& search) const
 {
-    const auto timerKeepAlive =
-        ::DurationConsumer::getCurrent().getTimer("PostgreSQL:countChargeInformationForInsurant");
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryPostgres, "PostgreSQL:countChargeInformationForInsurant");
     return ::PostgresBackendHelper::executeCountQuery(transaction, mQueries.countChargeInformationForInsurant.query,
                                                       kvnr, search, "ChargeItem for insurant");
 }
@@ -228,7 +233,8 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
 {
     TVLOG(2) << query;
 
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer("PostgreSQL:retrieveChargeInformation");
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                          "PostgreSQL:retrieveChargeInformation");
 
     const auto dbResult =
         transaction.exec_params(query, static_cast<int16_t>(::magic_enum::enum_integer(id.type())), id.toDatabaseId());

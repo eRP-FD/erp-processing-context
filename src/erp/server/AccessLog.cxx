@@ -4,8 +4,7 @@
  */
 
 #include "erp/server/AccessLog.hxx"
-
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/ExceptionHelper.hxx"
@@ -20,7 +19,7 @@ AccessLog::AccessLog (void)
         "access");
     mLog.keyValue(
         "timestamp",
-        fhirtools::Timestamp(mStartTime.value()).toXsDateTime());
+        model::Timestamp(mStartTime.value()).toXsDateTime());
 }
 
 
@@ -33,7 +32,7 @@ AccessLog::AccessLog (std::ostream& os)
         "access");
     mLog.keyValue(
         "timestamp",
-        fhirtools::Timestamp(mStartTime.value()).toXsDateTime());
+        model::Timestamp(mStartTime.value()).toXsDateTime());
 }
 
 

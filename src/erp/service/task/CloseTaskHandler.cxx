@@ -107,7 +107,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19233.start(
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
     const auto inProgressDate = task->lastModifiedDate();
-    const auto completedTimestamp = fhirtools::Timestamp::now();
+    const auto completedTimestamp = model::Timestamp::now();
     const auto linkBase = getLinkBase();
     const auto authorIdentifier = model::Device::createReferenceString(linkBase);
     const std::string prescriptionDigestIdentifier = "PrescriptionDigest-" + prescriptionId.toString();
@@ -148,7 +148,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19233.finish();
 
     A_19233.start("Set signature");
-    model::Signature signature(base64SignatureData, fhirtools::Timestamp::now(), authorIdentifier);
+    model::Signature signature(base64SignatureData, model::Timestamp::now(), authorIdentifier);
     responseReceipt.setSignature(signature);
     A_19233.finish();
 
@@ -177,7 +177,8 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
 std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFromBody(PcSessionContext& session)
 {
     A_22069.start("Detect input resource type: Bundle or MedicationDispense");
-    const auto resourceDetector = parseAndValidateRequestBody<model::UnspecifiedResource>(session, SchemaType::fhir);
+    const auto resourceDetector =
+        parseAndValidateRequestBody<model::UnspecifiedResource>(session, SchemaType::fhir);
     const auto resourceType = resourceDetector.getResourceType();
     ErpExpect(resourceType == model::Bundle::resourceTypeName ||
                   resourceType == model::MedicationDispense::resourceTypeName,
@@ -186,15 +187,15 @@ std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFrom
 
     if (resourceType == model::Bundle::resourceTypeName)
     {
-        auto bundle =
-            parseAndValidateRequestBody<model::MedicationDispenseBundle>(session, SchemaType::MedicationDispenseBundle);
+        auto bundle = parseAndValidateRequestBody<model::MedicationDispenseBundle>(
+            session, SchemaType::MedicationDispenseBundle, std::nullopt);
         return bundle.getResourcesByType<model::MedicationDispense>();
     }
     else
     {
         std::vector<model::MedicationDispense> ret;
-        ret.emplace_back(
-            parseAndValidateRequestBody<model::MedicationDispense>(session, SchemaType::Gem_erxMedicationDispense));
+        ret.emplace_back(parseAndValidateRequestBody<model::MedicationDispense>(
+            session, SchemaType::Gem_erxMedicationDispense, std::nullopt));
         return ret;
     }
 }

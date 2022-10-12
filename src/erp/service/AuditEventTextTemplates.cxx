@@ -78,6 +78,7 @@ constexpr std::string_view auditEventTextTemplates = R"--(
           "eventId": 14,
           "textTemplate": "Veraltete Rezepte wurden vom Fachdienst automatisch gelöscht."
         },
+
         {
           "eventId": 15,
           "textTemplate": "{self} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} gelöscht."
@@ -100,19 +101,39 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 20,
-          "textTemplate": "{self} hat Markierung zu Abrechnungsinformation gespeichert."
-        },
-        {
-          "eventId": 21,
           "textTemplate": "{self} hat die Einwilligung erteilt."
         },
         {
-          "eventId": 22,
+          "eventId": 21,
           "textTemplate": "{self} hat die Einwilligung widerrufen."
         },
         {
-          "eventId": 23,
+          "eventId": 22,
           "textTemplate": "Veraltete Abrechnungsinformationen wurden vom Fachdienst automatisch gelöscht."
+        },
+        {
+          "eventId": 23,
+          "textTemplate": "{self} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} gelesen."
+        },
+        {
+          "eventId": 24,
+          "textTemplate": "{agentName} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} gelesen."
+        },
+        {
+          "eventId": 25,
+          "textTemplate": "{self} hat Markierung zu Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} geändert."
+        },
+        {
+          "eventId": 26,
+          "textTemplate": "{agentName} hat mit Ihrer Gesundheitskarte alle Ihre einlösbaren E-Rezepte abgerufen (Prüfziffer: {PZ})."
+        },
+        {
+          "eventId": 27,
+          "textTemplate": "{agentName} hat mit Ihrer Gesundheitskarte alle Ihre einlösbaren E-Rezepte abgerufen. (Keine Prüfziffer vorhanden)"
+        },
+        {
+          "eventId": 28,
+          "textTemplate": "{agentName} konnte aufgrund eines Fehlers Ihre E-Rezepte nicht mit Ihrer Gesundheitskarte abrufen."
         }
       ]
     },
@@ -179,6 +200,7 @@ constexpr std::string_view auditEventTextTemplates = R"--(
           "eventId": 14,
           "textTemplate": "Outdated prescriptions were deleted automatically by the service."
         },
+
         {
           "eventId": 15,
           "textTemplate": "{self} deleted charging information for a prescription {prescriptionId}."
@@ -201,19 +223,39 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 20,
-          "textTemplate": "{self} saved billing information flag."
-        },
-        {
-          "eventId": 21,
           "textTemplate": "{self} gave the consent."
         },
         {
-          "eventId": 22,
+          "eventId": 21,
           "textTemplate": "{self} withdrew the consent."
         },
         {
-          "eventId": 23,
+          "eventId": 22,
           "textTemplate": "Outdated charging information was deleted automatically by the service."
+        },
+        {
+          "eventId": 23,
+          "textTemplate": "{self} read charging information for the prescription {prescriptionId}."
+        },
+        {
+          "eventId": 24,
+          "textTemplate": "{agentName} read charging information for the prescription {prescriptionId}."
+        },
+        {
+          "eventId": 25,
+          "textTemplate": "{self} changed marking in charging information for a prescription {prescriptionId}."
+        },
+        {
+          "eventId": 26,
+          "textTemplate": "{agentName} retrieved your dispensable e-prescriptions using your health card (check number: {PZ})."
+        },
+        {
+          "eventId": 27,
+          "textTemplate": "{agentName} retrieved your dispensable e-prescriptions using your health card. (no check number available)."
+        },
+        {
+          "eventId": 28,
+          "textTemplate": "{agentName} was not able to retrieve your e-prescriptions due to an error with your health card."
         }
       ]
     }

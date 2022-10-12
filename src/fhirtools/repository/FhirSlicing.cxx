@@ -4,13 +4,10 @@
  */
 
 #include "fhirtools/repository/FhirSlicing.hxx"
-
-#include <algorithm>
-#include <variant>
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/Element.hxx"
 #include "fhirtools/model/ValueElement.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
 #include "fhirtools/repository/FhirElement.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
@@ -18,13 +15,19 @@
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 
+#include <algorithm>
+#include <variant>
+
 using fhirtools::Element;
-using fhirtools::ProfiledElementTypeInfo;
 using fhirtools::FhirSlice;
 using fhirtools::FhirSliceDiscriminator;
 using fhirtools::FhirSlicing;
 using fhirtools::FhirStructureRepository;
+using fhirtools::ProfiledElementTypeInfo;
 using fhirtools::ValueElement;
+
+static constexpr std::string_view resolveFunc = "resolve()";
+static constexpr std::string_view dollarThis = "$this";
 
 FhirSlicing::FhirSlicing() = default;
 FhirSlicing::FhirSlicing(const FhirSlicing&) = default;
@@ -47,6 +50,7 @@ FhirSlicing::SlicingRules FhirSlicing::slicingRules() const
 struct FhirSlice::Impl {
     std::string mName;
     std::shared_ptr<FhirStructureDefinition> mProfile;
+    mutable std::shared_ptr<FhirSlicing::Condition> mCondition;
 };
 
 FhirSlice::FhirSlice(const FhirSlice& other)
@@ -74,12 +78,17 @@ public:
 std::shared_ptr<FhirSlicing::Condition>
 FhirSlice::condition(const FhirStructureRepository& repo, const std::list<FhirSliceDiscriminator>& discriminators) const
 {
+    if (mImpl->mCondition)
+    {
+        return mImpl->mCondition;
+    }
     auto cond = std::make_shared<SliceCondition>();
     cond->mConditions.reserve(discriminators.size());
     std::ranges::transform(discriminators, std::back_inserter(cond->mConditions),
                            [&](const FhirSliceDiscriminator& disc) {
                                return disc.condition(repo, &*mImpl->mProfile);
                            });
+    mImpl->mCondition = cond;
     return cond;
 }
 
@@ -106,43 +115,30 @@ namespace
 class DiscriminatorCondition : public FhirSlicing::Condition
 {
 protected:
-    explicit DiscriminatorCondition(std::string path)
-        : mPath{std::move(path)}
+    explicit DiscriminatorCondition(fhirtools::ExpressionPtr pathExpression)
+        : mPathExpression{std::move(pathExpression)}
     {
     }
-    bool test(const ::Element& element) const override
+    bool test(const fhirtools::Element& element) const override
     {
-        return test(element, mPath);
-    }
-    //NOLINTNEXTLINE(misc-no-recursion)
-    bool test(const ::Element& element, std::string_view path) const
-    {
-        using std::min;
-        using namespace std::string_view_literals;
-        if (path.empty() || path == "$this"sv)
-        {
-            return testPathElement(element);
-        }
-        size_t dot = path.find('.');
-        auto name = path.substr(0, dot);
-        auto rest = path.substr(min(path.size(), name.size() + 1));
-        //NOLINTNEXTLINE(misc-no-recursion)
-        return std::ranges::any_of(element.subElements(std::string{name}), [&](const auto& subElement) {
-            return test(*subElement, rest);
+        const auto& resultCollection = mPathExpression->eval({element.shared_from_this()});
+        return std::ranges::any_of(resultCollection, [&](const auto& subElement) {
+            return testPathElement(*subElement);
         });
     }
 
     virtual bool testPathElement(const ::Element&) const = 0;
 
-    std::string mPath;
+    fhirtools::ExpressionPtr mPathExpression;
 };
 
 class DiscriminatorValueCondition : public DiscriminatorCondition
 {
 public:
-    explicit DiscriminatorValueCondition(const FhirStructureRepository& repo, std::list<ProfiledElementTypeInfo> defPtrs,
-                                         std::string path)
-        : DiscriminatorCondition{std::move(path)}
+    explicit DiscriminatorValueCondition(const FhirStructureRepository& repo,
+                                         std::list<ProfiledElementTypeInfo> defPtrs,
+                                         fhirtools::ExpressionPtr pathExpression)
+        : DiscriminatorCondition{std::move(pathExpression)}
         , mFixed{}
     {
         defPtrs.remove_if([](const ProfiledElementTypeInfo& defPtr) {
@@ -155,7 +151,7 @@ public:
         defPtrs.pop_front();
         ValueElement fixedValue{&repo, mFixed};
         bool ambiguous = std::ranges::any_of(defPtrs, [&](auto dp) {
-            return ValueElement{&repo, dp.element()->fixed()} != fixedValue;
+            return ValueElement{&repo, dp.element()->fixed()}.equals(fixedValue) != true;
         });
         if (ambiguous)
         {
@@ -172,7 +168,7 @@ public:
     bool testPathElement(const ::Element& element) const override
     {
         const auto* repo = element.getFhirStructureRepository();
-        return (element == ValueElement{repo, mFixed});
+        return (element.equals(ValueElement{repo, mFixed}) == true);
     }
     std::shared_ptr<const fhirtools::FhirValue> mFixed;
 };
@@ -181,8 +177,9 @@ class DiscriminatorPatternCondition : public DiscriminatorCondition
 {
 public:
     explicit DiscriminatorPatternCondition(const FhirStructureRepository& repo,
-                                           std::list<ProfiledElementTypeInfo> defPtrs, std::string path)
-        : DiscriminatorCondition{std::move(path)}
+                                           std::list<ProfiledElementTypeInfo> defPtrs,
+                                           fhirtools::ExpressionPtr pathExpression)
+        : DiscriminatorCondition{std::move(pathExpression)}
     {
         defPtrs.remove_if([](const ProfiledElementTypeInfo& defPtr) {
             return ! defPtr.element()->pattern();
@@ -197,7 +194,7 @@ public:
             for (const auto& existingPat : mPattern)
             {
                 ValueElement existingPatValue{&repo, existingPat};
-                if (patternValue == existingPatValue)
+                if (patternValue.equals(existingPatValue) == true)
                 {
                     pattern.reset();
                     break;
@@ -228,11 +225,104 @@ public:
 };
 
 
+class DiscriminatorBindingConditionBase : public DiscriminatorCondition
+{
+public:
+    explicit DiscriminatorBindingConditionBase(const FhirStructureRepository& repo,
+                                               std::list<ProfiledElementTypeInfo> elementInfos,
+                                               fhirtools::ExpressionPtr pathExpression)
+        : DiscriminatorCondition{std::move(pathExpression)}
+    {
+        using namespace fhirtools;
+        using namespace std::string_literals;
+        (void) repo;
+        elementInfos.remove_if([](const ProfiledElementTypeInfo& defPtr) {
+            return ! defPtr.element()->hasBinding();
+        });
+        Expect3(! elementInfos.empty(), "could not determine binding value for discriminator", std::logic_error);
+        bool contradiction = false;
+        std::optional<std::tuple<std::string, std::optional<Version>>> binding;
+        for (const auto& info : elementInfos)
+        {
+            const auto& elementBinding = info.element()->binding();
+            if (binding)
+            {
+                if (*binding != std::make_tuple(elementBinding.valueSetUrl, elementBinding.valueSetVersion))
+                {
+                    LOG(ERROR) << "binding " << get<0>(*binding) << '|'
+                               << (get<1>(*binding) ? *get<1>(*binding) : "<no-ver>"s) << " contradicts "
+                               << elementBinding.valueSetUrl << '|'
+                               << (elementBinding.valueSetVersion
+                                       ? static_cast<const std::string&>(*elementBinding.valueSetVersion)
+                                       : "<no-ver>"s);
+                    contradiction = true;
+                }
+            }
+            else
+            {
+                binding = std::make_tuple(elementBinding.valueSetUrl, elementBinding.valueSetVersion);
+            }
+        }
+        Expect3(! contradiction, "Contradicting binding.", std::logic_error);
+        Expect3(binding.has_value(), "Failed to determine Binding", std::logic_error);
+        mValueSet = repo.findValueSet(get<0>(*binding), get<1>(*binding));
+        Expect3(mValueSet != nullptr,
+                "Failed to find ValueSet: " + get<0>(*binding) + '|' +
+                    (get<1>(*binding) ? *get<1>(*binding) : "<no-ver>"s),
+                std::logic_error);
+    }
+
+protected:
+    const fhirtools::FhirValueSet* mValueSet = nullptr;
+};
+
+class DiscriminatorPrimitiveBindingCondition : public DiscriminatorBindingConditionBase
+{
+public:
+    using DiscriminatorBindingConditionBase::DiscriminatorBindingConditionBase;
+    bool testPathElement(const ::Element& element) const override
+    {
+        return mValueSet->containsCode(element.asString());
+    }
+};
+
+class DiscriminatorCodingBindingCondition : public DiscriminatorBindingConditionBase
+{
+public:
+    using DiscriminatorBindingConditionBase::DiscriminatorBindingConditionBase;
+    bool testPathElement(const ::Element& element) const override
+    {
+        auto systemSubElement = element.subElements("system");
+        auto codeSubElement = element.subElements("code");
+        return (systemSubElement.size() == 1 && codeSubElement.size() == 1) &&
+               mValueSet->containsCode(codeSubElement[0]->asString(), systemSubElement[0]->asString());
+    }
+};
+
+class DiscriminatorCodeableConceptBindingCondition : public DiscriminatorCodingBindingCondition
+{
+public:
+    using DiscriminatorCodingBindingCondition::DiscriminatorCodingBindingCondition;
+    bool testPathElement(const ::Element& element) const override
+    {
+        auto codingSubElements = element.subElements("coding");
+        for (const auto& codingSubElement : codingSubElements)
+        {
+            if (! DiscriminatorCodingBindingCondition::testPathElement(*codingSubElement))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
 class DiscriminatorExistsCondition : public DiscriminatorCondition
 {
 public:
-    explicit DiscriminatorExistsCondition(const std::list<ProfiledElementTypeInfo>& defPtrs, std::string path)
-        : DiscriminatorCondition{std::move(path)}
+    explicit DiscriminatorExistsCondition(const std::list<ProfiledElementTypeInfo>& defPtrs,
+                                          fhirtools::ExpressionPtr pathExpression)
+        : DiscriminatorCondition{std::move(pathExpression)}
     {
         std::optional<bool> shouldExist;
         for (const auto& defPtr : defPtrs)
@@ -274,8 +364,9 @@ class DiscriminatorTypeCondition : public DiscriminatorCondition
 {
 public:
     explicit DiscriminatorTypeCondition(const FhirStructureRepository& repo,
-                                        const std::list<ProfiledElementTypeInfo>& defPtrs, std::string path)
-        : DiscriminatorCondition{std::move(path)}
+                                        const std::list<ProfiledElementTypeInfo>& defPtrs,
+                                        fhirtools::ExpressionPtr pathExpression)
+        : DiscriminatorCondition{std::move(pathExpression)}
     {
         std::set<std::string> types;
         for (const auto& dp : defPtrs)
@@ -308,14 +399,15 @@ public:
 class DiscriminatorProfileCondition : public DiscriminatorCondition
 {
 public:
-    explicit DiscriminatorProfileCondition(const std::list<ProfiledElementTypeInfo>& defPtrs, std::string path)
-        : DiscriminatorCondition{std::move(path)}
+    explicit DiscriminatorProfileCondition(const std::list<ProfiledElementTypeInfo>& defPtrs,
+                                           fhirtools::ExpressionPtr pathExpression)
+        : DiscriminatorCondition{std::move(pathExpression)}
     {
         for (const auto& dp : defPtrs)
         {
             std::ranges::copy(dp.element()->profiles(), std::inserter(mProfiles, mProfiles.end()));
         }
-        Expect(! mProfiles.empty(), "no profile" + mPath);
+        Expect(! mProfiles.empty(), "no profile");
     }
     bool testPathElement(const ::Element& element) const override
     {
@@ -326,29 +418,31 @@ public:
     std::set<std::string> mProfiles;
 };
 
-
-}
+}// anonymous namespace
 
 std::shared_ptr<FhirSlicing::Condition> FhirSliceDiscriminator::condition(const FhirStructureRepository& repo,
                                                                           const FhirStructureDefinition* def) const
 {
-    auto defPtrs = resolveElements(repo, def, mPath);
-    Expect(! defPtrs.empty(), "no matching elements for descriptor found: " + mPath);
+    auto elementInfos = collectElements(repo, ProfiledElementTypeInfo{def}, mPath);
+    Expect(! elementInfos.empty(), "no matching elements for descriptor found: " + mPath);
+    auto pathExpression = FhirPathParser::parse(&repo, mPath);
     try
     {
         switch (mType)
         {
             using enum DiscriminatorType;
             case exists:
-                return std::make_shared<DiscriminatorExistsCondition>(std::move(defPtrs), mPath);
-            case pattern:
-                return std::make_shared<DiscriminatorPatternCondition>(repo, std::move(defPtrs), mPath);
+                return std::make_shared<DiscriminatorExistsCondition>(std::move(elementInfos),
+                                                                      std::move(pathExpression));
             case profile:
-                return std::make_shared<DiscriminatorProfileCondition>(std::move(defPtrs), mPath);
+                return std::make_shared<DiscriminatorProfileCondition>(std::move(elementInfos),
+                                                                       std::move(pathExpression));
             case type:
-                return std::make_shared<DiscriminatorTypeCondition>(repo, std::move(defPtrs), mPath);
+                return std::make_shared<DiscriminatorTypeCondition>(repo, std::move(elementInfos),
+                                                                    std::move(pathExpression));
             case value:
-                return std::make_shared<DiscriminatorValueCondition>(repo, defPtrs, mPath);
+            case pattern:
+                return valueishCondition(repo, elementInfos, def, std::move(pathExpression));
         }
     }
     catch (const std::logic_error& ex)
@@ -357,63 +451,134 @@ std::shared_ptr<FhirSlicing::Condition> FhirSliceDiscriminator::condition(const 
     }
     Fail2("Unexpected value for DiscriminatorType: " + std::to_string(int(mType)), std::logic_error);
 }
+std::shared_ptr<FhirSlicing::Condition> fhirtools::FhirSliceDiscriminator::valueishCondition(
+    const fhirtools::FhirStructureRepository& repo, std::list<ProfiledElementTypeInfo> elementInfos,
+    const fhirtools::FhirStructureDefinition* def, ExpressionPtr pathExpression) const
+{
+    bool pattern = false;
+    bool fixed = false;
+    bool binding = false;
+    for (const auto& info : elementInfos)
+    {
+        const auto& fhirElement = info.element();
+        if (fhirElement->pattern())
+        {
+            pattern = true;
+        }
+        if (fhirElement->fixed())
+        {
+            fixed = true;
+        }
+        if (fhirElement->hasBinding() && ! fhirElement->pattern() && ! fhirElement->fixed())
+        {
+            binding = true;
+        }
+    }
+    if (pattern && fixed)
+    {
+        TLOG(WARNING) << "found both pattern and fixed: " << def->url() << '|' << def->version()
+                      << " - slicing definition might be ambiguous - using "
+                      << (mType == DiscriminatorType::value ? "fixed" : "pattern");
+        pattern = mType == DiscriminatorType::pattern;
+        fixed = mType == DiscriminatorType::value;
+    }
+    if (fixed && ! pattern)
+    {
+        if (mType == DiscriminatorType::pattern)
+        {
+            TLOG(WARNING) << "Discriminator Type is 'pattern' but only fixed is set: " << def->url() << '|'
+                          << def->version() << " - treating as 'value'";
+        }
+        return std::make_shared<DiscriminatorValueCondition>(repo, std::move(elementInfos), std::move(pathExpression));
+    }
+    else if (pattern && ! fixed)
+    {
+        if (mType == DiscriminatorType::value)
+        {
+            TLOG(WARNING) << "Discriminator Type is 'value' but only pattern is set: " << def->url() << '|'
+                          << def->version() << " - treating as 'pattern'";
+        }
+        return std::make_shared<DiscriminatorPatternCondition>(repo, std::move(elementInfos),
+                                                               std::move(pathExpression));
+    }
+    FPExpect3(binding, "Failed to determine value for Discriminator", std::logic_error);
+    FPExpect3(! pattern && ! fixed, "pattern of fixed should not be set when treating as binding", std::logic_error);
+    const auto& typeId = elementInfos.front().element()->typeId();
+    if (typeId == "Coding")
+    {
+        return std::make_shared<DiscriminatorCodingBindingCondition>(repo, std::move(elementInfos),
+                                                                     std::move(pathExpression));
+    }
+    else if (typeId == "CodeableConcept")
+    {
+        return std::make_shared<DiscriminatorCodeableConceptBindingCondition>(repo, std::move(elementInfos),
+                                                                              std::move(pathExpression));
+    }
+    else
+    {
+        const auto* baseDef = repo.findTypeById(typeId);
+        Expect3(baseDef != nullptr, "type not found: " + typeId, std::logic_error);
+        bool primitive = baseDef->kind() == FhirStructureDefinition::Kind::primitiveType || baseDef->isSystemType();
+        Expect3(primitive, "cannot handle binding discriminator for type: " + typeId, std::logic_error);
+        return std::make_shared<DiscriminatorPrimitiveBindingCondition>(repo, std::move(elementInfos),
+                                                                        std::move(pathExpression));
+    }
+}
+
 
 const std::string& FhirSliceDiscriminator::path() const
 {
     return mPath;
 }
 
-//NOLINTNEXTLINE(misc-no-recursion)
-std::list<ProfiledElementTypeInfo> FhirSliceDiscriminator::resolveElements(const FhirStructureRepository& repo,
-                                                                         const FhirStructureDefinition* def,
-                                                                         std::string_view path)
+std::list<ProfiledElementTypeInfo> FhirSliceDiscriminator::collectElements(const FhirStructureRepository& repo,
+                                                                           const ProfiledElementTypeInfo& parentDef,
+                                                                           std::string_view path)
 {
-    Expect3(def != nullptr, "def must not be nullptr", std::logic_error);
-    using namespace std::string_view_literals;
-    if (path == "$this"sv)
-    {
-        path = std::string_view{};
-    }
     std::list<ProfiledElementTypeInfo> result;
-    for (size_t pos = 0;; pos = path.find('.', pos + 1))
+    for (const auto& profileUrl : parentDef.element()->profiles())
     {
-        auto element = resolveElement(def, path.substr(0, pos));
-        if (! element)
-        {
-            break;
-        }
+        const auto* profile = repo.findDefinitionByUrl(profileUrl);
+        Expect3(profile != nullptr, "missing profile: " + profileUrl, std::logic_error);
+        result.splice(result.end(), collectSubElements(repo, ProfiledElementTypeInfo{profile}, path));
+    }
+    result.splice(result.end(), collectSubElements(repo, parentDef, path));
+    return result;
+}
 
-        std::string_view rest;
-        if (pos == std::string_view::npos || path.empty())
-        {
-            rest = std::string_view{};
-        }
-        else if (path[pos] != '.')
-        {
-            rest = path.substr(pos);
-        }
-        else
-        {
-            rest = path.substr(pos + 1);
-        }
-        for (const auto& profileUrl : element->profiles())
-        {
-            const auto* profile = repo.findDefinitionByUrl(profileUrl);
-            Expect3(profile != nullptr, "missing profile: " + profileUrl, std::logic_error);
-            result.splice(result.end(), resolveElements(repo, profile, rest));
-        }
-        result.splice(result.end(), resolveFromValues(repo, element, rest));
-        if (pos == std::string_view::npos)
-        {
-            result.emplace_back(def, element);
-            break;
-        }
-    };
+//NOLINTNEXTLINE(misc-no-recursion)
+std::list<ProfiledElementTypeInfo> FhirSliceDiscriminator::collectSubElements(const FhirStructureRepository& repo,
+                                                                           const ProfiledElementTypeInfo& parentDef,
+                                                                           std::string_view path)
+{
+    using namespace std::string_literals;
+    std::list<ProfiledElementTypeInfo> result;
+    if (path.empty())
+    {
+        return {parentDef};
+    }
+    size_t dotPos = path.find('.');
+    bool hasRest = dotPos != std::string_view::npos;
+    std::string_view prefix = path.substr(0, dotPos);
+    std::string_view rest = hasRest ? path.substr(dotPos + 1) : std::string_view{};
+    if (prefix == resolveFunc)
+    {
+        return collectFromResolve(repo, parentDef, rest);
+    }
+    Expect3(!prefix.ends_with("()"), "unsupported funtion in discriminator path: "s.append(prefix), std::logic_error);
+    if (prefix == dollarThis)
+    {
+        return {parentDef};
+    }
+    for (const auto& subDef : parentDef.subDefinitions(repo, prefix))
+    {
+        result.splice(result.end(), collectElements(repo, subDef, rest));
+    }
     return result;
 }
 
 
-std::shared_ptr<const fhirtools::FhirElement> FhirSliceDiscriminator::resolveElement(const FhirStructureDefinition* def,
+std::shared_ptr<const fhirtools::FhirElement> FhirSliceDiscriminator::collectElement(const FhirStructureDefinition* def,
                                                                                      std::string_view path)
 {
     std::string elementId;
@@ -428,7 +593,7 @@ std::shared_ptr<const fhirtools::FhirElement> FhirSliceDiscriminator::resolveEle
 
 std::list<std::shared_ptr<const ValueElement>>
 //NOLINTNEXTLINE(misc-no-recursion)
-FhirSliceDiscriminator::resolveFromValues(std::shared_ptr<const ValueElement> element, std::string_view path)
+FhirSliceDiscriminator::collectFromValues(std::shared_ptr<const ValueElement> element, std::string_view path)
 {
     std::list<std::shared_ptr<const ValueElement>> result;
     if (path.empty())
@@ -448,20 +613,20 @@ FhirSliceDiscriminator::resolveFromValues(std::shared_ptr<const ValueElement> el
         for (const auto& subElement : element->subElements(std::string{subName}))
         {
             result.splice(result.end(),
-                          resolveFromValues(std::dynamic_pointer_cast<const ValueElement>(subElement), rest));
+                          collectFromValues(std::dynamic_pointer_cast<const ValueElement>(subElement), rest));
         }
     }
     return result;
 }
 
 std::list<ProfiledElementTypeInfo>
-FhirSliceDiscriminator::resolveFromValues(const FhirStructureRepository& repo,
+FhirSliceDiscriminator::collectFromValues(const FhirStructureRepository& repo,
                                           const std::shared_ptr<const FhirElement>& element, std::string_view path)
 {
     std::list<ProfiledElementTypeInfo> result;
     if (element->pattern())
     {
-        auto patternElements = resolveFromValues(std::make_shared<ValueElement>(&repo, element->pattern()), path);
+        auto patternElements = collectFromValues(std::make_shared<ValueElement>(&repo, element->pattern()), path);
         for (const auto& patternElement : patternElements)
         {
             FhirElement::Builder builder{*patternElement->definitionPointer().element()};
@@ -471,7 +636,7 @@ FhirSliceDiscriminator::resolveFromValues(const FhirStructureRepository& repo,
     }
     if (element->fixed())
     {
-        auto fixedElements = resolveFromValues(std::make_shared<ValueElement>(&repo, element->fixed()), path);
+        auto fixedElements = collectFromValues(std::make_shared<ValueElement>(&repo, element->fixed()), path);
         for (const auto& fixedElement : fixedElements)
         {
             FhirElement::Builder builder{*fixedElement->definitionPointer().element()};
@@ -481,6 +646,24 @@ FhirSliceDiscriminator::resolveFromValues(const FhirStructureRepository& repo,
     }
     return result;
 }
+
+std::list<ProfiledElementTypeInfo>
+fhirtools::FhirSliceDiscriminator::collectFromResolve(const fhirtools::FhirStructureRepository& repo,
+                                                      const fhirtools::ProfiledElementTypeInfo& parentDef,
+                                                      std::string_view path)
+{
+    std::list<ProfiledElementTypeInfo> result;
+    for (const auto& profileUrl : parentDef.element()->referenceTargetProfiles())
+    {
+        const auto* profile = repo.findDefinitionByUrl(profileUrl);
+        Expect3(profile != nullptr, "missing profile: " + profileUrl, std::logic_error);
+        auto elementDef = FhirElement::Builder{*profile->rootElement()}.addProfile(profileUrl).getAndReset();
+        ProfiledElementTypeInfo resolveParent{profile, elementDef};
+        result.splice(result.end(), collectElements(repo, resolveParent, path));
+    }
+    return result;
+}
+
 
 FhirSlice::FhirSlice()
     : mImpl(std::make_unique<Impl>())

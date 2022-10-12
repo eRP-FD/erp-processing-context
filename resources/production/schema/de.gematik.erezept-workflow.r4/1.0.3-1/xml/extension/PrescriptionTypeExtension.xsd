@@ -54,6 +54,8 @@
       <xs:enumeration value="165"/>
       <xs:enumeration value="166"/>
       <xs:enumeration value="169"/>
+      <xs:enumeration value="200"/>
+      <xs:enumeration value="209"/>
     </xs:restriction>
   </xs:simpleType>
 </xs:schema>

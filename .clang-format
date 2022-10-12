@@ -39,7 +39,7 @@ IncludeBlocks: Regroup
 IncludeCategories:
   # (Implicit second group: the header file for the current translation unit)
   # Group 0, middle: Our normal non-test header files.
-  - Regex:           '^"(erp|mock|fhir-path)/'
+  - Regex:           '^"(erp|mock|fhirtools)/'
     Priority:        0
     SortPriority:    1
   # Group 0, bottom: Our test/ header files.

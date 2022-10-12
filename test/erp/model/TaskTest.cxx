@@ -157,7 +157,7 @@ TEST_F(TaskTest, SetAndDeleteUuids)//NOLINT(readability-function-cognitive-compl
 {
     auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     model::Task task(id, model::PrescriptionType::apothekenpflichigeArzneimittel,
-                     fhirtools::Timestamp::now(), fhirtools::Timestamp::now(),
+                     model::Timestamp::now(), model::Timestamp::now(),
                      model::Task::Status::completed);
     const auto uuid1 = id.deriveUuid(1);
     const auto uuid2 = id.deriveUuid(2);
@@ -204,17 +204,17 @@ TEST_F(TaskTest, SetAndDeleteUuids)//NOLINT(readability-function-cognitive-compl
 TEST_F(TaskTest, ExpiryDate)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    fhirtools::Timestamp timestamp = fhirtools::Timestamp::now();
+    model::Timestamp timestamp = model::Timestamp::now();
     ASSERT_NO_THROW(task.setExpiryDate(timestamp));
-    ASSERT_EQ(task.expiryDate(), fhirtools::Timestamp::fromGermanDate(timestamp.toXsDate()));
+    ASSERT_EQ(task.expiryDate(), model::Timestamp::fromGermanDate(timestamp.toXsDate()));
 }
 
 TEST_F(TaskTest, AcceptDate)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    fhirtools::Timestamp timestamp = fhirtools::Timestamp::now();
+    model::Timestamp timestamp = model::Timestamp::now();
     ASSERT_NO_THROW(task.setAcceptDate(timestamp));
-    ASSERT_EQ(task.acceptDate(), fhirtools::Timestamp::fromGermanDate(timestamp.toXsDate()));
+    ASSERT_EQ(task.acceptDate(), model::Timestamp::fromGermanDate(timestamp.toXsDate()));
 }
 
 
@@ -224,8 +224,8 @@ TEST_F(TaskTest, AcceptDate28Days)
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    auto baseDate = date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
-    task.setAcceptDate(fhirtools::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
+    task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
     auto expected = baseDate.get_sys_time() + days{28};
     ASSERT_EQ(task.acceptDate().toChronoTimePoint(), expected);
     A_19445_08.finish();
@@ -237,8 +237,8 @@ TEST_F(TaskTest, AcceptDate28DaysType169)
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::direkteZuweisung, "access_code");
-    auto baseDate = date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
-    task.setAcceptDate(fhirtools::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
+    task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
     auto expected = baseDate.get_sys_time() + days{28};
     ASSERT_EQ(task.acceptDate().toChronoTimePoint(), expected);
     A_19445_08.finish();
@@ -250,10 +250,10 @@ TEST_F(TaskTest, AcceptDate3Months)
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "access_code");
-    auto baseDate = date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
-    task.setAcceptDate(fhirtools::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
-    auto expected = fhirtools::Timestamp(
-        date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / July / 23}).get_sys_time());
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
+    task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
+    auto expected = model::Timestamp(
+        date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / July / 23}).get_sys_time());
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
     A_19445_08.finish();
 }
@@ -263,11 +263,11 @@ TEST_F(TaskTest, AcceptDate3WorkDays)
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    auto baseDate = date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
-    task.setAcceptDate(fhirtools::Timestamp(baseDate.get_sys_time()),
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
+    task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()),
                        model::KbvStatusKennzeichen::entlassmanagementKennzeichen, 3);
-    auto expected = fhirtools::Timestamp(
-        date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / April / 26}).get_sys_time());
+    auto expected = model::Timestamp(
+        date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / April / 26}).get_sys_time());
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
 }
 
@@ -276,11 +276,11 @@ TEST_F(TaskTest, AcceptDate6WorkDaysOverHolidays)
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    auto baseDate = date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / December / 23});
-    task.setAcceptDate(fhirtools::Timestamp(baseDate.get_sys_time()),
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / December / 23});
+    task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()),
                        model::KbvStatusKennzeichen::entlassmanagementKennzeichen, 6);
-    auto expected = fhirtools::Timestamp(
-        date::make_zoned(fhirtools::Timestamp::GermanTimezone, date::local_days{2021_y / December / 30})
+    auto expected = model::Timestamp(
+        date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / December / 30})
             .get_sys_time());
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
 }

@@ -167,7 +167,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
     date::year_month_day signingDay{date::floor<date::days>(
-        date::make_zoned(fhirtools::Timestamp::GermanTimezone, signingTime->toChronoTimePoint()).get_local_time())};
+        date::make_zoned(model::Timestamp::GermanTimezone, signingTime->toChronoTimePoint()).get_local_time())};
     if (isMvo)
     {
         setMvoExpiryAcceptDates(*task, mvoEndDate, signingDay);
@@ -176,7 +176,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     {
         // A_19445 Part 1 and 4 are in $create
         A_19445_08.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
-        task->setExpiryDate(fhirtools::Timestamp{date::sys_days{signingDay + date::months{3}}});
+        task->setExpiryDate(model::Timestamp{date::sys_days{signingDay + date::months{3}}});
         A_19445_08.finish();
         A_19445_08.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
         A_19517_02.start("different validity duration (accept date) for different types");
@@ -186,7 +186,6 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
         A_19445_08.finish();
     }
     A_19999.finish();
-
 
 
     A_19127.start("store KVNR from prescription bundle in task");
@@ -269,7 +268,7 @@ void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvBundl
     // using German timezone was decided, but sadly did not make it into the requirement
     // date::local_days is a date not bound to any timezone.
     const date::local_days signingDay{date::floor<date::days>(
-        date::make_zoned(fhirtools::Timestamp::GermanTimezone, signingTime.toChronoTimePoint()).get_local_time())};
+        date::make_zoned(model::Timestamp::GermanTimezone, signingTime.toChronoTimePoint()).get_local_time())};
     const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationRequest>();
     for (const auto& mr : medicationRequests)
     {
@@ -316,6 +315,7 @@ model::KbvBundle ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext
                 FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), prescription,
                                             *schemaValidationContext);
                 inCodeValidator.validate(kbvBundle, schemaType, schemaVersion, xmlValidator);
+                kbvBundle.additionalValidation();
             }
         }
         catch (const ErpException& erpException)
@@ -330,9 +330,11 @@ model::KbvBundle ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext
             {
                 validationResult.add(fhirtools::Severity::error, *erpException.diagnostics(), {}, nullptr);
             }
-            fhirtools::ValidatorOptions valOpts;
+            auto valOpts = model::ResourceBase::defaultValidatorOptions();
+            valOpts.allowNonLiteralAuthorReference =
+                (config.kbvValidationNonLiteralAuthorRef() == Configuration::NonLiteralAutherRefMode::allow);
             valOpts.reportUnknownExtensions =
-                config.kbvValidationOnUnknownExtension() != Configuration::OnUnknownExtension::ignore;
+                (config.kbvValidationOnUnknownExtension() != Configuration::OnUnknownExtension::ignore);
             validationResult.append(kbvBundle.genericValidate(valOpts));
             auto details = validationResult.summary(fhirtools::Severity::unslicedWarning);
             ErpFailWithDiagnostics(HttpStatus::BadRequest, erpException.what(), std::move(details));
@@ -343,7 +345,7 @@ model::KbvBundle ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext
     catch (const model::ModelException& er)
     {
         TVLOG(1) << "runtime_error: " << er.what();
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing error", er.what());
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing / validation error", er.what());
     }
 }
 
@@ -455,8 +457,10 @@ HttpStatus ActivateTaskHandler::checkExtensions(const model::KbvBundle& kbvBundl
                 break;
         }
     }
-    using enum Configuration::OnUnknownExtension;
-    fhirtools::ValidatorOptions options{.reportUnknownExtensions = (onUnknownExtension != ignore)};
+    fhirtools::ValidatorOptions options{model::ResourceBase::defaultValidatorOptions()};
+    options.reportUnknownExtensions = (onUnknownExtension != Configuration::OnUnknownExtension::ignore);
+    options.allowNonLiteralAuthorReference =
+        (config.kbvValidationNonLiteralAuthorRef() == Configuration::NonLiteralAutherRefMode::allow);
     const auto& validationResult = kbvBundle.genericValidate(options);
     fhirtools::Severity highestSeverity = validationResult.highestSeverity();
 #ifndef NDEBUG
@@ -476,6 +480,7 @@ HttpStatus ActivateTaskHandler::checkExtensions(const model::KbvBundle& kbvBundl
     });
     switch (onUnknownExtension)
     {
+        using enum Configuration::OnUnknownExtension;
         case ignore:
             return HttpStatus::OK;
         case report:
@@ -514,13 +519,23 @@ void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, con
                   "Kostenträger nicht zulässig");
     }
     A_22222.finish();
+
     // PKV related: check PKV coverage
-    A_22347.start("Check coverage type for flowtype 200 (PKV prescription)");
-    if(featureWf200enabled && prescriptionType == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+    A_22347_01.start("Check coverage type for flowtype 200/209 (PKV prescription)");
+    switch (prescriptionType)
     {
-        ErpExpect(pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not set for flowtype 200");
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            if (featureWf200enabled)
+            {
+                ErpExpect(pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not set for flowtype 200/209");
+            }
+            break;
     }
-    A_22347.finish();
+    A_22347_01.finish();
 }
 
 

@@ -68,7 +68,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.7.0"
+                                    def erp_release_version = "1.8.0"
                                     sh "scripts/ci-build.sh " +
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'"
@@ -91,7 +91,6 @@ pipeline {
                                         boost
                                         date
                                         glog
-                                        gmp
                                         gsl-lite
                                         gtest
                                         hiredis
@@ -100,7 +99,6 @@ pipeline {
                                         libpqxx
                                         libxml2
                                         magic_enum
-                                        mpfr
                                         openssl
                                         rapidjson
                                         redis-plus-plus
@@ -155,11 +153,12 @@ pipeline {
                             cd jenkins-build-debug/bin
                             ls -al
                             ./erp-test --gtest_output=xml:erp-test.xml
+                            ./fhirtools-test --gtest_output=xml:fhirtools-test.xml
                         """
                     }
                     post {
                         always {
-                            junit "jenkins-build-debug/bin/erp-test.xml"
+                            junit "jenkins-build-debug/bin/*-test.xml"
                         }
                     }
                 }
@@ -196,7 +195,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.7.0"
+                                def release_version = "1.8.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -232,7 +231,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.7.0"
+                                def release_version = "1.8.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +

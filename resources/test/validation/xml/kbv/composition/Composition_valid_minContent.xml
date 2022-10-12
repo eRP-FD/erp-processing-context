@@ -43,7 +43,7 @@
       </coding>
     </code>
     <entry>
-      <reference value="MedicationRequest/e930cdee-9eb5-4b44-88b5-2a18b69f3b9a" />
+      <reference value="MedicationRequest/931e9384-1b80-41f0-a40b-d2ced5e6d856" />
     </entry>
   </section>
   <section>
@@ -55,6 +55,17 @@
     </code>
     <entry>
       <reference value="Coverage/1b1ffb6e-eb05-43d7-87eb-e7818fe9661a" />
+    </entry>
+  </section>
+  <section>
+    <code>
+      <coding>
+        <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type" />
+        <code value="FOR_PractitionerRole" />
+      </coding>
+    </code>
+    <entry>
+      <reference value="PractitionerRole/34329d70-ccb5-43ae-b551-e5368022b226" />
     </entry>
   </section>
 </Composition>

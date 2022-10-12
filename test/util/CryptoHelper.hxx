@@ -7,7 +7,7 @@
 #define CRYPTOHELPER_H
 
 #include "erp/crypto/OpenSslHelper.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <optional>
 #include <string>
@@ -26,7 +26,7 @@ class CryptoHelper
 {
 public:
     static std::string toCadesBesSignature(const std::string& content,
-                                           const std::optional<fhirtools::Timestamp>& signingTime = std::nullopt);
+                                           const std::optional<model::Timestamp>& signingTime = std::nullopt);
     static std::string qesCertificatePem();
     static Certificate cHpQes();
     static shared_EVP_PKEY cHpQesPrv();

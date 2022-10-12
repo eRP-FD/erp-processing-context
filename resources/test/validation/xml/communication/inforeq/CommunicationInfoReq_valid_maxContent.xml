@@ -325,7 +325,7 @@
       <valueCoding>
         <system value="https://gematik.de/fhir/CodeSystem/Flowtype"/>
         <version value="1.0"/>
-        <code value="163"/>
+        <code value="160"/>
         <display value="display"/>
         <userSelected value="false"/>
       </valueCoding>

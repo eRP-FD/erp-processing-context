@@ -4,18 +4,191 @@
  */
 
 #include "fhirtools/model/Element.hxx"
-
-#include <boost/algorithm/string/case_conv.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <utility>
-#include <variant>
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/Collection.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/util/Constants.hxx"
+
+#include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <gsl/gsl-lite.hpp>
+#include <regex>
+#include <string_view>
+#include <utility>
+#include <variant>
 
 using fhirtools::Element;
 using fhirtools::PrimitiveElement;
+using fhirtools::ValidationResultList;
+
+namespace
+{
+decltype(auto) classicCtype()
+{
+    static decltype(auto) ctype = std::use_facet<std::ctype<char>>(std::locale::classic());
+    return ctype;
+}
+
+bool isScheme(std::string_view str)
+{
+    using namespace std::string_view_literals;
+    if (str.empty() || ! classicCtype().is(std::ctype_base::alpha, str[0]))
+    {
+        return false;
+    }
+    const char* notSchemeChar = std::ranges::find_if_not(str, [](const char c) {
+        return classicCtype().is(std::ctype_base::alnum, c) || "+-."sv.find(c) != std::string_view::npos;
+    });
+    return notSchemeChar == str.end();
+}
+
+bool isNid(std::string_view str)
+{
+    using namespace std::string_view_literals;
+    if (str.empty() || str.size() > 32 || ! classicCtype().is(std::ctype_base::alnum, str[0]))
+    {
+        return false;
+    }
+    const char* notNidChar = std::ranges::find_if_not(str, [](const char c) {
+        return classicCtype().is(std::ctype_base::alnum, c) || c == '-';
+    });
+    return notNidChar == str.end();
+}
+
+
+}// anonymous namespace
+
+bool Element::Identity::Scheme::isHttpLike() const
+{
+    static const std::set<std::string_view> httpLike{"http", "https"};
+    return httpLike.contains(*this);
+}
+
+std::weak_ordering Element::Identity::Scheme::operator<=>(const Scheme& rhs) const
+{
+    auto baseCmp = static_cast<const std::string&>(*this) <=> static_cast<const std::string&>(rhs);
+    if (is_eq(baseCmp))
+    {
+        return baseCmp;
+    }
+    if (isHttpLike() && rhs.isHttpLike())
+    {
+        return std::weak_ordering::equivalent;
+    }
+    return baseCmp;
+}
+
+bool fhirtools::Element::Identity::empty() const
+{
+    return pathOrId.empty() && ! scheme.has_value() && ! containedId.has_value();
+}
+
+std::string fhirtools::Element::Identity::url() const
+{
+    std::ostringstream oss;
+    if (scheme)
+    {
+        oss << *scheme << ':';
+    }
+    oss << pathOrId;
+    return std::move(oss).str();
+}
+
+bool Element::Identity::Scheme::operator==(const Element::Identity::Scheme& rhs) const
+{
+    return is_eq(*this <=> rhs);
+}
+
+bool Element::Identity::operator==(const Element::Identity& rhs) const
+{
+    return is_eq(*this <=> rhs);
+}
+
+Element::IdentityAndResult Element::IdentityAndResult::fromReferenceString(std::string_view referenceString,
+                                                                           std::string_view elementFullPath)
+{
+    using namespace std::string_view_literals;
+    using std::max;
+    using std::min;
+    auto warn = [&](std::string msg) {
+        ValidationResultList error;
+        error.add(Severity::warning, msg.append(referenceString), std::string{elementFullPath}, nullptr);
+        return IdentityAndResult{.result{error}};
+    };
+    IdentityAndResult result;
+    const char* pathOrIdEnd = referenceString.end();
+    const char* queryEnd = referenceString.end();
+    const char* schemeEnd = referenceString.end();
+    const char* pos = std::ranges::find_first_of(referenceString, ":?#");
+    if (pos != referenceString.end() && *pos == ':')
+    {
+        schemeEnd = pos;
+    }
+    pathOrIdEnd = std::ranges::find_if(pos, referenceString.end(), [](const char c) {
+        return "?#"sv.find(c) != std::string_view::npos;
+    });
+    queryEnd = std::ranges::find(pathOrIdEnd, referenceString.end(), '#');
+    if (schemeEnd == referenceString.end())
+    {
+        // relative uri
+        result.identity.pathOrId = std::string_view{referenceString.begin(), pathOrIdEnd};
+    }
+    else
+    {
+        std::string_view scheme{referenceString.begin(), schemeEnd};
+        if (! isScheme(scheme))
+        {
+            return warn("invalid scheme in reference: ");
+        }
+        if (scheme == "urn")
+        {
+            // https://www.rfc-editor.org/rfc/rfc2141
+            const char* nidEnd = std::ranges::find(schemeEnd + 1, pathOrIdEnd, ':');
+            if (nidEnd == pathOrIdEnd || nidEnd <= schemeEnd + 1)
+            {
+                return warn("missing NID in URN: ");
+            }
+            const std::string_view nid{schemeEnd + 1, nidEnd};
+            if (! isNid(nid))
+            {
+                return warn("invalid NID in URN: ");
+            }
+            scheme = std::string_view{referenceString.begin(), nidEnd};
+            result.identity.pathOrId = std::string_view{nidEnd + 1, pathOrIdEnd};
+        }
+        else
+        {
+            result.identity.pathOrId = std::string_view{schemeEnd + 1, pathOrIdEnd};
+        }
+        result.identity.scheme.emplace(scheme);
+    }
+    if (queryEnd != referenceString.end())
+    {
+        result.identity.containedId.emplace(queryEnd + 1, referenceString.end());
+    }
+    return result;
+}
+
+std::ostream& fhirtools::operator<<(std::ostream& os, const Element::Identity& ri)
+{
+    if (ri.scheme)
+    {
+        os << *ri.scheme << ':';
+    }
+    os << ri.pathOrId;
+    if (ri.containedId)
+    {
+        os << '#' << *ri.containedId;
+    }
+    return os;
+}
+
+std::string fhirtools::to_string(const Element::Identity& ri)
+{
+    std::ostringstream oss;
+    oss << ri;
+    return oss.str();
+}
 
 Element::Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
                  ProfiledElementTypeInfo definitionPointer)
@@ -24,6 +197,7 @@ Element::Element(const FhirStructureRepository* fhirStructureRepository, std::we
     , mParent(std::move(parent))
     , mType(GetElementType(fhirStructureRepository, mDefinitionPointer))
 {
+    Expect3(mFhirStructureRepository != nullptr, "fhirStructureRepository must not be nullptr", std::logic_error);
 }
 
 Element::Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
@@ -33,6 +207,7 @@ Element::Element(const FhirStructureRepository* fhirStructureRepository, std::we
     , mParent(std::move(parent))
     , mType(GetElementType(fhirStructureRepository, mDefinitionPointer))
 {
+    Expect3(mFhirStructureRepository != nullptr, "fhirStructureRepository must not be nullptr", std::logic_error);
 }
 
 
@@ -117,6 +292,455 @@ const fhirtools::ProfiledElementTypeInfo& Element::definitionPointer() const
     return mDefinitionPointer;
 }
 
+Element::IdentityAndResult Element::resourceIdentity(std::string_view elementFullPath, bool allowResourceId) const
+{
+    ValidationResultList failList;
+    const auto& resourceRoot = this->resourceRoot();
+    Expect3(resourceRoot != nullptr, "Cannot handle references outside resources", std::logic_error);
+    auto bundledId = resourceRoot->bundledResourceIdentity(elementFullPath);
+    if (! bundledId.identity.pathOrId.empty())
+    {
+        return bundledId;
+    }
+    failList.append(std::move(bundledId.result));
+    auto containedId = resourceRoot->containedIdentity(allowResourceId, elementFullPath);
+    if (containedId.identity.containedId.has_value())
+    {
+        return containedId;
+    }
+    failList.append(std::move(containedId.result));
+    auto metaSourceId = resourceRoot->metaSourceIdentity(elementFullPath);
+    if (! metaSourceId.identity.pathOrId.empty())
+    {
+        return metaSourceId;
+    }
+    failList.append(std::move(metaSourceId.result));
+    if (allowResourceId)
+    {
+        auto resourceId = resourceRoot->resourceTypeIdIdentity();
+        if (! resourceId.identity.pathOrId.empty())
+        {
+            return resourceId;
+        }
+        failList.append(resourceId.result);
+    }
+    return {{}, std::move(failList)};
+}
+
+Element::IdentityAndResult Element::metaSourceIdentity(std::string_view elementFullPath) const
+{
+    FPExpect3(isResource(), "metaSourceIdentity called on non-resource", std::logic_error);
+    const auto& meta = subElements("meta");
+    if (meta.empty())
+    {
+        return {};
+    }
+    const auto& source = meta[0]->subElements("source");
+    if (source.empty())
+    {
+        return {};
+    }
+    return IdentityAndResult::fromReferenceString(source[0]->asString(), elementFullPath);
+}
+
+
+Element::IdentityAndResult Element::bundledResourceIdentity(std::string_view elementFullPath) const
+{
+    const auto& parent = this->parent();
+    if (! parent || parent->mDefinitionPointer.element()->name() != "Bundle.entry")
+    {
+        ValidationResultList validationResult;
+        validationResult.add(Severity::debug, "Element is not in a bundle", std::string{elementFullPath}, nullptr);
+        return {{}, std::move(validationResult)};
+    }
+    const auto& fullUrlElement = parent->subElements("fullUrl");
+    if (fullUrlElement.empty())
+    {
+        ValidationResultList validationResult;
+        validationResult.add(Severity::debug, "fullUrl not set.", std::string{elementFullPath}, nullptr);
+        return {.result{std::move(validationResult)}};
+    }
+    return IdentityAndResult::fromReferenceString(fullUrlElement[0]->asString(), elementFullPath);
+}
+
+Element::IdentityAndResult Element::containedIdentity(bool allowResourceId, std::string_view elementFullPath) const
+{
+    const auto& parent = this->parent();
+    const auto& id = subElements("id");
+    if (! parent || id.empty() || ! parent->isContainerResource())
+    {
+        return {};
+    }
+    auto idRes = parent->bundledResourceIdentity(elementFullPath);
+    if (idRes.identity.pathOrId.empty())
+    {
+        idRes = parent->metaSourceIdentity(elementFullPath);
+        if (idRes.identity.pathOrId.empty() && allowResourceId)
+        {
+            idRes = parent->resourceTypeIdIdentity();
+        }
+    }
+    if (! idRes.identity.pathOrId.empty())
+    {
+        idRes.identity.containedId = id[0]->asString();
+    }
+    return idRes;
+}
+
+Element::IdentityAndResult Element::resourceTypeIdIdentity() const
+{
+    const auto& resourceType = this->resourceType();
+    const auto& idElement = subElements("id");
+    if (idElement.empty())
+    {
+        return {.identity{.pathOrId = resourceType}};
+    }
+    const auto& id = idElement[0]->asString();
+    Identity result;
+    result.pathOrId.reserve(id.size() + resourceType.size() + 1);
+    result.pathOrId.append(resourceType).append(1, '/').append(id);
+    return {result, {}};
+}
+
+
+Element::IdentityAndResult Element::referenceTargetIdentity(std::string_view elementFullPath) const
+{
+    if (mType == Type::String)
+    {
+        return referenceTargetIdentity(IdentityAndResult::fromReferenceString(asString(), elementFullPath),
+                                       elementFullPath);
+    }
+    if (mType == Type::Structured && definitionPointer().element()->typeId() == "Reference")
+    {
+        const auto& referenceField = subElements("reference");
+        if (referenceField.empty())
+        {
+            IdentityAndResult result;
+            result.result.add(Severity::debug, "Reference is not a url reference", std::string{elementFullPath},
+                              nullptr);
+            return result;
+        }
+        return referenceTargetIdentity(
+            IdentityAndResult::fromReferenceString(referenceField[0]->asString(), elementFullPath), elementFullPath);
+    }
+    IdentityAndResult result;
+    result.result.add(Severity::error, "Not a reference element type: " + definitionPointer().element()->typeId(),
+                      std::string{elementFullPath}, nullptr);
+    return result;
+}
+
+Element::IdentityAndResult Element::referenceTargetIdentity(IdentityAndResult reference,
+                                                            std::string_view elementFullPath) const
+{
+
+    if (reference.identity.scheme)
+    {
+        return reference;
+    }
+    if (reference.identity.empty())
+    {
+        IdentityAndResult result;
+        result.result.add(Severity::debug, "empty reference", std::string{elementFullPath}, nullptr);
+        return result;
+    }
+    const auto& resourceRoot = this->resourceRoot();
+    if (! resourceRoot)
+    {
+        reference.result.add(Severity::debug, "Reference outside resource", std::string{elementFullPath}, nullptr);
+        return reference;
+    }
+    if (reference.identity.pathOrId.empty())
+    {
+        auto ownIdentity = resourceRoot->resourceIdentity(elementFullPath);
+        reference.identity.scheme = ownIdentity.identity.scheme;
+        reference.identity.pathOrId = ownIdentity.identity.pathOrId;
+        reference.result.append(std::move(ownIdentity.result));
+        if (reference.identity.containedId && reference.identity.containedId->empty())
+        {
+            reference.identity.containedId.reset();
+        }
+        return reference;
+    }
+    const size_t slashPos = reference.identity.pathOrId.find('/');
+    if (slashPos != std::string::npos)
+    {
+        const auto& resourceTypes = mFhirStructureRepository->findCodeSystem(constants::resourceTypesUrl, std::nullopt);
+        const std::string_view resourceType{reference.identity.pathOrId.begin(),
+                                      reference.identity.pathOrId.begin() + gsl::narrow<std::string_view::difference_type>(slashPos)};
+        if (resourceTypes->containsCode(resourceType))
+        {
+            return relativeReferenceTargetIdentity(std::move(reference), resourceRoot, elementFullPath);
+        }
+    }
+    reference.result.add(Severity::debug, "invalid reference: " + to_string(reference.identity),
+                         std::string{elementFullPath}, nullptr);
+    reference.identity = {};
+    return reference;
+}
+Element::IdentityAndResult
+Element::relativeReferenceTargetIdentity(IdentityAndResult&& reference,
+                                         const std::shared_ptr<const Element>& currentResoureRoot,
+                                         std::string_view elementFullPath) const
+{
+    static const std::set<std::string_view> httpLike{"http", "https"};
+    using namespace std::string_literals;
+    using std::max;
+    auto ownIdentity = currentResoureRoot->resourceIdentity(elementFullPath, false);
+    if (ownIdentity.identity.pathOrId.empty() || ! ownIdentity.identity.scheme ||
+        ! httpLike.contains(*ownIdentity.identity.scheme))
+    {
+        reference.result.add(Severity::debug, "cannot derive full url", std::string{elementFullPath}, nullptr);
+        return std::move(reference);
+    }
+    std::string_view ownFullUrlPart{ownIdentity.identity.pathOrId};
+    const size_t lastSlash = ownFullUrlPart.rfind('/');
+    const size_t prevSlash = lastSlash > 0 ? ownFullUrlPart.rfind('/', lastSlash - 1) : std::string_view::npos;
+    if (lastSlash == std::string_view::npos || prevSlash == std::string_view::npos)
+    {
+        reference.result.add(Severity::debug, "Cannot derive prefix from url: " + ownIdentity.identity.pathOrId,
+                             std::string{elementFullPath}, nullptr);
+        return std::move(reference);
+    }
+    const auto& prefix = ownFullUrlPart.substr(0, prevSlash);
+    const auto& resourceInOwnUrl = ownFullUrlPart.substr(prevSlash + 1, lastSlash - prevSlash - 1);
+    const auto* resourceProfile = currentResoureRoot->definitionPointer().profile();
+    const auto& ownTypeId = resourceProfile->typeId();
+    // neither equals to ownTypeId nor ends_with '/' + ownTypeId
+    if (resourceInOwnUrl != ownTypeId)
+    {
+        IdentityAndResult result;
+        result.result.add(
+            Severity::debug,
+            "Resources fullUrl is not RESTful as it doesn't match resource type '"s.append(resourceInOwnUrl)
+                .append("' != '")
+                .append(ownTypeId)
+                .append("': ")
+                .append(ownIdentity.identity.pathOrId),
+            std::string{elementFullPath}, nullptr);
+        return result;
+    }
+    IdentityAndResult result;
+    result.identity.scheme = ownIdentity.identity.scheme;
+    result.identity.pathOrId.reserve(prefix.size() + reference.identity.pathOrId.size() + 1);
+    result.identity.pathOrId.append(prefix).append(1, '/').append(reference.identity.pathOrId);
+    result.identity.containedId = reference.identity.containedId;
+    result.result.add(Severity::debug, to_string(reference.identity) + " completed to " + to_string(result.identity),
+                      std::string{elementFullPath}, nullptr);
+    return result;
+}
+
+
+std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+Element::resolveReference(std::string_view elementFullPath) const
+{
+    std::optional<IdentityAndResult> identity;
+    if (mType == Type::String)
+    {
+        identity = IdentityAndResult::fromReferenceString(asString(), elementFullPath);
+    }
+    if (mType == Type::Structured && definitionPointer().element()->typeId() == "Reference")
+    {
+        const auto& referenceField = subElements("reference");
+        if (referenceField.empty())
+        {
+            ValidationResultList result;
+            result.add(Severity::debug, "Reference is not a url reference", std::string{elementFullPath}, nullptr);
+            return {nullptr, std::move(result)};
+        }
+        identity = IdentityAndResult::fromReferenceString(referenceField[0]->asString(), elementFullPath);
+    }
+    if (identity)
+    {
+        auto resolved = resolveReference(identity->identity, elementFullPath);
+        get<ValidationResultList>(resolved).prepend(std::move(identity->result));
+        return resolved;
+    }
+    return {};
+}
+
+std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+Element::resolveReference(const Identity& reference, std::string_view elementFullPath) const
+{
+    ValidationResultList resultList;
+    if (reference.containedId.has_value())
+    {
+        std::shared_ptr<const Element> referencedContainer;
+        if (reference.pathOrId.empty())
+        {
+            referencedContainer = containerResource();
+        }
+        else
+        {
+            std::tie(referencedContainer, resultList) = resolveUrlReference(reference, elementFullPath);
+        }
+        if (referencedContainer)
+        {
+            auto result = referencedContainer->resolveContainedReference(*reference.containedId);
+            get<ValidationResultList>(result).prepend(std::move(resultList));
+            return result;
+        }
+        resultList.add(Severity::debug, "reference target not found: " + to_string(reference),
+                       std::string{elementFullPath}, nullptr);
+        return std::make_tuple(nullptr, std::move(resultList));
+    }
+    if (reference.pathOrId.empty())
+    {
+        resultList.add(Severity::debug, "reference target not found: " + to_string(reference),
+                       std::string{elementFullPath}, nullptr);
+        return std::make_tuple(nullptr, std::move(resultList));
+    }
+    return resolveUrlReference(reference, elementFullPath);
+}
+
+std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+Element::resolveUrlReference(const Identity& urlIdentity, std::string_view elementFullPath) const
+{
+    using namespace std::string_literals;
+    auto fullTargetRef = referenceTargetIdentity({urlIdentity}, elementFullPath);
+    const auto containingBundle = this->containingBundle();
+    if (containingBundle)
+    {
+        auto resolution = containingBundle->resolveBundleReference(fullTargetRef.identity.url(), elementFullPath);
+        fullTargetRef.result.append(std::move(get<ValidationResultList>(resolution)));
+        return {std::move(get<std::shared_ptr<const Element>>(resolution)), std::move(fullTargetRef.result)};
+    }
+    auto ownIdentity = resourceIdentity(elementFullPath);
+    if (ownIdentity.identity.pathOrId == fullTargetRef.identity.pathOrId &&
+        ownIdentity.identity.scheme == fullTargetRef.identity.scheme)
+    {
+        if (ownIdentity.identity.containedId.has_value())
+        {
+            auto containerResource = this->containerResource();
+            if (containerResource == nullptr)
+            {
+                ValidationResultList resultList;
+                resultList.add(Severity::error,
+                               "Reference to non-existent container resource: "s.append(to_string(urlIdentity)),
+                               std::string{elementFullPath}, nullptr);
+                return {nullptr, std::move(resultList)};
+            }
+            return {std::move(containerResource), {}};
+        }
+        return {resourceRoot(), {}};
+    }
+    ValidationResultList resultList;
+    resultList.add(Severity::debug, "reference target not found: "s.append(to_string(urlIdentity)),
+                   std::string{elementFullPath}, nullptr);
+    return {nullptr, std::move(resultList)};
+}
+
+std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+fhirtools::Element::resolveBundleReference(std::string_view fullUrl, std::string_view elementFullPath) const
+{
+    using namespace std::string_literals;
+    for (const auto& entry : subElements("entry"))
+    {
+        const auto& fullUrlElement = entry->subElements("fullUrl");
+        if (! fullUrlElement.empty() && fullUrlElement[0]->asString() == fullUrl)
+        {
+            const auto& resource = entry->subElements("resource");
+            if (resource.empty())
+            {
+                ValidationResultList resultList;
+                resultList.add(Severity::error, "missing resource in referenced resource entry",
+                               std::string{elementFullPath}, nullptr);
+                return {nullptr, std::move(resultList)};
+            }
+            return {resource[0], {}};
+        }
+    }
+    ValidationResultList resultList;
+    resultList.add(Severity::debug, "reference target not found: "s.append(fullUrl), std::string{elementFullPath},
+                   nullptr);
+    return {nullptr, std::move(resultList)};
+}
+
+std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+fhirtools::Element::resolveContainedReference(std::string_view containedId) const
+{
+    ValidationResultList resultList;
+    for (const auto& contained : subElements("contained"))
+    {
+        const auto& id = contained->subElements("id");
+        if (id.empty())
+        {
+            resultList.add(Severity::error, "No id in contained resource", "<unknown>", nullptr);
+            continue;
+        }
+        if (id[0]->asString() == containedId)
+        {
+            return {contained, std::move(resultList)};
+        }
+    }
+    return {nullptr, std::move(resultList)};
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+std::shared_ptr<const Element> fhirtools::Element::documentRoot() const
+{
+    const auto& parent = this->parent();
+    if (! parent)
+    {
+        return shared_from_this();
+    }
+    return parent->documentRoot();
+}
+
+std::shared_ptr<const Element> fhirtools::Element::resourceRootParent() const
+{
+    const auto& resourceRoot = this->resourceRoot();
+    return resourceRoot ? resourceRoot->parent() : nullptr;
+}
+
+std::shared_ptr<const Element> Element::parentResource() const
+{
+    const auto& resourceParent = this->resourceRootParent();
+    return resourceParent ? resourceParent->resourceRoot() : nullptr;
+}
+
+
+std::shared_ptr<const Element> fhirtools::Element::resourceRoot() const
+{
+    if (isResource())
+    {
+        return shared_from_this();
+    }
+    const auto& p = parent();
+    return p ? p->resourceRoot() : nullptr;
+}
+
+std::shared_ptr<const Element> fhirtools::Element::containerResource() const
+{
+    const auto& resourceRoot = this->resourceRoot();
+    const auto& resourceParent = resourceRoot ? resourceRoot->parent() : nullptr;
+    if (resourceParent && resourceParent->hasSubElement("contained") &&
+        resourceParent->definitionPointer().profile()->isDerivedFrom(*mFhirStructureRepository,
+                                                                     constants::domainResourceUrl))
+    {
+        return resourceParent->resourceRoot();
+    }
+    if (resourceRoot->definitionPointer().profile()->isDerivedFrom(*mFhirStructureRepository,
+                                                                   constants::domainResourceUrl))
+    {
+        return resourceRoot;
+    }
+    return nullptr;
+}
+
+std::shared_ptr<const Element> fhirtools::Element::containingBundle() const
+{
+    const auto& resourceParent = this->resourceRootParent();
+    if (! resourceParent)
+    {
+        return nullptr;
+    }
+    if (resourceParent->definitionPointer().profile()->isDerivedFrom(*mFhirStructureRepository, constants::bundleUrl))
+    {
+        return resourceParent->resourceRoot();
+    }
+    return resourceParent->containingBundle();
+}
+
 void Element::setIsContextElement(const std::shared_ptr<IsContextElementTag>& tag) const
 {
     mIsContextElementTag = tag;
@@ -147,8 +771,29 @@ bool Element::isContainerResource() const
     return mDefinitionPointer.isResource() && hasSubElement("contained");
 }
 
-std::strong_ordering Element::operator<=>(const Element& rhs) const
+// NOLINTNEXTLINE(misc-no-recursion)
+std::optional<std::strong_ordering> fhirtools::Element::compareTo(const Element& rhs) const
 {
+    if (! isImplicitConvertible(type(), rhs.type()) && isImplicitConvertible(rhs.type(), type()))
+    {
+        auto reverseResult = rhs.compareTo(*this);
+        if (! reverseResult.has_value() || std::is_eq(*reverseResult))
+        {
+            return reverseResult;
+        }
+        else if (reverseResult == std::strong_ordering::greater)
+        {
+            return std::make_optional(std::strong_ordering::less);
+        }
+        else if (reverseResult == std::strong_ordering::less)
+        {
+            return std::make_optional(std::strong_ordering::greater);
+        }
+        else
+        {
+            FPFail2("unexpected std::strong_ordering value", std::logic_error);
+        }
+    }
     FPExpect(isImplicitConvertible(type(), rhs.type()), "incompatible operands for comparison");
     switch (rhs.type())
     {
@@ -170,13 +815,13 @@ std::strong_ordering Element::operator<=>(const Element& rhs) const
         case Type::String:
             return asString() <=> rhs.asString();
         case Type::Date:
-            return asDate() <=> rhs.asDate();
+            return asDate().compareTo(rhs.asDate());
         case Type::DateTime:
-            return asDateTime() <=> rhs.asDateTime();
+            return asDateTime().compareTo(rhs.asDateTime());
         case Type::Time:
-            return asTime() <=> rhs.asTime();
+            return asTime().compareTo(rhs.asTime());
         case Type::Quantity:
-            return asQuantity() <=> rhs.asQuantity();
+            return asQuantity().compareTo(rhs.asQuantity());
         case Type::Boolean:
             return asBool() <=> rhs.asBool();
         case Type::Structured:
@@ -185,30 +830,24 @@ std::strong_ordering Element::operator<=>(const Element& rhs) const
     FPFail("invalid type for comparison");
 }
 
-bool Element::operator==(const Element& rhs) const
+std::optional<bool> fhirtools::Element::equals(const Element& rhs) const
 {
     try
     {
         switch (rhs.type())
         {
             case Element::Type::Integer:
-                return asInt() == rhs.asInt();
             case Element::Type::Decimal:
-                return asDecimal() == rhs.asDecimal();
             case Element::Type::String:
-                return asString() == rhs.asString();
             case Element::Type::Boolean:
-                return asBool() == rhs.asBool();
             case Element::Type::Date:
-                // fixme if necessary ERP-10543: does currently not implement the return of empty collection {} as described in
-                //                     http://hl7.org/fhirpath/#datetime-equality
-                return asDate() == rhs.asDate();
             case Element::Type::DateTime:
-                return asDateTime() == rhs.asDateTime();
             case Element::Type::Time:
-                return asTime() == rhs.asTime();
-            case Element::Type::Quantity:
-                return asQuantity() == rhs.asQuantity();
+            case Element::Type::Quantity: {
+                const auto compareToResult = compareTo(rhs);
+                return compareToResult.has_value() ? std::make_optional(compareToResult == std::strong_ordering::equal)
+                                                   : std::nullopt;
+            }
             case Element::Type::Structured: {
                 const auto subElementsLhs = subElementNames();
                 const auto subElementsRhs = rhs.subElementNames();
@@ -219,7 +858,7 @@ bool Element::operator==(const Element& rhs) const
                 return std::ranges::all_of(subElementsRhs, [&rhs, this](const auto& item) {
                     const Collection subElementLhs{subElements(item)};
                     const Collection subElementRhs{rhs.subElements(item)};
-                    return subElementLhs == subElementRhs;
+                    return subElementLhs.equals(subElementRhs) == true;
                 });
             }
         }
@@ -257,10 +896,10 @@ bool Element::matches(const Element& pattern) const
         }
         return true;
     }
-    return *this == pattern;
+    return equals(pattern) == true;
 }
 
-Element::QuantityType::QuantityType(Element::DecimalType value, const std::string_view& unit)
+Element::QuantityType::QuantityType(DecimalType value, const std::string_view& unit)
     : mValue(std::move(value))
     , mUnit(unit)
 {
@@ -269,13 +908,17 @@ Element::QuantityType::QuantityType(Element::DecimalType value, const std::strin
 Element::QuantityType::QuantityType(const std::string_view& valueAndUnit)
 {
     size_t idx = 0;
-    mValue = std::stod(std::string(valueAndUnit), &idx);
+    (void) std::stod(std::string(valueAndUnit), &idx);
+    mValue = DecimalType(std::string_view{valueAndUnit.data(), idx});
     mUnit = boost::trim_copy(std::string(valueAndUnit.substr(idx)));
 }
 
-std::strong_ordering Element::QuantityType::operator<=>(const Element::QuantityType& rhs) const
+std::optional<std::strong_ordering> fhirtools::Element::QuantityType::compareTo(const Element::QuantityType& rhs) const
 {
-    FPExpect(convertibleToUnit(rhs.mUnit), "incompatible quantity units for comparison");
+    if (! convertibleToUnit(rhs.mUnit))
+    {
+        return std::nullopt;
+    }
     const auto convertedUnit = convertToUnit(rhs.mUnit);
     if (convertedUnit.mValue < rhs.mValue)
     {
@@ -290,17 +933,14 @@ std::strong_ordering Element::QuantityType::operator<=>(const Element::QuantityT
         return std::strong_ordering::equal;
     }
 }
-
-bool Element::QuantityType::operator==(const Element::QuantityType& rhs) const
+std::optional<bool> fhirtools::Element::QuantityType::equals(const Element::QuantityType& rhs) const
 {
-    try
+    const auto result = compareTo(rhs);
+    if (! result.has_value())
     {
-        return this->operator<=>(rhs) == std::strong_ordering::equal;
+        return std::nullopt;
     }
-    catch (const std::exception&)
-    {
-        return false;
-    }
+    return result == std::strong_ordering::equal;
 }
 
 Element::QuantityType Element::QuantityType::convertToUnit(const std::string& unit) const
@@ -315,9 +955,59 @@ bool Element::QuantityType::convertibleToUnit(const std::string& unit) const
 }
 
 PrimitiveElement::PrimitiveElement(const FhirStructureRepository* fhirStructureRepository, Type type, ValueType&& value)
-    : Element(fhirStructureRepository, {}, ProfiledElementTypeInfo{GetStructureDefinition(fhirStructureRepository, type)})
+    : Element(fhirStructureRepository, {},
+              ProfiledElementTypeInfo{GetStructureDefinition(fhirStructureRepository, type)})
     , mValue(value)
 {
+    using namespace std::string_literals;
+    struct TypeChecker {
+        TypeChecker(Type type)
+            : mType(type)
+        {
+        }
+        void operator()(int32_t)
+        {
+            FPExpect(mType == Element::Type::Integer,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/Integer");
+        }
+        void operator()(const DecimalType&)
+        {
+            FPExpect(mType == Element::Type::Decimal,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/Decimal");
+        }
+        void operator()(bool)
+        {
+            FPExpect(mType == Element::Type::Boolean,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/Boolean");
+        }
+        void operator()(const std::string&)
+        {
+            FPExpect(mType == Element::Type::String,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/String");
+        }
+        void operator()(const QuantityType&)
+        {
+            FPExpect(mType == Element::Type::Quantity,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/Quantity");
+        }
+        void operator()(const Date&)
+        {
+            FPExpect(mType == Element::Type::Date,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/Date");
+        }
+        void operator()(const DateTime&)
+        {
+            FPExpect(mType == Element::Type::DateTime,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/DateTime");
+        }
+        void operator()(const Time&)
+        {
+            FPExpect(mType == Element::Type::Time,
+                     "type/value mismatch "s.append(magic_enum::enum_name(mType)) + "/Time");
+        }
+        Type mType;
+    };
+    std::visit(TypeChecker(type), mValue);
 }
 
 const fhirtools::FhirStructureDefinition*
@@ -420,13 +1110,11 @@ std::string PrimitiveElement::asString() const
         case Type::Structured:
             break;
         case Type::Date:
-            // fixme if necessary ERP-10543:  for partial dates and times, the result will only be specified to the level of
-            //                      precision in the value being converted.
-            return std::get<Timestamp>(mValue).toXsDate();
+            return std::get<Date>(mValue).toString();
         case Type::DateTime:
-            return std::get<Timestamp>(mValue).toXsDateTime();
+            return std::get<DateTime>(mValue).toString();
         case Type::Time:
-            return std::get<Timestamp>(mValue).toXsTime();
+            return std::get<Time>(mValue).toString();
         case Type::Quantity: {
             const auto& q = std::get<QuantityType>(mValue);
             return decimalAsString(q.value()) + " " + q.unit();
@@ -446,7 +1134,7 @@ std::string PrimitiveElement::decimalAsString(const DecimalType& dec) const
     return trimmed;
 }
 
-Element::DecimalType PrimitiveElement::asDecimal() const
+fhirtools::DecimalType PrimitiveElement::asDecimal() const
 {
     switch (type())
     {
@@ -455,7 +1143,7 @@ Element::DecimalType PrimitiveElement::asDecimal() const
         case Type::Integer:
             return std::get<int32_t>(mValue);
         case Type::Boolean:
-            return std::get<bool>(mValue) ? 1.0 : 0.0;
+            return std::get<bool>(mValue) ? DecimalType("1.0") : DecimalType("0.0");
         case Type::String:
             return DecimalType(std::get<std::string>(mValue));
         case Type::Structured:
@@ -510,16 +1198,16 @@ bool PrimitiveElement::asBool() const
     FPFail("not convertible to bool");
 }
 
-fhirtools::Timestamp PrimitiveElement::asDate() const
+fhirtools::Date PrimitiveElement::asDate() const
 {
     switch (type())
     {
         case Type::Date:
-            return std::get<Timestamp>(mValue);
+            return std::get<Date>(mValue);
         case Type::DateTime:
-            return Timestamp::fromXsDate(std::get<Timestamp>(mValue).toXsDate());
+            return std::get<DateTime>(mValue).date();
         case Type::String:
-            return Timestamp::fromFhirDateTime(std::get<std::string>(mValue));
+            return Date(std::get<std::string>(mValue));
         case Type::Integer:
         case Type::Decimal:
         case Type::Boolean:
@@ -531,14 +1219,14 @@ fhirtools::Timestamp PrimitiveElement::asDate() const
     FPFail("not convertible to Date");
 }
 
-fhirtools::Timestamp PrimitiveElement::asTime() const
+fhirtools::Time PrimitiveElement::asTime() const
 {
     switch (type())
     {
         case Type::Time:
-            return std::get<Timestamp>(mValue);
+            return std::get<Time>(mValue);
         case Type::String:
-            return Timestamp::fromFhirPathTimeLiteral(std::get<std::string>(mValue));
+            return Time(std::get<std::string>(mValue));
         case Type::Integer:
         case Type::Decimal:
         case Type::Boolean:
@@ -551,15 +1239,16 @@ fhirtools::Timestamp PrimitiveElement::asTime() const
     FPFail("not convertible to Time");
 }
 
-fhirtools::Timestamp PrimitiveElement::asDateTime() const
+fhirtools::DateTime PrimitiveElement::asDateTime() const
 {
     switch (type())
     {
         case Type::Date:
+            return DateTime(std::get<Date>(mValue));
         case Type::DateTime:
-            return std::get<Timestamp>(mValue);
+            return std::get<DateTime>(mValue);
         case Type::String:
-            return Timestamp::fromFhirDateTime(std::get<std::string>(mValue));
+            return DateTime(std::get<std::string>(mValue));
         case Type::Integer:
         case Type::Decimal:
         case Type::Boolean:
@@ -645,7 +1334,14 @@ std::ostream& fhirtools::operator<<(std::ostream& os, const Element& element)
     os << R"(, "value":)";
     if (element.type() != Element::Type::Structured)
     {
-        os << '"' << element.asString() << '"';
+        try
+        {
+            os << '"' << element.asString() << '"';
+        }
+        catch (const std::runtime_error&)
+        {
+            os << "<null>";
+        }
     }
     else
     {
@@ -694,11 +1390,12 @@ std::ostream& Element::json(std::ostream& out) const
             return out << '"' << asString() << '"';
         case Structured: {
             out << '{';
+            std::string_view fieldSep;
             if (definitionPointer().isResource())
             {
-                out << R"("resourceType": ")" << definitionPointer().profile()->typeId() << R"(", )";
+                out << R"("resourceType": ")" << definitionPointer().profile()->typeId();
+                fieldSep = ", ";
             }
-            std::string_view fieldSep;
             for (const auto& name : subElementNames())
             {
                 auto defPtrs = definitionPointer().subDefinitions(*getFhirStructureRepository(), name);
@@ -729,8 +1426,8 @@ std::ostream& Element::json(std::ostream& out) const
                 }
             }
             out << '}';
-        }
             return out;
+        }
     }
     return out << "<error>";
 }

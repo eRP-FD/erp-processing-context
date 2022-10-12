@@ -11,8 +11,11 @@
 #include <iosfwd>
 #include <memory>
 #include <optional>
+#include <set>
+#include <variant>
 #include <vector>
 
+#include "fhirtools/model/DecimalType.hxx"
 #include "fhirtools/repository/FhirConstraint.hxx"
 #include "fhirtools/repository/FhirSlicing.hxx"
 
@@ -94,6 +97,16 @@ public:
     bool hasBinding() const {return mBinding.has_value();}
     const Binding& binding() const {return *mBinding;}
 
+    bool hasMaxLength() const;
+    size_t maxLength() const;
+
+    std::optional<int> minValueInteger() const;
+    std::optional<int> maxValueInteger() const;
+    std::optional<DecimalType> minValueDecimal() const;
+    std::optional<DecimalType> maxValueDecimal() const;
+
+    const std::set<std::string>& referenceTargetProfiles() const;
+
     // immutable:
     FhirElement(FhirElement&&) = default;
     FhirElement(const FhirElement&) = default;
@@ -115,6 +128,11 @@ private:
     std::shared_ptr<const FhirValue> mFixed;
     Cardinality mCardinality;
     std::optional<Binding> mBinding;
+    std::optional<size_t> mMaxLength;
+    using MinMaxValueType = std::variant<int, DecimalType>;
+    std::optional<MinMaxValueType> mMinValue;
+    std::optional<MinMaxValueType> mMaxValue;
+    std::set<std::string> mReferenceTargetProfiles;
 };
 
 std::ostream& operator << (std::ostream&, const FhirElement::Cardinality&);
@@ -134,6 +152,8 @@ public:
     Builder& typeId(std::string type_);
 
     Builder& addProfile(std::string profile);
+
+    Builder& setProfiles(std::list<std::string> profiles);
 
     Builder& contentReference(std::string contentReference_);
 
@@ -158,6 +178,18 @@ public:
     Builder& bindingStrength(const std::string& strength);
 
     Builder& bindingValueSet(const std::string& canonical);
+
+    Builder& maxLength(size_t maxLength);
+
+    Builder& minValueInteger(int minValue);
+
+    Builder& maxValueInteger(int maxValue);
+
+    Builder& minValueDecimal(const std::string& decimalAsString);
+
+    Builder& maxValueDecimal(const std::string& decimalAsString);
+
+    Builder& addTargetProfile(std::string&& targetProfile);
 
     std::shared_ptr<const FhirElement> getAndReset();
 

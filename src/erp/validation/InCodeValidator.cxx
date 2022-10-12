@@ -38,33 +38,6 @@ InCodeValidator::InCodeValidator()
                             SchemaType::KBV_PR_FOR_Patient,
                             SchemaType::KBV_PR_FOR_Practitioner,
                             SchemaType::KBV_PR_FOR_PractitionerRole};
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvBundleValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Composition, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvCompositionValidator_V1_0_1>());
-    mKbvValidators.try_emplace(
-        KeyKbv(SchemaType::KBV_PR_ERP_Medication_Compounding, model::ResourceVersion::KbvItaErp::v1_0_1),
-        std::make_unique<KbvMedicationCompoundingValidator_V1_0_1>());
-    mKbvValidators.try_emplace(
-        KeyKbv(SchemaType::KBV_PR_ERP_Medication_FreeText, model::ResourceVersion::KbvItaErp::v1_0_1),
-        std::make_unique<KbvMedicationFreeTextValidator_V1_0_1>());
-    mKbvValidators.try_emplace(
-        KeyKbv(SchemaType::KBV_PR_ERP_Medication_Ingredient, model::ResourceVersion::KbvItaErp::v1_0_1),
-        std::make_unique<KbvMedicationIngredientValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Medication_PZN, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvMedicationPZNValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Coverage, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvCoverageValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Prescription, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvMedicationRequestValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Organization, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvOrganizationValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Patient, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvPatientValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Practitioner, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvPractitionerValidator_V1_0_1>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_PracticeSupply, model::ResourceVersion::KbvItaErp::v1_0_1),
-                               std::make_unique<KbvPracticeSupplyValidator_V1_0_1>());
 
     mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2),
                                std::make_unique<KbvBundleValidator_V1_0_2>());

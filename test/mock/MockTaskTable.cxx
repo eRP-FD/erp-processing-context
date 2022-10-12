@@ -10,7 +10,7 @@
 #include "test/mock/MockAccountTable.hxx"
 #include "test/mock/TestUrlArguments.hxx"
 
-MockTaskTable::Row::Row(fhirtools::Timestamp initAuthoredOn, fhirtools::Timestamp initLastModified)
+MockTaskTable::Row::Row(model::Timestamp initAuthoredOn, model::Timestamp initLastModified)
     : authoredOn(initAuthoredOn)
     , lastModified(initLastModified)
 {
@@ -23,7 +23,7 @@ MockTaskTable::MockTaskTable(MockAccountTable& accountTable, const model::Prescr
 }
 
 
-std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp>
+std::tuple<BlobId, db_model::Blob, model::Timestamp>
 MockTaskTable::getTaskKeyData(const model::PrescriptionId& taskId)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
@@ -73,10 +73,10 @@ uint64_t MockTaskTable::countAllTasksForPatient(const db_model::HashedKvnr& kvnr
     return allTasks.size();
 }
 
-std::tuple<model::PrescriptionId, fhirtools::Timestamp> MockTaskTable::createTask(model::PrescriptionType prescriptionType,
+std::tuple<model::PrescriptionId, model::Timestamp> MockTaskTable::createTask(model::PrescriptionType prescriptionType,
                                                                               model::Task::Status taskStatus,
-                                                                              const fhirtools::Timestamp& lastUpdated,
-                                                                              const fhirtools::Timestamp& created)
+                                                                              const model::Timestamp& lastUpdated,
+                                                                              const model::Timestamp& created)
 {
     ++mTaskId;
     auto id = model::PrescriptionId::fromDatabaseId(prescriptionType, mTaskId);
@@ -86,8 +86,8 @@ std::tuple<model::PrescriptionId, fhirtools::Timestamp> MockTaskTable::createTas
     return std::make_tuple(id, created);
 }
 
-MockTaskTable::Row& MockTaskTable::createRow(const model::PrescriptionId& taskId, const fhirtools::Timestamp& lastUpdated,
-                                                                               const fhirtools::Timestamp& created)
+MockTaskTable::Row& MockTaskTable::createRow(const model::PrescriptionId& taskId, const model::Timestamp& lastUpdated,
+                                                                               const model::Timestamp& created)
 {
     auto [newTask, inserted] = mTasks.try_emplace(taskId.toDatabaseId(), created, lastUpdated);
     Expect3(inserted, "Failed to insert new Task: " + taskId.toString(), std::logic_error);
@@ -99,9 +99,9 @@ void MockTaskTable::activateTask(const model::PrescriptionId& taskId,
                                 const db_model::EncryptedBlob& encryptedKvnr,
                                 const db_model::HashedKvnr& hashedKvnr,
                                 model::Task::Status taskStatus,
-                                const fhirtools::Timestamp& lastModified,
-                                const fhirtools::Timestamp& expiryDate,
-                                const fhirtools::Timestamp& acceptDate,
+                                const model::Timestamp& lastModified,
+                                const model::Timestamp& expiryDate,
+                                const model::Timestamp& acceptDate,
                                 const db_model::EncryptedBlob& healthCareProviderPrescription)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
@@ -129,7 +129,7 @@ void MockTaskTable::updateTask(const model::PrescriptionId& taskId,
     taskRow.salt = salt;
 }
 
-void MockTaskTable::updateTaskStatusAndSecret(const model::PrescriptionId& taskId, model::Task::Status taskStatus, const fhirtools::Timestamp& lastModifiedDate, const std::optional<db_model::EncryptedBlob>& taskSecret)
+void MockTaskTable::updateTaskStatusAndSecret(const model::PrescriptionId& taskId, model::Task::Status taskStatus, const model::Timestamp& lastModifiedDate, const std::optional<db_model::EncryptedBlob>& taskSecret)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
     Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
@@ -140,12 +140,12 @@ void MockTaskTable::updateTaskStatusAndSecret(const model::PrescriptionId& taskI
 }
 void MockTaskTable::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                                        const model::Task::Status& taskStatus,
-                                                       const fhirtools::Timestamp& lastModified,
+                                                       const model::Timestamp& lastModified,
                                                        const db_model::EncryptedBlob& medicationDispense,
                                                        BlobId medicationDispenseBlobId,
                                                        const db_model::HashedTelematikId& telematicId,
-                                                       const fhirtools::Timestamp& whenHandedOver,
-                                                       const std::optional<fhirtools::Timestamp>& whenPrepared,
+                                                       const model::Timestamp& whenHandedOver,
+                                                       const std::optional<model::Timestamp>& whenPrepared,
                                                        const db_model::EncryptedBlob& taskReceipt)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
@@ -161,7 +161,7 @@ void MockTaskTable::updateTaskMedicationDispenseReceipt(const model::Prescriptio
     taskRow.receipt = taskReceipt;
 }
 
-void MockTaskTable::updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus, const fhirtools::Timestamp& lastModified)
+void MockTaskTable::updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus, const model::Timestamp& lastModified)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
     Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());

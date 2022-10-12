@@ -6,10 +6,11 @@
 #ifndef ERP_PROCESSING_CONTEXT_SOAP_XMLDOCUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_SOAP_XMLDOCUMENT_HXX
 
-#include <memory>
-#include <string>
 #include <libxml/xpathInternals.h>
 
+#include <memory>
+#include <optional>
+#include <string>
 
 struct XmlValidatorContext;
 
@@ -38,6 +39,7 @@ public:
 
     bool hasElement (const std::string& xPathExpression) const;
     std::string getElementText (const std::string& xPathExpression) const;
+    std::optional<std::string> getOptionalElementText (const std::string& xPathExpression) const;
     xmlNodePtr getNode (const std::string& xPathExpression) const;
     xmlNodeSetPtr getNodes (const std::string& xPathExpression) const;
     std::string getAttributeValue (const std::string& xPathExpression) const;

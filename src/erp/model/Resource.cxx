@@ -49,7 +49,6 @@
 #include "erp/util/JsonLog.hxx"
 #include "erp/validation/InCodeValidator.hxx"
 #include "erp/validation/JsonValidator.hxx"
-#include "erp/validation/KbvMedicationModelHelper.hxx"
 #include "fhirtools/util/SaxHandler.hxx"
 
 #include <boost/format.hpp>
@@ -496,6 +495,35 @@ std::optional<std::string_view> ResourceBase::identifierValue() const
     return getOptionalStringValue(identifierValuePointer);
 }
 
+SchemaType ResourceBase::getProfile() const
+{
+    const auto& profileString = getStringValue(profilePointer);
+    const auto& parts = String::split(profileString, '|');
+    const auto& profileWithoutVersion = parts[0];
+    const auto& pathParts = String::split(profileWithoutVersion, '/');
+    const auto& profile = pathParts.back();
+    const auto& schemaType = magic_enum::enum_cast<SchemaType>(profile);
+    ModelExpect(schemaType.has_value(),
+                "Could not extract schema type from profile string: " + std::string(profileString));
+    return *schemaType;
+}
+
+
+fhirtools::ValidatorOptions ResourceBase::defaultValidatorOptions()
+{
+    using enum ConfigurationKey;
+    using Severity = fhirtools::Severity;
+    const auto& config = Configuration::instance();
+    fhirtools::ValidatorOptions options;
+    options.levels.mandatoryResolvableReferenceFailure =
+        config.getOptional<Severity>(FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
+                                     options.levels.mandatoryResolvableReferenceFailure);
+    options.levels.unreferencedBundledResource = config.getOptional<Severity>(
+        FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, options.levels.unreferencedBundledResource);
+    options.levels.unreferencedContainedResource = config.getOptional<Severity>(
+        FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, options.levels.unreferencedContainedResource);
+    return options;
+}
 
 // ---
 
@@ -521,10 +549,9 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXmlNoValidation(st
 }
 
 template<class TDerivedModel, typename SchemaVersionType>
-TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(std::string_view xml, const XmlValidator& validator,
-                                                                  const InCodeValidator& inCodeValidator,
-                                                                  SchemaType schemaType, bool allowGenericValidate,
-                                                                  std::optional<SchemaVersionType> enforcedVersion)
+TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(
+    std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator, SchemaType schemaType,
+    const std::optional<fhirtools::ValidatorOptions>& valOpts, std::optional<SchemaVersionType> enforcedVersion)
 {
    std::optional<TDerivedModel> model;
     try
@@ -534,14 +561,14 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(std::string_vi
         FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), xml, *fhirSchemaValidationContext);
         if (schemaType != SchemaType::fhir)
         {
-            model->doValidation(xml, validator, inCodeValidator, schemaType, allowGenericValidate, enforcedVersion);
+            model->doValidation(xml, validator, inCodeValidator, schemaType, valOpts, enforcedVersion);
         }
     }
     catch (const ErpException& erpException)
     {
-        if (allowGenericValidate && model && schemaType == SchemaType::fhir)
+        if (valOpts && model && schemaType == SchemaType::fhir)
         {
-            model->doGenericValidation(erpException);
+            model->doGenericValidation(*valOpts, erpException);
         }
         throw;
     }
@@ -550,9 +577,9 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(std::string_vi
         TVLOG(1) << "runtime_error: " << er.what();
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing / validation error", er.what());
     }
-    if (allowGenericValidate && schemaType == SchemaType::fhir)
+    if (valOpts && schemaType == SchemaType::fhir)
     {
-        model->doGenericValidation({});
+        model->doGenericValidation (*valOpts);
     }
     return std::move(model).value();
 }
@@ -560,12 +587,13 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(std::string_vi
 template<class TDerivedModel, typename SchemaVersionType>
 void Resource<TDerivedModel, SchemaVersionType>::doValidation(std::string_view xml, const XmlValidator& validator,
                                                               const InCodeValidator& inCodeValidator,
-                                                              SchemaType schemaType, bool allowGenericValidate,
+                                                              SchemaType schemaType,
+                                                              const std::optional<fhirtools::ValidatorOptions>& valOpts,
                                                               std::optional<SchemaVersionType> enforcedVersion) const
 {
     const auto schemaVersion = getSchemaVersion();
     ModelExpect(! enforcedVersion || enforcedVersion == schemaVersion,
-                "profile version missmatch, expected=" +
+                "profile version mismatch, expected=" +
                     std::string(ResourceVersion::v_str(enforcedVersion.value_or(SchemaVersionType{}))) +
                     " found=" + std::string(ResourceVersion::v_str(schemaVersion)));
 
@@ -574,6 +602,7 @@ void Resource<TDerivedModel, SchemaVersionType>::doValidation(std::string_view x
     {
         FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), xml, *schemaValidationContext);
         inCodeValidator.validate(*this, schemaType, schemaVersion, validator);
+        additionalValidation();
     }
     catch (const ErpException& erpException)
     {
@@ -581,20 +610,20 @@ void Resource<TDerivedModel, SchemaVersionType>::doValidation(std::string_view x
         {
             throw;
         }
-        if (allowGenericValidate)
+        if (valOpts)
         {
-            doGenericValidation(erpException);
+            doGenericValidation(*valOpts, erpException);
         }
         throw;
     }
-    if (allowGenericValidate)
+    if (valOpts)
     {
-        doGenericValidation({});
+        doGenericValidation(*valOpts);
     }
 }
 
 template<typename TDerivedModel, typename SchemaVersionType>
-void Resource<TDerivedModel, SchemaVersionType>::doGenericValidation(
+void Resource<TDerivedModel, SchemaVersionType>::doGenericValidation(const fhirtools::ValidatorOptions& valOpts,
     const std::optional<ErpException>& validationErpException) const
 {
     using enum Configuration::GenericValidationMode;
@@ -618,7 +647,7 @@ void Resource<TDerivedModel, SchemaVersionType>::doGenericValidation(
         validationResult.add(fhirtools::Severity::error, *validationErpException->diagnostics(), {}, nullptr);
     }
 
-    validationResult.append(genericValidate({}));
+    validationResult.append(genericValidate(valOpts));
     auto highestSeverity = validationResult.highestSeverity();
 #ifndef NDEBUG
     if (highestSeverity >= fhirtools::Severity::error)
@@ -634,6 +663,11 @@ void Resource<TDerivedModel, SchemaVersionType>::doGenericValidation(
     {
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "FHIR-Validation error", validationResult.summary());
     }
+}
+
+template<class TDerivedModel, typename SchemaVersionType>
+void Resource<TDerivedModel, SchemaVersionType>::additionalValidation() const
+{
 }
 
 
@@ -654,10 +688,6 @@ Resource<TDerivedModel, SchemaVersionType>::genericValidate(const fhirtools::Val
         std::make_shared<ErpElement>(&Fhir::instance().structureRepository(), std::weak_ptr<const fhirtools::Element>{},
                                      resourceTypeName, &jsonDocument());
 
-    JsonLog jsonLog(LogId::INFO, JsonLog::makeWarningLogReceiver(), true);
-    jsonLog.keyValue("log-type", "timing");
-    jsonLog.keyValue("subject", "fhir-validation");
-    jsonLog.keyValue("resourceType", resourceTypeName);
     std::ostringstream profiles;
     std::string_view sep;
     for (const auto& prof: fhirPathElement->profiles())
@@ -665,16 +695,9 @@ Resource<TDerivedModel, SchemaVersionType>::genericValidate(const fhirtools::Val
         profiles << sep << prof;
         sep = ", ";
     }
-    jsonLog.keyValue("profiles", profiles.str());
-
-    DurationTimer::Receiver receiver = [&jsonLog](const std::chrono::system_clock::duration duration,
-                                            const std::string&, const std::string& sessionIdentifier) {
-        using namespace std::chrono;
-        jsonLog
-            .keyValue("x-request-id", sessionIdentifier)
-            .keyValue("duration-us", gsl::narrow<size_t>(duration_cast<microseconds>(duration).count()));
-    };
-    auto timer = DurationConsumer::getCurrent().getTimer("Generic FHIR Validation", receiver);
+    auto timer = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryFhirValidation, "Generic FHIR Validation",
+        {{"resourceType", resourceTypeName}, {std::string{"profiles"}, profiles.str()}});
 
     return fhirtools::FhirPathValidator::validate(fhirPathElement, resourceTypeName, options);
 }
@@ -690,7 +713,7 @@ TDerivedModel
 Resource<TDerivedModel, SchemaVersionType>::fromJson(std::string_view json, const JsonValidator& jsonValidator,
                                                      const XmlValidator& xmlValidator,
                                                      const InCodeValidator& inCodeValidator, SchemaType schemaType,
-                                                     bool allowGenericValidate)
+                                                     const std::optional<fhirtools::ValidatorOptions>& valOpts)
 {
     try
     {
@@ -703,11 +726,11 @@ Resource<TDerivedModel, SchemaVersionType>::fromJson(std::string_view json, cons
         }
         catch (const ErpException& erpException)
         {
-            if (!allowGenericValidate || erpException.status() != HttpStatus::BadRequest)
+            if (!valOpts || erpException.status() != HttpStatus::BadRequest)
             {
                 throw;
             }
-            model.doGenericValidation(erpException);
+            model.doGenericValidation(*valOpts, erpException);
             throw;
         }
 
@@ -715,11 +738,11 @@ Resource<TDerivedModel, SchemaVersionType>::fromJson(std::string_view json, cons
         {
             // Convert to XML and do XML validation
             const auto xml = Fhir::instance().converter().jsonToXmlString(model.jsonDocument());
-            model.doValidation(xml, xmlValidator, inCodeValidator, schemaType);
+            model.doValidation(xml, xmlValidator, inCodeValidator, schemaType, valOpts);
         }
-        else if (allowGenericValidate)
+        else if (valOpts)
         {
-            model.doGenericValidation({});
+            model.doGenericValidation(*valOpts);
         }
         return model;
     }
@@ -772,7 +795,7 @@ SchemaVersionType getFallbackVersion();
 template<>
 ResourceVersion::KbvItaErp getFallbackVersion<ResourceVersion::KbvItaErp>()
 {
-    return ResourceVersion::KbvItaErp::v1_0_1;
+    ModelFail("KBV resources must always define a profile version");
 }
 
 template<>
@@ -794,13 +817,13 @@ SchemaVersionType Resource<TDerivedModel, SchemaVersionType>::getSchemaVersion()
         ModelExpect(metaArray->Size() == 1, "/meta/profile array must have size 1");
         const auto profileString = getStringValue(profilePtr);
         const auto parts = String::split(profileString, '|');
+        ModelExpect(parts.size() <= 2, "Invalid meta/profile: more than one | separator found.");
         if (parts.size() == 2)
         {
             return getSchemaVersionT<SchemaVersionType>(parts[1]);
         }
         else
         {
-            // TODO ERP-7953: remove this when unversionized profiles are no longer supported.
             return getFallbackVersion<SchemaVersionType>();
         }
     }
@@ -837,7 +860,6 @@ template class Resource<KbvMedicationGeneric, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationCompounding, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationFreeText, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationIngredient, ResourceVersion::KbvItaErp>;
-template class Resource<KbvMedicationModelHelper, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationPzn, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationRequest, ResourceVersion::KbvItaErp>;
 template class Resource<KbvOrganization, ResourceVersion::KbvItaErp>;
@@ -856,5 +878,6 @@ template class Resource<Task>;
 template class Resource<UnspecifiedResource>;
 
 }// namespace model
+
 
 

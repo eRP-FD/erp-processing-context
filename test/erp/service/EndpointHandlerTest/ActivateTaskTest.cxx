@@ -234,7 +234,7 @@ TEST_P(ActivateTaskValidationModeTest, OnUnexpectedKbvExtension)
     auto& resourceManager = ResourceManager::instance();
     const auto& task = resourceManager.getStringResource(dataPath + "/task3.json");
     const auto& bundle = resourceManager.getStringResource(dataPath + "/kbv_bundle_unexpected_extension.xml");
-    auto time = fhirtools::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
+    auto time = model::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
     {
         EnvironmentVariableGuard onUnknownExtensionGuard{
             "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "ignore"};
@@ -279,6 +279,11 @@ TEST_P(ActivateTaskValidationModeTest, genericValidation)
     "Bundle.entry[0].resource{Composition}.extension[0].valueCoding.code: "
         "error: missing mandatory element "
         "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis:valueCoding|1.0.3); "
+    "Bundle.entry[0].resource{Composition}.subject: "
+        "error: Cannot match profile to Element 'Composition': "
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3 "
+            "(referenced resource Bundle.entry[0].resource{Composition} must match one of: "
+                "[\"https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3\"]); "
     "Bundle: "
         "error: bdl-7: FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles) "
         "(from profile: http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1); "
@@ -297,7 +302,7 @@ TEST_P(ActivateTaskValidationModeTest, genericValidation)
     const auto& invalidExtension = resourceManager.getStringResource(dataPath + "/kbv_bundle_unexpected_extension.xml");
     const auto& badBundle =
         resourceManager.getStringResource(dataPath + "/kbv_bundle_duplicate_fullUrl_missing_code.xml");
-    auto time = fhirtools::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
+    auto time = model::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
 
     EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, goodBundle, "X234567890", HttpStatus::OK, time));
     auto expectGeneric = (GetParam() == Configuration::GenericValidationMode::require_success)

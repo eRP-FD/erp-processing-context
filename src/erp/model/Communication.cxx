@@ -17,7 +17,7 @@
 
 using namespace model;
 using namespace model::resource;
-using fhirtools::Timestamp;
+using model::Timestamp;
 
 namespace rj = rapidjson;
 
@@ -342,4 +342,26 @@ void Communication::verifyPayload() const
     mPayload.verifyLength();
     mPayload.verifyUrls();
     mPayload.verifyMimeTypes();
+}
+
+bool Communication::canValidateGeneric(MessageType messageType)
+{
+    switch (messageType)
+    {
+        using enum model::Communication::MessageType;
+        case InfoReq:
+        case DispReq:
+        case Representative:
+            return true;
+        case Reply:
+        case ChargChangeReq:
+        case ChargChangeReply:
+            return false;
+    }
+    Fail2("Unexpected value for 'messageType': " + std::to_string(intmax_t(messageType)), std::logic_error);
+}
+
+bool model::Communication::canValidateGeneric() const
+{
+    return canValidateGeneric(messageType());
 }

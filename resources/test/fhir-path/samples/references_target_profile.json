@@ -1,0 +1,23 @@
+{
+    "resourceType": "DomainResource",
+    "id": "root",
+    "meta": {
+        "profile": [
+            "http://erp.test/ReferencesDomainResource|0.8.15"
+        ]
+    },
+    "extension": [
+        {
+            "url": "http://erp.test/ReferenceExtension",
+            "valueReference": {
+                "reference": "#contained"
+            }
+        }
+    ],
+    "contained": [
+        {
+            "resourceType": "DomainResource",
+            "id": "contained"
+        }
+    ]
+}

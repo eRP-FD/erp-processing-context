@@ -31,9 +31,9 @@ public:
     ProfileSolver(ProfileSolver&&) noexcept;
     ProfileSolver& operator =(const ProfileSolver&) = delete;
     ProfileSolver& operator =(ProfileSolver&&) noexcept;
-    void requireOne(std::map<ProfileValidatorMapKey, std::shared_ptr<ValidationData>> profileData);
+    void requireOne(std::map<ProfiledElementTypeInfo, std::shared_ptr<const ValidationData>> profileData);
     [[nodiscard]] ValidationResultList collectResults() const;
-    bool fail(const ProfileValidatorMapKey& mapKey);
+    bool fail(const ProfiledElementTypeInfo& mapKey);
     [[nodiscard]] bool failed() const;
 
     void merge(const ProfileSolver&);

@@ -12,7 +12,7 @@
 
 #include "ResourceManager.hxx"
 std::string CryptoHelper::toCadesBesSignature(const std::string& content,
-                                              const std::optional<fhirtools::Timestamp>& signingTime)
+                                              const std::optional<model::Timestamp>& signingTime)
 {
     auto pem_str = qesCertificatePem();
     auto cert = Certificate::fromPem(pem_str);

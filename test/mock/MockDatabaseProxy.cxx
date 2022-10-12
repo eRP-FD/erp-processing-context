@@ -25,9 +25,9 @@ void MockDatabaseProxy::activateTask(const model::PrescriptionId& taskId,
                                      const db_model::EncryptedBlob& encryptedKvnr,
                                      const db_model::HashedKvnr& hashedKvnr,
                                      model::Task::Status taskStatus,
-                                     const fhirtools::Timestamp& lastModified,
-                                     const fhirtools::Timestamp& expiryDate,
-                                     const fhirtools::Timestamp& acceptDate,
+                                     const model::Timestamp& lastModified,
+                                     const model::Timestamp& expiryDate,
+                                     const model::Timestamp& acceptDate,
                                      const db_model::EncryptedBlob& healthCareProviderPrescription)
 {
     mDatabase.activateTask(taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate, acceptDate,
@@ -61,10 +61,10 @@ uint64_t MockDatabaseProxy::countRepresentativeCommunications(const db_model::Ha
     return mDatabase.countRepresentativeCommunications(insurantA, insurantB, prescriptionId);
 }
 
-std::tuple<model::PrescriptionId, fhirtools::Timestamp> MockDatabaseProxy::createTask(model::PrescriptionType prescriptionType,
+std::tuple<model::PrescriptionId, model::Timestamp> MockDatabaseProxy::createTask(model::PrescriptionType prescriptionType,
                                                                                   model::Task::Status taskStatus,
-                                                                                  const fhirtools::Timestamp& lastUpdated,
-                                                                                  const fhirtools::Timestamp& created)
+                                                                                  const model::Timestamp& lastUpdated,
+                                                                                  const model::Timestamp& created)
 {
     return mDatabase.createTask(prescriptionType, taskStatus, lastUpdated, created);
 }
@@ -74,7 +74,7 @@ void MockDatabaseProxy::deleteCommunicationsForTask(const model::PrescriptionId&
     mDatabase.deleteCommunicationsForTask(taskId);
 }
 std::optional<Uuid> MockDatabaseProxy::insertCommunication(const model::PrescriptionId& prescriptionId,
-                                                           const fhirtools::Timestamp& timeSent,
+                                                           const model::Timestamp& timeSent,
                                                            const model::Communication::MessageType messageType,
                                                            const db_model::HashedId& sender,
                                                            const db_model::HashedId& recipient,
@@ -88,7 +88,7 @@ std::optional<Uuid> MockDatabaseProxy::insertCommunication(const model::Prescrip
 }
 
 void MockDatabaseProxy::markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds,
-                                                      const fhirtools::Timestamp& retrieved,
+                                                      const model::Timestamp& retrieved,
                                                       const db_model::HashedId& recipient)
 {
     return mDatabase.markCommunicationsAsRetrieved(communicationIds, retrieved, recipient);
@@ -192,19 +192,19 @@ void MockDatabaseProxy::updateTask(const model::PrescriptionId& taskId,
 
 void MockDatabaseProxy::updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                                     model::Task::Status taskStatus,
-                                                    const fhirtools::Timestamp& lastModified)
+                                                    const model::Timestamp& lastModified)
 {
     mDatabase.updateTaskClearPersonalData(taskId, taskStatus, lastModified);
 }
 
 void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                                             const model::Task::Status& taskStatus,
-                                                            const fhirtools::Timestamp& lastModified,
+                                                            const model::Timestamp& lastModified,
                                                             const db_model::EncryptedBlob& medicationDispense,
                                                             BlobId medicationDispenseBlobId,
                                                             const db_model::HashedTelematikId& telematicId,
-                                                            const fhirtools::Timestamp& whenHandedOver,
-                                                            const std::optional<fhirtools::Timestamp>& whenPrepared,
+                                                            const model::Timestamp& whenHandedOver,
+                                                            const std::optional<model::Timestamp>& whenPrepared,
                                                             const db_model::EncryptedBlob& receipt)
 {
     mDatabase.updateTaskMedicationDispenseReceipt(taskId, taskStatus, lastModified, medicationDispense,
@@ -214,17 +214,17 @@ void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(const model::Prescri
 
 void MockDatabaseProxy::updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                                   model::Task::Status status,
-                                                  const fhirtools::Timestamp& lastModifiedDate,
+                                                  const model::Timestamp& lastModifiedDate,
                                                   const std::optional<db_model::EncryptedBlob>& secret)
 {
     mDatabase.updateTaskStatusAndSecret(taskId, status, lastModifiedDate, secret);
 }
-std::tuple<BlobId, db_model::Blob, fhirtools::Timestamp> MockDatabaseProxy::getTaskKeyData(const model::PrescriptionId& taskId)
+std::tuple<BlobId, db_model::Blob, model::Timestamp> MockDatabaseProxy::getTaskKeyData(const model::PrescriptionId& taskId)
 {
     return mDatabase.getTaskKeyData(taskId);
 }
 
-std::tuple<std::optional<Uuid>, std::optional<fhirtools::Timestamp>>
+std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
 MockDatabaseProxy::deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender)
 {
     return mDatabase.deleteCommunication(communicationId, sender);
@@ -245,12 +245,12 @@ std::optional<db_model::Blob> MockDatabaseProxy::retrieveSaltForAccount(const db
     return mDatabase.retrieveSaltForAccount(accountId, masterKeyType, blobId);
 }
 
-void MockDatabaseProxy::storeConsent(const db_model::HashedKvnr& kvnr, const fhirtools::Timestamp& creationTime)
+void MockDatabaseProxy::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
 {
     mDatabase.storeConsent(kvnr, creationTime);
 }
 
-std::optional<fhirtools::Timestamp> MockDatabaseProxy::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::optional<model::Timestamp> MockDatabaseProxy::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
 {
     return mDatabase.retrieveConsentDateTime(kvnr);
 }
@@ -295,6 +295,11 @@ void MockDatabaseProxy::deleteChargeInformation(const ::model::PrescriptionId& i
 void MockDatabaseProxy::clearAllChargeInformation(const ::db_model::HashedKvnr& insurant)
 {
     mDatabase.clearAllChargeInformation(insurant);
+}
+
+void MockDatabaseProxy::clearAllChargeItemCommunications(const ::db_model::HashedKvnr& insurant)
+{
+    mDatabase.clearAllChargeItemCommunications(insurant);
 }
 
 uint64_t MockDatabaseProxy::countChargeInformationForInsurant(const ::db_model::HashedKvnr& insurant,

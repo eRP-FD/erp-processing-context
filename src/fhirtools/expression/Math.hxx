@@ -15,6 +15,17 @@ class MathPlusOperator : public BinaryExpression
 {
 };
 
+// http://hl7.org/fhirpath/N1/#mod
+class MathModOperator : public BinaryExpression
+{
+public:
+    static constexpr auto IDENTIFIER = "mod";
+    using BinaryExpression::BinaryExpression;
+    Collection eval(const Collection& collection) const override;
+private:
+    Collection mod(const Element& lhs, const Element& rhs, Element::Type type) const;
+};
+
 // http://hl7.org/fhirpath/N1/#abs-integer-decimal-quantity
 class MathAbs : public Expression
 {

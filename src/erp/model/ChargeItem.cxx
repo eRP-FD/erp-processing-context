@@ -232,7 +232,7 @@ void ChargeItem::setEntererTelematikId(const std::string_view& telematicId)
     setValue(entererTelematikIdValuePointer, telematicId);
 }
 
-void ChargeItem::setEnteredDate(const fhirtools::Timestamp& entered)
+void ChargeItem::setEnteredDate(const model::Timestamp& entered)
 {
     setValue(enteredDatePointer, entered.toXsDateTime());
 }

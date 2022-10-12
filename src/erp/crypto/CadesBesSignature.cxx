@@ -21,7 +21,7 @@ namespace
     {
     public:
         X509* certificate;
-        std::optional<fhirtools::Timestamp> signingTimestamp;
+        std::optional<model::Timestamp> signingTimestamp;
     };
 
 
@@ -75,7 +75,7 @@ namespace
     }
 
 
-    std::optional<fhirtools::Timestamp> getSigningTimeFromSignerInfo(CMS_SignerInfo& signerInfo)
+    std::optional<model::Timestamp> getSigningTimeFromSignerInfo(CMS_SignerInfo& signerInfo)
     {
         const int attributeIndex = CMS_signed_get_attr_by_NID(&signerInfo, NID_pkcs9_signingTime, -1);
         if (attributeIndex != -1)
@@ -89,7 +89,7 @@ namespace
                 tm tm{};
                 OpenSslExpect(ASN1_TIME_to_tm(asn1Type->value.utctime, &tm) == 1,
                               "Failed to convert ASN1_UTCTIME to struct tm");
-                return fhirtools::Timestamp::fromTmInUtc(tm);
+                return model::Timestamp::fromTmInUtc(tm);
             }
         }
 
@@ -472,7 +472,7 @@ CadesBesSignature::CadesBesSignature(
     const Certificate& cert,
     const shared_EVP_PKEY& privateKey,
     const std::string& payload,
-    const std::optional<fhirtools::Timestamp>& signingTime,
+    const std::optional<model::Timestamp>& signingTime,
     OcspResponsePtr ocspResponse)
     : mPayload(payload),
       mCmsHandle{}
@@ -525,7 +525,7 @@ const std::string& CadesBesSignature::payload() const
 }
 
 
-std::optional<fhirtools::Timestamp> CadesBesSignature::getSigningTime() const
+std::optional<model::Timestamp> CadesBesSignature::getSigningTime() const
 {
     const auto* signerInfos = CMS_get0_SignerInfos(mCmsHandle.removeConst().get());
     OpenSslExpect(signerInfos != nullptr, "Error getting signer info from CMS structure");
@@ -571,7 +571,7 @@ std::optional<fhirtools::Timestamp> CadesBesSignature::getSigningTime() const
     return {};
 }
 
-void CadesBesSignature::setSigningTime(const fhirtools::Timestamp& signingTime)
+void CadesBesSignature::setSigningTime(const model::Timestamp& signingTime)
 {
     using namespace std::chrono;
     auto secondsSinceEpoch = duration_cast<seconds>(signingTime.toChronoTimePoint().time_since_epoch()).count();

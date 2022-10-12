@@ -28,6 +28,7 @@ namespace {
     constexpr uint32_t LOGID_SERVICE_HSM                          = 0x00000003;
     constexpr uint32_t LOGID_SERVICE_DOS                          = 0x00000004;
     constexpr uint32_t LOGID_ACCESS                               = 0x00000005;
+    constexpr uint32_t LOGID_INTERNAL                             = 0x00000006;
 }
 
 
@@ -47,6 +48,9 @@ enum class LogId : uint32_t
     DOS_ERROR =          LOGID_ERROR    | LOGID_EXTERNAL_SERVICE_FAILURE | LOGID_SERVICE_DOS,
 
     ACCESS =             LOGID_INFO     |                                  LOGID_ACCESS,
+
+    INTERNAL_ERROR =     LOGID_ERROR    |                                  LOGID_INTERNAL,
+    INTERNAL_WARNING =   LOGID_WARNING  |                                  LOGID_INTERNAL,
 
     INFO =               LOGID_INFO
 };

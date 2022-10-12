@@ -4,8 +4,7 @@
  */
 
 #include "erp/tsl/TrustStore.hxx"
-
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/tsl/TslParser.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Configuration.hxx"
@@ -61,7 +60,7 @@ namespace
             if (isServiceAcceptable(iterator->second.serviceAcceptanceHistory, std::nullopt))
             {
                 // show the warning only for the valid certificate
-                const fhirtools::Timestamp timestamp(iterator->second.serviceAcceptanceHistory.begin()->first);
+                const model::Timestamp timestamp(iterator->second.serviceAcceptanceHistory.begin()->first);
                 LOG(WARNING) << TslError("Important: new TSL CA is going to be active from " + timestamp.toXsDateTime()
                                          + ", [" + iterator->second.certificate.toBase64() + "]",
                                          TslErrorCode::TSL_CA_UPDATE_WARNING).what();
@@ -166,7 +165,7 @@ std::vector<X509Certificate> TrustStore::getTslSignerCas() const
     {
         LOG(INFO) << "start: " << newTslSignerCaStart;
         if (newTslSignerCaStart.empty()
-            || fhirtools::Timestamp::now() > fhirtools::Timestamp::fromFhirDateTime(newTslSignerCaStart))
+            || model::Timestamp::now() > model::Timestamp::fromFhirDateTime(newTslSignerCaStart))
         {
             LOG(INFO) << "New TSL Signer CA is used.";
             tslSignerCaCerts.emplace_back(*newTslSignerCa);

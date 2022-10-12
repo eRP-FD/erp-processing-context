@@ -1,0 +1,45 @@
+{
+    "resourceType": "Bundle",
+    "id": "rootBundle",
+    "type": "collection",
+    "entry": [
+        {
+            "fullUrl": "http://erp.test/SliceByProfileFieldResolveBase/slicing",
+            "resource": {
+                "resourceType": "SliceByProfileFieldResolveBase",
+                "id": "slicing",
+                "meta": {
+                    "profile": [
+                        "http://erp.test/SliceByProfileFieldResolve"
+                    ]
+                },
+                "sliced": [
+                    {
+                        "entry": {
+                            "reference": "http://erp.test/SliceByProfileFieldResolveBase/slice1"
+                        }
+                    },
+                    {
+                        "entry": {
+                            "reference": "http://erp.test/SliceByProfileFieldResolveBase/slice2"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "fullUrl": "http://erp.test/SliceByProfileFieldResolveBase/slice1",
+            "resource": {
+                "resourceType": "Resource",
+                "id": "slice1"
+            }
+        },
+        {
+            "fullUrl": "http://erp.test/SliceByProfileFieldResolveBase/slice2",
+            "resource": {
+                "resourceType": "Resource",
+                "id": "slice2"
+            }
+        }
+    ]
+}

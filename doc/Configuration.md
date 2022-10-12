@@ -30,3 +30,5 @@ Each entry has the form
   For backward compatibility. The old way to configure the password of the HSM work identity.
 - HSM_IDLE_TIMEOUT_SECONDS ("ERP_HSM_IDLE_TIMEOUT_SECONDS" | "/erp/hsm/idle-timeout-seconds")
   Idle time after which the HSM closes a connection, measured in seconds.
+- PNW_ALLOWED_RESULTS ("ERP_SERVICE_PNW_ALLOWED_RESULTS" | "/erp/pnw_allowed_results")
+  Comma-separated list (as string) of values corresponding to the allowed results of the "E" value within PNW data

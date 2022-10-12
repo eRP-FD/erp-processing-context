@@ -46,22 +46,22 @@ namespace model {
          * excursion via time_t to tm, do the arithmetic and go back to time_point.
          */
 
-        fhirtools::Timestamp addOneSecond (const fhirtools::Timestamp t)
+        model::Timestamp addOneSecond (const model::Timestamp t)
         {
-            return fhirtools::Timestamp(t.toChronoTimePoint() + std::chrono::seconds(1));
+            return model::Timestamp(t.toChronoTimePoint() + std::chrono::seconds(1));
         }
 
-        fhirtools::Timestamp addOneMinute (const fhirtools::Timestamp t)
+        model::Timestamp addOneMinute (const model::Timestamp t)
         {
-            return fhirtools::Timestamp(t.toChronoTimePoint() + std::chrono::minutes(1));
+            return model::Timestamp(t.toChronoTimePoint() + std::chrono::minutes(1));
         }
 
-        fhirtools::Timestamp addOneDay (const fhirtools::Timestamp t)
+        model::Timestamp addOneDay (const model::Timestamp t)
         {
-            return fhirtools::Timestamp(t.toChronoTimePoint() + std::chrono::hours(24));
+            return model::Timestamp(t.toChronoTimePoint() + std::chrono::hours(24));
         }
 
-        fhirtools::Timestamp addOneMonth (const fhirtools::Timestamp t)
+        model::Timestamp addOneMonth (const model::Timestamp t)
         {
             // To tm.
             const std::time_t timeT = std::chrono::system_clock::to_time_t(t.toChronoTimePoint());
@@ -70,10 +70,10 @@ namespace model {
             // Add a single month.
             tm.tm_mon += 1;
 
-            return fhirtools::Timestamp::fromTmInUtc(tm);
+            return model::Timestamp::fromTmInUtc(tm);
         }
 
-        fhirtools::Timestamp addOneYear (const fhirtools::Timestamp t)
+        model::Timestamp addOneYear (const model::Timestamp t)
         {
             // To tm.
             const std::time_t timeT = std::chrono::system_clock::to_time_t(t.toChronoTimePoint());
@@ -82,11 +82,11 @@ namespace model {
             // Add a single year.
             tm.tm_year += 1;
 
-            return fhirtools::Timestamp::fromTmInUtc(tm);
+            return model::Timestamp::fromTmInUtc(tm);
         }
     }
 
-TimePeriod::TimePeriod (fhirtools::Timestamp start, fhirtools::Timestamp end)
+TimePeriod::TimePeriod (model::Timestamp start, model::Timestamp end)
     : mBegin(start),
       mEnd(end)
 {
@@ -95,38 +95,38 @@ TimePeriod::TimePeriod (fhirtools::Timestamp start, fhirtools::Timestamp end)
 
 TimePeriod TimePeriod::fromFhirSearchDate (const std::string& date)
 {
-    const fhirtools::Timestamp timestamp = fhirtools::Timestamp::fromFhirSearchDateTime(date);
-    switch (fhirtools::Timestamp::detectType(date))
+    const model::Timestamp timestamp = model::Timestamp::fromFhirSearchDateTime(date);
+    switch (model::Timestamp::detectType(date))
     {
-        case fhirtools::Timestamp::Type::DateTime:
+        case model::Timestamp::Type::DateTime:
             return TimePeriod(timestamp, addOneSecond(timestamp));
 
-        case fhirtools::Timestamp::Type::Date:
+        case model::Timestamp::Type::Date:
             return TimePeriod(timestamp, addOneDay(timestamp));
 
-        case fhirtools::Timestamp::Type::DateTimeWithoutSeconds:
+        case model::Timestamp::Type::DateTimeWithoutSeconds:
             return TimePeriod(timestamp, addOneMinute(timestamp));
 
-        case fhirtools::Timestamp::Type::YearMonth:
+        case model::Timestamp::Type::YearMonth:
             return TimePeriod(timestamp, addOneMonth(timestamp));
 
-        case fhirtools::Timestamp::Type::Year:
+        case model::Timestamp::Type::Year:
             return TimePeriod(timestamp, addOneYear(timestamp));
 
-        case fhirtools::Timestamp::Type::DateTimeWithFractionalSeconds:
+        case model::Timestamp::Type::DateTimeWithFractionalSeconds:
             break;
     }
-    Fail2("for search unsupported fhirtools::Timestamp::Type enum value", std::logic_error);
+    Fail2("for search unsupported model::Timestamp::Type enum value", std::logic_error);
 }
 
 
-fhirtools::Timestamp TimePeriod::begin (void) const
+model::Timestamp TimePeriod::begin (void) const
 {
     return mBegin;
 }
 
 
-fhirtools::Timestamp TimePeriod::end (void) const
+model::Timestamp TimePeriod::end (void) const
 {
     return mEnd;
 }

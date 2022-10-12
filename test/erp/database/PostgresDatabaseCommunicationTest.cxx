@@ -440,6 +440,72 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
 }
 
 
+TEST_P(PostgresDatabaseCommunicationTest, ClearAllChargeItemCommunications)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (!usePostgres())
+    {
+        GTEST_SKIP();
+    }
+
+    // Make sure that there are no leftovers from previous tests.
+    verifyDatabaseIsTidy();
+
+    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task = Task::fromJsonNoValidation(jsonString);
+    PrescriptionId prescriptionId = insertTask(task);
+    std::string_view kvnrInsurant = task.kvnr().value();
+
+    // Count currently available communication objects.
+    uint64_t communicationsCountPrev = countCommunications();
+
+    // Insert objects into database.
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
+                     .setPrescriptionId(prescriptionId.toString())
+                     .setRecipient(ActorRole::Pharmacists, mPharmacy)
+                     .setPayload("I want to change a charge item.").createJsonString();
+    Communication chargChangeReq = Communication::fromJsonNoValidation(jsonString);
+    chargChangeReq.setSender(kvnrInsurant);
+    chargChangeReq.setTimeSent(Timestamp::fromXsDateTime("2022-08-23T12:34:00.000+00:00"));
+    std::optional<Uuid> idChargChangeReq = insertCommunication(chargChangeReq);
+
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
+                     .setPrescriptionId(prescriptionId.toString())
+                     .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+                     .setPayload("Ok. What do you want to change?").createJsonString();
+    Communication chargChangeReply = Communication::fromJsonNoValidation(jsonString);
+    chargChangeReply.setSender(mPharmacy);
+    chargChangeReply.setTimeSent(Timestamp::fromXsDateTime("2022-08-23T12:45:00.000+00:00"));
+    std::optional<Uuid> idChargChangeReply = insertCommunication(chargChangeReply);
+
+    // Verify that the id fields of the Communication objects have been initialized.
+    ASSERT_TRUE(idChargChangeReq.has_value());
+    ASSERT_EQ(chargChangeReq.id(), idChargChangeReq.value());
+    ASSERT_TRUE(idChargChangeReq.has_value());
+    ASSERT_EQ(chargChangeReply.id(), idChargChangeReq.value());
+
+    // Count currently available communication objects. 2 new rows must have been added.
+    uint64_t communicationsCountCurr = countCommunications();
+    ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 2);
+
+    // Delete the communication objects
+    database().clearAllChargeItemCommunications(kvnrInsurant);
+    database().commitTransaction();
+
+    // Check whether the communication objects have been deleted.
+    const auto chargChangeReqRetrieved = retrieveCommunication(
+        idChargChangeReq.value(),
+        chargChangeReq.sender().value());
+    const auto chargChangeReplyRetrieved = retrieveCommunication(
+        idChargChangeReply.value(),
+        chargChangeReply.sender().value());
+
+    // Count currently available communication objects. The 2 new rows must have been deleted again.
+    communicationsCountCurr = countCommunications();
+    ASSERT_EQ(communicationsCountCurr, communicationsCountPrev);
+}
+
+
 TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())

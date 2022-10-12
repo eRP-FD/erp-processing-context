@@ -4,13 +4,12 @@
  */
 
 #include "test/erp/tsl/TslParsingExpectations.hxx"
-
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 
 
 const std::string TslParsingExpectations::expectedId{"ID31003620200826113628Z"};
 const std::string TslParsingExpectations::expectedSequenceNumber{"10036"};
-const std::chrono::system_clock::time_point TslParsingExpectations::expectedNextUpdate{fhirtools::Timestamp::fromFhirDateTime("2020-09-25T11:36:28Z").toChronoTimePoint()};
+const std::chrono::system_clock::time_point TslParsingExpectations::expectedNextUpdate{model::Timestamp::fromFhirDateTime("2020-09-25T11:36:28Z").toChronoTimePoint()};
 
 
 const X509Certificate TslParsingExpectations::expectedSignerCertificate{

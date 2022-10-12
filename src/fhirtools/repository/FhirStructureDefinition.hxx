@@ -103,8 +103,11 @@ public:
 
     [[nodiscard]] std::shared_ptr<const FhirElement> findElement(const std::string& elementId) const;
     std::tuple<std::shared_ptr<const FhirElement>, size_t> findElementAndIndex(const std::string& elementId) const;
+    const FhirStructureDefinition* parentType(const FhirStructureRepository& repo) const;
     bool isDerivedFrom(const FhirStructureRepository& repo, const std::string_view& baseUrl) const;
     bool isDerivedFrom(const FhirStructureRepository& repo, const FhirStructureDefinition& baseProfile) const;
+    const FhirStructureDefinition* baseType(const FhirStructureRepository& repo) const;
+    const FhirStructureDefinition& primitiveToSystemType(const FhirStructureRepository& repo) const;
 
     // immutable:
     FhirStructureDefinition(const FhirStructureDefinition&) = default;

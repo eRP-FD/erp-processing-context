@@ -19,7 +19,7 @@ TEST_F(Erp9777Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv));
     ASSERT_TRUE(task.has_value());
     std::string accessCode{task->accessCode()};
-    const auto qesBundle = std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), fhirtools::Timestamp::now()));
+    const auto qesBundle = std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()));
     ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
     std::optional<model::Bundle> taskBundle;
     ASSERT_NO_FATAL_FAILURE(taskBundle = taskAccept(task->prescriptionId(), accessCode));

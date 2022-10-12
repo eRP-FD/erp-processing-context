@@ -42,16 +42,16 @@ std::string JsonMaintainNumberPrecisionTestModel::serializeToJsonString() const
     return jsonDocument().serializeToJsonString();
 }
 
-std::optional<fhirtools::Timestamp> JsonMaintainNumberPrecisionTestModel::timeSent() const
+std::optional<model::Timestamp> JsonMaintainNumberPrecisionTestModel::timeSent() const
 {
     const auto optionalValue = getOptionalStringValue(sentPointer);
     if (optionalValue.has_value())
-        return fhirtools::Timestamp::fromFhirDateTime(std::string(optionalValue.value()));
+        return model::Timestamp::fromFhirDateTime(std::string(optionalValue.value()));
     else
         return {};
 }
 
-void JsonMaintainNumberPrecisionTestModel::setTimeSent(const fhirtools::Timestamp& timestamp)
+void JsonMaintainNumberPrecisionTestModel::setTimeSent(const model::Timestamp& timestamp)
 {
     ResourceBase::setValue(sentPointer, timestamp.toXsDateTime());
 }

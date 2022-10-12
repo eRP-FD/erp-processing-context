@@ -165,12 +165,31 @@ Collection FilteringOfType::eval(const Collection& collection) const
     Collection ret;
     for (const auto& item : collection)
     {
-        if (item->getStructureDefinition()->isDerivedFrom(*mFhirStructureRepository, type->url()))
+        if (item->getStructureDefinition()->isSystemType() &&
+            type->kind() == FhirStructureDefinition::Kind::primitiveType)
         {
-            ret.emplace_back(item);
+            if (item->getStructureDefinition()->isDerivedFrom(
+                    *mFhirStructureRepository, type->primitiveToSystemType(*mFhirStructureRepository).url()))
+            {
+                ret.emplace_back(item);
+            }
+        }
+        else
+        {
+            if (item->getStructureDefinition()->isDerivedFrom(*mFhirStructureRepository, type->url()))
+            {
+                ret.emplace_back(item);
+            }
         }
     }
     return ret;
+}
+
+SubsettingIndexer::SubsettingIndexer(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs,
+                                     ExpressionPtr rhs)
+    : BinaryExpression(fhirStructureRepository, std::move(lhs), std::move(rhs))
+{
+    FPExpect(mLhs && mRhs, "missing mandatory argument");
 }
 
 Collection SubsettingIndexer::eval(const Collection& collection) const
@@ -197,6 +216,12 @@ Collection SubsettingTail::eval(const Collection& collection) const
     return collection.empty() ? Collection{} : Collection{collection.begin() + 1, collection.end()};
 }
 
+SubsettingIntersect::SubsettingIntersect(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg)
+    : UnaryExpression(fhirStructureRepository, std::move(arg))
+{
+    FPExpect(mArg, "missing mandatory argument");
+}
+
 Collection SubsettingIntersect::eval(const Collection& collection) const
 {
     EVAL_TRACE;
@@ -210,6 +235,13 @@ Collection SubsettingIntersect::eval(const Collection& collection) const
         }
     }
     return ret;
+}
+
+CombiningUnion::CombiningUnion(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs,
+                               ExpressionPtr rhs)
+    : BinaryExpression(fhirStructureRepository, std::move(lhs), std::move(rhs))
+{
+    FPExpect(mLhs && mRhs, "missing mandatory argument");
 }
 
 Collection CombiningUnion::eval(const Collection& collection) const

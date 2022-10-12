@@ -93,12 +93,12 @@ const fhirtools::ValidationResultList& fhirtools::SlicingChecker::results() cons
     return mResult;
 }
 
-void SlicingChecker::addAffectedValidator(const fhirtools::ProfileValidatorMapKey& key)
+void SlicingChecker::addAffectedValidator(const fhirtools::ProfiledElementTypeInfo& key)
 {
     mAffectedValidators.emplace(key);
 }
 
-const std::set<fhirtools::ProfileValidatorMapKey>& SlicingChecker::affectedValidators() const
+const std::set<fhirtools::ProfiledElementTypeInfo>& SlicingChecker::affectedValidators() const
 {
     return mAffectedValidators;
 }

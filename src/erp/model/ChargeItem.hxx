@@ -6,12 +6,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_CHARGEITEM_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_CHARGEITEM_HXX
 
-#include "erp/model/extensions/ChargeItemMarkingFlag.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/Resource.hxx"
 #include "erp/model/Bundle.hxx"
 #include "erp/model/PrescriptionId.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Resource.hxx"
+#include "erp/model/Timestamp.hxx"
+#include "erp/model/extensions/ChargeItemMarkingFlag.hxx"
 
 #include <optional>
 
@@ -38,7 +38,7 @@ public:
     [[nodiscard]] ::std::optional<PrescriptionId> prescriptionId() const;
     [[nodiscard]] ::std::optional<::std::string_view> subjectKvnr() const;
     [[nodiscard]] ::std::optional<::std::string_view> entererTelematikId() const;
-    [[nodiscard]] ::std::optional<fhirtools::Timestamp> enteredDate() const;
+    [[nodiscard]] ::std::optional<model::Timestamp> enteredDate() const;
     [[nodiscard]] std::optional<std::string_view> supportingInfoReference(SupportingInfoType supportingInfoType) const;
 
     [[nodiscard]] bool isMarked() const;
@@ -53,7 +53,7 @@ public:
     void setPrescriptionId(const model::PrescriptionId& prescriptionId);
     void setSubjectKvnr(const std::string_view& kvnr);
     void setEntererTelematikId(const std::string_view& telematicId);
-    void setEnteredDate(const fhirtools::Timestamp& entered);
+    void setEnteredDate(const model::Timestamp& entered);
     void setMarkingFlag(const ::model::Extension& markingFlag);
     void setAccessCode(const std::string_view& accessCode);
     template<class ResourceType>

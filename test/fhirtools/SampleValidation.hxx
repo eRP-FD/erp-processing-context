@@ -42,8 +42,8 @@ public:
         return {
             // clang-format off
             "fhir/hl7.org/profiles-types.xml",
-            "test/fhir-path/profiles/StructureDefinition-Resource.xml",
-            "test/fhir-path/profiles/StructureDefinition-DomainResource.xml",
+            "fhir/hl7.org/profiles-resources.xml",
+            "fhir/hl7.org/extension-definitions.xml",
             "fhir/hl7.org/valuesets.xml",
             "fhir/hl7.org/v3-codesystems.xml",
             // clang-format on

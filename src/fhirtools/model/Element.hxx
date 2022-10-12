@@ -7,12 +7,14 @@
 #define FHIR_TOOLS_SRC_FHIR_PATH_MODEL_ELEMENT_HXX
 
 
-#include "fhirtools/model/Timestamp.hxx"
+#include "fhirtools/model/DateTime.hxx"
+#include "fhirtools/model/DecimalType.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
 
-#include <boost/multiprecision/mpfr.hpp>
 #include <magic_enum.hpp>
+#include <compare>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -20,16 +22,15 @@
 #include <variant>
 #include <vector>
 
-namespace fhirtools {
-namespace bmp = boost::multiprecision;
+namespace fhirtools
+{
+class FhirCodeSystem;
 
 /// @brief This is the FHIR-validators internal data model interface.
 /// A implementation for the ERP-Model (based on rapidjson) exists under erp/ErpElement.xxx
 class Element : public std::enable_shared_from_this<Element>
 {
 public:
-    // A fixed-point number type with precision 10^-8 as specified in http://hl7.org/fhirpath/#decimal
-    using DecimalType = bmp::number<bmp::mpfr_float_backend<8, bmp::allocate_stack>>;
     class QuantityType;
     enum class Type
     {
@@ -43,7 +44,38 @@ public:
         Quantity,
         Structured
     };
-    struct IsContextElementTag{};
+    struct IsContextElementTag {
+    };
+    // http://www.hl7.org/fhir/http.html#general
+    struct Identity {
+        struct Scheme : std::string {
+            using std::string::string;
+            bool isHttpLike() const;
+            // http and https are equal
+            std::weak_ordering operator<=>(const Scheme&) const;
+            bool operator==(const Scheme&) const;
+        };
+
+        bool empty() const;
+        std::string url() const;
+
+        std::optional<Scheme> scheme{};
+        std::string pathOrId{};
+        std::optional<std::string> containedId{};
+        std::weak_ordering operator<=>(const Identity&) const = default;
+        bool operator==(const Identity&) const;
+    };
+
+    struct IdentityAndResult {
+        static IdentityAndResult fromReferenceString(std::string_view referenceString,
+                                                     std::string_view elementFullPath);
+        Identity identity{};
+        ValidationResultList result{};
+
+        auto operator<=>(const IdentityAndResult&) const = delete;
+        auto operator==(const IdentityAndResult&) const = delete;
+    };
+
     Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
             ProfiledElementTypeInfo mDefinitionPointer);
     Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
@@ -66,14 +98,19 @@ public:
     [[nodiscard]] virtual DecimalType asDecimal() const = 0;
     [[nodiscard]] virtual bool asBool() const = 0;
     [[nodiscard]] virtual std::string asString() const = 0;
-    [[nodiscard]] virtual Timestamp asDate() const = 0;
-    [[nodiscard]] virtual Timestamp asTime() const = 0;
-    [[nodiscard]] virtual Timestamp asDateTime() const = 0;
+    [[nodiscard]] virtual Date asDate() const = 0;
+    [[nodiscard]] virtual Time asTime() const = 0;
+    [[nodiscard]] virtual DateTime asDateTime() const = 0;
     [[nodiscard]] virtual QuantityType asQuantity() const = 0;
 
     [[nodiscard]] virtual bool hasSubElement(const std::string& name) const = 0;
     [[nodiscard]] virtual std::vector<std::string> subElementNames() const = 0;
     [[nodiscard]] virtual std::vector<std::shared_ptr<const Element>> subElements(const std::string& name) const = 0;
+    [[nodiscard]] std::shared_ptr<const Element> resourceRoot() const;
+    [[nodiscard]] std::shared_ptr<const Element> containerResource() const;
+    [[nodiscard]] std::shared_ptr<const Element> containingBundle() const;
+    [[nodiscard]] std::shared_ptr<const Element> parentResource() const;
+    [[nodiscard]] std::shared_ptr<const Element> documentRoot() const;
 
     [[nodiscard]] static Type GetElementType(const FhirStructureRepository* fhirStructureRepository,
                                              const ProfiledElementTypeInfo& definitionPointer);
@@ -84,19 +121,50 @@ public:
     [[nodiscard]] const FhirStructureDefinition* getStructureDefinition() const;
     [[nodiscard]] const ProfiledElementTypeInfo& definitionPointer() const;
 
-    [[nodiscard]] std::strong_ordering operator<=>(const Element& rhs) const;
-    [[nodiscard]] bool operator==(const Element& rhs) const;
+    [[nodiscard]] IdentityAndResult resourceIdentity(std::string_view elementFullPath,
+                                                     bool allowResourceId = true) const;
+    [[nodiscard]] IdentityAndResult referenceTargetIdentity(std::string_view elementFullPath) const;
+
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    resolveReference(std::string_view elementFullPath) const;
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    resolveReference(const Identity& reference, std::string_view elementFullPath) const;
+
+    // like operator<=>, but can return {} in special cases, see http://hl7.org/fhirpath/#equality
+    // and http://hl7.org/fhirpath/#comparison
+    [[nodiscard]] std::optional<std::strong_ordering> compareTo(const Element& rhs) const;
+    [[nodiscard]] std::optional<bool> equals(const Element& rhs) const;
     [[nodiscard]] bool matches(const Element& pattern) const;
 
 
     std::ostream& json(std::ostream&) const;
 
 protected:
+    // the element, that contains the current resource
+    [[nodiscard]] std::shared_ptr<const Element> resourceRootParent() const;
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    resolveContainedReference(std::string_view containedId) const;
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    resolveUrlReference(const Identity& urlIdentity, std::string_view elementFullPath) const;
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    resolveBundleReference(std::string_view fullUrl, std::string_view elementFullPath) const;
+
     const FhirStructureRepository* mFhirStructureRepository;
     const ProfiledElementTypeInfo mDefinitionPointer;
     std::weak_ptr<const Element> mParent;
 
 private:
+    [[nodiscard]] IdentityAndResult bundledResourceIdentity(std::string_view elementFullPath) const;
+    [[nodiscard]] IdentityAndResult metaSourceIdentity(std::string_view elementFullPath) const;
+    [[nodiscard]] IdentityAndResult containedIdentity(bool allowResourceId, std::string_view elementFullPath) const;
+    [[nodiscard]] IdentityAndResult resourceTypeIdIdentity() const;
+
+    [[nodiscard]] IdentityAndResult referenceTargetIdentity(IdentityAndResult reference,
+                                                            std::string_view elementFullPath) const;
+    [[nodiscard]] IdentityAndResult
+    relativeReferenceTargetIdentity(IdentityAndResult&& reference,
+                                    const std::shared_ptr<const Element>& currentResoureRoot,
+                                    std::string_view elementFullPath) const;
     Type mType;
     mutable std::weak_ptr<IsContextElementTag> mIsContextElementTag;
 };
@@ -104,7 +172,7 @@ private:
 class Element::QuantityType
 {
 public:
-    QuantityType(Element::DecimalType value, const std::string_view& unit);
+    QuantityType(DecimalType value, const std::string_view& unit);
     explicit QuantityType(const std::string_view& valueAndUnit);
 
     [[nodiscard]] const DecimalType& value() const
@@ -116,14 +184,14 @@ public:
         return mUnit;
     }
 
-    [[nodiscard]] std::strong_ordering operator<=>(const QuantityType& rhs) const;
-    [[nodiscard]] bool operator==(const QuantityType& rhs) const;
+    [[nodiscard]] std::optional<std::strong_ordering> compareTo(const QuantityType& rhs) const;
+    [[nodiscard]] std::optional<bool> equals(const QuantityType& rhs) const;
 
 private:
     QuantityType convertToUnit(const std::string& unit) const;
     bool convertibleToUnit(const std::string& unit) const;
 
-    Element::DecimalType mValue;
+    DecimalType mValue;
     std::string mUnit;
 };
 
@@ -133,7 +201,7 @@ private:
 class PrimitiveElement : public Element
 {
 public:
-    using ValueType = std::variant<int32_t, DecimalType, bool, std::string, Timestamp, QuantityType>;
+    using ValueType = std::variant<int32_t, DecimalType, bool, std::string, Date, DateTime, Time, QuantityType>;
     explicit PrimitiveElement(const FhirStructureRepository* fhirStructureRepository, Type type, ValueType&& value);
     [[nodiscard]] std::string resourceType() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
@@ -142,9 +210,9 @@ public:
     [[nodiscard]] std::string asString() const override;
     [[nodiscard]] DecimalType asDecimal() const override;
     [[nodiscard]] bool asBool() const override;
-    [[nodiscard]] Timestamp asDate() const override;
-    [[nodiscard]] Timestamp asTime() const override;
-    [[nodiscard]] Timestamp asDateTime() const override;
+    [[nodiscard]] Date asDate() const override;
+    [[nodiscard]] Time asTime() const override;
+    [[nodiscard]] DateTime asDateTime() const override;
     [[nodiscard]] QuantityType asQuantity() const override;
 
     [[nodiscard]] bool hasSubElement(const std::string& name) const override;
@@ -164,5 +232,8 @@ private:
 
 std::ostream& operator<<(std::ostream& os, Element::Type type);
 std::ostream& operator<<(std::ostream& os, const Element& element);
+
+std::ostream& operator<<(std::ostream& os, const Element::Identity&);
+std::string to_string(const Element::Identity&);
 }
 #endif//FHIR_TOOLS_SRC_FHIR_PATH_MODEL_ELEMENT_HXX

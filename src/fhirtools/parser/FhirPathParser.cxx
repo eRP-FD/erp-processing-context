@@ -4,24 +4,26 @@
  */
 
 #include "fhirtools/parser/FhirPathParser.hxx"
-
-#include <boost/algorithm/string/trim.hpp>
-#include <source_location>
-
-#include "antlr4-runtime.h"
-#include "fhirpathLexer.h"
-#include "fhirpathParser.h"
-#include "fhirpathVisitor.h"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/BooleanLogic.hxx"
 #include "fhirtools/expression/Comparison.hxx"
 #include "fhirtools/expression/Conversion.hxx"
 #include "fhirtools/expression/Expression.hxx"
-#include "fhirtools/expression/Functions.hxx"
 #include "fhirtools/expression/FhirSupplements.hxx"
+#include "fhirtools/expression/Functions.hxx"
 #include "fhirtools/expression/LiteralExpression.hxx"
+#include "fhirtools/expression/Math.hxx"
 #include "fhirtools/expression/StringManipulation.hxx"
 #include "fhirtools/model/Element.hxx"
+#include "fhirtools/parser/ErrorListener.hxx"
+#include "antlr4-runtime.h"
+#include "fhirpathLexer.h"
+#include "fhirpathParser.h"
+#include "fhirpathVisitor.h"
+
+#include <boost/algorithm/string/trim.hpp>
+#include <source_location>
+
 
 #define TRACE VLOG(3) << std::source_location::current().function_name() << " <<< " << context->getText()
 
@@ -177,7 +179,13 @@ std::any
 FhirPathParser::Impl::visitMultiplicativeExpression(fhirtools::fhirpathParser::MultiplicativeExpressionContext* context)
 {
     TRACE;
-    FPFail("mathematics not implemented");
+    FPExpect(context->children.size() == 3, "invalid parse tree");
+    const auto op = context->children[1]->getText();
+    if (op == "mod")
+    {
+        return binaryOperator<MathModOperator>(context);
+    }
+    FPFail("mathematics operator not implemented: " + op);
 }
 std::any FhirPathParser::Impl::visitUnionExpression(fhirtools::fhirpathParser::UnionExpressionContext* context)
 {
@@ -344,10 +352,8 @@ std::any FhirPathParser::Impl::visitStringLiteral(fhirtools::fhirpathParser::Str
 {
     TRACE;
     auto str = context->STRING()->getText();
-    FPExpect(str.length() >= 2, "invalid string literal " + str);
-    boost::trim_if(str, [](const auto& c) {
-        return c == '\'';
-    });
+    FPExpect(str.length() >= 2 && str.front() == '\'' && str.back() == '\'', "invalid string literal " + str);
+    str = str.substr(1, str.size() - 2);
     return std::make_any<ExpressionPtr>(std::make_shared<LiteralStringExpression>(mRepository, str));
 }
 std::any FhirPathParser::Impl::visitNumberLiteral(fhirtools::fhirpathParser::NumberLiteralContext* context)
@@ -359,7 +365,7 @@ std::any FhirPathParser::Impl::visitNumberLiteral(fhirtools::fhirpathParser::Num
         return std::make_any<ExpressionPtr>(std::make_shared<LiteralIntegerExpression>(mRepository, std::stoi(str)));
     }
     return std::make_any<ExpressionPtr>(
-        std::make_shared<LiteralDecimalExpression>(mRepository, Element::DecimalType(str)));
+        std::make_shared<LiteralDecimalExpression>(mRepository, DecimalType(str)));
 }
 std::any FhirPathParser::Impl::visitDateLiteral(fhirtools::fhirpathParser::DateLiteralContext* context)
 {
@@ -390,9 +396,9 @@ std::any FhirPathParser::Impl::visitExternalConstant(fhirtools::fhirpathParser::
     std::string variable;
     if (context->STRING())
     {
-        variable = boost::trim_copy_if(context->STRING()->getText(), [](const auto& c) {
-            return c == '\'';
-        });
+        auto str = context->STRING()->getText();
+        FPExpect(str.length() >= 2 && str.front() == '\'' && str.back() == '\'', "invalid string literal " + str);
+        variable = str.substr(1, str.size() - 2);
     }
     else if (context->identifier())
     {
@@ -498,7 +504,11 @@ std::any FhirPathParser::Impl::visitFunction(fhirtools::fhirpathParser::Function
     }
     else if (identifier == FilteringOfType::IDENTIFIER)
     {
-        return unaryFun<FilteringOfType>(context);
+        FPExpect(context->paramList()->expression().size() == 1,
+                 "wrong number of arguments for function " + std::string(FilteringOfType::IDENTIFIER));
+        return std::make_any<ExpressionPtr>(std::make_shared<FilteringOfType>(
+            mRepository,
+            std::make_shared<LiteralStringExpression>(mRepository, context->paramList()->expression(0)->getText())));
     }
     else if (identifier == SubsettingFirst::IDENTIFIER)
     {
@@ -673,9 +683,9 @@ std::any FhirPathParser::Impl::visitIdentifier(fhirtools::fhirpathParser::Identi
     TRACE;
     if (context->DELIMITEDIDENTIFIER())
     {
-        return boost::trim_copy_if(context->DELIMITEDIDENTIFIER()->getText(), [](const auto& c) {
-            return c == '`';
-        });
+        auto text = context->DELIMITEDIDENTIFIER()->getText();
+        FPExpect(text.size() > 1 && text.front() == '`' && text.back() == '`', "Not a delimited identifier:" + text);
+        return text.substr(1, text.size()-2);
     }
     return context->getText();
 }
@@ -684,18 +694,19 @@ std::any FhirPathParser::Impl::visitIdentifier(fhirtools::fhirpathParser::Identi
 
 fhirtools::ExpressionPtr FhirPathParser::parse(const FhirStructureRepository* repository, std::string_view fhirPath)
 {
+    using namespace std::string_literals;
+    ErrorListener errorListener;
     antlr4::ANTLRInputStream input{fhirPath};
     fhirtools::fhirpathLexer lexer{&input};
+    lexer.addErrorListener(&errorListener);
     antlr4::CommonTokenStream tokens{&lexer};
     tokens.fill();
     fhirtools::fhirpathParser parser{&tokens};
+    parser.addErrorListener(&errorListener);
     parser.setBuildParseTree(true);
     auto* expr = parser.expression();
-    if (! expr)
-    {
-        LOG(ERROR) << "could not get expression" << std::endl;
-        return {};
-    }
+    FPExpect3(expr && parser.getNumberOfSyntaxErrors() == 0 && ! errorListener.hadError(),
+              "error while parsing expression", std::logic_error);
     Impl impl(repository);
     return std::any_cast<ExpressionPtr>(impl.visit(expr));
 }

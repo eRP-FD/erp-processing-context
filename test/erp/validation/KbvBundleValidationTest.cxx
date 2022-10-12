@@ -8,8 +8,10 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/String.hxx"
-
 #include "erp/validation/XmlValidator.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
+
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -56,13 +58,16 @@ TEST_P(XmlValidatorTestParamsKbvBundle, Resources)//NOLINT(readability-function-
     const auto document = FileHelper::readFileAsString(GetParam().path);
     if (GetParam().valid)
     {
+        std::optional<model::KbvBundle> kbvBundle;
         EXPECT_NO_THROW(model::KbvBundle::fromXml(document, *StaticData::getXmlValidator(),
-                                                  *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle));
+                                                  *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                                                  {{.allowNonLiteralAuthorReference = true}}));
     }
     else
     {
         EXPECT_THROW(model::KbvBundle::fromXml(document, *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle),
+                                               *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                                               {{.allowNonLiteralAuthorReference = true}}),
                      ErpException);
     }
 }
@@ -128,13 +133,15 @@ TEST_P(KbvWithEmbeddedValidationTestParams, KbvBundleWithEmbeddedSubResource)//N
 
     if (GetParam().valid)
     {
-        EXPECT_NO_THROW(model::KbvBundle::fromXml(kbvBundle, *StaticData::getXmlValidator(),
-                                                  *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle));
+        EXPECT_NO_THROW((void)model::KbvBundle::fromXml(kbvBundle, *StaticData::getXmlValidator(),
+                                                        *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                                                        {{.allowNonLiteralAuthorReference = true}}));
     }
     else
     {
-        EXPECT_THROW(model::KbvBundle::fromXml(kbvBundle, *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle),
+        EXPECT_THROW((void)model::KbvBundle::fromXml(kbvBundle, *StaticData::getXmlValidator(),
+                                                     *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                                                     {{.allowNonLiteralAuthorReference = true}}),
                      ErpException);
     }
 }
@@ -191,6 +198,12 @@ INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Composition_Valid, KbvWithEm
                              SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
                              fs::path(TEST_DATA_DIR) /
                                  "validation/xml/kbv/bundle/Bundle_placeholder_Composition.xml")));
+INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Composition_SupplyRequest_Valid, KbvWithEmbeddedValidationTestParams,
+                         testing::ValuesIn(makeKbvWithPlaceholderParams(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/composition/",
+                             "Composition_SupplyRequest_valid", SchemaType::KBV_PR_ERP_Bundle,
+                             model::ResourceVersion::KbvItaErp::v1_0_2, fs::path(TEST_DATA_DIR) /
+                                 "validation/xml/kbv/bundle/Bundle_placeholder_Composition_SupplyRequest.xml")));
 INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Composition_Invalid, KbvWithEmbeddedValidationTestParams,
                          testing::ValuesIn(makeKbvWithPlaceholderParams(
                              false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/composition/", "Composition_invalid",

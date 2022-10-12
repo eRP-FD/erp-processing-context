@@ -7,10 +7,9 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_SIGNATURE_HXX
 
 #include "erp/model/Resource.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
-
 #include <optional>
 
 class MimeType;
@@ -30,11 +29,11 @@ public:
 
     Signature(
         const std::string_view& data,
-        const fhirtools::Timestamp& when,
+        const model::Timestamp& when,
         const std::string_view& who);
 
     [[nodiscard]] std::optional<std::string_view> data() const;
-    [[nodiscard]] std::optional<fhirtools::Timestamp> when() const;
+    [[nodiscard]] std::optional<model::Timestamp> when() const;
     [[nodiscard]] std::optional<std::string_view> who() const;
     [[nodiscard]] std::optional<MimeType> sigFormat() const;
     [[nodiscard]] std::optional<MimeType> targetFormat() const;

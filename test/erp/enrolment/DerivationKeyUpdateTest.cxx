@@ -6,10 +6,12 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/PostgresConnection.hxx"
 #include "erp/hsm/ErpTypes.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestConfiguration.hxx"
+#include "test/workflow-test/EndpointTestClient.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
+#include "tools/EnrolmentApiClient.hxx"
 
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
@@ -24,9 +26,6 @@
 #include <pqxx/transaction>
 #include <string>
 #include <utility>
-
-#include "tools/EnrolmentApiClient.hxx"
-#include "test/workflow-test/EndpointTestClient.hxx"
 
 using namespace ::std::literals::chrono_literals;
 using namespace ::std::string_view_literals;
@@ -355,7 +354,7 @@ private:
     ::std::string mQesBundle = {};
     ::std::vector<::model::Communication> mCommunications = {};
     ::std::string mSecret;
-    ::std::optional<fhirtools::Timestamp> mLastModifiedDate;
+    ::std::optional<model::Timestamp> mLastModifiedDate;
 };
 
 TEST_F(DerivationKeyUpdateTest, Delete)//NOLINT(readability-function-cognitive-complexity)

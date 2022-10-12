@@ -32,7 +32,7 @@ public:
 protected:
 
     void insertChargeItem(// NOLINT(readability-function-cognitive-complexity)
-        const std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>>&
+        const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>&
             patientsPharmaciesChargeItem,
         std::vector<std::string>& prescriptionIds, const std::string_view accessCode, const bool removeTask = false)
     {
@@ -49,8 +49,8 @@ protected:
             std::optional<model::PrescriptionId> prescriptionId;
             ASSERT_NO_THROW(prescriptionId.emplace(db->storeTask(task)));
             task.setPrescriptionId(*prescriptionId);
-            task.setExpiryDate(fhirtools::Timestamp::now());
-            task.setAcceptDate(fhirtools::Timestamp::now());
+            task.setExpiryDate(model::Timestamp::now());
+            task.setAcceptDate(model::Timestamp::now());
 
             std::string chargeItemXML =
                 resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_input.xml");
@@ -264,7 +264,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllInsurant)
     std::string pharmacyA = "606358757";
     std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesChargeItems = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -310,7 +310,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllPharmacie)
     std::string pharmacyA = "606358757";
     std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesChargeItems = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -345,13 +345,13 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter) // NOLINT(readability-fun
     std::string pharmacyA = "606358757";
     std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesChargeItems = {
-        {InsurantA, pharmacyA, fhirtools::Timestamp::fromXsDateTime("2021-01-01T17:13:00+01:00")},
-        {InsurantA, pharmacyA, fhirtools::Timestamp::fromXsDateTime("2021-01-01T17:13:30+01:00")},
-        {InsurantA, pharmacyB, fhirtools::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00")},
-        {InsurantB, pharmacyA, fhirtools::Timestamp::fromXsDateTime("2021-03-03T17:13:00+01:00")},
-        {InsurantA, pharmacyA, fhirtools::Timestamp::fromXsDateTime("2021-04-04T17:13:00+01:00")},
-        {InsurantC, pharmacyB, fhirtools::Timestamp::fromXsDateTime("2021-05-05T17:13:00+01:00")}
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
+        {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-01-01T17:13:00+01:00")},
+        {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-01-01T17:13:30+01:00")},
+        {InsurantA, pharmacyB, model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00")},
+        {InsurantB, pharmacyA, model::Timestamp::fromXsDateTime("2021-03-03T17:13:00+01:00")},
+        {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-04-04T17:13:00+01:00")},
+        {InsurantC, pharmacyB, model::Timestamp::fromXsDateTime("2021-05-05T17:13:00+01:00")}
     };
 
     std::vector<std::string> prescriptionIDs;
@@ -410,7 +410,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging) // NOLINT(readability-
     std::string pharmacyB = "606358758";
     std::string pharmacyC = "606358759";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmacies;
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
     int countInsurantPharmacy = 11;
 	patientsPharmacies.reserve(100);
@@ -492,9 +492,9 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging) // NOLINT(reada
     std::string pharmacyB = "606358758";
     std::string pharmacyC = "606358759";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmacies;
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
-    fhirtools::Timestamp timestamp = fhirtools::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
+    model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
     int countInsurantPharmacy = 11;
 	patientsPharmacies.reserve(100);
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
@@ -502,14 +502,14 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging) // NOLINT(reada
         patientsPharmacies.emplace_back(InsurantA, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient));
     }
 
-    timestamp = fhirtools::Timestamp::fromXsDateTime("2021-10-25T12:34:56+01:00");
+    timestamp = model::Timestamp::fromXsDateTime("2021-10-25T12:34:56+01:00");
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
         patientsPharmacies.emplace_back(InsurantA, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient));
         patientsPharmacies.emplace_back(InsurantB, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient));
     }
 
-    timestamp = fhirtools::Timestamp::fromXsDateTime("2021-11-25T12:34:56+01:00");
+    timestamp = model::Timestamp::fromXsDateTime("2021-11-25T12:34:56+01:00");
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
         patientsPharmacies.emplace_back(InsurantA, pharmacyC, timestamp + std::chrono::hours(-24 * idxPatient));
@@ -578,9 +578,9 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
     std::string pharmacyB = "606358758";
     std::string pharmacyC = "606358759";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmacies;
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
-    fhirtools::Timestamp timestamp = fhirtools::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
+    model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
     int countInsurantPharmacy = 11;
 	patientsPharmacies.reserve(100);
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
@@ -588,14 +588,14 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
         patientsPharmacies.emplace_back(InsurantA, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient));
     }
 
-    timestamp = fhirtools::Timestamp::fromXsDateTime("2021-10-25T12:34:56+01:00");
+    timestamp = model::Timestamp::fromXsDateTime("2021-10-25T12:34:56+01:00");
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
         patientsPharmacies.emplace_back(InsurantA, pharmacyB, timestamp + std::chrono::hours(-24 * idxPatient));
         patientsPharmacies.emplace_back(InsurantB, pharmacyA, timestamp + std::chrono::hours(-24 * idxPatient));
     }
 
-    timestamp = fhirtools::Timestamp::fromXsDateTime("2021-11-25T12:34:56+01:00");
+    timestamp = model::Timestamp::fromXsDateTime("2021-11-25T12:34:56+01:00");
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
         patientsPharmacies.emplace_back(InsurantA, pharmacyC, timestamp + std::chrono::hours(-24 * idxPatient));
@@ -687,7 +687,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cog
     std::string pharmacyA = "606358757";
     std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesChargeItems = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantB, pharmacyB, std::nullopt},
     };
@@ -851,7 +851,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_BAD)
     std::string pharmacyA = "606358757";
     std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<fhirtools::Timestamp>>> patientsPharmaciesChargeItems = {
+    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
     };

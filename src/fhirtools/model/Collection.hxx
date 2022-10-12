@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <memory>
 #include <vector>
+#include <optional>
 
 namespace fhirtools
 {
@@ -27,8 +28,12 @@ public:
 
     std::ostream& json(std::ostream&);
 
-    [[nodiscard]] bool operator==(const Collection& rhs) const;
-    [[nodiscard]] bool operator!=(const Collection& rhs) const;
+    // returns true, false or empty, see http://hl7.org/fhirpath/#equality
+    [[nodiscard]] std::optional<bool> equals(const Collection& rhs) const;
+
+    // We need to delete the standard operators, otherwise the vector operators would be visible.
+    [[nodiscard]] bool operator==(const Collection& rhs) const = delete;
+    [[nodiscard]] bool operator!=(const Collection& rhs) const = delete;
 };
 
 std::ostream& operator<<(std::ostream& os, const Collection& collection);

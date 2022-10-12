@@ -32,12 +32,12 @@ public:
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
 
     [[nodiscard]] int32_t asInt() const override;
-    [[nodiscard]] Element::DecimalType asDecimal() const override;
+    [[nodiscard]] fhirtools::DecimalType asDecimal() const override;
     [[nodiscard]] bool asBool() const override;
     [[nodiscard]] std::string asString() const override;
-    [[nodiscard]] fhirtools::Timestamp asDate() const override;
-    [[nodiscard]] fhirtools::Timestamp asTime() const override;
-    [[nodiscard]] fhirtools::Timestamp asDateTime() const override;
+    [[nodiscard]] fhirtools::Date asDate() const override;
+    [[nodiscard]] fhirtools::Time asTime() const override;
+    [[nodiscard]] fhirtools::DateTime asDateTime() const override;
     [[nodiscard]] QuantityType asQuantity() const override;
 
     [[nodiscard]] bool hasSubElement(const std::string& name) const override;

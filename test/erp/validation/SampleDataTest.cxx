@@ -7,6 +7,8 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/validation/XmlValidator.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -62,34 +64,34 @@ protected:
         invalidList = {
             {resourceTestOutputDir() / "Konnektathon/7. Konnektathon/Medatixx2_Konnektathon-02-03-11/generierte "
                                        "eRezepte_medatixx2/20211103_103111_03799601.xml",
-                    "error: Element '{http://hl7.org/fhir}coding': "
-                        "Missing child element(s). Expected is ( {http://hl7.org/fhir}code ).; "
-                    "Bundle.entry[4].resource{Medication}.form: "
-                        "error: Expected exactly one system and one code sub-element "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "
-                    "Bundle.entry[4].resource{Medication}.form.coding[0].code: "
-                        "error: missing mandatory element "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "},
+             "error: Element '{http://hl7.org/fhir}coding': "
+             "Missing child element(s). Expected is ( {http://hl7.org/fhir}code ).; "
+             "Bundle.entry[4].resource{Medication}.form: "
+             "error: Expected exactly one system and one code sub-element "
+             "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "
+             "Bundle.entry[4].resource{Medication}.form.coding[0].code: "
+             "error: missing mandatory element "
+             "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "},
             {resourceTestOutputDir() / "Konnektathon/7. Konnektathon/Medatixx2_Konnektathon-02-03-11/generierte "
                                        "eRezepte_medatixx2/20211103_103237_03799601.xml",
-                    "error: Element '{http://hl7.org/fhir}coding': "
-                        "Missing child element(s). Expected is ( {http://hl7.org/fhir}code ).; "
-                    "Bundle.entry[4].resource{Medication}.form: "
-                        "error: Expected exactly one system and one code sub-element "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "
-                    "Bundle.entry[4].resource{Medication}.form.coding[0].code: "
-                        "error: missing mandatory element "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "},
+             "error: Element '{http://hl7.org/fhir}coding': "
+             "Missing child element(s). Expected is ( {http://hl7.org/fhir}code ).; "
+             "Bundle.entry[4].resource{Medication}.form: "
+             "error: Expected exactly one system and one code sub-element "
+             "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "
+             "Bundle.entry[4].resource{Medication}.form.coding[0].code: "
+             "error: missing mandatory element "
+             "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "},
             {resourceTestOutputDir() / "Konnektathon/7. Konnektathon/Medatixx2_Konnektathon-02-03-11/generierte "
                                        "eRezepte_medatixx2/20211103_103515_03799601.xml",
-                    "error: Element '{http://hl7.org/fhir}coding': "
-                        "Missing child element(s). Expected is ( {http://hl7.org/fhir}code ).; "
-                    "Bundle.entry[4].resource{Medication}.form: "
-                        "error: Expected exactly one system and one code sub-element "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "
-                    "Bundle.entry[4].resource{Medication}.form.coding[0].code: "
-                        "error: missing mandatory element "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "},
+             "error: Element '{http://hl7.org/fhir}coding': "
+             "Missing child element(s). Expected is ( {http://hl7.org/fhir}code ).; "
+             "Bundle.entry[4].resource{Medication}.form: "
+             "error: Expected exactly one system and one code sub-element "
+             "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "
+             "Bundle.entry[4].resource{Medication}.form.coding[0].code: "
+             "error: missing mandatory element "
+             "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2); "},
             {resourceTestOutputDir() / "Konnektathon/7. "
                                        "Konnektathon/MedVision_Konnektathon7/Output/160_000_074_295_222_21.xml",
              "Element '{http://hl7.org/fhir}postalCode', attribute 'value': [facet 'minLength'] The value '' has a "
@@ -100,10 +102,10 @@ protected:
              "union type '{http://hl7.org/fhir}date-primitive'."},
             {resourceTestOutputDir() /
                  "Konnektathon/8. Konnektathon/Konnektathon8.ADV/160.000.080.727.847.05.20211119/02-Medication.xml",
-                    "Bundle.entry[6].resource{Coverage}: error: "
-                        "Versichertenart-Pflicht: Die Versichertenart ist nicht vorhanden, sie ist aber bei den "
-                             "Kostentraegern vom Typ 'GKV', 'BG', 'SKT', 'PKV' oder 'UK' ein Pflichtelement. "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3); "},
+             "Bundle.entry[6].resource{Coverage}: error: "
+             "Versichertenart-Pflicht: Die Versichertenart ist nicht vorhanden, sie ist aber bei den "
+             "Kostentraegern vom Typ 'GKV', 'BG', 'SKT', 'PKV' oder 'UK' ein Pflichtelement. "
+             "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3); "},
             {resourceTestOutputDir() / "Kostbarkeiten_der_Abgabe_Abrechnung/Kostbarkeiten_der_Abgabe_Abrechnung/IKK_BB/"
                                        "IKK_BB_109519005_Beispiel_frei_2.xml",
              "Opening and ending tag mismatch: practitioner line 213 and Practitioner\n"},
@@ -122,16 +124,22 @@ TEST_P(SampleDataTest, SampleDataTest)
     bool shallFail = candidate != invalidList.end();
 
     const auto document = FileHelper::readFileAsString(GetParam().path);
+
+    fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true,
+                                        .levels{.unreferencedBundledResource = fhirtools::Severity::warning,
+                                                .mandatoryResolvableReferenceFailure = fhirtools::Severity::warning}};
+
     try
     {
-        model::KbvBundle::fromXml(document, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                  SchemaType::KBV_PR_ERP_Bundle);
+        auto bundle =
+            model::KbvBundle::fromXml(document, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                                      SchemaType::KBV_PR_ERP_Bundle, options);
         ASSERT_FALSE(shallFail);
     }
     catch (const ErpException& erp)
     {
         ASSERT_TRUE(shallFail) << erp.what() << erp.diagnostics().value_or("");
-        EXPECT_EQ(erp.diagnostics().value_or(""), candidate->second);
+        EXPECT_EQ(erp.diagnostics().value_or(""), candidate->second) << erp.what();
     }
 }
 
@@ -140,5 +148,4 @@ INSTANTIATE_TEST_SUITE_P(Konnektathon, SampleDataTest, testing::ValuesIn(makePar
 INSTANTIATE_TEST_SUITE_P(Kostbarkeiten_der_Abgabe_Abrechnung, SampleDataTest,
                          testing::ValuesIn(makeParams("Kostbarkeiten_der_Abgabe_Abrechnung")));
 
-INSTANTIATE_TEST_SUITE_P(MVO_KBV_1_0_2_, SampleDataTest,
-                         testing::ValuesIn(makeParams("MVO_KBV_1.0.2_")));
+INSTANTIATE_TEST_SUITE_P(MVO_KBV_1_0_2_, SampleDataTest, testing::ValuesIn(makeParams("MVO_KBV_1.0.2_")));

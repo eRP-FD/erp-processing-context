@@ -63,13 +63,13 @@ std::optional<std::string_view> model::Extension::valueString() const
     return getOptionalStringValue(valuePointer);
 }
 
-std::optional<fhirtools::Timestamp> model::Extension::valueDate() const
+std::optional<model::Timestamp> model::Extension::valueDate() const
 {
     static const rapidjson::Pointer valuePointer(resource::ElementName::path(resource::elements::valueDate));
     const auto strVal = getOptionalStringValue(valuePointer);
     if (strVal)
     {
-        return fhirtools::Timestamp::fromFhirDateTime(std::string(*strVal));
+        return model::Timestamp::fromFhirDateTime(std::string(*strVal));
     }
     return std::nullopt;
 }
@@ -88,45 +88,45 @@ std::optional<double> model::Extension::valueRatioDenominator() const
     return getOptionalDoubleValue(valuePointer);
 }
 
-std::optional<fhirtools::Timestamp> model::Extension::valuePeriodStart() const
+std::optional<model::Timestamp> model::Extension::valuePeriodStart() const
 {
     const auto strVal = getOptionalStringValue(valuePeriodStartPointer);
     if (strVal)
     {
-        return fhirtools::Timestamp::fromFhirDateTime(std::string(*strVal));
+        return model::Timestamp::fromFhirDateTime(std::string(*strVal));
     }
     return std::nullopt;
 }
 
-std::optional<fhirtools::Timestamp> model::Extension::valuePeriodEnd() const
+std::optional<model::Timestamp> model::Extension::valuePeriodEnd() const
 {
     const auto strVal = getOptionalStringValue(valuePeriodEndPointer);
     if (strVal)
     {
-        return fhirtools::Timestamp::fromFhirDateTime(std::string(*strVal));
+        return model::Timestamp::fromFhirDateTime(std::string(*strVal));
     }
     return std::nullopt;
 }
 
-std::optional<fhirtools::Timestamp> model::Extension::valuePeriodStartGermanDate() const
+std::optional<model::Timestamp> model::Extension::valuePeriodStartGermanDate() const
 {
     const auto strVal = getOptionalStringValue(valuePeriodStartPointer);
     if (strVal)
     {
         ModelExpect(strVal->size() == 10,
                     "valuePeriodStartGermanDate can only be called for Date with format yyyy-mm-dd");
-        return fhirtools::Timestamp::fromGermanDate(std::string(*strVal));
+        return model::Timestamp::fromGermanDate(std::string(*strVal));
     }
     return std::nullopt;
 }
-std::optional<fhirtools::Timestamp> model::Extension::valuePeriodEndGermanDate() const
+std::optional<model::Timestamp> model::Extension::valuePeriodEndGermanDate() const
 {
     const auto strVal = getOptionalStringValue(valuePeriodEndPointer);
     if (strVal)
     {
         ModelExpect(strVal->size() == 10,
                     "valuePeriodEndGermanDate can only be called for Date with format yyyy-mm-dd");
-        return fhirtools::Timestamp::fromGermanDate(std::string(*strVal));
+        return model::Timestamp::fromGermanDate(std::string(*strVal));
     }
     return std::nullopt;
 }

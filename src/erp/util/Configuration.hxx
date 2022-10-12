@@ -8,6 +8,7 @@
 
 #include "erp/util/Expect.hxx"
 #include "erp/util/SafeString.hxx"
+#include "fhirtools/validator/Severity.hxx"
 
 #include <erp/ErpConstants.hxx>
 #include <rapidjson/document.h>
@@ -30,7 +31,6 @@ enum class ConfigurationKey
     ENROLMENT_ACTIVATE_FOR_PORT,
     ENROLMENT_API_CREDENTIALS,
     ENTROPY_FETCH_INTERVAL_SECONDS,
-    FHIR_STRUCTURE_DEFINITIONS,
     IDP_REGISTERED_FD_URI,
     IDP_WELLKNOWN_HOST,
     IDP_WELLKNOWN_PATH,
@@ -54,6 +54,7 @@ enum class ConfigurationKey
     SERVICE_TASK_ACTIVATE_EASTER_CSV,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
+    SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF,
     SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE,
     SERVICE_COMMUNICATION_MAX_MESSAGES,
     SERVICE_SUBSCRIPTION_SIGNING_KEY,
@@ -86,16 +87,19 @@ enum class ConfigurationKey
     TSL_DOWNLOAD_CIPHERS,
     XML_SCHEMA_MISC,
     FHIR_PROFILE_OLD_VALID_UNTIL,
-    FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION,
     FHIR_PROFILE_OLD_XML_SCHEMA_KBV,
-    FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK_VERSION,
     FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK,
+    FHIR_STRUCTURE_DEFINITIONS_OLD,
+    ERP_FHIR_VERSION_OLD,
+    FHIR_STRUCTURE_DEFINITIONS,
+    ERP_FHIR_VERSION,
     FHIR_PROFILE_VALID_FROM,
     FHIR_PROFILE_RENDER_FROM,
-    FHIR_PROFILE_XML_SCHEMA_KBV_VERSION,
     FHIR_PROFILE_XML_SCHEMA_KBV,
-    FHIR_PROFILE_XML_SCHEMA_GEMATIK_VERSION,
     FHIR_PROFILE_XML_SCHEMA_GEMATIK,
+    FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
+    FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
+    FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
     HSM_CACHE_REFRESH_SECONDS,
     HSM_DEVICE,
     HSM_MAX_SESSION_COUNT,
@@ -113,6 +117,7 @@ enum class ConfigurationKey
     DEPRECATED_HSM_PASSWORD,
     TEE_TOKEN_UPDATE_SECONDS,
     TEE_TOKEN_RETRY_SECONDS,
+    TIMING_CATEGORIES,
     ZSTD_DICTIONARY_DIR,
     HTTPCLIENT_CONNECT_TIMEOUT_SECONDS,
 
@@ -133,6 +138,8 @@ enum class ConfigurationKey
     REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS,
     REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS,
 
+    REPORT_ALL_TASKS_RATE_LIMIT_SHORT,
+    REPORT_ALL_TASKS_RATE_LIMIT_LONG,
     // Feature related configuration
     FEATURE_PKV,
     FEATURE_WORKFLOW_200,
@@ -148,7 +155,8 @@ enum class ConfigurationKey
     DEBUG_DISABLE_DOS_CHECK,
     DEBUG_ENABLE_HSM_MOCK,
     DEBUG_DISABLE_QES_ID_CHECK,
-    DEBUG_ENABLE_MOCK_TSL_MANAGER
+    DEBUG_ENABLE_MOCK_TSL_MANAGER,
+    PNW_ALLOWED_RESULTS
 };
 
 
@@ -250,6 +258,10 @@ public:
 
     const char* getEnvironmentVariableName (Key key) const       {return names_.strings(key).environmentVariable.data();}
 
+    template<typename EnumT>
+        requires std::is_enum_v<EnumT>
+    [[nodiscard]] EnumT getOptional(Key key, std::type_identity_t<EnumT> defaultValue) const;
+
 protected:
     ConfigurationTemplate()
         : ConfigurationBase(Names().allStrings())
@@ -302,6 +314,19 @@ bool ConfigurationTemplate<Key, Names>::getOptionalBoolValue(Key key, bool defau
     return defaultValue;
 }
 
+template<typename Key, typename Names>
+template<typename EnumT>
+requires std::is_enum_v<EnumT>
+EnumT ConfigurationTemplate<Key, Names>::getOptional(Key key, std::type_identity_t<EnumT> defaultValue) const
+{
+    using namespace std::string_literals;
+    auto enumStr = getOptionalStringValue(key, std::string{magic_enum::enum_name(defaultValue)});
+    auto asEnum = magic_enum::enum_cast<EnumT>(enumStr);
+    Expect3(asEnum.has_value(), "invalid value for "s.append(magic_enum::enum_name(key)) + ": " + enumStr,
+            std::logic_error);
+    return *asEnum;
+
+}
 
 template<typename TKeyValueContainer>
 std::vector<typename TKeyValueContainer::mapped_type> getAllValues(const TKeyValueContainer& keyValueContainer)
@@ -373,6 +398,10 @@ public:
     enum class GenericValidationMode {
         disable, detail_only, ignore_errors, require_success
     };
+    enum class NonLiteralAutherRefMode
+    {
+        allow, deny,
+    };
 
     static const Configuration& instance();
     void check() const;
@@ -380,7 +409,9 @@ public:
     [[nodiscard]] bool featureWf200Enabled() const;
     [[nodiscard]] bool featurePkvEnabled() const;
     [[nodiscard]] OnUnknownExtension kbvValidationOnUnknownExtension() const;
+    [[nodiscard]] NonLiteralAutherRefMode kbvValidationNonLiteralAuthorRef() const;
     [[nodiscard]] GenericValidationMode genericValidationMode() const;
+    [[nodiscard]] bool timingLoggingEnabled(const std::string& category) const;
 };
 
 
@@ -392,4 +423,9 @@ extern void configureXmlValidator(XmlValidator& xmlValidator);
 extern std::optional<uint16_t> getEnrolementServerPort(const uint16_t pcPort,
                                                        const uint16_t defaultEnrolmentServerPort);
 
+extern template fhirtools::Severity
+    ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>::getOptional<fhirtools::Severity>(
+        ConfigurationKey, std::type_identity_t<fhirtools::Severity>) const;
+
 #endif // ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
+

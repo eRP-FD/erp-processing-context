@@ -87,8 +87,8 @@ db_model::Task::Task(const model::PrescriptionId& initPrescriptionId,
                      BlobId initKeyBlobId,
                      db_model::Blob initSalt,
                      model::Task::Status initStatus,
-                     const fhirtools::Timestamp& initAuthoredOn,
-                     const fhirtools::Timestamp& initLastModified)
+                     const model::Timestamp& initAuthoredOn,
+                     const model::Timestamp& initLastModified)
     : prescriptionId(initPrescriptionId)
     , blobId(initKeyBlobId)
     , salt(std::move(initSalt))
@@ -112,7 +112,8 @@ MedicationDispense::MedicationDispense(model::PrescriptionId initPrescriptionId,
 
 AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId eventId,
                      std::optional<EncryptedBlob> metaData, model::AuditEvent::Action action, HashedKvnr insurantKvnr,
-                     int16_t deviceId, std::optional<model::PrescriptionId> prescriptionId, std::optional<BlobId> blobId)
+                     int16_t deviceId, std::optional<model::PrescriptionId> prescriptionId,
+                     std::optional<BlobId> blobId)
     : agentType(agentType)
     , eventId(eventId)
     , metaData(std::move(metaData))
@@ -122,7 +123,7 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     , prescriptionId(std::move(prescriptionId))
     , blobId(blobId)
     , id()
-    , recorded(fhirtools::Timestamp::now())
+    , recorded(model::Timestamp::now())
 {
 }
 

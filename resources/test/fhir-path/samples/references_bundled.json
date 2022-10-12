@@ -1,0 +1,32 @@
+{
+    "resourceType": "Bundle",
+    "id": "root",
+    "entry": [
+        {
+            "fullUrl": "http://erp.test/DomainResource/0815",
+            "resource": {
+                "resourceType": "DomainResource",
+                "id": "0815",
+                "extension": {
+                    "url": "http://erp.test/ReferenceExtension",
+                    "valueReference": {
+                        "reference": "DomainResource/4711"
+                    }
+                }
+            }
+        },
+        {
+            "fullUrl": "http://erp.test/DomainResource/4711",
+            "resource": {
+                "resourceType": "DomainResource",
+                "id": "4711",
+                "extension": {
+                    "url": "http://erp.test/ReferenceExtension",
+                    "valueReference": {
+                        "reference": "http://erp.test/DomainResource/4711"
+                    }
+                }
+            }
+        }
+    ]
+}

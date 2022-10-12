@@ -30,15 +30,15 @@
 #include "erp/service/consent/ConsentGetHandler.hxx"
 #include "erp/service/consent/ConsentPostHandler.hxx"
 #include "erp/service/task/AbortTaskHandler.hxx"
-#include "erp/service/task/AcceptTaskHandler.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
 #include "erp/tsl/OcspHelper.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/FileHelper.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "mock/util/MockConfiguration.hxx"
-#include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/CryptoHelper.hxx"
@@ -50,6 +50,16 @@
 
 #include <gtest/gtest.h>
 #include <variant>
+
+namespace {
+static constexpr fhirtools::ValidatorOptions receiptValidationOptions
+{
+    .levels{
+        .unreferencedBundledResource = fhirtools::Severity::warning,
+        .unreferencedContainedResource = fhirtools::Severity::warning
+    }
+};
+}
 
 using namespace ::std::literals;
 
@@ -194,10 +204,8 @@ TEST_F(EndpointHandlerTest, GetTaskById)//NOLINT(readability-function-cognitive-
     auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
     auto tasks = bundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
-    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
                                          *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
-
-
     ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
     ASSERT_TRUE(rapidjson::Pointer("/link/0/relation").Get(document)->IsString());
 
@@ -237,8 +245,8 @@ TEST_F(EndpointHandlerTest, GetTaskById169NoAccessCode)//NOLINT(readability-func
     auto tasks = bundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
 
-    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 
     ASSERT_THROW((void)tasks[0].accessCode(), model::ModelException);
 
@@ -275,9 +283,11 @@ TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)//NOLINT(readability-
     auto prescriptions = bundle.getResourcesByType<model::Bundle>("Bundle");
     ASSERT_EQ(prescriptions.size(), 1);
 
-    ASSERT_NO_THROW(model::KbvBundle::fromXml(prescriptions[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                              *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle));
-
+    std::optional<model::KbvBundle> kbvBundle;
+    ASSERT_NO_THROW(kbvBundle.emplace(
+            model::KbvBundle::fromXml(prescriptions[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                      *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                                      {{.allowNonLiteralAuthorReference = true}})));
     ASSERT_TRUE(prescriptions[0].getSignature().has_value());
     auto signature = prescriptions[0].getSignature().value();
     ASSERT_TRUE(signature.when().has_value());
@@ -335,8 +345,8 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)//NOLINT(readability-functio
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)//NOLINT(readability-function-cognitive-complexity)
@@ -370,8 +380,8 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)//NOLINT(readabilit
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)//NOLINT(readability-function-cognitive-complexity)
@@ -410,8 +420,8 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)//NOLINT(readabi
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW(model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdWrongAccessCodeHeader)
@@ -569,8 +579,8 @@ TEST_F(EndpointHandlerTest, GetAllTasks)//NOLINT(readability-function-cognitive-
     ASSERT_FALSE(tasks.empty());
     for (const auto& item : tasks)
     {
-        ASSERT_NO_THROW(model::Task::fromXml(item.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                             *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+        ASSERT_NO_THROW((void)model::Task::fromXml(item.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                                   *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
     }
 }
 
@@ -820,8 +830,8 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)//NOLINT(readability-function-cognitiv
 
     auto auditEvent = model::AuditEvent::fromJsonNoValidation(serverResponse.getBody());
 
-    ASSERT_NO_THROW(model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
+    ASSERT_NO_THROW((void)model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
 
     auto expectedAuditEvent =
         model::AuditEvent::fromJsonNoValidation(FileHelper::readFileAsString(dataPath + "/audit_event.json"));
@@ -830,198 +840,7 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)//NOLINT(readability-function-cognitiv
               canonicalJson(expectedAuditEvent.serializeToJsonString()));
 }
 
-namespace {
 
-//NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void checkAcceptTaskSuccessCommon(
-    std::optional<model::Bundle>& resultBundle,
-    PcServiceContext& serviceContext,
-    const std::string_view& taskJson,
-    const std::string_view& kbvBundleXml,
-    unsigned int numOfExpectedResources)
-{
-    const auto& task = model::Task::fromJsonNoValidation(taskJson);
-
-    AcceptTaskHandler handler({});
-    Header requestHeader{ HttpMethod::POST, "/Task/" + task.prescriptionId().toString() + "/$accept/", 0, {}, HttpStatus::Unknown};
-
-    ServerRequest serverRequest{ std::move(requestHeader) };
-    serverRequest.setPathParameters({ "id" }, { task.prescriptionId().toString() });
-    serverRequest.setQueryParameters({ { "ac", std::string(task.accessCode()) } });
-
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext{serviceContext, serverRequest, serverResponse, accessLog};
-
-    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-    ASSERT_NO_THROW(handler.handleRequest(sessionContext));
-    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-
-    ASSERT_NO_THROW(resultBundle = model::Bundle::fromXml(serverResponse.getBody(),
-                                                          *StaticData::getXmlValidator(),
-                                                          *StaticData::getInCodeValidator(),
-                                                          SchemaType::fhir));
-    ASSERT_EQ(resultBundle->getResourceCount(), numOfExpectedResources);
-
-    const auto tasks = resultBundle->getResourcesByType<model::Task>("Task");
-    ASSERT_EQ(tasks.size(), 1);
-    EXPECT_EQ(tasks[0].prescriptionId(), task.prescriptionId());
-    EXPECT_EQ(tasks[0].status(), model::Task::Status::inprogress);
-    EXPECT_TRUE(tasks[0].secret().has_value());
-
-    const auto binaryResources = resultBundle->getResourcesByType<model::Binary>("Binary");
-    ASSERT_EQ(binaryResources.size(), 1);
-    ASSERT_TRUE(binaryResources[0].data().has_value());
-    std::optional<CadesBesSignature> signature;
-    ASSERT_NO_THROW(signature.emplace(std::string{binaryResources[0].data().value()}));
-    EXPECT_EQ(signature->payload(), kbvBundleXml);
-
-    ASSERT_TRUE(tasks[0].healthCarePrescriptionUuid().has_value());
-    ASSERT_TRUE(binaryResources[0].id().has_value());
-    ASSERT_EQ(tasks[0].healthCarePrescriptionUuid().value(), binaryResources[0].id().value());
-}
-
-} // anonymous namespace
-
-TEST_F(EndpointHandlerTest, AcceptTaskSuccess)
-{
-    auto& resourceManager = ResourceManager::instance();
-    std::optional<model::Bundle> resultBundle;
-    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
-        resultBundle, mServiceContext,
-        resourceManager.getStringResource(dataPath + "/task4.json"),
-        resourceManager.getStringResource(dataPath + "/kbv_bundle.xml"),
-        2 /*numOfExpectedResources*/));
-}
-
-// Regression test for ERP-10628
-TEST_F(EndpointHandlerTest, AcceptTaskSuccessNoQesCheck)
-{
-    auto& resourceManager = ResourceManager::instance();
-    auto factories = StaticData::makeMockFactories();
-
-    // create a TSL Manager that generates failures.
-    factories.tslManagerFactory = [](const std::shared_ptr<XmlValidator>& ){
-        auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
-        X509Certificate certX509 = X509Certificate::createFromBase64(cert.toBase64Der());
-        auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
-        auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{CFdSigErpTestHelper::cFdSigErpPrivateKey()});
-        const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
-
-        // trigger revoked status in OCSP-Responder for the certificate
-        std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
-            {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
-        return tslManager;
-    };
-    factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
-        auto md = std::make_unique<MockDatabase>(hsmPool);
-        md->fillWithStaticData();
-        return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
-    };
-
-    PcServiceContext serviceContext(Configuration::instance(), std::move(factories));
-    std::optional<model::Bundle> resultBundle;
-    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
-        resultBundle, serviceContext,
-        resourceManager.getStringResource(dataPath + "/task4.json"),
-        resourceManager.getStringResource(dataPath + "/kbv_bundle.xml"),
-        2 /*numOfExpectedResources*/));
-}
-
-TEST_F(EndpointHandlerTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-cognitive-complexity)
-{
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
-    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
-    const char* const pkvKvnr = "X500000000";
-
-    auto& resourceManager = ResourceManager::instance();
-    std::optional<model::Bundle> resultBundle;
-    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
-        resultBundle, mServiceContext,
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_activated_template.json"), pkvTaskId.toString()), pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"), pkvTaskId.toString()), pkvKvnr),
-        3 /*numOfExpectedResources*/));
-
-    // Check consent:
-    const auto consents = resultBundle->getResourcesByType<model::Consent>("Consent");
-    ASSERT_EQ(consents.size(), 1);
-    ASSERT_TRUE(consents[0].isChargingConsent());
-    const auto tasks = resultBundle->getResourcesByType<model::Task>("Task");
-    ASSERT_EQ(tasks.size(), 1);
-    ASSERT_TRUE(tasks[0].kvnr().has_value());
-    ASSERT_EQ(tasks[0].kvnr().value(), consents[0].patientKvnr());
-}
-
-TEST_F(EndpointHandlerTest, AcceptTaskPkvWithoutConsent)
-{
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
-    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
-    const char* const pkvKvnr = "X500000001";
-
-    auto& resourceManager = ResourceManager::instance();
-    std::optional<model::Bundle> resultBundle;
-    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
-        resultBundle, mServiceContext,
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_activated_template.json"), pkvTaskId.toString()), pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"), pkvTaskId.toString()), pkvKvnr),
-        2 /*numOfExpectedResources*/));  // no consent resource in result;
-}
-
-TEST_F(EndpointHandlerTest, AcceptTaskFail)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string validAccessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
-    AcceptTaskHandler handler({});
-    {
-        // Unknown Task;
-        const auto id = model::PrescriptionId::fromDatabaseId(
-            model::PrescriptionType::apothekenpflichigeArzneimittel, 999999).toString();
-        Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
-        ServerRequest serverRequest{ std::move(requestHeader) };
-        serverRequest.setPathParameters({ "id" }, { id });
-        serverRequest.setQueryParameters({ { "ac", validAccessCode} });
-        ServerResponse serverResponse;
-        AccessLog accessLog;
-        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
-        ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
-
-        serverRequest.setPathParameters({ "id" }, { "9a27d600-5a50-4e2b-98d3-5e05d2e85aa0" });
-        EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::NotFound);
-    }
-
-    const auto id = model::PrescriptionId::fromDatabaseId(
-            model::PrescriptionType::apothekenpflichigeArzneimittel, 4714).toString();
-    const Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
-    {
-        // No Access Code;
-        ServerRequest serverRequest{ Header(requestHeader) };
-        serverRequest.setPathParameters({ "id" }, { id });
-        ServerResponse serverResponse;
-        AccessLog accessLog;
-        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
-        ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
-    }
-    {
-        // Invalid Access Code;
-        ServerRequest serverRequest{ Header(requestHeader) };
-        serverRequest.setPathParameters({ "id" }, { id });
-        serverRequest.setQueryParameters({ { "ac", "invalid_access_code"} });
-        ServerResponse serverResponse;
-        AccessLog accessLog;
-        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
-        ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
-    }
-    {
-        // No id;
-        ServerRequest serverRequest{ Header(requestHeader) };
-        serverRequest.setQueryParameters({ { "ac", validAccessCode} });
-        ServerResponse serverResponse;
-        AccessLog accessLog;
-        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
-        ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
-    }
-}
 
 namespace
 {
@@ -1219,10 +1038,10 @@ TEST_F(EndpointHandlerTest, MetaDataXml)//NOLINT(readability-function-cognitive-
                                                         *StaticData::getInCodeValidator(),
                                                         SchemaType::fhir));
     EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion);
-    EXPECT_EQ(metaData->date(), fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
-    EXPECT_EQ(metaData->releaseDate(), fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
+    EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
+    EXPECT_EQ(metaData->releaseDate(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
 
-    const auto now = fhirtools::Timestamp::now();
+    const auto now = model::Timestamp::now();
     const auto* version = "0.3.1";
     metaData->setVersion(version);
     metaData->setDate(now);
@@ -1256,10 +1075,10 @@ TEST_F(EndpointHandlerTest, MetaDataJson)//NOLINT(readability-function-cognitive
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(metaData.jsonDocument()), SchemaType::fhir));
 
     EXPECT_EQ(metaData.version(), ErpServerInfo::ReleaseVersion);
-    EXPECT_EQ(metaData.date(), fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
-    EXPECT_EQ(metaData.releaseDate(), fhirtools::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
+    EXPECT_EQ(metaData.date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
+    EXPECT_EQ(metaData.releaseDate(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate));
 
-    const auto now = fhirtools::Timestamp::now();
+    const auto now = model::Timestamp::now();
     const auto* version = "0.3.1";
     metaData.setVersion(version);
     metaData.setDate(now);
@@ -1393,7 +1212,7 @@ TEST_F(EndpointHandlerTest, PostConsent)//NOLINT(readability-function-cognitive-
     EXPECT_EQ(resultConsent->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, origKvnr2));
     EXPECT_EQ(resultConsent->patientKvnr(), origKvnr2);
     EXPECT_TRUE(resultConsent->isChargingConsent());
-    EXPECT_EQ(fhirtools::Timestamp::fromXsDateTime(origDateTimeStr), resultConsent->dateTime());
+    EXPECT_EQ(model::Timestamp::fromXsDateTime(origDateTimeStr), resultConsent->dateTime());
 
     // Check kvnr mismatch
     A_22289.test("Kvnr of access token and Consent patient identifier must be identical");
@@ -1536,7 +1355,7 @@ TEST_F(EndpointHandlerTest, GetConsent)//NOLINT(readability-function-cognitive-c
     EXPECT_NO_FATAL_FAILURE(checkGetConsentHandler(resultConsent, mServiceContext, jwtInsurant, HttpStatus::OK));
     ASSERT_TRUE(resultConsent);
     EXPECT_EQ(resultConsent->patientKvnr(), origKvnr);
-    EXPECT_EQ(resultConsent->dateTime(), fhirtools::Timestamp::fromXsDateTime(origDateTimeStr));
+    EXPECT_EQ(resultConsent->dateTime(), model::Timestamp::fromXsDateTime(origDateTimeStr));
 
     // empty result:
     resultConsent = {};
@@ -1593,7 +1412,7 @@ void checkGetChargeItemByIdHandler(
             std::optional<model::ChargeItem> checkedChargeItem;
             ASSERT_NO_THROW(checkedChargeItem = model::ChargeItem::fromXml(
                 chargeItem.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                SchemaType::fhir, false));
+                SchemaType::fhir, std::nullopt));
             EXPECT_FALSE(checkedChargeItem->containedBinary());
 
             const auto bundleItems = chargeItemBundle.getResourcesByType<model::Bundle>("Bundle");
@@ -1616,8 +1435,9 @@ void checkGetChargeItemByIdHandler(
             const model::Bundle& receipt = bundleItems[2];
             std::optional<model::ErxReceipt> checkedReceipt;
             ASSERT_NO_THROW(checkedReceipt = model::ErxReceipt::fromXml(
-                receipt.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                SchemaType::Gem_erxReceiptBundle));
+                                receipt.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle,
+                                receiptValidationOptions));
 
             ASSERT_TRUE(
                 chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).has_value());
@@ -1639,7 +1459,7 @@ void checkGetChargeItemByIdHandler(
                 std::optional<model::KbvBundle> kbvBundleFromSignature;
                 ASSERT_NO_THROW(kbvBundleFromSignature = model::KbvBundle::fromXml(
                     cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                    SchemaType::KBV_PR_ERP_Bundle));
+                    SchemaType::KBV_PR_ERP_Bundle, {{.allowNonLiteralAuthorReference = true}}));
                 EXPECT_FALSE(kbvBundleFromSignature->getSignature().has_value());
             }
             {
@@ -1651,8 +1471,8 @@ void checkGetChargeItemByIdHandler(
                 CadesBesSignature cms(certs, signatureData);
                 std::optional<model::ErxReceipt> receiptFromSignature;
                 ASSERT_NO_THROW(receiptFromSignature = model::ErxReceipt::fromXml(
-                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                    SchemaType::Gem_erxReceiptBundle));
+                                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                                    SchemaType::Gem_erxReceiptBundle, receiptValidationOptions));
                 EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
             }
         }
@@ -1763,23 +1583,11 @@ TEST_F(EndpointHandlerTest, DeleteChargeItem)//NOLINT(readability-function-cogni
                                      JwtBuilder::testBuilder().makeJwtVersicherter(std::string("X999999999")),
                                      pkvTaskId.toString(), HttpStatus::Forbidden));
 
-    A_22115.test("Telematik-ID check");
-    EXPECT_NO_FATAL_FAILURE(
-        checkDeleteChargeItemHandler(mServiceContext,
-                                     JwtBuilder::testBuilder().makeJwtApotheke(std::string("606060606")),
-                                     pkvTaskId.toString(), HttpStatus::Forbidden));
-
     A_22115.test("Delete chargeItem");
     // Insured
     EXPECT_NO_FATAL_FAILURE(
         checkDeleteChargeItemHandler(mServiceContext,
                                      JwtBuilder::testBuilder().makeJwtVersicherter(std::string(kvnr)),
-                                     pkvTaskId.toString(), HttpStatus::NoContent));
-
-    // Pharmacy
-    EXPECT_NO_FATAL_FAILURE(
-        checkDeleteChargeItemHandler(mServiceContext,
-                                     JwtBuilder::testBuilder().makeJwtApotheke(std::string("606358757")),
                                      pkvTaskId.toString(), HttpStatus::NoContent));
 }
 
@@ -1824,7 +1632,7 @@ void checkPostChargeItemHandler(
     {
         ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromXml(
             serverResponse.getBody(), *StaticData::getXmlValidator(),
-            *StaticData::getInCodeValidator(), SchemaType::fhir, false));
+            *StaticData::getInCodeValidator(), SchemaType::fhir, std::nullopt));
         ASSERT_TRUE(resultChargeItem);
     }
 }
@@ -2128,13 +1936,13 @@ void checkPutChargeItemHandler(
         {
             ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromJson(
                 serverResponse.getBody(), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                *StaticData::getInCodeValidator(), SchemaType::fhir, false));
+                *StaticData::getInCodeValidator(), SchemaType::fhir, std::nullopt));
         }
         else
         {
             ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromXml(
                 serverResponse.getBody(), *StaticData::getXmlValidator(),
-                *StaticData::getInCodeValidator(), SchemaType::fhir, false));
+                *StaticData::getInCodeValidator(), SchemaType::fhir, std::nullopt));
         }
         ASSERT_TRUE(resultChargeItem);
     }
@@ -2171,7 +1979,7 @@ void checkPatchChargeItemHandler(
     {
         ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromJson(
                             serverResponse.getBody(), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                            *StaticData::getInCodeValidator(), SchemaType::fhir, false));
+                            *StaticData::getInCodeValidator(), SchemaType::fhir, std::nullopt));
         ASSERT_TRUE(resultChargeItem);
     }
 }
@@ -2217,7 +2025,7 @@ void checkUnchangedChargeItemFieldsCommon(
     {
         // entered date
         auto errChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
-        errChargeItem.setEnteredDate(fhirtools::Timestamp::now());
+        errChargeItem.setEnteredDate(model::Timestamp::now());
         ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(
             resultChargeItem, serviceContext, jwt, contentType, errChargeItem, pkvTaskId, HttpStatus::BadRequest));
     }
@@ -2410,4 +2218,8 @@ TEST_F(EndpointHandlerTest, PatchChargeItemInsurant)//NOLINT(readability-functio
     EXPECT_EQ(resultChargeItem->id(), pkvTaskId);
     EXPECT_EQ(resultChargeItem->prescriptionId(), pkvTaskId);
     EXPECT_TRUE(resultChargeItem->isMarked());
+    EXPECT_NO_FATAL_FAILURE(
+        checkGetChargeItemByIdHandler(mServiceContext,
+                                      JwtBuilder::testBuilder().makeJwtVersicherter(std::string(pkvKvnr)),
+                                      pkvTaskId.toString(), HttpStatus::OK));
 }

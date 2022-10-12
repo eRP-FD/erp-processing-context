@@ -74,7 +74,7 @@ void checkCommon(model::ChargeItem& chargeItem)
     chargeItem.setEntererTelematikId(telematicId);
     EXPECT_EQ(chargeItem.entererTelematikId(), telematicId);
 
-    const fhirtools::Timestamp enteredDate = fhirtools::Timestamp::now();
+    const model::Timestamp enteredDate = model::Timestamp::now();
     chargeItem.setEnteredDate(enteredDate);
     EXPECT_EQ(chargeItem.enteredDate(), enteredDate);
 
@@ -110,7 +110,8 @@ TEST(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function-c
     ASSERT_NO_THROW(
         sourceChargeItem = ::model::ChargeItem::fromXml(
             ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem));
+            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem,
+            std::nullopt));
     ASSERT_TRUE(sourceChargeItem.has_value());
 
     EXPECT_FALSE(chargeItem.prescriptionId());
@@ -162,7 +163,7 @@ TEST(ChargeItemTest, ConstructFromXml)//NOLINT(readability-function-cognitive-co
     std::optional<model::ChargeItem> optChargeItem;
     ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromXml(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem));
+        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem, std::nullopt));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
@@ -175,7 +176,7 @@ TEST(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-com
     ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromJson(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input_marked.json"),
         *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem));
+        *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem, std::nullopt));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
@@ -210,7 +211,8 @@ TEST(ChargeItemTest, ContainedBinary)//NOLINT(readability-function-cognitive-com
     ASSERT_NO_THROW(
         chargeItem = ::model::ChargeItem::fromXml(
             ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem));
+            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem,
+            std::nullopt));
     ASSERT_TRUE(chargeItem.has_value());
 
     ::std::optional<::model::Binary> containedBinary;
@@ -236,7 +238,7 @@ TEST(ChargeItemTest, MarkingFlags)//NOLINT(readability-function-cognitive-comple
         ASSERT_NO_THROW(sourceChargeItem = ::model::ChargeItem::fromJson(
                             ::ResourceManager::instance().getStringResource(chargeItemJson),
                             *::StaticData::getJsonValidator(), *::StaticData::getXmlValidator(),
-                            *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem))
+                            *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem, std::nullopt))
             << chargeItemJson;
         ASSERT_TRUE(sourceChargeItem.has_value());
 
@@ -375,3 +377,4 @@ TEST(ChargeItemTest, AccessCode)//NOLINT(readability-function-cognitive-complexi
     ASSERT_TRUE(chargeItem.prescriptionId());
     EXPECT_EQ(chargeItem.prescriptionId(), prescriptionId1);
 }
+

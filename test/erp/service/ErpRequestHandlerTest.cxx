@@ -55,8 +55,16 @@ public:
         }
         else
         {
-            ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, schemaType))
-                << "failed with " << contentMimeType << ", " << magic_enum::enum_name(schemaType) << " expectFail=false";
+            if constexpr (std::is_same_v<TModel, model::Communication>)
+            {
+                ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, schemaType, std::nullopt))
+                    << "failed with " << contentMimeType << ", " << magic_enum::enum_name(schemaType) << " expectFail=false";
+            }
+            else
+            {
+                ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, schemaType))
+                    << "failed with " << contentMimeType << ", " << magic_enum::enum_name(schemaType) << " expectFail=false";
+            }
         }
 
     }

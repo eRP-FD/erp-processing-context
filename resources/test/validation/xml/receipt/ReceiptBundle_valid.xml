@@ -43,13 +43,14 @@
         </event>
         <section>
           <entry>
-            <reference value="Binary/123456"/>
+            <reference value="urn:uuid:1111100000011111"/>
           </entry>
         </section>
       </Composition>
     </resource>
   </entry>
   <entry>
+    <fullUrl value="https://prescriptionserver.telematik/Device/eRxService"/>
     <resource>
       <Device>
         <id value="eRxService"/>

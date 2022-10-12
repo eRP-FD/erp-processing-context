@@ -1,0 +1,26 @@
+{
+    "resourceType": "Sliceable",
+    "meta": {
+        "profile": ["http://erp.test/SliceByPrimitiveBinding"]
+    },
+    "sliced": [
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "string": "Test1"
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "doesNotBelongToSlice",
+                "string": "NotInTestValueSet"
+            }
+        },
+        {
+            "smallstructure": {
+                "id": "belongsToSlice1",
+                "string": "Test2"
+            }
+        }
+    ]
+}

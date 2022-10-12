@@ -4,6 +4,22 @@
  */
 
 #include "erp/tsl/TslService.hxx"
+#include "erp/ErpRequirements.hxx"
+#include "erp/client/UrlRequestSender.hxx"
+#include "erp/model/Timestamp.hxx"
+#include "erp/pc/ProfessionOid.hxx"
+#include "erp/tsl/OcspService.hxx"
+#include "erp/tsl/OcspUrl.hxx"
+#include "erp/tsl/TrustStore.hxx"
+#include "erp/tsl/TslParser.hxx"
+#include "erp/tsl/X509Certificate.hxx"
+#include "erp/tsl/error/TslError.hxx"
+#include "erp/util/Configuration.hxx"
+#include "erp/util/Expect.hxx"
+#include "erp/util/GLog.hxx"
+#include "erp/util/Hash.hxx"
+#include "erp/util/UrlHelper.hxx"
+#include "erp/validation/XmlValidator.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <algorithm>
@@ -12,23 +28,6 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
-
-#include "erp/ErpRequirements.hxx"
-#include "erp/client/UrlRequestSender.hxx"
-#include "fhirtools/model/Timestamp.hxx"
-#include "erp/pc/ProfessionOid.hxx"
-#include "erp/tsl/OcspService.hxx"
-#include "erp/tsl/OcspUrl.hxx"
-#include "erp/tsl/TrustStore.hxx"
-#include "erp/tsl/TslParser.hxx"
-#include "erp/tsl/X509Certificate.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/validation/XmlValidator.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/GLog.hxx"
-#include "erp/util/Hash.hxx"
-#include "erp/util/UrlHelper.hxx"
 
 
 namespace
@@ -715,7 +714,7 @@ namespace
                 tm notBeforeTm{};
                 OpenSslExpect(1 == ASN1_TIME_to_tm(notBefore, &notBeforeTm), "Can not convert ASN1 time to tm.");
 
-                const auto timestamp = fhirtools::Timestamp::fromTmInUtc(notBeforeTm);
+                const auto timestamp = model::Timestamp::fromTmInUtc(notBeforeTm);
                 X509_VERIFY_PARAM_set_time(param, timestamp.toTimeT());
             }
 

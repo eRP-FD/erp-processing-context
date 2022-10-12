@@ -7,7 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_MODEL_JSONMAINTAINNUMBERPRECISIONTESTMODEL_HXX
 
 #include "erp/model/Resource.hxx"
-#include "fhirtools/model/Timestamp.hxx"
+#include "erp/model/Timestamp.hxx"
 
 class JsonMaintainNumberPrecisionTestModel : public model::ResourceBase
 {
@@ -15,8 +15,8 @@ public:
     static JsonMaintainNumberPrecisionTestModel fromJson(std::string& jsonString);
     [[nodiscard]] std::string serializeToJsonString() const;
 
-    [[nodiscard]] std::optional<fhirtools::Timestamp> timeSent() const;
-    void setTimeSent(const fhirtools::Timestamp& timestamp = fhirtools::Timestamp::now());
+    [[nodiscard]] std::optional<model::Timestamp> timeSent() const;
+    void setTimeSent(const model::Timestamp& timestamp = model::Timestamp::now());
 
     [[nodiscard]] std::string_view getValueAsString(const std::string& name) const;
     [[nodiscard]] int getValueAsInt(const std::string& name) const;

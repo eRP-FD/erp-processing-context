@@ -27,7 +27,7 @@ namespace
                                             serviceContext.getCFdSigErpManager().getOcspResponse()};
 
         const model::Signature fullSignature{cadesBesSignature.getBase64(),
-                                             fhirtools::Timestamp::now(),
+                                             model::Timestamp::now(),
                                              authorIdentifier};
 
         bundle.setSignature(fullSignature);
@@ -122,12 +122,14 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
     Expect(professionOIDClaim.has_value(), "JWT does not contain professionOIDClaim");
 
+    model::AuditEventId auditEventId{};
+
     // response bundle
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
+
     if (professionOIDClaim == profession_oid::oid_versicherter)
     {
-        auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
-
         A_22125.start("Assure identical kvnr of access token and ChargeItem resource");
         ErpExpect(chargeInformation.chargeItem.subjectKvnr() == idNumberClaim.value(), HttpStatus::Forbidden,
                   "Mismatch between access token and Kvnr");
@@ -156,11 +158,11 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
                                    chargeInformation.receipt->jsonDocument());
 
         A_22127.finish();
+
+        auditEventId = model::AuditEventId::GET_ChargeItem_id_insurant;
     }
     else
     {
-        auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
-
         A_22126.start("Assure identical TelematikId of access token and ChargeItem resource");
         ErpExpect(chargeInformation.chargeItem.entererTelematikId() == idNumberClaim.value(), HttpStatus::Forbidden,
                   "Mismatch between access token and TelematikId");
@@ -185,7 +187,16 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
         responseBundle.addResource(chargeInformation.unsignedDispenseItem.getId().toUrn(), {}, {},
                                    chargeInformation.unsignedDispenseItem.jsonDocument());
         A_22128.finish();
+
+        auditEventId = model::AuditEventId::GET_ChargeItem_id_pharmacy;
     }
 
     makeResponse(session, HttpStatus::OK, &responseBundle);
+
+    // Collect Audit data
+    session.auditDataCollector()
+        .setPrescriptionId(prescriptionId)
+        .setEventId(auditEventId)
+        .setInsurantKvnr(chargeInformation.chargeItem.subjectKvnr().value())
+        .setAction(model::AuditEvent::Action::read);
 }
