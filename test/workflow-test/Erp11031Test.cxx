@@ -4,6 +4,7 @@
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
+#include "erp/ErpRequirements.hxx"
 
 #include <gtest/gtest.h>
 
@@ -26,8 +27,7 @@ namespace
     constexpr std::size_t compressBufferSize = 2048;
     constexpr std::string_view pnwTimestampFormat = "%Y%m%d%H%M%S";
     constexpr std::size_t pnwFormattedTimestampLength = 14;
-    constexpr std::size_t validPnwResultValue = 3;
-    constexpr std::size_t invalidPnwResultValue = 100;
+    constexpr std::size_t validPnwResultValue = 2;
     constexpr std::string_view pnwPzNumber = "ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY=";
 
     /**
@@ -141,7 +141,7 @@ namespace
 
     std::string createFullyEncodedPnw(
         std::optional<std::string> formattedTimestamp = std::nullopt,
-        std::optional<std::size_t> resultValue = std::nullopt,
+        std::optional<std::string> resultValue = std::nullopt,
         std::optional<PnwPzNumberInput> pnwPzNumberInput = std::nullopt)
     {
         if (!formattedTimestamp.has_value())
@@ -151,7 +151,7 @@ namespace
 
         if (!resultValue.has_value())
         {
-            resultValue = validPnwResultValue;
+            resultValue = std::to_string(validPnwResultValue);
         }
 
         std::string pzNumberNode{};
@@ -167,7 +167,7 @@ namespace
         const std::string decodedPnw{"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><PN xmlns=\"http://ws.gematik.de/fa/vsdm/pnw/v1.0\" CDM_VERSION=\"1.0.0\"><TS>" +
                                      *formattedTimestamp +
                                      "</TS><E>" +
-                                     std::to_string(*resultValue) +
+                                     *resultValue +
                                      "</E>" +
                                      pzNumberNode +
                                       "</PN>"};
@@ -181,20 +181,27 @@ namespace
 
 class Erp11031Test : public ErpWorkflowTest
 {
+public:
+    void createActivatedTask(
+        std::optional<model::PrescriptionId>& prescriptionId,
+        std::string& kvnr)
+    {
+        std::string accessCode{};
+        ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+
+        ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
+
+        std::string qesBundle{};
+        std::vector<model::Communication> communications{};
+        ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    }
 };
 
 TEST_F(Erp11031Test, BadKvnr)
 {
-    std::string accessCode{};
     std::optional<model::PrescriptionId> prescriptionId{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
-
     std::string kvnr{};
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-
-    std::string qesBundle{};
-    std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    createActivatedTask(prescriptionId, kvnr);
 
     ASSERT_FALSE(kvnr.empty());
     kvnr.pop_back();
@@ -212,16 +219,10 @@ TEST_F(Erp11031Test, BadKvnr)
 
 TEST_F(Erp11031Test, BadPnwMissing)
 {
-    std::string accessCode{};
+    A_22432.test("Missing PNW causes error message with code 403");
     std::optional<model::PrescriptionId> prescriptionId{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
-
     std::string kvnr{};
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-
-    std::string qesBundle{};
-    std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    createActivatedTask(prescriptionId, kvnr);
 
     std::optional<model::Bundle> tasks{};
     ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
@@ -236,16 +237,10 @@ TEST_F(Erp11031Test, BadPnwMissing)
 
 TEST_F(Erp11031Test, BadPnwCannotDecode)
 {
-    std::string accessCode{};
+    A_22432.test("Undecodable PNW causes error message with code 403");
     std::optional<model::PrescriptionId> prescriptionId{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
-
     std::string kvnr{};
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-
-    std::string qesBundle{};
-    std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    createActivatedTask(prescriptionId, kvnr);
 
     auto pnw = createFullyEncodedPnw();
     ASSERT_GT(pnw.length(), 6);
@@ -266,16 +261,10 @@ TEST_F(Erp11031Test, BadPnwCannotDecode)
 
 TEST_F(Erp11031Test, TimestampTooOld)
 {
-    std::string accessCode{};
+    A_22432.test("PNW with timestamp older than 30 minutes causes error message with code 403");
     std::optional<model::PrescriptionId> prescriptionId{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
-
     std::string kvnr{};
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-
-    std::string qesBundle{};
-    std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    createActivatedTask(prescriptionId, kvnr);
 
     std::optional<model::Bundle> tasks{};
     ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
@@ -289,32 +278,48 @@ TEST_F(Erp11031Test, TimestampTooOld)
     ASSERT_FALSE(tasks);
 }
 
-TEST_F(Erp11031Test, ResultValueUnsupported)
+TEST_F(Erp11031Test, TimestampInvalid)
 {
-    std::string accessCode{};
+    A_22432.test("PNW with invalid timestamp causes error message with code 403");
     std::optional<model::PrescriptionId> prescriptionId{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
-
     std::string kvnr{};
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-
-    std::string qesBundle{};
-    std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    createActivatedTask(prescriptionId, kvnr);
 
     std::optional<model::Bundle> tasks{};
-    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
-                                            std::string{},
-                                            HttpStatus::Forbidden,
-                                            model::OperationOutcome::Issue::Type::forbidden,
-                                            "Ergebnis im Prüfungsnachweis ist nicht gültig.",
-                                            createFullyEncodedPnw(std::nullopt, invalidPnwResultValue)));
+    std::string invalidTsTrailing = convertTimestampToPnwFormat(model::Timestamp::now()) + "_";
+    for(const auto& str : { "", "_20221006101559", "20229906101559", invalidTsTrailing.c_str(), "invalid" })
+    {
+        ASSERT_NO_FATAL_FAILURE(
+            tasks = taskGet(kvnr, std::string{}, HttpStatus::Forbidden, model::OperationOutcome::Issue::Type::forbidden,
+                            "Failed parsing TS in PNW.", createFullyEncodedPnw(str), std::string("3-SMC-B-Testkarte-") + str));
+        ASSERT_FALSE(tasks);
+    }
 
-    ASSERT_FALSE(tasks);
 }
 
-TEST_F(Erp11031Test, BadPnwPzNumber)
+TEST_F(Erp11031Test, ResultValueUnsupported)
 {
+    A_22432.test("PNW with unsupported (i.e. not configured) result value causes error message with code 403");
+    std::optional<model::PrescriptionId> prescriptionId{};
+    std::string kvnr{};
+    std::optional<model::Bundle> tasks{};
+
+    createActivatedTask(prescriptionId, kvnr);
+
+    for(const auto& value : { "0", "6", "100", "invalid", "5invalid"})
+    {
+        ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr, std::string{}, HttpStatus::Forbidden,
+                                                model::OperationOutcome::Issue::Type::forbidden,
+                                                "Ergebnis im Prüfungsnachweis ist nicht gültig.",
+                                                createFullyEncodedPnw(std::nullopt, value),
+                                                std::string("3-SMC-B-Testkarte-") + value));
+        ASSERT_FALSE(tasks);
+    }
+}
+
+TEST_F(Erp11031Test, BadPnwIndistinctPzNumber)
+{
+    A_22432.test("PNW with indistinct PZ causes error message with code 403");
     const auto startTime = model::Timestamp::now();
 
     std::string accessCode{};
@@ -329,7 +334,8 @@ TEST_F(Erp11031Test, BadPnwPzNumber)
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
     std::optional<model::Bundle> tasks{};
-    auto pnwPzNumberInput = std::make_optional<PnwPzNumberInput>(pnwPzNumber.data(), true);
+    auto pnwPzNumberInput =
+        std::make_optional<PnwPzNumberInput>(pnwPzNumber.data(), true); // creates two "PZ" elements;
     ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
                                             std::string{},
                                             HttpStatus::Forbidden,
@@ -357,84 +363,75 @@ TEST_F(Erp11031Test, BadPnwPzNumber)
 
 TEST_F(Erp11031Test, ValidWithPnwPzNumber)
 {
-    const auto startTime = model::Timestamp::now();
-
-    std::string accessCode{};
-    std::optional<model::PrescriptionId> prescriptionId{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
-
-    std::string kvnr{};
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-
-    std::string qesBundle{};
-    std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
-
-    std::optional<model::Bundle> tasks{};
-    auto pnwPzNumberInput = std::make_optional<PnwPzNumberInput>(pnwPzNumber.data());
-    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
-                                            std::string{},
-                                            HttpStatus::OK,
-                                            std::nullopt,
-                                            std::nullopt,
-                                            createFullyEncodedPnw(
-                                                std::nullopt,
-                                                std::nullopt,
-                                                std::move(pnwPzNumberInput))));
-
-    ASSERT_TRUE(tasks);
-    ASSERT_EQ(tasks->getResourceCount(), 1);
-
+    A_22432.test("Valid PNW with PZ");
     const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
-    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    std::optional<model::PrescriptionId> prescriptionId{};
+    std::string kvnr{};
+    std::optional<model::Bundle> tasks{};
 
-    ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
-        { prescriptionId, prescriptionId, std::nullopt },
-        kvnr,
-        "en",
-        startTime,
-        { telematikIdDoctor, kvnr, telematikIdPharmacy },
-        { 0, 2 },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read }));
+    const auto pnwPzNumberInput = std::make_optional<PnwPzNumberInput>(pnwPzNumber.data());
 
+    for(const auto& value : { "1", "2", "3", "5"})
+    {
+        const auto startTime = model::Timestamp::now();
+        createActivatedTask(prescriptionId, kvnr);
+
+        const auto telematikIdPharmacy = std::string("3-SMC-B-Testkarte-") + value;
+        ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
+                                                std::string{},
+                                                HttpStatus::OK,
+                                                std::nullopt,
+                                                std::nullopt,
+                                                createFullyEncodedPnw(std::nullopt, value, std::move(pnwPzNumberInput)),
+                                                telematikIdPharmacy));
+
+        ASSERT_TRUE(tasks);
+        ASSERT_EQ(tasks->getResourceCount(), 1);
+
+        ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
+            { prescriptionId, prescriptionId, std::nullopt },
+            kvnr,
+            "en",
+            startTime,
+            { telematikIdDoctor, kvnr, telematikIdPharmacy },
+            { 0, 2 },
+            { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read }));
+    }
 }
 
-TEST_F(Erp11031Test, ValidWithoutPnzPwNumber)
+TEST_F(Erp11031Test, ValidWithoutPnwPzNumber)
 {
-    const auto startTime = model::Timestamp::now();
-
-    std::string accessCode{};
-    std::optional<model::PrescriptionId> prescriptionId{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
-
-    std::string kvnr{};
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-
-    std::string qesBundle{};
-    std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
-
-    std::optional<model::Bundle> tasks{};
-    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
-                                            std::string{},
-                                            HttpStatus::OK,
-                                            std::nullopt,
-                                            std::nullopt,
-                                            createFullyEncodedPnw()));
-
-    ASSERT_TRUE(tasks);
-    ASSERT_EQ(tasks->getResourceCount(), 1);
-
+    A_22432.test("Valid PNW without PZ");
     const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    std::optional<model::PrescriptionId> prescriptionId{};
+    std::string kvnr{};
+    std::optional<model::Bundle> tasks{};
 
-    ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
-        { prescriptionId, prescriptionId, std::nullopt },
-        kvnr,
-        "en",
-        startTime,
-        { telematikIdDoctor, kvnr, telematikIdPharmacy },
-        { 0, 2 },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read }));
+    for(const auto& value : { "1", "2", "3", "5"})
+    {
+        const auto startTime = model::Timestamp::now();
+        createActivatedTask(prescriptionId, kvnr);
 
+        const auto telematikIdPharmacy = std::string("3-SMC-B-Testkarte-") + value;
+        ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr,
+                                                std::string{},
+                                                HttpStatus::OK,
+                                                std::nullopt,
+                                                std::nullopt,
+                                                createFullyEncodedPnw(std::nullopt, value),
+                                                telematikIdPharmacy));
+
+        ASSERT_TRUE(tasks);
+        ASSERT_EQ(tasks->getResourceCount(), 1);
+
+        ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
+            { prescriptionId, prescriptionId, std::nullopt },
+            kvnr,
+            "en",
+            startTime,
+            { telematikIdDoctor, kvnr, telematikIdPharmacy },
+            { 0, 2 },
+            { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read }));
+    }
 }

@@ -968,7 +968,8 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
                                       const HttpStatus expectedStatus,
                                       const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
                                       const std::optional<std::string>& expectedErrorText,
-                                      const std::optional<std::string>& encodedPnw)
+                                      const std::optional<std::string>& encodedPnw,
+                                      const std::optional<std::string>& telematikId)
 {
     using namespace std::string_view_literals;
 
@@ -984,7 +985,7 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
         args.vauPath.append("?").append(searchArguments);
     }
 
-    args.jwt = encodedPnw.has_value() ? JwtBuilder::testBuilder().makeJwtApotheke()
+    args.jwt = encodedPnw.has_value() ? JwtBuilder::testBuilder().makeJwtApotheke(telematikId)
                                       : JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(args.jwt.value()));
     args.expectedInnerStatus = expectedStatus;
@@ -2300,10 +2301,11 @@ std::optional<model::Bundle> ErpWorkflowTestBase::taskGet(const std::string& kvn
                                                           const HttpStatus expectedStatus,
                                                           const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
                                                           const std::optional<std::string>& expectedErrorText,
-                                                          const std::optional<std::string>& encodedPnw)
+                                                          const std::optional<std::string>& encodedPnw,
+                                                          const std::optional<std::string>& telematikId)
 {
     std::optional<model::Bundle> taskBundle;
-    taskGetInternal(taskBundle, kvnr, searchArguments, expectedStatus, expectedErrorCode, expectedErrorText, encodedPnw);
+    taskGetInternal(taskBundle, kvnr, searchArguments, expectedStatus, expectedErrorCode, expectedErrorText, encodedPnw, telematikId);
     return taskBundle;
 }
 std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(

@@ -296,5 +296,7 @@ static Requirement A_22975    ("Performance - Rohdaten-Performance-Bericht - Kon
 
 static Requirement A_23160    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - Ratelimit pro Minute");
 static Requirement A_23161    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - Ratelimit pro Tag");
+static Requirement A_22431    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - Filter KVNR");
+static Requirement A_22432    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - Prüfung PNW");
 
 #endif

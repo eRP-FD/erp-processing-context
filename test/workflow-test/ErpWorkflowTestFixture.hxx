@@ -233,7 +233,8 @@ public:
         const HttpStatus expectedStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode = {},
         const std::optional<std::string>& expectedErrorText = std::nullopt,
-        const std::optional<std::string>& encodedPnw = std::nullopt);
+        const std::optional<std::string>& encodedPnw = std::nullopt,
+        const std::optional<std::string>& telematikId = std::nullopt);
 
     std::tuple<std::string, std::string> makeQESBundle( // returns signed and unsigned bundle
         const std::string& kvnr,
@@ -506,7 +507,8 @@ private:
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
         const std::optional<std::string>& expectedErrorText = std::nullopt,
-        const std::optional<std::string>& encodedPnw = std::nullopt);
+        const std::optional<std::string>& encodedPnw = std::nullopt,
+        const std::optional<std::string>& telematikId = std::nullopt);
 
     void medicationDispenseGetInternal(
         std::optional<model::MedicationDispense>& medicationDispense,

@@ -152,7 +152,10 @@ namespace
             integerValues.begin(),
             [](const auto& stringValue)
             {
-                return std::stoul(stringValue);
+                std::size_t idx = 0;
+                const auto pnwResultValue = std::stoul(stringValue, &idx);
+                Expect(idx == stringValue.size(), "Failed to convert to number");
+                return pnwResultValue;
             });
 
         return integerValues;
@@ -213,7 +216,8 @@ namespace
             const auto timestamp = pnwDocument->getElementText(xPathExpression_TSText.data());
 
             tm tm{};
-            ErpExpect(strptime(timestamp.c_str(), "%Y%m%d%H%M%S", &tm),
+            const auto* res = strptime(timestamp.c_str(), "%Y%m%d%H%M%S", &tm);
+            ErpExpect(res != nullptr && *res == 0,
                       HttpStatus::Forbidden,
                       "Failed parsing TS in PNW.");
 
@@ -232,7 +236,9 @@ namespace
         try
         {
             const auto resultValue = pnwDocument->getElementText(xPathExpression_EText.data());
-            pnwResultValue = std::stoul(resultValue);
+            std::size_t idx = 0;
+            pnwResultValue = std::stoul(resultValue, &idx);
+            Expect(idx == resultValue.size(), "Failed to convert to number");
         }
         catch (const std::exception& ex)
         {
@@ -559,16 +565,18 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     ErpExpect(telematikId.has_value(), HttpStatus::BadRequest, "No valid Telematik-ID in JWT");
 
     using namespace std::chrono;
-    const auto timespan = time_point_cast<milliseconds>(time_point<system_clock>() + 5s).time_since_epoch().count();
+    const auto short_limit = 1min;
+    const auto long_limit = 24h;
+    const auto timespan = time_point_cast<milliseconds>(time_point<system_clock>() + short_limit).time_since_epoch().count();
     const auto dailyTimespan =
-        time_point_cast<milliseconds>(time_point<system_clock>() + 24h).time_since_epoch().count();
+        time_point_cast<milliseconds>(time_point<system_clock>() + long_limit).time_since_epoch().count();
 
     A_23161.start("Rate limit per day");
     {
         auto longValue = Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_LONG);
         RateLimiter rateLimiterDaily(session.serviceContext.getRedisClient(), "ERP-PC-DAY", longValue, dailyTimespan);
         const auto now = system_clock::now();
-        auto exp = time_point_cast<seconds>(now + 24h).time_since_epoch();
+        auto exp = time_point_cast<seconds>(now + long_limit).time_since_epoch();
         auto exp_ms = time_point<system_clock, milliseconds>(exp);
         ErpExpect(
             rateLimiterDaily.updateCallsCounter(telematikId.value(), exp_ms),
@@ -582,7 +590,7 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
         auto shortValue = Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_SHORT);
         RateLimiter rateLimiter(session.serviceContext.getRedisClient(), "ERP-PC-MINUTE", shortValue, timespan);
         const auto now = system_clock::now();
-        auto exp = time_point_cast<seconds>(now + 1min).time_since_epoch();
+        auto exp = time_point_cast<seconds>(now + short_limit).time_since_epoch();
         auto exp_ms = time_point<system_clock, milliseconds>(exp);
         ErpExpect(rateLimiter.updateCallsCounter(telematikId.value(), exp_ms), HttpStatus::TooManyRequests, "Zugriffslimit erreicht - Nächster Abruf mit eGK in 1 Minute möglich.");
     }
@@ -599,16 +607,20 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
         .setInsurantKvnr(*kvnr)
         .setAction(model::AuditEvent::Action::read);
 
+    A_22432.start("Check provided 'PNW' value");
     const auto pnw = session.request.getQueryParameter("PNW");
     ErpExpect(pnw.has_value() && !pnw->empty(),
               HttpStatus::Forbidden,
               "Missing or invalid PNW query parameter");
 
     const auto pnwPzNumber = decodeAndValidatePnw(*pnw);
+    A_22432.finish();
 
+    A_22431.start("Read tasks according to KVNR and with status 'ready'");
     const auto statusReadyFilter = getTaskStatusReadyUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
     auto* database = session.database();
     auto tasks = database->retrieveAllTasksForPatient(kvnr.value(), statusReadyFilter);
+    A_22431.finish();
 
     for (auto& task : tasks) {
         const auto [taskWithAccessCode, data] = database->retrieveTaskAndPrescription(task.prescriptionId());
