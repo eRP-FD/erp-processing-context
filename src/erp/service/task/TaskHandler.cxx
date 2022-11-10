@@ -144,6 +144,11 @@ namespace
         const auto& configuration = Configuration::instance();
         const auto allowedResultValues = configuration.getStringValue(ConfigurationKey::PNW_ALLOWED_RESULTS);
 
+        if (allowedResultValues.empty())
+        {
+            return {};
+        }
+
         const auto stringValues = String::split(allowedResultValues, ',');
         std::vector<std::size_t> integerValues(stringValues.size());
         std::transform(

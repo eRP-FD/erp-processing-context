@@ -308,10 +308,12 @@ list(
         erp/validation/SampleDataTest.cxx
         erp/validation/XmlValidatorTest.cxx
         erp/xml/SaxParserTest.cxx
+        erp/xml/XmlDocumentTest.cxx
         erp/xml/XmlStringViewTest.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx
         util/BlobDatabaseHelper.cxx
+        util/LogTestBase.cxx
         util/ServerTestBase.cxx
         util/ServerTestBaseAutoCleanup.cxx
         workflow-test/EndpointTestClient.cxx

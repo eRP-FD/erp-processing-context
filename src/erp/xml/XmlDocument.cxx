@@ -18,6 +18,11 @@ XmlDocument::XmlDocument (const std::string_view xml)
       mPathHead()
 {
     auto parserContext = std::shared_ptr<xmlParserCtxt>(xmlNewParserCtxt(), xmlFreeParserCtxt);
+    auto oldEntityLoader = xmlGetExternalEntityLoader();
+    xmlSetExternalEntityLoader([](const char* URL, const char* /*ID*/, xmlParserCtxtPtr /*ctxt*/) -> xmlParserInputPtr {
+        LOG(WARNING) << "Suppressing external entity loading from " << URL;
+        return nullptr;
+    });
     mDocument = std::shared_ptr<xmlDoc>(
         xmlCtxtReadMemory(
             parserContext.get(),
@@ -27,6 +32,7 @@ XmlDocument::XmlDocument (const std::string_view xml)
             nullptr,
             XML_PARSE_DTDATTR),
         xmlFreeDoc);
+    xmlSetExternalEntityLoader(oldEntityLoader);
 
     if (mDocument==nullptr)
     {

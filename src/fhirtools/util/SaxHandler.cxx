@@ -247,8 +247,11 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
     }
 
     mContext->sax = &handler;
-
+    auto oldEntityLoader = xmlGetExternalEntityLoader();
     xmlCtxtUseOptions(mContext.get(), XML_PARSE_NOENT);
+    xmlSetExternalEntityLoader([](const char* /*URL*/, const char* /*ID*/, xmlParserCtxtPtr /*ctxt*/) -> xmlParserInputPtr {
+        return nullptr;
+    });
 
     int parseResult = 0;
     try
@@ -264,6 +267,7 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
                       "memory leaks.";
         std::rethrow_exception(std::current_exception());
     }
+    xmlSetExternalEntityLoader(oldEntityLoader);
 
     if (mExceptionPtr)
     {

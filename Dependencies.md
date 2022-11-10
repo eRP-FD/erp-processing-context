@@ -10,7 +10,7 @@
 | hiredis         | 1.0.2        | BSD-3-Clause | https://github.com/redis/hiredis/tree/v1.0.2                         |
 | libpq           | 13.6         | PostgreSQL   | https://github.com/postgres/postgres/tree/REL_13_6/src/backend/libpq |
 | libpqxx         | 7.7.3        | BSD-3-Clause | https://github.com/jtv/libpqxx/tree/7.7.3                            |
-| libxml2         | 2.9.14       | MIT          | https://github.com/GNOME/libxml2/tree/v2.9.14                        |
+| libxml2         | 2.10.3       | MIT          | https://github.com/GNOME/libxml2/tree/v2.10.3                        |
 | magic_enum      | 0.7.3        | MIT          | https://github.com/build2-packaging/magic_enum/releases/tag/v0.7.3   |
 | openssl*        | 1.1.1q       | OpenSSL      | https://github.com/openssl/openssl/tree/OpenSSL_1_1_1q               |
 | rapidjson       | cci.20211112 | MIT          | https://github.com/Tencent/rapidjson                                 |
@@ -25,4 +25,3 @@
  \* openssl 1.1.1q: Die verwendete openssl 1.1.1q basiert auf der auf conan-center (https://conan.io/center/) Verfügbaren.
    zusätzlich wird ein weiterer Patch angewandt, der den Zugriff auf die eingebettete OCSP-Response ermöglicht.
    Das geänderte Conan-Rezept und der Patch befinden sich im Unterordner `conan-recipes/openssl`
-
