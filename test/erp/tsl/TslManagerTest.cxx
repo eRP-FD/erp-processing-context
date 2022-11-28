@@ -488,7 +488,7 @@ TEST_F(TslManagerTest, validTslNoHttpSha2_Fail)//NOLINT(readability-function-cog
 TEST_F(TslManagerTest, loadTslWithInvalidTslSignerCertificate_Fail)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string tslContent =
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_wrongSigner.xml");
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_wrongSigner.xml");
     const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{

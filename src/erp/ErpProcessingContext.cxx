@@ -57,8 +57,7 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     A_21558.start("Register the allowed professionOIDs");
     handlerManager.onGetDo("/Task",
             std::make_unique<GetAllTasksHandler>(oids{
-                               oid_versicherter,
-                               oid_oeffentliche_apotheke}));
+                               oid_versicherter}));
     A_21558.finish();
 
     A_19113_01.start("Register the allowed professionOIDs");

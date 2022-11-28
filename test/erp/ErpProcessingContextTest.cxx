@@ -70,7 +70,6 @@ TEST_F(ErpProcessingContextTest, GetAllTasks_ProfessionOIDs)
     A_21558.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::GET, "/Task", {
             "1.2.276.0.76.4.49", // oid_versicherter
-            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
     });
 }
 

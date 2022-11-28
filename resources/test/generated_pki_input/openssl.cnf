@@ -126,7 +126,7 @@ x509_extensions     = v3_ca    # The extentions to add to the self signed cert
 # input_password    = secret
 # output_password   = secret
 
-# This sets a mask for permitted string types. There are several options. 
+# This sets a mask for permitted string types. There are several options.
 # default: PrintableString, T61String, BMPString.
 # pkix     : PrintableString, BMPString (PKIX recommendation before 2004)
 # utf8only: only UTF8Strings (PKIX recommendation after 2004).
@@ -410,6 +410,22 @@ authorityKeyIdentifier = keyid,issuer
 subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
 
 extendedKeyUsage       = id_tsl_kp_tslSigning
+
+crlDistributionPoints  = URI:http://example.com/example_ca.crl
+
+[tsl_signer_cert_wrong_key_usage]
+
+basicConstraints       = CA:FALSE
+
+keyUsage               = nonRepudiation, digitalSignature
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+
+subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
+
+extendedKeyUsage       = critical,timeStamping
 
 crlDistributionPoints  = URI:http://example.com/example_ca.crl
 

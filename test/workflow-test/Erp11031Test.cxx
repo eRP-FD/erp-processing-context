@@ -195,6 +195,11 @@ public:
         std::vector<model::Communication> communications{};
         ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
     }
+
+    void SetUp() override
+    {
+        GTEST_SKIP();
+    }
 };
 
 TEST_F(Erp11031Test, BadKvnr)

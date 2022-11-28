@@ -530,6 +530,8 @@ generate_certificate outdated_ca_ec qes_cert1_ec "Example Inc. Test QES Certific
     $validBeforeOutdated subjectAltName=email:admin@example.com
 generate_certificate outdated_ca_ec qes_cert2_ec "Example Inc. Test QES Certificate Invalid" qes_cert2 ec:brainpoolP256r1 \
     $normal subjectAltName=email:admin@example.com
+generate_certificate sub_ca1_ec tsl_signer_wrong_key_usage_ec "TSL signer 2" tsl_signer_cert_wrong_key_usage ec:brainpoolP256r1 $normal \
+    subjectAltName=email:admin@example.com
 
 # The Gematik TSLs to generate from templates
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_valid.xml" $normal
@@ -538,5 +540,6 @@ generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_outdated.xml
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_multiple_new_cas.xml" $multipleNewCA
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_broken_new_ca.xml" $brokenNewCA
 generate_tsl bna_signer_ec outdated_ca_ec "template_BNA_EC_valid.xml" "BNA_EC_valid.xml" $normal
+generate_tsl tsl_signer_wrong_key_usage_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_wrongSigner.xml" $normal
 
 success=true

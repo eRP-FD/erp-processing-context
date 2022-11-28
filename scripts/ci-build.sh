@@ -54,7 +54,7 @@ set +x
 export CC=gcc-11
 export CXX=g++-11
 cmake -GNinja \
-      -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DERP_BUILD_VERSION=${erp_build_version} \
       -DERP_RELEASE_VERSION=${erp_release_version} \
       -DERP_WITH_HSM_MOCK=ON \
@@ -66,4 +66,3 @@ ninja -l$(nproc) clean
 
 "${BUILD_WRAPPER_HOME}/build-wrapper-linux-x86-64" --out-dir sonar-reports \
         ninja -l$(nproc) test production fhirtools-test
-

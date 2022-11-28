@@ -264,7 +264,7 @@ TEST_F(CadesBesSignatureTest, GematikExampleWithOutdatedOcsp)//NOLINT(readabilit
 }
 
 
-TEST_F(CadesBesSignatureTest, validateGematik)
+TEST_F(CadesBesSignatureTest, DISABLED_validateGematik)
 {
     // TODO: The two certificates below, QES-noType.base64.der and QES-noTypeCA.base64.der
     //       are kind-of secret and must not made public together with the source code.
