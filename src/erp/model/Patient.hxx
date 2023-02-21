@@ -7,15 +7,17 @@
 #define ERP_PROCESSING_CONTEXT_PATIENT_HXX
 
 #include "erp/model/Resource.hxx"
+#include "erp/model/Kvnr.hxx"
 
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Patient : public Resource<Patient, ResourceVersion::KbvItaErp>
 {
 public:
     static constexpr auto resourceTypeName = "Patient";
-    [[nodiscard]] std::string kvnr() const;
+    [[nodiscard]] Kvnr kvnr() const;
     [[nodiscard]] std::optional<std::string_view> postalCode() const;
 
     [[nodiscard]] std::optional<UnspecifiedResource> birthDate() const;

@@ -10,6 +10,9 @@
 
 class CadesBesSignature;
 class TslManager;
+namespace fhirtools {
+class ValidatorOptions;
+}
 namespace model
 {
 enum class KbvStatusKennzeichen;
@@ -34,6 +37,7 @@ private:
     static HttpStatus checkExtensions(const model::KbvBundle&);
     void setMvoExpiryAcceptDates(model::Task& task, const std::optional<date::year_month_day>& mvoEndDate,
                                  const date::year_month_day& signingDay) const;
+    static fhirtools::ValidatorOptions validationOptions();
 };
 
 

@@ -63,14 +63,29 @@ public:
     void healthCheck();
 
     /**
-     * Returns string representation of last successful validation timestamp or "never succeeded" if
+     * Returns string representation of last successful OCSP response timestamp or "never succeeded" if
      * it was never successfully validated.
      */
-    std::string getLastValidationTimestamp();
+    std::string getLastOcspResponseTimestamp();
+
+    bool wasLastOcspRequestSuccessful();
 
     [[nodiscard]] CertificateType getCertificateType() const;
 
     [[nodiscard]] std::string getCertificateNotAfterTimestamp() const;
+
+    /**
+     * Let the manager use the timer to trigger the certificate validation regularly.
+     * If the validations are started by the method successfully the method returns true.
+     * If the validations are already started before, the method returns false.
+     * Otherwise an exception is thrown.
+     */
+    bool startValidations(std::shared_ptr<Timer> timer, int validationIntervalMinutes);
+
+    /**
+     * Stops the timer controlling the validations if any.
+     */
+    void stopValidations();
 
 protected:
     void onStart(void) override;
@@ -79,7 +94,7 @@ protected:
 
 private:
     TrustStore::OcspResponseData internalGetOcspResponseData(const Certificate& certificate,
-                                                             const bool forceOcspRequest);
+                                                             const bool jobValidationScenario);
 
     std::mutex mMutex;
 
@@ -87,9 +102,12 @@ private:
     std::optional<size_t> mValidationHookId;
     HsmPool& mHsmPool;
 
+    std::shared_ptr<Timer> mValidationTimer;
+
     std::chrono::system_clock::duration mOcspRequestGracePeriod;
-    std::chrono::system_clock::time_point mLastSuccess;
-    bool mLastCheckSuccessfull;
+    std::chrono::system_clock::time_point mLastProducedAt;
+    std::chrono::system_clock::time_point mLastOcspSuccess;
+    bool mLastOcspRequestSuccessful;
 
     // private key cache
     shared_EVP_PKEY mCFdSigErpKey;

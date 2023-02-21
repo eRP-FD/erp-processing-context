@@ -164,7 +164,7 @@ std::vector<std::string> ErpElement::subElementNames() const
 
 bool ErpElement::hasValue() const
 {
-    return mValue && ! mValue->IsObject();
+    return mValue && ! mValue->IsNull() && ! mValue->IsObject();
 }
 
 std::shared_ptr<ErpElement> ErpElement::createElement(ProfiledElementTypeInfo defPtr, bool isResource,
@@ -241,7 +241,7 @@ std::vector<std::shared_ptr<const Element>> ErpElement::arraySubElements(const P
     const auto& arr = val->GetArray();
     auto end = std::max(arr.Size(), primitiveArr ? primitiveArr->Size() : 0);
     std::vector<std::shared_ptr<const Element>> ret;
-    for (size_t i = 0; i < end; ++i)
+    for (rapidjson::SizeType i = 0; i < end; ++i)
     {
         bool havePrimitive = primitiveArr && primitiveArr->Size() > i && ! (*primitiveArr)[i].IsNull();
         const auto* primitive = havePrimitive ? &((*primitiveArr)[i]) : nullptr;

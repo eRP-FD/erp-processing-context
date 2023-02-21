@@ -4,6 +4,7 @@
  */
 
 #include "erp/model/AuditEvent.hxx"
+#include "erp/model/ResourceNames.hxx"
 
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
@@ -160,8 +161,10 @@ const rapidjson::Pointer entityDescriptionPointer("/entity/0/description");
 }  // anonymous namespace
 
 
-AuditEvent::AuditEvent()
-    : Resource<AuditEvent>("https://gematik.de/fhir/StructureDefinition/ErxAuditEvent",
+AuditEvent::AuditEvent(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+    : Resource<AuditEvent>(ResourceVersion::deprecatedProfile(profileVersion)
+                               ? resource::structure_definition::deprecated::auditEvent
+                               : resource::structure_definition::auditEvent,
                            []() {
                                std::call_once(onceFlag, initTemplates);
                                return AuditEventTemplate;

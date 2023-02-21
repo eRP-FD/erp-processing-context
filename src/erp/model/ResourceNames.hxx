@@ -21,42 +21,112 @@ namespace resource
 {
 namespace naming_system
 {
-const std::string_view telematicID = "https://gematik.de/fhir/NamingSystem/TelematikID";
-const std::string_view gkvKvid10 = "http://fhir.de/NamingSystem/gkv/kvid-10";
-const std::string_view accessCode = "https://gematik.de/fhir/NamingSystem/AccessCode";
-const std::string_view secret = "https://gematik.de/fhir/NamingSystem/Secret";
-const std::string_view prescriptionID = "https://gematik.de/fhir/NamingSystem/PrescriptionID";
-}
+constexpr std::string_view accessCode = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_AccessCode";
+constexpr std::string_view argeIknr = "http://fhir.de/sid/arge-ik/iknr";
+constexpr std::string_view gkvKvid10 = "http://fhir.de/sid/gkv/kvid-10";
+constexpr std::string_view pkvKvid10 = "http://fhir.de/sid/pkv/kvid-10";
+constexpr std::string_view prescriptionID = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId";
+constexpr std::string_view secret = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_Secret";
+constexpr std::string_view telematicID = "https://gematik.de/fhir/sid/telematik-id";
+namespace deprecated
+{
+constexpr std::string_view accessCode = "https://gematik.de/fhir/NamingSystem/AccessCode";
+constexpr std::string_view argeIknr = "http://fhir.de/NamingSystem/arge-ik/iknr";
+constexpr std::string_view gkvKvid10 = "http://fhir.de/NamingSystem/gkv/kvid-10";
+constexpr std::string_view prescriptionID = "https://gematik.de/fhir/NamingSystem/PrescriptionID";
+constexpr std::string_view secret = "https://gematik.de/fhir/NamingSystem/Secret";
+constexpr std::string_view telematicID = "https://gematik.de/fhir/NamingSystem/TelematikID";
+} // namespace deprecated
+} // namespace naming_system
 
 namespace code_system
 {
-const std::string_view consentType = "https://gematik.de/fhir/CodeSystem/Consenttype";
-}
+constexpr std::string_view consentType = "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType";
+constexpr std::string_view documentType = "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType";
+constexpr std::string_view flowType = "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType";
+namespace deprecated
+{
+constexpr std::string_view documentType = "https://gematik.de/fhir/CodeSystem/Documenttype";
+constexpr std::string_view flowType = "https://gematik.de/fhir/CodeSystem/Flowtype";
+} // namespace deprecated
+} // namespace code_system
 
 namespace structure_definition
 {
-const std::string communicationLocation = "http://prescriptionserver.telematik/Communication/";
-
-const std::string communication = "https://gematik.de/fhir/StructureDefinition/ErxCommunication";
-const std::string communicationInfoReq = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq";
-const std::string communicationChargChangeReq = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq";
-const std::string communicationChargChangeReply = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply";
-const std::string communicationReply = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply";
-const std::string communicationDispReq = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq";
-const std::string communicationRepresentative = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative";
-const std::string kbcExForLegalBasis = "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis";
-const std::string kbvExErpStatusCoPayment = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment";
-const std::string prescriptionItem = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle";
-const std::string dispenseItem = "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle";
-const std::string receipt = "https://gematik.de/fhir/StructureDefinition/ErxReceipt";
-const std::string markingFlag = "https://gematik.de/fhir/StructureDefinition/MarkingFlag";
+constexpr std::string_view acceptDate = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_AcceptDate";
+constexpr std::string_view auditEvent = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_AuditEvent";
+constexpr std::string_view beneficiary = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_Beneficiary";
+constexpr std::string_view binary = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Binary";
+constexpr std::string_view chargeItem = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem";
+constexpr std::string_view communication = "http://hl7.org/fhir/StructureDefinition/Communication";
+constexpr std::string_view communicationChargChangeReply = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply";
+constexpr std::string_view communicationChargChangeReq = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq";
+constexpr std::string_view communicationDispReq = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq";
+constexpr std::string_view communicationInfoReq = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_InfoReq";
+constexpr std::string_view communicationLocation = "http://prescriptionserver.telematik/Communication/";
+constexpr std::string_view communicationReply = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply";
+constexpr std::string_view communicationRepresentative = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative";
+constexpr std::string_view composition = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Composition";
+constexpr std::string_view consent = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent";
+constexpr std::string_view device = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device";
+constexpr std::string_view digest = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Digest";
+constexpr std::string_view dispenseItem = "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle";
+constexpr std::string_view expiryDate = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_ExpiryDate";
+constexpr std::string_view kbcExForLegalBasis = "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis";
+constexpr std::string_view kbvExErpStatusCoPayment = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment";
+constexpr std::string_view markingFlag = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag";
+constexpr std::string_view medicationDispense = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense";
+constexpr std::string_view prescriptionID = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PrescriptionId";
+constexpr std::string_view prescriptionItem = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle";
+constexpr std::string_view prescriptionType = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType";
+constexpr std::string_view receipt = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Bundle";
+constexpr std::string_view task = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task";
+namespace deprecated
+{
+constexpr std::string_view acceptDate = "https://gematik.de/fhir/StructureDefinition/AcceptDate";
+constexpr std::string_view auditEvent = "https://gematik.de/fhir/StructureDefinition/ErxAuditEvent";
+constexpr std::string_view beneficiary = "https://gematik.de/fhir/StructureDefinition/BeneficiaryExtension";
+constexpr std::string_view binary = "https://gematik.de/fhir/StructureDefinition/ErxBinary";
+constexpr std::string_view communication = "https://gematik.de/fhir/StructureDefinition/ErxCommunication";
+constexpr std::string_view communicationDispReq = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq";
+constexpr std::string_view communicationInfoReq = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq";
+constexpr std::string_view communicationReply = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply";
+constexpr std::string_view communicationRepresentative = "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative";
+constexpr std::string_view composition = "https://gematik.de/fhir/StructureDefinition/ErxComposition";
+constexpr std::string_view device = "https://gematik.de/fhir/StructureDefinition/ErxDevice";
+constexpr std::string_view digest = "http://hl7.org/fhir/StructureDefinition/Binary";
+constexpr std::string_view expiryDate = "https://gematik.de/fhir/StructureDefinition/ExpiryDate";
+constexpr std::string_view medicationDispense = "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense";
+constexpr std::string_view prescriptionType = "https://gematik.de/fhir/StructureDefinition/PrescriptionType";
+constexpr std::string_view receipt = "https://gematik.de/fhir/StructureDefinition/ErxReceipt";
+constexpr std::string_view task = "https://gematik.de/fhir/StructureDefinition/ErxTask";
+} // namespace deprecated
 
 } // namespace structure_definition
+
+namespace operation_definition
+{
+constexpr std::string_view create = "https://gematik.de/fhir/erp/OperationDefinition/CreateOperationDefinition";
+constexpr std::string_view activate = "https://gematik.de/fhir/erp/OperationDefinition/ActivateOperationDefinition";
+constexpr std::string_view accept = "https://gematik.de/fhir/erp/OperationDefinition/AcceptOperationDefinition";
+constexpr std::string_view reject = "https://gematik.de/fhir/erp/OperationDefinition/RejectOperationDefinition";
+constexpr std::string_view close = "https://gematik.de/fhir/erp/OperationDefinition/CloseOperationDefinition";
+constexpr std::string_view abort = "https://gematik.de/fhir/erp/OperationDefinition/AbortOperationDefinition";
+namespace deprecated
+{
+constexpr std::string_view create = "http://gematik.de/fhir/OperationDefinition/CreateOperationDefinition";
+constexpr std::string_view activate = "http://gematik.de/fhir/OperationDefinition/ActivateOperationDefinition";
+constexpr std::string_view accept = "http://gematik.de/fhir/OperationDefinition/AcceptOperationDefinition";
+constexpr std::string_view reject = "http://gematik.de/fhir/OperationDefinition/RejectOperationDefinition";
+constexpr std::string_view close = "http://gematik.de/fhir/OperationDefinition/CloseOperationDefinition";
+constexpr std::string_view abort = "http://gematik.de/fhir/OperationDefinition/AbortOperationDefinition";
+}
+}
 
 namespace elements
 {
 const std::string separator{"/"};
-}
+} // namespace elements
 
 class ElementName
 {
@@ -79,14 +149,20 @@ public:
     {
         return mName;
     }
+    [[nodiscard]] operator std::string_view () const
+    {
+        return mName.c_str();
+    }
 private:
     static std::string node(const std::string& node)
     {
         return elements::separator + node;
     }
-    static std::string node(size_t node)
+    template<typename TNumeric>
+        requires std::integral<TNumeric>
+    static std::string node(TNumeric node)
     {
-        return elements::separator + std::to_string(node);
+        return elements::separator + std::to_string(static_cast<size_t>(node));
     }
     const std::string mName;
 };
@@ -133,6 +209,9 @@ const ElementName _line{ "_line" };
 const ElementName meta{ "meta" };
 const ElementName name{ "name" };
 const ElementName numerator{ "numerator" };
+const ElementName parameter{ "parameter" };
+const ElementName part{ "part" };
+const ElementName path{ "path" };
 const ElementName patient{ "patient" };
 const ElementName payload{ "payload" };
 const ElementName payor{ "payor" };

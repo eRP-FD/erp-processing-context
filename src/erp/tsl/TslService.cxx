@@ -8,6 +8,7 @@
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/pc/ProfessionOid.hxx"
+#include "erp/tsl/OcspCheckDescriptor.hxx"
 #include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/OcspUrl.hxx"
 #include "erp/tsl/TrustStore.hxx"
@@ -28,6 +29,7 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
+#include <tuple>
 
 
 namespace
@@ -659,14 +661,13 @@ namespace
     }
 
 
+    // GEMREQ-start A_22141#checkOcspStatusOfCertificate, A_20159-02#checkOcspStatusOfCertificate
     void checkOcspStatusOfCertificate(const X509Certificate& certificate,
                                       const CertificateType certificateType,
                                       const X509Certificate& issueCertificate,
                                       const UrlRequestSender& requestSender,
                                       TrustStore& trustStore,
-                                      const OcspResponsePtr& ocspResponse,
-                                      const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
-                                      const bool forceOcspRequest)
+                                      const OcspCheckDescriptor& ocspCheckDescriptor)
     {
         const auto ocspUrl = getOcspUrl(certificate, certificateType, issueCertificate, trustStore);
 
@@ -679,12 +680,11 @@ namespace
                 ocspUrl,
                 trustStore,
                 hashExtensionMustBeValidated(certificateType),
-                ocspResponse,
-                referenceTimePoint,
-                forceOcspRequest),
-            referenceTimePoint,
+                ocspCheckDescriptor),
+            ocspCheckDescriptor.timeSettings.referenceTimePoint,
             trustStore);
     }
+    // GEMREQ-end A_22141#checkOcspStatusOfCertificate, A_20159-02#checkOcspStatusOfCertificate
 
     void checkCertificateChain(X509Certificate& certificate,
                                TrustStore& trustStore)
@@ -1076,15 +1076,12 @@ CertificateType TslService::getCertificateType(const X509Certificate& certificat
     TslFail("Unexpected certificate type", TslErrorCode::CERT_TYPE_MISMATCH);
 }
 
-void
-TslService::checkCertificate(
+// GEMREQ-start A_22141#checkCertificateWithoutOcspCheck, A_20159-02#checkCertificateWithoutOcspCheck
+std::tuple<CertificateType, X509Certificate>
+TslService::checkCertificateWithoutOcspCheck(
     X509Certificate& certificate,
     const std::unordered_set<CertificateType>& typeRestrictions,
-    const UrlRequestSender& requestSender,
-    TrustStore& trustStore,
-    const OcspResponsePtr& ocspResponse,
-    const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
-    const bool forceOcspRequest)
+    TrustStore& trustStore)
 {
     VLOG(2) << "Checking Certificate: [" << certificate.toBase64() << "]";
     const CertificateType certificateType = getCertificateType(certificate);
@@ -1147,13 +1144,40 @@ TslService::checkCertificate(
               "Invalid extended key usage.",
               TslErrorCode::WRONG_EXTENDEDKEYUSAGE);
 
+    return {certificateType, caInfo->certificate};
+}
+// GEMREQ-end A_22141#checkCertificateWithoutOcspCheck, A_20159-02#checkCertificateWithoutOcspCheck
+
+
+// GEMREQ-start A_22141#checkCertificate, A_20159-02#checkCertificate
+void
+TslService::checkCertificate(
+    X509Certificate& certificate,
+    const std::unordered_set<CertificateType>& typeRestrictions,
+    const UrlRequestSender& requestSender,
+    TrustStore& trustStore,
+    const OcspCheckDescriptor& ocspCheckDescriptor)
+{
+    CertificateType certificateType; // NOLINT(cppcoreguidelines-init-variables)
+    X509Certificate issuerCertificate;
+    try
+    {
+        std::tie(certificateType, issuerCertificate) =
+            checkCertificateWithoutOcspCheck(certificate, typeRestrictions, trustStore);
+    }
+    catch(const std::exception&)
+    {
+        // if the certificate is no more valid the cached OCSP response data should be removed
+        trustStore.cleanCachedOcspData(certificate.getSha256FingerprintHex());
+        throw;
+    }
+
     checkOcspStatusOfCertificate(
         certificate,
         certificateType,
-        caInfo->certificate,
+        issuerCertificate,
         requestSender,
         trustStore,
-        ocspResponse,
-        referenceTimePoint,
-        forceOcspRequest);
+        ocspCheckDescriptor);
 }
+// GEMREQ-end A_22141#checkCertificate, A_20159-02#checkCertificate

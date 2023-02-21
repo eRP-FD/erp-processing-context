@@ -35,7 +35,7 @@ public:
     {
     }
 
-    Header createPostHeader(
+    Header createCommunicationPostHeader(
         const std::string& path,
         const std::optional<const JWT>& jwtToken,
         std::optional<std::string> accessCode = {},
@@ -56,7 +56,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
 
-    std::string kvnrInsurant = std::string(task.kvnr().value());
+    const std::string kvnrInsurant = task.kvnr().value().id();
     std::string kvnrRepresentative = InsurantB;
 
     auto client = createClient();
@@ -66,12 +66,12 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(ReplyMessage).createJsonString();
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -80,12 +80,12 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(ReplyMessage).createJsonString();
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(kvnrInsurant) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -94,11 +94,11 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setPayload(ReplyMessage).createJsonString();
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -107,11 +107,11 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setPayload(ReplyMessage).createJsonString();
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(kvnrInsurant) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -122,9 +122,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Insurant, kvnrInsurant)
             .setPayload(ReplyMessage).createJsonString();
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -137,7 +137,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             .setPayload(ReplyMessage).createJsonString();
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(kvnrInsurant) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -153,7 +153,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             .setPayload(DispReqMessage).createJsonString();
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -164,9 +164,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Insurant, kvnrRepresentative)
             .setPayload(DispReqMessage).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy) }; // using wrong combination on purpose
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy.id()) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -178,7 +178,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
 
-    std::string kvnrInsurant = std::string(task.kvnr().value());
+    const std::string kvnrInsurant = task.kvnr().value().id();
     std::string kvnrRepresentative = InsurantB;
 
     auto client = createClient();
@@ -188,12 +188,12 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy) }; // using wrong combination on purpose
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy.id()) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
+            createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -202,12 +202,12 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy) }; // using wrong combination on purpose
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy.id()) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
+            createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -218,9 +218,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Insurant, kvnrInsurant)
             .setPayload(RepresentativeMessageByRepresentative).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy) }; // using wrong combination on purpose
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy.id()) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
+            createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -236,7 +236,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
             .setPayload(ReplyMessage).createJsonString();
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(kvnrInsurant) }; // using wrong combination on purpose
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -247,6 +247,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
 TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
+    const std::string kvnrInsurant = task.kvnr().value().id();
 
     auto client = createClient();
 
@@ -258,9 +259,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setRecipient(ActorRole::Pharmacists, "12345678901234567890")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -272,9 +273,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setRecipient(ActorRole::Pharmacists, "X123456789")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -287,9 +288,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setAccessCode(std::string(task.accessCode()))
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(DispReqMessage).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -302,9 +303,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setAccessCode(std::string(task.accessCode()))
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(DispReqMessage).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -318,9 +319,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Insurant, "X1234567")
             .setPayload(ReplyMessage).createJsonString();
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -331,9 +332,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Insurant, "X1234567")
             .setPayload(ReplyMessage).createJsonString();
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtPharmacy),
+            createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -345,9 +346,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setRecipient(ActorRole::Insurant, "X12345678901234567890")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -359,9 +360,9 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             .setRecipient(ActorRole::Insurant, "X12345678901234567890")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
         auto innerResponse = verifyOuterResponse(outerResponse);
@@ -372,22 +373,23 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
 TEST_F(CommunicationPostHandlerTest, InfoReq)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({Task::Status::ready, InsurantA, {}, TaskAccessCode});
+    const std::string kvnrInsurant = task.kvnr().value().id();
 
     // Please note that the MimeType "text/plain" is no longer existing.
     // But it doesn't matter as it will only be checked whether the size
     // of the attachment is correctly verified.
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setPayload(InfoReqMessage).createJsonString();
 
     // Create a client
     auto client = createClient();
 
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
     // Create the inner request
-    ClientRequest request(createPostHeader("/Communication", jwtInsurant), jsonString);
+    ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
     // Send the request.
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -427,19 +429,20 @@ TEST_F(CommunicationPostHandlerTest, InfoReq)//NOLINT(readability-function-cogni
 
     // The sender must have been taken from the access token.
     ASSERT_NO_FATAL_FAILURE(communication.sender());
-    ASSERT_EQ(communication.sender(), InsurantA);
+    ASSERT_EQ(model::getIdentityString(*communication.sender()), InsurantA);
 }
 
 TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
+    const std::string kvnrInsurant = task.kvnr().value().id();
 
     // Please note that the MimeType "text/plain" is no longer existing.
     // But it doesn't matter as it will only be checked whether the size
     // of the attachment is correctly verified.
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+        .setRecipient(ActorRole::Insurant, kvnrInsurant)
         .setPayload(ReplyMessage).createJsonString();
 
     // Create a client
@@ -447,7 +450,7 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
 
     const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
     // Create the inner request
-    ClientRequest request(createPostHeader("/Communication", jwtPharmacy), jsonString);
+    ClientRequest request(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
     // Send the request.
     auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
@@ -467,11 +470,11 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
 
     std::optional<Communication> communication;
 
-    ASSERT_NO_THROW(communication = Communication::fromXml(innerResponse.getBody(),
-                                                           *StaticData::getXmlValidator(),
-                                                           *StaticData::getInCodeValidator(),
-                                                           SchemaType::Gem_erxCommunicationReply,
-                                                           std::nullopt));
+    ASSERT_NO_THROW(communication = Communication::fromXml(
+                        innerResponse.getBody(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                        SchemaType::Gem_erxCommunicationReply,
+                        model::ResourceVersion::supportedBundles(),
+                        std::nullopt));
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
     ASSERT_TRUE(communication->id()->isValidIheUuid());
@@ -482,28 +485,29 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
 
     // The sender must have been taken from the access token.
     ASSERT_NO_THROW(communication->sender());
-    ASSERT_EQ(communication->sender(), mPharmacy);
+    ASSERT_EQ(model::getIdentityString(*communication->sender()), mPharmacy);
 }
 
 TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
+    const std::string kvnrInsurant = task.kvnr().value().id();
 
     // Please note that the MimeType "text/plain" is no longer existing.
     // But it doesn't matter as it will only be checked whether the size
     // of the attachment is correctly verified.
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setAccessCode(std::string(task.accessCode()))
         .setPayload(DispReqMessage).createJsonString();
 
     // Create a client
     auto client = createClient();
 
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
     // Create the inner request
-    ClientRequest request(createPostHeader("/Communication", jwtInsurant), jsonString);
+    ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
     // Send the request.
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -542,14 +546,14 @@ TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cogni
 
     // The sender must have been taken from the access token.
     ASSERT_NO_FATAL_FAILURE(communication.sender());
-    ASSERT_EQ(communication.sender(), InsurantA);
+    ASSERT_EQ(model::getIdentityString(*communication.sender()), InsurantA);
 }
 
 TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
 
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const std::string kvnrInsurant = task.kvnr().value().id();
     std::string kvnrRepresentative = InsurantB;
 
     // Create a client
@@ -567,9 +571,9 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
         .setAccessCode(std::string(task.accessCode()))
         .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrInsurant)) };
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
     // Create the inner request
-    ClientRequest requestByInsurant(createPostHeader("/Communication", jwtInsurant), jsonString);
+    ClientRequest requestByInsurant(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
     // Send the request.
     auto outerResponse = client.send(encryptRequest(requestByInsurant, jwtInsurant));
@@ -608,7 +612,7 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
 
     // The sender must have been taken from the access token.
     ASSERT_NO_FATAL_FAILURE(communicationByInsurant.sender());
-    ASSERT_EQ(communicationByInsurant.sender(), kvnrInsurant);
+    ASSERT_EQ(model::getIdentityString(*communicationByInsurant.sender()), kvnrInsurant);
 
     // Representative answers insurant
     //--------------------------------
@@ -618,12 +622,12 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     // of the attachment is correctly verified.
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+        .setRecipient(ActorRole::Insurant, kvnrInsurant)
         .setPayload(RepresentativeMessageByRepresentative).createJsonString();
 
     const JWT jwtRepresentative{ mJwtBuilder.makeJwtVersicherter(kvnrRepresentative) };
     // Create the inner request
-    ClientRequest requestByRepresentative(createPostHeader("/Communication", jwtRepresentative, std::string(task.accessCode())), jsonString);
+    ClientRequest requestByRepresentative(createCommunicationPostHeader("/Communication", jwtRepresentative, std::string(task.accessCode())), jsonString);
 
     // Send the request.
     outerResponse = client.send(encryptRequest(requestByRepresentative, jwtRepresentative));
@@ -660,13 +664,14 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
 
     // The sender must have been taken from the access token.
     ASSERT_NO_FATAL_FAILURE(communicationByRepresentative.sender());
-    ASSERT_EQ(communicationByRepresentative.sender(), kvnrRepresentative);
+    ASSERT_EQ(model::getIdentityString(*communicationByRepresentative.sender()), kvnrRepresentative);
 }
 
 TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
     auto task2 = addTaskToDatabase({ Task::Status::ready, InsurantB, {} });
+    const std::string kvnrInsurantB = task2.kvnr().value().id();
 
     auto client = createClient();
 
@@ -674,14 +679,14 @@ TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)//NOLINT(readabilit
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task1.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
 
         // Access TOKEN of kvnr of task 2 does not match KVNR in referenced task 1.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task2.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurantB) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
@@ -694,14 +699,14 @@ TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)//NOLINT(readabilit
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task1.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
 
         // Access CODE of task 2 is placed into header which doesn't match access code in referenced task 1.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantC) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant, std::string(task2.accessCode())),
+            createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task2.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
@@ -715,6 +720,7 @@ TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)//NOLINT(readabilit
 {
     auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
     auto task2 = addTaskToDatabase({ Task::Status::ready, InsurantB, {} });
+    const std::string kvnrInsurantB = task2.kvnr().value().id();
 
     auto client = createClient();
 
@@ -722,14 +728,14 @@ TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)//NOLINT(readabilit
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task1.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAccessCode(std::string(task1.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
 
         // Access TOKEN of kvnr of task 2 does not match KVNR in referenced task 1.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task2.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurantB) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
@@ -742,14 +748,14 @@ TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)//NOLINT(readabilit
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task1.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAccessCode(std::string(task1.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
 
         // Access CODE of task 2 is placed into header which doesn't match access code in referenced task 1.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantC) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant, std::string(task2.accessCode())),
+            createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task2.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
@@ -763,6 +769,8 @@ TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)//NOLINT(rea
 {
     auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
     auto task2 = addTaskToDatabase({ Task::Status::ready, InsurantB, {} });
+    const std::string kvnrInsurantA = task1.kvnr().value().id();
+    const std::string kvnrInsurantB = task2.kvnr().value().id();
 
     auto client = createClient();
 
@@ -775,9 +783,9 @@ TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)//NOLINT(rea
             .setPayload(DispReqMessage).createJsonString();
 
         // Access TOKEN of kvnr of task 2 does not match KVNR in referenced task 1.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task2.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurantB) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant),
+            createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
@@ -790,14 +798,14 @@ TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)//NOLINT(rea
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task1.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, std::string(task1.kvnr().value()))
+            .setRecipient(ActorRole::Insurant, kvnrInsurantA)
             .setAccessCode(std::string(task1.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
 
         // Access CODE of task 2 is placed into header which doesn't match access code in referenced task 1.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantC) };
         ClientRequest request(
-            createPostHeader("/Communication", jwtInsurant, std::string(task2.accessCode())),
+            createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task2.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
@@ -823,7 +831,8 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
 
     for (const auto& task : tasks)
     {
-        JWT jwtSender = mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value()));
+        const std::string kvnrInsurant = task.kvnr().value().id();
+        JWT jwtSender = mJwtBuilder.makeJwtVersicherter(kvnrInsurant);
         JWT jwtRecipient = mJwtBuilder.makeJwtVersicherter(InsurantB);
 
         std::string messageA = RepresentativeMessageByInsurant;
@@ -836,7 +845,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
             // The accessCode must be added to the header if the message is sent by the representative.
             std::optional<std::string> communicationAccessCode;
             std::optional<std::string> headerAccessCode;
-            if (jwtSender.stringForClaim(JWT::idNumberClaim).value() == std::string(task.kvnr().value()))
+            if (jwtSender.stringForClaim(JWT::idNumberClaim).value() == kvnrInsurant)
                 communicationAccessCode = task.accessCode();
             else
                 headerAccessCode = task.accessCode();
@@ -850,7 +859,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
             std::string jsonString = builder.createJsonString();
 
             // Create the inner request
-            ClientRequest request(createPostHeader("/Communication", jwtSender, headerAccessCode), jsonString);
+            ClientRequest request(createCommunicationPostHeader("/Communication", jwtSender, headerAccessCode), jsonString);
 
             // Send the request.
             auto outerResponse = client.send(encryptRequest(request, jwtSender));
@@ -889,7 +898,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
 
             // The sender must have been taken from the access token.
             ASSERT_NO_FATAL_FAILURE(communication.sender());
-            ASSERT_EQ(communication.sender(), jwtSender.stringForClaim(JWT::idNumberClaim));
+            ASSERT_EQ(model::getIdentityString(*communication.sender()), jwtSender.stringForClaim(JWT::idNumberClaim));
 
             std::swap(jwtSender, jwtRecipient);
             std::swap(messageA, messageB);
@@ -903,7 +912,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
         // The accessCode must be added to the header if the message is sent by the representative.
         std::optional<std::string> communicationAccessCode;
         std::optional<std::string> headerAccessCode;
-        if (jwtSender.stringForClaim(JWT::idNumberClaim).value() == std::string(task.kvnr().value()))
+        if (jwtSender.stringForClaim(JWT::idNumberClaim).value() == kvnrInsurant)
             communicationAccessCode = task.accessCode();
         else
             headerAccessCode = task.accessCode();
@@ -917,7 +926,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
         std::string jsonString = builder.createJsonString();
 
         // Create the inner request
-        ClientRequest request(createPostHeader("/Communication", jwtSender, headerAccessCode), jsonString);
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtSender, headerAccessCode), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request, jwtSender));
@@ -947,6 +956,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
     for (const auto& taskStatus : tasksStatus)
     {
         std::optional<Task> task;
+        const model::Kvnr kvnrInsurant{std::string{InsurantA}, model::Kvnr::Type::gkv};
 
         if (taskStatus == Task::Status::cancelled)
         {
@@ -962,7 +972,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
         // For tasks in status draft the kvnr is invalid. We set it here to access them below.
         if (!task->kvnr().has_value())
         {
-            task->setKvnr(InsurantA);
+            task->setKvnr(kvnrInsurant);
         }
 
         // Please note that the MimeType "text/plain" is no longer existing.
@@ -976,9 +986,9 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
 
         if (taskStatus == Task::Status::ready || taskStatus == Task::Status::inprogress)
         {
-            const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task->kvnr().value())) };
+            const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
             // Create the inner request
-            ClientRequest request(createPostHeader("/Communication", jwtInsurant), jsonString);
+            ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
             // Send the request.
             auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -1017,13 +1027,13 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
 
             // The sender must have been taken from the access token.
             ASSERT_NO_FATAL_FAILURE(communication.sender());
-            ASSERT_EQ(std::string(communication.sender().value()), jwtInsurant.stringForClaim(JWT::idNumberClaim).value());
+            ASSERT_EQ(model::getIdentityString(communication.sender().value()), jwtInsurant.stringForClaim(JWT::idNumberClaim).value());
         }
         else
         {
-            const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task->kvnr().value())) };
+            const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
             // Create the inner request
-            ClientRequest request(createPostHeader("/Communication", jwtInsurant), jsonString);
+            ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
             // Send the request.
             auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -1046,13 +1056,13 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20231)
 
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+        .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
         .setAccessCode(std::string(task.accessCode()))
         .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
     // Create the inner request
-    ClientRequest request(createPostHeader("/Communication", jwtInsurant), jsonString);
+    ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
     // Send the request.
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -1064,7 +1074,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20231)
 
 TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllowedSize)
 {
-    A_19450.test("malicious code check");
+    A_19450_01.test("malicious code check");
 
     // Create a client
     auto client = createClient();
@@ -1075,13 +1085,13 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
 
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setPayload(contentStringFitsMaxSize).createJsonString();
 
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
     // Create the inner request
-    ClientRequest requestFitsMaxSize(createPostHeader("/Communication", jwtInsurant), jsonString);
+    ClientRequest requestFitsMaxSize(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
     // Send the request.
     auto outerResponse = client.send(encryptRequest(requestFitsMaxSize, jwtInsurant));
@@ -1094,12 +1104,12 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
         .setPayload(contentStringExceedsMaxSize).createJsonString();
 
     // Create the inner request
-    ClientRequest requestExceedsMaxSize(createPostHeader("/Communication", jwtInsurant), jsonString);
+    ClientRequest requestExceedsMaxSize(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
     // Send the request.
     outerResponse = client.send(encryptRequest(requestExceedsMaxSize, jwtInsurant));
@@ -1108,6 +1118,75 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
     innerResponse = verifyOuterResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }
+
+TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentReference_notAllowed)
+{
+    A_19450_01.test("malicious code check");
+
+    // Create a client
+    auto client = createClient();
+
+    auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
+
+    // "contentReference" must be rejected.
+    const std::string externalUrl = "https://dth01.ibmgcloud.net/jira/browse/ERP-4012";
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        .setPrescriptionId(task.prescriptionId().toString())
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
+        .setPayload(externalUrl).createJsonString();
+    jsonString = String::replaceAll(jsonString, "contentString", "contentReference");
+
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+    // Create the inner request
+    ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+    // Send the request.
+    auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+    // Verify and decrypt the outer response. Also the generic part of the inner response.
+    auto innerResponse = verifyOuterResponse(outerResponse);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+}
+
+TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentAttachment_notAllowed)
+{
+    A_19450_01.test("malicious code check");
+
+    // Create a client
+    auto client = createClient();
+
+    auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
+
+    // "contentAttachment" must be rejected.
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        .setPrescriptionId(task.prescriptionId().toString())
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
+        .setPayload("##ATTACHMENT##").createJsonString();
+
+    jsonString = String::replaceAll(jsonString, "contentString", "contentAttachment");
+    std::vector<uint8_t> buffer(100, 'x');
+    std::string attachmentData = Base64::encode(buffer);
+    const std::string attachment = R"(
+                {
+                    "contentType": ")" + std::string(MimeType::binary) + R"(",
+                    "data": ")" + attachmentData + R"("
+                })";
+    jsonString = String::replaceAll(jsonString, R"("##ATTACHMENT##")", attachment);
+
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+    // Create the inner request
+    ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+    // Send the request.
+    auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+    // Verify and decrypt the outer response. Also the generic part of the inner response.
+    auto innerResponse = verifyOuterResponse(outerResponse);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+}
+
 
 TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -1125,12 +1204,12 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+            .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantB) };
         // Create the inner request
-        ClientRequest request(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -1169,7 +1248,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
 
         // The sender must have been taken from the access token.
         EXPECT_NO_FATAL_FAILURE(communication.sender());
-        EXPECT_EQ(std::string(communication.sender().value()), jwtInsurant.stringForClaim(JWT::idNumberClaim).value());
+        EXPECT_EQ(model::getIdentityString(communication.sender().value()), jwtInsurant.stringForClaim(JWT::idNumberClaim).value());
     }
 
     // Second check bad request. KVNR of referenced task not equal to KVNR of sender and
@@ -1179,13 +1258,13 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+            .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantB) };
         // Create the inner request
         std::string accessCode = "888bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
-        ClientRequest request(createPostHeader("/Communication", jwtInsurant, accessCode), jsonString);
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant, accessCode), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -1201,12 +1280,12 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+            .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantB) };
         // Create the inner request
-        ClientRequest requestAToB(createPostHeader("/Communication", jwtInsurant), jsonString);
+        ClientRequest requestAToB(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(requestAToB, jwtInsurant));
@@ -1227,9 +1306,9 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
             .setRecipient(ActorRole::Insurant, InsurantB)
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
         // Create the inner request
-        ClientRequest requestAToB(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest requestAToB(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(requestAToB, jwtInsurant));
@@ -1263,9 +1342,9 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1286,9 +1365,9 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1309,9 +1388,9 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1332,9 +1411,9 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(task.kvnr().value())) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1366,14 +1445,14 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantB) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1390,14 +1469,14 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMax) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1414,14 +1493,14 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMin) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1438,14 +1517,14 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantA) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1483,7 +1562,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         // Pharmacy sends message to representative.
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtPharmacy), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
@@ -1506,7 +1585,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         // Pharmacy sends message to representative.
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtPharmacy), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
@@ -1529,7 +1608,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         // Pharmacy sends message to representative.
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtPharmacy), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
@@ -1552,7 +1631,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         // Pharmacy sends message to representative.
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtPharmacy), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
@@ -1584,14 +1663,14 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantB) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1608,14 +1687,14 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMax) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1632,14 +1711,14 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMin) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1656,14 +1735,14 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy)
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(DispReqMessage).createJsonString();
 
         // Representative sends message to pharmacy.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantA) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1695,13 +1774,13 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+            .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
             .setPayload(RepresentativeMessageByRepresentative).createJsonString();
 
         // Representative sends message to insurant.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantB) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1718,13 +1797,13 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+            .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
             .setPayload(RepresentativeMessageByRepresentative).createJsonString();
 
         // Representative sends message to insurant.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMax) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1747,7 +1826,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
         // Representative sends message to insurant.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMin) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1764,14 +1843,14 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
 
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, std::string(task.kvnr().value()))
+            .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
             .setAccessCode(std::string(task.accessCode()))
             .setPayload(RepresentativeMessageByRepresentative).createJsonString();
 
         // Representative sends message to insurant.
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantA) };
         // Create the inner request
-        ClientRequest request1(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -1791,13 +1870,13 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_MissingAboutTag)
 
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload(InfoReqMessage)
         .createJsonString(); // no "about" attribute set
 
     const JWT jwtInsurant{mJwtBuilder.makeJwtVersicherter(InsurantA)};
     // Create the inner request
-    ClientRequest request(createPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
+    ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
     // Send the request.
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
@@ -1806,4 +1885,3 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_MissingAboutTag)
     auto innerResponse = verifyOuterResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
 }
-

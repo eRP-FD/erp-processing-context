@@ -648,11 +648,11 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     medicationDispense.setId({prescriptionId, 0});
     EXPECT_EQ(medicationDispense.prescriptionId().toString(), prescriptionId.toString());
 
-    const std::string kvnr = "X424242424";
+    const model::Kvnr kvnr{"X424242424"};
     medicationDispense.setKvnr(kvnr);
     EXPECT_EQ(medicationDispense.kvnr(), kvnr);
 
-    const std::string telematicId = "1234567";
+    const model::TelematikId telematicId{"1234567"};
     medicationDispense.setTelematicId(telematicId);
     EXPECT_EQ(medicationDispense.telematikId(), telematicId);
 

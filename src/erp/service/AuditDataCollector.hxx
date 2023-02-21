@@ -10,6 +10,7 @@
 #include "erp/model/AuditData.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/common/HttpStatus.hxx"
+#include "erp/model/Kvnr.hxx"
 
 #include <stdexcept>
 
@@ -31,7 +32,7 @@ public:
     AuditDataCollector& fillFromAccessToken(const JWT& accessToken);
     AuditDataCollector& setEventId(const model::AuditEventId eventId);
     AuditDataCollector& setAction(const model::AuditEvent::Action action);
-    AuditDataCollector& setInsurantKvnr(const std::string_view& kvnr);
+    AuditDataCollector& setInsurantKvnr(const model::Kvnr& kvnr);
     AuditDataCollector& setDeviceId(const std::int16_t deviceId);
     AuditDataCollector& setPrescriptionId(const model::PrescriptionId& prescriptionId);
     AuditDataCollector& setConsentId(const std::string_view& consentId);
@@ -52,7 +53,7 @@ private:
     std::optional<std::string> mAgentWho;    // TelematicId or Kvnr of accessing agent;
     std::optional<std::string> mAgentName;
     std::optional<std::string> mPnwPzNumber;
-    std::optional<std::string> mInsurantKvnr;
+    std::optional<model::Kvnr> mInsurantKvnr;
     std::optional<std::int16_t> mDeviceId;
     std::optional<model::PrescriptionId> mPrescriptionId;
     std::optional<std::string> mConsentId;

@@ -5,18 +5,21 @@
 
 #include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
+#include "erp/model/Kvnr.hxx"
+#include "erp/model/TelematikId.hxx"
 #include "test/erp/database/DatabaseTestFixture.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceManager.hxx"
 
 using namespace std::string_view_literals;
 
-class DatabaseTest : public DatabaseTestFixture
+class DatabaseTest : public DatabaseTestFixture<::testing::TestWithParam<model::PrescriptionType>>
 {
 public:
-    static constexpr auto pharmacyIds = {"X-0815-4711"sv, "X-0815-4712"sv, "X-0815-4713"sv};
-    static constexpr auto insurantIds = {"X123456789"sv, "X123456790"sv, "X123456791"sv};
-
+    std::vector<model::TelematikId> pharmacyIds = {
+        model::TelematikId{"X-0815-4711"sv}, model::TelematikId{"X-0815-4712"sv}, model::TelematikId{"X-0815-4713"sv}};
+    std::vector<model::Kvnr> insurantIds = {model::Kvnr{"X123456789"sv}, model::Kvnr{"X123456790"sv},
+                                            model::Kvnr{"X123456791"sv}};
 
     void SetUp() override
     {
@@ -31,16 +34,18 @@ public:
 
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void createChargeItem(std::string_view insurant, std::string_view pharmacy,
+                          model::PrescriptionType prescriptionType,
                           const model::Timestamp& enteredDate = model::Timestamp::now())
     {
         ResourceManager& resourceManager = ResourceManager::instance();
 
         auto&& db = database();
-        model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "09409348029834029384023984209");
-        task.setKvnr(insurant);
+        model::Task task(prescriptionType, "09409348029834029384023984209");
+
         std::optional<model::PrescriptionId> id;
         ASSERT_NO_THROW(id.emplace(db.storeTask(task)));
         task.setPrescriptionId(*id);
+        task.setKvnr(model::Kvnr{insurant, id->isPkv() ?  model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
         task.setExpiryDate(model::Timestamp::now());
         task.setAcceptDate(model::Timestamp::now());
 
@@ -57,7 +62,7 @@ public:
         chargeItem.deleteContainedBinary();
 
         const auto& dispenseItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
-        auto dispenseItem = model::Bundle::fromXmlNoValidation(dispenseItemXML);
+        auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
         auto signedDispenseItem =
             ::model::Binary{dispenseItem.getIdentifier().toString(),
                             ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
@@ -92,14 +97,19 @@ public:
     }
 };
 
-TEST_F(DatabaseTest, chargeItem_basic)//NOLINT(readability-function-cognitive-complexity)
+TEST_P(DatabaseTest, chargeItem_basic)//NOLINT(readability-function-cognitive-complexity)
 {
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
     // create tasks with chargeitems:
     for (const auto& insurant : insurantIds)
     {
         for (const auto& pharmacy: pharmacyIds)
         {
-            ASSERT_NO_FATAL_FAILURE(createChargeItem(insurant, pharmacy));
+            ASSERT_NO_FATAL_FAILURE(createChargeItem(insurant.id(), pharmacy.id(), GetParam()));
         }
     }
     // check retrieval of items for the insuratns
@@ -164,8 +174,13 @@ TEST_F(DatabaseTest, chargeItem_basic)//NOLINT(readability-function-cognitive-co
     }
 }
 
-TEST_F(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function-cognitive-complexity)
+TEST_P(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function-cognitive-complexity)
 {
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
     using namespace std::string_literals;
     const auto& insurant0 = data(insurantIds)[0];
     for (const auto& insurant : insurantIds)
@@ -173,7 +188,7 @@ TEST_F(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function
         int64_t stamp = 0;
         for (const auto& pharmacy: pharmacyIds)
         {
-            createChargeItem(insurant, pharmacy, model::Timestamp{stamp});
+            createChargeItem(insurant.id(), pharmacy.id(), GetParam(), model::Timestamp{stamp});
             ++stamp;
         }
     }
@@ -208,3 +223,7 @@ TEST_F(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function
         db.commitTransaction();
     }
 }
+
+INSTANTIATE_TEST_SUITE_P(DatabaseTestInst, DatabaseTest,
+                         testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                         model::PrescriptionType::direkteZuweisungPkv));

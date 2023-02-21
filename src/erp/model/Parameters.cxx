@@ -4,39 +4,43 @@
  */
 
 #include "erp/model/Parameters.hxx"
+#include "erp/model/ResourceNames.hxx"
 
 #include <libxml/xpath.h>
 #include <magic_enum.hpp>
 
 #include <tuple>
 
-namespace {
-
-rapidjson::Pointer resourceTypePointer{"/resourceType"};
-rapidjson::Pointer parameterPointer{"/parameter"};
-rapidjson::Pointer namePointer{"/name"};
-rapidjson::Pointer resourcePointer{"/resource"};
-rapidjson::Pointer partPointer{"/part"};
-rapidjson::Pointer partValueCodePointer{"/valueCode"};
-rapidjson::Pointer partValueStringPointer{"/valueString"};
-rapidjson::Pointer partValueBooleanPointer{"/valueBoolean"};
-rapidjson::Pointer workFlowTypePointer("/parameter/0/valueCoding/code");
-
-}
-
 
 namespace model
 {
 
+using namespace resource;
 
+namespace {
+
+const rapidjson::Pointer resourceTypePointer{ElementName::path(elements::resourceType)};
+const rapidjson::Pointer parameterArrayPointer{ElementName::path(elements::parameter)};
+const rapidjson::Pointer namePointer{ElementName::path(elements::name)};
+const rapidjson::Pointer resourcePointer{ElementName::path(elements::resource)};
+const rapidjson::Pointer partArrayPointer{ElementName::path(elements::part)};
+const rapidjson::Pointer partValueCodePointer{ElementName::path(elements::valueCode)};
+const rapidjson::Pointer partValueStringPointer{ElementName::path(elements::valueString)};
+const rapidjson::Pointer partValueBooleanPointer{ElementName::path(elements::valueBoolean)};
+const rapidjson::Pointer workFlowTypePointer{ElementName::path(elements::parameter, 0, elements::valueCoding, elements::code)};
+const rapidjson::Pointer workFlowSystemPointer{ElementName::path(elements::parameter, 0, elements::valueCoding, elements::system)};
+
+}
+
+// GEMREQ-start A_22878#MarkingFlag
 Parameters::MarkingFlag::MarkingFlag()
 : insuranceProvider{},
   subsidy{},
   taxOffice{}
 {
-    insuranceProvider.url = "ChargeItem.extension('https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_MarkingFlag').extension('insuranceProvider')";
-    subsidy.url = "ChargeItem.extension('https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_MarkingFlag').extension('subsidy')";
-    taxOffice.url = "ChargeItem.extension('https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_MarkingFlag').extension('taxOffice')";
+    insuranceProvider.url = "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('insuranceProvider')";
+    subsidy.url = "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('subsidy')";
+    taxOffice.url = "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('taxOffice')";
 }
 
 std::optional<std::reference_wrapper<Parameters::MarkingFlag::Element>> Parameters::MarkingFlag::findByUrl(const std::string_view& url)
@@ -58,10 +62,11 @@ std::optional<std::reference_wrapper<Parameters::MarkingFlag::Element>> Paramete
 
     return std::nullopt;
 }
+// GEMREQ-end A_22878#MarkingFlag
 
 std::string Parameters::MarkingFlag::toExtensionJson() const
 {
-    std::string result = R"({"url": "https://gematik.de/fhir/StructureDefinition/MarkingFlag","extension": [)";
+    std::string result = R"({"url": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag","extension": [)";
 
     if (insuranceProvider.value.has_value())
     {
@@ -101,17 +106,28 @@ Parameters::Parameters(NumberAsStringParserDocument&& document)
 
 size_t Parameters::count() const
 {
-    return valueSize(parameterPointer);
+    return valueSize(parameterArrayPointer);
 }
 
-const rapidjson::Value* Parameters::findResourceParameter(const std::string_view& name) const
+const rapidjson::Value* Parameters::findResourceParameter(std::string_view name) const
 {
-    auto result = findMemberInArray(parameterPointer, namePointer, name, resourcePointer);
+    const auto result = findMemberInArray(parameterArrayPointer, namePointer, name, resourcePointer);
     if (!result)
     {
         return nullptr;
     }
     return std::get<0>(result.value());
+}
+
+bool Parameters::hasParameter(std::string_view name) const
+{
+    const auto* result = findMemberInArray(parameterArrayPointer, namePointer, name);
+    return result != nullptr;
+}
+
+std::optional<std::string_view> Parameters::getWorkflowSystem() const
+{
+    return getOptionalStringValue(workFlowSystemPointer);
 }
 
 std::optional<model::PrescriptionType> Parameters::getPrescriptionType() const
@@ -121,129 +137,97 @@ std::optional<model::PrescriptionType> Parameters::getPrescriptionType() const
     return magic_enum::enum_cast<model::PrescriptionType>(numeric);
 }
 
-std::optional<model::ChargeItemMarkingFlag> Parameters::getChargeItemMarkingFlag() const
+// GEMREQ-start A_22878#getChargeItemMarkingFlag
+model::ChargeItemMarkingFlags Parameters::getChargeItemMarkingFlags() const
 {
     const auto resourceType = getStringValue(resourceTypePointer);
-    if (resourceType != "Parameters")
-    {
-        return std::nullopt;
-    }
+    ModelExpect(resourceType == "Parameters", "Invalid resource type");
 
-    const auto* parameterElem = getValue(parameterPointer);
-    if (!parameterElem || !parameterElem->IsArray())
-    {
-        return std::nullopt;
-    }
+    const auto* parameterElem = getValue(parameterArrayPointer);
+    ModelExpect(parameterElem, "Missing element " + Resource::pointerToString(parameterArrayPointer));
+    ModelExpect(parameterElem->IsArray(), "Element must be array: " + Resource::pointerToString(parameterArrayPointer));
+
+    const auto paramArray = parameterElem->GetArray();
+    ModelExpect(paramArray.Size() >= 1 && paramArray.Size() <= 3, "Unexpected number of parameters");
 
     MarkingFlag result{};
-    for (const auto& actualParameter : parameterElem->GetArray())
+    for (const auto& actualParameter : paramArray)
     {
-        const auto nameValue = getOptionalStringValue(actualParameter, namePointer);
-        if (!nameValue.has_value() || *nameValue != "operation")
-        {
-            continue;
-        }
+        const auto nameValue = getStringValue(actualParameter, namePointer);
+        ModelExpect(nameValue == "operation", "Invalid value for parameter element " + Resource::pointerToString(namePointer));
 
-        const auto* partElem = getValue(actualParameter, partPointer);
-        if (!partElem || !partElem->IsArray())
-        {
-            continue;
-        }
+        const auto* partElem = getValue(actualParameter, partArrayPointer);
+        ModelExpect(partElem, "Missing parameter element " + Resource::pointerToString(partArrayPointer));
+        ModelExpect(partElem->IsArray(), "Element must be array: " + Resource::pointerToString(partArrayPointer));
 
-        updateMarkingFlagFromPart(partElem->GetArray(), result);
+        updateMarkingFlagFromPartArray(partElem->GetArray(), result);
     }
 
     auto extensionJson = result.toExtensionJson();
     auto extensionDocument = NumberAsStringParserDocument::fromJson(std::move(extensionJson));
-    return ChargeItemMarkingFlag{std::move(extensionDocument)};
+    return ChargeItemMarkingFlags{std::move(extensionDocument)};
 }
+// GEMREQ-end A_22878#getChargeItemMarkingFlag
 
-void Parameters::updateMarkingFlagFromPart( //NOLINT(readability-function-cognitive-complexity)
+// GEMREQ-start A_22878#updateMarkingFlagFromPartArray
+void Parameters::updateMarkingFlagFromPartArray( //NOLINT(readability-function-cognitive-complexity)
     const NumberAsStringParserDocument::ConstArray& partArray,
     MarkingFlag& result) const
 {
-    std::map<std::string, bool> isValid{};
-    std::optional<bool> resultElementValue{};
+    ModelExpect(partArray.Size() == 4,
+                "'Array element " + Resource::pointerToString(partArrayPointer) + " must contain exactly four sub-elements");
+
+    std::map<std::string_view, bool> isValid{};
+    bool resultElementValue = false;
     std::optional<std::reference_wrapper<MarkingFlag::Element>> resultElement{};
-
-    auto parsePartNamesTypePathAndName = [&, this](const auto& name, const auto& part) mutable
-    {
-        const auto pointer = (name == "path" || name == "name") ? partValueStringPointer : partValueCodePointer;
-        const auto value = getOptionalStringValue(part, pointer);
-        if (!value.has_value())
-        {
-            return false;
-        }
-
-        if (name == "type")
-        {
-            if (*value == "add")
-            {
-                isValid["type"] = true;
-            }
-        }
-        else if (name == "path")
-        {
-            resultElement = result.findByUrl(*value);
-            if (resultElement.has_value())
-            {
-                isValid["path"] = true;
-            }
-        }
-        else if (name == "name")
-        {
-            if (*value == "valueBoolean")
-            {
-                isValid["name"] = true;
-            }
-        }
-
-        return true;
-    };
-
-    auto parsePartNameValue = [&, this](const auto& part) mutable
-    {
-        const auto* valueBooleanValue = partValueBooleanPointer.Get(part);
-        if (!valueBooleanValue || !valueBooleanValue->IsBool())
-        {
-            return false;
-        }
-
-        isValid["value"] = true;
-        resultElementValue = valueBooleanValue->GetBool();
-
-        return true;
-    };
 
     for (const auto& actualPart : partArray)
     {
-        const auto partNameValue = getOptionalStringValue(actualPart, namePointer);
-        if (!partNameValue.has_value())
+        ModelExpect(actualPart.MemberCount() == 2, "'part' element must have two sub-elements");
+        const auto partNameValue = getStringValue(actualPart, namePointer);
+        if (partNameValue == elements::path)
         {
-            break;
+            const auto value = getStringValue(actualPart, partValueStringPointer);
+            resultElement = result.findByUrl(value);
+            ModelExpect(resultElement.has_value(),
+                        "Invalid value of element " + Resource::pointerToString(partValueStringPointer) + " for part element with name=" +
+                        std::string(elements::path) + ", it is not allowed to patch any fields except the marking flags");
         }
+        else if (partNameValue == elements::type)
+        {
+            const auto value = getStringValue(actualPart, partValueCodePointer);
+            ModelExpect(value == "add",
+                        "Invalid value of element " + Resource::pointerToString(partValueCodePointer) +
+                        " for part element with name=" + std::string(elements::type));
+        }
+        else if (partNameValue == elements::name)
+        {
+            const auto value = getStringValue(actualPart, partValueStringPointer);
+            ModelExpect(value == elements::valueBoolean,
+                        "Invalid value of element " + Resource::pointerToString(partValueStringPointer) +
+                        " for part element with name=" + std::string(elements::name));
+        }
+        else if (partNameValue == elements::value)
+        {
+            const auto* valueBooleanValue = partValueBooleanPointer.Get(actualPart);
+            ModelExpect(valueBooleanValue,
+                        "Missing part element " + Resource::pointerToString(partValueBooleanPointer) + " with name=" +
+                        std::string(elements::value));
+            ModelExpect(valueBooleanValue->IsBool(),
+                        "Element " + Resource::pointerToString(partValueBooleanPointer) + " must be of type Boolean");
+            resultElementValue = valueBooleanValue->GetBool();
+        }
+        else
+            ModelFail("Invalid value for part element " + Resource::pointerToString(namePointer));
 
-        if ((*partNameValue == "type" || *partNameValue == "path" || *partNameValue == "name") &&
-            (!parsePartNamesTypePathAndName(*partNameValue, actualPart)))
-        {
-            break;
-        }
-
-        if (*partNameValue == "value" && !parsePartNameValue(actualPart))
-        {
-            break;
-        }
+        ModelExpect(isValid.count(partNameValue) == 0, "Multiple occurences of part element with name=" + std::string(partNameValue));
+        isValid[partNameValue] = true;
     }
 
-    if (isValid.count("type") && isValid.count("path") && isValid.count("name") && isValid.count("value"))
-    {
-        if (!resultElementValue.has_value() || !resultElement.has_value())
-        {
-            Fail2("Part is valid but missing values", std::logic_error);
-        }
-
-        resultElement->get().value = *resultElementValue;
-    }
+    ModelExpect(!resultElement->get().value.has_value(),
+                "Multiple occurrences of parameter with path value " + std::string(resultElement->get().url));
+    resultElement->get().value = resultElementValue;
 }
+// GEMREQ-end A_22878#updateMarkingFlagFromPartArray
 
-}
+} // namespace model

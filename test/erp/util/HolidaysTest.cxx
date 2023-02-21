@@ -16,7 +16,7 @@ public:
     const Holidays& holidays()
     {
         if (! mHolidays)
-            mHolidays.reset(new Holidays);
+            mHolidays.reset(new Holidays);// NOLINT(cppcoreguidelines-owning-memory)
         return *mHolidays;
     }
 

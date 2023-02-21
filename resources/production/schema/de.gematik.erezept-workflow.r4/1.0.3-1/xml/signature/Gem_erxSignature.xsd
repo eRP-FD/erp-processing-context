@@ -49,7 +49,14 @@
   <xs:complexType name="Gem_erxSignature.DeviceReference.type">
     <xs:complexContent>
       <xs:extension base="Element">
-        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
+        <xs:attribute name="value">
+          <xs:simpleType>
+            <xs:restriction base="uri-primitive">
+              <xs:enumeration value="Device"/>
+              <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxDevice"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

@@ -190,8 +190,7 @@ TEST_F(CadesBesSignatureTest, getMessageDigest)
     CadesBesSignature cadesBesSignature(
         Base64::encode(FileHelper::readFileAsString(::std::string(TEST_DATA_DIR) + "/issues/ERP-5822/kbv_bundle.p7s")));
     const auto messageDigest = cadesBesSignature.getMessageDigest();
-    ASSERT_TRUE(messageDigest.has_value());
-    EXPECT_EQ(Base64::encode(messageDigest.value()), referenceDigest);
+    EXPECT_EQ(Base64::encode(messageDigest), referenceDigest);
 }
 
 
@@ -264,32 +263,68 @@ TEST_F(CadesBesSignatureTest, GematikExampleWithOutdatedOcsp)//NOLINT(readabilit
 }
 
 
-TEST_F(CadesBesSignatureTest, DISABLED_validateGematik)
+TEST_F(CadesBesSignatureTest, GematikExampleCounterSignature)//NOLINT(readability-function-cognitive-complexity)
 {
-    // TODO: The two certificates below, QES-noType.base64.der and QES-noTypeCA.base64.der
-    //       are kind-of secret and must not made public together with the source code.
-    //       Hopefully we can obtain non-sensitive replacements from Achelos. If that
-    //       is not possible then remove the certificates and also this test before making
-    //       the source code publicly accessible.
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
 
     // The contained in CAdES-BES OCSP-Response is outdated, but it is valid for the
     // time of signature creation ( reference time point ), thus it must be accepted
-    auto cert = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-noType.base64.der"));
+    const auto raw =
+        FileHelper::readFileAsString(
+            std::string(TEST_DATA_DIR)
+            + "/cadesBesSignature/4fe2013d-ae94-441a-a1b1-78236ae65680_S_SECUN_secu_kon_4.8.2_4.1.3.p7s");
+    CadesBesSignature cadesBesSignature(raw);
 
-    auto certCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/QES-noTypeCA.base64.der"));
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
+    auto cert = Certificate::fromPem(certificate);
+    cadesBesSignature.addCounterSignature(cert, privKey);
+
+    const std::string signedText = cadesBesSignature.getBase64();
+
+    // load the serialized CAdES-BES
+    {
+        const CadesBesSignature resultCadesBesSignature{signedText};
+        ASSERT_FALSE(resultCadesBesSignature.payload().empty());
+        ASSERT_NO_THROW(resultCadesBesSignature.validateCounterSignature(cert));
+    }
+}
+
+
+TEST_F(CadesBesSignatureTest, validateGematik)
+{
+    // test certificates for "Vorläuferkarten", which is handled as CertificateType::C_HP_ENC internally
+    // and has certificate policy oid_vk_eaa_enc (oid 1.3.6.1.4.1.24796.1.10)
+    // cf ERP-6078
+    std::string_view myText = "The text to be signed";
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(
+        SafeString{FileHelper::readFileAsString(ResourceManager::getAbsoluteFilename(
+            "test/generated_pki/sub_ca1_ec/certificates/qes_cert_ec_hp_enc/qes_cert_ec_hp_enc_key.pem"))});
+
+    auto cert = Certificate::fromBinaryDer(FileHelper::readFileAsString(ResourceManager::getAbsoluteFilename(
+        "test/generated_pki/sub_ca1_ec/certificates/qes_cert_ec_hp_enc/qes_cert_ec_hp_enc.der")));
+
+    auto certCA = Certificate::fromBinaryDer(
+        FileHelper::readFileAsString(ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der")));
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
-        {},
-        {},
-        {
-            {"http://qocsp-eA.medisign.de:8080/ocsp",
-                {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+        {}, {}, {{"http://ocsp.test.ibm.de/", {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    std::string signedText = "MIJF2QYJKoZIhvcNAQcCoIJFyjCCRcYCAQUxDzANBglghkgBZQMEAgEFADCCNWQGCSqGSIb3DQEHAaCCNVUEgjVRPEJ1bmRsZSB4bWxucz0iaHR0cDovL2hsNy5vcmcvZmhpciI+DQogIDxpZCB2YWx1ZT0iNmEyMDM4MDUtZTA2OS00MzU3LWE4ZGUtMzBjNmM1M2FhMDg2IiAvPg0KICA8bWV0YT4NCiAgICA8bGFzdFVwZGF0ZWQgdmFsdWU9IjIwMjEtMDYtMTdUMTQ6MjY6NTYuMTEwMDMxKzAyOjAwIiAvPg0KICAgIDxwcm9maWxlIHZhbHVlPSJodHRwczovL2ZoaXIua2J2LmRlL1N0cnVjdHVyZURlZmluaXRpb24vS0JWX1BSX0VSUF9CdW5kbGV8MS4wLjEiIC8+DQogIDwvbWV0YT4NCiAgPGlkZW50aWZpZXI+DQogICAgPHN5c3RlbSB2YWx1ZT0iaHR0cHM6Ly9nZW1hdGlrLmRlL2ZoaXIvTmFtaW5nU3lzdGVtL1ByZXNjcmlwdGlvbklEIiAvPg0KICAgIDx2YWx1ZSB2YWx1ZT0iMTYwLjAwMC4wMDAuMDAwLjAwNC40NSIgLz4NCiAgPC9pZGVudGlmaWVyPg0KICA8dHlwZSB2YWx1ZT0iZG9jdW1lbnQiIC8+DQogIDx0aW1lc3RhbXAgdmFsdWU9IjIwMjEtMDYtMTdUMTQ6MjY6NTYuMTEwMDMxKzAyOjAwIiAvPg0KICA8ZW50cnk+DQogICAgPGZ1bGxVcmwgdmFsdWU9Imh0dHA6Ly9sb2NhbGhvc3Q6NDc5OS9maGlyL0NvbXBvc2l0aW9uL2MyNzk4ZWNjLWZhYTItNDc4OC05YTlhLWZjZmM5Mjk4NGZjZSIgLz4NCiAgICA8cmVzb3VyY2U+DQogICAgICA8Q29tcG9zaXRpb24+DQogICAgICAgIDxpZCB2YWx1ZT0iYzI3OThlY2MtZmFhMi00Nzg4LTlhOWEtZmNmYzkyOTg0ZmNlIiAvPg0KICAgICAgICA8bWV0YT4NCiAgICAgICAgICA8cHJvZmlsZSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9TdHJ1Y3R1cmVEZWZpbml0aW9uL0tCVl9QUl9FUlBfQ29tcG9zaXRpb258MS4wLjEiIC8+DQogICAgICAgIDwvbWV0YT4NCiAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHBzOi8vZmhpci5rYnYuZGUvU3RydWN0dXJlRGVmaW5pdGlvbi9LQlZfRVhfRk9SX0xlZ2FsX2Jhc2lzIj4NCiAgICAgICAgICA8dmFsdWVDb2Rpbmc+DQogICAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwczovL2ZoaXIua2J2LmRlL0NvZGVTeXN0ZW0vS0JWX0NTX1NGSElSX0tCVl9TVEFUVVNLRU5OWkVJQ0hFTiIgLz4NCiAgICAgICAgICAgIDxjb2RlIHZhbHVlPSIwMCIgLz4NCiAgICAgICAgICA8L3ZhbHVlQ29kaW5nPg0KICAgICAgICA8L2V4dGVuc2lvbj4NCiAgICAgICAgPHN0YXR1cyB2YWx1ZT0iZmluYWwiIC8+DQogICAgICAgIDx0eXBlPg0KICAgICAgICAgIDxjb2Rpbmc+DQogICAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwczovL2ZoaXIua2J2LmRlL0NvZGVTeXN0ZW0vS0JWX0NTX1NGSElSX0tCVl9GT1JNVUxBUl9BUlQiIC8+DQogICAgICAgICAgICA8Y29kZSB2YWx1ZT0iZTE2QSIgLz4NCiAgICAgICAgICA8L2NvZGluZz4NCiAgICAgICAgPC90eXBlPg0KICAgICAgICA8c3ViamVjdD4NCiAgICAgICAgICA8cmVmZXJlbmNlIHZhbHVlPSJQYXRpZW50LzNiZTk4Njg1LThhYmEtNGE3Ni1hOTMwLWYxMTlhZDMwYWU2ZiIgLz4NCiAgICAgICAgPC9zdWJqZWN0Pg0KICAgICAgICA8ZGF0ZSB2YWx1ZT0iMjAyMS0wNi0xN1QwMjoyNjo1NloiIC8+DQogICAgICAgIDxhdXRob3I+DQogICAgICAgICAgPHJlZmVyZW5jZSB2YWx1ZT0iUHJhY3RpdGlvbmVyL2ZhM2U0MzIwLTBiYTMtNDVlNy1iYzlmLTkxNDU1MTYxYjZiYSIgLz4NCiAgICAgICAgICA8dHlwZSB2YWx1ZT0iUHJhY3RpdGlvbmVyIiAvPg0KICAgICAgICA8L2F1dGhvcj4NCiAgICAgICAgPGF1dGhvcj4NCiAgICAgICAgICA8dHlwZSB2YWx1ZT0iRGV2aWNlIiAvPg0KICAgICAgICAgIDxpZGVudGlmaWVyPg0KICAgICAgICAgICAgPHN5c3RlbSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9OYW1pbmdTeXN0ZW0vS0JWX05TX0ZPUl9QcnVlZm51bW1lciIgLz4NCiAgICAgICAgICAgIDx2YWx1ZSB2YWx1ZT0iWS8xLzE4MDcvMzYvMjQ0IiAvPg0KICAgICAgICAgIDwvaWRlbnRpZmllcj4NCiAgICAgICAgPC9hdXRob3I+DQogICAgICAgIDx0aXRsZSB2YWx1ZT0iZWxla3Ryb25pc2NoZSBBcnpuZWltaXR0ZWx2ZXJvcmRudW5nIiAvPg0KICAgICAgICA8Y3VzdG9kaWFuPg0KICAgICAgICAgIDxyZWZlcmVuY2UgdmFsdWU9Ik9yZ2FuaXphdGlvbi8xZjNhYzRjNS00NDFkLTRjNDItYWQ5Zi0yMjY2YTgyNWRmNjgiIC8+DQogICAgICAgIDwvY3VzdG9kaWFuPg0KICAgICAgICA8c2VjdGlvbj4NCiAgICAgICAgICA8Y29kZT4NCiAgICAgICAgICAgIDxjb2Rpbmc+DQogICAgICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHBzOi8vZmhpci5rYnYuZGUvQ29kZVN5c3RlbS9LQlZfQ1NfRVJQX1NlY3Rpb25fVHlwZSIgLz4NCiAgICAgICAgICAgICAgPGNvZGUgdmFsdWU9IlByZXNjcmlwdGlvbiIgLz4NCiAgICAgICAgICAgIDwvY29kaW5nPg0KICAgICAgICAgIDwvY29kZT4NCiAgICAgICAgICA8ZW50cnk+DQogICAgICAgICAgICA8cmVmZXJlbmNlIHZhbHVlPSJNZWRpY2F0aW9uUmVxdWVzdC8zYzhhMzMwMy02MjViLTQyZjMtOGMwMC1jMmJhZWRhOTJkNWEiIC8+DQogICAgICAgICAgPC9lbnRyeT4NCiAgICAgICAgPC9zZWN0aW9uPg0KICAgICAgICA8c2VjdGlvbj4NCiAgICAgICAgICA8Y29kZT4NCiAgICAgICAgICAgIDxjb2Rpbmc+DQogICAgICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHBzOi8vZmhpci5rYnYuZGUvQ29kZVN5c3RlbS9LQlZfQ1NfRVJQX1NlY3Rpb25fVHlwZSIgLz4NCiAgICAgICAgICAgICAgPGNvZGUgdmFsdWU9IkNvdmVyYWdlIiAvPg0KICAgICAgICAgICAgPC9jb2Rpbmc+DQogICAgICAgICAgPC9jb2RlPg0KICAgICAgICAgIDxlbnRyeT4NCiAgICAgICAgICAgIDxyZWZlcmVuY2UgdmFsdWU9IkNvdmVyYWdlLzJjNzRjZDVkLWU2MDgtNGIzOC1hZGJhLWNlMWE5YzUzN2Q1YSIgLz4NCiAgICAgICAgICA8L2VudHJ5Pg0KICAgICAgICA8L3NlY3Rpb24+DQogICAgICA8L0NvbXBvc2l0aW9uPg0KICAgIDwvcmVzb3VyY2U+DQogIDwvZW50cnk+DQogIDxlbnRyeT4NCiAgICA8ZnVsbFVybCB2YWx1ZT0iaHR0cDovL2xvY2FsaG9zdDo0Nzk5L2ZoaXIvTWVkaWNhdGlvbi9mMzZiNGY1NS0yNjcwLTQ5YTgtYWYzOS1hZmY0OTY4NDU4M2IiIC8+DQogICAgPHJlc291cmNlPg0KICAgICAgPE1lZGljYXRpb24+DQogICAgICAgIDxpZCB2YWx1ZT0iZjM2YjRmNTUtMjY3MC00OWE4LWFmMzktYWZmNDk2ODQ1ODNiIiAvPg0KICAgICAgICA8bWV0YT4NCiAgICAgICAgICA8cHJvZmlsZSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9TdHJ1Y3R1cmVEZWZpbml0aW9uL0tCVl9QUl9FUlBfTWVkaWNhdGlvbl9QWk58MS4wLjEiIC8+DQogICAgICAgIDwvbWV0YT4NCiAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHBzOi8vZmhpci5rYnYuZGUvU3RydWN0dXJlRGVmaW5pdGlvbi9LQlZfRVhfRVJQX01lZGljYXRpb25fQ2F0ZWdvcnkiPg0KICAgICAgICAgIDx2YWx1ZUNvZGluZz4NCiAgICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHBzOi8vZmhpci5rYnYuZGUvQ29kZVN5c3RlbS9LQlZfQ1NfRVJQX01lZGljYXRpb25fQ2F0ZWdvcnkiIC8+DQogICAgICAgICAgICA8Y29kZSB2YWx1ZT0iMDAiIC8+DQogICAgICAgICAgPC92YWx1ZUNvZGluZz4NCiAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgIDxleHRlbnNpb24gdXJsPSJodHRwczovL2ZoaXIua2J2LmRlL1N0cnVjdHVyZURlZmluaXRpb24vS0JWX0VYX0VSUF9NZWRpY2F0aW9uX1ZhY2NpbmUiPg0KICAgICAgICAgIDx2YWx1ZUJvb2xlYW4gdmFsdWU9ImZhbHNlIiAvPg0KICAgICAgICA8L2V4dGVuc2lvbj4NCiAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHA6Ly9maGlyLmRlL1N0cnVjdHVyZURlZmluaXRpb24vbm9ybWdyb2Vzc2UiPg0KICAgICAgICAgIDx2YWx1ZUNvZGUgdmFsdWU9Ik4xIiAvPg0KICAgICAgICA8L2V4dGVuc2lvbj4NCiAgICAgICAgPGNvZGU+DQogICAgICAgICAgPGNvZGluZz4NCiAgICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHA6Ly9maGlyLmRlL0NvZGVTeXN0ZW0vaWZhL3B6biIgLz4NCiAgICAgICAgICAgIDxjb2RlIHZhbHVlPSIwNjk2OTczNiIgLz4NCiAgICAgICAgICA8L2NvZGluZz4NCiAgICAgICAgICA8dGV4dCB2YWx1ZT0iTmlmZWRpcGluLXJhdGlvcGhhcm3CriAyMG1nIDMwIFJldGFyZHRibC4gTjEiIC8+DQogICAgICAgIDwvY29kZT4NCiAgICAgICAgPGZvcm0+DQogICAgICAgICAgPGNvZGluZz4NCiAgICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHBzOi8vZmhpci5rYnYuZGUvVmFsdWVTZXQvS0JWX1ZTX1NGSElSX0tCVl9EQVJSRUlDSFVOR1NGT1JNIiAvPg0KICAgICAgICAgICAgPGNvZGUgdmFsdWU9IlJFVCIgLz4NCiAgICAgICAgICA8L2NvZGluZz4NCiAgICAgICAgPC9mb3JtPg0KICAgICAgICA8YW1vdW50Pg0KICAgICAgICAgIDxudW1lcmF0b3I+DQogICAgICAgICAgICA8dmFsdWUgdmFsdWU9IjMwIiAvPg0KICAgICAgICAgICAgPHVuaXQgdmFsdWU9IlJFVCIgLz4NCiAgICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHA6Ly91bml0c29mbWVhc3VyZS5vcmciIC8+DQogICAgICAgICAgICA8Y29kZSB2YWx1ZT0ie1N0dWVja30iIC8+DQogICAgICAgICAgPC9udW1lcmF0b3I+DQogICAgICAgICAgPGRlbm9taW5hdG9yPg0KICAgICAgICAgICAgPHZhbHVlIHZhbHVlPSIxIiAvPg0KICAgICAgICAgIDwvZGVub21pbmF0b3I+DQogICAgICAgIDwvYW1vdW50Pg0KICAgICAgPC9NZWRpY2F0aW9uPg0KICAgIDwvcmVzb3VyY2U+DQogIDwvZW50cnk+DQogIDxlbnRyeT4NCiAgICA8ZnVsbFVybCB2YWx1ZT0iaHR0cDovL2xvY2FsaG9zdDo0Nzk5L2ZoaXIvTWVkaWNhdGlvblJlcXVlc3QvM2M4YTMzMDMtNjI1Yi00MmYzLThjMDAtYzJiYWVkYTkyZDVhIiAvPg0KICAgIDxyZXNvdXJjZT4NCiAgICAgIDxNZWRpY2F0aW9uUmVxdWVzdD4NCiAgICAgICAgPGlkIHZhbHVlPSIzYzhhMzMwMy02MjViLTQyZjMtOGMwMC1jMmJhZWRhOTJkNWEiIC8+DQogICAgICAgIDxtZXRhPg0KICAgICAgICAgIDxwcm9maWxlIHZhbHVlPSJodHRwczovL2ZoaXIua2J2LmRlL1N0cnVjdHVyZURlZmluaXRpb24vS0JWX1BSX0VSUF9QcmVzY3JpcHRpb258MS4wLjEiIC8+DQogICAgICAgIDwvbWV0YT4NCiAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHBzOi8vZmhpci5rYnYuZGUvU3RydWN0dXJlRGVmaW5pdGlvbi9LQlZfRVhfRVJQX1N0YXR1c0NvUGF5bWVudCI+DQogICAgICAgICAgPHZhbHVlQ29kaW5nPg0KICAgICAgICAgICAgPHN5c3RlbSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9Db2RlU3lzdGVtL0tCVl9DU19FUlBfU3RhdHVzQ29QYXltZW50IiAvPg0KICAgICAgICAgICAgPGNvZGUgdmFsdWU9IjAiIC8+DQogICAgICAgICAgPC92YWx1ZUNvZGluZz4NCiAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgIDxleHRlbnNpb24gdXJsPSJodHRwczovL2ZoaXIua2J2LmRlL1N0cnVjdHVyZURlZmluaXRpb24vS0JWX0VYX0VSUF9FbWVyZ2VuY3lTZXJ2aWNlc0ZlZSI+DQogICAgICAgICAgPHZhbHVlQm9vbGVhbiB2YWx1ZT0iZmFsc2UiIC8+DQogICAgICAgIDwvZXh0ZW5zaW9uPg0KICAgICAgICA8ZXh0ZW5zaW9uIHVybD0iaHR0cHM6Ly9maGlyLmtidi5kZS9TdHJ1Y3R1cmVEZWZpbml0aW9uL0tCVl9FWF9FUlBfQlZHIj4NCiAgICAgICAgICA8dmFsdWVCb29sZWFuIHZhbHVlPSJmYWxzZSIgLz4NCiAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgIDxleHRlbnNpb24gdXJsPSJodHRwczovL2ZoaXIua2J2LmRlL1N0cnVjdHVyZURlZmluaXRpb24vS0JWX0VYX0VSUF9NdWx0aXBsZV9QcmVzY3JpcHRpb24iPg0KICAgICAgICAgIDxleHRlbnNpb24gdXJsPSJLZW5uemVpY2hlbiI+DQogICAgICAgICAgICA8dmFsdWVCb29sZWFuIHZhbHVlPSJmYWxzZSIgLz4NCiAgICAgICAgICA8L2V4dGVuc2lvbj4NCiAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgIDxzdGF0dXMgdmFsdWU9ImFjdGl2ZSIgLz4NCiAgICAgICAgPGludGVudCB2YWx1ZT0ib3JkZXIiIC8+DQogICAgICAgIDxtZWRpY2F0aW9uUmVmZXJlbmNlPg0KICAgICAgICAgIDxyZWZlcmVuY2UgdmFsdWU9Ik1lZGljYXRpb24vZjM2YjRmNTUtMjY3MC00OWE4LWFmMzktYWZmNDk2ODQ1ODNiIiAvPg0KICAgICAgICA8L21lZGljYXRpb25SZWZlcmVuY2U+DQogICAgICAgIDxzdWJqZWN0Pg0KICAgICAgICAgIDxyZWZlcmVuY2UgdmFsdWU9IlBhdGllbnQvM2JlOTg2ODUtOGFiYS00YTc2LWE5MzAtZjExOWFkMzBhZTZmIiAvPg0KICAgICAgICA8L3N1YmplY3Q+DQogICAgICAgIDxhdXRob3JlZE9uIHZhbHVlPSIyMDIxLTA2LTE3IiAvPg0KICAgICAgICA8cmVxdWVzdGVyPg0KICAgICAgICAgIDxyZWZlcmVuY2UgdmFsdWU9IlByYWN0aXRpb25lci9mYTNlNDMyMC0wYmEzLTQ1ZTctYmM5Zi05MTQ1NTE2MWI2YmEiIC8+DQogICAgICAgIDwvcmVxdWVzdGVyPg0KICAgICAgICA8aW5zdXJhbmNlPg0KICAgICAgICAgIDxyZWZlcmVuY2UgdmFsdWU9IkNvdmVyYWdlLzJjNzRjZDVkLWU2MDgtNGIzOC1hZGJhLWNlMWE5YzUzN2Q1YSIgLz4NCiAgICAgICAgPC9pbnN1cmFuY2U+DQogICAgICAgIDxkb3NhZ2VJbnN0cnVjdGlvbj4NCiAgICAgICAgICA8ZXh0ZW5zaW9uIHVybD0iaHR0cHM6Ly9maGlyLmtidi5kZS9TdHJ1Y3R1cmVEZWZpbml0aW9uL0tCVl9FWF9FUlBfRG9zYWdlRmxhZyI+DQogICAgICAgICAgICA8dmFsdWVCb29sZWFuIHZhbHVlPSJmYWxzZSIgLz4NCiAgICAgICAgICA8L2V4dGVuc2lvbj4NCiAgICAgICAgPC9kb3NhZ2VJbnN0cnVjdGlvbj4NCiAgICAgICAgPGRpc3BlbnNlUmVxdWVzdD4NCiAgICAgICAgICA8cXVhbnRpdHk+DQogICAgICAgICAgICA8dmFsdWUgdmFsdWU9IjEiIC8+DQogICAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwOi8vdW5pdHNvZm1lYXN1cmUub3JnIiAvPg0KICAgICAgICAgICAgPGNvZGUgdmFsdWU9IntQYWNrYWdlfSIgLz4NCiAgICAgICAgICA8L3F1YW50aXR5Pg0KICAgICAgICA8L2Rpc3BlbnNlUmVxdWVzdD4NCiAgICAgICAgPHN1YnN0aXR1dGlvbj4NCiAgICAgICAgICA8YWxsb3dlZEJvb2xlYW4gdmFsdWU9InRydWUiIC8+DQogICAgICAgIDwvc3Vic3RpdHV0aW9uPg0KICAgICAgPC9NZWRpY2F0aW9uUmVxdWVzdD4NCiAgICA8L3Jlc291cmNlPg0KICA8L2VudHJ5Pg0KICA8ZW50cnk+DQogICAgPGZ1bGxVcmwgdmFsdWU9Imh0dHA6Ly9sb2NhbGhvc3Q6NDc5OS9maGlyL1BhdGllbnQvM2JlOTg2ODUtOGFiYS00YTc2LWE5MzAtZjExOWFkMzBhZTZmIiAvPg0KICAgIDxyZXNvdXJjZT4NCiAgICAgIDxQYXRpZW50Pg0KICAgICAgICA8aWQgdmFsdWU9IjNiZTk4Njg1LThhYmEtNGE3Ni1hOTMwLWYxMTlhZDMwYWU2ZiIgLz4NCiAgICAgICAgPG1ldGE+DQogICAgICAgICAgPHByb2ZpbGUgdmFsdWU9Imh0dHBzOi8vZmhpci5rYnYuZGUvU3RydWN0dXJlRGVmaW5pdGlvbi9LQlZfUFJfRk9SX1BhdGllbnR8MS4wLjMiIC8+DQogICAgICAgIDwvbWV0YT4NCiAgICAgICAgPGlkZW50aWZpZXI+DQogICAgICAgICAgPHR5cGU+DQogICAgICAgICAgICA8Y29kaW5nPg0KICAgICAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwOi8vZmhpci5kZS9Db2RlU3lzdGVtL2lkZW50aWZpZXItdHlwZS1kZS1iYXNpcyIgLz4NCiAgICAgICAgICAgICAgPGNvZGUgdmFsdWU9IkdLViIgLz4NCiAgICAgICAgICAgIDwvY29kaW5nPg0KICAgICAgICAgIDwvdHlwZT4NCiAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwOi8vZmhpci5kZS9OYW1pbmdTeXN0ZW0vZ2t2L2t2aWQtMTAiIC8+DQogICAgICAgICAgPHZhbHVlIHZhbHVlPSJNMTIzNDU2Nzg5IiAvPg0KICAgICAgICA8L2lkZW50aWZpZXI+DQogICAgICAgIDxuYW1lPg0KICAgICAgICAgIDx1c2UgdmFsdWU9Im9mZmljaWFsIiAvPg0KICAgICAgICAgIDxmYW1pbHkgdmFsdWU9Ik11c3Rlcm1hbm4iPg0KICAgICAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHA6Ly9obDcub3JnL2ZoaXIvU3RydWN0dXJlRGVmaW5pdGlvbi9odW1hbm5hbWUtb3duLW5hbWUiPg0KICAgICAgICAgICAgICA8dmFsdWVTdHJpbmcgdmFsdWU9Ik11c3Rlcm1hbm4iIC8+DQogICAgICAgICAgICA8L2V4dGVuc2lvbj4NCiAgICAgICAgICA8L2ZhbWlseT4NCiAgICAgICAgICA8Z2l2ZW4gdmFsdWU9IkVyaWthIiAvPg0KICAgICAgICA8L25hbWU+DQogICAgICAgIDxiaXJ0aERhdGUgdmFsdWU9IjE5MDAtMDEtMDEiIC8+DQogICAgICAgIDxhZGRyZXNzPg0KICAgICAgICAgIDx0eXBlIHZhbHVlPSJib3RoIiAvPg0KICAgICAgICAgIDxjaXR5IHZhbHVlPSIiIC8+DQogICAgICAgICAgPHBvc3RhbENvZGUgdmFsdWU9IjAwMDAwIiAvPg0KICAgICAgICAgIDxjb3VudHJ5IHZhbHVlPSJEIiAvPg0KICAgICAgICA8L2FkZHJlc3M+DQogICAgICA8L1BhdGllbnQ+DQogICAgPC9yZXNvdXJjZT4NCiAgPC9lbnRyeT4NCiAgPGVudHJ5Pg0KICAgIDxmdWxsVXJsIHZhbHVlPSJodHRwOi8vbG9jYWxob3N0OjQ3OTkvZmhpci9QcmFjdGl0aW9uZXIvZmEzZTQzMjAtMGJhMy00NWU3LWJjOWYtOTE0NTUxNjFiNmJhIiAvPg0KICAgIDxyZXNvdXJjZT4NCiAgICAgIDxQcmFjdGl0aW9uZXI+DQogICAgICAgIDxpZCB2YWx1ZT0iZmEzZTQzMjAtMGJhMy00NWU3LWJjOWYtOTE0NTUxNjFiNmJhIiAvPg0KICAgICAgICA8bWV0YT4NCiAgICAgICAgICA8cHJvZmlsZSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9TdHJ1Y3R1cmVEZWZpbml0aW9uL0tCVl9QUl9GT1JfUHJhY3RpdGlvbmVyfDEuMC4zIiAvPg0KICAgICAgICA8L21ldGE+DQogICAgICAgIDxpZGVudGlmaWVyPg0KICAgICAgICAgIDx0eXBlPg0KICAgICAgICAgICAgPGNvZGluZz4NCiAgICAgICAgICAgICAgPHN5c3RlbSB2YWx1ZT0iaHR0cDovL3Rlcm1pbm9sb2d5LmhsNy5vcmcvQ29kZVN5c3RlbS92Mi0wMjAzIiAvPg0KICAgICAgICAgICAgICA8Y29kZSB2YWx1ZT0iTEFOUiIgLz4NCiAgICAgICAgICAgIDwvY29kaW5nPg0KICAgICAgICAgIDwvdHlwZT4NCiAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwczovL2ZoaXIua2J2LmRlL05hbWluZ1N5c3RlbS9LQlZfTlNfQmFzZV9BTlIiIC8+DQogICAgICAgICAgPHZhbHVlIHZhbHVlPSI2NjI2NDI2MDEiIC8+DQogICAgICAgIDwvaWRlbnRpZmllcj4NCiAgICAgICAgPG5hbWU+DQogICAgICAgICAgPHVzZSB2YWx1ZT0ib2ZmaWNpYWwiIC8+DQogICAgICAgICAgPGZhbWlseSB2YWx1ZT0iUHJheGlzIERyLiBTaGFoaW4gQS4gTWlya291aGkiPg0KICAgICAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHA6Ly9obDcub3JnL2ZoaXIvU3RydWN0dXJlRGVmaW5pdGlvbi9odW1hbm5hbWUtb3duLW5hbWUiPg0KICAgICAgICAgICAgICA8dmFsdWVTdHJpbmcgdmFsdWU9IlByYXhpcyBEci4gU2hhaGluIEEuIE1pcmtvdWhpIiAvPg0KICAgICAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgICAgPC9mYW1pbHk+DQogICAgICAgICAgPGdpdmVuIHZhbHVlPSItIiAvPg0KICAgICAgICA8L25hbWU+DQogICAgICAgIDxxdWFsaWZpY2F0aW9uPg0KICAgICAgICAgIDxjb2RlPg0KICAgICAgICAgICAgPGNvZGluZz4NCiAgICAgICAgICAgICAgPHN5c3RlbSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9Db2RlU3lzdGVtL0tCVl9DU19GT1JfUXVhbGlmaWNhdGlvbl9UeXBlIiAvPg0KICAgICAgICAgICAgICA8Y29kZSB2YWx1ZT0iMDEwIiAvPg0KICAgICAgICAgICAgPC9jb2Rpbmc+DQogICAgICAgICAgPC9jb2RlPg0KICAgICAgICA8L3F1YWxpZmljYXRpb24+DQogICAgICAgIDxxdWFsaWZpY2F0aW9uPg0KICAgICAgICAgIDxjb2RlPg0KICAgICAgICAgICAgPHRleHQgdmFsdWU9IkFyenQiIC8+DQogICAgICAgICAgPC9jb2RlPg0KICAgICAgICA8L3F1YWxpZmljYXRpb24+DQogICAgICA8L1ByYWN0aXRpb25lcj4NCiAgICA8L3Jlc291cmNlPg0KICA8L2VudHJ5Pg0KICA8ZW50cnk+DQogICAgPGZ1bGxVcmwgdmFsdWU9Imh0dHA6Ly9sb2NhbGhvc3Q6NDc5OS9maGlyL09yZ2FuaXphdGlvbi8xZjNhYzRjNS00NDFkLTRjNDItYWQ5Zi0yMjY2YTgyNWRmNjgiIC8+DQogICAgPHJlc291cmNlPg0KICAgICAgPE9yZ2FuaXphdGlvbj4NCiAgICAgICAgPGlkIHZhbHVlPSIxZjNhYzRjNS00NDFkLTRjNDItYWQ5Zi0yMjY2YTgyNWRmNjgiIC8+DQogICAgICAgIDxtZXRhPg0KICAgICAgICAgIDxwcm9maWxlIHZhbHVlPSJodHRwczovL2ZoaXIua2J2LmRlL1N0cnVjdHVyZURlZmluaXRpb24vS0JWX1BSX0ZPUl9Pcmdhbml6YXRpb258MS4wLjMiIC8+DQogICAgICAgIDwvbWV0YT4NCiAgICAgICAgPGlkZW50aWZpZXI+DQogICAgICAgICAgPHR5cGU+DQogICAgICAgICAgICA8Y29kaW5nPg0KICAgICAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwOi8vdGVybWlub2xvZ3kuaGw3Lm9yZy9Db2RlU3lzdGVtL3YyLTAyMDMiIC8+DQogICAgICAgICAgICAgIDxjb2RlIHZhbHVlPSJCU05SIiAvPg0KICAgICAgICAgICAgPC9jb2Rpbmc+DQogICAgICAgICAgPC90eXBlPg0KICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHBzOi8vZmhpci5rYnYuZGUvTmFtaW5nU3lzdGVtL0tCVl9OU19CYXNlX0JTTlIiIC8+DQogICAgICAgICAgPHZhbHVlIHZhbHVlPSI3Mjg0MTkyMDAiIC8+DQogICAgICAgIDwvaWRlbnRpZmllcj4NCiAgICAgICAgPG5hbWUgdmFsdWU9IlByYXhpcyBEci4gU2hhaGluIEEuIE1pcmtvdWhpIiAvPg0KICAgICAgICA8dGVsZWNvbT4NCiAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJwaG9uZSIgLz4NCiAgICAgICAgICA8dmFsdWUgdmFsdWU9IjAzMC82ODQgMzUzNiIgLz4NCiAgICAgICAgPC90ZWxlY29tPg0KICAgICAgICA8dGVsZWNvbT4NCiAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJmYXgiIC8+DQogICAgICAgICAgPHZhbHVlIHZhbHVlPSIwMzAvNjgwIDU1NjQ2IiAvPg0KICAgICAgICA8L3RlbGVjb20+DQogICAgICAgIDxhZGRyZXNzPg0KICAgICAgICAgIDx0eXBlIHZhbHVlPSJib3RoIiAvPg0KICAgICAgICAgIDxsaW5lIHZhbHVlPSJIYXVwdHN0cmHDn2UgMTMxIj4NCiAgICAgICAgICAgIDxleHRlbnNpb24gdXJsPSJodHRwOi8vaGw3Lm9yZy9maGlyL1N0cnVjdHVyZURlZmluaXRpb24vaXNvMjEwOTAtQURYUC1ob3VzZU51bWJlciI+DQogICAgICAgICAgICAgIDx2YWx1ZVN0cmluZyB2YWx1ZT0iMTMxIiAvPg0KICAgICAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgICAgICA8ZXh0ZW5zaW9uIHVybD0iaHR0cDovL2hsNy5vcmcvZmhpci9TdHJ1Y3R1cmVEZWZpbml0aW9uL2lzbzIxMDkwLUFEWFAtc3RyZWV0TmFtZSI+DQogICAgICAgICAgICAgIDx2YWx1ZVN0cmluZyB2YWx1ZT0iSGF1cHRzdHJhw59lIiAvPg0KICAgICAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgICAgPC9saW5lPg0KICAgICAgICAgIDxjaXR5IHZhbHVlPSJCZXJsaW4iIC8+DQogICAgICAgICAgPHBvc3RhbENvZGUgdmFsdWU9IjEwODI3IiAvPg0KICAgICAgICAgIDxjb3VudHJ5IHZhbHVlPSJEIiAvPg0KICAgICAgICA8L2FkZHJlc3M+DQogICAgICA8L09yZ2FuaXphdGlvbj4NCiAgICA8L3Jlc291cmNlPg0KICA8L2VudHJ5Pg0KICA8ZW50cnk+DQogICAgPGZ1bGxVcmwgdmFsdWU9Imh0dHA6Ly9sb2NhbGhvc3Q6NDc5OS9maGlyL0NvdmVyYWdlLzJjNzRjZDVkLWU2MDgtNGIzOC1hZGJhLWNlMWE5YzUzN2Q1YSIgLz4NCiAgICA8cmVzb3VyY2U+DQogICAgICA8Q292ZXJhZ2U+DQogICAgICAgIDxpZCB2YWx1ZT0iMmM3NGNkNWQtZTYwOC00YjM4LWFkYmEtY2UxYTljNTM3ZDVhIiAvPg0KICAgICAgICA8bWV0YT4NCiAgICAgICAgICA8cHJvZmlsZSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9TdHJ1Y3R1cmVEZWZpbml0aW9uL0tCVl9QUl9GT1JfQ292ZXJhZ2V8MS4wLjMiIC8+DQogICAgICAgIDwvbWV0YT4NCiAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHA6Ly9maGlyLmRlL1N0cnVjdHVyZURlZmluaXRpb24vZ2t2L2Jlc29uZGVyZS1wZXJzb25lbmdydXBwZSI+DQogICAgICAgICAgPHZhbHVlQ29kaW5nPg0KICAgICAgICAgICAgPHN5c3RlbSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9Db2RlU3lzdGVtL0tCVl9DU19TRkhJUl9LQlZfUEVSU09ORU5HUlVQUEUiIC8+DQogICAgICAgICAgICA8Y29kZSB2YWx1ZT0iMDAiIC8+DQogICAgICAgICAgPC92YWx1ZUNvZGluZz4NCiAgICAgICAgPC9leHRlbnNpb24+DQogICAgICAgIDxleHRlbnNpb24gdXJsPSJodHRwOi8vZmhpci5kZS9TdHJ1Y3R1cmVEZWZpbml0aW9uL2drdi9kbXAta2VubnplaWNoZW4iPg0KICAgICAgICAgIDx2YWx1ZUNvZGluZz4NCiAgICAgICAgICAgIDxzeXN0ZW0gdmFsdWU9Imh0dHBzOi8vZmhpci5rYnYuZGUvQ29kZVN5c3RlbS9LQlZfQ1NfU0ZISVJfS0JWX0RNUCIgLz4NCiAgICAgICAgICAgIDxjb2RlIHZhbHVlPSIwMCIgLz4NCiAgICAgICAgICA8L3ZhbHVlQ29kaW5nPg0KICAgICAgICA8L2V4dGVuc2lvbj4NCiAgICAgICAgPGV4dGVuc2lvbiB1cmw9Imh0dHA6Ly9maGlyLmRlL1N0cnVjdHVyZURlZmluaXRpb24vZ2t2L3ZlcnNpY2hlcnRlbmFydCI+DQogICAgICAgICAgPHZhbHVlQ29kaW5nPg0KICAgICAgICAgICAgPHN5c3RlbSB2YWx1ZT0iaHR0cHM6Ly9maGlyLmtidi5kZS9WYWx1ZVNldC9LQlZfVlNfU0ZISVJfS0JWX1ZFUlNJQ0hFUlRFTlNUQVRVUyIgLz4NCiAgICAgICAgICAgIDxjb2RlIHZhbHVlPSIxIiAvPg0KICAgICAgICAgIDwvdmFsdWVDb2Rpbmc+DQogICAgICAgIDwvZXh0ZW5zaW9uPg0KICAgICAgICA8ZXh0ZW5zaW9uIHVybD0iaHR0cDovL2ZoaXIuZGUvU3RydWN0dXJlRGVmaW5pdGlvbi9na3Yvd29wIj4NCiAgICAgICAgICA8dmFsdWVDb2Rpbmc+DQogICAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwczovL2ZoaXIua2J2LmRlL1ZhbHVlU2V0L0tCVl9WU19TRkhJUl9JVEFfV09QIiAvPg0KICAgICAgICAgICAgPGNvZGUgdmFsdWU9IjAwIiAvPg0KICAgICAgICAgIDwvdmFsdWVDb2Rpbmc+DQogICAgICAgIDwvZXh0ZW5zaW9uPg0KICAgICAgICA8c3RhdHVzIHZhbHVlPSJhY3RpdmUiIC8+DQogICAgICAgIDx0eXBlPg0KICAgICAgICAgIDxjb2Rpbmc+DQogICAgICAgICAgICA8c3lzdGVtIHZhbHVlPSJodHRwOi8vZmhpci5kZS9Db2RlU3lzdGVtL3ZlcnNpY2hlcnVuZ3NhcnQtZGUtYmFzaXMiIC8+DQogICAgICAgICAgICA8Y29kZSB2YWx1ZT0iR0tWIiAvPg0KICAgICAgICAgIDwvY29kaW5nPg0KICAgICAgICA8L3R5cGU+DQogICAgICAgIDxiZW5lZmljaWFyeT4NCiAgICAgICAgICA8cmVmZXJlbmNlIHZhbHVlPSJQYXRpZW50LzNiZTk4Njg1LThhYmEtNGE3Ni1hOTMwLWYxMTlhZDMwYWU2ZiIgLz4NCiAgICAgICAgPC9iZW5lZmljaWFyeT4NCiAgICAgICAgPHBheW9yPg0KICAgICAgICAgIDxpZGVudGlmaWVyPg0KICAgICAgICAgICAgPHN5c3RlbSB2YWx1ZT0iaHR0cDovL2ZoaXIuZGUv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";
-
-    ASSERT_NO_THROW(CadesBesSignature(signedText, *manager));
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+    manager->addPostUpdateHook([mgrWeakPtr, certCA] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
+        TslTestHelper::addCaCertificateToTrustStore(certCA, *tslManager, TslMode::BNA);
+    });
+    std::string signedText;
+    {
+        CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}};
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
+    }
+    {
+        CadesBesSignature cadesBesSignature{signedText, *manager, true};
+        EXPECT_EQ(cadesBesSignature.payload(), myText);
+    }
 }
 
 
@@ -377,9 +412,12 @@ TEST_F(CadesBesSignatureTest, validateQesG0NoOcspProxy)
         {
             {"http://ocsp.test.ibm.de/",
              {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
-
-    manager->addPostUpdateHook([=]{
-        TslTestHelper::addCaCertificateToTrustStore(certCA, *manager, TslMode::BNA);
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+    manager->addPostUpdateHook([mgrWeakPtr, certCA] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
+        TslTestHelper::addCaCertificateToTrustStore(certCA, *tslManager, TslMode::BNA);
     });
 
     std::string signedText;
@@ -420,9 +458,12 @@ TEST_F(CadesBesSignatureTest, validateQesG0WithOcspProxy)
         {
             {ocspProxyUrl + ocspUrlFromCert,
                 {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
-
-    manager->addPostUpdateHook([=]{
-        TslTestHelper::addCaCertificateToTrustStore(certCA, *manager, TslMode::BNA);
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+    manager->addPostUpdateHook([mgrWeakPtr, certCA] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
+        TslTestHelper::addCaCertificateToTrustStore(certCA, *tslManager, TslMode::BNA);
     });
 
     std::string signedText;
@@ -470,7 +511,11 @@ TEST_F(CadesBesSignatureTest, validateOcspResponseInGeneratedCMS)//NOLINT(readab
             {ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     auto ocspResponseData =
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false);
+        tslManager->getCertificateOcspResponse(
+            TslMode::TSL,
+            certX509,
+            {CertificateType::C_FD_SIG},
+            TslTestHelper::getDefaultTestOcspCheckDescriptor());
 
     std::string signedText;
     {
@@ -532,7 +577,96 @@ TEST_F(CadesBesSignatureTest, noProvidedOcspResponseInCms)
         // validate embedded OCSP response
         auto x509Certificate = X509Certificate::createFromBase64(cert.toBase64Der());
         auto ocspResponseData =
-            manager->getCertificateOcspResponse(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, false);
+            manager->getCertificateOcspResponse(
+                TslMode::BNA,
+                x509Certificate,
+                {CertificateType::C_HP_QES},
+                TslTestHelper::getDefaultTestOcspCheckDescriptor());
+        const std::string bioOcspResponseFromCms = OcspHelper::ocspResponseToString(*ocspResponseFromCms);
+        ASSERT_EQ(ocspResponseData.response, bioOcspResponseFromCms);
+    }
+}
+
+
+TEST_F(CadesBesSignatureTest, validateSmcBOsig)
+{
+    std::string_view myText = "The text to be signed";
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
+        FileHelper::readFileAsString(
+            ResourceManager::getAbsoluteFilename(
+                "test/generated_pki/sub_ca1_ec/certificates/smc_b_osig_ec/smc_b_osig_ec_key.pem"))});
+
+    auto cert = Certificate::fromBinaryDer(FileHelper::readFileAsString(
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/certificates/smc_b_osig_ec/smc_b_osig_ec.der")));
+
+    auto certCA = Certificate::fromBinaryDer(FileHelper::readFileAsString(
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der")));
+
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
+        {},
+        {},
+        {
+            {"http://ocsp-testref.tsl.telematik-test/ocsp",
+             {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    std::string signedText;
+    {
+        CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
+    }
+    {
+        CadesBesSignature cadesBesSignature{signedText, *manager, true};
+        EXPECT_EQ(cadesBesSignature.payload(), myText);
+    }
+}
+
+
+TEST_F(CadesBesSignatureTest, noProvidedOcspResponseInCmsWithSmcBOsig)
+{
+    std::string_view myText = "The text to be signed";
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
+        FileHelper::readFileAsString(
+            ResourceManager::getAbsoluteFilename(
+                "test/generated_pki/sub_ca1_ec/certificates/smc_b_osig_ec/smc_b_osig_ec_key.pem"))});
+
+    auto cert = Certificate::fromBinaryDer(FileHelper::readFileAsString(
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/certificates/smc_b_osig_ec/smc_b_osig_ec.der")));
+
+    auto certCA = Certificate::fromBinaryDer(FileHelper::readFileAsString(
+        ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der")));
+
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
+        {},
+        {},
+        {
+            {"http://ocsp-testref.tsl.telematik-test/ocsp",
+             {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    std::string signedText;
+    {
+        CadesBesSignature cadesBesSignature{ cert, privKey, std::string{myText}};
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
+    }
+
+    {
+        // created cadesBesSignature does not contain embedded OCSP-Response
+        OcspResponsePtr ocspResponseFromCms;
+        ASSERT_NO_THROW(ocspResponseFromCms = getEmbeddedOcspResponse(signedText));
+        ASSERT_EQ(ocspResponseFromCms, nullptr);
+
+        // the reloading should embed OCSP-Response to the package
+        CadesBesSignature cadesBesSignature{signedText, *manager, true};
+        ASSERT_NO_THROW(ocspResponseFromCms = getEmbeddedOcspResponse(cadesBesSignature.getBase64()));
+        ASSERT_NE(ocspResponseFromCms, nullptr);
+
+        // validate embedded OCSP response
+        auto x509Certificate = X509Certificate::createFromBase64(cert.toBase64Der());
+        auto ocspResponseData =
+            manager->getCertificateOcspResponse(
+                TslMode::TSL,
+                x509Certificate,
+                {CertificateType::C_HCI_OSIG},
+                TslTestHelper::getDefaultTestOcspCheckDescriptor());
         const std::string bioOcspResponseFromCms = OcspHelper::ocspResponseToString(*ocspResponseFromCms);
         ASSERT_EQ(ocspResponseData.response, bioOcspResponseFromCms);
     }

@@ -7,7 +7,6 @@
 
 #include <list>
 #include <memory>
-#include <ranges>
 #include <string>
 #include <vector>
 
@@ -23,6 +22,7 @@ class FhirStructureDefinition;
 class FhirStructureRepository;
 class ProfiledElementTypeInfo;
 class ValueElement;
+class ValidatorOptions;
 
 using ExpressionPtr = std::shared_ptr<Expression>;
 
@@ -37,7 +37,7 @@ public:
     class Condition
     {
     public:
-        virtual bool test(const Element&) const = 0;
+        virtual bool test(const Element&, const ValidatorOptions&) const = 0;
         virtual ~Condition() = default;
     };
 
@@ -135,6 +135,11 @@ private:
     [[nodiscard]] std::shared_ptr<FhirSlicing::Condition>
     valueishCondition(const FhirStructureRepository& repo, std::list<ProfiledElementTypeInfo> elementInfos,
                       const FhirStructureDefinition* def, ExpressionPtr) const;
+
+    // For a slicing the returned bools indicate if that slicing has a pattern, fixed, or binding condition or a
+    // combination of those.
+    [[nodiscard]] std::tuple<bool, bool, bool>
+    getvalueishConditionProperties(const std::list<ProfiledElementTypeInfo>& elementInfos) const;
 
     DiscriminatorType mType = DiscriminatorType::value;
     std::string mPath;

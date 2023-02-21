@@ -12,13 +12,6 @@
 #include <optional>
 #include <string>
 
-namespace fhirtools{
-class Timestamp;
-}
-
-namespace model
-{
-}
 class CadesBesSignature;
 class Certificate;
 
@@ -30,6 +23,8 @@ public:
     static std::string qesCertificatePem();
     static Certificate cHpQes();
     static shared_EVP_PKEY cHpQesPrv();
+    static Certificate cQesG0();
+    static shared_EVP_PKEY cQesG0Prv();
     static Certificate cHpQesWansim();
     static shared_EVP_PKEY cHpQesPrvWansim();
 };

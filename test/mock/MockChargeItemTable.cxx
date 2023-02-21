@@ -38,7 +38,8 @@ void MockChargeItemTable::updateChargeInformation(const ::db_model::ChargeItem& 
     ErpExpect(item != mChargeItems.end(), ::HttpStatus::NotFound,
               "No such charge item: " + chargeItem.prescriptionId.toString());
 
-    ::std::get<::db_model::ChargeItem>(*item).markingFlag = chargeItem.markingFlag;
+    ::std::get<::db_model::ChargeItem>(*item).accessCode = chargeItem.accessCode;
+    ::std::get<::db_model::ChargeItem>(*item).markingFlags = chargeItem.markingFlags;
     ::std::get<::db_model::ChargeItem>(*item).billingData = chargeItem.billingData;
     ::std::get<::db_model::ChargeItem>(*item).billingDataJson = chargeItem.billingDataJson;
 }
@@ -56,9 +57,10 @@ MockChargeItemTable::retrieveAllChargeItemsForInsurant(const ::db_model::HashedK
         const auto& chargeItem = ::std::get<::db_model::ChargeItem>(entry);
         if ((::std::get<::db_model::HashedKvnr>(entry) == kvnr) &&
             (! testArgs || (testArgs->matches("entered-date", ::std::make_optional(chargeItem.enteredDate)) &&
-                            testArgs->matches("lastUpdated", ::std::make_optional(chargeItem.lastModified)))))
+                            testArgs->matches("_lastUpdated", ::std::make_optional(chargeItem.lastModified)))))
         {
             result.emplace_back(chargeItem);
+            result.back().accessCode = {} ; // Access code is not read for "retrieveAllChargeItemsForInsurant" query;
         }
     }
 
@@ -98,14 +100,15 @@ uint64_t MockChargeItemTable::countChargeInformationForInsurant(const ::db_model
 {
     const auto testArgs = search ? ::std::make_optional<TestUrlArguments>(*search) : ::std::nullopt;
 
-    return ::std::count_if(::std::begin(mChargeItems), ::std::end(mChargeItems), [kvnr, testArgs](const auto& item) {
-        return ((::std::get<::db_model::HashedKvnr>(item) == kvnr) &&
-                (! testArgs ||
-                 (testArgs->matches("entered-date",
-                                    ::std::make_optional(::std::get<::db_model::ChargeItem>(item).enteredDate)) &&
-                  testArgs->matches("last_Updated",
-                                    ::std::make_optional(::std::get<::db_model::ChargeItem>(item).lastModified)))));
-    });
+    return static_cast<uint64_t>(
+        ::std::count_if(::std::begin(mChargeItems), ::std::end(mChargeItems), [kvnr, testArgs](const auto& item) {
+            return ((::std::get<::db_model::HashedKvnr>(item) == kvnr) &&
+                    (! testArgs ||
+                     (testArgs->matches("entered-date",
+                                        ::std::make_optional(::std::get<::db_model::ChargeItem>(item).enteredDate)) &&
+                      testArgs->matches("last_Updated",
+                                        ::std::make_optional(::std::get<::db_model::ChargeItem>(item).lastModified)))));
+        }));
 }
 
 void MockChargeItemTable::clearAllChargeInformation(const db_model::HashedKvnr& insurant)

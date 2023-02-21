@@ -4,6 +4,7 @@
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 
@@ -13,7 +14,8 @@ class Erp10941Test : public ErpWorkflowTest
 
 TEST_F(Erp10941Test, PostChargeItemByPharmacyWithMarkingFlagFails)
 {
-    const std::string kvnr = generateNewRandomKVNR();
+    auto envGuards = testutils::getNewFhirProfileEnvironment();
+    const std::string kvnr = generateNewRandomKVNR().id();
     std::optional<model::PrescriptionId> prescriptionId;
     std::optional<model::KbvBundle> kbvBundle;
     std::optional<model::ErxReceipt> closeReceipt;

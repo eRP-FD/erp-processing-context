@@ -130,7 +130,7 @@ namespace local
 #define VauFail(errorStatus, vauError, message) \
     local::logAndThrow<ErpException>(message, fileAndLine, errorStatus, vauError)
 #define VauFailWithDiagnostics(errorStatus, vauError, message, diagnostics) \
-    local::logAndThrow<ErpException>(message, fileAndLine, errorStatus, diganostics, vauError)
+    local::logAndThrow<ErpException>(message, fileAndLine, errorStatus, diagnostics, vauError)
 
 /**
  * Variant of the Expect macro that should be used for errors originating in model classes.

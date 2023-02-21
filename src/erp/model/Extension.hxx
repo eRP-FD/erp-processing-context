@@ -14,6 +14,7 @@ namespace model
 {
 class Timestamp;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Extension : public model::Resource<Extension>
 {
 public:

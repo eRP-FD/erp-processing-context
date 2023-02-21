@@ -53,6 +53,8 @@ public:
 private:
     bool isA(const Code& code, const std::string& value) const;
     const Code& getCode(const std::string& code) const;
+    std::vector<std::string> resolveIsAConcept(const std::string& value) const;
+    std::vector<std::string> resolveIsAParent(const std::string& value) const;
 
     std::string mUrl;
     std::string mName;

@@ -38,6 +38,14 @@ public:
                   model::ResourceVersion::DeGematikErezeptWorkflowR4 version, const XmlValidator& xmlValidator) const;
     void validate(const model::ResourceBase& resource, SchemaType schemaType,
                   model::ResourceVersion::NotProfiled version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::Fhir version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::DeGematikErezeptPatientenrechnungR4 version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::WorkflowOrPatientenRechnungProfile version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::AbgabedatenPkv version, const XmlValidator& xmlValidator) const;
 
 private:
     std::set<SchemaType> mMandatoryValidation;

@@ -24,6 +24,7 @@
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MetaData.hxx"
 #include "erp/model/OperationOutcome.hxx"
+#include "erp/model/Parameters.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/Timestamp.hxx"
@@ -72,8 +73,9 @@ public:
 
     void checkTask(const rapidjson::Value& task);
 
-    void checkOperationOutcome(const std::string& responseBody,
-                               bool isJson,
+    model::OperationOutcome operationOutcomeFromResponse(const std::string& responseBody, bool isJson) const;
+
+    void checkOperationOutcome(const model::OperationOutcome& operationOutcome,
                                const model::OperationOutcome::Issue::Type expectedErrorCode,
                                const std::optional<std::string>& expectedIssueText = {},
                                const std::optional<std::string>& expectedIssueDiagnostics = {}) const;
@@ -174,13 +176,28 @@ public:
                                           HttpStatus expectedInnerStatus = HttpStatus::Created,
                                           const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
-    std::optional<model::Task> taskActivate(const model::PrescriptionId& prescriptionId,
+    std::optional<model::Task> taskActivateWithOutcomeValidation(const model::PrescriptionId& prescriptionId,
         const std::string_view& accessCode,
         const std::string& qesBundle,
         HttpStatus expectedInnerStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
         const std::optional<std::string>& expectedIssueText = {},
         const std::optional<std::string>& expectedIssueDiagnostics = {});
+
+    /**
+     * Perform a task activation and return either the task or, on failure, the OperationOutcome result
+     *
+     * @param prescriptionId prescriptionId for the actication
+     * @param accessCode access Code for task activation
+     * @param qesBundle signed qesBundle
+     * @param expectedInnerStatus Expected HTTP response code for the innner VAU request
+     * @return std::variant<model::Task, model::OperationOutcome> On successful activation, return the task, otherwise
+     * the OperationOutcome
+     */
+    std::variant<model::Task, model::OperationOutcome> taskActivate(const model::PrescriptionId& prescriptionId,
+        const std::string_view& accessCode,
+        const std::string& qesBundle,
+        HttpStatus expectedInnerStatus = HttpStatus::OK);
 
     std::optional<model::Bundle> taskAccept(const model::PrescriptionId& prescriptionId,
         const std::string& accessCode, HttpStatus expectedInnerStatus = HttpStatus::OK,
@@ -295,16 +312,17 @@ public:
         const std::string& secret,
         const HttpStatus expectedStatus = HttpStatus::Created,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
-        const std::optional<std::string>& templateFile = std::nullopt);
+        const std::optional<std::string>& templateFile = std::nullopt,
+        const std::optional<std::function<std::string(const std::string&)>>& signFunction = std::nullopt);
 
-    std::optional<model::ChargeItem> chargeItemPut(
+    std::variant<model::ChargeItem, model::OperationOutcome> chargeItemPut(
         const JWT& jwt,
         const ContentMimeType& contentType,
         const model::ChargeItem& inputChargeItem,
-        const std::optional<std::string>& newMedicationDispenseString,
-        const std::optional<std::tuple<bool, bool, bool>>& newMarking,
+        const std::string& newMedicationDispenseString,
         const HttpStatus expectedStatus = HttpStatus::OK,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
+        const std::optional<std::function<std::string(const std::string&)>>& signFunction = std::nullopt);
 
     std::optional<model::Bundle> chargeItemsGet(
         const JWT& jwt,
@@ -329,7 +347,14 @@ public:
         const HttpStatus expectedStatus = HttpStatus::NoContent,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
-    void createClosedTask(
+    std::optional<model::ChargeItem> chargeItemPatch(
+        const model::PrescriptionId& id,
+        const JWT& jwt,
+        const model::Parameters::MarkingFlag& markingFlag,
+        const HttpStatus expectedStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+
+    std::optional<model::Task> createClosedTask(
         std::optional<model::PrescriptionId>& createdId,
         std::optional<model::KbvBundle>& usedKbvBundle,
         std::optional<model::ErxReceipt>& closeReceipt,
@@ -419,7 +444,7 @@ public:
         const std::size_t pageSize,
         const std::string& addSearch = "");
 
-    std::string generateNewRandomKVNR();
+    model::Kvnr generateNewRandomKVNR();
     void generateNewRandomKVNR(std::string& kvnr);
 
     static std::shared_ptr<XmlValidator> getXmlValidator();
@@ -433,15 +458,19 @@ public:
 protected:
     virtual std::string medicationDispense(const std::string& kvnr,
                                            const std::string& prescriptionIdForMedicationDispense,
-                                           const std::string& whenHandedOver);
+                                           const std::string& whenHandedOver,
+                                           model::ResourceVersion::FhirProfileBundleVersion bundleVersion = model::ResourceVersion::currentBundle());
     virtual std::string medicationDispenseBundle(const std::string& kvnr,
                                                  const std::string& prescriptionIdForMedicationDispense,
-                                                 const std::string& whenHandedOver, size_t numMedicationDispenses);
+                                                 const std::string& whenHandedOver, size_t numMedicationDispenses,
+                                                 model::ResourceVersion::FhirProfileBundleVersion bundleVersion = model::ResourceVersion::currentBundle());
 
     static std::string patchVersionsInBundle(const std::string& bundle);
 
     // some tests must know if they run with proxy in between, because the proxy modifies the Http Response.
     bool runsInCloudEnv() const;
+
+    model::ResourceVersion::DeGematikErezeptWorkflowR4 serverGematikProfileVersion();
 
     static bool isUnsupportedFlowtype(const model::PrescriptionType workflowType);
 
@@ -460,19 +489,10 @@ private:
                             const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
                             model::PrescriptionType workflowType);
 
-    static void makeQESBundleInternal (std::string& qesBundle,
-        const std::string& kvnr,
-        const model::PrescriptionId& prescriptionId,
-        const model::Timestamp& now);
-
-    void taskActivateInternal(std::optional<model::Task>& task,
-        const model::PrescriptionId& prescriptionId,
+    void taskActivateInternal(std::variant<model::Task, model::OperationOutcome>& result, const model::PrescriptionId& prescriptionId,
         const std::string_view& accessCode,
         const std::string& qesBundle,
-        HttpStatus expectedInnerStatus,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
-        const std::optional<std::string>& expectedIssueText,
-        const std::optional<std::string>& expectedIssueDiagnostics);
+        HttpStatus expectedInnerStatus);
 
     void taskAcceptInternal(std::optional<model::Bundle>& bundle,
         const model::PrescriptionId& prescriptionId,
@@ -567,17 +587,18 @@ private:
         const std::string& secret,
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
-        const std::optional<std::string>& templateFile);
+        const std::optional<std::string>& templateFile,
+        const std::optional<std::function<std::string(const std::string&)>>& signFunction);
 
     void chargeItemPutInternal(
-        std::optional<model::ChargeItem>& resultChargeItem,
+        std::variant<model::ChargeItem, model::OperationOutcome>& result,
         const JWT& jwt,
         const ContentMimeType& contentType,
         const model::ChargeItem& inputChargeItem,
-        const std::optional<std::string>& newMedicationDispenseString,
-        const std::optional<std::tuple<bool, bool, bool>>& newMarking,
+        const std::string& newMedicationDispenseString,
         const HttpStatus expectedStatus,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
+        const std::optional<std::function<std::string(const std::string&)>>& signFunction);
 
     void chargeItemsGetInternal(
         std::optional<model::Bundle>& chargeItemsBundle,
@@ -597,6 +618,24 @@ private:
         const std::optional<model::ErxReceipt>& expectedReceipt,
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
+    void chargeItemPatchInternal(
+        std::optional<model::ChargeItem>& result,
+        const model::PrescriptionId& id,
+        const JWT& jwt,
+        const model::Parameters::MarkingFlag& markingFlag,
+        const HttpStatus expectedStatus,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+
+    void createClosedTaskInternal(
+        std::optional<model::Task>& task,
+        std::optional<model::PrescriptionId>& createdId,
+        std::optional<model::KbvBundle>& usedKbvBundle,
+        std::optional<model::ErxReceipt>& closeReceipt,
+        std::string& createdAccessCode,
+        std::string& createdSecret,
+        const model::PrescriptionType prescriptionType,
+        const std::string& kvnr);
 
     void getMedicationDispenseForTask(
         std::optional<model::MedicationDispense>& medicationDispenseForTask,
@@ -637,7 +676,7 @@ template <typename TestClass>
 class ErpWorkflowTestTemplate : public TestClass, public ErpWorkflowTestBase {
 
 protected:
-    void SetUp() override
+    ErpWorkflowTestTemplate()
     {
         //  Preload to avoid delays caused by loading during communication potentially causing server socket timeouts
         StaticData::getJsonValidator();

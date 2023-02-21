@@ -2,21 +2,22 @@
 // (C) Copyright IBM Corp. 2022
 
 #include "fhirtools/validator/ValidationResult.hxx"
-
-#include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "erp/util/TLog.hxx"
+#include "fhirtools/FPExpect.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
 
 #include <magic_enum.hpp>
 #include <sstream>
 
 using fhirtools::ValidationError;
-using fhirtools::ValidationResultList;
+using fhirtools::ValidationResults;
 
 std::ostream& fhirtools::operator<<(std::ostream& out, const ValidationError& err)
 {
     struct Printer {
         std::string operator()(const FhirConstraint& constraint)
         {
+
             return std::string{magic_enum::enum_name(constraint.getSeverity())} + ": " + constraint.getKey() + ": " +
                    constraint.getHuman();
         };
@@ -26,7 +27,7 @@ std::ostream& fhirtools::operator<<(std::ostream& out, const ValidationError& er
                    std::get<std::string>(message);
         };
     };
-    if (!err.fieldName.empty())
+    if (! err.fieldName.empty())
     {
         out << err.fieldName << ": ";
     }
@@ -41,46 +42,54 @@ std::string fhirtools::to_string(const ValidationError& err)
     return strm.str();
 }
 
-std::list<ValidationError> fhirtools::ValidationResultList::results() &&
+ValidationError::ValidationError(FhirConstraint inConstraint, std::string inFieldName,
+                                 const FhirStructureDefinition* inProfile)
+    : fieldName{std::move(inFieldName)}
+    , reason{std::move(inConstraint)}
+    , profile{inProfile}
+{
+}
+
+ValidationError::ValidationError(MessageReason inReason, std::string inFieldName, const FhirStructureDefinition* inProfile)
+    : fieldName{std::move(inFieldName)}
+    , reason{std::move(inReason)}
+    , profile{inProfile}
+{
+}
+
+std::set<ValidationError> fhirtools::ValidationResults::results() &&
 {
     return std::move(mResults);
 }
 
-const std::list<ValidationError>& fhirtools::ValidationResultList::results() const&
+const std::set<ValidationError>& fhirtools::ValidationResults::results() const&
 {
     return mResults;
 }
 
-void fhirtools::ValidationResultList::add(fhirtools::Severity severity, std::string message,
-                                          std::string elementFullPath,
-                                          const fhirtools::FhirStructureDefinition* profile)
+void fhirtools::ValidationResults::add(fhirtools::Severity severity, std::string message, std::string elementFullPath,
+                                       const fhirtools::FhirStructureDefinition* profile)
 {
-    mResults.emplace_back(
-        ValidationError{std::make_tuple(severity, std::move(message)), std::move(elementFullPath), profile});
+    mResults.emplace(std::make_tuple(severity, std::move(message)), std::move(elementFullPath), profile);
 }
 
-void fhirtools::ValidationResultList::add(fhirtools::FhirConstraint constraint, std::string elementFullPath,
-                                          const fhirtools::FhirStructureDefinition* profile)
+void fhirtools::ValidationResults::add(FhirConstraint constraint, std::string elementFullPath,
+                                       const fhirtools::FhirStructureDefinition* profile)
 {
-    mResults.emplace_back(ValidationError{std::move(constraint), std::move(elementFullPath), profile});
+    mResults.emplace(std::move(constraint), std::move(elementFullPath), profile);
 }
 
-void fhirtools::ValidationResultList::append(fhirtools::ValidationResultList inList)
+void fhirtools::ValidationResults::merge(fhirtools::ValidationResults inResults)
 {
-    append(std::move(inList).results());
+    merge(std::move(inResults).results());
 }
 
-void fhirtools::ValidationResultList::prepend(fhirtools::ValidationResultList inList)
+void fhirtools::ValidationResults::merge(std::set<ValidationError> inResults)
 {
-    mResults.splice(mResults.begin(), std::move(inList).results());
+    mResults.merge(std::move(inResults));
 }
 
-void fhirtools::ValidationResultList::append(std::list<ValidationError> inList)
-{
-    mResults.splice(mResults.end(), std::move(inList));
-}
-
-void fhirtools::ValidationResultList::dumpToLog() const
+void fhirtools::ValidationResults::dumpToLog() const
 {
     for (const auto& item : mResults)
     {
@@ -114,19 +123,20 @@ void fhirtools::ValidationResultList::dumpToLog() const
 
 fhirtools::Severity ValidationError::severity() const
 {
-    if (std::holds_alternative<FhirConstraint>(reason))
-    {
-        const auto& r = std::get<FhirConstraint>(reason);
-        return r.getSeverity();
-    }
-    else
-    {
-        const auto& r = std::get<std::tuple<Severity, std::string>>(reason);
-        return std::get<0>(r);
-    }
+    struct Visitor {
+        Severity operator()(const FhirConstraint& reason)
+        {
+            return reason.getSeverity();
+        }
+        Severity operator()(const MessageReason& reason)
+        {
+            return std::get<0>(reason);
+        }
+    };
+    return std::visit(Visitor{}, reason);
 }
 
-fhirtools::Severity fhirtools::ValidationResultList::highestSeverity() const
+fhirtools::Severity fhirtools::ValidationResults::highestSeverity() const
 {
     using std::max;
     fhirtools::Severity maxSeverity = Severity::MIN;
@@ -141,7 +151,7 @@ fhirtools::Severity fhirtools::ValidationResultList::highestSeverity() const
     return maxSeverity;
 }
 
-std::string fhirtools::ValidationResultList::summary(Severity minSeverity) const
+std::string fhirtools::ValidationResults::summary(Severity minSeverity) const
 {
     std::ostringstream oss;
     for (const auto& item : mResults)

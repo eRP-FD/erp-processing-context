@@ -249,7 +249,10 @@ void MockTaskTable::deleteChargeItemSupportingInformation(const ::model::Prescri
 {
     switch (mPrescriptionType)
     {
-        case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv: {
+        case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            [[fallthrough]];
+        case ::model::PrescriptionType::direkteZuweisungPkv:
+        {
             auto task = mTasks.find(taskId.toDatabaseId());
             Expect(task != mTasks.end(), "no such task:" + taskId.toString());
 
@@ -262,7 +265,6 @@ void MockTaskTable::deleteChargeItemSupportingInformation(const ::model::Prescri
         case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
             [[fallthrough]];
         case ::model::PrescriptionType::direkteZuweisung:
-        case ::model::PrescriptionType::direkteZuweisungPkv:
             break;
     }
 }
@@ -271,7 +273,10 @@ void MockTaskTable::clearAllChargeItemSupportingInformation(const ::db_model::Ha
 {
     switch (mPrescriptionType)
     {
-        case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv: {
+        case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            [[fallthrough]];
+        case ::model::PrescriptionType::direkteZuweisungPkv:
+        {
             for (auto& task : mTasks)
             {
                 if (task.second.kvnrHashed == kvnrHashed)
@@ -287,7 +292,6 @@ void MockTaskTable::clearAllChargeItemSupportingInformation(const ::db_model::Ha
         case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
             [[fallthrough]];
         case ::model::PrescriptionType::direkteZuweisung:
-        case ::model::PrescriptionType::direkteZuweisungPkv:
             break;
     }
 }
@@ -340,7 +344,10 @@ std::optional<db_model::Task> MockTaskTable::select(int64_t databaseId,
     dbTask->kvnr = fields.count(kvnr)?t.kvnr:std::nullopt;
     dbTask->expiryDate = fields.count(expiry_date)?t.expiryDate:std::nullopt;
     dbTask->acceptDate = fields.count(accept_date)?t.acceptDate:std::nullopt;
-    dbTask->blobId = fields.count(task_key_blob_id)?t.taskKeyBlobId.value():-1;
+    if (fields.count(task_key_blob_id))
+    {
+        dbTask->blobId = t.taskKeyBlobId.value();
+    }
     dbTask->accessCode = fields.count(access_code)?t.accessCode:std::nullopt;
     dbTask->secret = fields.count(secret)?t.secret:std::nullopt;
     dbTask->healthcareProviderPrescription =

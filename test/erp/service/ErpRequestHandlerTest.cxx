@@ -88,7 +88,7 @@ public:
                 testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, schemaType, expectFail);
                 break;
             case SchemaType::MedicationDispenseBundle:
-                testParseAndValidateRequestBodyT<model::MedicationDispenseBundle>(body, contentMimeType, schemaType, expectFail);
+                testParseAndValidateRequestBodyT<model::MedicationDispenseBundle>(body, contentMimeType, SchemaType::fhir, expectFail);
                 break;
             case SchemaType::ActivateTaskParameters:
             case SchemaType::CreateTaskParameters:
@@ -138,6 +138,7 @@ struct SampleFile {
     std::string_view xmlSample;
     std::string_view jsonSample;
     SchemaType schemaType;
+    model::ResourceVersion::FhirProfileBundleVersion fhirBundleVersion;
     std::optional<std::string_view> skipReason = {};
 };
 
@@ -180,6 +181,10 @@ TEST_P(ErpRequestHandlerTest, validateRequestBodyReferenceSamplesJSON)
     {
         GTEST_SKIP_(GetParam().skipReason->data());
     }
+    if (! model::ResourceVersion::supportedBundles().contains(GetParam().fhirBundleVersion))
+    {
+        GTEST_SKIP_("Skipping unsupported data");
+    }
     mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
         FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" /
             GetParam().jsonSample), ContentMimeType::fhirJsonUtf8, GetParam().schemaType, false);
@@ -195,6 +200,10 @@ TEST_P(ErpRequestHandlerTest, validateRequestBodyReferenceSamplesXML)
     if (GetParam().skipReason)
     {
         GTEST_SKIP_(GetParam().skipReason->data());
+    }
+    if (! model::ResourceVersion::supportedBundles().contains(GetParam().fhirBundleVersion))
+    {
+        GTEST_SKIP_("Skipping unsupported data");
     }
     mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
         FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" /
@@ -214,13 +223,13 @@ INSTANTIATE_TEST_SUITE_P(
     gematikExamples, ErpRequestHandlerTest,
     ::testing::Values(
         SampleFile{"communication_dispense_req.xml", "communication_dispense_req.json",
-                   SchemaType::Gem_erxCommunicationDispReq},
+                   SchemaType::Gem_erxCommunicationDispReq, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
         SampleFile{"communication_info_req.xml", "communication_info_req.json",
-                   SchemaType::Gem_erxCommunicationInfoReq},
-        SampleFile{"communication_reply.xml", "communication_reply.json", SchemaType::Gem_erxCommunicationReply},
-        SampleFile{"medication_dispense.xml", "medication_dispense.json", SchemaType::Gem_erxMedicationDispense},
-        SampleFile{"task_activate_parameters.xml", "task_activate_parameters.json", SchemaType::fhir},
-        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::fhir},
-        SampleFile{"chargeItem_simplifier.xml", "chargeItem_simplifier.json", SchemaType::Gem_erxChargeItem},
-        SampleFile{"consent_simplifier.xml", "consent_simplifier.json", SchemaType::Gem_erxConsent}
+                   SchemaType::Gem_erxCommunicationInfoReq, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
+        SampleFile{"communication_reply.xml", "communication_reply.json", SchemaType::Gem_erxCommunicationReply, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
+        SampleFile{"medication_dispense.xml", "medication_dispense.json", SchemaType::Gem_erxMedicationDispense, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
+        SampleFile{"task_activate_parameters.xml", "task_activate_parameters.json", SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
+        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
+        SampleFile{"chargeItem_simplifier.xml", "chargeItem_simplifier.json", SchemaType::Gem_erxChargeItem, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01},
+        SampleFile{"consent_simplifier.xml", "consent_simplifier.json", SchemaType::Gem_erxConsent, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}
 ));

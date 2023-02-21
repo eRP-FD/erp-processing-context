@@ -4,6 +4,9 @@
  */
 
 #include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirpathLexer.h"
+#include "fhirpathParser.h"
+#include "fhirpathVisitor.h"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/BooleanLogic.hxx"
 #include "fhirtools/expression/Comparison.hxx"
@@ -16,12 +19,10 @@
 #include "fhirtools/expression/StringManipulation.hxx"
 #include "fhirtools/model/Element.hxx"
 #include "fhirtools/parser/ErrorListener.hxx"
-#include "antlr4-runtime.h"
-#include "fhirpathLexer.h"
-#include "fhirpathParser.h"
-#include "fhirpathVisitor.h"
+#include "fhirtools/util/Utf8Helper.hxx"
 
-#include <boost/algorithm/string/trim.hpp>
+#include <antlr4-runtime/antlr4-runtime.h>
+#include <charconv>
 #include <source_location>
 
 
@@ -351,9 +352,7 @@ std::any FhirPathParser::Impl::visitBooleanLiteral(fhirtools::fhirpathParser::Bo
 std::any FhirPathParser::Impl::visitStringLiteral(fhirtools::fhirpathParser::StringLiteralContext* context)
 {
     TRACE;
-    auto str = context->STRING()->getText();
-    FPExpect(str.length() >= 2 && str.front() == '\'' && str.back() == '\'', "invalid string literal " + str);
-    str = str.substr(1, str.size() - 2);
+    const auto& str = unescapeStringLiteral(context->STRING()->getText(), '\'');
     return std::make_any<ExpressionPtr>(std::make_shared<LiteralStringExpression>(mRepository, str));
 }
 std::any FhirPathParser::Impl::visitNumberLiteral(fhirtools::fhirpathParser::NumberLiteralContext* context)
@@ -364,8 +363,7 @@ std::any FhirPathParser::Impl::visitNumberLiteral(fhirtools::fhirpathParser::Num
     {
         return std::make_any<ExpressionPtr>(std::make_shared<LiteralIntegerExpression>(mRepository, std::stoi(str)));
     }
-    return std::make_any<ExpressionPtr>(
-        std::make_shared<LiteralDecimalExpression>(mRepository, DecimalType(str)));
+    return std::make_any<ExpressionPtr>(std::make_shared<LiteralDecimalExpression>(mRepository, DecimalType(str)));
 }
 std::any FhirPathParser::Impl::visitDateLiteral(fhirtools::fhirpathParser::DateLiteralContext* context)
 {
@@ -683,9 +681,7 @@ std::any FhirPathParser::Impl::visitIdentifier(fhirtools::fhirpathParser::Identi
     TRACE;
     if (context->DELIMITEDIDENTIFIER())
     {
-        auto text = context->DELIMITEDIDENTIFIER()->getText();
-        FPExpect(text.size() > 1 && text.front() == '`' && text.back() == '`', "Not a delimited identifier:" + text);
-        return text.substr(1, text.size()-2);
+        return unescapeStringLiteral(context->DELIMITEDIDENTIFIER()->getText(), '`');
     }
     return context->getText();
 }
@@ -709,6 +705,57 @@ fhirtools::ExpressionPtr FhirPathParser::parse(const FhirStructureRepository* re
               "error while parsing expression", std::logic_error);
     Impl impl(repository);
     return std::any_cast<ExpressionPtr>(impl.visit(expr));
+}
+
+std::string FhirPathParser::unescapeStringLiteral(const std::string_view& str, char stringDelimiter)
+{
+    FPExpect(str.length() >= 2 && str.front() == stringDelimiter && str.back() == stringDelimiter,
+             "invalid string literal " + std::string(str));
+
+    std::string strEscaped;
+    strEscaped.reserve(str.size());
+
+    static const std::unordered_map<char, char> escapeCharacters = {
+        {'\'', '\''}, {'"', '"'}, {'`', '`'}, {'r', '\r'}, {'n', '\n'}, {'t', '\t'}, {'f', '\f'}, {'\\', '\\'}};
+
+    // String literals may use \-escapes to escape quotes and represent Unicode characters:
+    // See https://hl7.org/fhirpath/#string for specification
+    // ignore leading and trailing '`
+    for (size_t index = 1, length = str.size() - 1; index < length; ++index)
+    {
+        if (str[index] == '\\')
+        {
+            ++index;
+            if (index >= length)
+            {
+                break;
+            }
+            if (const auto esc = escapeCharacters.find(str[index]); esc != escapeCharacters.end())
+            {
+                strEscaped.append(1, esc->second);
+                continue;
+            }
+            // Handling of unicode-character escape sequence in the form \uXXXX:
+            if (str[index] == 'u' && length > index + 4)
+            {
+                uint16_t c16 = 0;
+                const auto* ptr = str.data() + index + 1;
+                const auto* endPtr = str.data() + index + 5;
+                const auto fromCharsResult = std::from_chars(ptr, endPtr, c16, 16);
+
+                // If the escape sequence is invalid, e.g. not exactly 4 numbers, it is ignored and replicated
+                // to the output omitting only the backslash, see https://hl7.org/fhirpath/#string
+                if (fromCharsResult.ptr == endPtr && fromCharsResult.ec == std::errc())
+                {
+                    strEscaped.append(Utf8Helper::unicodeLiteralToString(c16));
+                    index += 4;
+                    continue;
+                }
+            }
+        }
+        strEscaped.append(1, str[index]);
+    }
+    return strEscaped;
 }
 
 }

@@ -13,6 +13,7 @@ set(ERP_HL7_ORG_DEFINITIONS_FILES
 )
 
 set(FHIR_PATCH "${CMAKE_CURRENT_SOURCE_DIR}/fhir/ERP-5615-FHIR-28686-unsignedInt-positiveInt-as-integer.patch")
+set(FHIR_PATCH2 "${CMAKE_CURRENT_SOURCE_DIR}/fhir/v3-codesystems-version-2018-08-12-to-4.0.1.patch")
 
 set(ZDICT_FILES
     zstd/default_json.zdict
@@ -32,6 +33,8 @@ add_custom_command(OUTPUT ${ERP_HL7_ORG_DEFINITIONS_FILES}
                                "${CMAKE_COMMAND}" -E tar xJf "${CMAKE_CURRENT_SOURCE_DIR}/fhir/hl7-definitions.tar.xz"
                    COMMAND "${CMAKE_COMMAND}" -E chdir "${ERP_FHIR_RESOURCE_DIR}"
                                "${Patch_EXECUTABLE}" "-p1" "-i" "${FHIR_PATCH}"
+                   COMMAND "${CMAKE_COMMAND}" -E chdir "${ERP_FHIR_RESOURCE_DIR}"
+                               "${Patch_EXECUTABLE}" "-p1" "-i" "${FHIR_PATCH2}"
                    COMMENT "Extracting/Patching hl7-definitions.tar.xz")
 
 set(SCHEMA_FILES
@@ -485,6 +488,18 @@ set(FHIR_PROFILES
           "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml"
 )
 
+set(FHIR_PROFILES_DIRS
+        "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.0"
+        "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.1.0"
+        "fhir/profiles/de.basisprofil.r4-1.3.2"
+        "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0"
+        "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0"
+        "fhir/profiles/KBV.Basis-1.3.0"
+        "fhir/profiles/kbv.ita.erp-1.1.0/package/"
+        "fhir/profiles/kbv.ita.for-1.1.0/package/"
+        "fhir/profiles/fhir.kbv.de"
+        )
+
 foreach(profile ${FHIR_PROFILES})
     add_custom_command (
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${ERP_RUNTIME_RESOURCE_DIR}"
@@ -492,6 +507,15 @@ foreach(profile ${FHIR_PROFILES})
             DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${profile}"
             COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${profile}" "${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
             COMMENT "copy ${CMAKE_CURRENT_SOURCE_DIR}/${profile} ${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
+    )
+endforeach()
+foreach(profile ${FHIR_PROFILES_DIRS})
+    add_custom_command (
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${ERP_RUNTIME_RESOURCE_DIR}"
+            OUTPUT "${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
+            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${profile}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/${profile}" "${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
+            COMMENT "copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/${profile} ${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
     )
 endforeach()
 
@@ -560,6 +584,7 @@ add_custom_target(resources ALL
         ${ZDICT_FILES}
         ${ERP_EASTER_LIST}
         ${FHIR_PROFILES}
+        ${FHIR_PROFILES_DIRS}
 )
 
 install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/resources/

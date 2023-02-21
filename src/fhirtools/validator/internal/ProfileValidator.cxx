@@ -66,16 +66,18 @@ ProfileValidator& ProfileValidator::operator=(ProfileValidator&&) noexcept = def
 
 
 ProfileValidator::ProfileValidator(MapKey mapKey, std::set<std::shared_ptr<ValidationData>> parentData,
-                                   fhirtools::ProfiledElementTypeInfo defPtr, std::string sliceName)
+                                   fhirtools::ProfiledElementTypeInfo defPtr, std::string sliceName,
+                                   const ProfileSetValidator& setValidator)
     : mData{std::make_shared<ValidationData>(std::make_unique<MapKey>(std::move(mapKey)))}
     , mParentData{std::move(parentData)}
     , mDefPtr{std::move(defPtr)}
     , mSliceName{std::move(sliceName)}
+    , mSetValidator{setValidator}
 {
 }
 
-ProfileValidator::ProfileValidator(ProfiledElementTypeInfo defPtr)
-    : ProfileValidator{{defPtr}, {}, std::move(defPtr), {}}
+ProfileValidator::ProfileValidator(ProfiledElementTypeInfo defPtr, const ProfileSetValidator& setValidator)
+    : ProfileValidator{{defPtr}, {}, std::move(defPtr), {}, setValidator}
 {
 }
 
@@ -108,7 +110,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
                            .getAndReset();
         ProfiledElementTypeInfo zeroCardinalityPtr{basePtr.profile(), element};
         MapKey key{mDefPtr};
-        ProfileValidator validator{key, {mData}, zeroCardinalityPtr, mSliceName};
+        ProfileValidator validator{key, {mData}, zeroCardinalityPtr, mSliceName, mSetValidator};
         result.emplace(std::move(key), std::move(validator));
         return result;
     }
@@ -119,7 +121,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
         ProfiledElementTypeInfo defPtr{prof};
         MapKey key{defPtr};
-        ProfileValidator validator{key, {}, defPtr, {}};
+        ProfileValidator validator{key, {}, defPtr, {}, mSetValidator};
         profilesKeys.emplace(key, validator.mData);
         TVLOG(4) << "adding sub-validator profile: " << url;
         result.emplace(std::move(key), std::move(validator));
@@ -127,7 +129,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
     for (const auto& defPtr : mDefPtr.subDefinitions(repo, name))
     {
         MapKey key{defPtr};
-        ProfileValidator validator{key, {mData}, defPtr, {}};
+        ProfileValidator validator{key, {mData}, defPtr, {}, mSetValidator};
         if (! profilesKeys.empty())
         {
             validator.mSolver.requireOne(profilesKeys);
@@ -163,14 +165,14 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
         {
             auto condition = slice.condition(*element.getFhirStructureRepository(), slicing->discriminators());
             Expect(condition != nullptr, "couldn't get condition for slice: " + slice.name());
-            if (condition->test(element))
+            if (condition->test(element, mSetValidator.get().options()))
             {
                 const auto& profile = slice.profile();
                 static_assert(std::is_reference_v<decltype(slice.profile())>);
                 result.sliceProfiles.emplace_back(&profile);
                 ProfiledElementTypeInfo ptr{&profile, profile.rootElement()};
                 MapKey profKey{ptr};
-                ProfileValidator profVal{profKey, mParentData, ptr, slice.name()};
+                ProfileValidator profVal{profKey, mParentData, ptr, slice.name(), mSetValidator};
                 auto subSlices = profVal.process(element, elementFullPath);
                 Expect3(subSlices.sliceProfiles.empty(), "Slice rootElement cannot be sliced.", std::logic_error);
                 mData->add(Severity::debug, "detected slice: " + slice.name(), std::string{elementFullPath},
@@ -185,7 +187,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
                         Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
                         ProfiledElementTypeInfo defPtr{prof};
                         MapKey key{defPtr};
-                        ProfileValidator validator{key, {}, defPtr, {}};
+                        ProfileValidator validator{key, {}, defPtr, {}, mSetValidator};
                         profilesKeys.emplace(key, validator.mData);
                         TVLOG(4) << "adding sub-validator profile: " << url;
                         result.extraValidators.emplace(std::move(key), std::move(validator));
@@ -485,7 +487,7 @@ void ProfileValidator::checkValueNotEmpty(const Element& element, std::string_vi
     }
 }
 
-void fhirtools::ProfileValidator::appendResults(fhirtools::ValidationResultList results)
+void fhirtools::ProfileValidator::appendResults(fhirtools::ValidationResults results)
 {
     mData->append(std::move(results));
 }
@@ -499,9 +501,9 @@ void fhirtools::ProfileValidator::finalize()
     }
 }
 
-ValidationResultList ProfileValidator::results() const
+ValidationResults ProfileValidator::results() const
 {
-    ValidationResultList result{mData->results()};
+    ValidationResults result{mData->results()};
     return result;
 }
 

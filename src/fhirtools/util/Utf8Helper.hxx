@@ -29,6 +29,9 @@ public:
      */
     // Currently unused, remove if not needed in future:
     static std::string truncateUtf8(const std::string& s, std::size_t maxLength);
+
+    /// @param unicodeLiteral utf16 character, will be converted into utf8 and returned as std::string.
+    static std::string unicodeLiteralToString(char16_t unicodeLiteral);
 };
 
 }

@@ -26,7 +26,7 @@ public:
     public:
         explicit LocalHsmMockFactory(std::unique_ptr<HsmClient>&& hsmClient, std::shared_ptr<BlobCache> blobCache,
                                      volatile const bool& forceFailFlag)
-            : ::HsmMockFactory{std::move(hsmClient), blobCache}
+            : ::HsmMockFactory{std::move(hsmClient), std::move(blobCache)}
             , mForceFailFlag{forceFailFlag}
         {
         }
@@ -59,7 +59,7 @@ public:
 
     std::shared_ptr<BlobCache> mBlobCache;
     std::unique_ptr<HsmPool> mHsmPool;
-    const Configuration* mConfiguration;
+    const Configuration* mConfiguration{};
     EnvironmentVariableGuard check{"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS", "2"};
     EnvironmentVariableGuard failedCheck{"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS", "2"};
     EnvironmentVariableGuard refresh{"ERP_REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS", "6"};

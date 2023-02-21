@@ -124,7 +124,7 @@ public:
         return search;
     }
 
-    void setupTasks(size_t nTasks, std::string_view kvnr, std::vector<model::Task>& outTasks,
+    void setupTasks(size_t nTasks, const model::Kvnr& kvnr, std::vector<model::Task>& outTasks,
                     model::PrescriptionType prescriptionType = GetParam())
     {
         for (size_t i = 0; i < nTasks; ++i)
@@ -133,9 +133,9 @@ public:
             const auto id1 = database().storeTask(task1);
             // The database generates the ID
             task1.setPrescriptionId(id1);
-
+            const auto type = id1.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
             // assign KVNRs
-            task1.setKvnr(kvnr);
+            task1.setKvnr(model::Kvnr{kvnr.id(), type});
             task1.setExpiryDate(model::Timestamp::now());
             task1.setAcceptDate(model::Timestamp::now());
             task1.setStatus(model::Task::Status::ready);
@@ -208,12 +208,14 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-functio
     }
 
     model::Task task1(prescriptionType(), "access_code");
-    task1.setKvnr(InsurantA);
+    const auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
+    const auto kvnr = model::Kvnr{InsurantA, kvnrType};
+    task1.setKvnr(kvnr);
 
     // does not store the KVNR:
     task1.setPrescriptionId(database().storeTask(task1));
     database().commitTransaction();
-    ASSERT_TRUE(database().retrieveAllTasksForPatient(InsurantA, {}).empty());
+    ASSERT_TRUE(database().retrieveAllTasksForPatient(kvnr, {}).empty());
 
     task1.setStatus(model::Task::Status::ready);
     task1.setExpiryDate(model::Timestamp::now());
@@ -226,7 +228,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-functio
     database().commitTransaction();
 
     // KVNR is now set
-    ASSERT_FALSE(database().retrieveAllTasksForPatient(InsurantA, {}).empty());
+    ASSERT_FALSE(database().retrieveAllTasksForPatient(kvnr, {}).empty());
     database().commitTransaction();
 
     pqxx::result result;
@@ -260,7 +262,8 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
     }
 
     model::Task task1(prescriptionType(), "access_code");
-    task1.setKvnr(InsurantA);
+    auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
+    task1.setKvnr(model::Kvnr{std::string{InsurantA}, kvnrType});
 
     // does not store the KVNR:
     task1.setPrescriptionId(database().storeTask(task1));
@@ -297,7 +300,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     const auto id = database().storeTask(task);
     database().commitTransaction();
     task.setPrescriptionId(id);
-    task.setKvnr("X123456789");
+    task.setKvnr(model::Kvnr{std::string{"X123456789"}, id.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
     task.setAcceptDate(model::Timestamp::now());
     task.setExpiryDate(model::Timestamp::now());
 
@@ -321,8 +324,9 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
 
     A_19115.test("Ensure only own tasks can be retrieved by KVNR");
 
-    const std::string kvnr1 = "XYZABC1234";
-    const std::string kvnr2 = "XYZABC5678";
+    const auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
+    const model::Kvnr kvnr1{"XYZABC1234", kvnrType};
+    const model::Kvnr kvnr2{"XYZABC5678", kvnrType};
 
     // cleanup
     {
@@ -418,7 +422,8 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     }
     model::Task task(prescriptionType(), "access_code");
     task.setPrescriptionId(database().storeTask(task));
-    task.setKvnr("X123456789");
+    auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
+    task.setKvnr(model::Kvnr{std::string{"X123456789"}, kvnrType});
 
     const auto medicationDispenseJson =
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_output1.json");
@@ -537,7 +542,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)//NOLINT(readability-function
         GTEST_SKIP();
     }
 
-    const std::string kvnr1 = "XYZABC1234";
+    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -599,7 +604,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksLastModified)//NOLINT(readability-fu
         GTEST_SKIP();
     }
 
-    const std::string kvnr1 = "XYZABC1234";
+    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -680,7 +685,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)//NOLINT(readability-func
         GTEST_SKIP();
     }
 
-    const std::string kvnr1 = "XYZABC1234";
+    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -761,7 +766,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksSort)//NOLINT(readability-function-c
         GTEST_SKIP();
     }
 
-    const std::string kvnr1 = "XYZABC1234";
+    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -818,7 +823,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksPaging)//NOLINT(readability-function
         GTEST_SKIP();
     }
 
-    const std::string kvnr1 = "XYZABC1234";
+    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -877,10 +882,11 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     {
         GTEST_SKIP();
     }
+    const auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
+    const model::Kvnr kvnr{InsurantA, kvnrType};
 
-    cleanKvnr(InsurantA, taskTableName());
+    cleanKvnr(kvnr, taskTableName());
 
-    const char* const kvnr = InsurantA;
     const char* const telematicId = "3-SMC-XXXX-883110000120312";
     const auto deviceId = 42;
 
@@ -921,7 +927,7 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     EXPECT_TRUE(entry.metaData().pnwPzNumber().has_value());
     EXPECT_EQ(entry.metaData().pnwPzNumber().value(), pnwPzNumber);
 
-    cleanKvnr(InsurantA, taskTableName());
+    cleanKvnr(kvnr, taskTableName());
 }
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseTaskTestInst, PostgresDatabaseTaskTest,

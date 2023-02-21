@@ -18,7 +18,7 @@ namespace fhirtools
 
 class Element;
 class FhirStructureDefinition;
-class ValidationResultList;
+class ValidationResults;
 class ValidatorOptions;
 /// @brief Holds information about all references in FHIR-ReferenceContext
 ///
@@ -55,7 +55,7 @@ public:
     void addResource(std::shared_ptr<ResourceInfo> newResource);
     std::list<std::shared_ptr<ResourceInfo>>& resources();
 
-    [[nodiscard]] ValidationResultList finalize(const ValidatorOptions&);
+    [[nodiscard]] ValidationResults finalize(const ValidatorOptions&);
 
     ReferenceContext() = default;
     ReferenceContext(const ReferenceContext&) = delete;

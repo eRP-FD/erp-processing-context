@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="SlicingTest"/>
+  <entry>
+    <fullUrl value="http://erp.test/SimpleBackbone"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SimpleBackbone"/>
+        <url value="http://erp.test/SimpleBackbone"/>
+        <version value="4.0.1"/>
+        <name value="SimpleBackbone"/>
+        <kind value="complex-type"/>
+        <type value="SimpleBackbone"/>
+        <derivation value="basetype"/>
+        <snapshot>
+          <element id="SimpleBackbone">
+            <path value="SimpleBackbone"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SimpleBackbone"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp.test/SlicedBase"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SlicedBase"/>
+        <url value="http://erp.test/SlicedBase"/>
+        <version value="4.0.1"/>
+        <name value="SlicedBase"/>
+        <kind value="complex-type"/>
+        <type value="SlicedBase"/>
+        <derivation value="basetype"/>
+        <snapshot>
+          <element id="SlicedBase">
+            <path value="SlicedBase"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SlicedBase.sliced">
+            <path value="SlicedBase.sliced"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="discriminator"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SimpleBackbone"/>
+            </type>
+          </element>
+          <element id="SlicedBase.sliced.discriminator">
+            <path value="SlicedBase.sliced.discriminator"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SlicedBase.sliced.discriminator"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp.test/BackboneNotSliced"/>
+    <resource>
+      <StructureDefinition>
+        <id value="BackboneNotSliced"/>
+        <url value="http://erp.test/BackboneNotSliced"/>
+        <version value="4.0.1"/>
+        <name value="BackboneNotSliced"/>
+        <kind value="complex-type"/>
+        <type value="BackboneNotSliced"/>
+        <baseDefinition value="http://erp.test/SlicedBase"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="BackboneNotSliced">
+            <path value="BackboneNotSliced"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="BackboneNotSliced.sliced">
+            <path value="BackboneNotSliced.sliced"/>
+            <!-- SHOULD BE FIXED: Slicing not copied from parent -->
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SimpleBackbone"/>
+            </type>
+          </element>
+          <element id="BackboneNotSliced.sliced.discriminator">
+            <path value="BackboneNotSliced.sliced.discriminator"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SlicedBase.sliced.discriminator"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

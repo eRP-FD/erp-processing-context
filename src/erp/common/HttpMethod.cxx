@@ -13,6 +13,7 @@ std::string toString (HttpMethod method)
         case HttpMethod::GET: return "GET";
         case HttpMethod::POST: return "POST";
         case HttpMethod::PUT: return "PUT";
+        case HttpMethod::PATCH: return "PATCH";
         case HttpMethod::DELETE: return "DELETE";
         case HttpMethod::HEAD: return "HEAD";
 

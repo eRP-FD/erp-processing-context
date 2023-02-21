@@ -49,7 +49,7 @@ OuterTeeRequest OuterTeeRequest::disassemble (const std::string& outerRequestBod
               "body is too short to be a outer request body");
     OuterTeeRequest message;
 
-    message.version = outerRequestBody[0];
+    message.version = gsl::narrow<uint8_t>(outerRequestBody[0]);
     size_t offset = VersionLength;
     ::copy(message.xComponent, outerRequestBody, offset, EllipticCurve::KeyCoordinateLength);
     offset += EllipticCurve::KeyCoordinateLength;

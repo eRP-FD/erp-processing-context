@@ -28,19 +28,6 @@ namespace
     constexpr std::size_t ecdsaComponentSize = 32_B;
 
     /**
-    * Throws an exception unless the given parameter has the expected value of 1.
-    *
-    * Will be refactored via the introduction of more specific exception types.
-    */
-    void throwExceptionIfNotOne(int operationResult)
-    {
-        if (1 != operationResult)
-        {
-            Fail2("EllipticCurveUtils error", std::runtime_error);
-        }
-    }
-
-    /**
      * Provides helpers to serialize/unserialize raw OpenSSL signatures
      * to/from util::Buffers having various formats.
      *
@@ -57,7 +44,7 @@ namespace
                                                        nullptr),
                                              [](auto) { /* ownership transferred */ }};
 
-                throwExceptionIfNotOne(nullptr != rawComponentResult);
+                Expect(nullptr != rawComponentResult, "EllipticCurveUtils error");
 
                 return rawComponentResult;
             }
@@ -66,10 +53,11 @@ namespace
             util::Buffer makeXmldsigComponentFromRawComponent(const BigNumConstPtr& rawComponent)
             {
                 util::Buffer componentResult(ecdsaComponentSize);
-                throwExceptionIfNotOne(gsl::narrow<int>(componentResult.size()) ==
+                Expect(gsl::narrow<int>(componentResult.size()) ==
                                        BN_bn2binpad(rawComponent.get(),
                                                     util::bufferToRaw(componentResult),
-                                                    gsl::narrow_cast<uint16_t>(componentResult.size())));
+                                                    gsl::narrow_cast<uint16_t>(componentResult.size())),
+                       "EllipticCurveUtils error");
 
                 return componentResult;
             }
@@ -87,10 +75,10 @@ namespace
                                    OPENSSL_free(rawBuffer);
                                  }};
 
-            throwExceptionIfNotOne(0 < asn1RawBufferLength);
-            throwExceptionIfNotOne(nullptr != asn1Buffer);
+            Expect(0 < asn1RawBufferLength, "EllipticCurveUtils error");
+            Expect(nullptr != asn1Buffer, "EllipticCurveUtils error");
 
-            return util::rawToBuffer(asn1Buffer.get(), asn1RawBufferLength);
+            return util::rawToBuffer(asn1Buffer.get(), static_cast<size_t>(asn1RawBufferLength));
         }
 
 
@@ -98,11 +86,11 @@ namespace
         {
             BigNumConstPtr rawComponentR{ECDSA_SIG_get0_r(rawSignature.get()),
                                          [](auto) { /* refcount not increased */ }};
-            throwExceptionIfNotOne(nullptr != rawComponentR);
+            Expect(nullptr != rawComponentR, "EllipticCurveUtils error");
 
             BigNumConstPtr rawComponentS{ECDSA_SIG_get0_s(rawSignature.get()),
                                          [](auto) { /* refcount not increased */ }};
-            throwExceptionIfNotOne(nullptr != rawComponentS);
+            Expect(nullptr != rawComponentS, "EllipticCurveUtils error");
 
             return util::concatenateBuffers(
                 detail::makeXmldsigComponentFromRawComponent(rawComponentR),
@@ -118,7 +106,7 @@ namespace
                                                                gsl::narrow_cast<uint16_t>(signature.size())),
                                                  ECDSA_SIG_free};
 
-            throwExceptionIfNotOne(nullptr != rawSignatureResult);
+            Expect(nullptr != rawSignatureResult, "EllipticCurveUtils error");
 
             return rawSignatureResult;
         }
@@ -133,17 +121,17 @@ namespace
             }
 
             EcdsaSignaturePtr rawSignatureResult{ECDSA_SIG_new(), ECDSA_SIG_free};
-            throwExceptionIfNotOne(nullptr != rawSignatureResult);
+            Expect(nullptr != rawSignatureResult, "EllipticCurveUtils error");
 
             const auto componentBorderIterator = signature.cbegin() + gsl::narrow<ptrdiff_t>(signatureSize / 2);
-            throwExceptionIfNotOne(
-                ECDSA_SIG_set0(rawSignatureResult.get(),
+            Expect(
+                1 == ECDSA_SIG_set0(rawSignatureResult.get(),
                                detail::parseRawComponentFromXmldsigComponent(
                                    util::Buffer{signature.cbegin(), componentBorderIterator})
                                    .get(),
                                detail::parseRawComponentFromXmldsigComponent(
                                    util::Buffer{componentBorderIterator, signature.cend()})
-                                   .get()));
+                                   .get()), "EllipticCurveUtils error");
 
             return rawSignatureResult;
         }
@@ -207,12 +195,12 @@ shared_EVP_PKEY EllipticCurveUtils::createPublicKeyHex (
     OpenSslExpect(yCoordinateHex.size() <= 64, "y coordinate too long, " + std::to_string(yCoordinateHex.size()) + " but must not be longer than 32");
 
     auto x = shared_BN::make();
-    size_t count = BN_hex2bn(x.getP(), xCoordinateHex.c_str());
-    OpenSslExpect(count == xCoordinateHex.size(), "conversion of x component failed");
+    auto count = BN_hex2bn(x.getP(), xCoordinateHex.c_str());
+    OpenSslExpect(gsl::narrow<size_t>(count) == xCoordinateHex.size(), "conversion of x component failed");
 
     auto y = shared_BN::make();
     count = BN_hex2bn(y.getP(), yCoordinateHex.c_str());
-    OpenSslExpect(count == yCoordinateHex.size(), "conversion of y component failed");
+    OpenSslExpect(gsl::narrow<size_t>(count) == yCoordinateHex.size(), "conversion of y component failed");
 
     return createPublicKeyBN(x, y, curveId);
 }
@@ -281,8 +269,8 @@ shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex (
     OpenSslExpect(group!=nullptr, "could not get group from elliptic curve key");
 
     auto p = shared_BN::make();
-    size_t count = BN_hex2bn(p.getP(), pComponent.c_str());
-    OpenSslExpect(count==pComponent.size(), "conversion of hex private key failed");
+    auto count = BN_hex2bn(p.getP(), pComponent.c_str());
+    OpenSslExpect(gsl::narrow<size_t>(count)==pComponent.size(), "conversion of hex private key failed");
 
     int result = EC_KEY_set_private_key(key, p);
     OpenSslExpect(result == 1, "could not create ec private key");
@@ -418,10 +406,10 @@ std::string EllipticCurveUtils::publicKeyToPem (const shared_EVP_PKEY& publicKey
     OpenSslExpect(status == 1, "can not convert public key to PEM string");
 
     char* data = nullptr;
-    const std::size_t length = BIO_get_mem_data(memory, &data);
-    OpenSslExpect(data != nullptr && length != 0, "can not get data from bio");
+    const auto length = BIO_get_mem_data(memory, &data);
+    OpenSslExpect(data != nullptr && length > 0, "can not get data from bio");
 
-    return {data, length};
+    return {data, static_cast<size_t>(length)};
 }
 
 
@@ -450,8 +438,8 @@ std::string EllipticCurveUtils::privateKeyToPem (const shared_EVP_PKEY& privateK
     OpenSslExpect(status == 1, "can not convert private key to PEM string");
 
     char* data = nullptr;
-    const std::size_t length = BIO_get_mem_data(memory, &data);
-    OpenSslExpect(data != nullptr && length != 0, "can not get data from bio");
+    const auto length = BIO_get_mem_data(memory, &data);
+    OpenSslExpect(data != nullptr && length > 0, "can not get data from bio");
 
-    return {data, length};
+    return {data, static_cast<size_t>(length)};
 }

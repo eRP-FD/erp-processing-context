@@ -9,6 +9,7 @@
 #include "erp/service/AuditEventTextTemplates.hxx"
 #include "erp/model/AuditData.hxx"
 #include "erp/model/AuditEvent.hxx"
+#include "erp/model/ResourceVersion.hxx"
 
 class JWT;
 
@@ -19,7 +20,8 @@ public:
         const model::AuditData& auditData,
         const std::string& language,
         const AuditEventTextTemplates& textResources,
-        const JWT& accessToken);
+        const JWT& accessToken,
+        model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion);
 
 };
 

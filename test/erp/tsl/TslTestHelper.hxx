@@ -111,6 +111,8 @@ public:
         const std::map<std::string, const std::vector<MockOcsp::CertificatePair>>& ocspResponderKnownCertificateCaPairs = {},
         const std::optional<Certificate>& ocspCertificate = std::nullopt,
         std::unique_ptr<TrustStore> tslTrustStore = {});
+
+    static OcspCheckDescriptor getDefaultTestOcspCheckDescriptor();
 };
 
 

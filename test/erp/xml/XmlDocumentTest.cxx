@@ -30,3 +30,12 @@ TEST(XmlDocumentTest, externalEntity)
     });
     ASSERT_TRUE(success) << "did not find expected log message";
 }
+
+TEST(XmlDocumentTest, escapedValue)
+{
+    const std::string_view xmlData = R"__(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <expression value="code.matches('^\d{8}$')"/>)__";
+    const XmlDocument xmlDocument(xmlData);
+    const auto& parsedValue = xmlDocument.getAttributeValue("/expression/@value");
+    EXPECT_EQ(parsedValue, R"__(code.matches('^\d{8}$'))__");
+}

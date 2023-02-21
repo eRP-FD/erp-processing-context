@@ -46,7 +46,7 @@ std::string JsonMaintainNumberPrecisionTest::createJsonStringCommunicationInfoRe
         writer.StartObject();
             writer.Key(elements::profile);
             writer.StartArray();
-                writer.String(structure_definition::communicationInfoReq);
+                writer.String(structure_definition::communicationInfoReq.data());
             writer.EndArray();
         writer.EndObject();
         writer.Key(elements::contained);
@@ -153,7 +153,7 @@ std::string JsonMaintainNumberPrecisionTest::createJsonStringCommunicationInfoRe
                 writer.Key(elements::identifier);
                 writer.StartObject();
                     writer.Key(elements::system);
-                    writer.String(std::string(naming_system::telematicID));
+                    writer.String(std::string(naming_system::deprecated::telematicID));
                     writer.Key(elements::value);
                     writer.String("606358757");
                 writer.EndObject();

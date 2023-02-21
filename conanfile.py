@@ -40,32 +40,32 @@ class ErpProcessingContext(ConanFile):
     generators = "cmake"
     exports_sources = "."
     build_requires = []
-    requires = ['antlr4-cppruntime/4.10.1',
-                'boost/1.79.0',
+    requires = ['antlr4-cppruntime/4.11.1',
+                'boost/1.81.0',
                 'date/3.0.1',  # date can be removed as soon as we use C++20
                 'glog/0.6.0',
                 'gsl-lite/0.40.0',
                 'libxml2/2.10.3',
-                'openssl/1.1.1q@erp/stable-1',
-                'rapidjson/cci.20211112',
-                'magic_enum/0.7.3',
-                'libpqxx/7.7.3',
+                'openssl/1.1.1t@erp/stable-1',
+                'rapidjson/cci.20220822',
+                'magic_enum/0.8.2',
+                'libpqxx/7.7.4',
                 'libpq/13.6',
-                'zstd/1.5.2',  # database compression
-                'gtest/1.11.0',
-                'hiredis/1.0.2',
+                'zstd/1.5.4',  # database compression
+                'gtest/1.13.0',
+                'hiredis/1.1.0',
                 'redis-plus-plus/1.3.3',
-                'zlib/1.2.12']
+                'zlib/1.2.13']
 
     def requirements(self):
         if self.options.with_tpmclient:
             self.requires('tpmclient/0.14.0')
         if self.options.with_hsmclient:
-            self.requires('hsmclient/2.3.0-B63')
+            self.requires('hsmclient/2.5.0-B00')
 
     def build_requirements(self):
         if self.options.with_sbom:
-            self.build_requires('sbom_generator/0.1@ibm/stable')
+            self.build_requires('sbom_generator/0.2@ibm/stable')
 
     def configure(self):
         if self.options.with_sbom:

@@ -9,6 +9,7 @@
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <fstream>
 
@@ -34,11 +35,13 @@ public:
 
     std::string medicationDispense(const std::string& kvnr,
                                    const std::string& prescriptionIdForMedicationDispense,
-                                   const std::string& /*whenHandedOver*/) override
+                                   const std::string& /*whenHandedOver*/,
+                                   model::ResourceVersion::FhirProfileBundleVersion) override
     {
-        (void)kvnr;
-        std::string closeBody = resourceManager.getStringResource(testDataPath + "medication_dispense.xml");
-        return String::replaceAll(closeBody, "160.000.000.001.963.85", prescriptionIdForMedicationDispense);
+        return ResourceTemplates::medicationDispenseXml(
+            {.prescriptionId = model::PrescriptionId::fromString(prescriptionIdForMedicationDispense), .kvnr = kvnr, 
+             .telematikId = "3-SMC-B-Testkarte-883110000129068",
+             .whenHandedOver = model::Timestamp::fromXsDateTime("2021-05-30T07:58:37+02:00")});
     }
 
     size_t countMedicationDispenses(const std::string_view& query)
@@ -72,7 +75,6 @@ private:
 
 TEST_F(Erp5899Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
-    EnvironmentVariableGuard environmentVariableGuard("ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION", "false");
     EnvironmentVariableGuard environmentVariableGuard3("ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE",
                                                        "false");
     EnvironmentVariableGuard environmentVariableGuard2("DEBUG_DISABLE_QES_ID_CHECK", "true");
@@ -100,7 +102,7 @@ TEST_F(Erp5899Test, run)//NOLINT(readability-function-cognitive-complexity)
     std::string accessCode{task->accessCode()};
 
     std::string qesBundle;
-    taskActivate(task->prescriptionId(), accessCode,
+    taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
                  std::get<0>(makeQESBundle("X110502414", task->prescriptionId(), model::Timestamp::now())));
 
     std::optional<model::Bundle> bundle;
@@ -114,9 +116,9 @@ TEST_F(Erp5899Test, run)//NOLINT(readability-function-cognitive-complexity)
     }
     std::string secret;
     ASSERT_NO_THROW(secret = task->secret().value());
-    std::string kvnr;
+    std::optional<model::Kvnr> kvnr;
     ASSERT_NO_THROW(kvnr = task->kvnr().value());
-    ASSERT_NO_FATAL_FAILURE(taskClose(task->prescriptionId(), secret, kvnr));
+    ASSERT_NO_FATAL_FAILURE(taskClose(task->prescriptionId(), secret, kvnr->id()));
 
     ASSERT_NO_FATAL_FAILURE(EXPECT_EQ(countMedicationDispenses(originalQuery), originalCount + 0));
     ASSERT_NO_FATAL_FAILURE(EXPECT_EQ(countMedicationDispenses(geQuery), geCount + 1));

@@ -1,15 +1,19 @@
 # Used Packages
 ## The following packages are supported and included in the respective versions:
 
-| Package                                        | Version   | Download-Link                                                                            |
-|------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
-| kbv.ita.erp                                    | 1.0.2     | https://simplifier.net/packages/kbv.ita.erp/1.0.2                                        |
-| kbv.ita.for                                    | 1.0.3     | https://simplifier.net/packages/kbv.ita.for/1.0.3                                        |
-| de.basisprofil.r4                              | 0.9.13    | https://simplifier.net/packages/de.basisprofil.r4/0.9.13                                 |
-| de.gematik.erezept-workflow.r4                 | 1.1.1     | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.1.1                     |
-| de.abda.eRezeptAbgabedatenBasis                | 1.2.1     | https://simplifier.net/packages/de.abda.erezeptabgabedatenbasis/1.2.1                    |
-| de.abda.eRezeptAbgabedatenPKV                  | 1.1.0-rc9 | https://simplifier.net/packages/de.abda.erezeptabgabedatenpkv/1.1.0-rc9                  |
-| de.gematik.erezept-abrechnungsinformationen.r4 | 1.0.0-rc1 | https://simplifier.net/packages/de.gematik.erezept-abrechnungsinformationen.r4/1.0.0-rc1 |
+| Package                                        | Version    | Download-Link                                                                  |
+|------------------------------------------------|------------|--------------------------------------------------------------------------------|
+| kbv.ita.erp                                    | 1.0.2      | https://simplifier.net/packages/kbv.ita.erp/1.0.2                              |
+| kbv.ita.erp                                    | 1.1.0      | https://simplifier.net/packages/kbv.ita.erp/1.1.0                              |
+| kbv.ita.for                                    | 1.0.3      | https://simplifier.net/packages/kbv.ita.for/1.0.3                              |
+| kbv.ita.for                                    | 1.1.0      | https://simplifier.net/packages/kbv.ita.for/1.1.0                              |
+| de.basisprofil.r4                              | 0.9.13     | https://simplifier.net/packages/de.basisprofil.r4/0.9.13                       |
+| de.basisprofil.r4                              | 1.3.2      | https://simplifier.net/packages/de.basisprofil.r4/1.3.2                      |
+| de.gematik.erezept-workflow.r4                 | 1.1.1      | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.1.1           |
+| de.gematik.erezept-workflow.r4                 | 1.2.0      | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.2.0           |
+| de.abda.erezeptabgabedatenbasis                | 1.3.0      | https://simplifier.net/packages/de.abda.erezeptabgabedatenbasis/1.3.0          |
+| de.abda.erezeptabgabedatenpkv                  | 1.1.0      | https://simplifier.net/packages/de.abda.erezeptabgabedatenpkv/1.1.0            |
+| de.gematik.erezept-patientenrechnung.r4        | 1.0.0      | https://simplifier.net/packages/de.gematik.erezept-patientenrechnung.r4/1.0.0  |
 
 # Used FHIR Components
 ## The following FHIR components are used and included in the respective versions:

@@ -67,5 +67,5 @@ TEST_F(TeeTokenUpdaterTest, successfulRenewal)
     updater->requestUpdate();
 
     TVLOG(1) << "waiting for updates";
-    waitFor([&updateCount]{return updateCount >= 2;});
+    testutils::waitFor([&updateCount]{return updateCount >= 2;});
 }

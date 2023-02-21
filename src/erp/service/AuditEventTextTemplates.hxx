@@ -15,9 +15,16 @@ class AuditEventTextTemplates
 public:
     AuditEventTextTemplates();
 
-    std::string retrieveTextTemplate(
+    struct TextTemplate
+    {
+        std::string text;
+        std::string language;
+    };
+    TextTemplate retrieveTextTemplate(
         const model::AuditEventId eventId,
-        const std::string& language) const;
+        const std::string& requestedLanguage) const;
+
+    static constexpr std::string_view defaultLanguage = "en";
 
     static constexpr std::string_view selfVariableName = "{self}";
     static constexpr std::string_view agentNameVariableName = "{agentName}";
@@ -25,9 +32,11 @@ public:
     static constexpr std::string_view pzNumberVariableName = "{PZ}";
 
 private:
+    using Id2TextContainer = std::unordered_map<model::AuditEventId, std::string>;
     // Language -> (event-id -> text-template)
-    std::unordered_map<std::string, std::unordered_map<model::AuditEventId, std::string>> mTextTemplates;
+    std::unordered_map<std::string, Id2TextContainer> mTextTemplates;
 
+    const Id2TextContainer& getId2TextContainer(std::string& inOutLanguage) const;
 };
 
 

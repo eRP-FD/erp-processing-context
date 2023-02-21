@@ -35,8 +35,8 @@ fi
 
 
 
-echo "fetch latest version of ubuntu:focal"
-docker pull ubuntu:focal
+echo "fetch latest version of ubuntu:jammy"
+docker pull ubuntu:jammy
 
 echo "running docker build"
 docker build -t erp-pc-ubuntu-build:$version "$tmpdir"

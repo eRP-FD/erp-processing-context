@@ -22,7 +22,7 @@ LogTestBase::TestLogSink::~TestLogSink()
 }
 
 
-void LogTestBase::TestLogSink::visitLines(std::function<void(const std::string&)> visitor) const
+void LogTestBase::TestLogSink::visitLines(const std::function<void(const std::string&)>& visitor) const
 {
     std::lock_guard lock(mMutex);
     for (const auto& line : mLines)

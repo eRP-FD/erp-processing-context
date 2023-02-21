@@ -117,7 +117,9 @@ TEST_F(Base64Test, variableLengthRoundTrip)
 
 TEST_F(Base64Test, adjustSizeBeforeEncoding)
 {
-    for (const size_t size : {0, 1, 2, 3, 4, 5, 1023, 1024, 1025, 1026, 1024*1024-1, 1024*1024, 1024*1024+1, 1024*1024+2})
+    for (const size_t size :
+         std::initializer_list<size_t>{0, 1, 2, 3, 4, 5, 1023, 1024, 1025, 1026, 1024ull * 1024ull - 1ull,
+                                       1024ull * 1024ull, 1024ull * 1024ull + 1ull, 1024ull * 1024ull + 2ull})
     {
         const std::string s (size, 'X');
         const std::string encoded = Base64::encode(s);
@@ -130,7 +132,9 @@ TEST_F(Base64Test, adjustSizeBeforeEncoding)
 
 TEST_F(Base64Test, adjustSizeBeforeDecoding)
 {
-    for (const size_t size : {0, 1, 2, 3, 4, 5, 1023, 1024, 1025, 1026, 1024*1024-1, 1024*1024, 1024*1024+1, 1024*1024+2})
+    for (const size_t size :
+         std::initializer_list<size_t>{0, 1, 2, 3, 4, 5, 1023, 1024, 1025, 1026, 1024ull * 1024ull - 1ull,
+                                       1024ull * 1024ull, 1024ull * 1024ull + 1ull, 1024ull * 1024ull + 2ull})
     {
         const std::string s (size, 'X');
         const std::string encoded = Base64::encode(s);

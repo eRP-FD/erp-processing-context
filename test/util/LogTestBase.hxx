@@ -39,7 +39,7 @@ public:
          * Call `visitor` for each line currently in mLines under locked mutex.
          * That means that all messages that arrive while the mutex is locked are not presented to the visitor.
          */
-        void visitLines(std::function<void(const std::string&)> visitor) const;
+        void visitLines(const std::function<void(const std::string&)>& visitor) const;
 
         std::vector<std::string> lines() const;
         std::string line(const size_t index) const;

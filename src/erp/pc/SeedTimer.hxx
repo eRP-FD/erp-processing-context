@@ -15,12 +15,11 @@ class HsmPool;
 class ThreadPool;
 
 
-class SeedTimer
-    : public PeriodicTimer
+class SeedTimerHandler : public FixedIntervalHandler
 {
 public:
     using AddEntropyFunction = std::function<void (const SafeString&)>;
-    explicit SeedTimer(ThreadPool& pool,
+    explicit SeedTimerHandler(ThreadPool& pool,
                     HsmPool& hsmPool,
                     std::chrono::steady_clock::duration interval,
                     AddEntropyFunction addEntropy = &SecureRandomGenerator::addEntropy);
@@ -36,10 +35,9 @@ private:
     ThreadPool& mThreadPool;
     Seeder mSeeder;
     const AddEntropyFunction mAddEntropy;
-    std::chrono::steady_clock::duration mInterval;
     std::atomic<std::chrono::system_clock::time_point> mLastUpdate;
 };
 
-
+using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 
 #endif// ERP_PROCESSING_CONTEXT_SEEDTIMER_HXX

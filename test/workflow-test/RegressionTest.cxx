@@ -4,6 +4,8 @@
  */
 #include "test/util/ResourceManager.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
+#include "test/util/TestUtils.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <gtest/gtest.h>
 
@@ -22,33 +24,30 @@ TEST_F(RegressionTest, Erp10674)
     kbv_bundle_xml = patchVersionsInBundle(kbv_bundle_xml);
     std::string accessCode{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(
-        taskActivate(task->prescriptionId(), accessCode,
+        taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
                      toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDate("2022-07-29")),
                      HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
 
 TEST_F(RegressionTest, Erp10669)
 {
-    std::string kbv_bundle_xml = ResourceManager::instance().getStringResource(
-        "test/EndpointHandlerTest/kbv_bundle_mehrfachverordnung_A_22635.xml");
-    kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "####START####", "2022-07-29T00:05:57+02:00");
-    kbv_bundle_xml =
-        String::replaceAll(kbv_bundle_xml, "<authoredOn value=\"2020-02-03\"/>", "<authoredOn value=\"2022-07-29\"/>");
+    auto timestamp = model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00");
+    auto signingDay = model::Timestamp::fromXsDate("2022-07-29");
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
     ASSERT_TRUE(task.has_value());
-    kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.004.713.80", task->prescriptionId().toString());
-    kbv_bundle_xml = patchVersionsInBundle(kbv_bundle_xml);
+    std::string kbv_bundle_xml = ResourceTemplates::kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                                     .timestamp = signingDay,
+                                                                     .redeemPeriodStart = timestamp,
+                                                                     .redeemPeriodEnd = {}});
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
-    ASSERT_NO_FATAL_FAILURE(
-        taskActivateResult = taskActivate(
-            task->prescriptionId(), accessCode,
-            toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00"))));
+    ASSERT_NO_FATAL_FAILURE(taskActivateResult = taskActivateWithOutcomeValidation(
+                                task->prescriptionId(), accessCode, toCadesBesSignature(kbv_bundle_xml, signingDay)));
     ASSERT_TRUE(taskActivateResult);
     EXPECT_EQ(taskActivateResult->expiryDate().toGermanDate(), "2023-07-29");
     EXPECT_EQ(taskActivateResult->acceptDate().toGermanDate(), "2023-07-29");
-    auto bundle = taskGetId(taskActivateResult->prescriptionId(), std::string{taskActivateResult->kvnr().value()});
+    auto bundle = taskGetId(taskActivateResult->prescriptionId(), taskActivateResult->kvnr().value().id());
     ASSERT_TRUE(bundle);
     std::optional<model::Task> getTaskResult;
     getTaskFromBundle(getTaskResult, *bundle);
@@ -59,12 +58,13 @@ TEST_F(RegressionTest, Erp10669)
 
 TEST_F(RegressionTest, Erp10835)
 {
+    auto profileEnv = testutils::getNewFhirProfileEnvironment();
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
     auto task = taskCreate(model::PrescriptionType::direkteZuweisungPkv);
     ASSERT_TRUE(task.has_value());
-    auto kvnr = generateNewRandomKVNR();
+    auto kvnr = generateNewRandomKVNR().id();
     ASSERT_NO_FATAL_FAILURE(
-        taskActivate(task->prescriptionId(), task->accessCode(),
+        taskActivateWithOutcomeValidation(task->prescriptionId(), task->accessCode(),
                      std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
     ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, model::Timestamp::now()));
     const auto acceptBundle = taskAccept(task->prescriptionId(), std::string{task->accessCode()});
@@ -81,8 +81,9 @@ class RegressionTestErp8170 : public ErpWorkflowTest
 {
 protected:
     std::string medicationDispense(const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense,
-                                   const std::string&) override
+                                   const std::string&, model::ResourceVersion::FhirProfileBundleVersion) override
     {
+        // TODO: adjust for version 1.1.0
         auto medicationDispense =
             ResourceManager::instance().getStringResource("test/issues/ERP-8170/MedicationDispense.xml");
         medicationDispense =
@@ -98,9 +99,9 @@ TEST_F(RegressionTestErp8170, Erp8170)
 {
     auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
     ASSERT_TRUE(task.has_value());
-    auto kvnr = generateNewRandomKVNR();
+    auto kvnr = generateNewRandomKVNR().id();
     ASSERT_NO_FATAL_FAILURE(
-        taskActivate(task->prescriptionId(), task->accessCode(),
+        taskActivateWithOutcomeValidation(task->prescriptionId(), task->accessCode(),
                      std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
     const auto acceptBundle = taskAccept(task->prescriptionId(), std::string{task->accessCode()});
     ASSERT_TRUE(acceptBundle);
@@ -114,7 +115,6 @@ TEST_F(RegressionTest, Erp11116)
 {
     auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
     ASSERT_TRUE(task.has_value());
-    auto kvnr = generateNewRandomKVNR();
     auto accessCode = task->accessCode();
 
     std::string kbv_bundle_xml = ResourceManager::instance().getStringResource(
@@ -123,7 +123,7 @@ TEST_F(RegressionTest, Erp11116)
     kbv_bundle_xml = patchVersionsInBundle(kbv_bundle_xml);
 
     ASSERT_NO_FATAL_FAILURE(
-        taskActivate(task->prescriptionId(), accessCode,
+        taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
                      toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
                      HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
@@ -132,17 +132,16 @@ TEST_F(RegressionTest, Erp11142)
 {
     auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
     ASSERT_TRUE(task.has_value());
-    auto kvnr = generateNewRandomKVNR();
     auto accessCode = task->accessCode();
 
     std::string kbv_bundle_xml = ResourceManager::instance().getStringResource(
         "test/issues/ERP-11142/Bundle_invalid_missing_meta_profile_version.xml");
     kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.000.012.230.33", task->prescriptionId().toString());
-    ASSERT_NO_FATAL_FAILURE(
-        taskActivate(task->prescriptionId(), accessCode,
-                     toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-                     HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
-                     "parsing / validation error", "KBV resources must always define a profile version"));
+    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
+        task->prescriptionId(), accessCode,
+        toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
+        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
+        "KBV resources must always define a profile version"));
 
     // additional test with duplicate version, KBV_PR_ERP_Bundle|1.0.3|1.0.3
     kbv_bundle_xml = String::replaceAll(
@@ -150,11 +149,11 @@ TEST_F(RegressionTest, Erp11142)
         "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" +
             std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())) + "|" +
             std::string(v_str(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>())));
-    ASSERT_NO_FATAL_FAILURE(taskActivate(
+    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
-        "parsing / validation error", "Invalid meta/profile: more than one | separator found."));
+        "Invalid meta/profile: more than one | separator found."));
 }
 
 TEST_F(RegressionTest, Erp10892_1)
@@ -168,7 +167,7 @@ TEST_F(RegressionTest, Erp10892_1)
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
     ASSERT_NO_FATAL_FAILURE(
-        taskActivateResult = taskActivate(
+        taskActivateResult = taskActivateWithOutcomeValidation(
             task->prescriptionId(), accessCode,
             toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
@@ -185,7 +184,7 @@ TEST_F(RegressionTest, Erp10892_2)
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
     ASSERT_NO_FATAL_FAILURE(
-        taskActivateResult = taskActivate(
+        taskActivateResult = taskActivateWithOutcomeValidation(
             task->prescriptionId(), accessCode,
             toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
@@ -205,12 +204,12 @@ TEST_F(RegressionTest, Erp11050)
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
     ASSERT_NO_FATAL_FAILURE(
-        taskActivateResult = taskActivate(
+        taskActivateResult = taskActivateWithOutcomeValidation(
             task->prescriptionId(), accessCode,
             toCadesBesSignature(kbv_bundle_400_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
     ASSERT_NO_FATAL_FAILURE(
-        taskActivateResult = taskActivate(
+        taskActivateResult = taskActivateWithOutcomeValidation(
             task->prescriptionId(), accessCode,
             toCadesBesSignature(kbv_bundle_500_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));

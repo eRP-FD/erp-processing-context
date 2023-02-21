@@ -52,14 +52,14 @@ UniqueXmlDocumentPtr FhirConverter::jsonToXml(const model::NumberAsStringParserD
 }
 
 
-std::string FhirConverter::jsonToXmlString(const model::NumberAsStringParserDocument& jsonDOM) const
+std::string FhirConverter::jsonToXmlString(const model::NumberAsStringParserDocument& jsonDOM, bool formatted) const
 {
     const auto& asXmlDoc = jsonToXml(jsonDOM);
     std::unique_ptr<xmlChar[], void (*)(void*)> buffer{nullptr, xmlFree};
     int size = 0;
     {
         xmlChar* rawBuffer = nullptr;
-        xmlDocDumpMemoryEnc(asXmlDoc.get(), &rawBuffer, &size, "utf-8");
+        xmlDocDumpFormatMemoryEnc(asXmlDoc.get(), &rawBuffer, &size, "utf-8", formatted ? 1 : 0);
         buffer.reset(rawBuffer);
         Expect(size > 0 && rawBuffer != nullptr, "XML document serialization failed.");
     }

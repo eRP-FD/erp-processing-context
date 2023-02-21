@@ -7,8 +7,9 @@
 
 #include "erp/ErpRequirements.hxx"
 #include "erp/database/Database.hxx"
-#include "erp/util/search/UrlArguments.hxx"
+#include "erp/model/Identity.hxx"
 #include "erp/util/TLog.hxx"
+#include "erp/util/search/UrlArguments.hxx"
 
 
 CommunicationGetHandlerBase::CommunicationGetHandlerBase(Operation operation,
@@ -29,7 +30,9 @@ void CommunicationGetHandlerBase::markCommunicationsAsRetrieved (
     const auto now = model::Timestamp::now();
     std::vector<Uuid> communicationIdsToMark;
     for (auto& communication : communications)
-        if (!communication.timeReceived().has_value() && communication.recipient() == caller)
+    {
+        const std::string recipientIdentiy = model::getIdentityString(communication.recipient());
+        if (!communication.timeReceived().has_value() && recipientIdentiy == caller)
         {
             Expect(communication.id().has_value(), "communication id has not been initialized");
             communicationIdsToMark.emplace_back(communication.id().value());
@@ -38,6 +41,7 @@ void CommunicationGetHandlerBase::markCommunicationsAsRetrieved (
             // actual update in the database.
             communication.setTimeReceived(now);
         }
+    }
 
     database.markCommunicationsAsRetrieved(
         communicationIdsToMark,
@@ -109,20 +113,28 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
         {},     // No filter by communication id for getAll. Also, per ERP-3862, we don't have to support the _id parameter.
         arguments);
     A_19520.finish();
+    try
+    {
+        markCommunicationsAsRetrieved(*database, communications, caller);
 
-    markCommunicationsAsRetrieved(*database, communications, caller);
+        std::size_t totalSearchMatches =
+            responseIsPartOfMultiplePages(arguments->pagingArgument(), communications.size())
+                ? database->countCommunications(caller, arguments)
+                : communications.size();
 
-    std::size_t totalSearchMatches =
-        responseIsPartOfMultiplePages(arguments->pagingArgument(), communications.size()) ?
-        database->countCommunications(caller, arguments) : communications.size();
+        auto bundle = createBundle(communications);
+        bundle.setTotalSearchMatches(totalSearchMatches);
+        const auto links = arguments->getBundleLinks(getLinkBase(), "/Communication", totalSearchMatches);
+        for (const auto& link : links)
+            bundle.setLink(link.first, link.second);
 
-    auto bundle = createBundle(communications);
-    bundle.setTotalSearchMatches(totalSearchMatches);
-    const auto links = arguments->getBundleLinks(getLinkBase(), "/Communication", totalSearchMatches);
-    for (const auto& link : links)
-        bundle.setLink(link.first, link.second);
-
-    makeResponse(session, HttpStatus::OK, &bundle);
+        makeResponse(session, HttpStatus::OK, &bundle);
+    }
+    catch (const model::ModelException& e)
+    {
+        TVLOG(1) << "ModelException: " << e.what();
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "caught ModelException", e.what());
+    }
 }
 
 

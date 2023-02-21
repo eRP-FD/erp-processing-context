@@ -80,8 +80,6 @@ public:
 
     SubscriptionHandlerTest()
         : ServerTestBase(true)
-
-        , jwtVersicherter(jwtWithProfessionOID(profession_oid::oid_versicherter))
         , jwtOeffentliche_apotheke(jwtWithProfessionOID(profession_oid::oid_oeffentliche_apotheke))
         , jwtKrankenhausapotheke(jwtWithProfessionOID(profession_oid::oid_krankenhausapotheke))
         , teeProtocol()
@@ -90,7 +88,6 @@ public:
     }
 
 
-    JWT jwtVersicherter;
     JWT jwtOeffentliche_apotheke;
     JWT jwtKrankenhausapotheke;
 
@@ -123,19 +120,19 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionStatusParameter)
 
     // Test request with status != requested is not allowed.
     const auto* body0 =
-        R"--({ "resourceType": "Subscription", "status": "active", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "status": "active", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=X020406089", "channel": { "type": "websocket" } })--";
     EXPECT_NO_FATAL_FAILURE(
         testEndpoint(HttpMethod::POST, endpoint, body0, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 
     // Test request with empty Status is not allowed.
     const auto* body1 =
-        R"--({ "resourceType": "Subscription", "status": "", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "status": "", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=X020406089", "channel": { "type": "websocket" } })--";
     EXPECT_NO_FATAL_FAILURE(
         testEndpoint(HttpMethod::POST, endpoint, body1, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 
     // Test with absent status is not allowed.
     const auto* body2 =
-        R"--({ "resourceType": "Subscription", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=X020406089", "channel": { "type": "websocket" } })--";
     EXPECT_NO_FATAL_FAILURE(
         testEndpoint(HttpMethod::POST, endpoint, body2, jwtOeffentliche_apotheke, HttpStatus::BadRequest));
 }
@@ -144,7 +141,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionTelematikIdMismatch)
 {
     const std::string_view endpoint = "/Subscription";
 
-    // Test request with recipient=recipient1 but the used jwt has recipient0.
+    // Test request with recipient=recipient1 but the used jwt has X020406089.
     A_22363.test("Ensure that a LEI can register only for itself.");
     const auto* body0 =
         R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient1", "channel": { "type": "websocket" } })--";
@@ -162,7 +159,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionSuccessAuth)//NOLINT(readability
 
     // Test valid request.
     const auto* body =
-        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=X020406089", "channel": { "type": "websocket" } })--";
     std::string responseBody;
     EXPECT_NO_FATAL_FAILURE(
         testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody));
@@ -192,7 +189,7 @@ TEST_F(SubscriptionHandlerTest, Overlap)//NOLINT(readability-function-cognitive-
 
     // Test valid request.
     const auto* body =
-        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=recipient0", "channel": { "type": "websocket" } })--";
+        R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=X020406089", "channel": { "type": "websocket" } })--";
     std::string responseBody;
     EXPECT_NO_FATAL_FAILURE(
         testEndpoint(HttpMethod::POST, endpoint, body, jwtOeffentliche_apotheke, HttpStatus::OK, responseBody));
@@ -220,7 +217,7 @@ TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)//NOLINT(readability-fu
                                         std::string{MockCryptography::getEciesPrivateKeyPem()}};
     const std::string_view endpoint = "/Subscription";
     // Test valid request.
-    const std::string recipient = "recipient0";
+    const std::string recipient = "X020406089";
     const std::string recipient1 = "recipient1";
     const std::string bodyFmt =
         R"--({ "resourceType": "Subscription", "status": "requested", "reason": "stay in touch", "criteria": "Communication?received=null&recipient=%1%", "channel": { "type": "websocket" } })--";
@@ -245,7 +242,7 @@ TEST_F(SubscriptionHandlerTest, TelematicPseudonymChecks)//NOLINT(readability-fu
     std::string encryptedTelematicId = idField->GetString();
     // Check that the encrypted recipient (telematic) id is identical.
     EXPECT_EQ(mServer->serviceContext().getTelematicPseudonymManager().sign(recipient).hex(), encryptedTelematicId);
-    // Check that different encrypted recipients do not match ((recipient0) != hash(recipient1))
+    // Check that different encrypted recipients do not match ((X020406089) != hash(recipient1))
     EXPECT_NE(mServer->serviceContext().getTelematicPseudonymManager().sign(recipient1).hex(), encryptedTelematicId);
 }
 
@@ -261,7 +258,7 @@ TEST_F(SubscriptionHandlerTest, PostSubscriptionXML)
 <Subscription xmlns="http://hl7.org/fhir">
     <status value="requested" />
     <reason value="none" />
-    <criteria value="Communication?received=null&amp;recipient=recipient0" />
+    <criteria value="Communication?received=null&amp;recipient=X020406089" />
     <channel>
         <type value="websocket" />
     </channel>

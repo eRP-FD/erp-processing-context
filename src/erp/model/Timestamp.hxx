@@ -17,7 +17,7 @@ namespace model
  *  formats that are understood by PostgresDB and FHIR.
  *
  *  Regarding FHIR data types please refer to https://www.hl7.org/fhir/datatypes.html. This class implements an
- *  intersection of what is described on the FHIR page in the "domain value" column and the the specification of the
+ *  intersection of what is described on the FHIR page in the "domain value" column and the specification of the
  *  references XML types xs:dateTime, xs:date, xs:gYearMonth, xs:gYear. This leads to this definition of date time values:
  *  - four different formats: YYYY, YYYY-MM, YYYY-MM-DD, YYYY-MM-DDThh:mm:ss+zz:zz
  *    only YYYY-MM-DDThh:mm:ss+zz:zz is currently supported
@@ -142,6 +142,9 @@ public:
 
     /// see fromGermanDate
     std::string toGermanDate() const;
+
+    /// dd.mm.YYYY
+    std::string toGermanDateFormat() const;
 
     /**
      * Convert to xs:gYearMonth format (YYYY-MM).

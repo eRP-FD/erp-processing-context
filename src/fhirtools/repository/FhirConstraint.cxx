@@ -55,9 +55,9 @@ decltype(auto) FhirConstraint::tie() const
     return std::tie(mKey, mExpression, mSeverity, mHuman);
 }
 
-bool FhirConstraint::operator<(const FhirConstraint& other) const
+std::strong_ordering FhirConstraint::operator<=>(const FhirConstraint& other) const
 {
-    return tie() < other.tie();
+    return tie() <=> other.tie();
 }
 
 bool FhirConstraint::operator==(const FhirConstraint& other) const

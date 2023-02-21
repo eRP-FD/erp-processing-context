@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="GEM-ERP-CS-AvailabilityStatus"/>
+  <url value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_AvailabilityStatus"/>
+  <version value="1.2"/>
+  <name value="GEM_ERP_CS_AvailabilityStatus"/>
+  <title value="CodeSystem of AvailabilityStatus"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://www.gematik.de"/>
+    </telecom>
+  </contact>
+  <description value="Type of the availability status for medication availability request."/>
+  <copyright value="gematik GmbH"/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="6"/>
+  <concept>
+    <code value="10"/>
+    <display value="sofort verfügbar"/>
+  </concept>
+  <concept>
+    <code value="20"/>
+    <display value="noch Heute verfügbar"/>
+  </concept>
+  <concept>
+    <code value="30"/>
+    <display value="am nächsten Werktag - vormittags"/>
+  </concept>
+  <concept>
+    <code value="40"/>
+    <display value="am nächsten Werktag- nachmittags"/>
+  </concept>
+  <concept>
+    <code value="50"/>
+    <display value="nicht verfügbar"/>
+  </concept>
+  <concept>
+    <code value="90"/>
+    <display value="unbekannt"/>
+  </concept>
+</CodeSystem>

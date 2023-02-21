@@ -111,6 +111,7 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
         set(COMPILER_LIBCXX_SETTING "libstdc++11")
     endif()
 
+    separate_arguments(ERP_CONAN_ARG_LIST NATIVE_COMMAND ${ERP_CONAN_ARGS})
     execute_process(
         COMMAND env CONAN_CMAKE_GENERATOR=${CMAKE_GENERATOR}
                 "${CONAN}" install
@@ -123,7 +124,7 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
                 -e CC=${CMAKE_C_COMPILER}
                 ${CONAN_HSM_TPM}
                 ${CONAN_PROFILE}
-                ${ERP_CONAN_ARGS}
+                ${ERP_CONAN_ARG_LIST}
                 "${CMAKE_SOURCE_DIR}"
     )
 endif()
@@ -223,7 +224,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_link_options(-NODEFAULTLIB:libboost_regex-vc142-mt-gd-x64-1_74.lib)
 else()
     add_compile_options(-Wall) # This may require an additional -g3 to activate debug symbols for boost::beast
-    add_compile_options(-Wextra -Wpedantic)
+    add_compile_options(-Wextra -Wpedantic -Wconversion)
     if(ERP_WARNING_AS_ERROR)
         add_compile_options(-Werror)
     endif()

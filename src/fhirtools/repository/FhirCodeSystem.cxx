@@ -48,38 +48,51 @@ const std::string& FhirCodeSystem::getSupplements() const
 }
 std::vector<std::string> FhirCodeSystem::resolveIsA(const std::string& value, const std::string& property) const
 {
-    std::vector<std::string> ret;
     if (property == "concept")
     {
-        for (const auto& item : mCodes)
-        {
-            bool equals =
-                mCaseSensitive ? item.code == value : boost::to_lower_copy(value) == boost::to_lower_copy(item.code);
-            if (equals || isA(item, value))
-            {
-                ret.push_back(item.code);
-            }
-        }
+        return resolveIsAConcept(value);
     }
     else if (property == "parent")
     {
-        for (const auto& item : mCodes)
-        {
-            if (! item.parent.empty())
-            {
-                if (isA(getCode(item.parent), value))
-                {
-                    ret.push_back(item.parent);
-                }
-            }
-        }
+        return resolveIsAParent(value);
     }
     else
     {
         FPFail("Unsupported property for is-a: " + property);
     }
+}
+
+std::vector<std::string> FhirCodeSystem::resolveIsAParent(const std::string& value) const
+{
+    std::vector<std::string> ret;
+    for (const auto& item : mCodes)
+    {
+        if (! item.parent.empty())
+        {
+            if (isA(getCode(item.parent), value))
+            {
+                ret.push_back(item.parent);
+            }
+        }
+    }
     return ret;
 }
+
+std::vector<std::string> FhirCodeSystem::resolveIsAConcept(const std::string& value) const
+{
+    std::vector<std::string> ret;
+    for (const auto& item : mCodes)
+    {
+        bool equals =
+            mCaseSensitive ? item.code == value : boost::to_lower_copy(value) == boost::to_lower_copy(item.code);
+        if (equals || isA(item, value))
+        {
+            ret.push_back(item.code);
+        }
+    }
+    return ret;
+}
+
 std::vector<std::string> FhirCodeSystem::resolveIsNotA(const std::string& value, const std::string& property) const
 {
     std::vector<std::string> ret;

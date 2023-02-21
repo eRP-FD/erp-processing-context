@@ -311,22 +311,22 @@ TEST_F(ElementTest, QuantityArithmetik)
 
 TEST_F(ElementTest, CompareTo)
 {
-    PrimitiveElement elementInt3(&repo, Element::Type::Integer, 3);
-    PrimitiveElement elementInt4(&repo, Element::Type::Integer, 4);
-    PrimitiveElement elementDecPi(&repo, Element::Type::Decimal, DecimalType("3.1415"));
-    PrimitiveElement elementDec3(&repo, Element::Type::Decimal, DecimalType(3));
-    PrimitiveElement elementStrA(&repo, Element::Type::String, "abc"s);
-    PrimitiveElement elementStrB(&repo, Element::Type::String, "ABC"s);
-    PrimitiveElement elementQuantitiy1(&repo, Element::Type::Quantity, Element::QuantityType(15, "cm"));
-    PrimitiveElement elementQuantitiy2(&repo, Element::Type::Quantity, Element::QuantityType(16, "cm"));
-    PrimitiveElement elementQuantitiy3(&repo, Element::Type::Quantity, Element::QuantityType(3, ""));
+    const PrimitiveElement elementInt3(&repo, Element::Type::Integer, 3);
+    const PrimitiveElement elementInt4(&repo, Element::Type::Integer, 4);
+    const PrimitiveElement elementDecPi(&repo, Element::Type::Decimal, DecimalType("3.1415"));
+    const PrimitiveElement elementDec3(&repo, Element::Type::Decimal, DecimalType(3));
+    const PrimitiveElement elementStrA(&repo, Element::Type::String, "abc"s);
+    const PrimitiveElement elementStrB(&repo, Element::Type::String, "ABC"s);
+    const PrimitiveElement elementQuantitiy1(&repo, Element::Type::Quantity, Element::QuantityType(15, "cm"));
+    const PrimitiveElement elementQuantitiy2(&repo, Element::Type::Quantity, Element::QuantityType(16, "cm"));
+    const PrimitiveElement elementQuantitiy3(&repo, Element::Type::Quantity, Element::QuantityType(3, ""));
 
     EXPECT_EQ(elementInt3.compareTo(elementInt3), std::strong_ordering::equal);
     EXPECT_EQ(elementInt3.compareTo(elementInt4), std::strong_ordering::less);
     EXPECT_EQ(elementInt3.compareTo(elementDecPi), std::strong_ordering::less);
     EXPECT_EQ(elementInt3.compareTo(elementDec3), std::strong_ordering::equal);
-    EXPECT_THROW((void) (elementInt3.compareTo(elementStrA)), std::exception);
-    EXPECT_THROW((void) (elementInt3.compareTo(elementStrB)), std::exception);
+    EXPECT_EQ(elementInt3.compareTo(elementStrA), std::strong_ordering::less);
+    EXPECT_EQ(elementInt3.compareTo(elementStrB), std::strong_ordering::less);
     EXPECT_EQ(elementInt3.compareTo(elementQuantitiy1), std::nullopt);
     EXPECT_EQ(elementInt3.compareTo(elementQuantitiy2), std::nullopt);
     EXPECT_EQ(elementInt3.compareTo(elementQuantitiy3), std::strong_ordering::equal);
@@ -335,8 +335,8 @@ TEST_F(ElementTest, CompareTo)
     EXPECT_EQ(elementInt4.compareTo(elementInt4), std::strong_ordering::equal);
     EXPECT_EQ(elementInt4.compareTo(elementDecPi), std::strong_ordering::greater);
     EXPECT_EQ(elementInt4.compareTo(elementDec3), std::strong_ordering::greater);
-    EXPECT_THROW((void) (elementInt4.compareTo(elementStrA)), std::exception);
-    EXPECT_THROW((void) (elementInt4.compareTo(elementStrB)), std::exception);
+    EXPECT_EQ(elementInt4.compareTo(elementStrA), std::strong_ordering::less);
+    EXPECT_EQ(elementInt4.compareTo(elementStrB), std::strong_ordering::less);
     EXPECT_EQ(elementInt4.compareTo(elementQuantitiy1), std::nullopt);
     EXPECT_EQ(elementInt4.compareTo(elementQuantitiy2), std::nullopt);
     EXPECT_EQ(elementInt4.compareTo(elementQuantitiy3), std::strong_ordering::greater);
@@ -345,8 +345,8 @@ TEST_F(ElementTest, CompareTo)
     EXPECT_EQ(elementDecPi.compareTo(elementInt4), std::strong_ordering::less);
     EXPECT_EQ(elementDecPi.compareTo(elementDecPi), std::strong_ordering::equal);
     EXPECT_EQ(elementDecPi.compareTo(elementDec3), std::strong_ordering::greater);
-    EXPECT_THROW((void) (elementDecPi.compareTo(elementStrA)), std::exception);
-    EXPECT_THROW((void) (elementDecPi.compareTo(elementStrB)), std::exception);
+    EXPECT_EQ(elementDecPi.compareTo(elementStrA), std::strong_ordering::less);
+    EXPECT_EQ(elementDecPi.compareTo(elementStrB), std::strong_ordering::less);
     EXPECT_EQ(elementDecPi.compareTo(elementQuantitiy1), std::nullopt);
     EXPECT_EQ(elementDecPi.compareTo(elementQuantitiy2), std::nullopt);
     EXPECT_EQ(elementDecPi.compareTo(elementQuantitiy3), std::strong_ordering::greater);
@@ -355,38 +355,38 @@ TEST_F(ElementTest, CompareTo)
     EXPECT_EQ(elementDec3.compareTo(elementInt4), std::strong_ordering::less);
     EXPECT_EQ(elementDec3.compareTo(elementDecPi), std::strong_ordering::less);
     EXPECT_EQ(elementDec3.compareTo(elementDec3), std::strong_ordering::equal);
-    EXPECT_THROW((void) (elementDec3.compareTo(elementStrA)), std::exception);
-    EXPECT_THROW((void) (elementDec3.compareTo(elementStrB)), std::exception);
+    EXPECT_EQ(elementDec3.compareTo(elementStrA), std::strong_ordering::less);
+    EXPECT_EQ(elementDec3.compareTo(elementStrB), std::strong_ordering::less);
     EXPECT_EQ(elementDec3.compareTo(elementQuantitiy1), std::nullopt);
     EXPECT_EQ(elementDec3.compareTo(elementQuantitiy2), std::nullopt);
     EXPECT_EQ(elementDec3.compareTo(elementQuantitiy3), std::strong_ordering::equal);
 
-    EXPECT_THROW((void) (elementStrA.compareTo(elementInt3)), std::exception);
-    EXPECT_THROW((void) (elementStrA.compareTo(elementInt4)), std::exception);
-    EXPECT_THROW((void) (elementStrA.compareTo(elementDecPi)), std::exception);
-    EXPECT_THROW((void) (elementStrA.compareTo(elementDec3)), std::exception);
+    EXPECT_EQ(elementStrA.compareTo(elementInt3), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrA.compareTo(elementInt4), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrA.compareTo(elementDecPi), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrA.compareTo(elementDec3), std::strong_ordering::greater);
     EXPECT_EQ(elementStrA.compareTo(elementStrA), std::strong_ordering::equal);
     EXPECT_EQ(elementStrA.compareTo(elementStrB), std::strong_ordering::greater);
-    EXPECT_THROW((void) (elementStrA.compareTo(elementQuantitiy1)), std::exception);
-    EXPECT_THROW((void) (elementStrA.compareTo(elementQuantitiy2)), std::exception);
-    EXPECT_THROW((void) (elementStrA.compareTo(elementQuantitiy3)), std::exception);
+    EXPECT_EQ(elementStrA.compareTo(elementQuantitiy1), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrA.compareTo(elementQuantitiy2), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrA.compareTo(elementQuantitiy3), std::strong_ordering::greater);
 
-    EXPECT_THROW((void) (elementStrB.compareTo(elementInt3)), std::exception);
-    EXPECT_THROW((void) (elementStrB.compareTo(elementInt4)), std::exception);
-    EXPECT_THROW((void) (elementStrB.compareTo(elementDecPi)), std::exception);
-    EXPECT_THROW((void) (elementStrB.compareTo(elementDec3)), std::exception);
+    EXPECT_EQ(elementStrB.compareTo(elementInt3), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrB.compareTo(elementInt4), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrB.compareTo(elementDecPi), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrB.compareTo(elementDec3), std::strong_ordering::greater);
     EXPECT_EQ(elementStrB.compareTo(elementStrA), std::strong_ordering::less);
     EXPECT_EQ(elementStrB.compareTo(elementStrB), std::strong_ordering::equal);
-    EXPECT_THROW((void) (elementStrB.compareTo(elementQuantitiy1)), std::exception);
-    EXPECT_THROW((void) (elementStrB.compareTo(elementQuantitiy2)), std::exception);
-    EXPECT_THROW((void) (elementStrB.compareTo(elementQuantitiy3)), std::exception);
+    EXPECT_EQ(elementStrB.compareTo(elementQuantitiy1), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrB.compareTo(elementQuantitiy2), std::strong_ordering::greater);
+    EXPECT_EQ(elementStrB.compareTo(elementQuantitiy3), std::strong_ordering::greater);
 
     EXPECT_EQ(elementQuantitiy1.compareTo(elementInt3), std::nullopt);
     EXPECT_EQ(elementQuantitiy1.compareTo(elementInt4), std::nullopt);
     EXPECT_EQ(elementQuantitiy1.compareTo(elementDecPi), std::nullopt);
     EXPECT_EQ(elementQuantitiy1.compareTo(elementDec3), std::nullopt);
-    EXPECT_THROW((void) (elementQuantitiy1.compareTo(elementStrA)), std::exception);
-    EXPECT_THROW((void) (elementQuantitiy1.compareTo(elementStrB)), std::exception);
+    EXPECT_EQ(elementQuantitiy1.compareTo(elementStrA), std::strong_ordering::less);
+    EXPECT_EQ(elementQuantitiy1.compareTo(elementStrB), std::strong_ordering::less);
     EXPECT_EQ(elementQuantitiy1.compareTo(elementQuantitiy1), std::strong_ordering::equal);
     EXPECT_EQ(elementQuantitiy1.compareTo(elementQuantitiy2), std::strong_ordering::less);
     EXPECT_EQ(elementQuantitiy1.compareTo(elementQuantitiy3), std::nullopt);
@@ -395,8 +395,8 @@ TEST_F(ElementTest, CompareTo)
     EXPECT_EQ(elementQuantitiy2.compareTo(elementInt4), std::nullopt);
     EXPECT_EQ(elementQuantitiy2.compareTo(elementDecPi), std::nullopt);
     EXPECT_EQ(elementQuantitiy2.compareTo(elementDec3), std::nullopt);
-    EXPECT_THROW((void) (elementQuantitiy2.compareTo(elementStrA)), std::exception);
-    EXPECT_THROW((void) (elementQuantitiy2.compareTo(elementStrB)), std::exception);
+    EXPECT_EQ(elementQuantitiy2.compareTo(elementStrA), std::strong_ordering::less);
+    EXPECT_EQ(elementQuantitiy2.compareTo(elementStrB), std::strong_ordering::less);
     EXPECT_EQ(elementQuantitiy2.compareTo(elementQuantitiy1), std::strong_ordering::greater);
     EXPECT_EQ(elementQuantitiy2.compareTo(elementQuantitiy2), std::strong_ordering::equal);
     EXPECT_EQ(elementQuantitiy2.compareTo(elementQuantitiy3), std::nullopt);
@@ -405,8 +405,8 @@ TEST_F(ElementTest, CompareTo)
     EXPECT_EQ(elementQuantitiy3.compareTo(elementInt4), std::strong_ordering::less);
     EXPECT_EQ(elementQuantitiy3.compareTo(elementDecPi), std::strong_ordering::less);
     EXPECT_EQ(elementQuantitiy3.compareTo(elementDec3), std::strong_ordering::equal);
-    EXPECT_THROW((void) (elementQuantitiy3.compareTo(elementStrA)), std::exception);
-    EXPECT_THROW((void) (elementQuantitiy3.compareTo(elementStrB)), std::exception);
+    EXPECT_EQ(elementQuantitiy3.compareTo(elementStrA), std::strong_ordering::less);
+    EXPECT_EQ(elementQuantitiy3.compareTo(elementStrB), std::strong_ordering::less);
     EXPECT_EQ(elementQuantitiy3.compareTo(elementQuantitiy1), std::nullopt);
     EXPECT_EQ(elementQuantitiy3.compareTo(elementQuantitiy2), std::nullopt);
     EXPECT_EQ(elementQuantitiy3.compareTo(elementQuantitiy3), std::strong_ordering::equal);

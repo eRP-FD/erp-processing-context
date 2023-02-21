@@ -4,12 +4,13 @@
  */
 
 #include "erp/model/MetaData.hxx"
-
 #include "erp/erp-serverinfo.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "erp/model/ResourceNames.hxx"
+#include "erp/model/ResourceVersion.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/RapidjsonDocument.hxx"
 
-#include <mutex> // for call_once
+#include <mutex>// for call_once
 
 
 namespace model
@@ -72,27 +73,27 @@ const std::string metadata_template = R"--(
           "operation": [
             {
               "name": "create",
-              "definition": "http://gematik.de/fhir/OperationDefinition/CreateOperationDefinition"
+              "definition": ""
             },
             {
               "name": "activate",
-              "definition": "http://gematik.de/fhir/OperationDefinition/ActivateOperationDefinition"
+              "definition": ""
             },
             {
               "name": "accept",
-              "definition": "http://gematik.de/fhir/OperationDefinition/AcceptOperationDefinition"
+              "definition": ""
             },
             {
               "name": "reject",
-              "definition": "http://gematik.de/fhir/OperationDefinition/RejectOperationDefinition"
+              "definition": ""
             },
             {
               "name": "close",
-              "definition": "http://gematik.de/fhir/OperationDefinition/CloseOperationDefinition"
+              "definition": ""
             },
             {
               "name": "abort",
-              "definition": "http://gematik.de/fhir/OperationDefinition/AbortOperationDefinition"
+              "definition": ""
             }
           ]
         },
@@ -186,27 +187,140 @@ const std::string metadata_template = R"--(
   ]
 }
 )--";
+constexpr std::string_view chargeitem_resource_template = R"--(
+        {
+          "type": "ChargeItem",
+          "profile": "",
+          "interaction": [
+            {
+              "code": "create"
+            },
+            {
+              "code": "read"
+            },
+            {
+              "code": "delete"
+            }
+          ],
+          "searchParam": [
+            {
+              "name": "entered-date",
+              "type": "date"
+            },
+            {
+              "name": "_lastUpdated",
+              "type": "date"
+            }
+          ]
+        })--";
+constexpr std::string_view consent_resource_template = R"--(
+        {
+          "type": "Consent",
+          "profile": "",
+          "interaction": [
+            {
+              "code": "create"
+            },
+            {
+              "code": "read"
+            },
+            {
+              "code": "delete"
+            }
+          ]
+        })--";
 
 std::once_flag onceFlag;
 struct MetaDataTemplateMark;
 RapidjsonNumberAsStringParserDocument<MetaDataTemplateMark> metaDataTemplate;
+struct ConsentTemplateMark;
+RapidjsonNumberAsStringParserDocument<ConsentTemplateMark> consentTemplate;
+struct ChargeItemTemplateMark;
+RapidjsonNumberAsStringParserDocument<ChargeItemTemplateMark> chargeItemTemplate;
 
-void initTemplates ()
+void initTemplates()
 {
     rapidjson::StringStream strm(metadata_template.data());
     metaDataTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(strm);
-    ModelExpect(!metaDataTemplate->HasParseError(), "can not parse json template string");
+    ModelExpect(! metaDataTemplate->HasParseError(), "can not parse json MetaData template string");
+    rapidjson::StringStream strmChargeItem(chargeitem_resource_template.data());
+    chargeItemTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(strmChargeItem);
+    ModelExpect(! metaDataTemplate->HasParseError(), "can not parse json ChargeItem template string");
+    rapidjson::StringStream strmConsent(consent_resource_template.data());
+    consentTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(strmConsent);
+    ModelExpect(! metaDataTemplate->HasParseError(), "can not parse json Consent template string");
 }
 
 // definition of JSON pointers:
-const rapidjson::Pointer datePointer ("/date");
-const rapidjson::Pointer versionPointer ("/software/version");
-const rapidjson::Pointer releaseDatePointer ("/software/releaseDate");
+const rapidjson::Pointer datePointer("/date");
+const rapidjson::Pointer versionPointer("/software/version");
+const rapidjson::Pointer releaseDatePointer("/software/releaseDate");
 
-}  // anonymous namespace
+const rapidjson::Pointer restResourceArrayPointer("/rest/0/resource");
+const rapidjson::Pointer restResourceTaskOperationArrayPointer("/rest/0/resource/0/operation");
+const rapidjson::Pointer restResourceCommSupportedProfileArrayPointer("/rest/0/resource/1/supportedProfile");
+const rapidjson::Pointer restResourceTaskSupportedProfilePointer("/rest/0/resource/0/profile");
+
+struct DeprecatedProfile
+{
+    static constexpr auto resourceStructDefs = {
+        resource::structure_definition::deprecated::task,
+        resource::structure_definition::communication,
+        resource::structure_definition::deprecated::medicationDispense,
+        resource::structure_definition::deprecated::auditEvent,
+        resource::structure_definition::deprecated::device
+    };
+    static constexpr auto resourceCommStructDefs = {
+        resource::structure_definition::deprecated::communicationInfoReq,
+        resource::structure_definition::deprecated::communicationReply,
+        resource::structure_definition::deprecated::communicationDispReq,
+        resource::structure_definition::deprecated::communicationRepresentative
+    };
+    static constexpr auto taskOpStructDefs = {
+        resource::operation_definition::deprecated::create,
+        resource::operation_definition::deprecated::activate,
+        resource::operation_definition::deprecated::accept,
+        resource::operation_definition::deprecated::reject,
+        resource::operation_definition::deprecated::close,
+        resource::operation_definition::deprecated::abort
+    };
+}
+deprecatedProfile;
+
+struct CurrentProfile
+{
+    static constexpr auto resourceStructDefs = {
+        resource::structure_definition::task,
+        resource::structure_definition::communication,
+        resource::structure_definition::medicationDispense,
+        resource::structure_definition::auditEvent,
+        resource::structure_definition::device,
+        resource::structure_definition::chargeItem,
+        resource::structure_definition::consent
+    };
+    static constexpr auto resourceCommStructDefs = {
+        resource::structure_definition::communicationInfoReq,
+        resource::structure_definition::communicationReply,
+        resource::structure_definition::communicationDispReq,
+        resource::structure_definition::communicationRepresentative,
+        resource::structure_definition::communicationChargChangeReq,
+        resource::structure_definition::communicationChargChangeReply
+    };
+    static constexpr auto taskOpStructDefs = {
+        resource::operation_definition::create,
+        resource::operation_definition::activate,
+        resource::operation_definition::accept,
+        resource::operation_definition::reject,
+        resource::operation_definition::close,
+        resource::operation_definition::abort
+    };
+}
+currentProfile;
+
+}// anonymous namespace
 
 
-MetaData::MetaData()
+MetaData::MetaData(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
     : Resource<MetaData>(ResourceBase::NoProfile,
                          []() {
                              std::call_once(onceFlag, initTemplates);
@@ -214,42 +328,45 @@ MetaData::MetaData()
                          }()
                              .instance())
 {
-    addMemberToArrayEntry(
-        ::rapidjson::Pointer{"/rest/0/resource"}, 0, "profile",
-        ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxTask"));
-
-    addMemberToArrayEntry(
-        ::rapidjson::Pointer{"/rest/0/resource"}, 1, "profile",
-        ::model::ResourceVersion::versionizeProfile("http://hl7.org/fhir/StructureDefinition/Communication"));
-
-    addMemberToArrayEntry(::rapidjson::Pointer{"/rest/0/resource"}, 1, "supportedProfile",
-                          {::model::ResourceVersion::versionizeProfile(
-                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq"),
-                           ::model::ResourceVersion::versionizeProfile(
-                               "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq"),
-                           ::model::ResourceVersion::versionizeProfile(
-                               "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply"),
-                           ::model::ResourceVersion::versionizeProfile(
-                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply"),
-                           ::model::ResourceVersion::versionizeProfile(
-                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq"),
-                           ::model::ResourceVersion::versionizeProfile(
-                               "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative")});
-
-    addMemberToArrayEntry(::rapidjson::Pointer{"/rest/0/resource"}, 2, "profile",
-                          ::model::ResourceVersion::versionizeProfile(
-                              "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"));
-    addMemberToArrayEntry(
-        ::rapidjson::Pointer{"/rest/0/resource"}, 3, "profile",
-        ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxAuditEvent"));
-    addMemberToArrayEntry(
-        ::rapidjson::Pointer{"/rest/0/resource"}, 4, "profile",
-        ::model::ResourceVersion::versionizeProfile("https://gematik.de/fhir/StructureDefinition/ErxDevice"));
+    if(model::ResourceVersion::deprecatedProfile(profileVersion))
+    {
+        fillResource(deprecatedProfile);
+    }
+    else
+    {
+        addResourceTemplate(*chargeItemTemplate);
+        addResourceTemplate(*consentTemplate);
+        fillResource(currentProfile);
+    }
 
     setVersion(ErpServerInfo::ReleaseVersion);
     model::Timestamp releaseDate = model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
     setDate(releaseDate);
     setReleaseDate(releaseDate);
+}
+
+template<class ProfileDefinition>
+void MetaData::fillResource(const ProfileDefinition& profileDefinition)
+{
+    for (size_t index = 0; const auto structDef : profileDefinition.resourceStructDefs)
+    {
+        addMemberToArrayEntry(restResourceArrayPointer, index++, "profile", ResourceVersion::versionizeProfile(structDef));
+    }
+    for (const auto structDef : profileDefinition.resourceCommStructDefs)
+    {
+        addToArray(restResourceCommSupportedProfileArrayPointer, ResourceVersion::versionizeProfile(structDef));
+    }
+    for (size_t index = 0; const auto structDef : profileDefinition.taskOpStructDefs)
+    {
+        addMemberToArrayEntry(restResourceTaskOperationArrayPointer, index++, "definition", structDef);
+    }
+}
+
+template<class TemplateDocument>
+void MetaData::addResourceTemplate(const TemplateDocument& templateDocument)
+{
+    auto newEntry = copyValue(templateDocument);
+    addToArray(restResourceArrayPointer, std::move(newEntry));
 }
 
 MetaData::MetaData(NumberAsStringParserDocument&& jsonTree)
@@ -288,4 +405,12 @@ void MetaData::setReleaseDate(const model::Timestamp& releaseDate)
     setValue(releaseDatePointer, releaseDate.toXsDateTime());
 }
 
-}  // namespace model
+ResourceVersion::DeGematikErezeptWorkflowR4 MetaData::taskProfileVersion()
+{
+    const auto profileVersion =
+        ResourceVersion::profileVersionFromName(getStringValue(restResourceTaskSupportedProfilePointer));
+    return std::get<ResourceVersion::DeGematikErezeptWorkflowR4>(
+        std::get<ResourceVersion::AnyProfileVersion>(profileVersion));
+}
+
+}// namespace model

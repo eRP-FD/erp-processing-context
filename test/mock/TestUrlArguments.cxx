@@ -521,8 +521,8 @@ TestUrlArguments::Communications TestUrlArguments::applySort (Communications&& c
 TestUrlArguments::Communications TestUrlArguments::applyPaging (Communications&& communications) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
-    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(communications.size()) - offset;
+    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(communications.size()) - gsl::narrow<ptrdiff_t>(offset);
     size_t count = 0;
     if(remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -598,8 +598,8 @@ TestUrlArguments::Tasks TestUrlArguments::applySort (TestUrlArguments::Tasks&& t
 TestUrlArguments::Tasks TestUrlArguments::applyPaging (TestUrlArguments::Tasks&& tasks) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
-    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(tasks.size()) - offset;
+    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(tasks.size()) - gsl::narrow<ptrdiff_t>(offset);
     size_t count = 0;
     if(remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -670,8 +670,8 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::applySort (TestUrlArgumen
 TestUrlArguments::AuditDataContainer TestUrlArguments::applyPaging (TestUrlArguments::AuditDataContainer&& auditEvents) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
-    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(auditEvents.size()) - offset;
+    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(auditEvents.size()) - gsl::narrow<ptrdiff_t>(offset);
     size_t count = 0;
     if(remaining > 0)
         count = std::min(size_t(remaining), countArg);
@@ -786,8 +786,8 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applyPaging(MedicationDi
 TestUrlArguments::ChargeItemContainer TestUrlArguments::applyPaging(ChargeItemContainer&& chargeItems) const
 {
     const auto countArg = mUrlArguments.mPagingArgument.getCount();
-    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
-    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(chargeItems.size()) - offset;
+    const size_t offset = mUrlArguments.mPagingArgument.getOffset();
+    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(chargeItems.size()) - gsl::narrow<ptrdiff_t>(offset);
     size_t count = 0;
     if (remaining > 0)
         count = std::min(size_t(remaining), countArg);

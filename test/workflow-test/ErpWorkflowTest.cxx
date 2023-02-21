@@ -11,9 +11,10 @@
 #include "erp/fhir/Fhir.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <thread>
-
 
 
 TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
@@ -71,6 +72,34 @@ TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
     }
 }
 
+TEST_F(ErpWorkflowTest, ActivateTaskUnsupportedProfile)
+{
+    if (runsInCloudEnv())
+    {
+        GTEST_SKIP_("skipped in cloud environment");
+    }
+    std::optional<model::Task> task;
+    std::optional<std::variant<model::Task, model::OperationOutcome>> result;
+    const auto signingTime = model::Timestamp::fromXsDate("2021-06-08");
+    // create a task with the deprecated profile and send them to a server with the new profile set
+    {
+        auto envVars = testutils::getOldFhirProfileEnvironment();
+        ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
+        ASSERT_TRUE(task.has_value());
+
+        auto kbvBundle = ResourceTemplates::kbvBundleXml({.timestamp = signingTime});
+        auto envVarsNew = testutils::getNewFhirProfileEnvironment();
+        ASSERT_NO_FATAL_FAILURE(result =
+                                    taskActivate(task->prescriptionId(), task->accessCode(),
+                                                 toCadesBesSignature(kbvBundle, signingTime), HttpStatus::BadRequest));
+        ASSERT_TRUE(std::holds_alternative<model::OperationOutcome>(*result));
+        const model::OperationOutcome& operationOutcome = std::get<model::OperationOutcome>(*result);
+        ASSERT_TRUE(String::contains(operationOutcome.issues().at(0).detailsText.value_or(""),
+                                 "Unsupported profile"));
+    }
+}
+
+
 TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-cognitive-complexity)
 {
     if(isUnsupportedFlowtype(GetParam()))
@@ -100,7 +129,8 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtInsurant));
     ASSERT_TRUE(communicationsBundle);
     EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, *prescriptionId), communications.size());
-    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20");
+    const auto closeBody =
+        medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20", model::ResourceVersion::currentBundle());
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
     const JWT jwt{ jwtApotheke() };
     ClientResponse serverResponse;
@@ -195,30 +225,31 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurantProxy) // NOLINT
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
-    std::string kvnr;
-    generateNewRandomKVNR(kvnr);
+    const auto kvnr = generateNewRandomKVNR();
     std::string qesBundle;
     std::vector<model::Communication> communications;
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr.id(), accessCode));
 
-    std::string kvnrRepresentative;
+    std::optional<model::Kvnr> kvnrRepresentative;
     for (const auto& communication : communications)
     {
-        if (communication.messageType() == model::Communication::MessageType::Representative && communication.sender() != kvnr)
+        if (communication.messageType() == model::Communication::MessageType::Representative &&
+            communication.sender().has_value() && model::getIdentityString(communication.sender().value()) != kvnr)
         {
-            kvnrRepresentative = std::string(communication.recipient().value());
+            kvnrRepresentative = std::get<model::Kvnr>(communication.recipient());
             break;
         }
     }
-    ASSERT_FALSE(kvnrRepresentative.empty());
-    ASSERT_NO_FATAL_FAILURE(
-        checkTaskAbort(*prescriptionId, JwtBuilder::testBuilder().makeJwtVersicherter(kvnrRepresentative), kvnr, { accessCode }, { }, communications));
+    ASSERT_TRUE(kvnrRepresentative.has_value());
+    ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId,
+                                           JwtBuilder::testBuilder().makeJwtVersicherter(kvnrRepresentative->id()),
+                                           kvnr.id(), {accessCode}, {}, communications));
 
     // Check audit events
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
-        { prescriptionId }, kvnr, "en", startTime,
-        { telematicIdDoctor, kvnr, kvnrRepresentative }, { 0 },
+        { prescriptionId }, kvnr.id(), "en", startTime,
+        { telematicIdDoctor, kvnr.id(), kvnrRepresentative->id() }, { 0 },
         { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del});
 }
 
@@ -459,9 +490,8 @@ TEST_F(ErpWorkflowTest, TaskSearchStatusERP4627) // NOLINT
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
     // Default result format is XML, if no inner request could be created:
     ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
-    checkOperationOutcome(
-        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
-        "Parsing the HTTP message header failed.");
+    checkOperationOutcome(operationOutcomeFromResponse(innerResponse.getBody(), false /*Json*/),
+                          model::OperationOutcome::Issue::Type::invalid, "Parsing the HTTP message header failed.");
 }
 
 TEST_P(ErpWorkflowTestP, TaskSearchLastModified) // NOLINT
@@ -931,11 +961,10 @@ TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-comp
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    const char* refFile = "test/EndpointHandlerTest/metadata.json";
-    if (model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>() >=
-        model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)
+    const auto* refFile = "test/EndpointHandlerTest/metadata_1.1.1.json";
+    if (! model::ResourceVersion::deprecatedProfile(serverGematikProfileVersion()))
     {
-        refFile = "test/EndpointHandlerTest/metadata_1.1.1.json";
+        refFile = "test/EndpointHandlerTest/metadata_1.2.json";
     }
 
     auto expectedMetaData = model::MetaData::fromJsonNoValidation(
@@ -1029,7 +1058,7 @@ std::string fixBundle(const std::string& bundle, const Uuid& id)
     // remove comments
     result = regex_replace(result, std::regex{R"(<!--.*-->)"}, "$1");
     // fix id
-    result = regex_replace(result, std::regex{"9581ce65-b118-4751-9073-19c091b341e0"}, id.toString());
+    result = regex_replace(result, std::regex{"8938aff5-720a-414a-b574-114bd8d1e11c"}, id.toString());
     // remove empty lines
     result = regex_replace(result, std::regex{R"((^|\n)\s*\n)"}, "$1");
     // remove redundant namespace declarations
@@ -1041,7 +1070,6 @@ std::string fixBundle(const std::string& bundle, const Uuid& id)
 TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
-    auto& resourceManager = ResourceManager::instance();
 
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
@@ -1050,18 +1078,20 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitiv
     ASSERT_TRUE(prescriptionId.has_value());
 
     const std::string kvnr{"K220645129"};
+
+    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
     // prepare QES-Bundle for invocation of POST /task/<id>/$activate
-    auto qesXMLString = resourceManager.getStringResource("test/issues/ERP-5723_ERP-5750/InputKbvBundle.xml");
-    qesXMLString = String::replaceAll(qesXMLString, "160.100.000.000.024.67", prescriptionId->toString());
-    qesXMLString = patchVersionsInBundle(qesXMLString);
-    auto qesBundle = model::KbvBundle::fromXml(qesXMLString, *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-                                               {{.allowNonLiteralAuthorReference = true}});
-    std::string qesBundleSigned = toCadesBesSignature(qesXMLString, model::Timestamp::fromXsDate("2021-04-03"));
+    auto bundleXml = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId.value(), .timestamp = timestamp, .kvnr = kvnr});
+    auto qesBundle = model::KbvBundle::fromXml(
+        bundleXml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+        model::ResourceVersion::supportedBundles(),
+        {{.allowNonLiteralAuthorReference = true}});
+    std::string qesBundleSigned = toCadesBesSignature(bundleXml, timestamp);
 
     std::optional<model::Task> task;
     // invoke /task/<id>/$activate
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(*prescriptionId, accessCode, qesBundleSigned));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(*prescriptionId, accessCode, qesBundleSigned));
     ASSERT_TRUE(task);
     EXPECT_NO_THROW(EXPECT_EQ(task->prescriptionId().toString(), prescriptionId->toString()));
     ASSERT_TRUE(task->kvnr());
@@ -1103,7 +1133,7 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitiv
         outputBundleXml.replace(sigStart, sigLen, "");
     }
     outputBundleXml = regex_replace(outputBundleXml, std::regex{R"(\n\s*<signature>(.|\n)*</signature>)"}, "");
-    EXPECT_EQ(outputBundleXml, fixBundle(qesXMLString, outputBundle[0].getId()));
+    EXPECT_EQ(outputBundleXml, fixBundle(bundleXml, outputBundle[0].getId()));
     ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(*prescriptionId, kvnr, accessCode));
     // get task again as XML:
     ClientResponse response;
@@ -1118,7 +1148,7 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitiv
     EXPECT_EQ(*contentType,std::string(ContentMimeType::fhirXmlUtf8));
     const auto& body = response.getBody();
     EXPECT_FALSE(body.empty());
-    EXPECT_NE(body.find("1\xe2\x80\x93""3mal/Tag"), std::string::npos);
+    EXPECT_NE(body.find("1\xe2\x80\x93""3mal "), std::string::npos);
 }
 
 
@@ -1148,16 +1178,19 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
     using namespace std::string_view_literals;
     using model::Task;
     using model::Timestamp;
-    static const char* create =
-        "<Parameters xmlns=\"http://hl7.org/fhir\">\n"
-        "  <parameter>\n"
-        "    <name value=\"workflowType\"/>\n"
-        "    <valueCoding>\n"
-        "      <system value=\"https://gematik.de/fhir/CodeSystem/Flowtype\"/>\n"
-        "      <code value=\"160\"/>\n"
-        "    </valueCoding>\n"
-        "  </parameter>\n"
-        "</Parameters>\n";
+    const auto gematikVersion{model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()};
+    const auto csFlowtype = (gematikVersion < model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0)
+                            ? model::resource::code_system::deprecated::flowType
+                            : model::resource::code_system::flowType;
+    const std::string create = R"--(<Parameters xmlns="http://hl7.org/fhir">
+  <parameter>
+    <name value="workflowType"/>
+    <valueCoding>
+      <system value=")--" + std::string(csFlowtype) + R"--("/>
+      <code value="160"/>
+    </valueCoding>
+  </parameter>
+</Parameters>)--";
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(RequestArguments{HttpMethod::POST, "/Task/$create", create, "application/fhir+xml"}.withJwt(jwt)
                                                                          .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
@@ -1226,7 +1259,7 @@ TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWh
 
     const std::string kvnr{"X007654321"};
     const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, qesBundle));
     ASSERT_TRUE(task);
 
     std::optional<model::Bundle> acceptResultBundle;
@@ -1281,7 +1314,7 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
     const std::string kvnr{"X101010101"};
 
     const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(prescriptionId, accessCode, qesBundle));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle));
     ASSERT_TRUE(task);
 
     // Abort task:
@@ -1292,7 +1325,7 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {},
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
-    ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, accessCode, qesBundle,
+    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle,
                                          HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_NO_FATAL_FAILURE(taskAccept(prescriptionId, accessCode,
                                        HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
@@ -1425,7 +1458,7 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
     ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
     checkOperationOutcome(
-        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
+        operationOutcomeFromResponse(innerResponse.getBody(), false /*Json*/), model::OperationOutcome::Issue::Type::invalid,
         "HTTP parser finished before end of message, Content-Length field is missing or the value is too low.");
 
     // Send request with ContentLength header containing too low value
@@ -1436,7 +1469,7 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
     ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
     checkOperationOutcome(
-        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
+        operationOutcomeFromResponse(innerResponse.getBody(), false /*Json*/), model::OperationOutcome::Issue::Type::invalid,
         "HTTP parser finished before end of message, Content-Length field is missing or the value is too low.");
 
     // Send request with ContentLength header containing too high value
@@ -1446,9 +1479,9 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentType));
     ASSERT_EQ(innerResponse.getHeader().header(Header::ContentType).value(), "application/fhir+xml;charset=utf-8");
-    checkOperationOutcome(
-        innerResponse.getBody(), false/*Json*/, model::OperationOutcome::Issue::Type::invalid,
-        "HTTP parser did not finish correctly, Content-Length field is too large.");
+    checkOperationOutcome(operationOutcomeFromResponse(innerResponse.getBody(), false /*Json*/),
+                          model::OperationOutcome::Issue::Type::invalid,
+                          "HTTP parser did not finish correctly, Content-Length field is too large.");
 }
 
 TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
@@ -1507,14 +1540,14 @@ TEST_P(ErpWorkflowTestP, OperationOutcomeIncodeValidation)// NOLINT
         ResourceManager::instance().getStringResource("test/validation/xml/kbv/bundle/Bundle_invalid_erp_8431.xml");
     bundle = String::replaceAll(bundle, "REPLACE_ME_taskId", prescriptionId->toString());
     const auto& qes = toCadesBesSignature(bundle, model::Timestamp::fromXsDate("2021-06-08"));
-    ASSERT_NO_FATAL_FAILURE(taskActivate(*prescriptionId, accessCode, qes, HttpStatus::BadRequest,
+    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(*prescriptionId, accessCode, qes, HttpStatus::BadRequest,
                                          model::OperationOutcome::Issue::Type::invalid, "mandatory identifier.value not set"));
 }
 
 TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
 {
     using namespace std::chrono_literals;
-    
+
     // invoke POST /task/$create
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
@@ -1529,7 +1562,7 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now())));
 
     // invoke /task/<id>/$activate
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(*prescriptionId, std::string(task->accessCode()), qesBundle));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(*prescriptionId, std::string(task->accessCode()), qesBundle));
     ASSERT_TRUE(task);
 
     const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);

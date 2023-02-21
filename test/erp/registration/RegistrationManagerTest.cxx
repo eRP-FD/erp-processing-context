@@ -18,8 +18,10 @@ class RegistrationManagerTest : public testing::Test
 {
 public:
     const std::string teeHost = "tee-host";
-    const uint16_t teePort = 9090;
-    const std::string keyName = "ERP_VAU_INSTANCE:" + teeHost + ":" + std::to_string(teePort);
+    std::string getKeyName(uint16_t teePort) const
+    {
+        return "ERP_VAU_INSTANCE:" + teeHost + ":" + std::to_string(teePort);
+    }
     const char* eventFieldName = "event";
     const char* timestampFieldName = "timestamp";
 };
@@ -31,8 +33,10 @@ TEST_F(RegistrationManagerTest, Registration)//NOLINT(readability-function-cogni
             ? std::unique_ptr<RedisInterface>(new MockRedisStore())
             : std::unique_ptr<RedisInterface>(new RedisClient());
     auto& redisClient = *uniqueRedisClient;
-
-    RegistrationManager registrationManager(teeHost, teePort, std::move(uniqueRedisClient));
+    const auto& config = Configuration::instance();
+    const auto teeport = config.serverPort();
+    const auto keyName = getKeyName(teeport);
+    RegistrationManager registrationManager(teeHost, teeport, std::move(uniqueRedisClient));
 
     const model::Timestamp now = model::Timestamp::now();
 
@@ -83,8 +87,8 @@ TEST_F(RegistrationManagerTest, RegistrationBasedOnApplicationHealth)//NOLINT(re
         TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
             ? std::unique_ptr<RedisInterface>(new MockRedisStore())
             : std::unique_ptr<RedisInterface>(new RedisClient());
-
-    RegistrationManager registrationManager(teeHost, teePort, std::move(uniqueRedisClient));
+    const auto& config = Configuration::instance();
+    RegistrationManager registrationManager(teeHost, config.serverPort(), std::move(uniqueRedisClient));
 
     ApplicationHealth applicationHealth;
     ASSERT_FALSE(registrationManager.registered());

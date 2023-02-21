@@ -17,12 +17,16 @@ sonarqube {
         property "sonar.scm.provider", "git"
         property "sonar.cfamily.threads", "6"
         property "sonar.cfamily.cache.enabled", "false"
-        property "sonar.sources", "src/erp"
+        property "sonar.projectBaseDir", "${System.getProperty("user.dir")}"
+        property "sonar.sources", "src/"
+        property "sonar.tests", "test/"
         property "sonar.cxx.clangtidy.reportPaths", "clang-tidy.txt"
+        property "sonar.cxx.jsonCompilationDatabase", "jenkins-build-debug/compile_commands.json"
         property "sonar.cxx.file.suffixes", ".cxx,.cpp,.cc,.c,.hxx,.hpp,.hh,.h"
+        property "sonar.cxx.squid.disabled", "true"
         property "sonar.c.file.suffixes", "-"
         property "sonar.cpp.file.suffixes", "-"
         property "sonar.verbose", "true"
-        property "sonar.cfamily.build-wrapper-output", "${System.getProperty("user.dir")}/jenkins-build-debug/sonar-reports/"
+        property "sonar.cfamily.compile-commands", "jenkins-build-debug/compile_commands.json"
     }
 }

@@ -77,11 +77,15 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
     std::shared_ptr<TslManager> mgr(new TslManager(requestSender, std::move(xmlValidator),
                                                    std::vector<TslManager::PostUpdateHook>{}, std::move(trustStore),
                                                    std::unique_ptr<TrustStore>{}));
-    auto postUpdateHook = [=]{
-        addOcspCertificateToTrustStore(ocspCertificate, *mgr->mTslTrustStore);
-        addOcspCertificateToTrustStore(ocspCertificate, *mgr->mBnaTrustStore);
-        addCaCertificateToTrustStore(idpCertificateCa, *mgr, TSL);
-        addCaCertificateToTrustStore(idpCertificateCa, *mgr, BNA);
+    std::weak_ptr<TslManager> mgrWeakPtr{mgr};
+    auto postUpdateHook = [mgrWeakPtr, ocspCertificate, idpCertificateCa]{
+        auto tslManager = mgrWeakPtr.lock();
+        if (!tslManager)
+            return;
+        addOcspCertificateToTrustStore(ocspCertificate, *tslManager->mTslTrustStore);
+        addOcspCertificateToTrustStore(ocspCertificate, *tslManager->mBnaTrustStore);
+        addCaCertificateToTrustStore(idpCertificateCa, *tslManager, TSL);
+        addCaCertificateToTrustStore(idpCertificateCa, *tslManager, BNA);
     };
     mgr->addPostUpdateHook(postUpdateHook);
 

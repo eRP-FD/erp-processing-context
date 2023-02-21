@@ -66,7 +66,7 @@ AuditDataCollector& AuditDataCollector::setAction(const model::AuditEvent::Actio
     return *this;
 }
 
-AuditDataCollector& AuditDataCollector::setInsurantKvnr(const std::string_view& kvnr)
+AuditDataCollector& AuditDataCollector::setInsurantKvnr(const model::Kvnr& kvnr)
 {
     mInsurantKvnr = kvnr;
     return *this;

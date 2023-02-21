@@ -112,7 +112,8 @@ void FhirStructureDefinitionParser::startElement(const xmlChar* localname, const
             mStack.emplace_back(ElementType::ValueSet, localname);
         }
         else if (localname == "NamingSystem"_xs || localname == "OperationDefinition"_xs ||
-                 localname == "ImplementationGuide"_xs || localname == "ConceptMap"_xs)
+                 localname == "ImplementationGuide"_xs || localname == "ConceptMap"_xs ||
+                 localname == "SearchParameter"_xs)
         {
             TVLOG(2) << "skipping unneeded element: " + std::string{XmlStringView{localname}};
             mStack.emplace_back(ElementType::Ignored, localname);
@@ -403,6 +404,7 @@ void FhirStructureDefinitionParser::handleSnapshotSubTree(const xmlChar* localna
     mElementBuilder.name(std::string{idValue});
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void FhirStructureDefinitionParser::handleElementSubTree(const xmlChar* localname, const xmlChar* uri,
                                                          const SaxHandler::AttributeList& attributes)
 {
@@ -433,80 +435,81 @@ void FhirStructureDefinitionParser::handleElementSubTree(const xmlChar* localnam
                              {"base"_xs, ElementType::base},
                              {"constraint"_xs, ElementType::constraint},
                              {"binding"_xs, ElementType::binding}});
-    if (! hasEntered)
+    if (hasEntered)
     {
-        if (localname == "representation"_xs)
+        return;
+    }
+    if (localname == "representation"_xs)
+    {
+        mElementBuilder.representation(stringToRepresentation(valueAttributeFrom(attributes)));
+    }
+    else if (localname == "contentReference"_xs)
+    {
+        mElementBuilder.contentReference(valueAttributeFrom(attributes));
+    }
+    else if (localname == "max"_xs || localname == "min"_xs || localname ==  "maxLength"_xs)
+    {
+        const auto val = valueAttributeFrom(attributes);
+        if (val == "*" && localname == "max"_xs)
         {
-            mElementBuilder.representation(stringToRepresentation(valueAttributeFrom(attributes)));
+            mElementBuilder.cardinalityMax(std::nullopt);
         }
-        else if (localname == "contentReference"_xs)
+        else
         {
-            mElementBuilder.contentReference(valueAttributeFrom(attributes));
-        }
-        else if (localname == "max"_xs || localname == "min"_xs || localname ==  "maxLength"_xs)
-        {
-            const auto val = valueAttributeFrom(attributes);
-            if (val == "*" && localname == "max"_xs)
-            {
-                mElementBuilder.cardinalityMax(std::nullopt);
-            }
-            else
-            {
-                uint32_t uintVal{};
-                const auto *end = val.data() + val.size();
-                const auto res = std::from_chars(val.data(), end, uintVal);
-                Expect3(res.ec == std::errc{} && res.ptr == end,
-                        "failed to convert value for "s.append(localnameView) + ": " +
-                            (res.ec == std::errc{} ? "trailing characters" : std::make_error_code(res.ec).message()) +
-                            " in '" + val + "'",
-                        std::logic_error);
-                if (localname == "min"_xs)
-                {
-                    mElementBuilder.cardinalityMin(uintVal);
-                }
-                else if (localname == "max"_xs)
-                {
-                    mElementBuilder.cardinalityMax(uintVal);
-                }
-                else if (localname == "maxLength"_xs)
-                {
-                    mElementBuilder.maxLength(uintVal);
-                }
-            }
-        }
-        else if (localname == "minValueInteger"_xs || localname == "maxValueInteger"_xs)
-        {
-            int intVal{};
-            const auto val = valueAttributeFrom(attributes);
-            const auto* end = val.data() + val.size();
-            const auto res = std::from_chars(val.data(), end, intVal);
+            uint32_t uintVal{};
+            const auto *end = val.data() + val.size();
+            const auto res = std::from_chars(val.data(), end, uintVal);
             Expect3(res.ec == std::errc{} && res.ptr == end,
                     "failed to convert value for "s.append(localnameView) + ": " +
                         (res.ec == std::errc{} ? "trailing characters" : std::make_error_code(res.ec).message()) +
                         " in '" + val + "'",
                     std::logic_error);
-            if (localname == "minValueInteger"_xs)
+            if (localname == "min"_xs)
             {
-                mElementBuilder.minValueInteger(intVal);
+                mElementBuilder.cardinalityMin(uintVal);
             }
-            else if (localname == "maxValueInteger"_xs)
+            else if (localname == "max"_xs)
             {
-                mElementBuilder.maxValueInteger(intVal);
+                mElementBuilder.cardinalityMax(uintVal);
+            }
+            else if (localname == "maxLength"_xs)
+            {
+                mElementBuilder.maxLength(uintVal);
             }
         }
-        else if (localname == "minValueDecimal"_xs)
+    }
+    else if (localname == "minValueInteger"_xs || localname == "maxValueInteger"_xs)
+    {
+        int intVal{};
+        const auto val = valueAttributeFrom(attributes);
+        const auto* end = val.data() + val.size();
+        const auto res = std::from_chars(val.data(), end, intVal);
+        Expect3(res.ec == std::errc{} && res.ptr == end,
+                "failed to convert value for "s.append(localnameView) + ": " +
+                    (res.ec == std::errc{} ? "trailing characters" : std::make_error_code(res.ec).message()) +
+                    " in '" + val + "'",
+                std::logic_error);
+        if (localname == "minValueInteger"_xs)
         {
-            mElementBuilder.minValueDecimal(valueAttributeFrom(attributes));
+            mElementBuilder.minValueInteger(intVal);
         }
-        else if (localname =="maxValueDecimal"_xs)
+        else if (localname == "maxValueInteger"_xs)
         {
-            mElementBuilder.maxValueDecimal(valueAttributeFrom(attributes));
+            mElementBuilder.maxValueInteger(intVal);
         }
-        else if (localnameView.starts_with("minValue") || localnameView.starts_with("maxValue"))
-        {
-            // more min/maxValue[x] cases can be implemented when needed.
-            Fail("unsupported: " + std::string(localnameView));
-        }
+    }
+    else if (localname == "minValueDecimal"_xs)
+    {
+        mElementBuilder.minValueDecimal(valueAttributeFrom(attributes));
+    }
+    else if (localname =="maxValueDecimal"_xs)
+    {
+        mElementBuilder.maxValueDecimal(valueAttributeFrom(attributes));
+    }
+    else if (localnameView.starts_with("minValue") || localnameView.starts_with("maxValue"))
+    {
+        // more min/maxValue[x] cases can be implemented when needed.
+        Fail("unsupported: " + std::string(localnameView));
     }
 }
 

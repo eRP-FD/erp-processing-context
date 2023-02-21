@@ -44,6 +44,20 @@ public:
     std::unique_ptr<XmlValidatorContext>
     getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::DeGematikErezeptWorkflowR4 version) const;
 
+    std::unique_ptr<XmlValidatorContext>
+    getSchemaValidationContext(SchemaType schemaType,
+                               model::ResourceVersion::DeGematikErezeptPatientenrechnungR4 version) const;
+    std::unique_ptr<XmlValidatorContext>
+    getSchemaValidationContext(SchemaType schemaType,
+                               model::ResourceVersion::AbgabedatenPkv version) const;
+
+    std::unique_ptr<XmlValidatorContext>
+    getSchemaValidationContext(SchemaType schemaType,
+                               model::ResourceVersion::WorkflowOrPatientenRechnungProfile version) const;
+
+    std::unique_ptr<XmlValidatorContext>
+    getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::Fhir version) const;
+
     std::unique_ptr<XmlValidatorContext> getSchemaValidationContext(SchemaType schemaType,
                                                                     model::ResourceVersion::KbvItaErp version) const;
 

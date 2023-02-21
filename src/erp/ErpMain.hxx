@@ -6,28 +6,30 @@
 #ifndef ERP_PROCESSING_CONTEXT_ERPMAIN_HXX
 #define ERP_PROCESSING_CONTEXT_ERPMAIN_HXX
 
-#include "erp/database/Database.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
-#include "erp/tsl/TslManager.hxx"
-#include "erp/tsl/TslRefreshJob.hxx"
-#include "erp/util/Condition.hxx"
-#include "erp/util/Configuration.hxx"
-
 #include <memory>
-#include <optional>
+#include <functional>
 
 class ApplicationHealth;
+class ApplicationHealthAndRegistrationUpdater;
 class BlobCache;
 class BlobDatabase;
+template <typename>
+class Condition;
 class HsmClient;
 class HsmFactory;
+class HsmPool;
 class PcServiceContext;
+template<typename>
+class PeriodicTimer;
 class RedisInterface;
-class SeedTimer;
+class SeedTimerHandler;
+class TslManager;
 class ThreadPool;
 struct Factories;
 class HttpsServer;
+class XmlValidator;
+
+using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 
 /**
  * A collection of high-level functions that are required to initialize and run the processing context application.
@@ -76,3 +78,4 @@ private:
 
 
 #endif
+

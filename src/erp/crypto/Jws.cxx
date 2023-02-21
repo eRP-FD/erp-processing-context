@@ -131,14 +131,13 @@ Jws::Jws(const JoseHeader& header, std::string_view payload, const shared_EVP_PK
     OpenSslExpect(EVP_DigestSignFinal(mdctx, nullptr, &siglen) == 1, "Failed to get signature length.");
     auto sig = std::make_unique<unsigned char[]>(siglen);
     OpenSslExpect(EVP_DigestSignFinal(mdctx, sig.get(), &siglen) == 1, "Signature calculation failed");
-    ECDSA_SIG* ecdsasig = nullptr;
     const unsigned char* sigptr = sig.get();
-    OpenSslExpect(d2i_ECDSA_SIG(&ecdsasig, &sigptr, static_cast<int>(siglen)), "Failed to read generated signature.");
-    OpenSslExpect(ecdsasig, "d2i_ECDSA_SIG did not create an ECDSA_SIG object.");
+    EcdsaSignaturePtr ecdsaSig{d2i_ECDSA_SIG(nullptr, &sigptr, static_cast<int>(siglen))};
+    OpenSslExpect(ecdsaSig != nullptr, "Failed to read generated signature.");
 
     const BIGNUM* r;// NOLINT(cppcoreguidelines-init-variables)
     const BIGNUM* s;// NOLINT(cppcoreguidelines-init-variables)
-    ECDSA_SIG_get0(ecdsasig, &r, &s);
+    ECDSA_SIG_get0(ecdsaSig.get(), &r, &s);
     std::string rsBin(2 * BnSize, '\0');
     OpenSslExpect(BN_bn2binpad(r, reinterpret_cast<unsigned char*>(rsBin.data()), BnSize) == BnSize,
                   "Failed to get binary R.");

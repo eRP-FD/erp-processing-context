@@ -47,8 +47,6 @@ TEST_F(DurationConsumerTest, DurationConsumerGuard_failForSecondResetSessionIden
         DurationConsumerGuard guard ("test", {});
     }
     EXPECT_FALSE(DurationConsumer::getCurrent().isInitialized());
-
-    EXPECT_ANY_THROW(DurationConsumer::getCurrent().reset());
 }
 
 

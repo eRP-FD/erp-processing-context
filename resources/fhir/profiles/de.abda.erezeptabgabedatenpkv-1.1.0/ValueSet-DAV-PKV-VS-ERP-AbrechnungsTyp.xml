@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="DAV-PKV-VS-ERP-AbrechnungsTyp"/>
+  <url value="http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-AbrechnungsTyp"/>
+  <version value="1.1"/>
+  <name value="DAV_PKV_VS_ERP_AbrechnungsTyp"/>
+  <status value="active"/>
+  <compose>
+    <include>
+      <system value="http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-AbrechnungsTyp"/>
+    </include>
+  </compose>
+</ValueSet>

@@ -46,7 +46,7 @@ const std::string consent_template = R"--(
     {
       "coding": [
         {
-          "system": "https://gematik.de/fhir/CodeSystem/Consenttype",
+          "system": "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType",
           "code": "CHARGCONS",
           "display": "Consent for saving electronic charge item"
         }
@@ -55,7 +55,7 @@ const std::string consent_template = R"--(
   ],
   "patient": {
     "identifier": {
-      "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
+      "system": "http://fhir.de/sid/pkv/kvid-10",
       "value": ""
     }
   },
@@ -84,6 +84,7 @@ void initTemplates()
 
 const rapidjson::Pointer idPointer(ElementName::path(elements::id));
 const rapidjson::Pointer patientKvnrValuePointer(ElementName::path(elements::patient, elements::identifier, elements::value));
+const rapidjson::Pointer patientKvnrSystemPointer(ElementName::path(elements::patient, elements::identifier, elements::system));
 const rapidjson::Pointer dateTimePointer(ElementName::path(elements::dateTime));
 
 const rapidjson::Pointer categoryPointer(ElementName::path(elements::category));
@@ -97,9 +98,9 @@ const auto consentIdSeparator = '-';
 
 
 // static
-std::string Consent::createIdString(Consent::Type type, const std::string_view& kvnr)
+std::string Consent::createIdString(Consent::Type type, const Kvnr& kvnr)
 {
-    return std::string(magic_enum::enum_name(type)) + consentIdSeparator + std::string(kvnr);
+    return std::string(magic_enum::enum_name(type)) + consentIdSeparator + kvnr.id();
 }
 
 // static
@@ -114,23 +115,22 @@ std::pair<Consent::Type, std::string> Consent::splitIdString(const std::string_v
 }
 
 
-Consent::Consent(
-    const std::string_view& kvnr,
-    const model::Timestamp& dateTime)
-    : Resource<Consent>("https://gematik.de/fhir/StructureDefinition/ErxConsent",
-                        []() {
-                            std::call_once(onceFlag, initTemplates);
-                            return ConsentTemplate;
-                        }()
-                            .instance())
+Consent::Consent(const Kvnr& kvnr, const model::Timestamp& dateTime)
+    : Resource<Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>(resource::structure_definition::consent,
+                                                                              []() {
+                                                                                  std::call_once(onceFlag,
+                                                                                                 initTemplates);
+                                                                                  return ConsentTemplate;
+                                                                              }()
+                                                                                  .instance())
 {
     setPatientKvnr(kvnr);
     setDateTime(dateTime);
     fillId();
 }
 
-Consent::Consent (NumberAsStringParserDocument&& jsonTree)
-    : Resource<Consent>(std::move(jsonTree))
+Consent::Consent(NumberAsStringParserDocument&& jsonTree)
+    : Resource<Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>(std::move(jsonTree))
 {
 }
 
@@ -139,9 +139,9 @@ std::optional<std::string_view> Consent::id() const
     return getOptionalStringValue(idPointer);
 }
 
-std::string_view Consent::patientKvnr() const
+Kvnr Consent::patientKvnr() const
 {
-    return getStringValue(patientKvnrValuePointer);
+    return Kvnr{getStringValue(patientKvnrValuePointer), getStringValue(patientKvnrSystemPointer)};
 }
 
 bool Consent::isChargingConsent() const
@@ -161,7 +161,7 @@ bool Consent::isChargingConsent() const
             const auto system = getOptionalStringValue(*codingItem, systemPointer);
             const auto code = getOptionalStringValue(*codingItem, codePointer);
             if(system.has_value() && system.value() == code_system::consentType &&
-               code.has_value() && code.value() == magic_enum::enum_name(Consent::Type::CHARGCONS))
+               code.has_value() && code.value() == chargingConsentType)
             {
                 return true;
             }
@@ -186,9 +186,9 @@ void Consent::setId(const std::string_view& id)
     setValue(idPointer, id);
 }
 
-void Consent::setPatientKvnr(const std::string_view& kvnr)
+void Consent::setPatientKvnr(const Kvnr& kvnr)
 {
-    setValue(patientKvnrValuePointer, kvnr);
+    setValue(patientKvnrValuePointer, kvnr.id());
 }
 
 void Consent::setDateTime(const model::Timestamp& dateTime)

@@ -6,13 +6,13 @@
 #include "fhirtools/model/Element.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/Constants.hxx"
-
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 using namespace fhirtools;
 
 void ReferenceFinder::FinderResult::merge(ReferenceFinder::FinderResult&& source)
 {
-    validationResults.append(std::move(source.validationResults));
+    validationResults.merge(std::move(source.validationResults));
     referenceContext.merge(std::move(source.referenceContext));
 }
 fhirtools::ReferenceFinder::FinderResult fhirtools::ReferenceFinder::find(const fhirtools::Element& element,
@@ -31,8 +31,8 @@ fhirtools::ReferenceFinder::FinderResult fhirtools::ReferenceFinder::find(const 
                                                                     .elementFullPath{std::string{elementFullPath}},
                                                                     .resourceRoot{element.shared_from_this()},
                                                                     .anchorType = ReferenceContext::AnchorType::none});
-    ReferenceFinder finder{profiles, resourceInfo, true, isDocumentBundle(isBundle, element), 0};
-    finder.mResult.validationResults.append(std::move(resultList));
+    ReferenceFinder finder{profiles, resourceInfo, true, isDocumentBundle(isBundle, element), 0, options};
+    finder.mResult.validationResults.merge(std::move(resultList));
     if (isResource)
     {
         finder.mProfiledElementTypes.merge(finder.profilesFromResource(element, elementFullPath));
@@ -42,18 +42,19 @@ fhirtools::ReferenceFinder::FinderResult fhirtools::ReferenceFinder::find(const 
     {
         finder.mResult.referenceContext.addResource(std::move(resourceInfo));
     }
-    finder.mResult.validationResults.append(finder.mResult.referenceContext.finalize(options));
+    finder.mResult.validationResults.merge(finder.mResult.referenceContext.finalize(options));
     return std::move(finder.mResult);
 }
 
 ReferenceFinder::ReferenceFinder(std::set<ProfiledElementTypeInfo> profiles,
                                  std::shared_ptr<ResourceInfo> currentResource, bool followBundleEntry,
-                                 bool isDocumentBundle, size_t bundleIndex)
+                                 bool isDocumentBundle, size_t bundleIndex, const ValidatorOptions& options)
     : mProfiledElementTypes{std::move(profiles)}
     , mCurrentResource{std::move(currentResource)}
     , mFollowBundleEntry{followBundleEntry}
     , mIsDocumentBundle{isDocumentBundle}
     , mBundleIndex{bundleIndex}
+    , mOptions{options}
 {
 }
 
@@ -102,8 +103,8 @@ void ReferenceFinder::findInternal(const Element& element, std::string_view elem
             }
             else
             {
-                ReferenceFinder subFinder{commonSubPets, mCurrentResource, mFollowBundleEntry, mIsDocumentBundle,
-                                          mBundleIndex};
+                ReferenceFinder subFinder{commonSubPets,     mCurrentResource, mFollowBundleEntry,
+                                          mIsDocumentBundle, mBundleIndex,     mOptions};
                 std::ostringstream subResourcePath;
                 subResourcePath << resourcePath << '.' << subName;
                 subFinder.findInternal(*subElement, subElementFullPath.view(), subResourcePath.str());
@@ -133,13 +134,13 @@ void ReferenceFinder::processResource(const Element& element, std::set<ProfiledE
         return;
     }
     std::set<ProfiledElementTypeInfo> resourcePets;
-    for (auto& pet : allSubPets) //NOLINT(readability-qualified-auto)
+    for (auto& pet : allSubPets)//NOLINT(readability-qualified-auto)
     {
         if (! pet.element()->isRoot() || resourceDef->isDerivedFrom(repo, *pet.profile()))
         {
             continue;
         }
-        resourcePets.emplace(std::move(pet)); //NOLINT(hicpp-move-const-arg,performance-move-const-arg)
+        resourcePets.emplace(std::move(pet));//NOLINT(hicpp-move-const-arg,performance-move-const-arg)
     }
     resourcePets.merge(profilesFromResource(element, elementFullPath.view()));
     if (resourcePets.empty())
@@ -165,7 +166,8 @@ void ReferenceFinder::processResource(const Element& element, std::set<ProfiledE
                                                     .resourceRoot{element.shared_from_this()},
                                                     .anchorType = isAnchor ? AnchorType::composition : AnchorType::none,
                                                     .referenceRequirement = referenceRequirement(resourceHandling)});
-    ReferenceFinder subFinder{resourcePets, resourceInfo, followBundleEntry, isDocumentBundle(isBundle, element), 0};
+    ReferenceFinder subFinder{resourcePets, resourceInfo, followBundleEntry, isDocumentBundle(isBundle, element), 0,
+                              mOptions};
     subFinder.findInternal(element, elementFullPath.view(), std::string{});
     mResult.merge(std::move(subFinder.mResult));
     if (resourceHandling == ResourceHandling::contained)
@@ -209,7 +211,7 @@ fhirtools::ReferenceFinder::sliceProfiledElementTypes(const fhirtools::Element& 
     for (const auto& slice : slicing->slices())
     {
         const auto& condition = slice.condition(repo, slicing->discriminators());
-        if (condition->test(element))
+        if (condition->test(element, mOptions))
         {
             static_assert(std::is_reference_v<decltype(slice.profile())>,
                           "slice.profile() must return reference to allow taking the address");
@@ -248,18 +250,21 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
 {
     const auto& repo = *element.getFhirStructureRepository();
     auto [referenceId, resultList] = element.referenceTargetIdentity(elementFullPath);
-    mResult.validationResults.append(std::move(resultList));
+    mResult.validationResults.merge(std::move(resultList));
     ReferenceContext::ReferenceInfo refInfo{.identity = std::move(referenceId),
                                             .elementFullPath = std::string{elementFullPath},
                                             .localPath = std::move(resourcePath),
                                             .referencingElement{element.shared_from_this()},
                                             .targetProfileSets{}};
+    const FhirStructureDefinition* type = getTypeFromReferenceElement(repo, element, elementFullPath);
     for (const auto& pet : mProfiledElementTypes)
     {
         std::set<const FhirStructureDefinition*> profileSet;
         std::ostringstream targetProfiles;
         targetProfiles << '[';
         std::string_view sep;
+        const auto& referenceTargetProfiles = pet.element()->referenceTargetProfiles();
+        bool referenceTargetsOk = referenceTargetProfiles.empty();
         for (const auto& profileUrl : pet.element()->referenceTargetProfiles())
         {
             const auto* profile = repo.findDefinitionByUrl(profileUrl);
@@ -269,11 +274,28 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
                                               std::string{elementFullPath}, pet.profile());
                 continue;
             }
+            if (type != nullptr && ! (profile->isDerivedFrom(repo, *type) || type->isDerivedFrom(repo, *profile)))
+            {
+                continue;
+            }
+            referenceTargetsOk = true;
             targetProfiles << sep << profileUrl;
             sep = ", ";
             profileSet.emplace(profile);
         }
-
+        if (!referenceTargetsOk)
+        {
+            std::ostringstream msg;
+            msg << "Non of the allowed Target Profiles [";
+            std::string_view sepProf;
+            for (const auto& prof: referenceTargetProfiles)
+            {
+                msg << sepProf << '"' << prof << '"';
+                sepProf = ", ";
+            }
+            msg << "] matches type: " << type->url() << '|' << type->version();
+            mResult.validationResults.add(Severity::error, msg.str(), std::string{elementFullPath} + ".type", pet.profile());
+        }
         targetProfiles << ']';
         mResult.validationResults.add(Severity::debug,
                                       (to_string(refInfo.identity) + " targetProfile: ").append(targetProfiles.view()),
@@ -355,6 +377,38 @@ ReferenceContext::AnchorType ReferenceFinder::referenceRequirement(ReferenceFind
     Fail2("invalid value for elementType: " + std::to_string(intmax_t(elementType)), std::logic_error);
 }
 
+const FhirStructureDefinition* ReferenceFinder::getTypeFromReferenceElement(const FhirStructureRepository& repo,
+                                                                            const Element& referenceElement,
+                                                                            const std::string_view elementFullPath)
+{
+    auto typeElement = referenceElement.subElements("type");
+    const FhirStructureDefinition* type = nullptr;
+    if (! typeElement.empty() && typeElement[0]->type() == Element::Type::String)
+    {
+        auto typeStr = typeElement[0]->asString();
+        type = repo.findTypeById(typeStr);
+        if (! type)
+        {
+            std::string typeElementFullPath;
+            typeElementFullPath.reserve(elementFullPath.size() + 5);
+            typeElementFullPath.append(elementFullPath).append(".type");
+            type = repo.findDefinitionByUrl(typeStr);
+            if (type)
+            {
+                // http://www.hl7.org/fhir/references.html#type
+                mResult.validationResults.add(Severity::error, "Urls only allowed for Logical Models.",
+                                              typeElementFullPath, nullptr);
+            }
+            else
+            {
+                mResult.validationResults.add(Severity::error, "Unknown type: " + typeStr, typeElementFullPath,
+                                              nullptr);
+            }
+        }
+    }
+    return type;
+}
+
 
 void fhirtools::ReferenceFinder::addSliceProfiles(const Element& element, std::string_view elementFullPath)
 {
@@ -385,7 +439,8 @@ void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo, const std::list<std::string>& newProfileUrls,
+void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo,
+                                             const std::list<std::string>& newProfileUrls,
                                              std::string_view elementFullPath,
                                              const FhirStructureDefinition* sourceProfile)
 {
@@ -401,5 +456,5 @@ void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo
         }
         newProfiles.emplace(prof);
     }
-    addProfiles(repo, std::move(newProfiles), elementFullPath);
+    addProfiles(repo, newProfiles, elementFullPath);
 }

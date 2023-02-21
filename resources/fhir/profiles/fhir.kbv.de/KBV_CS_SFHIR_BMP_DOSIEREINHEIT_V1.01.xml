@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<CodeSystem xmlns="http://hl7.org/fhir" xmlns:ns2="http://www.w3.org/1999/xhtml">
+    <id value="KBV-CS-SFHIR-BMP-DOSIEREINHEIT"/>
+    <url value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT"/>
+    <identifier>
+        <system value="urn:ietf:rfc:3986"/>
+        <value value="urn:oid:1.2.276.0.76.3.1.1.5.2.41"/>
+    </identifier>
+    <version value="1.01"/>
+    <name value="KBV_CS_SFHIR_BMP_DOSIEREINHEIT"/>
+    <status value="active"/>
+    <date value="2019-01-01"/>
+    <publisher value="Kassenärztliche Bundesvereinigung"/>
+    <contact>
+        <telecom>
+            <system value="url"/>
+            <value value="http://www.kbv.de"/>
+        </telecom>
+    </contact>
+    <description value="Die Schlüsseltabelle enthält eine Liste von kodierten Dosiereinheiten, die im Rahmen der Spezifikation zum bundeseinheitlichen Medikationsplan nach § 31a SGB V zu verwenden sind (vgl. Anhang 4 zu Anlage 3 Vereinbarung BMP). Die Spalte &#x22;Code&#x22; wird im Attribut &#x22;V&#x22;, die Spalte &#x22;Einheit Ausdruck&#x22; im Attribut &#x22;DN&#x22;, die Spalte  &#x22;Bedeutung&#x22; im Attribut &#x22;bedeutung&#x22; und die Spalte &#x22;Einheit durch AM-Datenbanken unterstützt&#x22; im Attribut &#x22;unterstuetzt&#x22; abgebildet."/>
+    <copyright value="Kassenärztliche Bundesvereinigung"/>
+    <caseSensitive value="true"/>
+    <content value="complete"/>
+    <property>
+        <code value="unterstuetzt"/>
+        <type value="boolean"/>
+    </property>
+    <property>
+        <code value="sortierung"/>
+        <type value="integer"/>
+    </property>
+    <concept>
+        <code value="#"/>
+        <display value="Messlöffel"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="8"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="0"/>
+        <display value="Messbecher"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="9"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="1"/>
+        <display value="Stück"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="1"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="2"/>
+        <display value="Pkg."/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="false"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="22"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="3"/>
+        <display value="Flasche"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="15"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="4"/>
+        <display value="Beutel"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="16"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="5"/>
+        <display value="Hub"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="4"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="6"/>
+        <display value="Tropfen"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="2"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="7"/>
+        <display value="Teelöffel"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="26"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="8"/>
+        <display value="Esslöffel"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="27"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="9"/>
+        <display value="E"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="13"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="a"/>
+        <display value="Tasse"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="29"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="b"/>
+        <display value="Applikatorfüllung"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="11"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="c"/>
+        <display value="Augenbadewanne"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="33"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="d"/>
+        <display value="Dosierbriefchen"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="23"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="e"/>
+        <display value="Dosierpipette"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="24"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="f"/>
+        <display value="Dosierspritze"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="25"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="g"/>
+        <display value="Einzeldosis"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="12"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="h"/>
+        <display value="Glas"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="28"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="i"/>
+        <display value="Likörglas"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="32"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="j"/>
+        <display value="Messkappe"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="30"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="k"/>
+        <display value="Messschale"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="31"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="l"/>
+        <display value="Mio E"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="17"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="m"/>
+        <display value="Mio IE"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="18"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="n"/>
+        <display value="Pipettenteilstrich"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="14"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="o"/>
+        <display value="Sprühstoß"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="5"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="p"/>
+        <display value="IE"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="3"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="q"/>
+        <display value="cm"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="7"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="r"/>
+        <display value="l"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="20"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="s"/>
+        <display value="ml"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="6"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="t"/>
+        <display value="g"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="true"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="19"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="u"/>
+        <display value="kg"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="false"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="21"/>
+        </property>
+    </concept>
+    <concept>
+        <code value="v"/>
+        <display value="mg"/>
+        <property>
+            <code value="unterstuetzt"/>
+            <valueBoolean value="false"/>
+        </property>
+        <property>
+            <code value="sortierung"/>
+            <valueInteger value="10"/>
+        </property>
+    </concept>
+</CodeSystem>

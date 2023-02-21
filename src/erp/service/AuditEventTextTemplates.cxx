@@ -92,10 +92,6 @@ constexpr std::string_view auditEventTextTemplates = R"--(
           "textTemplate": "{agentName} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} gespeichert."
         },
         {
-          "eventId": 18,
-          "textTemplate": "{self} hat Markierung zu Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} geändert."
-        },
-        {
           "eventId": 19,
           "textTemplate": "{agentName} hat Abrechnungsinformationen zu dem Rezept mit der ID {prescriptionId} geändert."
         },
@@ -134,6 +130,10 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         {
           "eventId": 28,
           "textTemplate": "{agentName} konnte aufgrund eines Fehlers Ihre E-Rezepte nicht mit Ihrer Gesundheitskarte abrufen."
+        },
+        {
+          "eventId": 29,
+          "textTemplate": "Veraltete Nachrichten wurden vom Fachdienst automatisch gelöscht."
         }
       ]
     },
@@ -214,12 +214,8 @@ constexpr std::string_view auditEventTextTemplates = R"--(
           "textTemplate": "{agentName} stored charging information for a prescription {prescriptionId}."
         },
         {
-          "eventId": 18,
-          "textTemplate": "{self} changed marking in charging information for a prescription {prescriptionId}."
-        },
-        {
           "eventId": 19,
-          "textTemplate": "{agentName} changed charging information for a prescription {prescriptionId}"
+          "textTemplate": "{agentName} changed charging information for a prescription {prescriptionId}."
         },
         {
           "eventId": 20,
@@ -256,6 +252,10 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         {
           "eventId": 28,
           "textTemplate": "{agentName} was not able to retrieve your e-prescriptions due to an error with your health card."
+        },
+        {
+          "eventId": 29,
+          "textTemplate": "Outdated communications were deleted automatically by the service."
         }
       ]
     }
@@ -311,19 +311,45 @@ AuditEventTextTemplates::AuditEventTextTemplates()
 }
 
 
-std::string AuditEventTextTemplates::retrieveTextTemplate(
+AuditEventTextTemplates::TextTemplate AuditEventTextTemplates::retrieveTextTemplate(
     const model::AuditEventId eventId,
-    const std::string& language) const
+    const std::string& requestedLanguage) const
 {
+    std::string language = requestedLanguage;
     try
     {
-        const auto& resourcesForLanguage = mTextTemplates.at(language);
-        return resourcesForLanguage.at(eventId);
+        const auto& resourcesForLanguage = getId2TextContainer(language);
+        return { resourcesForLanguage.at(eventId), language };
     }
     catch(std::out_of_range& )
     {
-        TVLOG(1) << "No audit event text resource found for language " << language << " and event id "
-                 << static_cast<std::underlying_type<model::AuditEventId>::type>(eventId);
+        TLOG(WARNING) << "No audit event text resource found for language \"" << language << "\" and event id "
+                      << static_cast<std::underlying_type<model::AuditEventId>::type>(eventId);
         Fail2("No audit event text resource found for event id / language combination", std::logic_error);
     }
 }
+
+
+const AuditEventTextTemplates::Id2TextContainer&
+AuditEventTextTemplates::getId2TextContainer(std::string& inOutLanguage) const
+{
+    try
+    {
+        return mTextTemplates.at(inOutLanguage);
+    }
+    catch(std::out_of_range& )
+    {
+        TLOG(WARNING) << "Unsupported language " << inOutLanguage << ", using \"" << AuditEventTextTemplates::defaultLanguage << "\" instead";
+        inOutLanguage = AuditEventTextTemplates::defaultLanguage;
+        try
+        {
+            return mTextTemplates.at(inOutLanguage);
+        }
+        catch(std::out_of_range& )
+        {
+            TLOG(WARNING) << "No text templates for default language \"" << inOutLanguage << "\" found";
+            Fail2("No text templates for default language found", std::logic_error);
+        }
+    }
+}
+

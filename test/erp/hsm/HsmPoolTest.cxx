@@ -192,7 +192,7 @@ TEST_F(HsmPoolTest, keepAlive)
 
     ASSERT_EQ(clientReference.callCount, 0);
 
-    // Acquire one session. It is created on demand but not not destroyed after use.
+    // Acquire one session. It is created on demand but not destroyed after use.
     {
         auto session = pool.acquire();
         // Use it to set the last HSM call time.

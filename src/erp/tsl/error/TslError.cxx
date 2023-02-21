@@ -156,7 +156,7 @@ namespace
         Fail("unexpected TslErrorCode " + std::to_string(errorCode));
     }
 
-
+    // GEMREQ-start getErrorDefaultStatus
     HttpStatus getErrorDefaultStatus(const TslErrorCode errorCode)
     {
         switch (errorCode)
@@ -216,6 +216,7 @@ namespace
 
         Fail("unexpected TslErrorCode " + std::to_string(errorCode));
     }
+    // GEMREQ-end getErrorDefaultStatus
 
 
     LogId getErrorsLogId(const TslErrorCode errorCode, const std::vector<TslError::ErrorData>& errorData)

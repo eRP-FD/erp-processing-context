@@ -24,6 +24,7 @@
 #include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/Identity.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
@@ -57,7 +58,7 @@ void DatabaseFrontend::healthCheck()
 }
 
 std::tuple<std::vector<model::MedicationDispense>, bool>
-DatabaseFrontend::retrieveAllMedicationDispenses(const std::string& kvnr,
+DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
                                                  const std::optional<UrlArguments>& search)
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
@@ -104,13 +105,14 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const std::string& kvnr,
     return {std::move(resultSet), hasNextPage};
 }
 
-std::optional<MedicationDispense> DatabaseFrontend::retrieveMedicationDispense(const std::string& kvnr,
+std::optional<MedicationDispense> DatabaseFrontend::retrieveMedicationDispense(const model::Kvnr& kvnr,
                                                                                const model::MedicationDispenseId& id)
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
 
-    const auto [encryptedResult, hasNextPage] =
+    const auto encryptedResultTuple =
         mBackend->retrieveAllMedicationDispenses(hashedKvnr, id.getPrescriptionId(), {});
+    const auto& encryptedResult = std::get<std::vector<db_model::MedicationDispense>>(encryptedResultTuple);
 
     Expect(encryptedResult.size() <= 1,
            "invalid number of results of Medication Dispenses: " + std::to_string(encryptedResult.size()));
@@ -205,7 +207,7 @@ void DatabaseFrontend::activateTask(const Task& task, const Binary& healthCarePr
                                                      Compression::DictionaryUse::Default_json);
     const auto& kvnr = task.kvnr();
     Expect(kvnr.has_value(), "KVNR not set in task during activate");
-    auto encrypedKvnr = mCodec.encode(*kvnr, key, Compression::DictionaryUse::Default_json);
+    auto encrypedKvnr = mCodec.encode(kvnr->id(), key, Compression::DictionaryUse::Default_json);
 
     const auto hashedKvnr = mDerivation.hashKvnr(*kvnr);
     A_19688.finish();
@@ -288,7 +290,7 @@ std::string DatabaseFrontend::storeAuditEventData(model::AuditData& auditData)
 }
 
 std::vector<model::AuditData>
-DatabaseFrontend::retrieveAuditEventData(const std::string& kvnr, const std::optional<Uuid>& id,
+DatabaseFrontend::retrieveAuditEventData(const model::Kvnr& kvnr, const std::optional<Uuid>& id,
                                          const std::optional<model::PrescriptionId>& prescriptionId,
                                          const std::optional<UrlArguments>& search)
 {
@@ -316,13 +318,13 @@ DatabaseFrontend::retrieveAuditEventData(const std::string& kvnr, const std::opt
             }
             auto auditMetaData = AuditMetaData::fromJsonNoValidation(mCodec.decode(*item.metaData, key->second));
 
-            ret.emplace_back(item.eventId, std::move(auditMetaData), item.action, item.agentType, kvnr, item.deviceId,
-                             item.prescriptionId, consentId);
+            ret.emplace_back(item.eventId, std::move(auditMetaData), item.action, item.agentType, model::Kvnr{kvnr},
+                             item.deviceId, item.prescriptionId, consentId);
         }
         else
         {
-            ret.emplace_back(item.eventId, AuditMetaData({}, {}, {}), item.action, item.agentType, kvnr, item.deviceId,
-                item.prescriptionId, consentId);
+            ret.emplace_back(item.eventId, AuditMetaData({}, {}, {}), item.action, item.agentType, model::Kvnr{kvnr},
+                             item.deviceId, item.prescriptionId, consentId);
         }
         ret.back().setId(item.id);
         ret.back().setRecorded(item.recorded);
@@ -331,7 +333,7 @@ DatabaseFrontend::retrieveAuditEventData(const std::string& kvnr, const std::opt
     return ret;
 }
 
-uint64_t DatabaseFrontend::countAuditEventData(const std::string& kvnr,
+uint64_t DatabaseFrontend::countAuditEventData(const model::Kvnr& kvnr,
                                                const std::optional<UrlArguments>& search)
 {
     return mBackend->countAuditEventData(mDerivation.hashKvnr(kvnr), search);
@@ -401,46 +403,48 @@ DatabaseFrontend::retrieveTaskAndPrescriptionAndReceipt(const PrescriptionId& ta
                            keyForTask ? getReceipt(*dbTask, *keyForTask) : std::nullopt);
 }
 
-std::vector<model::Task> DatabaseFrontend::retrieveAllTasksForPatient(const std::string& kvnr,
+std::vector<model::Task> DatabaseFrontend::retrieveAllTasksForPatient(const model::Kvnr& kvnr,
                                                                       const std::optional<UrlArguments>& search)
 {
-    ErpExpect(kvnr.find('\0') == std::string::npos, HttpStatus::BadRequest, "null character in kvnr");
-    ErpExpect(kvnr.size() == 10, HttpStatus::BadRequest, "kvnr must have 10 characters");
+    ErpExpect(kvnr.valid(), HttpStatus::BadRequest, "Invalid KVNR");
 
     auto dbTaskList = mBackend->retrieveAllTasksForPatient(mDerivation.hashKvnr(kvnr), search);
     std::vector<model::Task> allTasks;
     for (const auto& dbTask : dbTaskList)
     {
         auto modelTask = getModelTask(dbTask);
-        modelTask.setKvnr(kvnr);
+        auto kvnrType = modelTask.prescriptionId().isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
+        modelTask.setKvnr(model::Kvnr{kvnr.id(), kvnrType});
         allTasks.emplace_back(std::move(modelTask));
     }
     return allTasks;
 }
 
-uint64_t DatabaseFrontend::countAllTasksForPatient (const std::string& kvnr, const std::optional<UrlArguments>& search)
+uint64_t DatabaseFrontend::countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     return mBackend->countAllTasksForPatient(mDerivation.hashKvnr(kvnr), search);
 }
 
 std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communication)
 {
-    const std::optional<std::string_view> sender = communication.sender();
-    const std::optional<std::string_view> recipient = communication.recipient();
+    const auto sender = communication.sender();
+    const auto recipient = communication.recipient();
     const std::optional<model::Timestamp> timeSent = communication.timeSent();
 
     ErpExpect(sender.has_value(), HttpStatus::InternalServerError, "communication object has no 'sender' value");
-    ErpExpect(recipient.has_value(), HttpStatus::InternalServerError, "communication object has no 'recipient' value");
     ErpExpect(timeSent.has_value(), HttpStatus::InternalServerError, "communication object has no 'sent' value");
 
     const auto& messagePlain = communication.serializeToJsonString();
 
+    const std::string& senderIdentity = model::getIdentityString(sender.value());
+    const std::string& recipientIdentity = model::getIdentityString(recipient);
+
     const model::PrescriptionId& prescriptionId = communication.prescriptionId();
     const model::Communication::MessageType messageType = communication.messageType();
-    const db_model::HashedId senderHashed = mDerivation.hashIdentity(sender.value());
-    const db_model::HashedId recipientHashed = mDerivation.hashIdentity(recipient.value());
-    auto [senderKey, senderBlobId] = communicationKeyAndId(sender.value(), senderHashed);
-    auto [recipientKey, recipientBlobId] = communicationKeyAndId(recipient.value(), recipientHashed);
+    const db_model::HashedId senderHashed = mDerivation.hashIdentity(senderIdentity);
+    const db_model::HashedId recipientHashed = mDerivation.hashIdentity(recipientIdentity);
+    auto [senderKey, senderBlobId] = communicationKeyAndId(senderIdentity, senderHashed);
+    auto [recipientKey, recipientBlobId] = communicationKeyAndId(recipientIdentity, recipientHashed);
     auto messageForSender = mCodec.encode(messagePlain, senderKey, Compression::DictionaryUse::Default_json);
     auto messageForRecipient = mCodec.encode(messagePlain, recipientKey, Compression::DictionaryUse::Default_json);
     auto uuid = mBackend->insertCommunication(prescriptionId, timeSent.value(), messageType, senderHashed, recipientHashed,
@@ -453,7 +457,7 @@ std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communi
     return uuid;
 }
 
-uint64_t DatabaseFrontend::countRepresentativeCommunications(const std::string& insurantA, const std::string& insurantB,
+uint64_t DatabaseFrontend::countRepresentativeCommunications(const model::Kvnr& insurantA, const model::Kvnr& insurantB,
                                                              const PrescriptionId& prescriptionId)
 {
     return mBackend->countRepresentativeCommunications(mDerivation.hashKvnr(insurantA),
@@ -534,7 +538,7 @@ void DatabaseFrontend::storeConsent(const Consent& consent)
     return mBackend->storeConsent(hashedKvnr, consent.dateTime());
 }
 
-std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const std::string_view& kvnr)
+std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const model::Kvnr& kvnr)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
     auto dateTime = mBackend->retrieveConsentDateTime(hashedKvnr);
@@ -545,12 +549,15 @@ std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const std::strin
     return std::nullopt;
 }
 
-bool DatabaseFrontend::clearConsent(const std::string_view& kvnr)
+// GEMREQ-start A_22158#query-call
+bool DatabaseFrontend::clearConsent(const model::Kvnr& kvnr)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
     return mBackend->clearConsent(hashedKvnr);
 }
+// GEMREQ-end A_22158#query-call
 
+// GEMREQ-start storeChargeInformation
 void DatabaseFrontend::storeChargeInformation(const ::model::ChargeInformation& chargeInformation)
 {
     ErpExpect(chargeInformation.prescription.has_value(), ::HttpStatus::BadRequest, "No prescription data found.");
@@ -573,7 +580,9 @@ void DatabaseFrontend::storeChargeInformation(const ::model::ChargeInformation& 
     const auto& hashedKvnr = mDerivation.hashKvnr(chargeInformation.chargeItem.subjectKvnr().value());
     mBackend->storeChargeInformation(dbChargeItem, hashedKvnr);
 }
+// GEMREQ-end storeChargeInformation
 
+// GEMREQ-start updateChargeInformation
 void DatabaseFrontend::updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt)
 {
     ErpExpect(chargeInformation.chargeItem.prescriptionId().has_value(), ::HttpStatus::BadRequest,
@@ -590,9 +599,11 @@ void DatabaseFrontend::updateChargeInformation(const ::model::ChargeInformation&
                                                              ::std::get<::db_model::Blob>(encryptionData),
                                                              ::std::get<::SafeString>(encryptionData), mCodec});
 }
+// GEMREQ-end updateChargeInformation
 
+// GEMREQ-start A_22119#query-call
 ::std::vector<::model::ChargeItem>
-DatabaseFrontend::retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
+DatabaseFrontend::retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
                                                     const std::optional<UrlArguments>& search) const
 {
     const auto dbChargeItems = mBackend->retrieveAllChargeItemsForInsurant(mDerivation.hashKvnr(kvnr), search);
@@ -606,6 +617,7 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const std::string_view& kvnr
 
     return result;
 }
+// GEMREQ-end A_22119#query-call
 
 ::model::ChargeInformation DatabaseFrontend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
@@ -626,24 +638,37 @@ std::tuple<::model::ChargeInformation, BlobId, db_model::Blob> DatabaseFrontend:
         std::move(chargeItem.salt));
 }
 
+// GEMREQ-start A_22117-01#query-call-deleteChargeInformation
 void DatabaseFrontend::deleteChargeInformation(const model::PrescriptionId& id)
 {
     mBackend->deleteChargeInformation(id);
 }
+// GEMREQ-end A_22117-01#query-call-deleteChargeInformation
 
-void DatabaseFrontend::clearAllChargeInformation(const std::string_view& kvnr)
+// GEMREQ-start A_22157#query-call-clearAllChargeInformation
+void DatabaseFrontend::clearAllChargeInformation(const model::Kvnr& kvnr)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
     mBackend->clearAllChargeInformation(hashedKvnr);
 }
+// GEMREQ-end A_22157#query-call-clearAllChargeInformation
 
-void DatabaseFrontend::clearAllChargeItemCommunications(const std::string_view& kvnr)
+// GEMREQ-start A_22157#query-call-clearAllChargeItemCommunications
+void DatabaseFrontend::clearAllChargeItemCommunications(const model::Kvnr& kvnr)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
     mBackend->clearAllChargeItemCommunications(hashedKvnr);
 }
+// GEMREQ-end A_22157#query-call-clearAllChargeItemCommunications
 
-uint64_t DatabaseFrontend::countChargeInformationForInsurant(const std::string& kvnr,
+// GEMREQ-start A_22117-01#query-call-deleteCommunicationsForChargeItem
+void DatabaseFrontend::deleteCommunicationsForChargeItem(const model::PrescriptionId& id)
+{
+    mBackend->deleteCommunicationsForChargeItem(id);
+}
+// GEMREQ-end A_22117-01#query-call-deleteCommunicationsForChargeItem
+
+uint64_t DatabaseFrontend::countChargeInformationForInsurant(const model::Kvnr& kvnr,
                                                              const std::optional<UrlArguments>& search)
 {
     return mBackend->countChargeInformationForInsurant(mDerivation.hashKvnr(kvnr), search);
@@ -670,7 +695,8 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
                           dbTask.status);
     if (dbTask.kvnr && key)
     {
-        modelTask.setKvnr(mCodec.decode(*dbTask.kvnr, *key));
+        const auto type = dbTask.prescriptionId.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
+        modelTask.setKvnr(model::Kvnr{std::string{mCodec.decode(*dbTask.kvnr, *key)}, type});
     }
     if (dbTask.expiryDate)
     {

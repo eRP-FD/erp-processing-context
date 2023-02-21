@@ -54,6 +54,7 @@ Uuid::Uuid ()
     mString.assign(36, ' ');
     // Writing to the trailing null byte of std::string is valid as long as we only overwrite it
     // with char() == '\0' (which snprintf does).
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
     int written = std::snprintf(mString.data(), mString.size() + 1,
                   "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
                   uuid.parts.timeLow,
@@ -99,16 +100,14 @@ Uuid::operator const std::string&() const
 
 std::string Uuid::toUrn () const
 {
-    if (isValidIheUuid())
-        return "urn:uuid:" + mString;
-    else
-        return mString;
+    Expect(isValidIheUuid(), "invalid UUID");
+    return "urn:uuid:" + mString;
 }
 
 
 std::string Uuid::toOid() const
 {
-    Expects(isValidIheUuid());
+    Expect(isValidIheUuid(), "invalid UUID");
 
     // remove '-'s and concatenate
     std::string hex = String::concatenateStrings(String::split(mString, '-'), "");

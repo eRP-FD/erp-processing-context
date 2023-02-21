@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 #include <magic_enum.hpp>
 #include <ostream>
+#include <variant>
 
 #include "erp/fhir/FhirConverter.hxx"
 #include "erp/model/KbvBundle.hxx"
@@ -22,6 +23,7 @@
 
 #include "test_config.h"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/TestUtils.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include <erp/fhir/Fhir.hxx>
@@ -44,12 +46,26 @@ public:
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 1));
         return task;
     }
+
+    void SetUp() override
+    {
+        envGuards = testutils::getOverlappingFhirProfileEnvironment();
+    }
+
+    void TearDown() override
+    {
+        envGuards.clear();
+    }
+private:
+    std::vector<EnvironmentVariableGuard> envGuards;
 };
 
 
 TEST_F(XmlValidatorTest, ValidateDefaultTask)
 {
+    auto envGuards = testutils::getOldFhirProfileEnvironment();
     auto xmlDocument = validTask().serializeToXmlString();
+
     ASSERT_NO_THROW((void) FhirConverter().xmlStringToJsonWithValidation(
         xmlDocument, *getXmlValidator(), SchemaType::Gem_erxTask,
         ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()));
@@ -74,6 +90,7 @@ TEST_F(XmlValidatorTest, TaskInvalidPrescriptionId)
 
 TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-function-cognitive-complexity)
 {
+    auto envGuards = testutils::getOldFhirProfileEnvironment();
     for(const auto& type : magic_enum::enum_values<SchemaType>())
     {
         switch(type)
@@ -104,7 +121,7 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
                         type,
                         ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()) !=
                     nullptr);
-            
+
                 break;
             case SchemaType::KBV_PR_ERP_Bundle:
             case SchemaType::KBV_PR_ERP_Composition:
@@ -140,6 +157,7 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
 
 TEST_F(XmlValidatorTest, MinimalFhirDocumentMustFail)
 {
+    auto envGuards = testutils::getOldFhirProfileEnvironment();
     const auto document = ::boost::str(::boost::format(R"(
 <Communication xmlns="http://hl7.org/fhir">
     <meta>
@@ -158,7 +176,8 @@ struct TestParamsGematik
     bool valid;
     fs::path path;
     SchemaType schemaType;
-    model::ResourceVersion::DeGematikErezeptWorkflowR4 version;
+    std::variant<model::ResourceVersion::DeGematikErezeptWorkflowR4, model::ResourceVersion::FhirProfileBundleVersion>
+        version;
 };
 std::ostream& operator<<(std::ostream& os, const TestParamsGematik& params)
 {
@@ -166,9 +185,10 @@ std::ostream& operator<<(std::ostream& os, const TestParamsGematik& params)
        << " " << params.path.filename();
     return os;
 }
-std::vector<TestParamsGematik> makeTestParameters(bool valid, const fs::path& basePath, const std::string& startsWith,
-                                                  SchemaType schemaType,
-                                                  model::ResourceVersion::DeGematikErezeptWorkflowR4 version)
+std::vector<TestParamsGematik> makeTestParameters(
+    bool valid, const fs::path& basePath, const std::string& startsWith, SchemaType schemaType,
+    std::variant<model::ResourceVersion::DeGematikErezeptWorkflowR4, model::ResourceVersion::FhirProfileBundleVersion>
+        version)
 {
     std::vector<TestParamsGematik> params;
     for (const auto& dirEntry : fs::directory_iterator(basePath))
@@ -194,10 +214,12 @@ public:
 };
 class XmlValidatorTestParamsGematik : public XmlValidatorTestParams, public testing::TestWithParam<TestParamsGematik> {
 public:
-    fhirtools::ValidationResultList validate(const model::NumberAsStringParserDocument& doc)
+    fhirtools::ValidationResults
+    validate(const model::NumberAsStringParserDocument& doc,
+             model::ResourceVersion::FhirProfileBundleVersion version)
     {
         using namespace model::resource;
-        fhirtools::ValidationResultList result;
+        fhirtools::ValidationResults result;
         static const rapidjson::Pointer resourceTypePointer{ ElementName::path(elements::resourceType) };
         auto resourceTypeOpt = model::NumberAsStringParserDocument::getOptionalStringValue(doc, resourceTypePointer);
         EXPECT_TRUE(resourceTypeOpt);
@@ -207,7 +229,7 @@ public:
             return result;
         }
         std::string resourceType{*resourceTypeOpt};
-        auto erpElement = std::make_shared<ErpElement>(&Fhir::instance().structureRepository(),
+        auto erpElement = std::make_shared<ErpElement>(&Fhir::instance().structureRepository(version),
                                                        std::weak_ptr<fhirtools::Element>{}, resourceType, &doc);
         result = fhirtools::FhirPathValidator::validate(erpElement, resourceType);
         result.dumpToLog();
@@ -220,10 +242,23 @@ public:
         bool failed = false;
         try
         {
+            bool unversionedValidation = GetParam().schemaType == SchemaType::fhir ||
+                                         GetParam().schemaType == SchemaType::MedicationDispenseBundle;
+            model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVer{};
+            model::ResourceVersion::FhirProfileBundleVersion bundleVer{};
+            if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version))
+            {
+                gematikVer = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version);
+                bundleVer = model::ResourceVersion::isProfileSupported(gematikVer).value();
+            }
+            else
+            {
+                bundleVer = std::get<model::ResourceVersion::FhirProfileBundleVersion>(GetParam().version);
+                gematikVer = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(profileVersionFromBundle(bundleVer));
+            }
             if (GetParam().valid)
             {
-                if (GetParam().schemaType == SchemaType::fhir ||
-                    GetParam().schemaType == SchemaType::MedicationDispenseBundle)
+                if (unversionedValidation)
                 {
                     EXPECT_NO_THROW(doc.emplace(FhirConverter().xmlStringToJsonWithValidationNoVer(
                         document, *getXmlValidator(), GetParam().schemaType)));
@@ -231,13 +266,12 @@ public:
                 else
                 {
                     EXPECT_NO_THROW(doc.emplace(FhirConverter().xmlStringToJsonWithValidation(
-                        document, *getXmlValidator(), GetParam().schemaType, GetParam().version)));
+                        document, *getXmlValidator(), GetParam().schemaType, gematikVer)));
                 }
             }
             else
             {
-                if (GetParam().schemaType == SchemaType::fhir ||
-                    GetParam().schemaType == SchemaType::MedicationDispenseBundle)
+                if (unversionedValidation)
                 {
                     doc.emplace(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
                                                                                    GetParam().schemaType));
@@ -245,13 +279,13 @@ public:
                 else
                 {
                     doc.emplace(FhirConverter().xmlStringToJsonWithValidation(
-                        document, *getXmlValidator(), GetParam().schemaType, GetParam().version));
+                        document, *getXmlValidator(), GetParam().schemaType, gematikVer));
                 }
             }
             if (doc)
             {
-                fhirtools::ValidationResultList valResult;
-                ASSERT_NO_THROW(valResult = validate(*doc));
+                fhirtools::ValidationResults valResult;
+                ASSERT_NO_THROW(valResult = validate(*doc, bundleVer));
                 failed = valResult.highestSeverity() >= fhirtools::Severity::error;
             }
         }
@@ -267,57 +301,107 @@ public:
 TEST_P(XmlValidatorTestParamsGematik, Resources)
 {
     const auto document = FileHelper::readFileAsString(GetParam().path);
+    LOG(INFO) << "checking file = " << GetParam().path.filename();
     checkDocument(document);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    AuditEventValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/auditevent/",
+    AuditEventValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/auditevent/1.1.1/",
                                          "AuditEvent_valid", SchemaType::Gem_erxAuditEvent,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
-INSTANTIATE_TEST_SUITE_P(BundleValidResources, XmlValidatorTestParamsGematik,
+
+INSTANTIATE_TEST_SUITE_P(AuditEventValidResources2023, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
-                             true, fs::path(TEST_DATA_DIR) / "validation/xml/bundle/", "Bundle_valid", SchemaType::fhir,
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/auditevent/1.2/", "AuditEvent_valid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
+INSTANTIATE_TEST_SUITE_P(BundleValidResources2022, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/bundle/1.1.1/", "Bundle_valid", SchemaType::fhir,
                              model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+INSTANTIATE_TEST_SUITE_P(BundleValidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/bundle/1.2", "Bundle_valid", SchemaType::fhir,
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(
-    CommunicationDispReqValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/dispreq/",
+    CommunicationDispReqValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/dispreq/1.1.1/",
                                          "CommunicationDispReq_valid", SchemaType::Gem_erxCommunicationDispReq,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    CommunicationInfoReqValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/inforeq/",
+    CommunicationDispReqValidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/dispreq/1.2/",
+                                         "CommunicationDispReq_valid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    CommunicationInfoReqValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/inforeq/1.1.1/",
                                          "CommunicationInfoReq_valid", SchemaType::Gem_erxCommunicationInfoReq,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    CommunicationReplyValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/reply/",
+    CommunicationInfoReqValidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/inforeq/1.2/",
+                                         "CommunicationInfoReq_valid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    CommunicationReplyValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/reply/1.1.1/",
                                          "CommunicationReply_valid", SchemaType::Gem_erxCommunicationReply,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+
+INSTANTIATE_TEST_SUITE_P(
+    CommunicationReplyValidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/reply/1.2/",
+                                         "CommunicationReply_valid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
 INSTANTIATE_TEST_SUITE_P(CommunicationRepresentativeValidResources, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
                              true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/representative/",
                              "CommunicationRepresentative_valid", SchemaType::Gem_erxCommunicationRepresentative,
                              model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+
+INSTANTIATE_TEST_SUITE_P(CommunicationRepresentativeValidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/communication/representative/1.2/",
+                             "CommunicationRepresentative_valid", SchemaType::fhir,
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(
-    CompositionValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/composition/",
+    CompositionValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/composition/1.1.1/",
                                          "Composition_valid", SchemaType::Gem_erxCompositionElement,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
-INSTANTIATE_TEST_SUITE_P(DeviceValidResources, XmlValidatorTestParamsGematik,
+
+INSTANTIATE_TEST_SUITE_P(DeviceValidResources2022, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
-                             true, fs::path(TEST_DATA_DIR) / "validation/xml/device/", "Device_valid",
-                             SchemaType::Gem_erxDevice, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/device/1.1.1/", "Device_valid",
+                             SchemaType::Gem_erxDevice, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
+
+INSTANTIATE_TEST_SUITE_P(DeviceValidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/device/1.2/", "Device_valid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(
-    MedicationDispenseValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/",
+    MedicationDispenseValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.1.1/",
                                          "MedicationDispense_valid", SchemaType::Gem_erxMedicationDispense,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    OrganizationValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/organization/",
+    MedicationDispenseValidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.2/",
+                                         "MedicationDispense_valid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    OrganizationValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/organization/1.1.1/",
                                          "Organization_valid", SchemaType::Gem_erxOrganizationElement,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+INSTANTIATE_TEST_SUITE_P(
+    OrganizationValidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/organization/1.2/",
+                                         "Organization_valid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(
     activateTaskParametersValidResources, XmlValidatorTestParamsGematik,
     testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/parameters/",
@@ -328,73 +412,143 @@ INSTANTIATE_TEST_SUITE_P(createTaskParametersValidResources, XmlValidatorTestPar
                              true, fs::path(TEST_DATA_DIR) / "validation/xml/parameters/", "createTaskParameters_valid",
                              SchemaType::fhir, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    ReceiptBundleValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/",
+    ReceiptBundleValidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/1.1.1/",
                                          "ReceiptBundle_valid", SchemaType::Gem_erxReceiptBundle,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
-INSTANTIATE_TEST_SUITE_P(TaskValidResources, XmlValidatorTestParamsGematik,
-                         testing::ValuesIn(makeTestParameters(
-                             true, fs::path(TEST_DATA_DIR) / "validation/xml/task/", "Task_valid",
-                             SchemaType::Gem_erxTask, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    ChargeItemValidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/chargeItem/",
-                                         "ChargeItem_valid", SchemaType::Gem_erxChargeItem,
-                                         model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+    ReceiptBundleValidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/1.2/",
+                                         "ReceiptBundle_valid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
+INSTANTIATE_TEST_SUITE_P(TaskValidResources2022, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/task/1.1.1/", "Task_valid",
+                             SchemaType::Gem_erxTask, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+INSTANTIATE_TEST_SUITE_P(TaskValidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/task/1.2/", "Task_valid", SchemaType::fhir,
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(ChargeItemValidResources, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/chargeItem/", "ChargeItem_valid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(ConsentValidResources, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
                              true, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/consent/", "Consent_valid",
-                             SchemaType::Gem_erxConsent, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 
+INSTANTIATE_TEST_SUITE_P(AbgabedatenBundleValidResources, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             true, fs::path(TEST_DATA_DIR) / "validation/xml/v_2023_07_01/dav/AbgabedatenBundle",
+                             "Bundle_valid", SchemaType::fhir,
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(AbgabedatenBundleInvalidResources, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/v_2023_07_01/dav/AbgabedatenBundle",
+                             "Bundle_invalid", SchemaType::fhir,
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 
 INSTANTIATE_TEST_SUITE_P(
-    AuditEventInvalidResources, XmlValidatorTestParamsGematik,
+    AuditEventInvalidResources2022, XmlValidatorTestParamsGematik,
     testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/auditevent/",
                                          "AuditEvent_invalid", SchemaType::Gem_erxAuditEvent,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
-INSTANTIATE_TEST_SUITE_P(BundleInvalidResources, XmlValidatorTestParamsGematik,
+
+INSTANTIATE_TEST_SUITE_P(AuditEventInvalidResources2023, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
-                             false, fs::path(TEST_DATA_DIR) / "validation/xml/bundle/", "Bundle_invalid",
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/auditevent/1.2/", "AuditEvent_invalid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
+INSTANTIATE_TEST_SUITE_P(BundleInvalidResources2022, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/bundle/1.1.1/", "Bundle_invalid",
                              SchemaType::fhir, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+
+INSTANTIATE_TEST_SUITE_P(BundleInvalidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/bundle/1.2/", "Bundle_invalid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
 INSTANTIATE_TEST_SUITE_P(
-    CommunicationDispReqInvalidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/dispreq/",
+    CommunicationDispReqInvalidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/dispreq/1.1.1/",
                                          "CommunicationDispReq_invalid", SchemaType::Gem_erxCommunicationDispReq,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    CommunicationInfoReqInvalidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/inforeq/",
+    CommunicationDispReqInvalidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/dispreq/1.2/",
+                                         "CommunicationDispReq_invalid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    CommunicationInfoReqInvalidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/inforeq/1.1.1/",
                                          "CommunicationInfoReq_invalid", SchemaType::Gem_erxCommunicationInfoReq,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    CommunicationReplyInvalidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/reply/",
+    CommunicationInfoReqInvalidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/inforeq/1.2/",
+                                         "CommunicationInfoReq_invalid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    CommunicationReplyInvalidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/reply/1.1.1",
                                          "CommunicationReply_invalid", SchemaType::Gem_erxCommunicationReply,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
-INSTANTIATE_TEST_SUITE_P(CommunicationRepresentativeInvalidResources, XmlValidatorTestParamsGematik,
+INSTANTIATE_TEST_SUITE_P(
+    CommunicationReplyInvalidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/reply/1.2/",
+                                         "CommunicationReply_invalid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
+INSTANTIATE_TEST_SUITE_P(CommunicationRepresentativeInvalidResources2022, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
-                             false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/representative/",
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/representative/1.1.1/",
                              "CommunicationRepresentative_invalid", SchemaType::Gem_erxCommunicationRepresentative,
                              model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+
+INSTANTIATE_TEST_SUITE_P(CommunicationRepresentativeInvalidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/communication/representative/1.2/",
+                             "CommunicationRepresentative_invalid", SchemaType::fhir,
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
 INSTANTIATE_TEST_SUITE_P(
-    CompositionInvalidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/composition/",
+    CompositionInvalidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/composition/1.1.1/",
                                          "Composition_invalid", SchemaType::Gem_erxCompositionElement,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
-INSTANTIATE_TEST_SUITE_P(DeviceInvalidResources, XmlValidatorTestParamsGematik,
+
+INSTANTIATE_TEST_SUITE_P(DeviceInvalidResources2022, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
-                             false, fs::path(TEST_DATA_DIR) / "validation/xml/device/", "Device_invalid",
-                             SchemaType::Gem_erxDevice, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/device/1.1.1/", "Device_invalid",
+                             SchemaType::Gem_erxDevice, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
+
+INSTANTIATE_TEST_SUITE_P(DeviceInvalidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/device/1.2/", "Device_invalid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(
-    MedicationDispenseInvalidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/",
+    MedicationDispenseInvalidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.1.1/",
                                          "MedicationDispense_invalid", SchemaType::Gem_erxMedicationDispense,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    OrganizationInvalidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/organization/",
+    MedicationDispenseInvalidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.2/",
+                                         "MedicationDispense_invalid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    OrganizationInvalidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/organization/1.1.1/",
                                          "Organization_invalid", SchemaType::Gem_erxOrganizationElement,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+INSTANTIATE_TEST_SUITE_P(
+    OrganizationInvalidResources2023, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/organization/1.2/",
+                                         "Organization_invalid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(
     activateTaskParametersInvalidResources, XmlValidatorTestParamsGematik,
     testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/parameters/",
@@ -406,23 +560,31 @@ INSTANTIATE_TEST_SUITE_P(
                                          "createTaskParameters_invalid", SchemaType::fhir,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    ReceiptBundleInvalidResources, XmlValidatorTestParamsGematik,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/",
+    ReceiptBundleInvalidResources2022, XmlValidatorTestParamsGematik,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/1.1.1",
                                          "ReceiptBundle_invalid", SchemaType::Gem_erxReceiptBundle,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
-INSTANTIATE_TEST_SUITE_P(TaskInvalidResources, XmlValidatorTestParamsGematik,
+INSTANTIATE_TEST_SUITE_P(ReceiptBundleInvalidResources2023, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
-                             false, fs::path(TEST_DATA_DIR) / "validation/xml/task/", "Task_invalid",
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/receipt/1.2", "ReceiptBundle_invalid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(TaskInvalidResources2022, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/task/1.1.1/", "Task_invalid",
                              SchemaType::Gem_erxTask, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+INSTANTIATE_TEST_SUITE_P(TaskInvalidResources2023, XmlValidatorTestParamsGematik,
+                         testing::ValuesIn(makeTestParameters(
+                             false, fs::path(TEST_DATA_DIR) / "validation/xml/task/1.2/", "Task_invalid",
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(
     ChargeItemInvalidResources, XmlValidatorTestParamsGematik,
     testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/chargeItem/",
-                                         "ChargeItem_invalid", SchemaType::Gem_erxChargeItem,
-                                         model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+                                         "ChargeItem_invalid", SchemaType::fhir,
+                                         model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 INSTANTIATE_TEST_SUITE_P(ConsentInvalidResources, XmlValidatorTestParamsGematik,
                          testing::ValuesIn(makeTestParameters(
                              false, fs::path(TEST_DATA_DIR) / "validation/xml/pkv/consent/", "Consent_invalid",
-                             SchemaType::Gem_erxConsent, model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+                             SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 
 
 TEST_F(XmlValidatorTest, Erp6345)//NOLINT(readability-function-cognitive-complexity)
@@ -438,40 +600,115 @@ TEST_F(XmlValidatorTest, Erp6345)//NOLINT(readability-function-cognitive-complex
         file2, *getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2));
 }
 
-class MedicationDispenseBundleTest:public XmlValidatorTestParamsGematik{};
+class MedicationDispenseBundleTest : public XmlValidatorTestParamsGematik
+{
+};
 
 TEST_P(MedicationDispenseBundleTest, MedicationDispenseBundle)
 {
-    const auto& placeholderDocument = FileHelper::readFileAsString(
-        fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense_bundle/MedicationDispenseBundle_placeholder.xml");
-            auto document = FileHelper::readFileAsString(GetParam().path);
-            document = String::replaceAll(document, " xmlns=\"http://hl7.org/fhir\"", "");
-            document = String::replaceAll(document, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "");
-            const auto bundleDocument = String::replaceAll(placeholderDocument, "###PLACEHOLDER###", document);
-            checkDocument(bundleDocument);
+    model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVer{};
+    if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version))
+    {
+        gematikVer = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version);
+    }
+    else
+    {
+        const auto bundleVer = std::get<model::ResourceVersion::FhirProfileBundleVersion>(GetParam().version);
+        gematikVer = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(profileVersionFromBundle(bundleVer));
+    }
+    const auto gematikVerString = v_str(gematikVer);
+    const std::string placeholderFile = fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense_bundle/" /
+                                        gematikVerString / "MedicationDispenseBundle_placeholder.xml";
+    const auto& placeholderDocument = FileHelper::readFileAsString(placeholderFile);
+    auto document = FileHelper::readFileAsString(GetParam().path);
+    document = String::replaceAll(document, " xmlns=\"http://hl7.org/fhir\"", "");
+    document = String::replaceAll(document, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "");
+    const auto bundleDocument = String::replaceAll(placeholderDocument, "###PLACEHOLDER###", document);
+    checkDocument(bundleDocument);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    MedicationDispenseBundleValid, MedicationDispenseBundleTest,
-    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/",
+    MedicationDispenseBundleValid2022, MedicationDispenseBundleTest,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.1.1/",
                                       "MedicationDispense_valid", SchemaType::MedicationDispenseBundle,
                                       model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
 INSTANTIATE_TEST_SUITE_P(
-    MedicationDispenseBundleInvalid, MedicationDispenseBundleTest,
-    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/",
+    MedicationDispenseBundleValid2023, MedicationDispenseBundleTest,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.2/",
+                                      "MedicationDispense_valid", SchemaType::fhir,
+                                      model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    MedicationDispenseBundleInvalid2022, MedicationDispenseBundleTest,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.1.1/",
                                          "MedicationDispense_invalid", SchemaType::MedicationDispenseBundle,
                                          model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1)));
+INSTANTIATE_TEST_SUITE_P(
+    MedicationDispenseBundleInvalid2023, MedicationDispenseBundleTest,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.2/",
+                                      "MedicationDispense_invalid", SchemaType::fhir,
+                                      model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+
+class CompositionBundleTest : public XmlValidatorTestParamsGematik
+{
+};
+
+TEST_P(CompositionBundleTest, CompositionBundle)
+{
+    LOG(INFO) << "testing " << GetParam().path;
+    model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVer{};
+    if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version))
+    {
+        gematikVer = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version);
+    }
+    else
+    {
+        const auto bundleVer = std::get<model::ResourceVersion::FhirProfileBundleVersion>(GetParam().version);
+        gematikVer = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(profileVersionFromBundle(bundleVer));
+    }
+    const auto gematikVerString = v_str(gematikVer);
+    const std::string placeholderFile = fs::path(TEST_DATA_DIR) / "validation/xml/composition_bundle/" /
+                                        gematikVerString / "CompositionBundle_placeholder.xml";
+    const auto& placeholderDocument = FileHelper::readFileAsString(placeholderFile);
+    auto document = FileHelper::readFileAsString(GetParam().path);
+    document = String::replaceAll(document, " xmlns=\"http://hl7.org/fhir\"", "");
+    document = String::replaceAll(document, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "");
+    const auto bundleDocument = String::replaceAll(placeholderDocument, "###PLACEHOLDER###", document);
+    checkDocument(bundleDocument);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    CompositionBundleValid2023, CompositionBundleTest,
+    testing::ValuesIn(makeTestParameters(true, fs::path(TEST_DATA_DIR) / "validation/xml/composition/1.2/",
+                                      "Composition_valid", SchemaType::fhir,
+                                      model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+INSTANTIATE_TEST_SUITE_P(
+    CompositionBundleInvalid2023, CompositionBundleTest,
+    testing::ValuesIn(makeTestParameters(false, fs::path(TEST_DATA_DIR) / "validation/xml/composition/1.2/",
+                                      "Composition_invalid", SchemaType::fhir,
+                                      model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
 
 class XmlValidatorTestPeriod : public XmlValidatorTest
 {
 public:
+    void SetUp() override
+    {
+        // the tests make only sense for XmlValidation which is only active for
+        // the old profiles
+        envGuards = testutils::getOldFhirProfileEnvironment();
+    }
+
+    void TearDown() override
+    {
+        envGuards.clear();
+    }
+
     void DoTestOnePeriod(std::optional<model::Timestamp> begin, std::optional<model::Timestamp> end, bool expectSuccess)
     {
         const auto& config = Configuration::instance();
         xmlValidator.loadGematikSchemas(
             ::std::string{::model::ResourceVersion::v_str(
                 ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>())},
-            config.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK), begin, end);
+            config.getArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK), begin, end);
         DoTest(expectSuccess);
     }
 
@@ -483,11 +720,11 @@ public:
         xmlValidator.loadGematikSchemas(
             ::std::string{::model::ResourceVersion::v_str(
                 ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>())},
-            config.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK), begin1, end1);
+            config.getArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK), begin1, end1);
         xmlValidator.loadGematikSchemas(
             ::std::string{::model::ResourceVersion::v_str(
                 ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>())},
-            config.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK), begin2, end2);
+            config.getArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK), begin2, end2);
         DoTest(expectSuccess);
     }
 
@@ -497,10 +734,10 @@ private:
     void DoTest(bool expectSuccess) const //NOLINT(readability-function-cognitive-complexity)
     {
         auto file_valid = FileHelper::readFileAsString(
-            std::filesystem::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/MedicationDispense_valid.xml");
+            std::filesystem::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.1.1/MedicationDispense_valid.xml");
         auto file_invalid = FileHelper::readFileAsString(
             std::filesystem::path(TEST_DATA_DIR) /
-            "validation/xml/medicationdispense/MedicationDispense_invalid_wrongSubjectIdentifierUse.xml");
+            "validation/xml/medicationdispense/1.1.1/MedicationDispense_invalid_wrongSubjectIdentifierUse.xml");
 
         const auto version = ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>();
         if (expectSuccess)
@@ -518,6 +755,7 @@ private:
                                                                    SchemaType::Gem_erxMedicationDispense, version),
                      ErpException);
     }
+    std::vector<EnvironmentVariableGuard> envGuards;
 };
 
 TEST_F(XmlValidatorTestPeriod, ValidityPeriods_noPeriod)
@@ -608,7 +846,7 @@ TEST_F(XmlValidatorTest, VersionMixup)
     bundle = String::replaceAll(bundle, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.2",
                                 "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.1");
 
-    EXPECT_THROW(model::KbvBundle::fromXml(bundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+    EXPECT_THROW((void)model::KbvBundle::fromXml(bundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
                                            SchemaType::KBV_PR_ERP_Bundle),
                  ExceptionWrapper<ErpException>);
 }

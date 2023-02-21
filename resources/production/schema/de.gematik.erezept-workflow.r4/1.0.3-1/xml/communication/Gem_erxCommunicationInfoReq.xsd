@@ -66,6 +66,7 @@
   </xs:complexType>
   <xs:simpleType name="KBV_PR_ERP_Bundle.Reference.type-list">
     <xs:restriction base="uri-primitive">
+      <xs:enumeration value="Medication"/>
       <xs:enumeration value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Freetext"/>
       <xs:enumeration value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN"/>
       <xs:enumeration value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding"/>

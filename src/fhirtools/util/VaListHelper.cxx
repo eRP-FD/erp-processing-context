@@ -4,10 +4,8 @@
  */
 
 #include "fhirtools/util/VaListHelper.hxx"
-
-#include <gsl/gsl-lite.hpp>
-
 #include "fhirtools/FPExpect.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 namespace fhirtools
 {

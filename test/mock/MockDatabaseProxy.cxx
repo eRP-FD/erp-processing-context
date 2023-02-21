@@ -302,6 +302,11 @@ void MockDatabaseProxy::clearAllChargeItemCommunications(const ::db_model::Hashe
     mDatabase.clearAllChargeItemCommunications(insurant);
 }
 
+void MockDatabaseProxy::deleteCommunicationsForChargeItem(const model::PrescriptionId& id)
+{
+    mDatabase.deleteCommunicationsForChargeItem(id);
+}
+
 uint64_t MockDatabaseProxy::countChargeInformationForInsurant(const ::db_model::HashedKvnr& insurant,
                                                               const ::std::optional<::UrlArguments>& search)
 {

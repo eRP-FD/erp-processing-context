@@ -12,8 +12,10 @@
 #include "erp/model/AuditData.hxx"
 #include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/TelematikId.hxx"
 #include "erp/model/Timestamp.hxx"
 
 #include <string>
@@ -66,7 +68,7 @@ public:
 class HashedKvnr: public HashedId
 {
 public:
-    static HashedKvnr fromKvnr(const std::string_view& kvnr, const SafeString& persistencyIndexKey);
+    static HashedKvnr fromKvnr(const model::Kvnr& kvnr, const SafeString& persistencyIndexKey);
 
 private:
     explicit HashedKvnr(HashedId&& hashedKvnr);
@@ -75,7 +77,7 @@ private:
 class HashedTelematikId: public HashedId
 {
 public:
-    static HashedTelematikId fromTelematikId(const std::string_view& id, const SafeString& persistencyIndexKey);
+    static HashedTelematikId fromTelematikId(const model::TelematikId& id, const SafeString& persistencyIndexKey);
 private:
     explicit HashedTelematikId(HashedId&& id);
 };
@@ -162,7 +164,7 @@ struct ChargeItem {
     EncryptedBlob enterer = {};
     ::model::Timestamp enteredDate = ::model::Timestamp::now();
     ::model::Timestamp lastModified = ::model::Timestamp::now();
-    ::std::optional<EncryptedBlob> markingFlag = {};
+    ::std::optional<Blob> markingFlags = {};
     BlobId blobId = {};
     Blob salt = {};
     EncryptedBlob accessCode = {};

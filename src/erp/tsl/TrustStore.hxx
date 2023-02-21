@@ -40,8 +40,9 @@ public:
     {
     public:
         OcspService::Status status;
-        std::chrono::seconds gracePeriod{0};
-        std::chrono::system_clock::time_point timeStamp;
+        std::chrono::system_clock::duration gracePeriod{0};
+        std::chrono::system_clock::time_point producedAt;
+        std::chrono::system_clock::time_point receivedAt;
         std::string response;
     };
 
@@ -131,14 +132,20 @@ public:
     void distrustCertificates ();
 
     /**
-     * Caches ocsp result status with fingerprint, grace period, timestamp and response
+     * Caches ocsp response status with fingerprint, grace period, timestamp and response
      */
     void setCacheOcspData (const std::string& fingerprint, OcspResponseData ocspCacheData);
+
+    /**
+     * Removes cached ocsp response data based on certificate fingerprint.
+     */
+    void cleanCachedOcspData (const std::string& fingerprint);
 
     /**
      * Returns cached OcspCacheData, if any.
      */
     std::optional<OcspResponseData> getCachedOcspData (const std::string& fingerprint);
+
 
     /**
      * get OCSP service endpoint uri for a certificate CA.

@@ -98,6 +98,29 @@ XmlValidator::getSchemaValidationContext(SchemaType schemaType,
 }
 
 std::unique_ptr<XmlValidatorContext>
+XmlValidator::getSchemaValidationContext(SchemaType schemaType,
+                               model::ResourceVersion::WorkflowOrPatientenRechnungProfile version) const
+{
+    if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version))
+    {
+        return getSchemaValidationContext(schemaType, std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version));
+    }
+    return getSchemaValidationContext(schemaType, std::get<model::ResourceVersion::DeGematikErezeptPatientenrechnungR4>(version));
+}
+
+std::unique_ptr<XmlValidatorContext>
+XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::DeGematikErezeptPatientenrechnungR4) const
+{
+    return getSchemaValidationContextNoVer(schemaType);
+}
+
+std::unique_ptr<XmlValidatorContext>
+XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::AbgabedatenPkv) const
+{
+    return getSchemaValidationContextNoVer(schemaType);
+}
+
+std::unique_ptr<XmlValidatorContext>
 XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::KbvItaErp version) const
 {
     auto candidate = mKbvXmlSchemaPtrs.find(std::make_pair(schemaType, version));
@@ -113,6 +136,12 @@ XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceV
 
 std::unique_ptr<XmlValidatorContext>
 XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::NotProfiled) const
+{
+    return getSchemaValidationContextNoVer(schemaType);
+}
+
+std::unique_ptr<XmlValidatorContext>
+XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::Fhir) const
 {
     return getSchemaValidationContextNoVer(schemaType);
 }
@@ -170,7 +199,7 @@ void XmlValidator::errorCallback(void* context, const char* msg, ...)
         if (context)
             TVLOG(1) << "in context of: " << *static_cast<std::string*>(context);
 
-        std::va_list args{};
+        std::va_list args{}; //NOLINT(cppcoreguidelines-pro-type-vararg)
         va_start(args, msg);
         TVLOG(1) << "XML validation failed: " << String::vaListToString(msg, args);
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "XML validation failed", String::vaListToString(msg, args));
@@ -189,7 +218,7 @@ void XmlValidator::warningCallback(void* context, const char* msg, ...)
         if (context)
             TVLOG(1) << "in context of: " << *static_cast<std::string*>(context);
 
-        std::va_list args{};
+        std::va_list args{}; // NOLINT(cppcoreguidelines-pro-type-vararg)
         va_start(args, msg);
         TVLOG(1) << String::vaListToString(msg, args);
         va_end(args);

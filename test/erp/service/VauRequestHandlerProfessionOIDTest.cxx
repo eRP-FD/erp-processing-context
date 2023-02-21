@@ -58,6 +58,7 @@ public:
         return encryptedRequest;
     }
 
+    // GEMREQ-start testEndpoint
     void testEndpoint (const HttpMethod method, const std::string_view endpoint, const JWT& jwt1, HttpStatus expected)
     {
         // Send the request.
@@ -77,6 +78,7 @@ public:
                                 << "professionOID: " << jwt1.stringForClaim(JWT::professionOIDClaim).value_or("xxx")
                                 << " configuration is wrong for endpoint " << endpoint;
     }
+    // GEMREQ-end testEndpoint
 
 
     JWT jwtWithInvalidProfessionOID ()
@@ -325,12 +327,14 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAbortForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
 
+// GEMREQ-start A_19405
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllMedicationDispensesSuccess)
 {
     A_19405.test("Valid professionOID claim in JWT");
     const std::string_view endpoint = "/MedicationDispense";
     testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::OK);
 }
+
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllMedicationDispensesForbidden)
 {
     A_19405.test("Invalid professionOID claim in JWT");
@@ -345,6 +349,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllMedicationDispensesForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_19405
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetMedicationDispenseSuccess)
 {
@@ -523,7 +528,8 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetMetadataSuccess)
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::OK);
 }
 
-TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemNotFound)
+// GEMREQ-start A_22113
+TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemSuccess)
 {
     A_22113.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
@@ -542,7 +548,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemForbidden)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22113
 
+// GEMREQ-start A_22118
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsSuccess)
 {
     A_22118.test("Valid professionOID claim in JWT");
@@ -564,7 +572,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22118
 
+// GEMREQ-start A_22124
 TEST_F(VauRequestHandlerProfessionOIDTest, GetChargeItemSuccess)
 {
     A_22124.test("Valid professionOID claim in JWT");
@@ -586,7 +596,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetChargeItemForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22124
 
+// GEMREQ-start A_22129
 TEST_F(VauRequestHandlerProfessionOIDTest, PostChargeItemSuccess)
 {
     A_22129.test("Valid professionOID claim in JWT");
@@ -608,20 +620,22 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostChargeItemForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22129
 
+// GEMREQ-start A_22144
 TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemSuccess)
 {
     A_22144.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
-    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::PUT, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::PUT, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtOeffentliche_apotheke, HttpStatus::BadRequest);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtKrankenhausapotheke, HttpStatus::BadRequest);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemForbidden)
 {
     A_22144.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskId;
+    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PUT, endpoint, jwtArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PUT, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PUT, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
@@ -630,6 +644,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemForbidden)
     testEndpoint(HttpMethod::PUT, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PUT, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22144
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentMethodNotAllowed)
 {
@@ -643,16 +658,17 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentUnknownCategory)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::BadRequest);
 }
 
+// GEMREQ-start A_22875
 TEST_F(VauRequestHandlerProfessionOIDTest, PatchChargeItemSuccess)
 {
-    A_22144.test("Valid professionOID claim in JWT");
+    A_22875.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskIdNotFound;
     testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::NotFound);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PatchChargeItemForbidden)
 {
-    A_22144.test("Valid professionOID claim in JWT");
+    A_22875.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/ChargeItem/" + taskId;
     testEndpoint(HttpMethod::PATCH, endpoint, jwtArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
@@ -662,7 +678,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PatchChargeItemForbidden)
     testEndpoint(HttpMethod::PATCH, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22875
 
+// GEMREQ-start A_22155
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentForbidden)
 {
     A_22155.test("Invalid professionOID claim in JWT");
@@ -684,7 +702,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentSuccess)
     const std::string_view endpoint = "/Consent/?category=CHARGCONS";
     testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::NotFound);
 }
+// GEMREQ-end A_22155
 
+// GEMREQ-start A_22159
 TEST_F(VauRequestHandlerProfessionOIDTest, GetConsentSuccess)
 {
     A_22159.test("Valid professionOID claim in JWT");
@@ -706,7 +726,9 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetConsentForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22159
 
+// GEMREQ-start A_22161
 TEST_F(VauRequestHandlerProfessionOIDTest, PostConsentSuccess)
 {
     A_22161.test("Valid professionOID claim in JWT");
@@ -728,6 +750,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostConsentForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_22161
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostSubscriptionSuccess)
 {

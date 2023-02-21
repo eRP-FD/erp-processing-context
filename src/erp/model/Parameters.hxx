@@ -8,26 +8,28 @@
 
 #include "erp/model/PrescriptionType.hxx"
 #include "erp/model/Resource.hxx"
-#include "erp/model/extensions/ChargeItemMarkingFlag.hxx"
+#include "erp/model/extensions/ChargeItemMarkingFlags.hxx"
 
 #include <libxml2/libxml/tree.h>
-
 #include <memory>
 #include <string_view>
 
 
 namespace model
 {
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Parameters : public Resource<Parameters, ResourceVersion::NotProfiled>
 {
 public:
     static constexpr auto resourceTypeName = "Parameters";
 
     size_t count() const;
-    const rapidjson::Value* findResourceParameter(const std::string_view& name) const;
+    const rapidjson::Value* findResourceParameter(std::string_view name) const;
+    bool hasParameter(std::string_view name) const;
 
     // Available in Task/$create request parameter
     std::optional<model::PrescriptionType> getPrescriptionType() const;
+    std::optional<std::string_view> getWorkflowSystem() const;
 
     struct MarkingFlag
     {
@@ -49,14 +51,15 @@ public:
     };
 
     // Available in PATCH ChargeItem
-    std::optional<model::ChargeItemMarkingFlag> getChargeItemMarkingFlag() const;
-    void updateMarkingFlagFromPart(
-        const NumberAsStringParserDocument::ConstArray& partArray,
-        MarkingFlag& result) const;
+    model::ChargeItemMarkingFlags getChargeItemMarkingFlags() const;
 
 private:
     friend Resource;
     explicit Parameters (NumberAsStringParserDocument&& document);
+
+    void updateMarkingFlagFromPartArray(
+        const NumberAsStringParserDocument::ConstArray& partArray,
+        MarkingFlag& result) const;
 };
 
 

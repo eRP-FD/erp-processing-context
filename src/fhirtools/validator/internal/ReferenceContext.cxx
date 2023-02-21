@@ -17,7 +17,7 @@ namespace
 class ReferenceContext::Finalizer
 {
 public:
-    [[nodiscard]] static ValidationResultList finalize(ReferenceContext& refContext, const ValidatorOptions&);
+    [[nodiscard]] static ValidationResults finalize(ReferenceContext& refContext, const ValidatorOptions&);
 
 private:
     explicit Finalizer(ReferenceContext& context)
@@ -31,13 +31,17 @@ private:
     void checkMissingResolution(ReferenceContext::ResourceInfo& resource, const ValidatorOptions& options);
 
     ReferenceContext& mContext;
-    ValidationResultList mResult;
+    ValidationResults mResult;
 };
 
-ValidationResultList ReferenceContext::Finalizer::finalize(ReferenceContext& refContext,
+ValidationResults ReferenceContext::Finalizer::finalize(ReferenceContext& refContext,
                                                            const ValidatorOptions& options)
 
 {
+    if (!options.validateReferences)
+    {
+        return {};
+    }
     Finalizer finalizer{refContext};
     finalizer.markContainedAnchors();
     for (auto& res : refContext.mResources)
@@ -183,7 +187,7 @@ std::list<std::shared_ptr<ReferenceContext::ResourceInfo>>& ReferenceContext::re
     return mResources;
 }
 
-ValidationResultList ReferenceContext::finalize(const ValidatorOptions& options)
+ValidationResults ReferenceContext::finalize(const ValidatorOptions& options)
 {
     return Finalizer::finalize(*this, options);
 }

@@ -264,6 +264,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     // clang-format off
     mNamesByKey.insert({
     {ConfigurationKey::C_FD_SIG_ERP                                   , {"ERP_C_FD_SIG_ERP"                                   , "/erp/c.fd.sig-erp"}},
+    {ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL               , {"ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL"               , "/erp/c.fd.sig-erp-validation"}},
     {ConfigurationKey::ECIES_CERTIFICATE                              , {"ERP_ECIES_CERTIFICATE"                              , "/erp/ecies-certificate"}},
     {ConfigurationKey::ENROLMENT_SERVER_PORT                          , {"ERP_ENROLMENT_SERVER_PORT"                          , "/erp/enrolment/server/port"}},
     {ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT                    , {"ERP_ENROLMENT_ACTIVATE_FOR_PORT"                    , "/erp/enrolment/server/activateForPort"}},
@@ -275,6 +276,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH           , {"ERP_IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH"           , "/erp/idp/sslRootCaPath"}},
     {ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES                    , {"ERP_IDP_UPDATE_INTERVAL_MINUTES"                    , "/erp/idp/updateIntervalMinutes"}},
     {ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS, {"ERP_IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS", "/erp/idp/noValidCertificateUpdateIntervalSeconds"}},
+    {ConfigurationKey::OCSP_C_FD_SIG_ERP_GRACE_PERIOD                 , {"ERP_OCSP_C_FD_SIG_ERP_GRACE_PERIOD"                 , "/erp/ocsp/gracePeriodCFdSigErp"}},
+    {ConfigurationKey::OCSP_SMC_B_OSIG_GRACE_PERIOD                   , {"ERP_OCSP_SMC_B_OSIG_GRACE_PERIOD"                   , "/erp/ocsp/gracePeriodSmcBOsig"}},
     {ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD                      , {"ERP_OCSP_NON_QES_GRACE_PERIOD"                      , "/erp/ocsp/gracePeriodNonQes"}},
     {ConfigurationKey::OCSP_QES_GRACE_PERIOD                          , {"ERP_OCSP_QES_GRACE_PERIOD"                          , "/erp/ocsp/gracePeriodQes"}},
     {ConfigurationKey::SERVER_THREAD_COUNT                            , {"ERP_SERVER_THREAD_COUNT"                            , "/erp/server/thread-count"}},
@@ -286,7 +289,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD, {"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD", "/erp/service/task/activate/entlassRezeptValidityInWorkDays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS                 , {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS"                 , "/erp/service/task/activate/holidays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv"}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION           , {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION"           , "/erp/service/task/activate/kbvValidation"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF", "/erp/service/task/activate/kbvValidationNonLiteralAuthorRef"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, {"ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE", "/erp/service/task/activate/authoredOnMustEqualSigningDate"}},
@@ -695,10 +697,10 @@ void configureXmlValidator(XmlValidator& xmlValidator)
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_RENDER_FROM);
     const auto& profileRenderFrom = profileRenderFromStr
                                      ? std::make_optional(model::Timestamp::fromXsDateTime(*profileRenderFromStr)) : std::nullopt;
-    const auto& profileKbvSchemas = configuration.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV);
+    const auto& profileKbvSchemas = configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV);
     const auto& erpFhirVersion = configuration.getStringValue(ConfigurationKey::ERP_FHIR_VERSION);
     const auto& profileGematikSchemas =
-        configuration.getArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK);
+        configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK);
 
     // this is the optional old profile, that is still valid for some grace-period.
     const auto& oldValidUntilStr = configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL);

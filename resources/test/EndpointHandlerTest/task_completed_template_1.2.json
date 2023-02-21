@@ -1,0 +1,104 @@
+{
+  "resourceType": "Task",
+  "id": "###PRESCRIPTION_ID###",
+  "meta": {
+    "profile": [
+      "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task|1.2"
+    ]
+  },
+  "extension": [
+    {
+      "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType",
+      "valueCoding": {
+        "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType",
+        "code": "###PRESCRIPTION_TYPE###",
+        "display": "###PRESCRIPTION_TYPE_DISPLAY###"
+      }
+    },
+    {
+      "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_ExpiryDate",
+      "valueDate": "2022-03-01"
+    },
+    {
+      "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_AcceptDate",
+      "valueDate": "2021-12-29"
+    }
+  ],
+  "identifier": [
+    {
+      "use": "official",
+      "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
+      "value": "###PRESCRIPTION_ID###"
+    },
+    {
+      "use": "official",
+      "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_Secret",
+      "value": "d816aed610758a777a836dc4ae5c2a3748b38220b9f331d251240be4f7615da3"
+    }
+  ],
+  "status": "completed",
+  "intent": "order",
+  "for": {
+    "identifier": {
+      "system": "###KVNR_NAMING_SYSTEM###",
+      "value": "###INSURANT_KVNR###"
+    }
+  },
+  "authoredOn": "###TIMESTAMP###",
+  "lastModified": "###TIMESTAMP###",
+  "performerType": [
+    {
+      "coding": [
+        {
+          "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_OrganizationType",
+          "code": "urn:oid:1.2.276.0.76.4.54",
+          "display": "Öffentliche Apotheke"
+        }
+      ],
+      "text": "Öffentliche Apotheke"
+    }
+  ],
+  "input": [
+    {
+      "type": {
+        "coding": [
+          {
+            "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType",
+            "code": "1"
+          }
+        ]
+      },
+      "valueReference": {
+        "reference": "c8010000-0000-0000-0001-000000000000"
+      }
+    },
+    {
+      "type": {
+        "coding": [
+          {
+            "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType",
+            "code": "2"
+          }
+        ]
+      },
+      "valueReference": {
+        "reference": "c8010000-0000-0000-0002-000000000000"
+      }
+    }
+  ],
+  "output": [
+    {
+      "type": {
+        "coding": [
+          {
+            "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType",
+            "code": "3"
+          }
+        ]
+      },
+      "valueReference": {
+        "reference": "c8010000-0000-0000-0003-000000000000"
+      }
+    }
+  ]
+}

@@ -6,13 +6,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTIL_ENVIRONMENTVARIABLEGUARD_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_UTIL_ENVIRONMENTVARIABLEGUARD_HXX
 
+#include "erp/util/Configuration.hxx"
 #include "erp/util/Environment.hxx"
 
-#include "erp/util/Configuration.hxx"
-
+#include <boost/noncopyable.hpp>
 #include <string>
 
-class EnvironmentVariableGuard
+class EnvironmentVariableGuard : private boost::noncopyable
 {
 public:
     EnvironmentVariableGuard(const std::string& variableName, const std::optional<std::string>& value)
@@ -29,8 +29,32 @@ public:
 
     ~EnvironmentVariableGuard()
     {
-        set(mPreviousValue);
+        if (mRestoreOldValue)
+        {
+            set(mPreviousValue);
+        }
     }
+
+    EnvironmentVariableGuard(EnvironmentVariableGuard&& other) noexcept
+        : mRestoreOldValue (true)
+    {
+        std::swap(mVariableName, other.mVariableName);
+        std::swap(mPreviousValue, other.mPreviousValue);
+        other.mRestoreOldValue = false;
+    }
+
+    EnvironmentVariableGuard& operator=(EnvironmentVariableGuard&& other) noexcept
+    {
+        if (&other != this)
+        {
+            std::swap(mVariableName, other.mVariableName);
+            std::swap(mPreviousValue, other.mPreviousValue);
+            other.mRestoreOldValue = false;
+            mRestoreOldValue = true;
+        }
+        return *this;
+    }
+
 
 private:
     void set(const std::optional<std::string>& value)
@@ -40,10 +64,9 @@ private:
         else
             Environment::unset(mVariableName);
     }
-
-    const std::string mVariableName;
+    bool mRestoreOldValue{true};
+    std::string mVariableName;
     std::optional<std::string> mPreviousValue;
 };
-
 
 #endif

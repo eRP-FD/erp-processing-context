@@ -105,3 +105,40 @@ void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType
     Expect(mMandatoryValidation.count(schemaType) == 0,
            "In-code validation not supported for un-profiled resources.");
 }
+
+
+void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType,
+                               model::ResourceVersion::DeGematikErezeptPatientenrechnungR4, const XmlValidator&) const
+{
+    Expect(mMandatoryValidation.count(schemaType) == 0,
+           "In-code validation not supported for PKV resources.");
+}
+
+void InCodeValidator::validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::WorkflowOrPatientenRechnungProfile version, const XmlValidator& xmlValidator) const
+{
+    if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version))
+    {
+        auto gematikVersion = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version);
+        validate(resource, schemaType, gematikVersion, xmlValidator);
+    }
+    else
+    {
+        auto patVersion = std::get<model::ResourceVersion::DeGematikErezeptPatientenrechnungR4>(version);
+        validate(resource, schemaType, patVersion, xmlValidator);
+    }
+}
+
+void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType, model::ResourceVersion::Fhir,
+                               const XmlValidator&) const
+{
+    Expect(mMandatoryValidation.count(schemaType) == 0,
+           "In-code validation not supported for fhir resources.");
+}
+
+void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType, model::ResourceVersion::AbgabedatenPkv,
+                               const XmlValidator&) const
+{
+    Expect(mMandatoryValidation.count(schemaType) == 0,
+           "In-code validation not supported for PKV resources.");
+}

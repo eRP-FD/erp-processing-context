@@ -70,7 +70,7 @@ public:
     ProfileValidator& operator=(ProfileValidator&&) noexcept;
     virtual ~ProfileValidator() = default;
 
-    explicit ProfileValidator(ProfiledElementTypeInfo defPtr);
+    explicit ProfileValidator(ProfiledElementTypeInfo defPtr, const ProfileSetValidator&);
     void merge(ProfileValidator&&);
 
     class Map : public std::map<MapKey, ProfileValidator>
@@ -91,9 +91,9 @@ public:
         Map extraValidators;
     };
     ProcessingResult process(const Element& element, std::string_view elementFullPath);
-    void appendResults(ValidationResultList results);
+    void appendResults(ValidationResults results);
     void finalize();
-    ValidationResultList results() const;
+    ValidationResults results() const;
 
     void notifyFailed(const MapKey& key);
     bool failed() const;
@@ -105,7 +105,7 @@ public:
 
 protected:
     ProfileValidator(MapKey mapKey, std::set<std::shared_ptr<ValidationData>> parentData,
-                     ProfiledElementTypeInfo defPtr, std::string sliceName);
+                     ProfiledElementTypeInfo defPtr, std::string sliceName, const ProfileSetValidator&);
     void checkBinding(const Element& element, std::string_view elementFullPath);
     void validateBinding(const fhirtools::Element& element, const FhirElement::Binding& binding,
                          const FhirValueSet* bindingValueSet, std::string_view elementFullPath);
@@ -125,6 +125,7 @@ protected:
     ProfiledElementTypeInfo mDefPtr;
     std::string mSliceName;
     ProfileSolver mSolver;
+    std::reference_wrapper<const ProfileSetValidator> mSetValidator;
 };
 
 class ProfileValidatorCounterData
@@ -132,7 +133,7 @@ class ProfileValidatorCounterData
 public:
 
     std::map<ProfiledElementTypeInfo, ProfiledElementTypeInfo> elementMap;
-    size_t count = 0;
+    uint32_t count = 0;
     void check(ProfileValidator::Map& profMap, const ProfileValidatorCounterKey& cKey,
                std::string_view elementFullPath) const;
 };

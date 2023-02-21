@@ -303,7 +303,9 @@ void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeLis
                 continue;
             }
             std::string elementId = makeElementId(*element, attribute.localname());
-            const auto [fieldType, fieldElement] = getTypeAndElement(type, nullptr, *element, attribute.localname());
+            const auto fieldTypeAndElement = getTypeAndElement(type, nullptr, *element, attribute.localname());
+            const auto& fieldType = std::get<const FhirStructureDefinition&>(fieldTypeAndElement);
+            const auto& fieldElement = std::get<std::shared_ptr<const FhirElement>>(fieldTypeAndElement);
             ErpExpect(fieldElement->representation() == FhirElement::Representation::xmlAttr, HttpStatus::BadRequest,
                       "Field on " + getPath() + " may not be represented as attribute: "s.append(attribute.localname()));
             ErpExpect(fieldType.kind() == FhirStructureDefinition::Kind::primitiveType || fieldType.isSystemType(), HttpStatus::BadRequest,
@@ -460,7 +462,7 @@ void FhirSaxHandler::joinContext(FhirSaxHandler::Context&& context)
     }
     else if (top.value.IsObject())
     {
-        if (hasValue(context.value))
+        if (hasValue(context.value) || !context.value.IsArray())
         {
             top.value.AddMember(asJsonValue(context.name), std::move(context.value), mResult.GetAllocator());
         }

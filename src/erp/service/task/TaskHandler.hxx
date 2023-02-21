@@ -78,7 +78,7 @@ public:
     void handleRequest (PcSessionContext& session) override;
 
 private:
-    static void checkTaskState(const std::optional<model::Task>& task);
+    static void checkTaskState(const std::optional<model::Task>& task, bool isPatient);
     void handleRequestFromPatient(PcSessionContext& session, const model::PrescriptionId& prescriptionId,
                                          const JWT& accessToken);
     void handleRequestFromPharmacist(PcSessionContext& session, const model::PrescriptionId& prescriptionId);

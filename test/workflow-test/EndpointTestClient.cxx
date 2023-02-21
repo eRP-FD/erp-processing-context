@@ -11,6 +11,7 @@
 #include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/idp/IdpUpdater.hxx"
+#include "erp/pc/SeedTimer.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -45,8 +46,6 @@ EndpointTestClient::EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidato
 
 void EndpointTestClient::initAdminServer()
 {
-    mPortGuard =
-        std::make_unique<EnvironmentVariableGuard>(ConfigurationKey::ADMIN_SERVER_PORT, std::to_string(adminPort));
     const auto& config = Configuration::instance();
     RequestHandlerManager manager;
     AdminServer::addEndpoints(manager);
@@ -59,8 +58,6 @@ void EndpointTestClient::initAdminServer()
 
 void EndpointTestClient::initEnrolmentServer()
 {
-    mPortGuard = std::make_unique<EnvironmentVariableGuard>(ConfigurationKey::ENROLMENT_SERVER_PORT,
-                                                            std::to_string(enrolmentPort));
     const auto& config = Configuration::instance();
     RequestHandlerManager manager;
     EnrolmentServer::addEndpoints(manager);
@@ -124,7 +121,7 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
     using namespace std::chrono_literals;
     mServer->serviceContext().setPrngSeeder(std::make_unique<SeedTimer>(
         mServer->getThreadPool(), mContext->getHsmPool(), 200ms, [](const SafeString&) {}));
-    const_cast<SeedTimer*>(mContext->getPrngSeeder())->refreshSeeds();
+    const_pointer_cast<SeedTimerHandler>(mContext->getPrngSeeder()->handler())->refreshSeeds();
 
     mServer->serve(2);
 
@@ -172,14 +169,15 @@ std::string EndpointTestClient::getHostAddress() const
 
 uint16_t EndpointTestClient::getPort() const
 {
+    const auto& config = Configuration::instance();
     switch (mTarget)
     {
         case Target::ADMIN:
-            return adminPort;
+            return gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT));
         case Target::VAU:
-            return vauPort;
+            return config.serverPort();
         case Target::ENROLMENT:
-            return enrolmentPort;
+            return gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT));
     }
     Fail2("invalid value for Target: " + std::to_string(static_cast<intmax_t>(mTarget)), std::logic_error);
 }

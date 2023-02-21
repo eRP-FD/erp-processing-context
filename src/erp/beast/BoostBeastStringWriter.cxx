@@ -4,15 +4,15 @@
  */
 
 #include "erp/beast/BoostBeastStringWriter.hxx"
-
-#include "erp/common/BoostBeastMethod.hxx"
 #include "erp/common/BoostBeastHttpStatus.hxx"
+#include "erp/common/BoostBeastMethod.hxx"
 #include "erp/common/Header.hxx"
 #include "erp/util/Expect.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
+#include <boost/beast/http.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/string_body.hpp>
-#include <boost/beast/http.hpp>
 
 
 namespace {
@@ -47,7 +47,7 @@ namespace {
         auto visitor = [&s, &serializer] (auto&, auto buffers)
         {
             for (const auto&& buffer : buffers)
-                s.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+                s.write(reinterpret_cast<const char*>(buffer.data()), gsl::narrow<std::streamsize>(buffer.size()));
             serializer.consume(boost::beast::buffer_bytes(buffers));
         };
         while (!serializer.is_done())

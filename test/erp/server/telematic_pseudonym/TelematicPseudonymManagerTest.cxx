@@ -168,8 +168,6 @@ TEST_F(TelematicPseudonymCmacTest, KeySwap)
 {
     using namespace date;
 
-    std::shared_mutex mMutex;
-
     std::string source = "secret information";
 
     A_22383.test("Test for a key swap when three months are exceeded while trying to sign.");

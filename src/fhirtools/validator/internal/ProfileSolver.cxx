@@ -18,15 +18,15 @@ public:
         : mGoodProfiles{std::move(profileData)}
     {
     }
-    ValidationResultList collectResults() const
+    ValidationResults collectResults() const
     {
-        ValidationResultList result;
+        ValidationResults result;
         TVLOG(3) << __PRETTY_FUNCTION__ << " good: " << mGoodProfiles.size() << ", failed: " << mFailedProfiles.size();
         const auto& collectFrom = mFailed ? mFailedProfiles : mGoodProfiles;
         for (const auto& resData : collectFrom)
         {
             TVLOG(4) << "    adding results from:" << resData.first;
-            result.append(resData.second->results());
+            result.merge(resData.second->results());
         }
 
         return result;
@@ -72,12 +72,12 @@ void fhirtools::ProfileSolver::requireOne(
     mSolvers.emplace_back(std::move(profileData));
 }
 
-fhirtools::ValidationResultList fhirtools::ProfileSolver::collectResults() const
+fhirtools::ValidationResults fhirtools::ProfileSolver::collectResults() const
 {
-    ValidationResultList result;
+    ValidationResults result;
     for (const auto& solver : mSolvers)
     {
-        result.append(solver.collectResults());
+        result.merge(solver.collectResults());
     }
     return result;
 }

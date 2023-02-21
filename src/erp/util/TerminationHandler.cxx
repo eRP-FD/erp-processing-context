@@ -13,10 +13,10 @@
 #include <iostream>
 #include <memory>
 
-class TerminationHandler::ShutdownDelayTimer : public OneShotTimer
+class TerminationHandler::ShutdownDelayTimerHandler : public OneShotHandler
 {
 public:
-    using OneShotTimer::OneShotTimer;
+    using OneShotHandler::OneShotHandler;
 
 protected:
     void timerHandler() override
@@ -25,11 +25,11 @@ protected:
     }
 };
 
-class TerminationHandler::CountDownTimer : public PeriodicTimer
+class TerminationHandler::CountDownTimerHandler : public FixedIntervalHandler
 {
 public:
-    explicit CountDownTimer(int countDownSecondsStart)
-        : PeriodicTimer(std::chrono::seconds(1))
+    explicit CountDownTimerHandler(int countDownSecondsStart)
+        : FixedIntervalHandler(std::chrono::seconds(1))
         , secondsLeft(countDownSecondsStart)
     {
         TLOG(WARNING) << "shutdown in " << secondsLeft;

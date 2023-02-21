@@ -47,7 +47,6 @@
 class EnrolmentServerTest : public MockAndProductionTestBase<Tpm::Factory>
 {
 public:
-    static constexpr uint16_t EnrolmentServerPort = 9191;
     static constexpr std::string_view mBlobId = "(012345678901234567890123456789)"; // 32 bytes, simulates a SHA256.
     static constexpr std::string_view mAkName = "< 012345678901234567890123456789 >"; // 34 bytes, simulates a TPM name object.
 
@@ -81,11 +80,11 @@ public:
             // Create and start the server.
             RequestHandlerManager handlers;
             EnrolmentServer::addEndpoints(handlers);
-
+            const auto& config = Configuration::instance();
             Tpm::Factory tpmFactory = *parameter;
             mServer = std::make_unique<HttpsServer>(
                 "0.0.0.0",
-                EnrolmentServerPort,
+                config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
                 std::move(handlers),
                 mContext);
             mServer->serve(1);
@@ -107,7 +106,10 @@ public:
 
     HttpsClient createClient (void)
     {
-        return HttpsClient("127.0.0.1", EnrolmentServerPort, 30 /*connectionTimeoutSeconds*/, false/*enforceServerAuthentication*/);
+        const auto& config = Configuration::instance();
+        return HttpsClient("127.0.0.1",
+                           gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
+                           30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
     }
 
     Header createHeader (
@@ -188,7 +190,7 @@ public:
 
     size_t toSecondsSinceEpoch (const std::chrono::system_clock::time_point t)
     {
-        return std::chrono::duration_cast<std::chrono::seconds>(t.time_since_epoch()).count();
+        return gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::seconds>(t.time_since_epoch()).count());
     }
 
     const bool usePostgres = TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false);
@@ -212,12 +214,12 @@ public:
 
         static db_model::HashedKvnr dummyHashedKvnr()
         {
-            return DummyDerivation{}.derivation.hashKvnr("X081547110");
+            return DummyDerivation{}.derivation.hashKvnr(model::Kvnr{"X081547110"});
         }
 
         static db_model::HashedTelematikId dummyHashedTelematikId()
         {
-            return DummyDerivation{}.derivation.hashTelematikId("X-XY-MyDoc");
+            return DummyDerivation{}.derivation.hashTelematikId(model::TelematikId{"X-XY-MyDoc"});
         }
 
         static void deleteTask(EnrolmentServerTest& parent, model::PrescriptionId prescriptionId)
@@ -315,7 +317,7 @@ public:
             chargeItem.blobId = blobId;
 
             auto& backend = parent.database()->getBackend();
-            backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr("X1234567890", ::SafeString{}));
+            backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr(model::Kvnr{"X1234567890"}, ::SafeString{}));
             backend.commitTransaction();
 
             releaseKeyBlob = [&parent, id = chargeItem.prescriptionId] {
@@ -460,7 +462,7 @@ TEST_P(EnrolmentServerTest, GetEnclaveStatus)//NOLINT(readability-function-cogni
     const auto id = model.getString(enrolment::GetEnclaveStatus::responseEnclaveId);
     ASSERT_TRUE(Uuid(id).isValidIheUuid());
     // The difference between the enclave time and "now" should only be as large as it takes to return that value back to us, i.e. very small.
-    ASSERT_LT(model.getInt64(enrolment::GetEnclaveStatus::responseEnclaveTime) - secondsSinceEpoch, 1);
+    ASSERT_LT(gsl::narrow<size_t>(model.getInt64(enrolment::GetEnclaveStatus::responseEnclaveTime)) - secondsSinceEpoch, 1);
     // Initial state is "NotEnrolled".
     ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "NotEnrolled");
 

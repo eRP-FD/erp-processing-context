@@ -9,6 +9,7 @@
 #include "erp/hsm/production/HsmProductionFactory.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/util/Condition.hxx"
 #include "erp/util/SignalHandler.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"

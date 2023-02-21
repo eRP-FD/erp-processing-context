@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AuditEvent xmlns="http://hl7.org/fhir">
+  <meta>
+    <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_AuditEvent|1.2" />
+    <tag>
+      <display value="Valid Example with minimal data." />
+    </tag>
+  </meta>
+  <language value="de"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">Institutions- oder Organisations-Bezeichnung hat das Rezept mit der ID 160.000.000.007.182.45 eingestellt.</div>
+  </text>
+  <type>
+    <system value="http://terminology.hl7.org/CodeSystem/audit-event-type" />
+    <version value="1.0"/>
+    <code value="rest" />
+    <display value="display"/>
+    <userSelected value="true"/>
+  </type>
+  <subtype>
+    <system value="http://hl7.org/fhir/restful-interaction" />
+    <version value="1.0"/>
+    <code value="create" />
+    <display value="display"/>
+    <userSelected value="true"/>
+  </subtype>
+  <action value="C" />
+  <period>
+    <start value="2020-02-27T08:04:27.434+00:00"/>
+    <end value="2020-02-28T08:04:27.434+00:00"/>
+  </period>
+  <recorded value="2020-02-27T08:04:27.434+00:00" />
+  <outcome value="0" />
+  <outcomeDesc value="outcome description"/>
+  <purposeOfEvent>
+    <coding>
+      <system value="system" />
+      <version value="1.0"/>
+      <code value="code"/>
+      <display value="code display" />
+      <userSelected value="false"/>
+    </coding>
+    <text value="test"/>
+  </purposeOfEvent>
+  <agent>
+    <type>
+      <coding>
+        <system value="http://terminology.hl7.org/CodeSystem/extra-security-role-type" />
+        <version value="1.0"/>
+        <code value="humanuser" />
+        <display value="Human User" />
+        <userSelected value="false"/>
+      </coding>
+      <text value="text"/>
+    </type>
+    <role>
+      <coding>
+        <system value="http://terminology.hl7.org/CodeSystem/extra-security-role-type" />
+        <version value="1.0"/>
+        <code value="humanuser" />
+        <display value="Human User" />
+        <userSelected value="false"/>
+      </coding>
+      <text value="text"/>
+    </role>
+    <who>
+      <identifier>
+        <use value="official"/>
+        <type>
+          <coding>
+            <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+            <version value="1.0"/>
+            <code value="PRN" />
+            <display value="code display" />
+            <userSelected value="false"/>
+          </coding>
+          <text value="test"/>
+        </type>
+        <system value="https://gematik.de/fhir/sid/telematik-id" />
+        <value value="606358750" />
+        <period>
+          <start value="2020-03-02T08:25:05+00:00"/>
+          <end value="2020-03-02T08:25:06+00:00"/>
+        </period>
+        <assigner>
+          <reference value="assigner reference"/>
+          <type value="Organization"/>
+          <identifier>
+            <value value="assigner identifier" />
+          </identifier>
+          <display value="assigner display"/>
+        </assigner>
+      </identifier>
+    </who>
+    <altId value="alternative"/>
+    <name value="Praxis Dr. M&#252;ller" />
+    <requestor value="false" />
+    <location>
+      <reference value="assigner reference"/>
+      <type value="Location"/>
+      <identifier>
+        <value value="assigner identifier" />
+      </identifier>
+      <display value="assigner display"/>
+    </location>
+    <policy value="policy.uri"/>
+    <media>
+      <system value="test.uri" />
+      <version value="1.0"/>
+      <code value="code" />
+      <display value="code display" />
+      <userSelected value="false"/>
+    </media>
+    <network>
+      <address value="192.168.0.1"/>
+      <type value="2"/>
+    </network>
+    <purposeOfUse>
+      <coding>
+        <system value="test.uri" />
+        <version value="1.0"/>
+        <code value="code" />
+        <display value="code display" />
+        <userSelected value="false"/>
+      </coding>
+      <text value="test"/>
+    </purposeOfUse>
+  </agent>
+  <source>
+    <site value="E-Rezept Fachdienst" />
+    <observer>
+      <reference value="Device/1234" />
+      <type value="Device"/>
+      <identifier>
+        <value value="assigner identifier" />
+      </identifier>
+      <display value="assigner display"/>
+    </observer>
+    <type>
+      <system value="test.uri" />
+      <version value="1.0"/>
+      <code value="code" />
+      <display value="code display" />
+      <userSelected value="false"/>
+    </type>
+  </source>
+  <entity>
+    <what>
+      <reference value="https://prescriptionserver.telematik/Task/4711" />
+      <type value="MedicationDispense"/>
+      <identifier>
+        <use value="official" />
+        <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
+        <value value="160.123.456.789.123.58" />
+      </identifier>
+      <display value="display"/>
+    </what>
+    <type>
+      <system value="http://terminology.hl7.org/CodeSystem/extra-security-role-type" />
+      <version value="1.0"/>
+      <code value="humanuser" />
+      <display value="Human User" />
+      <userSelected value="false"/>
+    </type>
+    <role>
+      <system value="http://terminology.hl7.org/CodeSystem/extra-security-role-type" />
+      <version value="1.0"/>
+      <code value="humanuser" />
+      <display value="Human User" />
+      <userSelected value="false"/>
+    </role>
+    <lifecycle>
+      <system value="http://terminology.hl7.org/CodeSystem/extra-security-role-type" />
+      <version value="1.0"/>
+      <code value="humanuser" />
+      <display value="Human User" />
+      <userSelected value="false"/>
+    </lifecycle>
+    <securityLabel>
+      <system value="http://terminology.hl7.org/CodeSystem/extra-security-role-type" />
+      <version value="1.0"/>
+      <code value="humanuser" />
+      <display value="Human User" />
+      <userSelected value="false"/>
+    </securityLabel>
+    <name value="X123456789" />
+    <description value="*160.123.456.789.123.58*" />
+    <detail>
+      <type value="text/plain"/>
+      <valueString value="detail"/>
+    </detail>
+  </entity>
+</AuditEvent>

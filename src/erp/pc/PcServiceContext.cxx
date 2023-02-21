@@ -9,6 +9,7 @@
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/Database.hxx"
+#include "erp/pc/SeedTimer.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
@@ -37,6 +38,7 @@ namespace
 }
 
 
+// GEMREQ-start A_20974-01
 PcServiceContext::PcServiceContext(const Configuration& configuration, Factories&& factories)
     : idp()
     , mTimerManager(std::make_shared<Timer>())
@@ -58,6 +60,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mReportPseudonameKeyRefreshJob(PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(*mHsmPool, getBlobCache(), configuration))
     , mRegistrationInterface(std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(), factories.redisClientFactory()))
     , mTpmFactory(std::move(factories.tpmFactory))
+// GEMREQ-end A_20974-01
 {
     RequestHandlerManager teeHandlers;
     ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
@@ -78,9 +81,10 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
 
     RequestHandlerManager adminHandlers;
     AdminServer::addEndpoints(adminHandlers);
-    mAdminServer = factories.adminServerFactory(configuration.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
-                                                configuration.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT),
-                                                std::move(adminHandlers), *this, false, SafeString{});
+    mAdminServer = factories.adminServerFactory(
+        configuration.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+        gsl::narrow<uint16_t>(configuration.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), std::move(adminHandlers),
+        *this, false, SafeString{});
     Expect3(mDatabaseFactory!=nullptr, "database factory has been passed as nullptr to ServiceContext constructor", std::logic_error);
     Expect3(mTpmFactory!=nullptr, "mTpmFactory has been passed as nullptr to ServiceContext constructor", std::logic_error);
     Expect3(mTslManager!=nullptr, "mTslManager could not be initialized", std::logic_error);

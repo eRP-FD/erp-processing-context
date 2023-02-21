@@ -14,17 +14,30 @@
 
 #include <gtest/gtest.h>
 
-
-TEST(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity)
+class ConsentTest : public testing::Test
 {
-    const char* const kvnr = "X987654321";
+public:
+    void SetUp() override
+    {
+        if (model::ResourceVersion::deprecatedProfile(
+                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+        {
+            GTEST_SKIP();
+        }
+    }
+};
+
+
+TEST_F(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity)
+{
+    const model::Kvnr kvnr{"X987654321"};
     const auto consentType = model::Consent::Type::CHARGCONS;
-    const auto consentIdStr = std::string("CHARGCONS-") + kvnr;
+    const auto consentIdStr = std::string("CHARGCONS-") + kvnr.id();
 
     EXPECT_EQ(model::Consent::createIdString(consentType, kvnr), consentIdStr);
 
     auto consentIdParts = model::Consent::splitIdString(consentIdStr);
-    EXPECT_EQ(model::Consent::createIdString(consentIdParts.first, consentIdParts.second), consentIdStr);
+    EXPECT_EQ(model::Consent::createIdString(consentIdParts.first, model::Kvnr{consentIdParts.second}), consentIdStr);
     EXPECT_EQ(consentIdParts.first, consentType);
     EXPECT_EQ(consentIdParts.second, kvnr);
 
@@ -33,10 +46,10 @@ TEST(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity)
     EXPECT_THROW(consentIdParts = model::Consent::splitIdString("INVALID-X123456789"), model::ModelException);
 }
 
-TEST(ConsentTest, Construct)
+TEST_F(ConsentTest, Construct)
 {
     const auto consentType = model::Consent::Type::CHARGCONS;
-    const char* const kvnr = "X123456789";
+    const model::Kvnr kvnr{"X123456789"};
     const model::Timestamp dateTime = model::Timestamp::now();
     model::Consent consent(kvnr, dateTime);
     EXPECT_TRUE(consent.id().has_value());
@@ -46,7 +59,7 @@ TEST(ConsentTest, Construct)
     EXPECT_TRUE(consent.isChargingConsent());
 }
 
-TEST(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE", "disable"};
     auto jsonString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.json");
@@ -59,7 +72,7 @@ TEST(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-comp
     auto& consent = optConsent.value();
 
     EXPECT_FALSE(consent.id().has_value());
-    const char* const kvnr = "X123456789";
+    const model::Kvnr kvnr{"X123456789"};
     EXPECT_EQ(consent.patientKvnr(), kvnr);
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 
@@ -70,7 +83,7 @@ TEST(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-comp
 
     // Set category/coding to some other values to check that now "isChargingConsent" is false:
     jsonString = String::replaceAll(
-        jsonString, "https://gematik.de/fhir/CodeSystem/Consenttype", "http://terminology.hl7.org/CodeSystem/v3-ActCode");
+        jsonString, "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType", "http://terminology.hl7.org/CodeSystem/v3-ActCode");
     jsonString = String::replaceAll(jsonString, "CHARGCONS", "INFAO");
 
     std::optional<model::Consent> optConsent2;
@@ -81,14 +94,14 @@ TEST(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-comp
     EXPECT_THROW(optConsent2.value().fillId(), model::ModelException);
 }
 
-TEST(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
 {
     auto consent = model::Consent::fromXml(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.xml"),
         *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir);  // TODO change to correct schema as soon as available
 
     EXPECT_FALSE(consent.id().has_value());
-    const char* const kvnr = "X123456789";
+    const model::Kvnr kvnr{"X123456789"};
     EXPECT_EQ(consent.patientKvnr(), kvnr);
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 
@@ -97,4 +110,3 @@ TEST(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-compl
     EXPECT_TRUE(consent.id().has_value());
     EXPECT_EQ(consent.id().value(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr));
 }
-

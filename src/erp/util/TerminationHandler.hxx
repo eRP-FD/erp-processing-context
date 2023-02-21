@@ -13,6 +13,9 @@
 #include <optional>
 #include <vector>
 
+template <typename>
+class PeriodicTimer;
+
 namespace boost::asio
 {
 class io_context;
@@ -91,9 +94,11 @@ private:
     std::vector<std::function<void(bool)>> mCallbacks;
     std::atomic<State> mState;
     std::atomic_bool mHasError;
-    class ShutdownDelayTimer;
+    class ShutdownDelayTimerHandler;
+    using ShutdownDelayTimer= PeriodicTimer<ShutdownDelayTimerHandler>;
     std::unique_ptr<ShutdownDelayTimer> mShutdownDelayTimer;
-    class CountDownTimer;
+    class CountDownTimerHandler;
+    using CountDownTimer = PeriodicTimer<CountDownTimerHandler>;
     std::unique_ptr<CountDownTimer> mCountDownTimer;
 
     static std::unique_ptr<TerminationHandler>& rawInstance (void);

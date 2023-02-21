@@ -19,6 +19,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/util/tool_config.hxx.in" "${CMAKE_CU
 
 set(ERP_TEST_UTIL_SOURCES
         util/TestConfiguration.cxx
+        util/TestUtils.cxx
         util/ResourceManager.cxx
         )
 
@@ -81,12 +82,14 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp10081Test.cxx
         workflow-test/Erp10101Test.cxx
         workflow-test/Erp10941Test.cxx
+        workflow-test/Erp11543Test.cxx
         workflow-test/Erp11031Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
-        workflow-test/ErpWorkflow169Test.cxx
-        workflow-test/ErpWorkflow200Test.cxx
+        workflow-test/ErpWorkflowDirekteZuweisungTest.cxx
+        workflow-test/ErpWorkflowPkvTest.cxx
         workflow-test/ErpWorkflowTestFixture.cxx
+        workflow-test/Error403IfTaskStateDraft.cxx
         workflow-test/HttpsTestClient.cxx
         workflow-test/MultipleMedicationDispenses.cxx
         workflow-test/RegressionTest.cxx
@@ -94,6 +97,7 @@ set(ERP_TEST_LIB_SOURCES
         util/CryptoHelper.cxx
         util/EnvironmentVariableGuard.hxx
         util/JwtBuilder.cxx
+        util/ResourceTemplates.cxx
         util/StaticData.cxx
     )
 
@@ -203,6 +207,7 @@ list(
         erp/model/JsonCanonicalizationTestModel.cxx
         erp/model/JsonMaintainNumberPrecisionTest.cxx
         erp/model/JsonMaintainNumberPrecisionTestModel.cxx
+        erp/model/KvnrTest.cxx
         erp/model/MedicationDispenseTest.cxx
         erp/model/MetaDataTest.cxx
         erp/model/OperationOutcomeTest.cxx
@@ -245,6 +250,7 @@ list(
         erp/service/EndpointHandlerTest/AcceptTaskTest.cxx
         erp/service/EndpointHandlerTest/ActivateTaskTest.cxx
         erp/service/EndpointHandlerTest/CloseTaskTest.cxx
+        erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
         erp/service/EndpointHandlerTest/FeatureToggleWf200Test.cxx
         erp/service/ErpRequestHandlerTest.cxx
@@ -303,7 +309,7 @@ list(
         erp/util/search/UrlArgumentsTest.cxx
         erp/util/VersionTest.cxx
         erp/util/WorkDayTest.cxx
-        erp/validation/JsonValidatorTest.cxx
+        erp/validation/JsonValidationTest.cxx
         erp/validation/KbvBundleValidationTest.cxx
         erp/validation/SampleDataTest.cxx
         erp/validation/XmlValidatorTest.cxx

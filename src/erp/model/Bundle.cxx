@@ -5,6 +5,7 @@
 
 #include "erp/model/Bundle.hxx"
 
+#include "erp/model/AbgabedatenPkvBundle.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
@@ -48,7 +49,7 @@ namespace
 // Сustom definitions of names for enum.
 // Specialization of `enum_name` must be injected in `namespace magic_enum::customize`.
 template <>
-constexpr std::string_view magic_enum::customize::enum_name<model::BundleType>(typename model::BundleType value) noexcept {
+constexpr magic_enum::customize::customize_t magic_enum::customize::enum_name<model::BundleType>(typename model::BundleType value) noexcept {
     switch (value) {
         case model::BundleType::document:
         case model::BundleType::message:
@@ -57,13 +58,13 @@ constexpr std::string_view magic_enum::customize::enum_name<model::BundleType>(t
         case model::BundleType::history:
         case model::BundleType::searchset:
         case model::BundleType::collection:
-            return {};
+            return default_tag;
         case model::BundleType::transaction_response:
             return "transaction-response";
         case model::BundleType::batch_response:
             return "batch-response";
     }
-    return {};
+    return invalid_tag;
 }
 
 
@@ -286,7 +287,7 @@ template <class DerivedBundle, typename SchemaVersionType>
 size_t BundleBase<DerivedBundle, SchemaVersionType>::getTotalSearchMatches() const
 {
     auto optionalTotal = this->getOptionalInt64Value(totalPointer);
-    return optionalTotal.value_or(0);
+    return gsl::narrow<size_t>(optionalTotal.value_or(0));
 }
 
 template <class DerivedBundle, typename SchemaVersionType>
@@ -312,10 +313,48 @@ void BundleBase<DerivedBundle, SchemaVersionType>::setTotalSearchMatches(std::si
     setValue(totalPointer, rapidjson::Value(static_cast<std::uint64_t>(totalSearchMatches)));
 }
 
+template <class DerivedBundle, typename SchemaVersionType>
+SchemaVersionType BundleBase<DerivedBundle, SchemaVersionType>::getSchemaVersion(const std::optional<SchemaVersionType>& fallbackVersion) const
+{
+    // If we get unversioned bundles, we have to try to determine the
+    // version via its entries, otherwise we might end up picking the wrong version
+    // e.g. the bundles for MedicationDispense do not contain a meta.profile entry, however
+    // their entries do. Iterate over the entries until we find a profiled resource.
+    // As a last resort, use the default rendering profile version - hoping that they validate
+    // with any profile.
+    if constexpr (! std::is_same_v<SchemaVersionType, ResourceVersion::NotProfiled>)
+    {
+        if (Resource<DerivedBundle, SchemaVersionType>::getProfileName())
+        {
+            return Resource<DerivedBundle, SchemaVersionType>::getSchemaVersion(fallbackVersion);
+        }
+        for (std::size_t idx = 0; idx < getResourceCount(); ++idx)
+        {
+            auto entry = UnspecifiedResource::fromJson(getResource(idx));
+            const auto profileString = entry.getProfileName();
+            if (! profileString)
+            {
+                continue;
+            }
+            const auto anyProfileVersion = std::get<ResourceVersion::AnyProfileVersion>(
+                ResourceVersion::profileVersionFromName(*profileString, ResourceVersion::allBundles()));
+            if (std::holds_alternative<SchemaVersionType>(anyProfileVersion))
+            {
+                return std::get<SchemaVersionType>(anyProfileVersion);
+            }
+        }
+        ModelExpect(fallbackVersion.has_value(), "Unable to determine schema version without fallback");
+        TLOG(WARNING) << "Unspecified profile, using fallback fhir profile version";
+        return *fallbackVersion;
+    }
+    return {};
+}
+
 
 template class BundleBase<ErxReceipt>;
 template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
 template class BundleBase<Bundle>;
-template class BundleBase<MedicationDispenseBundle, ResourceVersion::NotProfiled>;
+template class BundleBase<MedicationDispenseBundle>;
+template class BundleBase<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>;
 
 } // end of namespace model

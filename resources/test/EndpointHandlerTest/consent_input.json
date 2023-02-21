@@ -2,7 +2,7 @@
   "resourceType": "Consent",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/StructureDefinition/ErxConsent|1.1.1"
+      "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|1.0"
     ],
     "tag": [
       {
@@ -24,7 +24,7 @@
     {
       "coding": [
         {
-          "system": "https://gematik.de/fhir/CodeSystem/Consenttype",
+          "system": "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType",
           "code": "CHARGCONS",
           "display": "Consent for saving electronic charge item"
         }

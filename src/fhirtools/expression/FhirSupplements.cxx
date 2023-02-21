@@ -115,7 +115,7 @@ Collection Resolve::eval(const Collection& collection) const
         const auto& [element, _] = item->resolveReference(elementPathIsNotUsed);
         if (element)
         {
-            result.emplace_back(std::move(element));
+            result.emplace_back(element);
         }
     }
     return result;

@@ -168,7 +168,7 @@ namespace
                         qcStatement->statementId);
                     if (readSize > 0)
                     {
-                        statementIdString.resize(readSize);
+                        statementIdString.resize(static_cast<size_t>(readSize));
                         // only id-qcs-pkixQCSyntax-v1 is supported, means the statementIdString is the oid
                         return statementIdString;
                     }
@@ -259,7 +259,7 @@ std::string X509Certificate::toBase64 () const
         OPENSSL_free(buffer);
         Fail2("Unable to convert certificate to string.", CryptoFormalError);
     }
-    const std::string& b64Encoded = Base64::encode(util::rawToBuffer(buffer, length));
+    const std::string& b64Encoded = Base64::encode(util::rawToBuffer(buffer, static_cast<size_t>(length)));
     OPENSSL_free(buffer);
 
     return b64Encoded;
@@ -641,7 +641,8 @@ std::vector<std::string> X509Certificate::getOcspUrls() const {
     STACK_OF(OPENSSL_STRING) *ocspStack = X509_get1_ocsp(pCert.get());
     Expect(ocspStack != nullptr, "can not get ocsp stack");
     int len = sk_OPENSSL_STRING_num(ocspStack);
-    result.reserve(len);
+    OpenSslExpect(len >= 0, "sk_OPENSSL_STRING_num failed");
+    result.reserve(static_cast<size_t>(len));
     for (int i = 0; i < len; ++i)
     {
         result.emplace_back(sk_OPENSSL_STRING_value(ocspStack, i));
@@ -1043,7 +1044,7 @@ std::unordered_multimap<std::string, std::string> X509Certificate::getDistinguis
         ASN1_STRING *v = X509_NAME_ENTRY_get_data(entry);
         if (key != nullptr && v != nullptr)
         {
-            dn.insert({std::string(key), std::string(reinterpret_cast<const char*>(v->data), v->length)});
+            dn.insert({std::string(key), std::string(reinterpret_cast<const char*>(v->data), gsl::narrow<size_t>(v->length))});
         }
     }
 

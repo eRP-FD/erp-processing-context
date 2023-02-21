@@ -1,2 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CodeSystem xmlns="http://hl7.org/fhir"><url value="https://gematik.de/fhir/CodeSystem/AvailabilityStatus"/><version value="1.1.1"/><name value="AvailabilityStatusCS"/><title value="CodeSystem of AvailabilityStatus"/><status value="draft"/><experimental value="false"/><publisher value="gematik GmbH"/><contact><telecom><system value="url"/><value value="http://www.gematik.de"/></telecom></contact><description value="Type of the availability status for medication availability request."/><copyright value="gematik GmbH"/><caseSensitive value="true"/><content value="complete"/><concept><code value="10"/><display value="sofort verfügbar"/></concept><concept><code value="20"/><display value="noch Heute verfügbar"/></concept><concept><code value="30"/><display value="am nächsten Werktag - vormittags"/></concept><concept><code value="40"/><display value="am nächsten Werktag- nachmittags"/></concept><concept><code value="50"/><display value="nicht verfügbar"/></concept><concept><code value="90"/><display value="unbekannt"/></concept></CodeSystem>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <url value="https://gematik.de/fhir/CodeSystem/AvailabilityStatus"/>
+  <version value="1.1.1"/>
+  <name value="AvailabilityStatusCS"/>
+  <title value="CodeSystem of AvailabilityStatus"/>
+  <status value="draft"/>
+  <experimental value="false"/>
+  <publisher value="gematik GmbH"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://www.gematik.de"/>
+    </telecom>
+  </contact>
+  <description value="Type of the availability status for medication availability request."/>
+  <copyright value="gematik GmbH"/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <concept>
+    <code value="10"/>
+    <display value="sofort verfügbar"/>
+  </concept>
+  <concept>
+    <code value="20"/>
+    <display value="noch Heute verfügbar"/>
+  </concept>
+  <concept>
+    <code value="30"/>
+    <display value="am nächsten Werktag - vormittags"/>
+  </concept>
+  <concept>
+    <code value="40"/>
+    <display value="am nächsten Werktag- nachmittags"/>
+  </concept>
+  <concept>
+    <code value="50"/>
+    <display value="nicht verfügbar"/>
+  </concept>
+  <concept>
+    <code value="90"/>
+    <display value="unbekannt"/>
+  </concept>
+</CodeSystem>

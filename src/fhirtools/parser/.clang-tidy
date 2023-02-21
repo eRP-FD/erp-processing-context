@@ -1,0 +1,6 @@
+InheritParentConfig: true
+Checks:
+  -bugprone-reserved-identifier,
+  -cert-dcl37-c,
+  -cert-dcl51-cpp,
+  -cppcoreguidelines-explicit-virtual-functions

@@ -193,6 +193,7 @@
       <xs:enumeration value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"/>
       <xs:enumeration value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle"/>
       <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxReceipt"/>
+      <xs:enumeration value="DAV-PKV-PR-ERP-AbgabedatenBundle"/>
     </xs:restriction>
   </xs:simpleType>    
 </xs:schema>

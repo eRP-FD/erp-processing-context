@@ -38,6 +38,8 @@ oid_hba_qes          = 1.2.276.0.76.4.72
 qcp-natural-qscd     = 0.4.0.194112.1.2
 oid_policy_hba_cp    = 1.2.276.0.76.4.145
 oid_policy_eu_phys   = 1.3.6.1.4.1.42675.1.1
+oid_smc_b_osig       = 1.2.276.0.76.4.78
+oid_vk_eaa_enc       = 1.3.6.1.4.1.24796.1.10
 
 # Policies used by the TSA examples.
 tsa_policy1 = 1.2.3.4.1
@@ -449,6 +451,40 @@ certificatePolicies    = oid_fd_sig
 1.3.36.8.3.3           = ASN1:SEQUENCE:admission_syntax_epa_vau_sequence
 
 crlDistributionPoints  = URI:http://example.com/example_ca.crl
+
+
+####################################################################
+[smc_b_osig]
+
+basicConstraints       = CA:FALSE
+
+keyUsage               = nonRepudiation, digitalSignature
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+
+subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
+
+certificatePolicies    = oid_smc_b_osig
+
+crlDistributionPoints  = URI:http://example.com/example_ca.crl
+
+####################################################################
+[qes_cert_hp_enc]
+
+basicConstraints       = CA:FALSE
+
+keyUsage               = nonRepudiation, digitalSignature
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+1.3.6.1.5.5.7.1.3      = ASN1:SEQUENCE:qcStatement
+
+certificatePolicies    = oid_vk_eaa_enc
+crlDistributionPoints  = URI:http://example.com/example_ca.crl
+authorityInfoAccess    = OCSP;URI:http://ocsp.test.ibm.de/
 
 
 ####################################################################

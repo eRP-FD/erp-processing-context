@@ -32,7 +32,7 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
     std::string qesBundle;
     ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnrInsurant, task->prescriptionId(), model::Timestamp::now())));
     ASSERT_FALSE(qesBundle.empty());
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, qesBundle));
     ASSERT_TRUE(task.has_value());
     ASSERT_EQ(task->kvnr(), kvnrInsurant);
     std::optional<model::Communication> infoReq1;
@@ -76,4 +76,3 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
     EXPECT_NO_THROW(comms = commBundle->getResourcesByType<Communication>("Communication"));
     EXPECT_EQ(comms.size(), 2);
 }
-

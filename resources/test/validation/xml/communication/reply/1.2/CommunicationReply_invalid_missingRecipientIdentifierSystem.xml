@@ -1,0 +1,24 @@
+<Communication xmlns="http://hl7.org/fhir">
+  <id value="7977a4ab-97a9-4d95-afb3-6c4c1e2ac596" />
+  <meta>
+      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2" />
+  </meta>
+  <basedOn>
+      <reference value="Task/160.000.033.491.280.78" />
+  </basedOn>
+  <status value="unknown" />
+  <recipient>
+      <identifier>
+          <value value="X234567890" />
+      </identifier>
+  </recipient>
+  <sender>
+      <identifier>
+          <system value="https://gematik.de/fhir/sid/telematik-id" />
+          <value value="3-SMC-B-Testkarte-883110000123465" />
+      </identifier>
+  </sender>
+  <payload>
+      <contentString value="Eisern" />
+  </payload>
+</Communication>

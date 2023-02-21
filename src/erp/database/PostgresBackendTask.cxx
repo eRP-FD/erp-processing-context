@@ -51,6 +51,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         FOR UPDATE
         )--")
 
+    // GEMREQ-start A_22135#query, A_22134#query
     QUERY(retrieveTaskByIdPlusPrescriptionPlusReceipt, R"--(
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
             EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id,
@@ -59,6 +60,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         WHERE prescription_id = $1
         FOR UPDATE
         )--")
+    // GEMREQ-end A_22135#query, A_22134#query
 
     QUERY(countAllTasksByKvnr, R"--(
         SELECT COUNT(*)
@@ -104,18 +106,6 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
             when_handed_over = NULL, when_prepared = NULL, performer = NULL, medication_dispense_bundle = NULL
         WHERE prescription_id = $1
         )--")
-
-    QUERY(deleteChargeItemSupportingInformation, R"--(
-        UPDATE )--" + taskTableName() + R"--(
-        SET healthcare_provider_prescription = NULL, medication_dispense_bundle = NULL, medication_dispense_blob_id = NULL, receipt = NULL
-        WHERE prescription_id = $1
-        )--")
-
-    QUERY(clearAllChargeItemSupportingInformation, R"--(
-        UPDATE )--" + taskTableName() + R"--(
-        SET healthcare_provider_prescription = NULL, medication_dispense_bundle = NULL, medication_dispense_blob_id = NULL, receipt = NULL
-        WHERE kvnr_hashed = $1
-    )--")
 #undef QUERY
 }
 
@@ -379,7 +369,7 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndPrescription(p
     return {};
 }
 
-
+// GEMREQ-start A_22135#retrieveTask, A_22134#retrieveTask
 ::std::optional<::db_model::Task>
 PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::work& transaction,
                                                            const ::model::PrescriptionId& taskId)
@@ -408,7 +398,7 @@ PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::work& transac
 
     return {};
 }
-
+// GEMREQ-end A_22135#retrieveTask, A_22134#retrieveTask
 
 uint64_t PostgresBackendTask::countAllTasksForPatient(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
                                                       const std::optional<UrlArguments>& search) const
@@ -417,27 +407,6 @@ uint64_t PostgresBackendTask::countAllTasksForPatient(pqxx::work& transaction, c
                                                                         "PostgreSQL:countAllTasksForPatient");
     return PostgresBackendHelper::executeCountQuery(transaction, mQueries.countAllTasksByKvnr.query, kvnr, search,
                                                     "tasks");
-}
-
-void PostgresBackendTask::deleteChargeItemSupportingInformation(::pqxx::work& transaction,
-                                                                const ::model::PrescriptionId& id)
-{
-    TVLOG(2) << mQueries.deleteChargeItemSupportingInformation.query;
-    Expect(id.type() == mPrescriptionType,
-           "deleteChargeItemSupportingInformation: Invalid prescription type for: " + id.toString());
-
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:deleteChargeItemSupportingInformation");
-    transaction.exec_params0(mQueries.deleteChargeItemSupportingInformation.query, id.toDatabaseId());
-}
-
-void PostgresBackendTask::clearAllChargeItemSupportingInformation(::pqxx::work& transaction,
-                                                                  const ::db_model::HashedKvnr& kvnr) const
-{
-    TVLOG(2) << mQueries.clearAllChargeItemSupportingInformation.query;
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:clearAllChargeItemSupportingInformation");
-    transaction.exec_params0(mQueries.clearAllChargeItemSupportingInformation.query, kvnr.binarystring());
 }
 
 namespace taskFromQueryResultRowHelper

@@ -34,6 +34,7 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 
 #ifdef _WINNT_
@@ -106,9 +107,10 @@ void ServerTestBase::startServer (void)
     factories.redisClientFactory = []{return createRedisInstance();};
     mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
     initializeIdp(mContext->idp);
+    const auto& config = Configuration::instance();
     mServer = std::make_unique<HttpsServer>(
         "0.0.0.0",
-        static_cast<uint16_t>(9999),
+        static_cast<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)),
         std::move(handlers),
         *mContext);
     mServer->serve(serverThreadCount);
@@ -172,7 +174,9 @@ void ServerTestBase::TearDown (void)
 
 HttpsClient ServerTestBase::createClient (void)
 {
-    return HttpsClient("127.0.0.1", 9999, 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+    const auto& config = Configuration::instance();
+    return HttpsClient("127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)),
+                       30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
 }
 
 
@@ -353,7 +357,7 @@ JWT ServerTestBase::jwtWithProfessionOID(const std::string_view professionOID)
             "family_name": "Nachname",
             "given_name": "Vorname",
             "iat": ##IAT##,
-            "idNummer": "recipient0",
+            "idNummer": "X020406089",
             "iss": "https://idp1.telematik.de/jwt",
             "jti": "<IDP>_01234567890123456789",
             "nonce": "fuu bar baz",
@@ -405,7 +409,7 @@ Task ServerTestBase::addTaskToDatabase(const TaskDescriptor& descriptor)
     {
         activateTask(task, descriptor.kvnrPatient);
         acceptTask(task);
-        closeTask(task, descriptor.telematicIdPharmacy.has_value() ? descriptor.telematicIdPharmacy.value() : mPharmacy);
+        closeTask(task, descriptor.telematicIdPharmacy.has_value() ? descriptor.telematicIdPharmacy.value() : mPharmacy.id());
     }
     return task;
 }
@@ -424,20 +428,16 @@ Task ServerTestBase::createTask(const std::string& accessCode)
 void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
 {
     PrescriptionId prescriptionId = task.prescriptionId();
+    Kvnr kvnr{kvnrPatient, prescriptionId.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv};
+    task.setKvnr(kvnr);
 
-    task.setKvnr(kvnrPatient);
-
-    std::string prescriptionBundleXmlString =
-        FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/MedicationDispenseKbvBundle1.xml");
-
-    prescriptionBundleXmlString =
-        String::replaceAll(prescriptionBundleXmlString, "##PrescriptionId##", prescriptionId.toString());
-    prescriptionBundleXmlString =
-        String::replaceAll(prescriptionBundleXmlString, "##kvnrPatient##", kvnrPatient);
-
-    auto prescriptionBundle = KbvBundle::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
-                                                 *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-                                                 {{.allowNonLiteralAuthorReference = true}});
+    const auto prescriptionBundleXmlString = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId, .kvnr = kvnrPatient});
+    const auto prescriptionBundle =
+        KbvBundle::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
+                           *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                           model::ResourceVersion::supportedBundles(),
+                           {{.allowNonLiteralAuthorReference = true}});
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
     ASSERT_FALSE(patients.empty());
@@ -492,7 +492,7 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
     Composition compositionResource(telematicIdPharmacy, inProgessDate, completedTimestamp, authorIdentifier,
                                     prescriptionDigestIdentifier);
     Device deviceResource;
-    const ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Base64};
+    const ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Digest};
 
     task.setReceiptUuid();
     task.setStatus(Task::Status::completed);
@@ -543,8 +543,7 @@ MedicationDispense ServerTestBase::createMedicationDispense(
     const Timestamp& whenHandedOver,
     const std::optional<Timestamp>& whenPrepared) const
 {
-    const std::string medicationDispenseString =
-        FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/fhir/conversion/medication_dispense.xml");
+    const auto medicationDispenseString = ResourceTemplates::medicationDispenseXml({});
 
     MedicationDispense medicationDispense = MedicationDispense::fromXml(
             medicationDispenseString,
@@ -553,12 +552,12 @@ MedicationDispense ServerTestBase::createMedicationDispense(
             SchemaType::Gem_erxMedicationDispense);
 
     PrescriptionId prescriptionId = task.prescriptionId();
-    std::string_view kvnrPatient = task.kvnr().value();
+    const auto kvnrPatient = task.kvnr().value();
 
     medicationDispense.setPrescriptionId(prescriptionId);
     medicationDispense.setId({prescriptionId, 0});
     medicationDispense.setKvnr(kvnrPatient);
-    medicationDispense.setTelematicId(telematicIdPharmacy);
+    medicationDispense.setTelematicId(model::TelematikId{telematicIdPharmacy});
     medicationDispense.setWhenHandedOver(whenHandedOver);
 
     if (whenPrepared.has_value())

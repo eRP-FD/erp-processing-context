@@ -95,7 +95,7 @@ namespace
         std::unique_ptr<ASN1_OCTET_STRING, std::function<void(ASN1_OCTET_STRING*)>> hash(
             ASN1_OCTET_STRING_new(), ASN1_OCTET_STRING_free);
         OpenSslExpect(hash != nullptr, "Can not create ASN1_OCTET_STRING");
-        OpenSslExpect(1 == ASN1_OCTET_STRING_set(hash.get(), messageDigest, digestLength),
+        OpenSslExpect(1 == ASN1_OCTET_STRING_set(hash.get(), messageDigest, gsl::narrow<int>(digestLength)),
                       "can not set ASN1_OCTET_STRING");
 
         shared_ASN1_TYPE hashType = shared_ASN1_TYPE::make();
@@ -141,11 +141,9 @@ namespace
             X509_EXTENSION_create_by_OBJ(nullptr, extensionIdObject.get(), 0, extensionString.get()),
             X509_EXTENSION_free);
         OpenSslExpect(extension != nullptr, "can not create OCSP extension");
-        (void)extensionString.release();
 
         OpenSslExpect(1 == OCSP_SINGLERESP_add_ext(&singleResponse, extension.get(), -1),
                       "can not add extension to basic OCSP response");
-        (void)extension.release();
     }
 
 
@@ -167,7 +165,7 @@ namespace
                 OCSP_cert_to_id(nullptr, certificatePair.certificate.toX509(), certificatePair.issuer.toX509()),
                 OCSP_CERTID_free);
             OpenSslExpect(knownCertificateId != nullptr, "can not create certificate id");
-            if (0 == OCSP_id_issuer_cmp(&certificateId, knownCertificateId.get()))
+            if (0 == OCSP_id_cmp(&certificateId, knownCertificateId.get()))
             {
                 return certificatePair;
             }
@@ -196,14 +194,16 @@ MockOcsp MockOcsp::create (
 
     const std::optional<MockOcsp::CertificatePair> certificateToSign =
         findCertificateById(ocspResponderKnownCertificateCaPairs, *certificateId);
+    CertificateOcspTestMode testMode =
+        certificateToSign.has_value() ? certificateToSign->testMode : CertificateOcspTestMode::SUCCESS;
 
-    if (certificateToSign->testMode == CertificateOcspTestMode::WRONG_CERTID)
+    if (testMode == CertificateOcspTestMode::WRONG_CERTID)
     {
         certificateId = createUnexpectedCertId();
         OpenSslExpect(certificateId != nullptr, "can not create unexpected certificate id");
     }
 
-    const auto thisUpdateTime = (certificateToSign->testMode == CertificateOcspTestMode::WRONG_THIS_UPDATE
+    const auto thisUpdateTime = (testMode == CertificateOcspTestMode::WRONG_THIS_UPDATE
                              ? time(nullptr) + 6000
                              : time(nullptr));
     std::unique_ptr<ASN1_TIME, decltype(&ASN1_TIME_free)> thisUpdate(
@@ -217,7 +217,7 @@ MockOcsp MockOcsp::create (
     int status = V_OCSP_CERTSTATUS_UNKNOWN;
     if (certificateToSign.has_value())
     {
-        status = (certificateToSign->testMode == CertificateOcspTestMode::REVOKED
+        status = (testMode == CertificateOcspTestMode::REVOKED
                       ? V_OCSP_CERTSTATUS_REVOKED
                       : V_OCSP_CERTSTATUS_GOOD);
     }
@@ -231,11 +231,8 @@ MockOcsp MockOcsp::create (
             thisUpdate.get(),
             nextUpdate.get());
     OpenSslExpect(singleResponse != nullptr, "can not set status in basic ocsp response");
-    (void)certificateId.release();
-    (void)thisUpdate.release();
-    (void)nextUpdate.release();
 
-    if (certificateToSign.has_value() && certificateToSign->testMode != CertificateOcspTestMode::CERTHASH_MISSING)
+    if (certificateToSign.has_value() && testMode != CertificateOcspTestMode::CERTHASH_MISSING)
     {
         addHashExtension(*certificateToSign, *singleResponse);
     }
@@ -251,12 +248,11 @@ MockOcsp MockOcsp::create (
                  privateKey.get(),
                  EVP_sha1(),
                  nullptr,
-                 (certificateToSign->testMode == CertificateOcspTestMode::WRONG_PRODUCED_AT ? OCSP_NOTIME : 0)),
+                 (testMode == CertificateOcspTestMode::WRONG_PRODUCED_AT ? OCSP_NOTIME : 0)),
         "can not sign basic ocsp response");
 
     auto response = shared_OCSP_RESPONSE::make(OCSP_response_create(V_OCSP_CERTSTATUS_GOOD, basicResponse.get()));
     OpenSslExpect(response != nullptr, "can not create OCSP response");
-    basicResponse.release();
 
     return MockOcsp(std::move(response));
 }

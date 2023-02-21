@@ -7,9 +7,10 @@
 #include "fhirtools/repository/FhirConstraint.hxx"
 #include "fhirtools/validator/Severity.hxx"
 
-#include <list>
+#include <set>
 #include <string>
 #include <variant>
+
 
 namespace fhirtools
 {
@@ -18,38 +19,41 @@ class FhirStructureDefinition;
 /**
  * @brief Records Error information for a single issue found during Validation
  */
-class ValidationError {
+class ValidationError
+{
 public:
     using MessageReason = std::tuple<Severity, std::string>;
-    std::variant<FhirConstraint, MessageReason> reason;
+    ValidationError(FhirConstraint, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
+    ValidationError(MessageReason, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
     std::string fieldName;
+    std::variant<FhirConstraint, MessageReason> reason;
     const FhirStructureDefinition* profile = nullptr;
-    bool operator == (const ValidationError&) const = default;
+    bool operator==(const ValidationError&) const = default;
+    auto operator<=>(const ValidationError&) const = default; //NOLINT(hicpp-use-nullptr,modernize-use-nullptr)
     Severity severity() const;
 };
 
 /**
  * @brief Records a list of ValidationError from Validation
  */
-class ValidationResultList
+class ValidationResults
 {
 public:
-    const std::list<ValidationError>& results() const &;
-    std::list<ValidationError> results() &&;
+    const std::set<ValidationError>& results() const&;
+    std::set<ValidationError> results() &&;
     void add(Severity, std::string message, std::string elementFullPath, const FhirStructureDefinition* profile);
     void add(FhirConstraint constraint, std::string elementFullPath, const FhirStructureDefinition* profile);
-    void append(ValidationResultList);
-    void prepend(ValidationResultList);
-    void append(std::list<ValidationError>);
+    void merge(ValidationResults);
+    void merge(std::set<ValidationError>);
     Severity highestSeverity() const;
     void dumpToLog() const;
     std::string summary(Severity minSeverity = Severity::error) const;
 
 private:
-    std::list<ValidationError> mResults;
+    std::set<ValidationError> mResults;
 };
 
-std::ostream& operator << (std::ostream& out, const ValidationError& err);
+std::ostream& operator<<(std::ostream& out, const ValidationError& err);
 std::string to_string(const ValidationError& err);
 
 }

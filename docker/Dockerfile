@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.2 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -34,8 +34,7 @@ RUN conan remote clean &&\
     conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force &&\
     conan user -r erp -p "${CONAN_PASSWORD}" "${CONAN_LOGIN_USERNAME}" &&\
     conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force &&\
-    conan profile new --detect default &&\
-    /usr/bin/echo -e '[build_requires]\nautomake/1.16.5' >> ~/.conan/profiles/default
+    conan profile new --detect default
 
 
 # Build Release variant:
@@ -101,15 +100,32 @@ RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 
 
 # Build runtime image here:
-FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.5 AS runtime
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.6 AS runtime
+
+# Dummy key required for the signing steps.
+RUN openssl genrsa -3 -out /enclave-dummy-key.pem 3072
 
 WORKDIR /debug/erp
 COPY --from=reldeb_build /build/erp-processing-context/reldeb/erp-processing-context-debug.tar.gz .
 COPY --from=reldeb_build /debug/erp .
 
+# Make sure that the signing step performs well.
+RUN cd /debug/erp/bin && gramine-sgx-sign \
+    --manifest /debug/erp/bin/erp-processing-context-kubernetes.manifest \
+    --output   /debug/erp/bin/erp-processing-context-kubernetes.manifest.sgx \
+    --libpal   /usr/lib/x86_64-linux-gnu/gramine/sgx/libpal.so \
+    --key      /enclave-dummy-key.pem
+
 WORKDIR /erp
 COPY --from=release_build /build/erp-processing-context/release/erp-processing-context.tar.gz .
 COPY --from=release_build /erp .
+
+# Make sure that the signing step performs well.
+RUN cd /erp/bin && gramine-sgx-sign \
+    --manifest /erp/bin/erp-processing-context-kubernetes.manifest \
+    --output   /erp/bin/erp-processing-context-kubernetes.manifest.sgx \
+    --libpal   /usr/lib/x86_64-linux-gnu/gramine/sgx/libpal.so \
+    --key      /enclave-dummy-key.pem
 
 WORKDIR /
 COPY docker/start_erp.sh /start_erp.sh

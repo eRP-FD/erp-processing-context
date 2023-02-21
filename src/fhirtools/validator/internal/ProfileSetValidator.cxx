@@ -22,23 +22,23 @@ ProfileSetValidator& ProfileSetValidator::operator=(ProfileSetValidator&&) noexc
 fhirtools::ProfileSetValidator::ProfileSetValidator(fhirtools::ProfiledElementTypeInfo rootPointer,
                                                     const std::set<ProfiledElementTypeInfo>& defPointers,
                                                     const FhirPathValidator& validator)
-    : mRootValidator(rootPointer)
+    : mRootValidator(rootPointer, *this)
     , mValidator{validator}
 {
     for (const auto& defPtr : defPointers)
     {
         ProfileValidator::MapKey mapKey{defPtr};
-        mProfileValidators.emplace(mapKey, ProfileValidator{defPtr});
+        mProfileValidators.emplace(mapKey, ProfileValidator{defPtr, *this});
         mIncludeInResult.emplace(std::move(mapKey));
     }
     ProfileValidator::MapKey mapKey{mRootValidator.definitionPointer()};
-    mProfileValidators.emplace(mapKey, ProfileValidator{std::move(rootPointer)});
+    mProfileValidators.emplace(mapKey, ProfileValidator{std::move(rootPointer), *this});
     mIncludeInResult.emplace(std::move(mapKey));
 }
 
 ProfileSetValidator::ProfileSetValidator(ProfileSetValidator* parent, ProfiledElementTypeInfo rootPointer)
     : mParent(parent)
-    , mRootValidator{std::move(rootPointer)}
+    , mRootValidator{std::move(rootPointer), *this}
     , mValidator{parent->mValidator}
 {
 }
@@ -85,7 +85,7 @@ void ProfileSetValidator::addProfile(const FhirStructureRepository& repo, const 
     if (profile->isDerivedFrom(repo, *rootPointer().profile()))
     {
         ProfiledElementTypeInfo defPtr{profile};
-        mProfileValidators.emplace(defPtr, ProfileValidator{defPtr});
+        mProfileValidators.emplace(defPtr, ProfileValidator{defPtr, *this});
         mIncludeInResult.emplace(std::move(defPtr));
     }
 }
@@ -160,7 +160,7 @@ ProfileSetValidator::createSolverDataValue(const FhirStructureRepository& repo, 
     if (profile->baseType(repo) == rootPointer().profile())
     {
         ProfiledElementTypeInfo defPtr{profile};
-        const auto& [validator, inserted] = mProfileValidators.emplace(defPtr, ProfileValidator{defPtr});
+        const auto& [validator, inserted] = mProfileValidators.emplace(defPtr, ProfileValidator{defPtr, *this});
         return {std::move(defPtr), validator->second.validationData()};
     }
     else if (rootPointer().profile()->isDerivedFrom(repo, *profile))
@@ -287,22 +287,14 @@ void fhirtools::ProfileSetValidator::createSliceCheckersAndCounters()
     using namespace std::string_view_literals;
     if (mParent)
     {
-        const bool checkExtension =
-            options().reportUnknownExtensions && rootPointer() == mValidator.get().extensionRootDefPtr();
-        bool extensionChecked = false;
-        std::optional<FhirSlicing::SlicingRules> ruleOverride;
-        if (checkExtension)
-        {
-            ruleOverride = FhirSlicing::SlicingRules::reportOther;
-        }
         for (auto& profVal : mProfileValidators)
         {
             const auto& defPtr = profVal.second.definitionPointer();
-            if (defPtr.element()->hasSlices())
+            const auto& slicing = defPtr.element()->slicing();
+            if (slicing)
             {
-                extensionChecked = true;
-                const auto& slicing = defPtr.element()->slicing();
-                auto [it, ins] = mParent->mSliceCheckers.try_emplace(defPtr, defPtr.profile(), *slicing, ruleOverride);
+                auto [it, ins] = mParent->mSliceCheckers.try_emplace(defPtr, defPtr.profile(), *slicing,
+                                                                     getRuleOverride(profVal.first));
                 TVLOG(3) << "Adding Slicechecker for " << defPtr.profile()->url() << '|' << defPtr.profile()->version()
                          << "@" << defPtr.element()->name();
                 for (const auto& pk : profVal.second.parentKey())
@@ -314,16 +306,6 @@ void fhirtools::ProfileSetValidator::createSliceCheckersAndCounters()
                     createSliceCounters(profVal.second, *slicing);
                 }
             }
-        }
-        if (! extensionChecked && checkExtension)
-        {
-            // no extensions defined for this Extension-Element - set reportOther using base definition
-            const auto& extensionDef = mValidator.get().elementExtensionDefPtr();
-            const auto& slicing = extensionDef.element()->slicing();
-            auto [it, ins] = mParent->mSliceCheckers.try_emplace(rootPointer(), rootPointer().profile(),
-                                                                 slicing.value(), ruleOverride);
-            it->second.addAffectedValidator(mParent->mRootValidator.key());
-            TVLOG(3) << "Adding Extension-Slicechecker";
         }
     }
 }
@@ -445,7 +427,7 @@ void ProfileSetValidator::finalizeSliceCheckers(std::string_view elementFullPath
             }
             else
             {
-                mResults.append(slicingCheckResults);
+                mResults.merge(slicingCheckResults);
             }
         }
     }
@@ -454,7 +436,7 @@ void ProfileSetValidator::finalizeSliceCheckers(std::string_view elementFullPath
 std::set<ProfileValidator::MapKey> fhirtools::ProfileSetValidator::initialFailed() const
 {
     std::set<ProfileValidator::MapKey> failed;
-    for (auto& profVal : mProfileValidators)
+    for (const auto& profVal : mProfileValidators)
     {
         if (profVal.second.failed())
         {
@@ -524,28 +506,84 @@ fhirtools::ReferenceContext fhirtools::ProfileSetValidator::buildReferenceContex
 #ifndef NDEBUG
     findResult.referenceContext.dumpToLog();
 #endif
-    mResults.append(std::move(findResult.validationResults));
+    mResults.merge(std::move(findResult.validationResults));
     return std::move(findResult.referenceContext);
 }
 
-ValidationResultList ProfileSetValidator::results() const
+ValidationResults ProfileSetValidator::results() const
 {
     using namespace std::string_literals;
     using std::to_string;
-    ValidationResultList result;
+    ValidationResults result;
     std::set<ProfileValidator::MapKey> added;
     for (const auto& defPtr : mIncludeInResult)
     {
         if (added.insert(defPtr).second)
         {
             TVLOG(4) << "adding results from " << defPtr;
-            result.append(getValidator(defPtr).results());
+            result.merge(getValidator(defPtr).results());
         }
     }
     for (const auto& solver : mSolvers)
     {
-        result.append(solver.collectResults());
+        result.merge(solver.collectResults());
     }
-    result.append(mResults);
+    result.merge(mResults);
     return result;
+}
+
+
+bool ProfileSetValidator::hasMostSlices(const ProfiledElementTypeInfo& pet) const
+{
+    const auto& slicing = pet.element()->slicing();
+    const auto& sliceCount = slicing ? slicing->slices().size() : 0;
+    for (const auto& profVal : mProfileValidators)
+    {
+        if (profVal.first == pet)
+        {
+            continue;
+        }
+        const auto& otherSlicing = profVal.first.element()->slicing();
+        if (! otherSlicing)
+        {
+            continue;
+        }
+        if (otherSlicing->slices().size() > sliceCount)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::optional<FhirSlicing::SlicingRules> ProfileSetValidator::getRuleOverride(const ProfiledElementTypeInfo& pet) const
+{
+    const bool isExtension = rootPointer() == mValidator.get().extensionRootDefPtr();
+    if (! isExtension)
+    {
+        return std::nullopt;
+    }
+    const auto& options = mValidator.get().options();
+    const auto& slicing = pet.element()->slicing();
+    switch (options.reportUnknownExtensions)
+    {
+        using enum ValidatorOptions::ReportUnknownExtensionsMode;
+        case disable:
+            return std::nullopt;
+        case enable:
+            break;
+        case onlyOpenSlicing:
+            if (slicing->slicingRules() != FhirSlicing::SlicingRules::open)
+            {
+                return std::nullopt;
+            }
+    }
+    // Only report for the slicing with the most slices, because:
+    // 1. The empty definition is also always considered
+    // 2. Any derived profiles might add slices to other open Slicings
+    if (hasMostSlices(pet))
+    {
+        return FhirSlicing::SlicingRules::reportOther;
+    }
+    return std::nullopt;
 }

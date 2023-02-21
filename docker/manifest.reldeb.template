@@ -127,9 +127,9 @@ sgx.trusted_files = [
 "file:/debug/erp/lib/libibmtssutils.so.1.6.0",
 "file:/debug/erp/lib/libssl.so.1.1",
 "file:/debug/erp/lib/libstdc++.so.6",
-"file:/debug/erp/lib/libstdc++.so.6.0.29",
+"file:/debug/erp/lib/libstdc++.so.6.0.30",
 "file:/debug/erp/lib/libtpmclient.so",
 "file:/debug/erp/lib/libz.so.1",
-"file:/debug/erp/lib/libz.so.1.2.12",
+"file:/debug/erp/lib/libz.so.1.2.13",
 __ADDITIONAL_TRUST_FILES__
 ]

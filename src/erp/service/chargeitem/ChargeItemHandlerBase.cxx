@@ -87,9 +87,10 @@ void ChargeItemHandlerBase::verifyPharmacyAccessCode(
 
 
 // static
+// GEMREQ-start createPharmacyAccessCode
 std::string ChargeItemHandlerBase::createPharmacyAccessCode()
 {
     const auto rawAccessCode = SecureRandomGenerator::generate(32);
     return ByteHelper::toHex(rawAccessCode);
 }
-
+// GEMREQ-end createPharmacyAccessCode

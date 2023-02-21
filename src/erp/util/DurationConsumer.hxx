@@ -72,7 +72,7 @@ public:
     void initialize (
         const std::string& sessionIdentifier,
         DurationTimer::Receiver&& receiver);
-    void reset (void);
+    void reset (void) noexcept;
     bool isInitialized (void) const;
     std::optional<std::string> getSessionIdentifier (void) const;
 

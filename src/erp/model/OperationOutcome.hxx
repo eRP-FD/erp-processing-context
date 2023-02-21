@@ -19,7 +19,8 @@ namespace model
 
 // Reduced version of OperationOutcome resource, contains only functionality currently needed;
 
-class OperationOutcome : public Resource<OperationOutcome>
+// NOLINTNEXTLINE(bugprone-exception-escape)
+class OperationOutcome : public Resource<OperationOutcome, ResourceVersion::Fhir>
 {
 public:
     static constexpr auto resourceTypeName = "OperationOutcome";
@@ -86,7 +87,7 @@ public:
     [[nodiscard]] std::vector<Issue> issues() const;
 
 private:
-    friend Resource<OperationOutcome>;
+    friend Resource<OperationOutcome, ResourceVersion::Fhir>;
     explicit OperationOutcome(NumberAsStringParserDocument&& jsonTree);
 };
 

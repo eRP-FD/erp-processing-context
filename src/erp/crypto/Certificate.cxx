@@ -246,16 +246,16 @@ std::string Certificate::toPem(void) const
 {
     auto certificateMemory = shared_BIO::make();
     const int status = PEM_write_bio_X509(certificateMemory,
-                                          const_cast<X509*>(mX509Certificate.get()));
+                                          mX509Certificate.removeConst());
     throwIfNot(
         status == 1,
         "can not convert certificate to PEM string");
 
     char* data = nullptr;
-    const std::size_t length = BIO_get_mem_data(certificateMemory, &data);
-    throwIfNot(data != nullptr && length != 0, "can not get data from certificate");
+    const auto length = BIO_get_mem_data(certificateMemory, &data);
+    throwIfNot(data != nullptr && length > 0, "can not get data from certificate");
 
-    std::string s (data, length);
+    std::string s (data, static_cast<size_t>(length));
 
     return s;
 }
@@ -276,10 +276,10 @@ std::string Certificate::toBinaryDer(void) const
         "can not convert certificate to DER string");
 
     char* data = nullptr;
-    const std::size_t length = BIO_get_mem_data(certificateMemory, &data);
-    throwIfNot(data != nullptr && length != 0, "can not get data from certificate");
+    const auto length = BIO_get_mem_data(certificateMemory, &data);
+    throwIfNot(data != nullptr && length > 0, "can not get data from certificate");
 
-    return {data, length};
+    return {data, static_cast<size_t>(length)};
 }
 
 
@@ -392,6 +392,7 @@ Certificate::Builder& Certificate::Builder::withSerial (const long int serial)
 
 Certificate::Builder& Certificate::Builder::withSubjectName (const X509_NAME* name)
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
     X509_set_subject_name(mX509Certificate, const_cast<X509_NAME*>(name));
     return *this;
 }
@@ -409,6 +410,7 @@ Certificate::Builder& Certificate::Builder::withSubjectName (const std::vector<s
 
 Certificate::Builder& Certificate::Builder::withIssuerName (const X509_NAME* name)
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
     X509_set_issuer_name(mX509Certificate, const_cast<X509_NAME*>(name));
     return *this;
 }

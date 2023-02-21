@@ -1,0 +1,101 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2023
+ * (C) Copyright IBM Corp. 2023
+ */
+
+pipeline {
+    agent {
+        node {
+            label 'dockerstage'
+        }
+    }
+    triggers {
+        cron('H 4 * * *')
+    }
+
+    options {
+        disableConcurrentBuilds()
+        skipDefaultCheckout()
+        copyArtifactPermission(
+            '/eRp/Integration/erp_processing_context_dev, ' +
+            '/eRp/Integration/erp_processing_context_dev2, ' +
+            '/eRp/Integration/erp_processing_context_box, ' +
+            '/eRp/Integration/erp_processing_context_box2, ' +
+            '/eRp/Integration/erp_processing_context_lu, ' +
+            '/eRp/Integration/erp_processing_context_lu2'
+        )
+    }
+
+    environment {
+        GIT_SOURCE_CREDS = credentials('jenkins-github-erp')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                cleanWs()
+                commonCheckout()
+            }
+        }
+        stage('Static Analysis') {
+            agent {
+                docker {
+                    label 'dockerstage'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.2'
+                    registryUrl 'https://de.icr.io/v2'
+                    registryCredentialsId 'icr_image_puller_erp_dev_api_key'
+                    reuseNode true
+                    args '-u root:sudo -v $HOME/tools:$HOME/tools'
+                }
+            }
+            environment {
+                BRANCH_NAME = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+            }
+            steps {
+                script {
+                    loadNexusConfiguration {
+                        loadGithubSSHConfiguration {
+                            env.BRANCH_NAME = "${BRANCH_NAME}"
+                            def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
+                            def erp_release_version = "1.9.0"
+                            sh "scripts/ci-build.sh " +
+                                "--build_version='${erp_build_version}' " +
+                                "--release_version='${erp_release_version}' " +
+                                "--skip-build"
+                            sh "scripts/ci-static-analysis.sh " +
+                                    "--build-path=jenkins-build-debug " +
+                                    "--source-path=. " +
+                                    "--clang-tidy-bin=clang-tidy-15 " +
+                                    "--output=clang-tidy.txt "
+                            archiveArtifacts artifacts: 'clang-tidy.txt', allowEmptyArchive:true
+                            staticAnalysis("SonarQubeeRp")
+                            timeout(time: 5, unit: 'MINUTES') {
+                                waitForQualityGate abortPipeline: true
+                            }
+                            // Fix build folder file permissions
+                            sh "chmod o+w build/"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            script {
+                def url = env.BUILD_URL.replaceAll("%", "%25")
+                def branchName = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+                slackSendClient(message: "Build ${env.BUILD_DISPLAY_NAME} failed for branch `${branchName}`:rotating_light: \nFor more details visit <${url}|the build page>",
+                                channel: '#erp-cpp')
+            }
+        }
+        fixed {
+            script {
+                def branchName = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
+                slackSendClient(message: "Build is now successful again on branch `${branchName}`:green_heart:",
+                                channel: '#erp-cpp')
+            }
+        }
+    }
+}

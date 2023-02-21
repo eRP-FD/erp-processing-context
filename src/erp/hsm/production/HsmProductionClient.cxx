@@ -105,9 +105,10 @@ namespace
     DeriveKeyOutput derivePersistenceKey (
         const HsmRawSession& session,
         DeriveKeyInput&& arguments,
+        const std::string& keyName,
         hsmclient::DeriveKeyOutput (*deriveKey) (hsmclient::HSMSession, hsmclient::DeriveKeyInput))
     {
-        auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "Hsm:ERP_DeriveTaskKey");
+        auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, keyName);
 
         hsmclient::DeriveKeyInput input;
         setInput<TpmObjectNameLength>(input.AKName, arguments.akName);
@@ -215,6 +216,7 @@ DeriveKeyOutput HsmProductionClient::deriveTaskKey(
     return derivePersistenceKey (
         session,
         std::move(input),
+        "Hsm:ERP_DeriveTaskKey",
         hsmclient::ERP_DeriveTaskKey);
 }
 
@@ -226,6 +228,7 @@ DeriveKeyOutput HsmProductionClient::deriveAuditKey(
     return derivePersistenceKey (
         session,
         std::move(input),
+        "Hsm:ERP_DeriveTaskKey(AuditKey)",
         hsmclient::ERP_DeriveTaskKey);
 }
 
@@ -237,12 +240,13 @@ DeriveKeyOutput HsmProductionClient::deriveCommsKey(
     return derivePersistenceKey (
         session,
         std::move(input),
+        "Hsm:ERP_DeriveCommsKey",
         hsmclient::ERP_DeriveCommsKey);
 }
 
 ::DeriveKeyOutput HsmProductionClient::deriveChargeItemKey(const ::HsmRawSession& session, ::DeriveKeyInput&& input)
 {
-    return derivePersistenceKey(session, ::std::move(input), ::hsmclient::ERP_DeriveChargeItemKey);
+    return derivePersistenceKey(session, ::std::move(input), "Hsm:ERP_DeriveChargeItemKey", ::hsmclient::ERP_DeriveChargeItemKey);
 }
 
 ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
@@ -378,7 +382,7 @@ HsmRawSession HsmProductionClient::connect (const HsmIdentity& identity)
     TVLOG(1) << "connecting to HSM cluster with " << devices.size()-1 << " devices: " << hsmDeviceString;
     const auto connectedSession =
         hsmclient::ERP_ClusterConnect(
-            const_cast<const char**>(devices.data()),
+            const_cast<const char**>(devices.data()), // NOLINT(cppcoreguidelines-pro-type-const-cast)
             gsl::narrow_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(connectTimeout).count()),
             gsl::narrow_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(readTimeout).count()),
             gsl::narrow_cast<uint32_t>(std::chrono::duration_cast<std::chrono::seconds>(reconnectInterval).count()));

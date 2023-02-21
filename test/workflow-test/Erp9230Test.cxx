@@ -19,9 +19,9 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
     ASSERT_TRUE(prescriptionId.has_value());
-    auto kvnr = generateNewRandomKVNR();
+    auto kvnr = generateNewRandomKVNR().id();
     ASSERT_NO_FATAL_FAILURE(
-        taskActivate(*prescriptionId, accessCode, std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now()))));
+        taskActivateWithOutcomeValidation(*prescriptionId, accessCode, std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now()))));
 
     const auto jwtPharma = JwtBuilder::testBuilder().makeJwtApotheke();
     const auto telematikId = jwtPharma.stringForClaim(JWT::idNumberClaim);

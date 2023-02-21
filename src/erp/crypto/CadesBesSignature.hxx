@@ -51,7 +51,14 @@ public:
         const std::optional<model::Timestamp>& signingTime = std::nullopt,
         OcspResponsePtr ocspResponse = {});
 
-    /// @brief returns the the signature as Base64 encoded CMS file.
+    /// @brief adds countersignature to the CMS object.
+    void addCounterSignature(const Certificate& cert, const shared_EVP_PKEY& privateKey);
+
+    /// @brief validate the counter signature against the given certificate
+    /// @throws std::runtime_error if the counter signature verification fails.
+    void validateCounterSignature(const Certificate& signerCertificate) const;
+
+    /// @brief returns the signature as Base64 encoded CMS file.
     std::string getBase64() const;
 
     /// @brief returns the payload, that has been signed.
@@ -60,7 +67,7 @@ public:
     /// return the signingTime (OID 1.2.840.113549.1.9.5) from the CMS structure
     std::optional<model::Timestamp> getSigningTime() const;
 
-    [[nodiscard]] ::std::optional<::std::string> getMessageDigest() const;
+    [[nodiscard]] ::std::string getMessageDigest() const;
 
 private:
     using CmsVerifyFunction = std::function<int(CMS_ContentInfo&, BIO&)>;

@@ -25,10 +25,6 @@ public:
     FhirPathParserTest()
 
     {
-
-        auto fileList = {ResourceManager::getAbsoluteFilename("test/fhir-path/structure-definition.xml"),
-                         ResourceManager::getAbsoluteFilename("fhir/hl7.org/profiles-types.xml")};
-
         testResource = model::NumberAsStringParserDocument::fromJson(
             ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
 
@@ -610,3 +606,51 @@ TEST_F(FhirPathParserTestBundle, ofTypeInteger)
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asInt(), 2);
 }
+
+class FhirPathParserTestP : public FhirPathParserTest,
+                            public ::testing::WithParamInterface<std::pair<std::string, std::string>>
+{
+};
+using FhirPathParserTestP2 = FhirPathParserTestP;
+
+TEST_P(FhirPathParserTestP, unescapeStringLiteralExpression)
+{
+    auto expressions = FhirPathParser::parse(&repo, GetParam().first);
+    ASSERT_TRUE(expressions);
+    const auto col =
+        expressions->eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, GetParam().second)});
+    ASSERT_EQ(col.size(), 1);
+    EXPECT_EQ(col.single()->asString(), GetParam().second);
+}
+
+TEST_P(FhirPathParserTestP2, unescapeStringLiteral)
+{
+    auto result = FhirPathParser::unescapeStringLiteral(GetParam().first, GetParam().first[0]);
+    EXPECT_EQ(result, GetParam().second);
+}
+
+INSTANTIATE_TEST_SUITE_P(StringLiteral, FhirPathParserTestP,
+                         ::testing::Values(std::make_pair(R"('\'')", "'"), std::make_pair(R"('\"')", R"(")"),
+                                           std::make_pair(R"('\`')", "`"), std::make_pair(R"('\r')", "\r"),
+                                           std::make_pair(R"('\n')", "\n"), std::make_pair(R"('\t')", "\t"),
+                                           std::make_pair(R"('\f')", "\f"), std::make_pair(R"('\\')", R"(\)"),
+                                           std::make_pair(R"('\u0444')", "\u0444"), std::make_pair(R"('\p')", "p"),
+                                           std::make_pair(R"('\\p')", R"(\p)"), std::make_pair(R"('\3')", "3"),
+                                           std::make_pair(R"('\u005')", "u005"), std::make_pair(R"('\')", ""),
+                                           std::make_pair(R"('^\\d{8}$')", "^\\d{8}$")));
+
+INSTANTIATE_TEST_SUITE_P(StringLiteral, FhirPathParserTestP2,
+                         ::testing::Values(std::make_pair(R"(`\'`)", "'"), std::make_pair(R"(`\"`)", R"(")"),
+                                           std::make_pair(R"(`\``)", "`"), std::make_pair(R"(`\r`)", "\r"),
+                                           std::make_pair(R"(`\n`)", "\n"), std::make_pair(R"(`\t`)", "\t"),
+                                           std::make_pair(R"(`\f`)", "\f"), std::make_pair(R"(`\\`)", R"(\)"),
+                                           std::make_pair(R"(`\u0444`)", "\u0444"), std::make_pair(R"(`\p`)", "p"),
+                                           std::make_pair(R"(`\\p`)", R"(\p)"), std::make_pair(R"(`\3`)", "3"),
+                                           std::make_pair(R"(`\u005`)", "u005"), std::make_pair(R"(`\`)", ""),
+                                           std::make_pair(R"('\'')", "'"), std::make_pair(R"('\"')", R"(")"),
+                                           std::make_pair(R"('\`')", "`"), std::make_pair(R"('\r')", "\r"),
+                                           std::make_pair(R"('\n')", "\n"), std::make_pair(R"('\t')", "\t"),
+                                           std::make_pair(R"('\f')", "\f"), std::make_pair(R"('\\')", R"(\)"),
+                                           std::make_pair(R"('\u0444')", "\u0444"), std::make_pair(R"('\p')", "p"),
+                                           std::make_pair(R"('\\p')", R"(\p)"), std::make_pair(R"('\3')", "3"),
+                                           std::make_pair(R"('\u005')", "u005"), std::make_pair(R"('\')", "")));

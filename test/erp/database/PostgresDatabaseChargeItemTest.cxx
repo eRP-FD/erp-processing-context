@@ -10,6 +10,7 @@
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/util/FileHelper.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "test/erp/database/PostgresDatabaseTest.hxx"
@@ -25,6 +26,16 @@ using namespace ::std::literals;
 class PostgresBackendChargeItemTest : public PostgresDatabaseTest
 {
 public:
+    void SetUp() override
+    {
+        if (model::ResourceVersion::deprecatedProfile(
+                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+        {
+            GTEST_SKIP();
+        }
+        PostgresDatabaseTest::SetUp();
+    }
+
     void cleanup() override
     {
         if (usePostgres())
@@ -33,7 +44,7 @@ public:
         }
     }
 
-    ::std::vector<::model::ChargeInformation> setupChargeItems(::std::size_t count)
+    ::std::vector<::model::ChargeInformation> setupChargeItems(::std::size_t count, const std::string_view& kvnr = InsurantA)
     {
         ::std::vector<::model::ChargeInformation> result;
 
@@ -41,13 +52,12 @@ public:
         {
             auto& resourceManager = ::ResourceManager::instance();
 
-            const auto insurant = "X000000100"s;
-
             ::model::Task task(::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
                                ::MockDatabase::mockAccessCode);
             const auto id = database().storeTask(task);
             task.setPrescriptionId(id);
-            task.setKvnr(insurant);
+            const auto type = id.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
+            task.setKvnr(model::Kvnr{kvnr, type});
             task.setExpiryDate(::model::Timestamp::now());
             task.setAcceptDate(::model::Timestamp::now());
             task.setStatus(::model::Task::Status::ready);
@@ -56,7 +66,7 @@ public:
             auto prescriptionXML =
                 resourceManager.getStringResource("test/EndpointHandlerTest/kbv_pkv_bundle_template.xml");
             prescriptionXML = String::replaceAll(prescriptionXML, "##PRESCRIPTION_ID##", id.toString());
-            prescriptionXML = String::replaceAll(prescriptionXML, "##KVNR##", ::std::string{InsurantA});
+            prescriptionXML = String::replaceAll(prescriptionXML, "##KVNR##", ::std::string{kvnr});
             auto prescription = ::model::Bundle::fromXmlNoValidation(prescriptionXML);
             auto signedPrescription =
                 ::model::Binary{prescription.getId().toString(),
@@ -68,7 +78,7 @@ public:
                 resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_input.xml"));
             chargeItem.setId(id);
             chargeItem.setPrescriptionId(id);
-            chargeItem.setSubjectKvnr(insurant);
+            chargeItem.setSubjectKvnr(kvnr);
             chargeItem.setEntererTelematikId("606358757");
             chargeItem.setEnteredDate(::model::Timestamp::now());
             chargeItem.setAccessCode(::MockDatabase::mockAccessCode);
@@ -77,22 +87,21 @@ public:
             const auto& dispenseItemXML =
                 resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
             auto medicationDispense = ::model::MedicationDispense::fromXmlNoValidation(dispenseItemXML);
-            medicationDispense.setTelematicId("606358757");
+            medicationDispense.setTelematicId(model::TelematikId("606358757"));
             medicationDispense.setWhenHandedOver(::model::Timestamp::now());
-            auto dispenseItem = ::model::Bundle::fromJsonNoValidation(medicationDispense.serializeToJsonString());
+            auto dispenseItem = ::model::AbgabedatenPkvBundle::fromJsonNoValidation(medicationDispense.serializeToJsonString());
             dispenseItem.setId(::Uuid{"fe4a04af-0828-4977-a5ce-bfeed16ebf10"});
             auto signedDispenseItem =
                 ::model::Binary{"fe4a04af-0828-4977-a5ce-bfeed16ebf10",
                                 ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
 
-            chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem, dispenseItem);
-            chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem,
-                                                  prescription);
+            chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+            chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
 
             auto receiptJson = resourceManager.getStringResource("test/EndpointHandlerTest/receipt_template.json");
             receiptJson = ::String::replaceAll(receiptJson, "##PRESCRIPTION_ID##", id.toString());
             auto receipt = ::model::Bundle::fromJsonNoValidation(receiptJson);
-            chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt, receipt);
+            chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
 
             ::std::vector<::model::MedicationDispense> medicationDispenses;
             medicationDispenses.emplace_back(
@@ -146,34 +155,34 @@ TEST_F(PostgresBackendChargeItemTest, storeChargeInformation)//NOLINT(readabilit
               chargeInformationFromDatabase.chargeItem.enteredDate().value());
 
     ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.supportingInfoReference(
-        ::model::ChargeItem::SupportingInfoType::dispenseItem));
+        ::model::ChargeItem::SupportingInfoType::dispenseItemBundle));
     EXPECT_EQ(chargeInformation[0]
-                  .chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem)
+                  .chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle)
                   .value(),
               chargeInformationFromDatabase.chargeItem
-                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem)
+                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle)
                   .value());
     EXPECT_TRUE(chargeInformationFromDatabase.chargeItem.supportingInfoReference(
-        ::model::ChargeItem::SupportingInfoType::prescriptionItem));
+        ::model::ChargeItem::SupportingInfoType::prescriptionItemBundle));
     EXPECT_EQ(chargeInformation[0]
-                  .chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem)
+                  .chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle)
                   .value(),
               chargeInformationFromDatabase.chargeItem
-                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem)
+                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle)
                   .value());
     EXPECT_TRUE(chargeInformationFromDatabase.chargeItem.supportingInfoReference(
-        ::model::ChargeItem::SupportingInfoType::receipt));
+        ::model::ChargeItem::SupportingInfoType::receiptBundle));
     EXPECT_EQ(chargeInformation[0]
-                  .chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt)
+                  .chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle)
                   .value(),
               chargeInformationFromDatabase.chargeItem
-                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt)
+                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle)
                   .value());
 
     EXPECT_EQ(chargeInformation[0].chargeItem.isMarked(), chargeInformationFromDatabase.chargeItem.isMarked());
-    ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.markingFlag());
-    EXPECT_EQ(chargeInformation[0].chargeItem.markingFlag()->serializeToJsonString(),
-              chargeInformationFromDatabase.chargeItem.markingFlag()->serializeToJsonString());
+    ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.markingFlags());
+    EXPECT_EQ(chargeInformation[0].chargeItem.markingFlags()->serializeToJsonString(),
+              chargeInformationFromDatabase.chargeItem.markingFlags()->serializeToJsonString());
     ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.accessCode());
     EXPECT_EQ(chargeInformation[0].chargeItem.accessCode().value(),
               chargeInformationFromDatabase.chargeItem.accessCode().value());
@@ -212,17 +221,15 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
     database().commitTransaction();
 
     const auto markingFlag = ::String::replaceAll(
-        chargeInformationForUpdate.chargeItem.markingFlag()->serializeToJsonString(), "false", "true");
-    chargeInformationForUpdate.chargeItem.setMarkingFlag(::model::Extension::fromJsonNoValidation(markingFlag));
+        chargeInformationForUpdate.chargeItem.markingFlags()->serializeToJsonString(), "false", "true");
+    chargeInformationForUpdate.chargeItem.setMarkingFlags(::model::Extension::fromJsonNoValidation(markingFlag));
 
     const auto dispenseItemXML = ::String::replaceAll(
         ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/dispense_item.xml"), "4.50", "5.00");
-    auto dispenseItem = model::Bundle::fromXmlNoValidation(dispenseItemXML);
+    auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
+    dispenseItem.setId(Uuid{"fe4a04af-0828-4977-a5ce-bfeed16ebf10"});
     chargeInformationForUpdate.dispenseItem =
-        ::model::Binary{dispenseItem.getIdentifier().toString(),
-                        ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
-    chargeInformationForUpdate.dispenseItem =
-        ::model::Binary{"fe4a04af-0828-4977-a5ce-bfeed16ebf10",
+        ::model::Binary{dispenseItem.getId().toString(),
                         ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
     chargeInformationForUpdate.unsignedDispenseItem = ::std::move(dispenseItem);
 
@@ -251,37 +258,37 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
               chargeInformationFromDatabase.chargeItem.enteredDate().value());
 
     ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.supportingInfoReference(
-        ::model::ChargeItem::SupportingInfoType::dispenseItem));
+        ::model::ChargeItem::SupportingInfoType::dispenseItemBundle));
     EXPECT_EQ(chargeInformationForUpdate.chargeItem
-                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem)
+                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle)
                   .value(),
               chargeInformationFromDatabase.chargeItem
-                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem)
+                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle)
                   .value());
     EXPECT_TRUE(chargeInformationFromDatabase.chargeItem.supportingInfoReference(
-        ::model::ChargeItem::SupportingInfoType::prescriptionItem));
+        ::model::ChargeItem::SupportingInfoType::prescriptionItemBundle));
     EXPECT_EQ(chargeInformationForUpdate.chargeItem
-                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem)
+                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle)
                   .value(),
               chargeInformationFromDatabase.chargeItem
-                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem)
+                  .supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle)
                   .value());
     EXPECT_TRUE(chargeInformationFromDatabase.chargeItem.supportingInfoReference(
-        ::model::ChargeItem::SupportingInfoType::receipt));
+        ::model::ChargeItem::SupportingInfoType::receiptBundle));
     EXPECT_EQ(
-        chargeInformationForUpdate.chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt)
+        chargeInformationForUpdate.chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle)
             .value(),
         chargeInformationFromDatabase.chargeItem
-            .supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt)
+            .supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle)
             .value());
 
     EXPECT_NE(chargeInformation[0].chargeItem.isMarked(), chargeInformationFromDatabase.chargeItem.isMarked());
     EXPECT_EQ(chargeInformationForUpdate.chargeItem.isMarked(), chargeInformationFromDatabase.chargeItem.isMarked());
-    ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.markingFlag());
-    EXPECT_NE(chargeInformation[0].chargeItem.markingFlag()->serializeToJsonString(),
-              chargeInformationFromDatabase.chargeItem.markingFlag()->serializeToJsonString());
-    EXPECT_EQ(chargeInformationForUpdate.chargeItem.markingFlag()->serializeToJsonString(),
-              chargeInformationFromDatabase.chargeItem.markingFlag()->serializeToJsonString());
+    ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.markingFlags());
+    EXPECT_NE(chargeInformation[0].chargeItem.markingFlags()->serializeToJsonString(),
+              chargeInformationFromDatabase.chargeItem.markingFlags()->serializeToJsonString());
+    EXPECT_EQ(chargeInformationForUpdate.chargeItem.markingFlags()->serializeToJsonString(),
+              chargeInformationFromDatabase.chargeItem.markingFlags()->serializeToJsonString());
 
     ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.accessCode());
     EXPECT_EQ(chargeInformationForUpdate.chargeItem.accessCode().value(),
@@ -309,6 +316,7 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
               chargeInformationFromDatabase.receipt->serializeToJsonString());
 }
 
+// GEMREQ-start A_22117-01
 TEST_F(PostgresBackendChargeItemTest, DeleteChargeInformation)
 {
     if (! usePostgres())
@@ -316,46 +324,25 @@ TEST_F(PostgresBackendChargeItemTest, DeleteChargeInformation)
         GTEST_SKIP();
     }
 
-    ::std::vector<::model::ChargeInformation> chargeInformation = setupChargeItems(1u);
-    ASSERT_TRUE(chargeInformation.size() == 1u);
-    const auto prescriptionId = chargeInformation[0].chargeItem.prescriptionId();
-    ASSERT_TRUE(prescriptionId);
+    ::std::vector<::model::ChargeInformation> chargeInformation1 = setupChargeItems(1u);
+    ASSERT_TRUE(chargeInformation1.size() == 1u);
+    const auto prescriptionId1 = chargeInformation1[0].chargeItem.prescriptionId();
+    ASSERT_TRUE(prescriptionId1);
 
-    {
-        auto checkTransaction = createTransaction();
-        const auto result = checkTransaction.exec_params("SELECT FROM erp.task_200 "
-                                                         "WHERE prescription_id = $1 "
-                                                         "AND healthcare_provider_prescription IS NOT NULL "
-                                                         "AND medication_dispense_bundle IS NOT NULL "
-                                                         "AND medication_dispense_blob_id IS NOT NULL "
-                                                         "AND receipt IS NOT NULL",
-                                                         prescriptionId->toDatabaseId());
-        checkTransaction.commit();
-        EXPECT_EQ(result.size(), 1u);
-    }
+    ::std::vector<::model::ChargeInformation> chargeInformation2 = setupChargeItems(1u);
+    ASSERT_TRUE(chargeInformation1.size() == 1u);
+    const auto prescriptionId2 = chargeInformation2[0].chargeItem.prescriptionId();
+    ASSERT_TRUE(prescriptionId2);
 
-    EXPECT_NO_THROW(database().deleteChargeInformation(*prescriptionId));
+    EXPECT_NO_THROW(database().deleteChargeInformation(*prescriptionId1));
     database().commitTransaction();
-    EXPECT_ANY_THROW((void) database().retrieveChargeInformation(*prescriptionId));
-    database().commitTransaction();
-
-    A_22117_01.test("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
-    {
-        auto checkTransaction = createTransaction();
-        const auto result = checkTransaction.exec_params("SELECT FROM erp.task_200 "
-                                                         "WHERE prescription_id = $1 "
-                                                         "AND healthcare_provider_prescription IS NULL "
-                                                         "AND medication_dispense_bundle IS NULL "
-                                                         "AND medication_dispense_blob_id IS NULL "
-                                                         "AND receipt IS NULL",
-                                                         prescriptionId->toDatabaseId());
-        checkTransaction.commit();
-        EXPECT_EQ(result.size(), 1u);
-    }
-
+    EXPECT_ERP_EXCEPTION((void) database().retrieveChargeInformation(*prescriptionId1), HttpStatus::NotFound);
+    EXPECT_NO_THROW((void)database().retrieveChargeInformation(*prescriptionId2));
     database().commitTransaction();
 }
+// GEMREQ-end A_22117-01
 
+// GEMREQ-start A_22157
 TEST_F(PostgresBackendChargeItemTest, ClearAllChargeInformation)
 {
     if (! usePostgres())
@@ -363,60 +350,41 @@ TEST_F(PostgresBackendChargeItemTest, ClearAllChargeInformation)
         GTEST_SKIP();
     }
 
-    ::std::vector<::model::ChargeInformation> chargeInformation = setupChargeItems(3u);
-    ASSERT_TRUE(chargeInformation.size() == 3u);
-    ASSERT_TRUE(chargeInformation[0].chargeItem.prescriptionId());
-    ASSERT_TRUE(chargeInformation[1].chargeItem.prescriptionId());
-    ASSERT_TRUE(chargeInformation[2].chargeItem.prescriptionId());
-    ASSERT_TRUE(chargeInformation[0].chargeItem.subjectKvnr());
-    const auto kvnr = ::std::string{chargeInformation[0].chargeItem.subjectKvnr().value()};
-    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr, {}), 3u);
+    const auto chargeInformation1 = setupChargeItems(3u, InsurantA);
+    ASSERT_TRUE(chargeInformation1.size() == 3u);
+    ASSERT_TRUE(chargeInformation1[0].chargeItem.prescriptionId());
+    ASSERT_TRUE(chargeInformation1[1].chargeItem.prescriptionId());
+    ASSERT_TRUE(chargeInformation1[2].chargeItem.prescriptionId());
+    ASSERT_TRUE(chargeInformation1[0].chargeItem.subjectKvnr());
+    const auto kvnr1 = chargeInformation1[0].chargeItem.subjectKvnr().value();
+    EXPECT_EQ(kvnr1, InsurantA);
+    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr1, {}), 3u);
+
+    const auto chargeInformation2 = setupChargeItems(1u, InsurantB);
+    ASSERT_TRUE(chargeInformation2.size() == 1u);
+    ASSERT_TRUE(chargeInformation2[0].chargeItem.prescriptionId());
+    const auto kvnr2 = chargeInformation2[0].chargeItem.subjectKvnr().value();
+    EXPECT_EQ(kvnr2, InsurantB);
+    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr2, {}), 1u);
+
+    // Deletion of entries from table charge_item for kvnr1
+    EXPECT_NO_THROW(database().clearAllChargeInformation(kvnr1));
     database().commitTransaction();
 
-    const auto hashedKvnr = getKeyDerivation().hashKvnr(kvnr);
-    {
-        auto checkTransaction = createTransaction();
-        const auto result = checkTransaction.exec_params("SELECT FROM erp.task_200 "
-                                                         "WHERE kvnr_hashed = $1 "
-                                                         "AND healthcare_provider_prescription IS NOT NULL "
-                                                         "AND medication_dispense_bundle IS NOT NULL "
-                                                         "AND medication_dispense_blob_id IS NOT NULL "
-                                                         "AND receipt IS NOT NULL",
-                                                         hashedKvnr.binarystring());
-        checkTransaction.commit();
-        EXPECT_EQ(result.size(), 3u);
-    }
+    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr1, {}), 0u);
+    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr2, {}), 1u);
 
-    EXPECT_NO_THROW(database().clearAllChargeInformation(kvnr));
-    database().commitTransaction();
-
-    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr, {}), 0u);
-    database().commitTransaction();
-
-    EXPECT_ANY_THROW(
-        (void) database().retrieveChargeInformation(chargeInformation[0].chargeItem.prescriptionId().value()));
-    EXPECT_ANY_THROW(
-        (void) database().retrieveChargeInformation(chargeInformation[1].chargeItem.prescriptionId().value()));
-    EXPECT_ANY_THROW(
-        (void) database().retrieveChargeInformation(chargeInformation[2].chargeItem.prescriptionId().value()));
-    database().commitTransaction();
-
-    A_22117_01.test("E-Rezept-Fachdienst - Abrechnungsinformation löschen - zu löschende Ressourcen");
-    {
-        auto checkTransaction = createTransaction();
-        const auto result = checkTransaction.exec_params("SELECT FROM erp.task_200 "
-                                                         "WHERE kvnr_hashed = $1 "
-                                                         "AND healthcare_provider_prescription IS NULL "
-                                                         "AND medication_dispense_bundle IS NULL "
-                                                         "AND medication_dispense_blob_id IS NULL "
-                                                         "AND receipt IS NULL",
-                                                         hashedKvnr.binarystring());
-        checkTransaction.commit();
-        EXPECT_EQ(result.size(), 3u);
-    }
-
+    EXPECT_ERP_EXCEPTION(
+        (void) database().retrieveChargeInformation(chargeInformation1[0].chargeItem.prescriptionId().value()), HttpStatus::NotFound);
+    EXPECT_ERP_EXCEPTION(
+        (void) database().retrieveChargeInformation(chargeInformation1[1].chargeItem.prescriptionId().value()), HttpStatus::NotFound);
+    EXPECT_ERP_EXCEPTION(
+        (void) database().retrieveChargeInformation(chargeInformation1[2].chargeItem.prescriptionId().value()), HttpStatus::NotFound);
+    EXPECT_NO_THROW(
+        (void) database().retrieveChargeInformation(chargeInformation2[0].chargeItem.prescriptionId().value()));
     database().commitTransaction();
 }
+// GEMREQ-end A_22157
 
 TEST_F(PostgresBackendChargeItemTest, AllChargeItemsForInsurant)
 {
@@ -429,11 +397,66 @@ TEST_F(PostgresBackendChargeItemTest, AllChargeItemsForInsurant)
     ASSERT_TRUE(chargeInformation.size() == 5u);
 
     ASSERT_TRUE(chargeInformation[0].chargeItem.subjectKvnr());
-    const auto kvnr = ::std::string{chargeInformation[0].chargeItem.subjectKvnr().value()};
+    const auto kvnr = chargeInformation[0].chargeItem.subjectKvnr().value();
     EXPECT_EQ(database().countChargeInformationForInsurant(kvnr, {}), 5u);
     database().commitTransaction();
 
     const auto allChargeItems = database().retrieveAllChargeItemsForInsurant(kvnr, {});
     EXPECT_EQ(allChargeItems.size(), 5u);
+    database().commitTransaction();
+}
+
+TEST_F(PostgresBackendChargeItemTest, AllChargeItemsForInsurant_AbsentAccessCodePerItem_NoException)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+
+    const size_t numberOfItems = 5u;
+
+    ::std::vector<::model::ChargeInformation> chargeInformation = setupChargeItems(numberOfItems);
+    ASSERT_TRUE(chargeInformation.size() == numberOfItems);
+
+    ASSERT_TRUE(chargeInformation[0].chargeItem.subjectKvnr());
+    const auto kvnr = chargeInformation[0].chargeItem.subjectKvnr().value();
+    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr, {}), numberOfItems);
+    database().commitTransaction();
+
+    // Query for all charge items must not populate the access code field.
+    const auto allChargeItems = database().retrieveAllChargeItemsForInsurant(kvnr, {});
+    EXPECT_EQ(allChargeItems.size(), numberOfItems);
+
+    // Test for empty access code in charge items.
+    for (const auto& chargeItem : allChargeItems) {
+        EXPECT_FALSE(chargeItem.accessCode().has_value());
+    }
+
+    database().commitTransaction();
+}
+
+TEST_F(PostgresBackendChargeItemTest, ChargeItemForInsurant_PresentAccessCode_NoException)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+
+    const size_t numberOfItems = 2u;
+
+    ::std::vector<::model::ChargeInformation> chargeInformation = setupChargeItems(numberOfItems);
+    ASSERT_TRUE(chargeInformation.size() == numberOfItems);
+
+    ASSERT_TRUE(chargeInformation[0].chargeItem.subjectKvnr());
+    const auto kvnr = chargeInformation[0].chargeItem.subjectKvnr().value();
+    EXPECT_EQ(database().countChargeInformationForInsurant(kvnr, {}), numberOfItems);
+    database().commitTransaction();
+
+    for (const auto & info : chargeInformation) {
+        // Test for present access code field when querying single charge items.
+        const auto item = database().retrieveChargeInformation(info.chargeItem.prescriptionId().value());
+        EXPECT_TRUE(item.chargeItem.accessCode().has_value());
+    }
+
     database().commitTransaction();
 }

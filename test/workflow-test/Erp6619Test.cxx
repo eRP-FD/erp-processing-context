@@ -36,7 +36,7 @@ public:
         auto prescriptionId{task->prescriptionId()};
 
         const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
-        ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, accessCode, qesBundle));
+        ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle));
 
         {
             std::optional<model::Bundle> bundle;

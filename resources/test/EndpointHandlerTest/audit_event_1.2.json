@@ -1,0 +1,68 @@
+{
+    "resourceType": "AuditEvent",
+    "id": "01eb69a4-9029-d610-b1cf-ddb8c6c0bfbc",
+    "meta": {
+      "profile": [
+        "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_AuditEvent|1.2"
+      ]
+    },
+    "text": {
+      "status": "generated",
+      "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Praxis Dr. Frankenstein hat das Rezept mit der ID 160.100.000.000.000.42 eingestellt.</div>"
+    },
+    "language": "de",
+    "type": {
+      "system": "http://terminology.hl7.org/CodeSystem/audit-event-type",
+      "code": "rest"
+    },
+    "subtype": [
+      {
+        "system": "http://hl7.org/fhir/restful-interaction",
+        "code": "update"
+      }
+    ],
+    "action": "U",
+    "recorded": "2021-03-15T15:24:38.396+00:00",
+    "outcome": "0",
+    "agent": [
+      {
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/extra-security-role-type",
+              "code": "humanuser",
+              "display": "Human User"
+            }
+          ]
+        },
+        "name": "Praxis Dr. Frankenstein",
+        "requestor": false,
+        "who": {
+          "identifier": {
+            "system": "https://gematik.de/fhir/sid/telematik-id",
+            "value": "3-SMC-XXXX-883110000120312"
+          }
+        }
+      }
+    ],
+    "source": {
+      "site": "E-Rezept Fachdienst",
+      "observer": {
+        "reference": "Device/1234"
+      }
+    },
+    "entity": [
+      {
+        "what": {
+          "reference": "Task/160.100.000.000.000.42/$activate",
+          "identifier": {
+            "use": "official",
+            "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
+            "value": "160.100.000.000.000.42"
+          }
+        },
+        "name": "X122446688",
+        "description": "160.100.000.000.000.42"
+      }
+    ]
+  }

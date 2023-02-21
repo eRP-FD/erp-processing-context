@@ -11,6 +11,7 @@
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KBVEXERPAccident : public Extension
 {
 public:

@@ -28,6 +28,8 @@ static fs::path resourceTestOutputDir()
 struct KonnektathonData {
     fs::path basePath;
     fs::path path;
+    model::ResourceVersion::FhirProfileBundleVersion bundle;
+
 };
 std::ostream& operator<<(std::ostream& os, const KonnektathonData& params)
 {
@@ -37,7 +39,8 @@ std::ostream& operator<<(std::ostream& os, const KonnektathonData& params)
 }
 
 
-std::vector<KonnektathonData> makeParams(const std::string_view& path)
+std::vector<KonnektathonData> makeParams(const std::string_view& path,
+                                         model::ResourceVersion::FhirProfileBundleVersion bundle)
 {
     std::vector<KonnektathonData> params;
     for (const auto& dirEntry : fs::recursive_directory_iterator(resourceTestOutputDir() / path))
@@ -49,7 +52,7 @@ std::vector<KonnektathonData> makeParams(const std::string_view& path)
             if (document.find("<profile value=\"https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|") !=
                 std::string::npos)
             {
-                params.push_back({path, dirEntry.path()});
+                params.push_back({.basePath = path, .path = dirEntry.path(), .bundle = bundle});
             }
         }
     }
@@ -108,7 +111,7 @@ protected:
              "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3); "},
             {resourceTestOutputDir() / "Kostbarkeiten_der_Abgabe_Abrechnung/Kostbarkeiten_der_Abgabe_Abrechnung/IKK_BB/"
                                        "IKK_BB_109519005_Beispiel_frei_2.xml",
-             "Opening and ending tag mismatch: practitioner line 213 and Practitioner\n"},
+             "Opening and ending tag mismatch: practitioner line 213 and Practitioner"},
             {resourceTestOutputDir() / "Kostbarkeiten_der_Abgabe_Abrechnung/Kostbarkeiten_der_Abgabe_Abrechnung/AOK_NO/"
                                        "AOK_NO_109519005_Kostbarkeit_Zuzahlungsfrei.xml",
              "Element '{http://hl7.org/fhir}birthDate', attribute 'value': '2015-02-29' is not a valid value of the "
@@ -133,7 +136,7 @@ TEST_P(SampleDataTest, SampleDataTest)
     {
         auto bundle =
             model::KbvBundle::fromXml(document, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                      SchemaType::KBV_PR_ERP_Bundle, options);
+                                      SchemaType::KBV_PR_ERP_Bundle, {GetParam().bundle}, options);
         ASSERT_FALSE(shallFail);
     }
     catch (const ErpException& erp)
@@ -143,9 +146,14 @@ TEST_P(SampleDataTest, SampleDataTest)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(Konnektathon, SampleDataTest, testing::ValuesIn(makeParams("Konnektathon")));
+INSTANTIATE_TEST_SUITE_P(Konnektathon, SampleDataTest,
+                         testing::ValuesIn(makeParams("Konnektathon",
+                                                      model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
 
 INSTANTIATE_TEST_SUITE_P(Kostbarkeiten_der_Abgabe_Abrechnung, SampleDataTest,
-                         testing::ValuesIn(makeParams("Kostbarkeiten_der_Abgabe_Abrechnung")));
+                         testing::ValuesIn(makeParams("Kostbarkeiten_der_Abgabe_Abrechnung",
+                                                      model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
 
-INSTANTIATE_TEST_SUITE_P(MVO_KBV_1_0_2_, SampleDataTest, testing::ValuesIn(makeParams("MVO_KBV_1.0.2_")));
+INSTANTIATE_TEST_SUITE_P(MVO_KBV_1_0_2_, SampleDataTest,
+                         testing::ValuesIn(makeParams("MVO_KBV_1.0.2_",
+                                                      model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));

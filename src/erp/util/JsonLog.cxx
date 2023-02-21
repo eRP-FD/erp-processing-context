@@ -72,7 +72,7 @@ JsonLog::LogReceiver JsonLog::makeWarningLogReceiver (void)
 }
 
 
-JsonLog::LogReceiver JsonLog::makeVLogReceiver (const size_t logLevel)
+JsonLog::LogReceiver JsonLog::makeVLogReceiver (const int32_t logLevel)
 {
     return [logLevel](const std::string& message)
     {

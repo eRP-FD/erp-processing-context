@@ -31,16 +31,16 @@ public:
     static void createAndStoreAkEkAndQuoteBlob (
         TpmProxy& tpm,
         BlobCache& blobCache,
-        const size_t logLevel = 1);
+        const int32_t logLevel = 1);
     static void createAndStoreAkEkAndQuoteBlob (
         TpmProxy& tpm,
         BlobCache& blobCache,
         const std::string& certificateFilename,
-        const size_t logLevel = 1);
+        const int32_t logLevel = 1);
     static EnrolmentHelper::Blobs createAndReturnAkEkAndQuoteBlob (
         BlobCache& blobCache,
         const std::string& certificateFilename,
-        const size_t logLevel);
+        const int32_t logLevel);
 };
 
 

@@ -24,12 +24,13 @@ public:
     {
         return mConverter;
     }
-    const fhirtools::FhirStructureRepository& structureRepository() const
+    const fhirtools::FhirStructureRepository&
+    structureRepository(model::ResourceVersion::FhirProfileBundleVersion version =
+                            model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>()) const
     {
-        const auto currentVersion = model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>();
-        Expect(mStructureRepository.contains(currentVersion),
-               "current version not configured: " + std::string{model::ResourceVersion::v_str(currentVersion)});
-        return mStructureRepository.at(currentVersion);
+        Expect(mStructureRepository.contains(version),
+               "version not configured: " + std::string{model::ResourceVersion::v_str(version)});
+        return mStructureRepository.at(version);
     }
 
 private:

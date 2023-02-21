@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="GEM-ERP-CS-FlowType"/>
+  <url value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+  <version value="1.2"/>
+  <name value="GEM_ERP_CS_FlowType"/>
+  <title value="CodeSystem of Flowtypes"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://www.gematik.de"/>
+    </telecom>
+  </contact>
+  <description value="Shows the different types of the ePrescription according to the prescription forms."/>
+  <copyright value="gematik GmbH"/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="8"/>
+  <concept>
+    <code value="160"/>
+    <display value="Muster 16 (Apothekenpflichtige Arzneimittel)"/>
+  </concept>
+  <concept>
+    <code value="165"/>
+    <display value="Muster 16 (Betäubungsmittel)"/>
+  </concept>
+  <concept>
+    <code value="166"/>
+    <display value="Muster 16 (T-Rezepte)"/>
+  </concept>
+  <concept>
+    <code value="169"/>
+    <display value="Muster 16 (Direkte Zuweisung)"/>
+  </concept>
+  <concept>
+    <code value="200"/>
+    <display value="PKV (Apothekenpflichtige Arzneimittel)"/>
+  </concept>
+  <concept>
+    <code value="205"/>
+    <display value="PKV (Betäubungsmittel)"/>
+  </concept>
+  <concept>
+    <code value="206"/>
+    <display value="PKV (T-Rezepte)"/>
+  </concept>
+  <concept>
+    <code value="209"/>
+    <display value="PKV (Direkte Zuweisung)"/>
+  </concept>
+</CodeSystem>

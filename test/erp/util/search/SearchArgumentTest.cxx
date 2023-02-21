@@ -9,8 +9,10 @@
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "test/erp/model/CommunicationTest.hxx"
+#include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ServerTestBase.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test_config.h"
 
 #include <pqxx/transaction>
@@ -31,8 +33,8 @@
 class SearchArgumentTest : public ServerTestBase
 {
 public:
-    static constexpr const char* sender = "KVNRsendrA";
-    static constexpr const char* recipient = "X-234567890";
+    static constexpr const char* sender = "X506060003";
+    static constexpr const char* recipient = "X234567890";
 
     void SetUp (void) override
     {
@@ -43,9 +45,9 @@ public:
         auto database = createDatabase();
 
         // Create a task object that can be referenced from communication objects.
-        std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-        std::string jsonString = FileHelper::readFileAsString(dataPath + "/task1.json");
-        model::Task task = model::Task::fromJsonNoValidation(jsonString);
+        const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
+        const auto task = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .kvnr = "X123456789"}));
         mTaskId.emplace(database->storeTask(task));
 
         // Create a communication object.
@@ -67,7 +69,7 @@ public:
         auto database = createDatabase();
         if (mCommunicationId.has_value())
         {
-            database->deleteCommunication(mCommunicationId.value(), mCommunicationSender);
+            database->deleteCommunication(mCommunicationId.value(), model::getIdentityString(mCommunicationSender.value()));
             database->commitTransaction();
         }
         if (mTaskId.has_value())
@@ -163,7 +165,7 @@ public:
 private:
     std::optional<Uuid> mCommunicationId;
     std::optional<model::PrescriptionId> mTaskId;
-    std::string mCommunicationSender;
+    std::optional<model::Identity> mCommunicationSender;
 
     static bool mIsIntialCleanupRequested; // static so that database cleanup is only executed once before the first test runs.
 
@@ -196,7 +198,7 @@ TEST_F(SearchArgumentTest, getSelfLinkPathParameters)
     ServerRequest request(std::move(header));
     request.setQueryParameters({
         {"sent",          "lt2021-09-08"},
-        {"recipient",     "KVNR123456"},
+        {"recipient",     "X123456789"},
         {"sent",          "lt2021-09-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
@@ -208,7 +210,7 @@ TEST_F(SearchArgumentTest, getSelfLinkPathParameters)
     // - the second 'sent' timestamp is normalized to UTC.
     // - the 'to-be-ignored' argument is ignored and not included in the self link.
     ASSERT_EQ(UrlHelper::unescapeUrl(search.getLinkPathArguments(model::Link::Type::Self)),
-        "?sent=lt2021-09-08&recipient=KVNR123456&sent=lt2021-09-08T10:58:58+00:00");
+        "?sent=lt2021-09-08&recipient=X123456789&sent=lt2021-09-08T10:58:58+00:00");
 }
 
 
@@ -227,7 +229,7 @@ TEST_F(SearchArgumentTest, multipleParameters)
     ServerRequest request(std::move(header));
     request.setQueryParameters({
         {"sent",          "gt2021-09-08"},
-        {"recipient",     "KVNR123456"},
+        {"recipient",     "X123456789"},
         {"sent",          "gt2022-01-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
@@ -240,7 +242,41 @@ TEST_F(SearchArgumentTest, multipleParameters)
     // - the 'to-be-ignored' argument is ignored and not included in the self link.
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
         "(erp.timestamp_from_suuid(id) >= '2021-09-09T00:00:00+00:00') AND (recipient = '\\x"
-        + hashedHex("KVNR123456") + "') AND (erp.timestamp_from_suuid(id) >= '2022-01-08T10:58:59+00:00')");
+        + hashedHex("X123456789") + "') AND (erp.timestamp_from_suuid(id) >= '2022-01-08T10:58:59+00:00')");
+}
+
+
+TEST_F(SearchArgumentTest, Parse_DelimiterValueOnly_BadRequest)
+{
+    auto search = UrlArguments({
+         {"sent",      "erp.timestamp_from_suuid(id)", SearchParameter::Type::Date},
+         {"received",  SearchParameter::Type::Date},
+         {"sender",    SearchParameter::Type::HashedIdentity},
+         {"recipient", SearchParameter::Type::HashedIdentity}
+        });
+    Header header;
+    ServerRequest request(std::move(header));
+    request.setQueryParameters({
+        {"sent",          "gt2021-09-08"},
+        {"recipient",     ","},
+        {"sent",          "gt2022-01-08T23:32:58+12:34"},
+        {"to-be-ignored", "also to be ignored"}
+    });
+    EXPECT_ERP_EXCEPTION(search.parse(request, mServer->serviceContext().getKeyDerivation()), HttpStatus::BadRequest);
+    request.setQueryParameters({
+        {"sent",          "gt2021-09-08"},
+        {"recipient",     ",X123456789"},
+        {"sent",          "gt2022-01-08T23:32:58+12:34"},
+        {"to-be-ignored", "also to be ignored"}
+    });
+    EXPECT_ERP_EXCEPTION(search.parse(request, mServer->serviceContext().getKeyDerivation()), HttpStatus::BadRequest);
+    request.setQueryParameters({
+        {"sent",          "gt2021-09-08"},
+        {"recipient",     ",X123456789,"},
+        {"sent",          "gt2022-01-08T23:32:58+12:34"},
+        {"to-be-ignored", "also to be ignored"}
+    });
+    EXPECT_ERP_EXCEPTION(search.parse(request, mServer->serviceContext().getKeyDerivation()), HttpStatus::BadRequest);
 }
 
 
@@ -258,8 +294,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
     Header header;
     ServerRequest request(std::move(header));
     request.setQueryParameters({
-        {"recipient",     "KVNR123456,KVNR654321"},
-        {"sender",        "KVNR123456,KVNR654321"},
+        {"recipient",     "X123456789,KVNR654321"},
+        {"sender",        "X123456789,KVNR654321"},
         {"sent",          "2021-09-08,2021-09-01"},
         {"received",      "gt2022-01-08,2021-09-01"} // doesn't make sense but its not a failure
         });
@@ -271,8 +307,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
     // - the 'sent' timestamps are normalized to UTC and ored.
     // - the 'received' timestamps  are normalized to UTC and ored.
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
-        "((recipient = '\\x" + hashedHex("KVNR123456") + "') OR (recipient = '\\x" + hashedHex("KVNR654321") + "'))"
-        + " AND ((sender = '\\x" + hashedHex("KVNR123456") + "') OR (sender = '\\x" + hashedHex("KVNR654321") + "'))"
+        "((recipient = '\\x" + hashedHex("X123456789") + "') OR (recipient = '\\x" + hashedHex("KVNR654321") + "'))"
+        + " AND ((sender = '\\x" + hashedHex("X123456789") + "') OR (sender = '\\x" + hashedHex("KVNR654321") + "'))"
         + " AND ((('2021-09-08T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-09T00:00:00+00:00'))"
         + " OR (('2021-09-01T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-02T00:00:00+00:00')))"
         + " AND ((received >= '2022-01-09T00:00:00+00:00') OR (received >= '2021-09-02T00:00:00+00:00'))");
@@ -293,8 +329,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValuesWithFailure)
     Header header;
     ServerRequest request(std::move(header));
     request.setQueryParameters({
-        {"recipient",     "KVNR123456,KVNR654321"},
-        {"sender",        "KVNR123456,KVNR654321"},
+        {"recipient",     "X123456789,KVNR654321"},
+        {"sender",        "X123456789,KVNR654321"},
         {"sent",          "gt2021-09-08,lt2021-09-01"} // changing prefix is not supported
         });
     ASSERT_THROW(search.parse(request, mServer->serviceContext().getKeyDerivation()), ErpException);
@@ -615,8 +651,8 @@ TEST_F(SearchArgumentTest, data_failForFractionalSeconds)
 
 TEST_F(SearchArgumentTest, eq_syntax)
 {
-    testSyntax("recipient", "KVNR123456",
-               "(recipient = '\\x" + hashedHex("KVNR123456") + "')");
+    testSyntax("recipient", "X123456789",
+               "(recipient = '\\x" + hashedHex("X123456789") + "')");
 }
 
 

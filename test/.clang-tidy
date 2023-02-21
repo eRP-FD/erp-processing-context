@@ -1,3 +1,10 @@
 InheritParentConfig: true
 Checks:
-  -readability-function-cognitive-complexity
+  -readability-function-cognitive-complexity,
+  -readability-redundant-string-init,
+  -hicpp-move-const-arg,
+  -performance-move-const-arg,
+  -performance-unnecessary-value-param,
+  -cppcoreguidelines-pro-type-const-cast,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -clang-diagnostic-unused-result

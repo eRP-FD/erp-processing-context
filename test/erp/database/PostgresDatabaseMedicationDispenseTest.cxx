@@ -16,6 +16,7 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <chrono>
 
@@ -29,6 +30,9 @@ std::set<int64_t> PostgresDatabaseMedicationDispenseTest::sTaskPrescriptionIdsTo
 PostgresDatabaseMedicationDispenseTest::PostgresDatabaseMedicationDispenseTest() :
     PostgresDatabaseTest()
 {
+    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
+    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
+    mNsPrescriptionId = isDeprecated ? model::resource::naming_system::deprecated::prescriptionID : model::resource::naming_system::prescriptionID;
 }
 
 void PostgresDatabaseMedicationDispenseTest::cleanup()
@@ -70,7 +74,7 @@ void PostgresDatabaseMedicationDispenseTest::cleanup()
 */
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void PostgresDatabaseMedicationDispenseTest::insertTasks(
-    const std::vector<std::tuple<std::string, std::string, std::optional<Timestamp>>>& patientsPharmaciesMedicationWhenPrepared,
+    const std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<Timestamp>>>& patientsPharmaciesMedicationWhenPrepared,
     std::set<std::string>& patients,
     std::set<std::string>& pharmacies,
     std::map<std::string, Task>& tasksByPrescriptionIds,
@@ -80,16 +84,14 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
     std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
     model::PrescriptionType prescriptionType)
 {
-    int idxTask = 0;
-
     for (const auto& patientAndPharmacy : patientsPharmaciesMedicationWhenPrepared)
     {
-        std::string kvnrPatient = std::get<0>(patientAndPharmacy);
-        std::string pharmacy = std::get<1>(patientAndPharmacy);
+        auto kvnrPatient = std::get<0>(patientAndPharmacy);
+        auto pharmacy = std::get<1>(patientAndPharmacy);
         std::optional<Timestamp> whenPrepared = std::get<2>(patientAndPharmacy);
 
-        Task task = createAcceptedTask(kvnrPatient, prescriptionType);
-        auto medicationDispenses = closeTask(task, pharmacy, whenPrepared);
+        Task task = createAcceptedTask(kvnrPatient.id(), prescriptionType);
+        auto medicationDispenses = closeTask(task, pharmacy.id(), whenPrepared);
         EXPECT_GT(medicationDispenses.size(), 0);
         const auto& medicationDispense = medicationDispenses[0];
 
@@ -98,10 +100,10 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
         PrescriptionId medicationDispenseId = medicationDispense.prescriptionId();
         ASSERT_EQ(medicationDispenseId, prescriptionId);
 
-        std::string_view medicationDispenseKvnr = medicationDispense.kvnr();
+        auto medicationDispenseKvnr = medicationDispense.kvnr();
         ASSERT_EQ(medicationDispenseKvnr, kvnrPatient);
 
-        std::string_view medicationDispenseTelematicId = medicationDispense.telematikId();
+        auto medicationDispenseTelematicId = medicationDispense.telematikId();
         ASSERT_EQ(medicationDispenseTelematicId, pharmacy);
 
         std::chrono::system_clock::time_point handedOver = medicationDispense.whenHandedOver().toChronoTimePoint();
@@ -117,25 +119,23 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
             medicationDispensesInputXmlStrings.insert(std::make_pair(item.id().toString(), xmlString));
         }
 
-        patients.insert(kvnrPatient);
-        pharmacies.insert(pharmacy);
+        patients.insert(kvnrPatient.id());
+        pharmacies.insert(pharmacy.id());
 
         tasksByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(task)));
         medicationDispensesByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(medicationDispenses)));
 
-        if (prescriptionIdsByPatients.find(kvnrPatient) == prescriptionIdsByPatients.end())
+        if (prescriptionIdsByPatients.find(kvnrPatient.id()) == prescriptionIdsByPatients.end())
         {
-            prescriptionIdsByPatients.insert(std::make_pair(kvnrPatient, std::vector<std::string>()));
+            prescriptionIdsByPatients.insert(std::make_pair(kvnrPatient.id(), std::vector<std::string>()));
         }
-        prescriptionIdsByPatients[kvnrPatient].push_back(prescriptionId.toString());
+        prescriptionIdsByPatients[kvnrPatient.id()].push_back(prescriptionId.toString());
 
-        if (prescriptionIdsByPharmacies.find(pharmacy) == prescriptionIdsByPharmacies.end())
+        if (prescriptionIdsByPharmacies.find(pharmacy.id()) == prescriptionIdsByPharmacies.end())
         {
-            prescriptionIdsByPharmacies.insert(std::make_pair(pharmacy, std::vector<std::string>()));
+            prescriptionIdsByPharmacies.insert(std::make_pair(pharmacy.id(), std::vector<std::string>()));
         }
-        prescriptionIdsByPharmacies[pharmacy].push_back(prescriptionId.toString());
-
-        ++idxTask;
+        prescriptionIdsByPharmacies[pharmacy.id()].push_back(prescriptionId.toString());
     }
 }
 
@@ -161,7 +161,6 @@ void PostgresDatabaseMedicationDispenseTest::checkMedicationDispensesXmlStrings(
     std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
     const std::vector<MedicationDispense>& medicationDispenses)
 {
-    int idxResource = 0;
     for (const auto& medicationDispense : medicationDispenses)
     {
         std::string medicationDispenseResponseXmlString = medicationDispense.serializeToXmlString();
@@ -172,7 +171,6 @@ void PostgresDatabaseMedicationDispenseTest::checkMedicationDispensesXmlStrings(
         {
             EXPECT_EQ(medicationDispenseResponseXmlString, dispenseInput->second);
         }
-        ++idxResource;
     }
 }
 
@@ -196,7 +194,7 @@ void PostgresDatabaseMedicationDispenseTest::writeCurrentTestOutputFile(
 Task PostgresDatabaseMedicationDispenseTest::createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType)
 {
     Task task = createTask(prescriptionType);
-    task.setKvnr(kvnrPatient);
+    task.setKvnr(model::Kvnr{kvnrPatient, task.prescriptionId().isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
     activateTask(task);
     acceptTask(task);
     return task;
@@ -217,7 +215,7 @@ std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTest::closeTas
     Composition compositionResource(telematicIdPharmacy, inProgessDate, completedTimestamp, authorIdentifier,
                                     prescriptionDigestIdentifier);
     Device deviceResource;
-    ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Base64};
+    ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Digest};
 
     task.setReceiptUuid();
     task.updateLastUpdate();
@@ -246,29 +244,16 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::createMedicationDispe
     const Timestamp& whenHandedOver,
     const std::optional<Timestamp>& whenPrepared)
 {
-    std::string medicationDispenseXmlString =
-        FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/fhir/conversion/medication_dispense.xml");
+    const auto kvnr = task.kvnr().value().id();
+    const ResourceTemplates::MedicationDispenseOptions settings {
+        .prescriptionId = task.prescriptionId(),
+        .kvnr = kvnr,
+        .telematikId = telematicIdPharmacy,
+        .whenHandedOver = whenHandedOver,
+        .whenPrepared = whenPrepared };
+    const auto medicationDispenseXmlString = ResourceTemplates::medicationDispenseXml(settings);
 
-    MedicationDispense medicationDispense = MedicationDispense::fromXml(
-    medicationDispenseXmlString,
-        *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(),
-        SchemaType::Gem_erxMedicationDispense);
-
-    PrescriptionId prescriptionId = task.prescriptionId();
-    std::string_view kvnrPatient = task.kvnr().value();
-
-    medicationDispense.setPrescriptionId(prescriptionId);
-    medicationDispense.setKvnr(kvnrPatient);
-    medicationDispense.setTelematicId(telematicIdPharmacy);
-    medicationDispense.setWhenHandedOver(whenHandedOver);
-
-    // The element "whenPrepared" is optional
-    if (whenPrepared.has_value())
-    {
-        medicationDispense.setWhenPrepared(whenPrepared.value());
-    }
-
+    MedicationDispense medicationDispense = MedicationDispense::fromXmlNoValidation(medicationDispenseXmlString);
     return medicationDispense;
 }
 
@@ -293,16 +278,14 @@ void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
 
     PrescriptionId prescriptionId = task.prescriptionId();
 
-    std::string kvnrPatient = std::string(task.kvnr().value());
+    std::string kvnrPatient = std::string(task.kvnr().value().id());
 
     Timestamp signingTime = Timestamp::now();
 
-    std::string prescriptionBundleXmlString = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/MedicationDispenseKbvBundle1.xml");
+    const auto prescriptionBundleXmlString = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId, .kvnr = kvnrPatient});
 
-    prescriptionBundleXmlString = String::replaceAll(prescriptionBundleXmlString, "##PrescriptionId##", prescriptionId.toString());
-    prescriptionBundleXmlString = String::replaceAll(prescriptionBundleXmlString, "##kvnrPatient##", kvnrPatient);
-
-    auto prescriptionBundle = KbvBundle::fromXmlNoValidation(prescriptionBundleXmlString);
+    const auto prescriptionBundle = KbvBundle::fromXmlNoValidation(prescriptionBundleXmlString);
 
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
@@ -363,10 +346,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
     // Insert task into database
     //--------------------------
 
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+    auto kvnrPatient = model::Kvnr{InsurantA};
+    auto pharmacy = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -402,10 +385,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
     // Insert task into database
     //--------------------------
 
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+    auto kvnrPatient = model::Kvnr{InsurantA};
+    auto pharmacy = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, Timestamp::now()}
     };
 
@@ -518,7 +501,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
     }
 
     {
-        ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
+        ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy.id()} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
@@ -542,7 +525,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{
-            {"performer", pharmacy},
+            {"performer", pharmacy.id()},
             {"whenhandedover", "gt" + whenHandedOver},
             {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
@@ -554,9 +537,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
     }
 
     {
-        const auto& prescriptionId = prescriptionIdsByPatients[kvnrPatient].at(0);
+        const auto& prescriptionId = prescriptionIdsByPatients[kvnrPatient.id()].at(0);
         ServerRequest::QueryParametersType queryParameters{
-            {"identifier", "https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}};
+            {"identifier", std::string(mNsPrescriptionId) + "|" + prescriptionId}};
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
@@ -576,15 +559,15 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    auto pharmacyA = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
+    auto pharmacyB = model::TelematikId{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, std::nullopt}
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}
     };
 
     std::set<std::string> patients;
@@ -608,7 +591,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
         std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
 
         const auto [medicationDispenses, _] =
-            database().retrieveAllMedicationDispenses(kvnrPatient, std::optional<UrlArguments>{});
+            database().retrieveAllMedicationDispenses(model::Kvnr{kvnrPatient}, std::optional<UrlArguments>{});
         database().commitTransaction();
         EXPECT_EQ(medicationDispenses.size(), prescriptionIds.size() * GetParam().numMedications);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -625,15 +608,15 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    auto pharmacyA = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
+    auto pharmacyB = model::TelematikId{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, Timestamp::now()},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, Timestamp::now()},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, Timestamp::now()}
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, Timestamp::now()},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, Timestamp::now()},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, Timestamp::now()}
     };
 
     std::set<std::string> patients;
@@ -653,7 +636,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     //-------------------------
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
@@ -667,7 +650,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
@@ -680,7 +663,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
@@ -694,7 +677,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
@@ -707,8 +690,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyA;
+        model::Kvnr kvnrPatient{InsurantA};
+        std::string pharmacy = pharmacyA.id();
         ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 2 * GetParam().numMedications;
@@ -720,8 +703,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantC;
-        std::string pharmacy = pharmacyA;
+        model::Kvnr kvnrPatient{InsurantC};
+        std::string pharmacy = pharmacyA.id();
         ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 0;
@@ -732,8 +715,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyB;
+        model::Kvnr kvnrPatient{InsurantA};
+        std::string pharmacy = pharmacyB.id();
         ServerRequest::QueryParametersType queryParameters{ {"performer", pharmacy} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = GetParam().numMedications;
@@ -745,8 +728,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyA;
+        model::Kvnr kvnrPatient{InsurantA};
+        std::string pharmacy = pharmacyA.id();
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
@@ -765,7 +748,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
@@ -784,14 +767,15 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     }
 
     {
+        model::Kvnr kvnrPatient{InsurantA};
         const auto& prescriptionIds = prescriptionIdsByPatients[InsurantA];
         for (const auto& prescriptionId : prescriptionIds)
         {
             ServerRequest::QueryParametersType queryParameters{
-                {"identifier", "https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}};
+                {"identifier", std::string(mNsPrescriptionId) + "|" + prescriptionId}};
             UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
             const auto [medicationDispenses, _] =
-                database().retrieveAllMedicationDispenses(InsurantA, searchArgs);
+                database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
             database().commitTransaction();
             EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -809,34 +793,34 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
 
     for (size_t idxPatient = 0; idxPatient < 70; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyA, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantA}, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 10; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyB, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantA}, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 15; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyA, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantB}, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 55; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyB, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantB}, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyA, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantC}, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyB, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantC}, pharmacyB, Timestamp::now());
     }
 
     std::set<std::string> patients;
@@ -860,8 +844,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
     //-------------------------
 
     {
-        std::string kvnrPatient = InsurantA;
-        std::string pharmacy = pharmacyA;
+        model::Kvnr kvnrPatient{InsurantA};
+        std::string pharmacy = pharmacyA.id();
 
         size_t expectedCountAll = 0;
 
@@ -916,10 +900,11 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         }
     }
 
-    for (const std::string& kvnrPatient : patients)
+    for (const std::string& kvnrPatientId : patients)
     {
+        model::Kvnr kvnrPatient{kvnrPatientId};
         // whenhandedover is in the future
-        std::string pharmacy = pharmacyA;
+        std::string pharmacy = pharmacyA.id();
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
@@ -935,10 +920,11 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
-    for (const std::string& kvnrPatient : patients)
+    for (const std::string& kvnrPatientId : patients)
     {
         // whenprepared is in the future
-        std::string pharmacy = pharmacyA;
+        model::Kvnr kvnrPatient{kvnrPatientId};
+        std::string pharmacy = pharmacyA.id();
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
@@ -954,8 +940,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
-    for (const std::string& kvnrPatient : patients)
+    for (const std::string& kvnrPatientId : patients)
     {
+        model::Kvnr kvnrPatient{kvnrPatientId};
         std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
@@ -977,10 +964,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         for (const auto& prescriptionId : prescriptionIds)
         {
             ServerRequest::QueryParametersType queryParameters{
-                {"identifier", "https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}};
+                {"identifier", std::string(mNsPrescriptionId) + "|" + prescriptionId}};
             UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
             const auto [medicationDispenses, _] =
-                database().retrieveAllMedicationDispenses(InsurantA, searchArgs);
+                database().retrieveAllMedicationDispenses(model::Kvnr{InsurantA}, searchArgs);
             database().commitTransaction();
             EXPECT_EQ(medicationDispenses.size(), GetParam().numMedications);
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -998,10 +985,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
     // Insert task into database
     //--------------------------
 
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+    auto kvnrPatient = model::Kvnr{InsurantA};
+    auto pharmacy = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -1021,7 +1008,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetByIdNoFilter)
     // GET Medication Dispenses
     //-------------------------
 
-    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
+    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient.id())->second;
 
     for (const std::string& prescriptionId : prescriptionIds)
     {
@@ -1047,15 +1034,15 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)//NOL
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, std::nullopt}
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}
     };
 
     std::set<std::string> patients;
@@ -1074,9 +1061,10 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)//NOL
     // GET Medication Dispenses
     //-------------------------
 
-    for (const std::string& kvnrPatient : patients)
+    for (const std::string& kvnrPatientId : patients)
     {
-        std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
+        const model::Kvnr kvnrPatient{kvnrPatientId};
+        std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatientId)->second;
 
         for (const std::string& prescriptionId : prescriptionIds)
         {

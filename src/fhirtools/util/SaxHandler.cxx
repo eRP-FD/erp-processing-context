@@ -305,7 +305,7 @@ void SaxHandler::cErrorCallback(void* self, const char* msg, ...)
 {
     try
     {
-        std::va_list args{};
+        std::va_list args{}; //NOLINT(cppcoreguidelines-pro-type-vararg)
         va_start(args, msg);
         static_cast<SaxHandler*>(self)->error(msg, args);
         va_end(args);

@@ -12,7 +12,9 @@
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/hsm/HsmPool.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/model/PrescriptionId.hxx"
+#include "erp/model/TelematikId.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
@@ -148,15 +150,6 @@ protected:
     static constexpr const char* InsurantA = "X000000001";
     static constexpr const char* InsurantB = "X000000002";
     static constexpr const char* InsurantC = "X000000003";
-    static constexpr const char* InsurantX = "X000000004";
-
-    // KVNRs for insurants as defined in "resources/test/EndpointHandlerTest/task<Nr>.json".
-    // In "task[1,2,8]" the KVNR "X123456789" is defined.
-    // In "task[4,5,6,8]" the KVNR "X234567890" is defined.
-    // In "task3.json" no KVNR is defined.
-    static constexpr const char* InsurantTask128 = "X123456789";
-    static constexpr const char* InsurantTask4567 = "X234567890";
-
 
     KeyDerivation& getKeyDerivation()
     {
@@ -164,7 +157,7 @@ protected:
     }
 
 
-    void cleanKvnr(std::string_view kvnr, const std::string& taskTableName)
+    void cleanKvnr(const model::Kvnr& kvnr, const std::string& taskTableName)
     {
         auto&& txn = createTransaction();
         auto kvnr_hashed = mKeyDerivation->hashKvnr(kvnr);
@@ -175,7 +168,7 @@ protected:
 
     shared_EVP_PKEY mIdpPrivateKey;
     JwtBuilder      mJwtBuilder;
-    std::string     mPharmacy;
+    model::TelematikId mPharmacy;
 
 private:
     std::unique_ptr<pqxx::connection> mConnection;

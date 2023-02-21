@@ -1,14 +1,14 @@
 #include "erp/model/Consent.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "test/erp/database/DatabaseTestFixture.hxx"
+#include "test/util/TestUtils.hxx"
 
-class ConsentTableTest : public DatabaseTestFixture
+class ConsentTableTest : public DatabaseTestFixture<>
 {
 public:
-    static constexpr std::string_view kvnr1{"X123456789"};
-    static constexpr std::string_view kvnr2{"X012345678"};
-
-
+    const model::Kvnr kvnr1{"X123456789", model::Kvnr::Type::pkv};
+    const model::Kvnr kvnr2{"X012345678", model::Kvnr::Type::pkv};
 
     void SetUp() override
     {
@@ -17,7 +17,17 @@ public:
         (void)db.clearConsent(kvnr1);
         (void)db.clearConsent(kvnr2);
         db.commitTransaction();
+        envGuards = testutils::getNewFhirProfileEnvironment();
     }
+
+    void TearDown() override
+    {
+        envGuards.clear();
+        DatabaseTestFixture::TearDown();
+    }
+
+private:
+    std::vector<EnvironmentVariableGuard> envGuards;
 };
 
 TEST_F(ConsentTableTest, createAndGet)
@@ -66,6 +76,7 @@ TEST_F(ConsentTableTest, notFound)
     }
 }
 
+// GEMREQ-start A_22158
 TEST_F(ConsentTableTest, clear)
 {
     { // scope
@@ -93,6 +104,7 @@ TEST_F(ConsentTableTest, clear)
         db.commitTransaction();
     }
 }
+// GEMREQ-end A_22158
 
 TEST_F(ConsentTableTest, duplicate)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -108,4 +120,3 @@ TEST_F(ConsentTableTest, duplicate)//NOLINT(readability-function-cognitive-compl
         db.commitTransaction();
     }
 }
-

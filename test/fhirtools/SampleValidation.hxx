@@ -25,12 +25,18 @@ public:
     std::string_view filename;
     std::list<ValidationError> expect{};
     std::set<std::tuple<std::string_view, std::string_view>> expectedConstraintKeyElement{};
+    static std::string name(const ::testing::TestParamInfo<Sample>& info);
 };
 
 inline std::ostream& operator<<(std::ostream& out, const Sample& samp)
 {
     out << samp.filename;
     return out;
+}
+
+inline std::string Sample::name(const ::testing::TestParamInfo<Sample>& info)
+{
+    return std::filesystem::path{info.param.filename}.stem();
 }
 
 template<typename BaseT>
@@ -55,7 +61,7 @@ public:
     }
     [[nodiscard]] const FhirStructureRepository& repo()
     {
-        static auto instance = makeRepo();
+        static auto instance = BaseT::makeRepo();
         return *instance;
     }
 protected:
@@ -89,7 +95,7 @@ protected:
                 ve.profile = nullptr;
                 return ve == expected;
             };
-            EXPECT_GE(validationResult.remove_if(isExpected), 1) << expected;
+            EXPECT_GE(std::erase_if(validationResult, isExpected), 1) << expected;
         }
         for (const auto& expected : GetParam().expectedConstraintKeyElement)
         {
@@ -110,8 +116,8 @@ protected:
             EXPECT_TRUE(found) << get<1>(expected) << ": " << get<0>(expected);
         }
 
-        ValidationResultList reducedList;
-        reducedList.append(std::move(validationResult));
+        ValidationResults reducedList;
+        reducedList.merge(std::move(validationResult));
         EXPECT_LE(reducedList.highestSeverity(), Severity::debug);
         if (reducedList.highestSeverity() > Severity::debug)
         {
@@ -135,3 +141,4 @@ private:
 }
 
 #endif // ERP_TEST_FHIR_TOOLS_SAMPLEVALIDATION_HXX
+

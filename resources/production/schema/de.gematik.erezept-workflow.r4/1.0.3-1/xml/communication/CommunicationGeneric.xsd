@@ -28,7 +28,14 @@
   <xs:complexType name="Task.uri">
     <xs:complexContent>
       <xs:extension base="Element">
-        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
+        <xs:attribute name="value">
+          <xs:simpleType>
+            <xs:restriction base="uri-primitive">
+              <xs:enumeration value="Task"/>
+              <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

@@ -1,2 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<OperationDefinition xmlns="http://hl7.org/fhir"><url value="http://gematik.de/fhir/OperationDefinition/ActivateOperationDefinition"/><version value="1.1.1"/><name value="Activate Operation"/><status value="draft"/><kind value="operation"/><date value="2020-07-01"/><description value="This operation activates the created Task for the prescription. The input parameter must contain the qualified signed Bundle of the prescription. The prescription server validates the prescription, updates the task ressource and starts the workflow."/><code value="activate"/><resource value="Task"/><system value="false"/><type value="false"/><instance value="true"/><outputProfile value="https://gematik.de/fhir/StructureDefinition/ErxTask"/><parameter><name value="ePrescription"/><use value="in"/><min value="1"/><max value="1"/><documentation value="The qualified signed prescription element to activate the ePrescription workflow."/><type value="Binary"/><targetProfile value="https://gematik.de/fhir/StructureDefinition/ErxBinary"/></parameter><parameter><name value="return"/><use value="out"/><min value="1"/><max value="1"/><documentation value="Return the updated and activated Task."/><type value="Task"/></parameter></OperationDefinition>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <url value="http://gematik.de/fhir/OperationDefinition/ActivateOperationDefinition"/>
+  <version value="1.1.1"/>
+  <name value="Activate Operation"/>
+  <status value="draft"/>
+  <kind value="operation"/>
+  <date value="2020-07-01"/>
+  <description value="This operation activates the created Task for the prescription. The input parameter must contain the qualified signed Bundle of the prescription. The prescription server validates the prescription, updates the task ressource and starts the workflow."/>
+  <code value="activate"/>
+  <resource value="Task"/>
+  <system value="false"/>
+  <type value="false"/>
+  <instance value="true"/>
+  <outputProfile value="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
+  <parameter>
+    <name value="ePrescription"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="The qualified signed prescription element to activate the ePrescription workflow."/>
+    <type value="Binary"/>
+    <targetProfile value="https://gematik.de/fhir/StructureDefinition/ErxBinary"/>
+  </parameter>
+  <parameter>
+    <name value="return"/>
+    <use value="out"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="Return the updated and activated Task."/>
+    <type value="Task"/>
+  </parameter>
+</OperationDefinition>

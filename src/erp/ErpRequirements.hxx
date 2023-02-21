@@ -55,7 +55,7 @@ static Requirement A_22161    ("E-Rezept-Fachdienst - Consent schreiben - Rollen
 static Requirement A_19401    ("E-Rezept-Fachdienst - unzulässige Operationen Communication");
 static Requirement A_19447    ("E-Rezept-Fachdienst - Nachricht einstellen Schemaprüfung");
 static Requirement A_19448    ("E-Rezept-Fachdienst - Nachricht einstellen Absender und Sendedatum");
-static Requirement A_19450    ("E-Rezept-Fachdienst - Nachricht einstellen Schadcodeprüfung");
+static Requirement A_19450_01 ("E-Rezept-Fachdienst - Nachricht einstellen Schadcodeprüfung");
 static Requirement A_19520    ("E-Rezept-Fachdienst - Nachrichten für Empfänger filtern");
 static Requirement A_19521    ("E-Rezept-Fachdienst - Nachrichten als abgerufen markieren");
 static Requirement A_19522    ("E-Rezept-Fachdienst - Nachrichtenabruf Suchparameter");
@@ -137,6 +137,7 @@ static Requirement A_22631    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfach
 static Requirement A_22632    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - kein Entlassrezept");
 static Requirement A_22633    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - keine Ersatzverordnung");
 static Requirement A_22634    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Beginn Einlösefrist-Pflicht");
+static Requirement A_23164    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Endedatum nicht vor Startdatum");
 static Requirement A_22927    ("E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
 // PKV related:
 static Requirement A_22347_01 ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 200/209 - Prüfung Coverage Type");
@@ -167,7 +168,7 @@ static Requirement A_20546_01 ("E-Rezept-Fachdienst - Prüfung KVNR, Versicherte
 static Requirement A_20547    ("E-Rezept-Fachdienst - Prüfung KVNR, Vertreter löscht Rezept");
 static Requirement A_19120_3  ("E-Rezept-Fachdienst - Prüfung AccessCode, Verordnender löscht Rezept");
 static Requirement A_19224    ("E-Rezept-Fachdienst - Prüfung Secret, Apotheker löscht Rezept");
-static Requirement A_19027    ("E-Rezept-Fachdienst - Rezept löschen");
+static Requirement A_19027_02 ("E-Rezept-Fachdienst - Rezept löschen");
 static Requirement A_19121    ("E-Rezept-Fachdienst - Finaler Status cancelled");
 
 // Requirements for endpoint POST /Task/$reject
@@ -203,7 +204,6 @@ static Requirement A_22138   ("E-Rezept-Fachdienst – Abrechnungsinformation be
 static Requirement A_22139   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturprüfung PKV-Abgabedatensatz");
 static Requirement A_22140   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
 static Requirement A_22141   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturzertifikat SMC-B prüfen");
-static Requirement A_22142   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – OCSP-Response Signaturzertifikat PKV-Abgabedatensatz");
 static Requirement A_22143   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – ChargeItem befüllen");
 static Requirement A_22614   ("E-Rezept-Fachdienst - Abrechnungsinformation bereitstellen - Generierung AccessCode");
 // PUT /ChargeItem
@@ -277,10 +277,10 @@ static Requirement GS_A_4661_01  ("PKI - kritische Erweiterungen in Zertifikaten
 // C_10854: E-Rezept: Versionierung FHIR-Ressourcen
 static Requirement A_22216 ("FHIR-Ressourcen Versionsangabe");
 
-// Workflow 169
-static Requirement A_21360 ("E-Rezept-Fachdienst - Keine Einlöseinformationen für Flowtype 169");
+// Workflow 169 / 209
+static Requirement A_21360_01 ("E-Rezept-Fachdienst - Task abrufen - Flowtype 169 / 209 - keine Einlöseinformationen");
 static Requirement A_21370 ("E-Rezept-Fachdienst - Prüfung Rezept-ID und Präfix gegen Flowtype");
-static Requirement A_22102 ("E-Rezept-Fachdienst - E-Rezept löschen - Flowtype 169 - Versicherter - Statusprüfung");
+static Requirement A_22102_01 ("E-Rezept-Fachdienst - E-Rezept löschen - Flowtype 169 / 209 - Versicherter - Statusprüfung");
 
 // Requirements for endpoint /Subscription
 static Requirement A_22362    ("E-Rezept-Fachdienst - Rollenpruefung Apotheke 'Create Subscription'");

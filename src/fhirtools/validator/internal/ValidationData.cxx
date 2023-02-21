@@ -15,7 +15,7 @@ fhirtools::ValidationData::ValidationData(std::unique_ptr<ProfiledElementTypeInf
     FPExpect3(mMapKey != nullptr, "mapKey must not be null.", std::logic_error);
 }
 
-void fhirtools::ValidationData::add(fhirtools::FhirConstraint constraint, std::string elementFullPath,
+void fhirtools::ValidationData::add(FhirConstraint constraint, std::string elementFullPath,
                                     const fhirtools::FhirStructureDefinition* profile)
 {
     if (constraint.getSeverity() >= Severity::error)
@@ -35,13 +35,13 @@ void fhirtools::ValidationData::add(fhirtools::Severity severity, std::string me
     mResult.add(severity, std::move(message), std::move(elementFullPath), profile);
 }
 
-void fhirtools::ValidationData::append(fhirtools::ValidationResultList resList)
+void fhirtools::ValidationData::append(fhirtools::ValidationResults resList)
 {
     if (resList.highestSeverity() >= Severity::error)
     {
         mFailed = true;
     }
-    mResult.append(std::move(resList));
+    mResult.merge(std::move(resList));
 }
 
 bool fhirtools::ValidationData::isFailed() const
@@ -57,7 +57,7 @@ void fhirtools::ValidationData::fail()
 void fhirtools::ValidationData::merge(const fhirtools::ValidationData& other)
 {
     mFailed = mFailed || other.mFailed;
-    mResult.append(other.mResult);
+    mResult.merge(other.mResult);
 }
 
 const fhirtools::ProfiledElementTypeInfo& fhirtools::ValidationData::mapKey()
@@ -65,7 +65,7 @@ const fhirtools::ProfiledElementTypeInfo& fhirtools::ValidationData::mapKey()
     return *mMapKey;
 }
 
-const fhirtools::ValidationResultList& fhirtools::ValidationData::results() const
+const fhirtools::ValidationResults& fhirtools::ValidationData::results() const
 {
     return mResult;
 }

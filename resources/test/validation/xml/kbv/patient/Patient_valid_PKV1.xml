@@ -15,7 +15,7 @@
     <value value="X234567890" />
     <assigner>
       <reference value="assigner reference"/>
-      <type value="http://hl7.org/fhir/StructureDefinition/Organization"/>
+      <type value="Organization"/>
       <identifier>
         <use value="official"/>
         <type>

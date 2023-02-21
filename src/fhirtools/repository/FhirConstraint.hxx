@@ -35,7 +35,7 @@ public:
                                                               ExpressionCache* cache = nullptr) const;
 
 
-    bool operator < (const FhirConstraint&) const;
+    std::strong_ordering operator <=> (const FhirConstraint&) const;
     bool operator == (const FhirConstraint&) const;
 
 private:

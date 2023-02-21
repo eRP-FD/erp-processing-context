@@ -18,7 +18,6 @@ namespace model
 
 namespace
 {
-using namespace std::string_literals;
 
 const std::string composition_template = R"--(
  {
@@ -31,9 +30,9 @@ const std::string composition_template = R"--(
   },
   "extension":[
     {
-      "url":"https://gematik.de/fhir/StructureDefinition/BeneficiaryExtension",
+      "url":"https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_Beneficiary",
       "valueIdentifier":{
-         "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
+         "system":"https://gematik.de/fhir/sid/telematik-id",
          "value":""
        }
      }
@@ -42,7 +41,7 @@ const std::string composition_template = R"--(
   "type":{
     "coding":[
       {
-        "system":"https://gematik.de/fhir/CodeSystem/Documenttype",
+        "system":"https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType",
         "code":"3",
         "display":"Receipt"
       }
@@ -79,6 +78,7 @@ void initTemplates ()
 // definition of JSON pointers:
 const rapidjson::Pointer idPointer ("/id");
 const rapidjson::Pointer telematikIdPointer("/extension/0/valueIdentifier/value");
+const rapidjson::Pointer telematikIdSystemPointer("/extension/0/valueIdentifier/system");
 const rapidjson::Pointer datePointer ("/date");
 const rapidjson::Pointer eventPeriodStartPointer ("/event/0/period/start");
 const rapidjson::Pointer eventPeriodEndPointer ("/event/0/period/end");
@@ -86,8 +86,9 @@ const rapidjson::Pointer authorArrayPointer ("/author");
 const rapidjson::Pointer authorRelSystemPointer ("/identifier/system");
 const rapidjson::Pointer authorPointer ("/author/0/reference");
 const rapidjson::Pointer extensionPointer ("/extension");
+const rapidjson::Pointer beneficiaryExtensionUrlPointer ("/extension/0/url");
+const rapidjson::Pointer receiptCodingSystemPointer ("/type/coding/0/system");
 const rapidjson::Pointer valueCodingCodeRelPointer ("/valueCoding/code");
-const rapidjson::Pointer valueCodingSystemRelPointer("/valueCoding/system");
 const rapidjson::Pointer urlRelPointer("/url");
 const rapidjson::Pointer section0Entry0ReferencePointer("/section/0/entry/0/reference");
 }  // anonymous namespace
@@ -95,8 +96,11 @@ const rapidjson::Pointer section0Entry0ReferencePointer("/section/0/entry/0/refe
 
 Composition::Composition(const std::string_view& telematicId, const model::Timestamp& start,
                          const model::Timestamp& end, const std::string_view& author,
-                         const std::string_view& prescriptionDigestIdentifier)
-    : Resource<Composition>("https://gematik.de/fhir/StructureDefinition/ErxComposition",
+                         const std::string_view& prescriptionDigestIdentifier,
+                         ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+    : Resource<Composition>(ResourceVersion::deprecatedProfile(profileVersion)
+                                ? resource::structure_definition::deprecated::composition
+                                : resource::structure_definition::composition,
                             []() {
                                 std::call_once(onceFlag, initTemplates);
                                 return compositionTemplate;
@@ -110,6 +114,12 @@ Composition::Composition(const std::string_view& telematicId, const model::Times
     setValue(eventPeriodEndPointer, end.toXsDateTime());
     setValue(authorPointer, author);
     setValue(section0Entry0ReferencePointer, prescriptionDigestIdentifier);
+    if (ResourceVersion::deprecatedProfile(profileVersion))
+    {
+        setValue(telematikIdSystemPointer, resource::naming_system::deprecated::telematicID);
+        setValue(beneficiaryExtensionUrlPointer, resource::structure_definition::deprecated::beneficiary);
+        setValue(receiptCodingSystemPointer, resource::code_system::deprecated::documentType);
+    }
 }
 
 
@@ -171,7 +181,7 @@ std::optional<std::string_view> Composition::prescriptionDigestIdentifier() cons
 }
 
 
-std::optional<std::string_view> Composition::authorIdentifierSystem(int idx) const
+std::optional<std::string_view> Composition::authorIdentifierSystem(size_t idx) const
 {
     const auto* author = getMemberInArray(authorArrayPointer, idx);
     if (author)

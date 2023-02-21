@@ -3,6 +3,7 @@
  * (C) Copyright IBM Corp. 2022
  */
 
+#include "erp/model/ResourceVersion.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
@@ -14,6 +15,10 @@ class Erp10101Test : public ErpWorkflowTest
 
 TEST_F(Erp10101Test, ReferenceBundle)
 {
+    if (model::ResourceVersion::currentBundle() != model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)
+    {
+        GTEST_SKIP_("Disabled due to obsolete requirement");
+    }
     std::string kbv_bundle_xml =
         ResourceManager::instance().getStringResource("test/validation/xml/kbv/bundle/Bundle_valid_ERP-10101.xml");
     std::optional<model::Task> task;
@@ -23,6 +28,6 @@ TEST_F(Erp10101Test, ReferenceBundle)
     kbv_bundle_xml = patchVersionsInBundle(kbv_bundle_xml);
     std::string accessCode{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(
-        taskActivate(task->prescriptionId(), accessCode,
-                     toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDate("2022-05-31"))));
+        taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
+                                   toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDate("2022-05-31"))));
 }

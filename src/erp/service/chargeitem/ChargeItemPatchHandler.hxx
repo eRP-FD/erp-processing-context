@@ -7,10 +7,10 @@
 #define ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEM_CHARGEITEMPATCHHANDLER_HXX
 
 
-#include "erp/service/chargeitem/ChargeItemBodyHandlerBase.hxx"
+#include "erp/service/chargeitem/ChargeItemHandlerBase.hxx"
 
 
-class ChargeItemPatchHandler: public ChargeItemBodyHandlerBase
+class ChargeItemPatchHandler: public ChargeItemHandlerBase
 {
 public:
     ChargeItemPatchHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);

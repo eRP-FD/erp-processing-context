@@ -32,6 +32,7 @@ using OcspBasicRespPtr = OpensslUniquePtr<OCSP_BASICRESP, &OCSP_BASICRESP_free>;
 using OcspCertidPtr = OpensslUniquePtr<OCSP_CERTID, &OCSP_CERTID_free>;
 using OcspRequestPtr = OpensslUniquePtr<OCSP_REQUEST, &OCSP_REQUEST_free>;
 using OcspResponsePtr = OpensslUniquePtr<OCSP_RESPONSE, &OCSP_RESPONSE_free>;
+using EcdsaSignaturePtr = OpensslUniquePtr<ECDSA_SIG, &ECDSA_SIG_free>;
 
 
 // Use
@@ -72,15 +73,14 @@ public:
     /// Create a new openssl_shared_prt from the given raw pointer.
     static self_t make (C* p);
 
-    openssl_shared_ptr (void);
+    openssl_shared_ptr (void) = default;
     openssl_shared_ptr(const self_t& other);
     openssl_shared_ptr(self_t&& other) noexcept;
     ~openssl_shared_ptr (void);
 
     void reset (void);
 
-    self_t& operator= (const self_t& other); // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
-    self_t& operator= (self_t&& other) noexcept; // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
+    self_t& operator= (self_t other) noexcept; // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
     operator C* (void);
     operator const C* (void) const;
     C* get (void);
@@ -92,12 +92,14 @@ public:
 
     bool isSet (void) const;
 
+    void swap(openssl_shared_ptr& other) noexcept;
+
     /// Use this method only when you "know" that a function does not modify the openssl_shared_ptr object
     /// but still requires a non-const pointer.
     openssl_shared_ptr& removeConst (void) const;
 
 private:
-    C* p;
+    C* p{nullptr};
 
     // Don't expose this constructor to the public, so that we don't have to worry about increasing the reference
     // counter, i.e. expect that we are called only from make().
@@ -108,7 +110,7 @@ private:
 EVP_PKEY_CTX* new_EVP_PKEY_CTX (void);
 void free_ASN1_SEQUENCE_ANY (ASN1_SEQUENCE_ANY* sequence);
 
-
+// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)
 extern const char asn1_bit_string_name[];
 using shared_ASN1_BIT_STRING =     openssl_shared_ptr< ASN1_BIT_STRING,   ASN1_BIT_STRING_new,   ASN1_BIT_STRING_free,   nullptr,          asn1_bit_string_name>;
 
@@ -212,17 +214,6 @@ openssl_shared_ptr<C,creator,deleter,upref,name> openssl_shared_ptr<C,creator,de
 
 template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
 openssl_shared_ptr<C,creator,deleter,upref,name>
-    ::openssl_shared_ptr (void)
-    : openssl_shared_ptr(nullptr)
-{
-#ifdef LOCAL_LOGGING
-    log() << "constructor()" << '\n';
-#endif
-}
-
-
-template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
-openssl_shared_ptr<C,creator,deleter,upref,name>
 ::openssl_shared_ptr (C* q)
     : p(q)
 {
@@ -251,12 +242,8 @@ openssl_shared_ptr<C,creator,deleter,upref,name>
 template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
 openssl_shared_ptr<C,creator,deleter,upref,name>
     ::openssl_shared_ptr(self_t&& other) noexcept
-    : p(other.p)
 {
-    other.p = nullptr;
-#ifdef LOCAL_LOGGING
-    log() << "constructor(&): increased ref count\n";
-#endif
+    swap(other);
 }
 
 
@@ -264,13 +251,7 @@ template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const
 openssl_shared_ptr<C,creator,deleter,upref,name>
     ::~openssl_shared_ptr (void)
 {
-    if (p != nullptr)
-    {
-#ifdef LOCAL_LOGGING
-        log() << "destructor: deleting " << (void*)p << '\n';
-#endif
-        deleter(p);
-    }
+    reset();
 }
 
 template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
@@ -290,37 +271,18 @@ void openssl_shared_ptr<C,creator,deleter,upref,name>
 
 template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
 openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,deleter,upref,name>    // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
-    ::operator= (const self_t& other)
+    ::operator= (self_t other) noexcept
 {
-    // For this assignment operation we require the upref functor to be present.
-    static_assert(upref != nullptr);
-
-    // Prevent assignment to self.
-    if (this == &other)
-        return *this;
-
-    p = other.p;
-    if (p != nullptr)
-    {
-#ifdef LOCAL_LOGGING
-        const int refCount =
-#endif
-        upref(p);
-#ifdef LOCAL_LOGGING
-    log() << "operator=: increased ref count to " << refCount << '\n';
-#endif
-    }
+    swap(other);
     return *this;
 }
 
 
-template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const char* name>
-openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,deleter,upref,name>    // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
-    ::operator= (self_t&& other) noexcept
+template<class C, C* (*creator)(void), void (*deleter)(C*), int (*upref)(C*), const char* name>
+void openssl_shared_ptr<C, creator, deleter, upref, name>::swap(
+    openssl_shared_ptr<C, creator, deleter, upref, name>& other) noexcept
 {
-    p = std::move(other.p);
-    other.p = nullptr;
-    return *this;
+    std::swap(p, other.p);
 }
 
 
@@ -437,7 +399,9 @@ template<class C, C*(*creator)(void), void(*deleter)(C*), int(*upref)(C*), const
 openssl_shared_ptr<C,creator,deleter,upref,name>& openssl_shared_ptr<C,creator,deleter,upref,name>
     ::removeConst (void) const
 {
-    return const_cast<self_t&>(*this);
+    return const_cast<self_t&>(*this); // NOLINT(cppcoreguidelines-pro-type-const-cast)
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-c-arrays)
 
 #endif

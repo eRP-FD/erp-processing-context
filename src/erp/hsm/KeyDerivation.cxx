@@ -12,6 +12,8 @@
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/PrescriptionType.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "erp/model/Kvnr.hxx"
+#include "erp/model/TelematikId.hxx"
 #include "erp/util/SafeString.hxx"
 
 #include <boost/endian/conversion.hpp>
@@ -79,7 +81,7 @@ std::tuple<SafeString, OptionalDeriveKeyData> KeyDerivation::initialTaskKey(cons
     return std::make_tuple(SafeString(std::move(keyData.derivedKey)), std::move(*keyData.optionalData));
 }
 
-db_model::HashedKvnr KeyDerivation::hashKvnr(std::string_view kvnr) const
+db_model::HashedKvnr KeyDerivation::hashKvnr(const model::Kvnr& kvnr) const
 {
     return db_model::HashedKvnr::fromKvnr(kvnr, getPersistenceIndexKeyKvnr());
 }
@@ -151,21 +153,21 @@ std::tuple<SafeString, OptionalDeriveKeyData> KeyDerivation::initialAuditEventKe
     return std::make_tuple(std::move(key), std::move(*keyData.optionalData));
 }
 
-db_model::HashedTelematikId KeyDerivation::hashTelematikId(std::string_view tid) const
+db_model::HashedTelematikId KeyDerivation::hashTelematikId(const model::TelematikId& tid) const
 {
     return db_model::HashedTelematikId::fromTelematikId(tid, getPersistenceIndexKeyTelematikId());
 }
 
 db_model::HashedId KeyDerivation::hashIdentity(std::string_view identity) const
 {
-    bool isTelematikId = identity.find_first_of('-') != std::string_view::npos;
+    bool isTelematikId = model::TelematikId::isTelematikId(identity);
     if (isTelematikId)
     {
-        return hashTelematikId(identity);
+        return hashTelematikId(model::TelematikId{identity});
     }
     else
     {
-        return hashKvnr(identity);
+        return hashKvnr(model::Kvnr{identity});
     }
 }
 

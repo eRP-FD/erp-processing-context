@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 
 class MyTestExtension : public model::Extension
@@ -194,9 +194,7 @@ TEST(ExtensionTest, multipleExtensionsMiddle)
 
 TEST(ExtensionTest, kbvBundle)
 {
-    auto& resourceManager = ResourceManager::instance();
-    const auto& kbvBundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
-    auto bundle = model::Bundle::fromXmlNoValidation(kbvBundle);
+    auto bundle = model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml());
     auto medicationRequest = bundle.getResourcesByType<model::KbvMedicationRequest>();
     ASSERT_EQ(medicationRequest.size(), 1);
     auto ext = medicationRequest.at(0).getExtension<model::KBVMultiplePrescription>();

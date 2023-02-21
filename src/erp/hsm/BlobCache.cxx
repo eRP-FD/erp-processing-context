@@ -37,11 +37,11 @@ bool defaultValidityChecker(const ::BlobCache::Entry& entry)
 }
 }
 
-class BlobCache::Refresher : public PeriodicTimer
+class BlobCache::Refresher : public FixedIntervalHandler
 {
 public:
     explicit Refresher(BlobCache& blobCache, std::chrono::steady_clock::duration interval)
-        : PeriodicTimer{interval}
+        : FixedIntervalHandler{interval}
         , mBlobCache{blobCache}
     {
     }
@@ -148,7 +148,7 @@ void BlobCache::setPcrHash(const ::ErpVector& pcrHash)
 void BlobCache::startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval)
 {
     Expect3(mRefresher == nullptr, "refresher already started", std::logic_error);
-    mRefresher = std::make_unique<Refresher>(*this, interval);
+    mRefresher = std::make_unique<PeriodicTimer<Refresher>>(*this, interval);
     mRefresher->start(context, interval);
 }
 

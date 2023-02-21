@@ -17,9 +17,6 @@
 class EndpointTestClient final : public TestClient
 {
 public:
-    static constexpr uint16_t adminPort = 9990u;
-    static constexpr uint16_t enrolmentPort = 9998u;
-    static constexpr uint16_t vauPort = 9999u;
     static constexpr char mLocalHost[] = "127.0.0.1";
 
     static std::unique_ptr<TestClient> factory(std::shared_ptr<XmlValidator> xmlValidator, Target target);

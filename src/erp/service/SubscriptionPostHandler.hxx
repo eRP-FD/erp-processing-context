@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_SUBSCRIPTIONPOSTHANDLER_HXX
 
 #include "erp/service/ErpRequestHandler.hxx"
+#include "erp/model/TelematikId.hxx"
 
 class PcServiceContext;
 
@@ -16,7 +17,7 @@ public:
     SubscriptionPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     void handleRequest(PcSessionContext& session) override;
 
-    static void publish(PcServiceContext& serviceContext, std::string_view recipient);
+    static void publish(PcServiceContext& serviceContext, const model::TelematikId& recipient);
 };
 
 #endif// #ifndef ERP_PROCESSING_CONTEXT_SUBSCRIPTIONPOSTHANDLER_HXX

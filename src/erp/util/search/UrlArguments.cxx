@@ -13,6 +13,7 @@
 
 #include <date/date.h>
 #include <pqxx/nontransaction>
+#include <unordered_set>
 
 
 UrlArguments::UrlArguments (std::vector<SearchParameter>&& searchParameters)
@@ -34,18 +35,22 @@ void UrlArguments::parse(const std::vector<std::pair<std::string, std::string>>&
     for (const auto& entry : queryParameters)
     {
         ErpExpect( ! entry.first.empty(), HttpStatus::BadRequest, "empty arguments are not permitted");
-        if (entry.first[0] == '_')
+        if (entry.first == SortArgument::sortKey) // "_sort"
         {
-            if (entry.first == SortArgument::sortKey) // "_sort"
-                addSortArguments(entry.second);
-            else if (entry.first == PagingArgument::countKey) // "_count"
-                mPagingArgument.setCount(entry.second);
-            else if (entry.first == PagingArgument::offsetKey) // "__offset"
-                mPagingArgument.setOffset(entry.second);
-            else if (entry.first == ReverseIncludeArgument::revIncludeKey &&
-                     entry.second ==
-                         ReverseIncludeArgument::revIncludeAuditEventKey)// "_revinclude=AuditEvent:entity.what"
-                mReverseIncludeAuditEventArgument = true;
+            addSortArguments(entry.second);
+        }
+        else if (entry.first == PagingArgument::countKey) // "_count"
+        {
+            mPagingArgument.setCount(entry.second);
+        }
+        else if (entry.first == PagingArgument::offsetKey) // "__offset"
+        {
+            mPagingArgument.setOffset(entry.second);
+        }
+        else if (entry.first == ReverseIncludeArgument::revIncludeKey && // "_revinclude=AuditEvent:entity.what"
+                 entry.second == ReverseIncludeArgument::revIncludeAuditEventKey)
+        {
+            mReverseIncludeAuditEventArgument = true;
         }
         else
         {
@@ -61,6 +66,16 @@ void UrlArguments::parse(const std::vector<std::pair<std::string, std::string>>&
             }
         }
     }
+}
+
+
+std::vector<std::string> UrlArguments::splitCheckedArgs(const std::string& rawValues)
+{
+    std::vector<std::string> strlstRawValues = String::split(rawValues, ',');
+    for (const auto& part : strlstRawValues) {
+        Expect3(!part.empty(), "invalid value", model::ModelException);
+    }
+    return strlstRawValues;
 }
 
 
@@ -107,21 +122,17 @@ void UrlArguments::addDateSearchArguments(const std::string& name, const std::st
     if (!values.empty())
     {
         std::vector<std::optional<model::TimePeriod>> timePeriods;
-        const std::vector<std::string> strlstRawValues = String::split(values, ',');
+        const std::vector<std::string> strlstRawValues = splitCheckedArgs(values);
         for( const auto& rawValue : strlstRawValues)
         {
-            if (!rawValue.empty())
+            if (rawValue == "NULL")
             {
-                if (rawValue == "NULL")
-                {
-                    timePeriods.emplace_back();
-                }
-                else
-                {
-                    timePeriods.emplace_back(model::TimePeriod::fromFhirSearchDate(rawValue));
-                }
+                timePeriods.emplace_back();
             }
-            // else missing rawValue is ignored.
+            else
+            {
+                timePeriods.emplace_back(model::TimePeriod::fromFhirSearchDate(rawValue));
+            }
         }
         mSearchArguments.emplace_back(
             prefix, parameterDbName, name,
@@ -137,16 +148,12 @@ void UrlArguments::addStringSearchArguments(const std::string& name, const std::
     {
         std::vector<std::string> dbValues;
         std::vector<std::string> originalValues;
-        const std::vector<std::string> strlstRawValues = String::split(rawValues, ',');
+        const std::vector<std::string> strlstRawValues = splitCheckedArgs(rawValues);
         for (const auto& rawValue : strlstRawValues)
         {
-            if (!rawValue.empty())
-            {
-                const auto dbValue = getParameterDbValue(name, rawValue);
-                dbValues.emplace_back(dbValue.value_or(rawValue));
-                originalValues.emplace_back(rawValue);
-            }
-            // else missing rawValue is ignored.
+            const auto dbValue = getParameterDbValue(name, rawValue);
+            dbValues.emplace_back(dbValue.value_or(rawValue));
+            originalValues.emplace_back(rawValue);
         }
         mSearchArguments.emplace_back(
             SearchArgument::Prefix::EQ, parameterDbName, name,
@@ -162,17 +169,14 @@ void UrlArguments::addIdentitySearchArguments(const std::string& name, const std
     {
         std::vector<db_model::HashedId> dbValues;
         std::vector<std::string> originalValues;
-        const std::vector<std::string> strlstRawValues = String::split(rawValues, ',');
+        const std::vector<std::string> strlstRawValues = splitCheckedArgs(rawValues);
         for (const auto& rawValue : strlstRawValues)
         {
-            if (!rawValue.empty())
-            {
-                const auto dbValue = getParameterDbValue(name, rawValue);
-                dbValues.emplace_back(keyDerivation.hashIdentity(dbValue.value_or(rawValue)));
-                originalValues.emplace_back(rawValue);
-            }
-            // else missing rawValue is ignored.
+            const auto dbValue = getParameterDbValue(name, rawValue);
+            dbValues.emplace_back(keyDerivation.hashIdentity(dbValue.value_or(rawValue)));
+            originalValues.emplace_back(rawValue);
         }
+        // else missing rawValue is ignored.
         mSearchArguments.emplace_back(
             SearchArgument::Prefix::EQ, parameterDbName, name,
             SearchParameter::Type::HashedIdentity, dbValues, originalValues);
@@ -187,21 +191,17 @@ void UrlArguments::addTaskStatusSearchArguments(const std::string& name, const s
     {
         std::vector<model::Task::Status> dbValues;
         std::vector<std::string> originalValues;
-        const std::vector<std::string> strlstRawValues = String::split(rawValues, ',');
+        const std::vector<std::string> strlstRawValues = splitCheckedArgs(rawValues);
         for (const auto& rawValue : strlstRawValues)
         {
-            if (!rawValue.empty())
+            auto candidate = model::Task::StatusNamesReverse.find(rawValue);
+            if (candidate != model::Task::StatusNamesReverse.end())
             {
-                auto candidate = model::Task::StatusNamesReverse.find(rawValue);
-                if (candidate != model::Task::StatusNamesReverse.end())
-                {
-                    dbValues.emplace_back(candidate->second);
-                    originalValues.emplace_back(rawValue);
-                }
-                else
-                    ErpFail(HttpStatus::BadRequest, "Invalid value for status search parameter: " + rawValue);
+                dbValues.emplace_back(candidate->second);
+                originalValues.emplace_back(rawValue);
             }
-            // else missing rawValue is ignored.
+            else
+                ErpFail(HttpStatus::BadRequest, "Invalid value for status search parameter: " + rawValue);
         }
         mSearchArguments.emplace_back(
             SearchArgument::Prefix::EQ, parameterDbName, name,
@@ -213,21 +213,29 @@ void UrlArguments::addTaskStatusSearchArguments(const std::string& name, const s
 void UrlArguments::addPrescriptionIdSearchArguments(const std::string& name, const std::string& rawValues,
                                                     const std::string& parameterDbName)
 {
-    static constexpr auto* prefix = "https://gematik.de/fhir/NamingSystem/PrescriptionID|";
-    if (!rawValues.empty())
+    if (rawValues.empty())
+        return;
+
+    // Always support the old naming system version, but only support the new version
+    // when also the new profiles are accepted, i.e. at the overlapping period
+    std::unordered_set<std::string_view> supportedNamingSystems{
+        model::resource::naming_system::deprecated::prescriptionID};
+    if (model::ResourceVersion::isProfileSupported(model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0))
     {
-        std::vector<model::PrescriptionId> dbValues;
-        std::vector<std::string> originalValues;
-        const std::vector<std::string> strlstRawValues = String::split(rawValues, ',');
-        for (const auto& rawValue : strlstRawValues)
+        supportedNamingSystems.insert(model::resource::naming_system::prescriptionID);
+    }
+
+    std::vector<model::PrescriptionId> dbValues;
+    std::vector<std::string> originalValues;
+    const std::vector<std::string> strlstRawValues = splitCheckedArgs(rawValues);
+    for (const auto& rawValue : strlstRawValues)
+    {
+        std::string value;
+        for (const auto& namingSystem : supportedNamingSystems)
         {
-            if (!rawValue.empty())
+            if (String::starts_with(rawValue, std::string(namingSystem) + '|'))
             {
-                ErpExpectWithDiagnostics(
-                    String::starts_with(rawValue, prefix),
-                    HttpStatus::BadRequest, "bad search parameter", rawValue);
-                auto value =
-                    String::removeEnclosing(prefix, "", rawValue);
+                value = rawValue.substr(namingSystem.size() + 1);
                 try
                 {
                     auto prescriptionId = model::PrescriptionId::fromString(value);
@@ -238,11 +246,13 @@ void UrlArguments::addPrescriptionIdSearchArguments(const std::string& name, con
                 {
                     ErpFailWithDiagnostics(HttpStatus::BadRequest, "bad search parameter", rawValue);
                 }
+                break;
             }
         }
-        mSearchArguments.emplace_back(SearchArgument::Prefix::EQ, parameterDbName, name,
-                                      SearchParameter::Type::PrescriptionId, dbValues, originalValues);
+        ErpExpectWithDiagnostics(!value.empty(), HttpStatus::BadRequest, "bad search parameter", rawValue);
     }
+    mSearchArguments.emplace_back(SearchArgument::Prefix::EQ, parameterDbName, name,
+                                  SearchParameter::Type::PrescriptionId, dbValues, originalValues);
 }
 
 std::optional<SearchParameter::Type> UrlArguments::getParameterType (const std::string& argumentName) const

@@ -28,7 +28,7 @@ namespace db_model
 enum class MasterKeyType: int8_t;
 
 class Blob;
-class ChargeItem;
+struct ChargeItem;
 class Communication;
 class EncryptedBlob;
 class HashedId;
@@ -218,6 +218,7 @@ public:
     virtual void clearAllChargeInformation(const db_model::HashedKvnr& kvnr) = 0;
 
     virtual void clearAllChargeItemCommunications(const db_model::HashedKvnr& kvnr) = 0;
+    virtual void deleteCommunicationsForChargeItem(const model::PrescriptionId& id) = 0;
 
     virtual uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
                                              const std::optional<UrlArguments>& search) = 0;

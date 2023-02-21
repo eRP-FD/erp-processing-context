@@ -33,15 +33,15 @@ public:
     void foundUnsliced(std::string_view fullElementName);
     void finalize(std::string_view elementFullPath);
 
-    ValidationResultList results() &&;
-    const ValidationResultList& results() const &;
+    ValidationResults results() &&;
+    const ValidationResults& results() const &;
     [[nodiscard]] const std::set<ProfiledElementTypeInfo>& affectedValidators() const;
     void addAffectedValidator(const ProfiledElementTypeInfo&);
 
 private:
     struct SliceData {
         const FhirStructureDefinition* profile{};
-        size_t count = 0;
+        uint32_t count = 0;
     };
     bool mOrdered = false;
     FhirSlicing::SlicingRules mRules;
@@ -49,7 +49,7 @@ private:
     size_t mLastIdx = 0;
     bool mDone = false;
     std::string mUnmatchedFullName;
-    ValidationResultList mResult;
+    ValidationResults mResult;
     const FhirStructureDefinition* const mBaseProfile;
     std::set<ProfiledElementTypeInfo> mAffectedValidators;
 };

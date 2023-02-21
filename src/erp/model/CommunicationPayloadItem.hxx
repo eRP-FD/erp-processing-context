@@ -31,8 +31,6 @@ public:
 
     size_t length() const { return mLength; }
 
-    virtual void verifyUrls() const {};
-    virtual void verifyMimeType() const {};
 protected:
     CommunicationPayloadItem(Type type, const rapidjson::Value* value);
 
@@ -44,28 +42,6 @@ class CommunicationPayloadItemString : public CommunicationPayloadItem
 {
 public:
     explicit CommunicationPayloadItemString(const rapidjson::Value* value);
-};
-
-class CommunicationPayloadItemAttachment : public CommunicationPayloadItem
-{
-public:
-    explicit CommunicationPayloadItemAttachment(const rapidjson::Value* value);
-
-    void verifyUrls() const override;
-    void verifyMimeType() const override;
-private:
-    std::string mMimeType;
-    std::string mData;
-};
-
-class CommunicationPayloadItemReference : public CommunicationPayloadItem
-{
-public:
-    explicit CommunicationPayloadItemReference(const rapidjson::Value* value);
-
-    void verifyUrls() const override;
-private:
-    std::string mReference;
 };
 
 } // namespace model

@@ -1,0 +1,183 @@
+<?xml version="1.0"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="SlicingTest"/>
+  <entry>
+    <fullUrl value="http://erp.test/SliceType"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceType"/>
+        <url value="http://erp.test/SliceType"/>
+        <version value="4.0.1"/>
+        <name value="SliceType"/>
+        <kind value="complex-type"/>
+        <type value="SliceType"/>
+        <derivation value="basetype"/>
+        <snapshot>
+          <element id="SliceType">
+            <path value="SliceType"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceType"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SliceType.sliced">
+            <path value="SliceType.sliced"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="discriminator"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceType.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SliceType"/>
+            </type>
+          </element>
+          <element id="SliceType.sliced.discriminator">
+            <path value="SliceType.sliced.discriminator"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceType.sliced.discriminator"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp.test/SlicedBase"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SlicedBase"/>
+        <url value="http://erp.test/SlicedBase"/>
+        <version value="4.0.1"/>
+        <name value="SlicedBase"/>
+        <kind value="complex-type"/>
+        <type value="SlicedBase"/>
+        <derivation value="basetype"/>
+        <snapshot>
+          <element id="SlicedBase">
+            <path value="SlicedBase"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SlicedBase.subElement">
+            <path value="SlicedBase.subElement"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="discriminator"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase.subElement"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SliceType"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp.test/NotSlicedFromElementType"/>
+    <resource>
+      <StructureDefinition>
+        <id value="NotSlicedFromElementType"/>
+        <url value="http://erp.test/NotSlicedFromElementType"/>
+        <version value="4.0.1"/>
+        <name value="SlicedBase"/>
+        <kind value="complex-type"/>
+        <type value="SlicedBase"/>
+        <baseDefinition value="http://erp.test/SlicedBase"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="SlicedBase">
+            <path value="SlicedBase"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SlicedBase.subElement">
+            <path value="SlicedBase.subElement"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="discriminator"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase.subElement"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SliceType"/>
+            </type>
+          </element>
+          <element id="SlicedBase.subElement.sliced">
+            <path value="SlicedBase.subElement.sliced"/>
+            <!-- SHOULD BE FIXED: Slicing not copied from ElementType -->
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceType.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SliceType"/>
+            </type>
+          </element>
+          <element id="SlicedBase.subElement.sliced.discriminator">
+            <path value="SlicedBase.subElement.sliced.discriminator"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceType.sliced.discriminator"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

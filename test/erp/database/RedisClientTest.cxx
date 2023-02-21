@@ -43,8 +43,7 @@ TEST_F(RedisClientTest, BasicTest)//NOLINT(readability-function-cognitive-comple
     claims.RemoveMember(std::string{JWT::nbfClaim});
 
     // Configure for 10 calls within 4 s.
-    auto timespan = time_point_cast<milliseconds>(time_point<system_clock>() + seconds(4)).time_since_epoch().count();
-    dosHandler.setTimespan(timespan);
+    dosHandler.setTimespan(4s);
     dosHandler.setUpperLimitCalls(10);
 
     // JWT expires in 10 s from now. Use JWT 10 times within 4 s in order to block further access.
@@ -84,7 +83,8 @@ TEST_F(RedisClientTest, BasicTest)//NOLINT(readability-function-cognitive-comple
 TEST_F(RedisClientTest, BasicTest2)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono;
-    DosHandler dosHandler(std::make_unique<MockRedisStore>());
+    std::shared_ptr<MockRedisStore> redis = std::make_unique<MockRedisStore>();
+    DosHandler dosHandler(redis);
 
     const auto privateKey = MockCryptography::getIdpPrivateKey();
     const auto publicKey = MockCryptography::getIdpPublicKey();
@@ -95,8 +95,7 @@ TEST_F(RedisClientTest, BasicTest2)//NOLINT(readability-function-cognitive-compl
     claims.RemoveMember(std::string{JWT::nbfClaim});
 
     // Configure for 10 calls within 4 s.
-    auto timespan = time_point_cast<milliseconds>(time_point<system_clock>() + seconds(4)).time_since_epoch().count();
-    dosHandler.setTimespan(timespan);
+    dosHandler.setTimespan(4s);
     dosHandler.setUpperLimitCalls(10);
 
     // JWT expires in 10 s from now. Use JWT 10 times within 1 s in order to block further access.

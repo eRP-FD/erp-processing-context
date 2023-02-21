@@ -21,6 +21,7 @@
 namespace fhirtools {
 
 class FhirStructureRepository;
+class FhirStructureRepositoryFixer;
 
 /// @brief stores information for a single type read from FHIR definition files
 /// also refer to FhirStructureRepository
@@ -101,8 +102,8 @@ public:
         return mElements.at(0);
     }
 
-    [[nodiscard]] std::shared_ptr<const FhirElement> findElement(const std::string& elementId) const;
-    std::tuple<std::shared_ptr<const FhirElement>, size_t> findElementAndIndex(const std::string& elementId) const;
+    [[nodiscard]] std::shared_ptr<const FhirElement> findElement(std::string_view elementId) const;
+    std::tuple<std::shared_ptr<const FhirElement>, size_t> findElementAndIndex(std::string_view elementId) const;
     const FhirStructureDefinition* parentType(const FhirStructureRepository& repo) const;
     bool isDerivedFrom(const FhirStructureRepository& repo, const std::string_view& baseUrl) const;
     bool isDerivedFrom(const FhirStructureRepository& repo, const FhirStructureDefinition& baseProfile) const;
@@ -126,6 +127,8 @@ private:
     Derivation mDerivation = Derivation::basetype;
     Kind mKind = Kind::primitiveType;
     std::vector<std::shared_ptr<const FhirElement>> mElements;
+
+    friend class FhirStructureRepositoryFixer;
 };
 
 

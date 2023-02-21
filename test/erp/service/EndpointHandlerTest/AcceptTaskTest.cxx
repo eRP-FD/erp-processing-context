@@ -7,6 +7,7 @@
 #include "erp/service/task/AcceptTaskHandler.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 class AcceptTaskTest : public EndpointHandlerTest
 {
@@ -41,9 +42,10 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    // TODO: ERP-10782: re-enable validation for WF 209
-//    ASSERT_NO_THROW(resultBundle = model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
-//                                                          *StaticData::getInCodeValidator(), SchemaType::fhir));
+    ASSERT_NO_THROW(resultBundle = model::Bundle::fromXml(serverResponse.getBody(),
+                                                          *StaticData::getXmlValidator(),
+                                                          *StaticData::getInCodeValidator(),
+                                                          SchemaType::fhir));
     ASSERT_NO_THROW(resultBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
     ASSERT_EQ(resultBundle->getResourceCount(), numOfExpectedResources);
 
@@ -69,18 +71,20 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
 
 TEST_F(AcceptTaskTest, AcceptTaskSuccess)
 {
-    auto& resourceManager = ResourceManager::instance();
+    auto kbvBundle = ResourceTemplates::kbvBundleXml();
     std::optional<model::Bundle> resultBundle;
+    const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714);
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
-        resultBundle, mServiceContext, resourceManager.getStringResource(dataPath + "/task4.json"),
-        resourceManager.getStringResource(dataPath + "/kbv_bundle.xml"), 2 /*numOfExpectedResources*/));
+        resultBundle, mServiceContext,
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId}),
+        kbvBundle, 2 /*numOfExpectedResources*/));
 }
 
 // Regression test for ERP-10628
 TEST_F(AcceptTaskTest, AcceptTaskSuccessNoQesCheck)
 {
-    auto& resourceManager = ResourceManager::instance();
     auto factories = StaticData::makeMockFactories();
+    auto kbvBundle = ResourceTemplates::kbvBundleXml();
 
     // create a TSL Manager that generates failures.
     factories.tslManagerFactory = [](const std::shared_ptr<XmlValidator>&) {
@@ -104,30 +108,32 @@ TEST_F(AcceptTaskTest, AcceptTaskSuccessNoQesCheck)
 
     PcServiceContext serviceContext(Configuration::instance(), std::move(factories));
     std::optional<model::Bundle> resultBundle;
+    const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714);
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
-        resultBundle, serviceContext, resourceManager.getStringResource(dataPath + "/task4.json"),
-        resourceManager.getStringResource(dataPath + "/kbv_bundle.xml"), 2 /*numOfExpectedResources*/));
+        resultBundle, serviceContext,
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId}),
+        kbvBundle, 2 /*numOfExpectedResources*/));
 }
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-cognitive-complexity)
 {
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
     const char* const pkvKvnr = "X500000000";
 
-    auto& resourceManager = ResourceManager::instance();
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
         resultBundle, mServiceContext,
-        replaceKvnr(
-            replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_activated_template.json"),
-                                  pkvTaskId.toString()),
-            pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"),
-                                          pkvTaskId.toString()),
-                    pkvKvnr),
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
         3 /*numOfExpectedResources*/));
 
     // Check consent:
@@ -142,44 +148,44 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-co
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent)
 {
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
     const char* const pkvKvnr = "X500000001";
 
-    auto& resourceManager = ResourceManager::instance();
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
         resultBundle, mServiceContext,
-        replaceKvnr(
-            replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_activated_template.json"),
-                                  pkvTaskId.toString()),
-            pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"),
-                                          pkvTaskId.toString()),
-                    pkvKvnr),
+        ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
         2 /*numOfExpectedResources*/));// no consent resource in result;
 }
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent209)//NOLINT(readability-function-cognitive-complexity)
 {
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50002);
     const char* const pkvKvnr = "X500000002";
 
-    auto& resourceManager = ResourceManager::instance();
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
         resultBundle, mServiceContext,
-        replaceKvnr(
-            replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_activated_template.json"),
-                                  pkvTaskId.toString()),
-            pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"),
-                                          pkvTaskId.toString()),
-                    pkvKvnr),
+        ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
         3 /*numOfExpectedResources*/));
 
     // Check consent:
@@ -194,22 +200,22 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent209)//NOLINT(readability-function
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent209)
 {
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50003);
     const char* const pkvKvnr = "X500000003";
 
-    auto& resourceManager = ResourceManager::instance();
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
         resultBundle, mServiceContext,
-        replaceKvnr(
-            replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_activated_template.json"),
-                                  pkvTaskId.toString()),
-            pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"),
-                                          pkvTaskId.toString()),
-                    pkvKvnr),
+        ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
         2 /*numOfExpectedResources*/));// no consent resource in result;
 }
 

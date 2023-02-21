@@ -13,7 +13,7 @@
 void MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob (
     TpmProxy& tpm,
     BlobCache& blobCache,
-    const size_t logLevel)
+    const int32_t logLevel)
 {
     createAndStoreAkEkAndQuoteBlob(tpm, blobCache, std::string(MOCK_DATA_DIR) + "/enrolment/cacertecc.crt", logLevel);
 }
@@ -23,7 +23,7 @@ void MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob (
     TpmProxy& tpm,
     BlobCache& blobCache,
     const std::string& certificateFilename,
-    const size_t logLevel)
+    const int32_t logLevel)
 {
     auto blobs = EnrolmentHelper(HsmIdentity::getSetupIdentity(), certificateFilename, logLevel)
         .createBlobs(tpm);
@@ -57,7 +57,7 @@ void MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob (
 EnrolmentHelper::Blobs MockEnrolmentManager::createAndReturnAkEkAndQuoteBlob (
     BlobCache& blobCache,
     const std::string& certificateFilename,
-    const size_t logLevel)
+    const int32_t logLevel)
 {
     (void)blobCache; // Used only when TpmProxyDirect is used.
     TpmProxyApi tpm;

@@ -34,7 +34,7 @@ namespace
     uint32_t getInteger (const pqxx::row& row, const size_t columnIndex, const std::string& columnName)
     {
         Expect( ! row[gsl::narrow<pqxx::row::size_type>(columnIndex)].is_null(), columnName + " is null");
-        return row[gsl::narrow<pqxx::row::size_type>(columnIndex)].as<int32_t>();
+        return row[gsl::narrow<pqxx::row::size_type>(columnIndex)].as<uint32_t>();
     }
 
     ErpVector getErpVector (const pqxx::row& row, const size_t columnIndex, const std::string& columnName)
@@ -207,7 +207,7 @@ std::vector<BlobDatabase::Entry> ProductionBlobDatabase::getAllBlobsSortedById (
                                  transaction->esc(getHostIp()), transaction->esc(getBuildNumber()));
 
     std::vector<Entry> entries;
-    entries.reserve(result.size());
+    entries.reserve(gsl::narrow<size_t>(result.size()));
     TVLOG(1) << "got " << result.size() << " blobs from database";
 
     for (const auto& dbEntry : result)

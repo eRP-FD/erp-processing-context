@@ -10,11 +10,11 @@
 #include "erp/util/GLog.hxx"
 
 namespace {
-    static const std::string emptyParameter;
+    const std::string emptyParameter;
 }
 
 
-ContentType ContentType::fromString (const std::string contentTypeValue)
+ContentType ContentType::fromString (const std::string& contentTypeValue)
 {
     std::string type;
     std::unordered_map<std::string, std::string> parameters;

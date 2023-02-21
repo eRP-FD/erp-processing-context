@@ -71,7 +71,7 @@ std::string JWT::serialize(void) const
     return mHeader + separator + mPayload + separator + mSignature;
 }
 
-
+// GEMREQ-start A_19439#verify
 void JWT::verify(const shared_EVP_PKEY& publicKey) const
 {
     checkJwtFormat();
@@ -80,6 +80,7 @@ void JWT::verify(const shared_EVP_PKEY& publicKey) const
     checkIfExpired();
     verifySignature(publicKey);
 }
+// GEMREQ-end A_19439#verify
 
 void JWT::checkJwtFormat() const
 {
@@ -140,7 +141,7 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     auto ctx = shared_EVP_MD_CTX::make();
     Expect(ctx != nullptr, "Can't create context");
     Expect(EVP_DigestVerifyInit(ctx, nullptr, EVP_sha256(), nullptr,
-                                const_cast<EVP_PKEY*>(publicKey.get())) == 1,
+                                publicKey.removeConst()) == 1,
            "Can't create digest structure");
     Expect(EVP_DigestVerifyUpdate(ctx, mHeader.data(), mHeader.size()) == 1,
            "Can't update digest structure with header");
@@ -326,6 +327,7 @@ void JWT::checkRequiredClaims() const
     }
     A_20370.finish();
 
+    // GEMREQ-start A_19439#claims
     A_19439.start("Check for a specific authentication strength claim.");
     auto acr = stringForClaim(JWT::acrClaim);
     Expect(acr.has_value(), "Missing required acr claim.");
@@ -334,6 +336,7 @@ void JWT::checkRequiredClaims() const
         Fail2("The provided acr claim is not supported.", JwtInvalidFormatException);
     }
     A_19439.finish();
+    // GEMREQ-end A_19439#claims
 }
 
 void JWT::checkAudClaim() const

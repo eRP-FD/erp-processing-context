@@ -10,6 +10,7 @@
 #include "erp/model/PrescriptionType.hxx"
 #include "erp/model/Resource.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "erp/model/Kvnr.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
@@ -20,6 +21,7 @@ namespace model
 
 enum class KbvStatusKennzeichen;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Task : public Resource<Task>
 {
 public:
@@ -41,14 +43,17 @@ public:
     static Status fromNumericalStatus(int8_t status);
 
     // For creation of a new task
-    explicit Task(model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode);
+    explicit Task(model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode,
+                  model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion = ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
 
     // For creation from database entry
-    explicit Task(const PrescriptionId& id, PrescriptionType prescriptionType,
-                  model::Timestamp lastModified, model::Timestamp authoredOn, Status status);
+    explicit Task(const PrescriptionId& id, PrescriptionType prescriptionType, model::Timestamp lastModified,
+                  model::Timestamp authoredOn, Status status,
+                  ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
+                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
 
     [[nodiscard]] Status status() const;
-    [[nodiscard]] std::optional<std::string_view> kvnr() const;
+    [[nodiscard]] std::optional<Kvnr> kvnr() const;
     [[nodiscard]] PrescriptionId prescriptionId() const;
     [[nodiscard]] model::Timestamp authoredOn() const;
     [[nodiscard]] PrescriptionType type() const;
@@ -63,7 +68,7 @@ public:
 
     void setPrescriptionId (const model::PrescriptionId& prescriptionId);
     void setStatus(Status newStatus);
-    void setKvnr(std::string_view kvnr);
+    void setKvnr(const Kvnr& kvnr);
     // The UUID are derived from the prescription ID
     void setHealthCarePrescriptionUuid();
     void setPatientConfirmationUuid();
@@ -93,7 +98,7 @@ private:
     void dateToExtensionArray(std::string_view url, const model::Timestamp& expiryDate);
     [[nodiscard]] model::Timestamp dateFromExtensionArray(std::string_view url) const;
 
-    void setAccepDateDependentPrescriptionType(const model::Timestamp& baseTime);
+    void setAcceptDateDependentPrescriptionType(const model::Timestamp& baseTime);
 };
 
 }

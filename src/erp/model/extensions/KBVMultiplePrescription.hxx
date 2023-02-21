@@ -11,6 +11,7 @@
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KBVMultiplePrescription : public model::Extension
 {
 public:

@@ -171,7 +171,7 @@ ErpVector EnrolmentHelper::getBlobName (const ErpBlob& blob)
 EnrolmentHelper::EnrolmentHelper (
     const HsmIdentity& identity,
     const std::string& certificateFilename,
-    const size_t _logLevel)
+    const int32_t _logLevel)
     : logLevel(_logLevel),
       mCertificateFilename(certificateFilename),
       mHsmSession(HsmProductionClient::connect(identity))

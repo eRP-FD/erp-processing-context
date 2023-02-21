@@ -15,7 +15,7 @@ class ProfiledElementTypeInfo;
 class ProfileSetValidator;
 class ProfileValidatorMapKey;
 class ValidationData;
-class ValidationResultList;
+class ValidationResults;
 
 /**
  * @brief Resolves the Validation result for elements, that are allowed to match one of multiple Profiles
@@ -32,7 +32,7 @@ public:
     ProfileSolver& operator =(const ProfileSolver&) = delete;
     ProfileSolver& operator =(ProfileSolver&&) noexcept;
     void requireOne(std::map<ProfiledElementTypeInfo, std::shared_ptr<const ValidationData>> profileData);
-    [[nodiscard]] ValidationResultList collectResults() const;
+    [[nodiscard]] ValidationResults collectResults() const;
     bool fail(const ProfiledElementTypeInfo& mapKey);
     [[nodiscard]] bool failed() const;
 

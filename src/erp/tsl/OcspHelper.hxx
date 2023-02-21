@@ -7,6 +7,7 @@
 #define ERP_TSL_OCSPHELPER_HXX
 
 #include "erp/crypto/OpenSslHelper.hxx"
+#include "erp/tsl/TslMode.hxx"
 
 #include <memory>
 
@@ -19,7 +20,8 @@ public:
         void operator() (ASN1_SEQUENCE_ANY* asn1SequenceAny);
     };
 
-    static constexpr int DEFAULT_OCSP_GRACEPERIOD_SECONDS = 600;
+    static constexpr int DEFAULT_OCSP_NON_QES_GRACE_PERIOD_SECONDS = 3600; // 1 hour
+    static constexpr int DEFAULT_OCSP_QES_GRACE_PERIOD_SECONDS = 43200; // 12 hours
 
     using Asn1SequencePtr = std::unique_ptr<ASN1_SEQUENCE_ANY, Asn1SequenceDeleter>;
 
@@ -31,6 +33,8 @@ public:
     static std::string ocspResponseToString(OCSP_RESPONSE& ocspResponse);
 
     static OcspResponsePtr stringToOcspResponse(const std::string& responseString);
+
+    static std::chrono::system_clock::duration getOcspGracePeriod(TslMode tslMode);
 };
 
 #endif

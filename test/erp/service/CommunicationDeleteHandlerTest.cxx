@@ -42,7 +42,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
 
     Task task = addTaskToDatabase({Task::Status::ready, InsurantE});
 
-    std::string_view kvnrTask = task.kvnr().value();
+    const std::string kvnrTask = task.kvnr().value().id();
     std::string kvnrRepresentative = InsurantB;
 
     // Add Communication messages to database.
@@ -50,25 +50,25 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
 
     Communication infoReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask}, {ActorRole::Pharmacists, mPharmacy.id()},
         "", InfoReqMessage, model::Timestamp::now() });
     ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
 
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
-        {ActorRole::Pharmacists, mPharmacy}, {ActorRole::Insurant, std::string(kvnrTask)},
+        {ActorRole::Pharmacists, mPharmacy.id()}, {ActorRole::Insurant, kvnrTask},
         "", ReplyMessage, model::Timestamp::now() });
     ASSERT_TRUE(reply.id().value().isValidIheUuid());
 
     Communication dispReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::DispReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask}, {ActorRole::Pharmacists, mPharmacy.id()},
         std::string(task.accessCode()), DispReqMessage, model::Timestamp::now() });
     ASSERT_TRUE(dispReq.id().value().isValidIheUuid());
 
     Communication representative = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Representative,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Representative, kvnrRepresentative},
+        {ActorRole::Insurant, kvnrTask}, {ActorRole::Representative, kvnrRepresentative},
         std::string(task.accessCode()), RepresentativeMessageByInsurant, model::Timestamp::now() });
     ASSERT_TRUE(representative.id().value().isValidIheUuid());
 
@@ -84,11 +84,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
     {
         A_20260.test("Anwendungsfall Nachricht durch Versicherten löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + infoReq.id().value().toString(), jwtInsurant), "");
 
@@ -100,8 +100,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that the communication no longer exist in the database.
@@ -113,11 +113,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
     {
         A_20776.test("E-Rezept-Fachdienst - Nachricht durch Abgebenden löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
             + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtPharamacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharamacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + reply.id().value().toString(), jwtPharamacy), "");
 
@@ -129,7 +129,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
             + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
@@ -142,7 +142,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
     {
         A_20260.test("Anwendungsfall Nachricht durch Versicherten löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
             + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
@@ -158,7 +158,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
             + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
@@ -171,7 +171,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
     {
         A_20260.test("Anwendungsfall Nachricht durch Versicherten löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
             + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
@@ -187,7 +187,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
             + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
@@ -205,7 +205,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
 
     Task task = addTaskToDatabase({ Task::Status::ready, InsurantE });
 
-    std::string_view kvnrTask = task.kvnr().value();
+    const auto kvnrTask = task.kvnr().value();
     std::string kvnrRepresentative = InsurantB;
 
     // Add Communication messages to database.
@@ -216,28 +216,28 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
 
     Communication infoReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
         "", InfoReqMessage,
         timestampSent, timestampReceived });
     ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
 
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
-        {ActorRole::Pharmacists, mPharmacy}, {ActorRole::Insurant, std::string(kvnrTask)},
+        {ActorRole::Pharmacists, mPharmacy.id()}, {ActorRole::Insurant, kvnrTask.id()},
         "", ReplyMessage,
         timestampSent, timestampReceived });
     ASSERT_TRUE(reply.id().value().isValidIheUuid());
 
     Communication dispReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::DispReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
         std::string(task.accessCode()), DispReqMessage,
         timestampSent, timestampReceived });
     ASSERT_TRUE(dispReq.id().value().isValidIheUuid());
 
     Communication representative = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Representative,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Representative, kvnrRepresentative},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Representative, kvnrRepresentative},
         std::string(task.accessCode()), RepresentativeMessageByInsurant,
         timestampSent, timestampReceived });
     ASSERT_TRUE(representative.id().value().isValidIheUuid());
@@ -254,11 +254,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
     {
         A_20260.test("Anwendungsfall Nachricht durch Versicherten löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + infoReq.id().value().toString(), jwtInsurant), "");
 
@@ -271,8 +271,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that the communication no longer exist in the database.
@@ -284,11 +284,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
     {
         A_20776.test("E-Rezept-Fachdienst - Nachricht durch Abgebenden löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + reply.id().value().toString(), jwtPharmacy), "");
 
@@ -301,8 +301,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that the communication no longer exist in the database.
@@ -314,11 +314,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
     {
         A_20260.test("Anwendungsfall Nachricht durch Versicherten löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + dispReq.id().value().toString(), jwtInsurant), "");
 
@@ -331,8 +331,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that the communication no longer exist in the database.
@@ -344,11 +344,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
     {
         A_20260.test("Anwendungsfall Nachricht durch Versicherten löschen");
 
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + representative.id().value().toString(), jwtInsurant), "");
 
@@ -361,8 +361,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that the communication no longer exist in the database.
@@ -377,7 +377,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
 
     Task task = addTaskToDatabase({ Task::Status::ready, InsurantE });
 
-    std::string_view kvnrTask = task.kvnr().value();
+    const auto kvnrTask = task.kvnr().value();
     std::string kvnrRepresentative = InsurantB;
 
     Uuid invalidId;
@@ -387,25 +387,25 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
 
     Communication infoReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
         "", InfoReqMessage, model::Timestamp::now() });
     ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
 
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
-        {ActorRole::Pharmacists, mPharmacy}, {ActorRole::Insurant, std::string(kvnrTask)},
+        {ActorRole::Pharmacists, mPharmacy.id()}, {ActorRole::Insurant, kvnrTask.id()},
         "", ReplyMessage, model::Timestamp::now() });
     ASSERT_TRUE(reply.id().value().isValidIheUuid());
 
     Communication dispReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::DispReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
         std::string(task.accessCode()), DispReqMessage, model::Timestamp::now() });
     ASSERT_TRUE(dispReq.id().value().isValidIheUuid());
 
     Communication representative = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Representative,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Representative, kvnrRepresentative},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Representative, kvnrRepresentative},
         std::string(task.accessCode()), RepresentativeMessageByInsurant, model::Timestamp::now() });
     ASSERT_TRUE(representative.id().value().isValidIheUuid());
 
@@ -419,11 +419,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
     // Delete InfoReq message
     //-----------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + invalidId.toString(), jwtInsurant), "");
 
@@ -434,8 +434,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.
@@ -445,11 +445,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
     // Delete Reply message
     //----------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + invalidId.toString(), jwtPharmacy), "");
 
@@ -460,8 +460,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.
@@ -471,11 +471,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
     // Delete DispReq message
     //-----------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + invalidId.toString(), jwtInsurant), "");
 
@@ -486,8 +486,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.
@@ -497,11 +497,11 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
     // Delete Representative message
     //------------------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + invalidId.toString(), jwtInsurant), "");
 
@@ -512,8 +512,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.
@@ -528,7 +528,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
 
     Task task = addTaskToDatabase({ Task::Status::ready, InsurantE });
 
-    std::string_view kvnrTask = task.kvnr().value();
+    const auto kvnrTask = task.kvnr().value();
     std::string kvnrRepresentative = InsurantB;
 
     // Add Communication messages to database.
@@ -536,25 +536,25 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
 
     Communication infoReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
         "", InfoReqMessage, model::Timestamp::now() });
     ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
 
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
-        {ActorRole::Pharmacists, mPharmacy}, {ActorRole::Insurant, std::string(kvnrTask)},
+        {ActorRole::Pharmacists, mPharmacy.id()}, {ActorRole::Insurant, kvnrTask.id()},
         "", ReplyMessage, model::Timestamp::now() });
     ASSERT_TRUE(reply.id().value().isValidIheUuid());
 
     Communication dispReq = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::DispReq,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Pharmacists, mPharmacy},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
         std::string(task.accessCode()), DispReqMessage, model::Timestamp::now() });
     ASSERT_TRUE(dispReq.id().value().isValidIheUuid());
 
     Communication representative = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Representative,
-        {ActorRole::Insurant, std::string(kvnrTask)}, {ActorRole::Representative, kvnrRepresentative},
+        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Representative, kvnrRepresentative},
         std::string(task.accessCode()), RepresentativeMessageByInsurant, model::Timestamp::now() });
     ASSERT_TRUE(representative.id().value().isValidIheUuid());
 
@@ -568,12 +568,12 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
     // Delete InfoReq message
     //-----------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Pharmacy is not allowed to delete InfoReq sent by the insurant.
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + infoReq.id().value().toString(), jwtPharmacy), "");
 
@@ -584,8 +584,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.
@@ -595,12 +595,12 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
     // Delete Reply message
     //----------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Insurant is not allowed to delete Reply sent by pharmacy.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(std::string(kvnrTask)) };
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + reply.id().value().toString(), jwtInsurant), "");
 
@@ -611,8 +611,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.
@@ -622,12 +622,12 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
     // Delete DispReq message
     //-----------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Pharmacy is not allowed to delete DispReq sent by the insurant.
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy) };
+        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
         // Create the inner request
         ClientRequest request(createDeleteHeader("/Communication/" + dispReq.id().value().toString(), jwtPharmacy), "");
 
@@ -638,8 +638,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.
@@ -649,8 +649,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
     // Delete Representative message
     //------------------------------
     {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Representative is not allowed to delete message sent by insurant.
@@ -665,8 +665,8 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto innerResponse = verifyOuterResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy).size()
-            + database->retrieveCommunicationIds(std::string(kvnrTask)).size()
+        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
+            + database->retrieveCommunicationIds(kvnrTask.id()).size()
             + database->retrieveCommunicationIds(kvnrRepresentative).size();
 
         // Verify that no communication object has been removed from the database.

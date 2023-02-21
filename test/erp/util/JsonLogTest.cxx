@@ -4,6 +4,7 @@
  */
 
 #include "erp/util/JsonLog.hxx"
+#include "erp/util/Configuration.hxx"
 
 #include <gtest/gtest.h>
 
@@ -38,7 +39,12 @@ TEST_F(JsonLogTest, logWithDetails)
             .details("only shown in debug builds");
     }
 
-    ASSERT_EQ(result.str(), R"({"id":285212673,"host":"127.0.0.1","port":9090,"message":"this is the log message","details":"only shown in debug builds"})");
+    const auto& config = Configuration::instance();
+    std::stringstream expected;
+    expected << R"({"id":285212673,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
+             << R"(,"message":"this is the log message","details":"only shown in debug builds"})";
+
+    ASSERT_EQ(result.str(), expected.str());
 }
 
 
@@ -52,7 +58,11 @@ TEST_F(JsonLogTest, logWithoutDetails)
             .details("only shown in debug builds");
     }
 
-    ASSERT_EQ(result.str(), R"({"id":285212673,"host":"127.0.0.1","port":9090,"message":"this is the log message"})");
+    const auto& config = Configuration::instance();
+    std::stringstream expected;
+    expected << R"({"id":285212673,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
+             << R"(,"message":"this is the log message"})";
+    ASSERT_EQ(result.str(), expected.str());
 }
 
 
@@ -80,7 +90,11 @@ TEST_F(JsonLogTest, keyValueDouble_1_234)
         log.keyValue("key", 1.234);
     }
 
-    ASSERT_EQ(result.str(), R"({"id":0,"host":"127.0.0.1","port":9090,"key":1.234})");
+    const auto& config = Configuration::instance();
+    std::stringstream expected;
+    expected << R"({"id":0,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
+             << R"(,"key":1.234})";
+    ASSERT_EQ(result.str(), expected.str());
 }
 
 
@@ -93,7 +107,11 @@ TEST_F(JsonLogTest, keyValueDouble_12345_6789)
         log.keyValue("key", 12345.6789, 4);
     }
 
-    ASSERT_EQ(result.str(), R"({"id":0,"host":"127.0.0.1","port":9090,"key":12345.6789})");
+    const auto& config = Configuration::instance();
+    std::stringstream expected;
+    expected << R"({"id":0,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
+             << R"(,"key":12345.6789})";
+    ASSERT_EQ(result.str(), expected.str());
 }
 
 

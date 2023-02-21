@@ -1,2 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<OperationDefinition xmlns="http://hl7.org/fhir"><url value="http://gematik.de/fhir/OperationDefinition/CreateOperationDefinition"/><version value="1.1.1"/><name value="Create Operation"/><status value="draft"/><kind value="operation"/><date value="2020-07-01"/><description value="This operation creates a Task for the prescription of a specific workflowType."/><code value="create"/><resource value="Task"/><system value="false"/><type value="true"/><instance value="false"/><outputProfile value="https://gematik.de/fhir/StructureDefinition/ErxTask"/><parameter><name value="workflowType"/><use value="in"/><min value="1"/><max value="1"/><documentation value="This parameter defines the type of a prescription."/><type value="integer"/></parameter><parameter><name value="task"/><use value="out"/><min value="1"/><max value="1"/><documentation value="The created Task."/><type value="Task"/></parameter></OperationDefinition>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <url value="http://gematik.de/fhir/OperationDefinition/CreateOperationDefinition"/>
+  <version value="1.1.1"/>
+  <name value="Create Operation"/>
+  <status value="draft"/>
+  <kind value="operation"/>
+  <date value="2020-07-01"/>
+  <description value="This operation creates a Task for the prescription of a specific workflowType."/>
+  <code value="create"/>
+  <resource value="Task"/>
+  <system value="false"/>
+  <type value="true"/>
+  <instance value="false"/>
+  <outputProfile value="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
+  <parameter>
+    <name value="workflowType"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="This parameter defines the type of a prescription."/>
+    <type value="integer"/>
+  </parameter>
+  <parameter>
+    <name value="task"/>
+    <use value="out"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="The created Task."/>
+    <type value="Task"/>
+  </parameter>
+</OperationDefinition>

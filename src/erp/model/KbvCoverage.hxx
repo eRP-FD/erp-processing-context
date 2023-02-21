@@ -11,6 +11,7 @@
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KbvCoverage : public Resource<KbvCoverage, ResourceVersion::KbvItaErp>
 {
 public:

@@ -59,7 +59,7 @@ protected:
                                 const std::optional<fhirtools::ValidatorOptions>& =
                                     model::ResourceBase::defaultValidatorOptions());
 
-    static std::string getLanguageFromHeader(const Header& requestHeader);
+    static std::optional<std::string> getLanguageFromHeader(const Header& requestHeader);
 
     static bool responseIsPartOfMultiplePages(const PagingArgument& pagingArgument, std::size_t numOfResults);
 
@@ -91,15 +91,17 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& cont
 
     if (mimeType == MimeType::fhirJson || mimeType == MimeType::json)
     {
-        auto resource = TModel::fromJson(body, context.serviceContext.getJsonValidator(),
-                                         context.serviceContext.getXmlValidator(),
-                                         context.serviceContext.getInCodeValidator(), schemaType, valOpts);
+        auto resource = TModel::fromJson(
+            body, context.serviceContext.getJsonValidator(), context.serviceContext.getXmlValidator(),
+            context.serviceContext.getInCodeValidator(), schemaType,
+            model::ResourceVersion::supportedBundles(), valOpts);
         return resource;
     }
     else if (mimeType == MimeType::xml || mimeType == MimeType::fhirXml)
     {
-        auto resource = TModel::fromXml(body, context.serviceContext.getXmlValidator(),
-                                        context.serviceContext.getInCodeValidator(), schemaType, valOpts);
+        auto resource = TModel::fromXml(
+            body, context.serviceContext.getXmlValidator(), context.serviceContext.getInCodeValidator(), schemaType,
+            model::ResourceVersion::supportedBundles(), valOpts);
         return resource;
     }
 
@@ -108,4 +110,3 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& cont
 
 
 #endif
-

@@ -9,6 +9,8 @@
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/crypto/OpenSslHelper.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "erp/tsl/OcspCheckDescriptor.hxx"
+#include "erp/tsl/X509Certificate.hxx"
 
 #include <optional>
 #include <string>
@@ -93,10 +95,7 @@ public:
      * @param requestSender             used to send OCSP status requests
      * @param trustStore                where to look for the certificate; may be updated
      *                                  during this call
-     * @param ocspResponse              optional ocsp response that should be used for OCSP check if present
-     * @param referenceTimePoint        optional timepoint to be used for OCSP response validity checks
-     * @param forceOcspRequest          if true, the OCSP request must be done, provided OCSP-Response and OCSP-cache
-     *                                  are ignored
+     * @param ocspCheckDescriptor       describes the OCSP check approach to use
      *
      * @throws TslError                 in case of problems
      */
@@ -105,9 +104,7 @@ public:
         const std::unordered_set<CertificateType>& typeRestrictions,
         const UrlRequestSender& requestSender,
         TrustStore& trustStore,
-        const OcspResponsePtr& ocspResponse = {},
-        const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint = std::nullopt,
-        const bool forceOcspRequest = false);
+        const OcspCheckDescriptor& ocspCheckDescriptor);
 
 
     /**
@@ -187,6 +184,23 @@ private:
         const XmlValidator& xmlValidator,
         TrustStore& trustStore,
         const std::vector<X509Certificate>& expectedSignerCertificates);
+
+    /**
+     * This internal implementation does verification of the provided certificate without OCSP-Validation.
+     * Info: According to gemSpec_PKI the checked certificates must be signed directly by the trusted authority.
+     *
+     * @param certificate               the certificate to check
+     * @param typeRestrictions          if the set is not empty, the certificate type must be included there
+     * @param trustStore                where to look for the certificate; may be updated
+     *                                  during this call
+     *
+     * @throws TslError                 in case of problems
+     */
+    static std::tuple<CertificateType, X509Certificate>
+    checkCertificateWithoutOcspCheck(
+        X509Certificate& certificate,
+        const std::unordered_set<CertificateType>& typeRestrictions,
+        TrustStore& trustStore);
 
 
     // Make private methods available to gtest.

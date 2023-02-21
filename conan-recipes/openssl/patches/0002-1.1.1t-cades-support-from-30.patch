@@ -1,0 +1,1799 @@
+From f6b24ddc3dffa36a988eee44920818a97ec936bd Mon Sep 17 00:00:00 2001
+From: <redacted>
+Date: Thu, 9 Feb 2023 10:05:59 +0100
+Subject: [PATCH 2/3] 1.1.1t-cades-support-from-30.patch
+
+---
+ Configure                  |   3 +-
+ apps/cms.c                 |   6 +-
+ crypto/cms/cms_sd.c        |  73 ++++++++++
+ crypto/err/err.c           |   1 +
+ crypto/err/err_all.c       |   2 +
+ crypto/err/openssl.ec      |   1 +
+ crypto/err/openssl.txt     |  15 ++-
+ crypto/ess/build.info      |   3 +
+ crypto/ess/ess_asn1.c      |  57 ++++++++
+ crypto/ess/ess_err.c       |  53 ++++++++
+ crypto/ess/ess_lib.c       | 270 +++++++++++++++++++++++++++++++++++++
+ crypto/ts/ts_asn1.c        |  41 ------
+ crypto/ts/ts_err.c         |  12 --
+ crypto/ts/ts_local.h       |  61 ---------
+ crypto/ts/ts_rsp_sign.c    | 249 +---------------------------------
+ crypto/ts/ts_rsp_verify.c  |  30 +----
+ doc/man1/cms.pod           |  41 ++++++
+ include/internal/ess_int.h |  78 +++++++++++
+ include/openssl/cms.h      |   2 +
+ include/openssl/cmserr.h   |   2 +
+ include/openssl/err.h      |   2 +
+ include/openssl/ess.h      |  80 +++++++++++
+ include/openssl/esserr.h   |  38 ++++++
+ include/openssl/ts.h       |  48 +------
+ include/openssl/tserr.h    |   6 -
+ util/libcrypto.num         |  53 ++++----
+ 26 files changed, 757 insertions(+), 470 deletions(-)
+ create mode 100644 crypto/ess/build.info
+ create mode 100644 crypto/ess/ess_asn1.c
+ create mode 100644 crypto/ess/ess_err.c
+ create mode 100644 crypto/ess/ess_lib.c
+ create mode 100644 include/internal/ess_int.h
+ create mode 100644 include/openssl/ess.h
+ create mode 100644 include/openssl/esserr.h
+
+diff --git a/Configure b/Configure
+index 6cb1a84f4b..734ea72ba1 100755
+--- a/Configure
++++ b/Configure
+@@ -327,7 +327,7 @@ $config{sdirs} = [
+     "bn", "ec", "rsa", "dsa", "dh", "sm2", "dso", "engine",
+     "buffer", "bio", "stack", "lhash", "rand", "err",
+     "evp", "asn1", "pem", "x509", "x509v3", "conf", "txt_db", "pkcs7", "pkcs12", "comp", "ocsp", "ui",
+-    "cms", "ts", "srp", "cmac", "ct", "async", "kdf", "store"
++    "cms", "ts", "srp", "cmac", "ct", "async", "kdf", "store", "ess"
+     ];
+ # test/ subdirectories to build
+ $config{tdirs} = [ "ossl_shim" ];
+@@ -379,6 +379,7 @@ my @disablables = (
+     "egd",
+     "engine",
+     "err",
++    "ess",
+     "external-tests",
+     "filenames",
+     "fuzz-libfuzzer",
+diff --git a/apps/cms.c b/apps/cms.c
+index 71554037d0..4ac32c8d61 100644
+--- a/apps/cms.c
++++ b/apps/cms.c
+@@ -65,7 +65,7 @@ struct cms_key_param_st {
+ typedef enum OPTION_choice {
+     OPT_ERR = -1, OPT_EOF = 0, OPT_HELP,
+     OPT_INFORM, OPT_OUTFORM, OPT_IN, OPT_OUT, OPT_ENCRYPT,
+-    OPT_DECRYPT, OPT_SIGN, OPT_SIGN_RECEIPT, OPT_RESIGN,
++    OPT_DECRYPT, OPT_SIGN, OPT_CADES, OPT_SIGN_RECEIPT, OPT_RESIGN,
+     OPT_VERIFY, OPT_VERIFY_RETCODE, OPT_VERIFY_RECEIPT,
+     OPT_CMSOUT, OPT_DATA_OUT, OPT_DATA_CREATE, OPT_DIGEST_VERIFY,
+     OPT_DIGEST_CREATE, OPT_COMPRESS, OPT_UNCOMPRESS,
+@@ -102,6 +102,7 @@ const OPTIONS cms_options[] = {
+     {"sign", OPT_SIGN, '-', "Sign message"},
+     {"sign_receipt", OPT_SIGN_RECEIPT, '-', "Generate a signed receipt for the message"},
+     {"resign", OPT_RESIGN, '-', "Resign a signed message"},
++    {"cades", OPT_CADES, '-', "Include signer certificate digest"},
+     {"verify", OPT_VERIFY, '-', "Verify signed message"},
+     {"verify_retcode", OPT_VERIFY_RETCODE, '-'},
+     {"verify_receipt", OPT_VERIFY_RECEIPT, '<'},
+@@ -326,6 +327,9 @@ int cms_main(int argc, char **argv)
+         case OPT_BINARY:
+             flags |= CMS_BINARY;
+             break;
++        case OPT_CADES:
++            flags |= CMS_CADES;
++            break;
+         case OPT_KEYID:
+             flags |= CMS_USE_KEYID;
+             break;
+diff --git a/crypto/cms/cms_sd.c b/crypto/cms/cms_sd.c
+index 3f2a782565..b22299348b 100644
+--- a/crypto/cms/cms_sd.c
++++ b/crypto/cms/cms_sd.c
+@@ -14,9 +14,11 @@
+ #include <openssl/x509v3.h>
+ #include <openssl/err.h>
+ #include <openssl/cms.h>
++#include <openssl/ess.h>
+ #include "cms_local.h"
+ #include "crypto/asn1.h"
+ #include "crypto/evp.h"
++#include "internal/ess_int.h"
+ 
+ /* CMS SignedData Utilities */
+ 
+@@ -238,6 +240,56 @@ static int cms_sd_asn1_ctrl(CMS_SignerInfo *si, int cmd)
+     return 1;
+ }
+ 
++/* Add SigningCertificate signed attribute to the signer info. */
++static int ossl_cms_add1_signing_cert(CMS_SignerInfo *si,
++                                      const ESS_SIGNING_CERT *sc)
++{
++    ASN1_STRING *seq = NULL;
++    unsigned char *p, *pp = NULL;
++    int ret, len = i2d_ESS_SIGNING_CERT(sc, NULL);
++
++    if (len <= 0 || (pp = OPENSSL_malloc(len)) == NULL)
++        return 0;
++
++    p = pp;
++    i2d_ESS_SIGNING_CERT(sc, &p);
++    if (!(seq = ASN1_STRING_new()) || !ASN1_STRING_set(seq, pp, len)) {
++        ASN1_STRING_free(seq);
++        OPENSSL_free(pp);
++        return 0;
++    }
++    OPENSSL_free(pp);
++    ret = CMS_signed_add1_attr_by_NID(si, NID_id_smime_aa_signingCertificate,
++                                      V_ASN1_SEQUENCE, seq, -1);
++    ASN1_STRING_free(seq);
++    return ret;
++}
++
++/* Add SigningCertificateV2 signed attribute to the signer info. */
++static int ossl_cms_add1_signing_cert_v2(CMS_SignerInfo *si,
++                                         const ESS_SIGNING_CERT_V2 *sc)
++{
++    ASN1_STRING *seq = NULL;
++    unsigned char *p, *pp = NULL;
++    int ret, len = i2d_ESS_SIGNING_CERT_V2(sc, NULL);
++
++    if (len <= 0 || (pp = OPENSSL_malloc(len)) == NULL)
++        return 0;
++
++    p = pp;
++    i2d_ESS_SIGNING_CERT_V2(sc, &p);
++    if (!(seq = ASN1_STRING_new()) || !ASN1_STRING_set(seq, pp, len)) {
++        ASN1_STRING_free(seq);
++        OPENSSL_free(pp);
++        return 0;
++    }
++    OPENSSL_free(pp);
++    ret = CMS_signed_add1_attr_by_NID(si, NID_id_smime_aa_signingCertificateV2,
++                                      V_ASN1_SEQUENCE, seq, -1);
++    ASN1_STRING_free(seq);
++    return ret;
++}
++
+ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+                                 X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
+                                 unsigned int flags)
+@@ -355,6 +407,27 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+                 !CMS_SignerInfo_sign(si))
+                 goto err;
+         }
++        if (flags & CMS_CADES) {
++            ESS_SIGNING_CERT *sc = NULL;
++            ESS_SIGNING_CERT_V2 *sc2 = NULL;
++            int add_sc;
++
++            if (md == EVP_sha1() || md == NULL) {
++                if ((sc = ESS_SIGNING_CERT_new_init(signer,
++                                                    NULL, 1)) == NULL)
++                    goto err;
++                add_sc = ossl_cms_add1_signing_cert(si, sc);
++                ESS_SIGNING_CERT_free(sc);
++            } else {
++                if ((sc2 = ESS_SIGNING_CERT_V2_new_init(md, signer,
++                                                        NULL, 1)) == NULL)
++                    goto err;
++                add_sc = ossl_cms_add1_signing_cert_v2(si, sc2);
++                ESS_SIGNING_CERT_V2_free(sc2);
++            }
++            if (!add_sc)
++                goto err;
++        }
+     }
+ 
+     if (!(flags & CMS_NOCERTS)) {
+diff --git a/crypto/err/err.c b/crypto/err/err.c
+index 239a3cea9c..9c3cec69e6 100644
+--- a/crypto/err/err.c
++++ b/crypto/err/err.c
+@@ -66,6 +66,7 @@ static ERR_STRING_DATA ERR_str_libraries[] = {
+     {ERR_PACK(ERR_LIB_KDF, 0, 0), "KDF routines"},
+     {ERR_PACK(ERR_LIB_OSSL_STORE, 0, 0), "STORE routines"},
+     {ERR_PACK(ERR_LIB_SM2, 0, 0), "SM2 routines"},
++    {ERR_PACK(ERR_LIB_ESS, 0, 0), "ESS routines"},
+     {0, NULL},
+ };
+ 
+diff --git a/crypto/err/err_all.c b/crypto/err/err_all.c
+index 7c0a5f0b9c..9eb0a9db4f 100644
+--- a/crypto/err/err_all.c
++++ b/crypto/err/err_all.c
+@@ -38,6 +38,7 @@
+ #include <openssl/asyncerr.h>
+ #include <openssl/kdferr.h>
+ #include <openssl/storeerr.h>
++#include <openssl/esserr.h>
+ 
+ int err_load_crypto_strings_int(void)
+ {
+@@ -91,6 +92,7 @@ int err_load_crypto_strings_int(void)
+ # ifndef OPENSSL_NO_CT
+         ERR_load_CT_strings() == 0 ||
+ # endif
++        ERR_load_ESS_strings() == 0 ||
+         ERR_load_ASYNC_strings() == 0 ||
+ #endif
+         ERR_load_KDF_strings() == 0 ||
+diff --git a/crypto/err/openssl.ec b/crypto/err/openssl.ec
+index 5976d1501f..4b8c566ee9 100644
+--- a/crypto/err/openssl.ec
++++ b/crypto/err/openssl.ec
+@@ -34,6 +34,7 @@ L ASYNC         include/openssl/async.h         crypto/async/async_err.c
+ L KDF           include/openssl/kdf.h           crypto/kdf/kdf_err.c
+ L SM2           include/crypto/sm2.h            crypto/sm2/sm2_err.c
+ L OSSL_STORE    include/openssl/store.h         crypto/store/store_err.c
++L ESS           include/openssl/ess.h           crypto/ess/ess_err.c
+ 
+ # additional header files to be scanned for function names
+ L NONE          include/openssl/x509_vfy.h      NONE
+diff --git a/crypto/err/openssl.txt b/crypto/err/openssl.txt
+index ba3a46d5b9..1cdf8c1567 100644
+--- a/crypto/err/openssl.txt
++++ b/crypto/err/openssl.txt
+@@ -715,6 +715,12 @@ ENGINE_F_INT_CTRL_HELPER:172:int_ctrl_helper
+ ENGINE_F_INT_ENGINE_CONFIGURE:188:int_engine_configure
+ ENGINE_F_INT_ENGINE_MODULE_INIT:187:int_engine_module_init
+ ENGINE_F_OSSL_HMAC_INIT:200:ossl_hmac_init
++ESS_F_ESS_CERT_ID_NEW_INIT:100:ESS_CERT_ID_new_init
++ESS_F_ESS_CERT_ID_V2_NEW_INIT:101:ESS_CERT_ID_V2_new_init
++ESS_F_ESS_SIGNING_CERT_ADD:104:ESS_SIGNING_CERT_add
++ESS_F_ESS_SIGNING_CERT_NEW_INIT:102:ESS_SIGNING_CERT_new_init
++ESS_F_ESS_SIGNING_CERT_V2_ADD:105:ESS_SIGNING_CERT_V2_add
++ESS_F_ESS_SIGNING_CERT_V2_NEW_INIT:103:ESS_SIGNING_CERT_V2_new_init
+ EVP_F_AESNI_INIT_KEY:165:aesni_init_key
+ EVP_F_AESNI_XTS_INIT_KEY:207:aesni_xts_init_key
+ EVP_F_AES_GCM_CTRL:196:aes_gcm_ctrl
+@@ -1563,12 +1569,6 @@ SSL_F_WPACKET_START_SUB_PACKET_LEN__:634:WPACKET_start_sub_packet_len__
+ SSL_F_WRITE_STATE_MACHINE:586:write_state_machine
+ TS_F_DEF_SERIAL_CB:110:def_serial_cb
+ TS_F_DEF_TIME_CB:111:def_time_cb
+-TS_F_ESS_ADD_SIGNING_CERT:112:ess_add_signing_cert
+-TS_F_ESS_ADD_SIGNING_CERT_V2:147:ess_add_signing_cert_v2
+-TS_F_ESS_CERT_ID_NEW_INIT:113:ess_CERT_ID_new_init
+-TS_F_ESS_CERT_ID_V2_NEW_INIT:156:ess_cert_id_v2_new_init
+-TS_F_ESS_SIGNING_CERT_NEW_INIT:114:ess_SIGNING_CERT_new_init
+-TS_F_ESS_SIGNING_CERT_V2_NEW_INIT:157:ess_signing_cert_v2_new_init
+ TS_F_INT_TS_RESP_VERIFY_TOKEN:149:int_ts_RESP_verify_token
+ TS_F_PKCS7_TO_TS_TST_INFO:148:PKCS7_to_TS_TST_INFO
+ TS_F_TS_ACCURACY_SET_MICROS:115:TS_ACCURACY_set_micros
+@@ -2238,6 +2238,9 @@ ENGINE_R_UNIMPLEMENTED_CIPHER:146:unimplemented cipher
+ ENGINE_R_UNIMPLEMENTED_DIGEST:147:unimplemented digest
+ ENGINE_R_UNIMPLEMENTED_PUBLIC_KEY_METHOD:101:unimplemented public key method
+ ENGINE_R_VERSION_INCOMPATIBILITY:145:version incompatibility
++ESS_R_ESS_SIGNING_CERTIFICATE_ERROR:102:ess signing certificate error
++ESS_R_ESS_SIGNING_CERT_ADD_ERROR:100:ess signing cert add error
++ESS_R_ESS_SIGNING_CERT_V2_ADD_ERROR:101:ess signing cert v2 add error
+ EVP_R_AES_KEY_SETUP_FAILED:143:aes key setup failed
+ EVP_R_ARIA_KEY_SETUP_FAILED:176:aria key setup failed
+ EVP_R_BAD_DECRYPT:100:bad decrypt
+diff --git a/crypto/ess/build.info b/crypto/ess/build.info
+new file mode 100644
+index 0000000000..24fcecc8f5
+--- /dev/null
++++ b/crypto/ess/build.info
+@@ -0,0 +1,3 @@
++LIBS=../../libcrypto
++SOURCE[../../libcrypto]= \
++        ess_lib.c ess_asn1.c ess_err.c
+diff --git a/crypto/ess/ess_asn1.c b/crypto/ess/ess_asn1.c
+new file mode 100644
+index 0000000000..d10746906a
+--- /dev/null
++++ b/crypto/ess/ess_asn1.c
+@@ -0,0 +1,57 @@
++/*
++ * Copyright 2019 The OpenSSL Project Authors. All Rights Reserved.
++ *
++ * Licensed under the Apache License 2.0 (the "License").  You may not use
++ * this file except in compliance with the License.  You can obtain a copy
++ * in the file LICENSE in the source distribution or at
++ * https://www.openssl.org/source/license.html
++ */
++
++#include <openssl/err.h>
++#include <openssl/asn1t.h>
++#include <openssl/ess.h>
++#include <openssl/x509v3.h>
++#include "internal/ess_int.h"
++
++/* ASN1 stuff for ESS Structure */
++
++ASN1_SEQUENCE(ESS_ISSUER_SERIAL) = {
++        ASN1_SEQUENCE_OF(ESS_ISSUER_SERIAL, issuer, GENERAL_NAME),
++        ASN1_SIMPLE(ESS_ISSUER_SERIAL, serial, ASN1_INTEGER)
++} static_ASN1_SEQUENCE_END(ESS_ISSUER_SERIAL)
++
++IMPLEMENT_ASN1_FUNCTIONS_const(ESS_ISSUER_SERIAL)
++IMPLEMENT_ASN1_DUP_FUNCTION(ESS_ISSUER_SERIAL)
++
++ASN1_SEQUENCE(ESS_CERT_ID) = {
++        ASN1_SIMPLE(ESS_CERT_ID, hash, ASN1_OCTET_STRING),
++        ASN1_OPT(ESS_CERT_ID, issuer_serial, ESS_ISSUER_SERIAL)
++} static_ASN1_SEQUENCE_END(ESS_CERT_ID)
++
++IMPLEMENT_ASN1_FUNCTIONS_const(ESS_CERT_ID)
++IMPLEMENT_ASN1_DUP_FUNCTION(ESS_CERT_ID)
++
++ASN1_SEQUENCE(ESS_SIGNING_CERT) = {
++        ASN1_SEQUENCE_OF(ESS_SIGNING_CERT, cert_ids, ESS_CERT_ID),
++        ASN1_SEQUENCE_OF_OPT(ESS_SIGNING_CERT, policy_info, POLICYINFO)
++} static_ASN1_SEQUENCE_END(ESS_SIGNING_CERT)
++
++IMPLEMENT_ASN1_FUNCTIONS_const(ESS_SIGNING_CERT)
++IMPLEMENT_ASN1_DUP_FUNCTION(ESS_SIGNING_CERT)
++
++ASN1_SEQUENCE(ESS_CERT_ID_V2) = {
++        ASN1_OPT(ESS_CERT_ID_V2, hash_alg, X509_ALGOR),
++        ASN1_SIMPLE(ESS_CERT_ID_V2, hash, ASN1_OCTET_STRING),
++        ASN1_OPT(ESS_CERT_ID_V2, issuer_serial, ESS_ISSUER_SERIAL)
++} static_ASN1_SEQUENCE_END(ESS_CERT_ID_V2)
++
++IMPLEMENT_ASN1_FUNCTIONS_const(ESS_CERT_ID_V2)
++IMPLEMENT_ASN1_DUP_FUNCTION(ESS_CERT_ID_V2)
++
++ASN1_SEQUENCE(ESS_SIGNING_CERT_V2) = {
++        ASN1_SEQUENCE_OF(ESS_SIGNING_CERT_V2, cert_ids, ESS_CERT_ID_V2),
++        ASN1_SEQUENCE_OF_OPT(ESS_SIGNING_CERT_V2, policy_info, POLICYINFO)
++} static_ASN1_SEQUENCE_END(ESS_SIGNING_CERT_V2)
++
++IMPLEMENT_ASN1_FUNCTIONS_const(ESS_SIGNING_CERT_V2)
++IMPLEMENT_ASN1_DUP_FUNCTION(ESS_SIGNING_CERT_V2)
+diff --git a/crypto/ess/ess_err.c b/crypto/ess/ess_err.c
+new file mode 100644
+index 0000000000..215b7f1ebc
+--- /dev/null
++++ b/crypto/ess/ess_err.c
+@@ -0,0 +1,53 @@
++/*
++ * Generated by util/mkerr.pl DO NOT EDIT
++ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
++ *
++ * Licensed under the Apache License 2.0 (the "License").  You may not use
++ * this file except in compliance with the License.  You can obtain a copy
++ * in the file LICENSE in the source distribution or at
++ * https://www.openssl.org/source/license.html
++ */
++
++#include <openssl/err.h>
++#include <openssl/esserr.h>
++
++#ifndef OPENSSL_NO_ERR
++
++static const ERR_STRING_DATA ESS_str_functs[] = {
++    {ERR_PACK(ERR_LIB_ESS, ESS_F_ESS_CERT_ID_NEW_INIT, 0),
++     "ESS_CERT_ID_new_init"},
++    {ERR_PACK(ERR_LIB_ESS, ESS_F_ESS_CERT_ID_V2_NEW_INIT, 0),
++     "ESS_CERT_ID_V2_new_init"},
++    {ERR_PACK(ERR_LIB_ESS, ESS_F_ESS_SIGNING_CERT_ADD, 0),
++     "ESS_SIGNING_CERT_add"},
++    {ERR_PACK(ERR_LIB_ESS, ESS_F_ESS_SIGNING_CERT_NEW_INIT, 0),
++     "ESS_SIGNING_CERT_new_init"},
++    {ERR_PACK(ERR_LIB_ESS, ESS_F_ESS_SIGNING_CERT_V2_ADD, 0),
++     "ESS_SIGNING_CERT_V2_add"},
++    {ERR_PACK(ERR_LIB_ESS, ESS_F_ESS_SIGNING_CERT_V2_NEW_INIT, 0),
++     "ESS_SIGNING_CERT_V2_new_init"},
++    {0, NULL}
++};
++
++static const ERR_STRING_DATA ESS_str_reasons[] = {
++    {ERR_PACK(ERR_LIB_ESS, 0, ESS_R_ESS_SIGNING_CERTIFICATE_ERROR),
++    "ess signing certificate error"},
++    {ERR_PACK(ERR_LIB_ESS, 0, ESS_R_ESS_SIGNING_CERT_ADD_ERROR),
++    "ess signing cert add error"},
++    {ERR_PACK(ERR_LIB_ESS, 0, ESS_R_ESS_SIGNING_CERT_V2_ADD_ERROR),
++    "ess signing cert v2 add error"},
++    {0, NULL}
++};
++
++#endif
++
++int ERR_load_ESS_strings(void)
++{
++#ifndef OPENSSL_NO_ERR
++    if (ERR_func_error_string(ESS_str_functs[0].error) == NULL) {
++        ERR_load_strings_const(ESS_str_functs);
++        ERR_load_strings_const(ESS_str_reasons);
++    }
++#endif
++    return 1;
++}
+diff --git a/crypto/ess/ess_lib.c b/crypto/ess/ess_lib.c
+new file mode 100644
+index 0000000000..ce8869f4e1
+--- /dev/null
++++ b/crypto/ess/ess_lib.c
+@@ -0,0 +1,270 @@
++/*
++ * Copyright 2019 The OpenSSL Project Authors. All Rights Reserved.
++ *
++ * Licensed under the Apache License 2.0 (the "License").  You may not use
++ * this file except in compliance with the License.  You can obtain a copy
++ * in the file LICENSE in the source distribution or at
++ * https://www.openssl.org/source/license.html
++ */
++
++#include <string.h>
++#include <openssl/x509v3.h>
++#include <openssl/err.h>
++#include <openssl/ess.h>
++#include "internal/ess_int.h"
++
++static ESS_CERT_ID *ESS_CERT_ID_new_init(X509 *cert, int issuer_needed);
++static ESS_CERT_ID_V2 *ESS_CERT_ID_V2_new_init(const EVP_MD *hash_alg,
++                                               X509 *cert, int issuer_needed);
++
++ESS_SIGNING_CERT *ESS_SIGNING_CERT_new_init(X509 *signcert,
++                                            STACK_OF(X509) *certs,
++                                            int issuer_needed)
++{
++    ESS_CERT_ID *cid = NULL;
++    ESS_SIGNING_CERT *sc;
++    int i;
++
++    if ((sc = ESS_SIGNING_CERT_new()) == NULL)
++        goto err;
++    if (sc->cert_ids == NULL
++        && (sc->cert_ids = sk_ESS_CERT_ID_new_null()) == NULL)
++        goto err;
++
++    if ((cid = ESS_CERT_ID_new_init(signcert, issuer_needed)) == NULL
++        || !sk_ESS_CERT_ID_push(sc->cert_ids, cid))
++        goto err;
++    for (i = 0; i < sk_X509_num(certs); ++i) {
++        X509 *cert = sk_X509_value(certs, i);
++        if ((cid = ESS_CERT_ID_new_init(cert, 1)) == NULL
++            || !sk_ESS_CERT_ID_push(sc->cert_ids, cid))
++            goto err;
++    }
++
++    return sc;
++ err:
++    ESS_SIGNING_CERT_free(sc);
++    ESS_CERT_ID_free(cid);
++    ESSerr(ESS_F_ESS_SIGNING_CERT_NEW_INIT, ERR_R_MALLOC_FAILURE);
++    return NULL;
++}
++
++static ESS_CERT_ID *ESS_CERT_ID_new_init(X509 *cert, int issuer_needed)
++{
++    ESS_CERT_ID *cid = NULL;
++    GENERAL_NAME *name = NULL;
++    unsigned char cert_sha1[SHA_DIGEST_LENGTH];
++
++    /* Call for side-effect of computing hash and caching extensions */
++    X509_check_purpose(cert, -1, 0);
++    if ((cid = ESS_CERT_ID_new()) == NULL)
++        goto err;
++    if (!X509_digest(cert, EVP_sha1(), cert_sha1, NULL))
++        goto err;
++    if (!ASN1_OCTET_STRING_set(cid->hash, cert_sha1, SHA_DIGEST_LENGTH))
++        goto err;
++
++    /* Setting the issuer/serial if requested. */
++    if (!issuer_needed)
++        return cid;
++
++    if (cid->issuer_serial == NULL
++        && (cid->issuer_serial = ESS_ISSUER_SERIAL_new()) == NULL)
++        goto err;
++    if ((name = GENERAL_NAME_new()) == NULL)
++        goto err;
++    name->type = GEN_DIRNAME;
++    if ((name->d.dirn = X509_NAME_dup(X509_get_issuer_name(cert))) == NULL)
++        goto err;
++    if (!sk_GENERAL_NAME_push(cid->issuer_serial->issuer, name))
++        goto err;
++    name = NULL;            /* Ownership is lost. */
++    ASN1_INTEGER_free(cid->issuer_serial->serial);
++    if (!(cid->issuer_serial->serial =
++          ASN1_INTEGER_dup(X509_get_serialNumber(cert))))
++        goto err;
++
++    return cid;
++ err:
++    GENERAL_NAME_free(name);
++    ESS_CERT_ID_free(cid);
++    ESSerr(ESS_F_ESS_CERT_ID_NEW_INIT, ERR_R_MALLOC_FAILURE);
++    return NULL;
++}
++
++ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_new_init(const EVP_MD *hash_alg,
++                                                  X509 *signcert,
++                                                  STACK_OF(X509) *certs,
++                                                  int issuer_needed)
++{
++    ESS_CERT_ID_V2 *cid = NULL;
++    ESS_SIGNING_CERT_V2 *sc;
++    int i;
++
++    if ((sc = ESS_SIGNING_CERT_V2_new()) == NULL)
++        goto err;
++    if ((cid = ESS_CERT_ID_V2_new_init(hash_alg, signcert, issuer_needed)) == NULL)
++        goto err;
++    if (!sk_ESS_CERT_ID_V2_push(sc->cert_ids, cid))
++        goto err;
++    cid = NULL;
++
++    for (i = 0; i < sk_X509_num(certs); ++i) {
++        X509 *cert = sk_X509_value(certs, i);
++
++        if ((cid = ESS_CERT_ID_V2_new_init(hash_alg, cert, 1)) == NULL)
++            goto err;
++        if (!sk_ESS_CERT_ID_V2_push(sc->cert_ids, cid))
++            goto err;
++        cid = NULL;
++    }
++
++    return sc;
++ err:
++    ESS_SIGNING_CERT_V2_free(sc);
++    ESS_CERT_ID_V2_free(cid);
++    ESSerr(ESS_F_ESS_SIGNING_CERT_V2_NEW_INIT, ERR_R_MALLOC_FAILURE);
++    return NULL;
++}
++
++static ESS_CERT_ID_V2 *ESS_CERT_ID_V2_new_init(const EVP_MD *hash_alg,
++                                               X509 *cert, int issuer_needed)
++{
++    ESS_CERT_ID_V2 *cid;
++    GENERAL_NAME *name = NULL;
++    unsigned char hash[EVP_MAX_MD_SIZE];
++    unsigned int hash_len = sizeof(hash);
++    X509_ALGOR *alg = NULL;
++
++    memset(hash, 0, sizeof(hash));
++
++    if ((cid = ESS_CERT_ID_V2_new()) == NULL)
++        goto err;
++
++    if (hash_alg != EVP_sha256()) {
++        alg = X509_ALGOR_new();
++        if (alg == NULL)
++            goto err;
++        X509_ALGOR_set_md(alg, hash_alg);
++        if (alg->algorithm == NULL)
++            goto err;
++        cid->hash_alg = alg;
++        alg = NULL;
++    } else {
++        cid->hash_alg = NULL;
++    }
++
++    if (!X509_digest(cert, hash_alg, hash, &hash_len))
++        goto err;
++
++    if (!ASN1_OCTET_STRING_set(cid->hash, hash, hash_len))
++        goto err;
++
++    if (!issuer_needed)
++        return cid;
++
++    if ((cid->issuer_serial = ESS_ISSUER_SERIAL_new()) == NULL)
++        goto err;
++    if ((name = GENERAL_NAME_new()) == NULL)
++        goto err;
++    name->type = GEN_DIRNAME;
++    if ((name->d.dirn = X509_NAME_dup(X509_get_issuer_name(cert))) == NULL)
++        goto err;
++    if (!sk_GENERAL_NAME_push(cid->issuer_serial->issuer, name))
++        goto err;
++    name = NULL;            /* Ownership is lost. */
++    ASN1_INTEGER_free(cid->issuer_serial->serial);
++    cid->issuer_serial->serial = ASN1_INTEGER_dup(X509_get_serialNumber(cert));
++    if (cid->issuer_serial->serial == NULL)
++        goto err;
++
++    return cid;
++ err:
++    X509_ALGOR_free(alg);
++    GENERAL_NAME_free(name);
++    ESS_CERT_ID_V2_free(cid);
++    ESSerr(ESS_F_ESS_CERT_ID_V2_NEW_INIT, ERR_R_MALLOC_FAILURE);
++    return NULL;
++}
++
++ESS_SIGNING_CERT *ESS_SIGNING_CERT_get(PKCS7_SIGNER_INFO *si)
++{
++    ASN1_TYPE *attr;
++    const unsigned char *p;
++    attr = PKCS7_get_signed_attribute(si, NID_id_smime_aa_signingCertificate);
++    if (!attr)
++        return NULL;
++    p = attr->value.sequence->data;
++    return d2i_ESS_SIGNING_CERT(NULL, &p, attr->value.sequence->length);
++}
++
++ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_get(PKCS7_SIGNER_INFO *si)
++{
++    ASN1_TYPE *attr;
++    const unsigned char *p;
++
++    attr = PKCS7_get_signed_attribute(si, NID_id_smime_aa_signingCertificateV2);
++    if (attr == NULL)
++        return NULL;
++    p = attr->value.sequence->data;
++    return d2i_ESS_SIGNING_CERT_V2(NULL, &p, attr->value.sequence->length);
++}
++
++int ESS_SIGNING_CERT_add(PKCS7_SIGNER_INFO *si, ESS_SIGNING_CERT *sc)
++{
++    ASN1_STRING *seq = NULL;
++    unsigned char *p, *pp = NULL;
++    int len;
++
++    len = i2d_ESS_SIGNING_CERT(sc, NULL);
++    if ((pp = OPENSSL_malloc(len)) == NULL) {
++        ESSerr(ESS_F_ESS_SIGNING_CERT_ADD, ERR_R_MALLOC_FAILURE);
++        goto err;
++    }
++    p = pp;
++    i2d_ESS_SIGNING_CERT(sc, &p);
++    if ((seq = ASN1_STRING_new()) == NULL || !ASN1_STRING_set(seq, pp, len)) {
++        ESSerr(ESS_F_ESS_SIGNING_CERT_ADD, ERR_R_MALLOC_FAILURE);
++        goto err;
++    }
++    OPENSSL_free(pp);
++    pp = NULL;
++    return PKCS7_add_signed_attribute(si,
++                                      NID_id_smime_aa_signingCertificate,
++                                      V_ASN1_SEQUENCE, seq);
++ err:
++    ASN1_STRING_free(seq);
++    OPENSSL_free(pp);
++
++    return 0;
++}
++
++int ESS_SIGNING_CERT_V2_add(PKCS7_SIGNER_INFO *si,
++                            ESS_SIGNING_CERT_V2 *sc)
++{
++    ASN1_STRING *seq = NULL;
++    unsigned char *p, *pp = NULL;
++    int len = i2d_ESS_SIGNING_CERT_V2(sc, NULL);
++
++    if ((pp = OPENSSL_malloc(len)) == NULL) {
++        ESSerr(ESS_F_ESS_SIGNING_CERT_V2_ADD, ERR_R_MALLOC_FAILURE);
++        goto err;
++    }
++
++    p = pp;
++    i2d_ESS_SIGNING_CERT_V2(sc, &p);
++    if ((seq = ASN1_STRING_new()) == NULL || !ASN1_STRING_set(seq, pp, len)) {
++        ESSerr(ESS_F_ESS_SIGNING_CERT_V2_ADD, ERR_R_MALLOC_FAILURE);
++        goto err;
++    }
++
++    OPENSSL_free(pp);
++    pp = NULL;
++    return PKCS7_add_signed_attribute(si,
++                                      NID_id_smime_aa_signingCertificateV2,
++                                      V_ASN1_SEQUENCE, seq);
++ err:
++    ASN1_STRING_free(seq);
++    OPENSSL_free(pp);
++    return 0;
++}
+diff --git a/crypto/ts/ts_asn1.c b/crypto/ts/ts_asn1.c
+index 2840f5858a..2d4eaa5ad8 100644
+--- a/crypto/ts/ts_asn1.c
++++ b/crypto/ts/ts_asn1.c
+@@ -201,47 +201,6 @@ int i2d_TS_RESP_fp(FILE *fp, TS_RESP *a)
+ }
+ #endif
+ 
+-ASN1_SEQUENCE(ESS_ISSUER_SERIAL) = {
+-        ASN1_SEQUENCE_OF(ESS_ISSUER_SERIAL, issuer, GENERAL_NAME),
+-        ASN1_SIMPLE(ESS_ISSUER_SERIAL, serial, ASN1_INTEGER)
+-} static_ASN1_SEQUENCE_END(ESS_ISSUER_SERIAL)
+-
+-IMPLEMENT_ASN1_FUNCTIONS_const(ESS_ISSUER_SERIAL)
+-IMPLEMENT_ASN1_DUP_FUNCTION(ESS_ISSUER_SERIAL)
+-
+-ASN1_SEQUENCE(ESS_CERT_ID) = {
+-        ASN1_SIMPLE(ESS_CERT_ID, hash, ASN1_OCTET_STRING),
+-        ASN1_OPT(ESS_CERT_ID, issuer_serial, ESS_ISSUER_SERIAL)
+-} static_ASN1_SEQUENCE_END(ESS_CERT_ID)
+-
+-IMPLEMENT_ASN1_FUNCTIONS_const(ESS_CERT_ID)
+-IMPLEMENT_ASN1_DUP_FUNCTION(ESS_CERT_ID)
+-
+-ASN1_SEQUENCE(ESS_SIGNING_CERT) = {
+-        ASN1_SEQUENCE_OF(ESS_SIGNING_CERT, cert_ids, ESS_CERT_ID),
+-        ASN1_SEQUENCE_OF_OPT(ESS_SIGNING_CERT, policy_info, POLICYINFO)
+-} static_ASN1_SEQUENCE_END(ESS_SIGNING_CERT)
+-
+-IMPLEMENT_ASN1_FUNCTIONS_const(ESS_SIGNING_CERT)
+-IMPLEMENT_ASN1_DUP_FUNCTION(ESS_SIGNING_CERT)
+-
+-ASN1_SEQUENCE(ESS_CERT_ID_V2) = {
+-        ASN1_OPT(ESS_CERT_ID_V2, hash_alg, X509_ALGOR),
+-        ASN1_SIMPLE(ESS_CERT_ID_V2, hash, ASN1_OCTET_STRING),
+-        ASN1_OPT(ESS_CERT_ID_V2, issuer_serial, ESS_ISSUER_SERIAL)
+-} static_ASN1_SEQUENCE_END(ESS_CERT_ID_V2)
+-
+-IMPLEMENT_ASN1_FUNCTIONS_const(ESS_CERT_ID_V2)
+-IMPLEMENT_ASN1_DUP_FUNCTION(ESS_CERT_ID_V2)
+-
+-ASN1_SEQUENCE(ESS_SIGNING_CERT_V2) = {
+-        ASN1_SEQUENCE_OF(ESS_SIGNING_CERT_V2, cert_ids, ESS_CERT_ID_V2),
+-        ASN1_SEQUENCE_OF_OPT(ESS_SIGNING_CERT_V2, policy_info, POLICYINFO)
+-} static_ASN1_SEQUENCE_END(ESS_SIGNING_CERT_V2)
+-
+-IMPLEMENT_ASN1_FUNCTIONS_const(ESS_SIGNING_CERT_V2)
+-IMPLEMENT_ASN1_DUP_FUNCTION(ESS_SIGNING_CERT_V2)
+-
+ /* Getting encapsulated TS_TST_INFO object from PKCS7. */
+ TS_TST_INFO *PKCS7_to_TS_TST_INFO(PKCS7 *token)
+ {
+diff --git a/crypto/ts/ts_err.c b/crypto/ts/ts_err.c
+index 1f3854d849..b55c44ccbb 100644
+--- a/crypto/ts/ts_err.c
++++ b/crypto/ts/ts_err.c
+@@ -16,18 +16,6 @@
+ static const ERR_STRING_DATA TS_str_functs[] = {
+     {ERR_PACK(ERR_LIB_TS, TS_F_DEF_SERIAL_CB, 0), "def_serial_cb"},
+     {ERR_PACK(ERR_LIB_TS, TS_F_DEF_TIME_CB, 0), "def_time_cb"},
+-    {ERR_PACK(ERR_LIB_TS, TS_F_ESS_ADD_SIGNING_CERT, 0),
+-     "ess_add_signing_cert"},
+-    {ERR_PACK(ERR_LIB_TS, TS_F_ESS_ADD_SIGNING_CERT_V2, 0),
+-     "ess_add_signing_cert_v2"},
+-    {ERR_PACK(ERR_LIB_TS, TS_F_ESS_CERT_ID_NEW_INIT, 0),
+-     "ess_CERT_ID_new_init"},
+-    {ERR_PACK(ERR_LIB_TS, TS_F_ESS_CERT_ID_V2_NEW_INIT, 0),
+-     "ess_cert_id_v2_new_init"},
+-    {ERR_PACK(ERR_LIB_TS, TS_F_ESS_SIGNING_CERT_NEW_INIT, 0),
+-     "ess_SIGNING_CERT_new_init"},
+-    {ERR_PACK(ERR_LIB_TS, TS_F_ESS_SIGNING_CERT_V2_NEW_INIT, 0),
+-     "ess_signing_cert_v2_new_init"},
+     {ERR_PACK(ERR_LIB_TS, TS_F_INT_TS_RESP_VERIFY_TOKEN, 0),
+      "int_ts_RESP_verify_token"},
+     {ERR_PACK(ERR_LIB_TS, TS_F_PKCS7_TO_TS_TST_INFO, 0),
+diff --git a/crypto/ts/ts_local.h b/crypto/ts/ts_local.h
+index 771784fef7..4567f1aa47 100644
+--- a/crypto/ts/ts_local.h
++++ b/crypto/ts/ts_local.h
+@@ -98,67 +98,6 @@ struct TS_status_info_st {
+     ASN1_BIT_STRING *failure_info;
+ };
+ 
+-/*-
+- * IssuerSerial ::= SEQUENCE {
+- *         issuer                   GeneralNames,
+- *         serialNumber             CertificateSerialNumber
+- *         }
+- */
+-struct ESS_issuer_serial {
+-    STACK_OF(GENERAL_NAME) *issuer;
+-    ASN1_INTEGER *serial;
+-};
+-
+-/*-
+- * ESSCertID ::=  SEQUENCE {
+- *         certHash                 Hash,
+- *         issuerSerial             IssuerSerial OPTIONAL
+- * }
+- */
+-struct ESS_cert_id {
+-    ASN1_OCTET_STRING *hash;    /* Always SHA-1 digest. */
+-    ESS_ISSUER_SERIAL *issuer_serial;
+-};
+-
+-/*-
+- * SigningCertificate ::=  SEQUENCE {
+- *        certs        SEQUENCE OF ESSCertID,
+- *        policies     SEQUENCE OF PolicyInformation OPTIONAL
+- * }
+- */
+-struct ESS_signing_cert {
+-    STACK_OF(ESS_CERT_ID) *cert_ids;
+-    STACK_OF(POLICYINFO) *policy_info;
+-};
+-
+-/*-
+- * ESSCertIDv2 ::=  SEQUENCE {
+- *        hashAlgorithm           AlgorithmIdentifier
+- *                DEFAULT {algorithm id-sha256},
+- *        certHash                Hash,
+- *        issuerSerial            IssuerSerial OPTIONAL
+- * }
+- */
+-
+-struct ESS_cert_id_v2_st {
+-    X509_ALGOR *hash_alg;       /* Default: SHA-256 */
+-    ASN1_OCTET_STRING *hash;
+-    ESS_ISSUER_SERIAL *issuer_serial;
+-};
+-
+-/*-
+- * SigningCertificateV2 ::= SEQUENCE {
+- *        certs                   SEQUENCE OF ESSCertIDv2,
+- *        policies                SEQUENCE OF PolicyInformation OPTIONAL
+- * }
+- */
+-
+-struct ESS_signing_cert_v2_st {
+-    STACK_OF(ESS_CERT_ID_V2) *cert_ids;
+-    STACK_OF(POLICYINFO) *policy_info;
+-};
+-
+-
+ struct TS_resp_ctx {
+     X509 *signer_cert;
+     EVP_PKEY *signer_key;
+diff --git a/crypto/ts/ts_rsp_sign.c b/crypto/ts/ts_rsp_sign.c
+index 342582f024..9cde82b29e 100644
+--- a/crypto/ts/ts_rsp_sign.c
++++ b/crypto/ts/ts_rsp_sign.c
+@@ -15,6 +15,7 @@
+ #include <openssl/pkcs7.h>
+ #include <openssl/crypto.h>
+ #include "ts_local.h"
++#include "internal/ess_int.h"
+ 
+ static ASN1_INTEGER *def_serial_cb(struct TS_resp_ctx *, void *);
+ static int def_time_cb(struct TS_resp_ctx *, void *, long *sec, long *usec);
+@@ -29,20 +30,7 @@ static TS_TST_INFO *ts_RESP_create_tst_info(TS_RESP_CTX *ctx,
+ static int ts_RESP_process_extensions(TS_RESP_CTX *ctx);
+ static int ts_RESP_sign(TS_RESP_CTX *ctx);
+ 
+-static ESS_SIGNING_CERT *ess_SIGNING_CERT_new_init(X509 *signcert,
+-                                                   STACK_OF(X509) *certs);
+-static ESS_CERT_ID *ess_CERT_ID_new_init(X509 *cert, int issuer_needed);
+ static int ts_TST_INFO_content_new(PKCS7 *p7);
+-static int ess_add_signing_cert(PKCS7_SIGNER_INFO *si, ESS_SIGNING_CERT *sc);
+-
+-static ESS_SIGNING_CERT_V2 *ess_signing_cert_v2_new_init(const EVP_MD *hash_alg,
+-                                                         X509 *signcert,
+-                                                         STACK_OF(X509)
+-                                                         *certs);
+-static ESS_CERT_ID_V2 *ess_cert_id_v2_new_init(const EVP_MD *hash_alg,
+-                                               X509 *cert, int issuer_needed);
+-static int ess_add_signing_cert_v2(PKCS7_SIGNER_INFO *si,
+-                                   ESS_SIGNING_CERT_V2 *sc);
+ 
+ static ASN1_GENERALIZEDTIME
+ *TS_RESP_set_genTime_with_precision(ASN1_GENERALIZEDTIME *, long, long,
+@@ -683,20 +671,20 @@ static int ts_RESP_sign(TS_RESP_CTX *ctx)
+     certs = ctx->flags & TS_ESS_CERT_ID_CHAIN ? ctx->certs : NULL;
+     if (ctx->ess_cert_id_digest == NULL
+         || ctx->ess_cert_id_digest == EVP_sha1()) {
+-        if ((sc = ess_SIGNING_CERT_new_init(ctx->signer_cert, certs)) == NULL)
++        if ((sc = ESS_SIGNING_CERT_new_init(ctx->signer_cert, certs, 0)) == NULL)
+             goto err;
+ 
+-        if (!ess_add_signing_cert(si, sc)) {
++        if (!ESS_SIGNING_CERT_add(si, sc)) {
+             TSerr(TS_F_TS_RESP_SIGN, TS_R_ESS_ADD_SIGNING_CERT_ERROR);
+             goto err;
+         }
+     } else {
+-        sc2 = ess_signing_cert_v2_new_init(ctx->ess_cert_id_digest,
+-                                           ctx->signer_cert, certs);
++        sc2 = ESS_SIGNING_CERT_V2_new_init(ctx->ess_cert_id_digest,
++                                           ctx->signer_cert, certs, 0);
+         if (sc2 == NULL)
+             goto err;
+ 
+-        if (!ess_add_signing_cert_v2(si, sc2)) {
++        if (!ESS_SIGNING_CERT_V2_add(si, sc2)) {
+             TSerr(TS_F_TS_RESP_SIGN, TS_R_ESS_ADD_SIGNING_CERT_V2_ERROR);
+             goto err;
+         }
+@@ -733,78 +721,6 @@ static int ts_RESP_sign(TS_RESP_CTX *ctx)
+     return ret;
+ }
+ 
+-static ESS_SIGNING_CERT *ess_SIGNING_CERT_new_init(X509 *signcert,
+-                                                   STACK_OF(X509) *certs)
+-{
+-    ESS_CERT_ID *cid;
+-    ESS_SIGNING_CERT *sc = NULL;
+-    int i;
+-
+-    if ((sc = ESS_SIGNING_CERT_new()) == NULL)
+-        goto err;
+-    if (sc->cert_ids == NULL
+-        && (sc->cert_ids = sk_ESS_CERT_ID_new_null()) == NULL)
+-        goto err;
+-
+-    if ((cid = ess_CERT_ID_new_init(signcert, 0)) == NULL
+-        || !sk_ESS_CERT_ID_push(sc->cert_ids, cid))
+-        goto err;
+-    for (i = 0; i < sk_X509_num(certs); ++i) {
+-        X509 *cert = sk_X509_value(certs, i);
+-        if ((cid = ess_CERT_ID_new_init(cert, 1)) == NULL
+-            || !sk_ESS_CERT_ID_push(sc->cert_ids, cid))
+-            goto err;
+-    }
+-
+-    return sc;
+- err:
+-    ESS_SIGNING_CERT_free(sc);
+-    TSerr(TS_F_ESS_SIGNING_CERT_NEW_INIT, ERR_R_MALLOC_FAILURE);
+-    return NULL;
+-}
+-
+-static ESS_CERT_ID *ess_CERT_ID_new_init(X509 *cert, int issuer_needed)
+-{
+-    ESS_CERT_ID *cid = NULL;
+-    GENERAL_NAME *name = NULL;
+-    unsigned char cert_sha1[SHA_DIGEST_LENGTH];
+-
+-    /* Call for side-effect of computing hash and caching extensions */
+-    X509_check_purpose(cert, -1, 0);
+-    if ((cid = ESS_CERT_ID_new()) == NULL)
+-        goto err;
+-    if (!X509_digest(cert, EVP_sha1(), cert_sha1, NULL))
+-        goto err;
+-    if (!ASN1_OCTET_STRING_set(cid->hash, cert_sha1, SHA_DIGEST_LENGTH))
+-        goto err;
+-
+-    /* Setting the issuer/serial if requested. */
+-    if (issuer_needed) {
+-        if (cid->issuer_serial == NULL
+-            && (cid->issuer_serial = ESS_ISSUER_SERIAL_new()) == NULL)
+-            goto err;
+-        if ((name = GENERAL_NAME_new()) == NULL)
+-            goto err;
+-        name->type = GEN_DIRNAME;
+-        if ((name->d.dirn = X509_NAME_dup(X509_get_issuer_name(cert))) == NULL)
+-            goto err;
+-        if (!sk_GENERAL_NAME_push(cid->issuer_serial->issuer, name))
+-            goto err;
+-        name = NULL;            /* Ownership is lost. */
+-        ASN1_INTEGER_free(cid->issuer_serial->serial);
+-        if (!(cid->issuer_serial->serial =
+-              ASN1_INTEGER_dup(X509_get_serialNumber(cert))))
+-            goto err;
+-    }
+-
+-    return cid;
+- err:
+-    GENERAL_NAME_free(name);
+-    ESS_CERT_ID_free(cid);
+-    TSerr(TS_F_ESS_CERT_ID_NEW_INIT, ERR_R_MALLOC_FAILURE);
+-    return NULL;
+-}
+-
+ static int ts_TST_INFO_content_new(PKCS7 *p7)
+ {
+     PKCS7 *ret = NULL;
+@@ -832,159 +748,6 @@ static int ts_TST_INFO_content_new(PKCS7 *p7)
+     return 0;
+ }
+ 
+-static int ess_add_signing_cert(PKCS7_SIGNER_INFO *si, ESS_SIGNING_CERT *sc)
+-{
+-    ASN1_STRING *seq = NULL;
+-    unsigned char *p, *pp = NULL;
+-    int len;
+-
+-    len = i2d_ESS_SIGNING_CERT(sc, NULL);
+-    if ((pp = OPENSSL_malloc(len)) == NULL) {
+-        TSerr(TS_F_ESS_ADD_SIGNING_CERT, ERR_R_MALLOC_FAILURE);
+-        goto err;
+-    }
+-    p = pp;
+-    i2d_ESS_SIGNING_CERT(sc, &p);
+-    if ((seq = ASN1_STRING_new()) == NULL || !ASN1_STRING_set(seq, pp, len)) {
+-        TSerr(TS_F_ESS_ADD_SIGNING_CERT, ERR_R_MALLOC_FAILURE);
+-        goto err;
+-    }
+-    OPENSSL_free(pp);
+-    pp = NULL;
+-    return PKCS7_add_signed_attribute(si,
+-                                      NID_id_smime_aa_signingCertificate,
+-                                      V_ASN1_SEQUENCE, seq);
+- err:
+-    ASN1_STRING_free(seq);
+-    OPENSSL_free(pp);
+-
+-    return 0;
+-}
+-
+-static ESS_SIGNING_CERT_V2 *ess_signing_cert_v2_new_init(const EVP_MD *hash_alg,
+-                                                         X509 *signcert,
+-                                                         STACK_OF(X509) *certs)
+-{
+-    ESS_CERT_ID_V2 *cid = NULL;
+-    ESS_SIGNING_CERT_V2 *sc = NULL;
+-    int i;
+-
+-    if ((sc = ESS_SIGNING_CERT_V2_new()) == NULL)
+-        goto err;
+-    if ((cid = ess_cert_id_v2_new_init(hash_alg, signcert, 0)) == NULL)
+-        goto err;
+-    if (!sk_ESS_CERT_ID_V2_push(sc->cert_ids, cid))
+-        goto err;
+-    cid = NULL;
+-
+-    for (i = 0; i < sk_X509_num(certs); ++i) {
+-        X509 *cert = sk_X509_value(certs, i);
+-
+-        if ((cid = ess_cert_id_v2_new_init(hash_alg, cert, 1)) == NULL)
+-            goto err;
+-        if (!sk_ESS_CERT_ID_V2_push(sc->cert_ids, cid))
+-            goto err;
+-        cid = NULL;
+-    }
+-
+-    return sc;
+- err:
+-    ESS_SIGNING_CERT_V2_free(sc);
+-    ESS_CERT_ID_V2_free(cid);
+-    TSerr(TS_F_ESS_SIGNING_CERT_V2_NEW_INIT, ERR_R_MALLOC_FAILURE);
+-    return NULL;
+-}
+-
+-static ESS_CERT_ID_V2 *ess_cert_id_v2_new_init(const EVP_MD *hash_alg,
+-                                               X509 *cert, int issuer_needed)
+-{
+-    ESS_CERT_ID_V2 *cid = NULL;
+-    GENERAL_NAME *name = NULL;
+-    unsigned char hash[EVP_MAX_MD_SIZE];
+-    unsigned int hash_len = sizeof(hash);
+-    X509_ALGOR *alg = NULL;
+-
+-    memset(hash, 0, sizeof(hash));
+-
+-    if ((cid = ESS_CERT_ID_V2_new()) == NULL)
+-        goto err;
+-
+-    if (hash_alg != EVP_sha256()) {
+-        alg = X509_ALGOR_new();
+-        if (alg == NULL)
+-            goto err;
+-        X509_ALGOR_set_md(alg, hash_alg);
+-        if (alg->algorithm == NULL)
+-            goto err;
+-        cid->hash_alg = alg;
+-        alg = NULL;
+-    } else {
+-        cid->hash_alg = NULL;
+-    }
+-
+-    if (!X509_digest(cert, hash_alg, hash, &hash_len))
+-        goto err;
+-
+-    if (!ASN1_OCTET_STRING_set(cid->hash, hash, hash_len))
+-        goto err;
+-
+-    if (issuer_needed) {
+-        if ((cid->issuer_serial = ESS_ISSUER_SERIAL_new()) == NULL)
+-            goto err;
+-        if ((name = GENERAL_NAME_new()) == NULL)
+-            goto err;
+-        name->type = GEN_DIRNAME;
+-        if ((name->d.dirn = X509_NAME_dup(X509_get_issuer_name(cert))) == NULL)
+-            goto err;
+-        if (!sk_GENERAL_NAME_push(cid->issuer_serial->issuer, name))
+-            goto err;
+-        name = NULL;            /* Ownership is lost. */
+-        ASN1_INTEGER_free(cid->issuer_serial->serial);
+-        cid->issuer_serial->serial =
+-                ASN1_INTEGER_dup(X509_get_serialNumber(cert));
+-        if (cid->issuer_serial->serial == NULL)
+-            goto err;
+-    }
+-
+-    return cid;
+- err:
+-    X509_ALGOR_free(alg);
+-    GENERAL_NAME_free(name);
+-    ESS_CERT_ID_V2_free(cid);
+-    TSerr(TS_F_ESS_CERT_ID_V2_NEW_INIT, ERR_R_MALLOC_FAILURE);
+-    return NULL;
+-}
+-
+-static int ess_add_signing_cert_v2(PKCS7_SIGNER_INFO *si,
+-                                   ESS_SIGNING_CERT_V2 *sc)
+-{
+-    ASN1_STRING *seq = NULL;
+-    unsigned char *p, *pp = NULL;
+-    int len = i2d_ESS_SIGNING_CERT_V2(sc, NULL);
+-
+-    if ((pp = OPENSSL_malloc(len)) == NULL) {
+-        TSerr(TS_F_ESS_ADD_SIGNING_CERT_V2, ERR_R_MALLOC_FAILURE);
+-        goto err;
+-    }
+-
+-    p = pp;
+-    i2d_ESS_SIGNING_CERT_V2(sc, &p);
+-    if ((seq = ASN1_STRING_new()) == NULL || !ASN1_STRING_set(seq, pp, len)) {
+-        TSerr(TS_F_ESS_ADD_SIGNING_CERT_V2, ERR_R_MALLOC_FAILURE);
+-        goto err;
+-    }
+-
+-    OPENSSL_free(pp);
+-    pp = NULL;
+-    return PKCS7_add_signed_attribute(si,
+-                                      NID_id_smime_aa_signingCertificateV2,
+-                                      V_ASN1_SEQUENCE, seq);
+- err:
+-    ASN1_STRING_free(seq);
+-    OPENSSL_free(pp);
+-    return 0;
+-}
+-
+ static ASN1_GENERALIZEDTIME *TS_RESP_set_genTime_with_precision(
+         ASN1_GENERALIZEDTIME *asn1_time, long sec, long usec,
+         unsigned precision)
+diff --git a/crypto/ts/ts_rsp_verify.c b/crypto/ts/ts_rsp_verify.c
+index 7fe3d27e74..9b55eb9429 100644
+--- a/crypto/ts/ts_rsp_verify.c
++++ b/crypto/ts/ts_rsp_verify.c
+@@ -13,12 +13,12 @@
+ #include <openssl/ts.h>
+ #include <openssl/pkcs7.h>
+ #include "ts_local.h"
++#include "internal/ess_int.h"
+ 
+ static int ts_verify_cert(X509_STORE *store, STACK_OF(X509) *untrusted,
+                           X509 *signer, STACK_OF(X509) **chain);
+ static int ts_check_signing_certs(PKCS7_SIGNER_INFO *si,
+                                   STACK_OF(X509) *chain);
+-static ESS_SIGNING_CERT *ess_get_signing_cert(PKCS7_SIGNER_INFO *si);
+ static int ts_find_cert(STACK_OF(ESS_CERT_ID) *cert_ids, X509 *cert);
+ static int ts_issuer_serial_cmp(ESS_ISSUER_SERIAL *is, X509 *cert);
+ static int int_ts_RESP_verify_token(TS_VERIFY_CTX *ctx,
+@@ -38,7 +38,6 @@ static int ts_check_signer_name(GENERAL_NAME *tsa_name, X509 *signer);
+ static int ts_find_name(STACK_OF(GENERAL_NAME) *gen_names,
+                         GENERAL_NAME *name);
+ static int ts_find_cert_v2(STACK_OF(ESS_CERT_ID_V2) *cert_ids, X509 *cert);
+-static ESS_SIGNING_CERT_V2 *ess_get_signing_cert_v2(PKCS7_SIGNER_INFO *si);
+ 
+ /*
+  * This must be large enough to hold all values in ts_status_text (with
+@@ -201,9 +200,9 @@ end:
+ static int ts_check_signing_certs(PKCS7_SIGNER_INFO *si,
+                                   STACK_OF(X509) *chain)
+ {
+-    ESS_SIGNING_CERT *ss = ess_get_signing_cert(si);
++    ESS_SIGNING_CERT *ss = ESS_SIGNING_CERT_get(si);
+     STACK_OF(ESS_CERT_ID) *cert_ids = NULL;
+-    ESS_SIGNING_CERT_V2 *ssv2 = ess_get_signing_cert_v2(si);
++    ESS_SIGNING_CERT_V2 *ssv2 = ESS_SIGNING_CERT_V2_get(si);
+     STACK_OF(ESS_CERT_ID_V2) *cert_ids_v2 = NULL;
+     X509 *cert;
+     int i = 0;
+@@ -257,29 +256,6 @@ static int ts_check_signing_certs(PKCS7_SIGNER_INFO *si,
+     return ret;
+ }
+ 
+-static ESS_SIGNING_CERT *ess_get_signing_cert(PKCS7_SIGNER_INFO *si)
+-{
+-    ASN1_TYPE *attr;
+-    const unsigned char *p;
+-    attr = PKCS7_get_signed_attribute(si, NID_id_smime_aa_signingCertificate);
+-    if (!attr)
+-        return NULL;
+-    p = attr->value.sequence->data;
+-    return d2i_ESS_SIGNING_CERT(NULL, &p, attr->value.sequence->length);
+-}
+-
+-static ESS_SIGNING_CERT_V2 *ess_get_signing_cert_v2(PKCS7_SIGNER_INFO *si)
+-{
+-    ASN1_TYPE *attr;
+-    const unsigned char *p;
+-
+-    attr = PKCS7_get_signed_attribute(si, NID_id_smime_aa_signingCertificateV2);
+-    if (attr == NULL)
+-        return NULL;
+-    p = attr->value.sequence->data;
+-    return d2i_ESS_SIGNING_CERT_V2(NULL, &p, attr->value.sequence->length);
+-}
+-
+ /* Returns < 0 if certificate is not found, certificate index otherwise. */
+ static int ts_find_cert(STACK_OF(ESS_CERT_ID) *cert_ids, X509 *cert)
+ {
+diff --git a/doc/man1/cms.pod b/doc/man1/cms.pod
+index c30e834cfa..4e6323c74c 100644
+--- a/doc/man1/cms.pod
++++ b/doc/man1/cms.pod
+@@ -15,6 +15,7 @@ B<openssl> B<cms>
+ [B<-verify>]
+ [B<-cmsout>]
+ [B<-resign>]
++[B<-cades>]
+ [B<-data_create>]
+ [B<-data_out>]
+ [B<-digest_create>]
+@@ -158,6 +159,12 @@ Takes an input message and writes out a PEM encoded CMS structure.
+ 
+ Resign a message: take an existing message and one or more new signers.
+ 
++=item B<-cades>
++
++Add an ESS signing-certificate or ESS signing-certificate-v2 signed-attribute to the SignerInfo, in order to make
++the signature comply with the requirements for a CAdES Basic Electronic Signature (CAdES-BES). See the NOTES
++section for more details.
++
+ =item B<-data_create>
+ 
+ Create a CMS B<Data> type.
+@@ -553,6 +560,40 @@ The B<-debug_decrypt> option can be used to disable the MMA attack protection
+ and return an error if no recipient can be found: this option should be used
+ with caution. For a fuller description see L<CMS_decrypt(3)>).
+ 
++=head1 CAdES Basic Electronic Signature (CAdES-BES)
++
++A CAdES Basic Electronic Signature (CAdES-BES), as defined in the European Standard ETSI EN 319 122-1 V1.1.1, contains:
++
++=over 4
++
++=item *
++
++The signed user data as defined in CMS (RFC 3852);
++
++=item *
++
++Content-type of the EncapsulatedContentInfo value being signed;
++
++=item *
++
++Message-digest of the eContent OCTET STRING within encapContentInfo being signed;
++
++=item *
++
++An ESS signing-certificate or ESS signing-certificate-v2 attribute, as defined in Enhanced Security Services (ESS), RFC 2634 and RFC 5035.
++An ESS signing-certificate attribute only allows for the use of SHA-1 as a digest algorithm.
++An ESS signing-certificate-v2 attribute allows for the use of any digest algorithm.
++
++=item *
++
++The digital signature value computed on the user data and, when present, on the signed attributes.
++
++Note that currently the B<-cades> option applies only to the B<-sign> operation and is ignored during
++the B<-verify> operation, i.e. the signing certification is not checked during the verification process.
++This feature might be added in a future version.
++
++=back
++
+ =head1 EXIT CODES
+ 
+ =over 4
+diff --git a/include/internal/ess_int.h b/include/internal/ess_int.h
+new file mode 100644
+index 0000000000..26476ae984
+--- /dev/null
++++ b/include/internal/ess_int.h
+@@ -0,0 +1,78 @@
++/*
++ * Copyright 2019 The OpenSSL Project Authors. All Rights Reserved.
++ *
++ * Licensed under the Apache License 2.0 (the "License").  You may not use
++ * this file except in compliance with the License.  You can obtain a copy
++ * in the file LICENSE in the source distribution or at
++ * https://www.openssl.org/source/license.html
++ */
++
++/* internal ESS related stuff */
++
++ESS_SIGNING_CERT *ESS_SIGNING_CERT_get(PKCS7_SIGNER_INFO *si);
++int ESS_SIGNING_CERT_add(PKCS7_SIGNER_INFO *si, ESS_SIGNING_CERT *sc);
++
++ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_get(PKCS7_SIGNER_INFO *si);
++int ESS_SIGNING_CERT_V2_add(PKCS7_SIGNER_INFO *si, ESS_SIGNING_CERT_V2 *sc);
++
++/*-
++ * IssuerSerial ::= SEQUENCE {
++ *        issuer                  GeneralNames,
++ *        serialNumber            CertificateSerialNumber
++ * }
++ */
++
++struct ESS_issuer_serial {
++    STACK_OF(GENERAL_NAME) *issuer;
++    ASN1_INTEGER *serial;
++};
++
++/*-
++ * ESSCertID ::=  SEQUENCE {
++ *        certHash                Hash,
++ *        issuerSerial            IssuerSerial OPTIONAL
++ * }
++ */
++
++struct ESS_cert_id {
++    ASN1_OCTET_STRING *hash;    /* Always SHA-1 digest. */
++    ESS_ISSUER_SERIAL *issuer_serial;
++};
++
++/*-
++ * SigningCertificate ::=  SEQUENCE {
++ *        certs                   SEQUENCE OF ESSCertID,
++ *        policies                SEQUENCE OF PolicyInformation OPTIONAL
++ * }
++ */
++
++struct ESS_signing_cert {
++    STACK_OF(ESS_CERT_ID) *cert_ids;
++    STACK_OF(POLICYINFO) *policy_info;
++};
++
++/*-
++ * ESSCertIDv2 ::=  SEQUENCE {
++ *        hashAlgorithm           AlgorithmIdentifier DEFAULT id-sha256,
++ *        certHash                Hash,
++ *        issuerSerial            IssuerSerial OPTIONAL
++ * }
++ */
++
++struct ESS_cert_id_v2_st {
++    X509_ALGOR *hash_alg;       /* Default: SHA-256 */
++    ASN1_OCTET_STRING *hash;
++    ESS_ISSUER_SERIAL *issuer_serial;
++};
++
++/*-
++ * SigningCertificateV2 ::= SEQUENCE {
++ *        certs                   SEQUENCE OF ESSCertIDv2,
++ *        policies                SEQUENCE OF PolicyInformation OPTIONAL
++ * }
++ */
++
++struct ESS_signing_cert_v2_st {
++    STACK_OF(ESS_CERT_ID_V2) *cert_ids;
++    STACK_OF(POLICYINFO) *policy_info;
++};
+diff --git a/include/openssl/cms.h b/include/openssl/cms.h
+index 9571bc9e2f..e1ab4d4d18 100644
+--- a/include/openssl/cms.h
++++ b/include/openssl/cms.h
+@@ -16,6 +16,7 @@
+ # include <openssl/x509.h>
+ # include <openssl/x509v3.h>
+ # include <openssl/cmserr.h>
++# include <openssl/ess.h>
+ # ifdef __cplusplus
+ extern "C" {
+ # endif
+@@ -73,6 +74,7 @@ DECLARE_ASN1_PRINT_FUNCTION(CMS_ContentInfo)
+ # define CMS_DEBUG_DECRYPT               0x20000
+ # define CMS_KEY_PARAM                   0x40000
+ # define CMS_ASCIICRLF                   0x80000
++# define CMS_CADES                       0x100000
+ 
+ const ASN1_OBJECT *CMS_get0_type(const CMS_ContentInfo *cms);
+ 
+diff --git a/include/openssl/cmserr.h b/include/openssl/cmserr.h
+index d589f592c8..a3e9d92251 100644
+--- a/include/openssl/cmserr.h
++++ b/include/openssl/cmserr.h
+@@ -35,6 +35,8 @@ int ERR_load_CMS_strings(void);
+ #  define CMS_F_CMS_ADD1_RECIPIENT_CERT                    101
+ #  define CMS_F_CMS_ADD1_SIGNER                            102
+ #  define CMS_F_CMS_ADD1_SIGNINGTIME                       103
++#  define CMS_F_CMS_ADD1_SIGNING_CERT                      181
++#  define CMS_F_CMS_ADD1_SIGNING_CERT_V2                   182
+ #  define CMS_F_CMS_COMPRESS                               104
+ #  define CMS_F_CMS_COMPRESSEDDATA_CREATE                  105
+ #  define CMS_F_CMS_COMPRESSEDDATA_INIT_BIO                106
+diff --git a/include/openssl/err.h b/include/openssl/err.h
+index b49f88129e..3ca063694a 100644
+--- a/include/openssl/err.h
++++ b/include/openssl/err.h
+@@ -95,6 +95,7 @@ typedef struct err_state_st {
+ # define ERR_LIB_ASYNC           51
+ # define ERR_LIB_KDF             52
+ # define ERR_LIB_SM2             53
++# define ERR_LIB_ESS             54
+ 
+ # define ERR_LIB_USER            128
+ 
+@@ -134,6 +135,7 @@ typedef struct err_state_st {
+ # define ASYNCerr(f,r) ERR_PUT_error(ERR_LIB_ASYNC,(f),(r),OPENSSL_FILE,OPENSSL_LINE)
+ # define KDFerr(f,r) ERR_PUT_error(ERR_LIB_KDF,(f),(r),OPENSSL_FILE,OPENSSL_LINE)
+ # define SM2err(f,r) ERR_PUT_error(ERR_LIB_SM2,(f),(r),OPENSSL_FILE,OPENSSL_LINE)
++# define ESSerr(f,r) ERR_PUT_error(ERR_LIB_ESS,(f),(r),OPENSSL_FILE,OPENSSL_LINE)
+ 
+ # define ERR_PACK(l,f,r) ( \
+         (((unsigned int)(l) & 0x0FF) << 24L) | \
+diff --git a/include/openssl/ess.h b/include/openssl/ess.h
+new file mode 100644
+index 0000000000..3912071882
+--- /dev/null
++++ b/include/openssl/ess.h
+@@ -0,0 +1,80 @@
++/*
++ * Copyright 2019 The OpenSSL Project Authors. All Rights Reserved.
++ *
++ * Licensed under the Apache License 2.0 (the "License").  You may not use
++ * this file except in compliance with the License.  You can obtain a copy
++ * in the file LICENSE in the source distribution or at
++ * https://www.openssl.org/source/license.html
++ */
++
++#ifndef HEADER_ESS_H
++# define HEADER_ESS_H
++
++# include <openssl/opensslconf.h>
++
++# ifdef  __cplusplus
++extern "C" {
++# endif
++# include <openssl/safestack.h>
++# include <openssl/x509.h>
++# include <openssl/esserr.h>
++
++typedef struct ESS_issuer_serial ESS_ISSUER_SERIAL;
++typedef struct ESS_cert_id ESS_CERT_ID;
++typedef struct ESS_signing_cert ESS_SIGNING_CERT;
++
++DEFINE_STACK_OF(ESS_CERT_ID)
++
++typedef struct ESS_signing_cert_v2_st ESS_SIGNING_CERT_V2;
++typedef struct ESS_cert_id_v2_st ESS_CERT_ID_V2;
++
++DEFINE_STACK_OF(ESS_CERT_ID_V2)
++
++ESS_ISSUER_SERIAL *ESS_ISSUER_SERIAL_new(void);
++void ESS_ISSUER_SERIAL_free(ESS_ISSUER_SERIAL *a);
++int i2d_ESS_ISSUER_SERIAL(const ESS_ISSUER_SERIAL *a, unsigned char **pp);
++ESS_ISSUER_SERIAL *d2i_ESS_ISSUER_SERIAL(ESS_ISSUER_SERIAL **a,
++                                         const unsigned char **pp,
++                                         long length);
++ESS_ISSUER_SERIAL *ESS_ISSUER_SERIAL_dup(ESS_ISSUER_SERIAL *a);
++
++ESS_CERT_ID *ESS_CERT_ID_new(void);
++void ESS_CERT_ID_free(ESS_CERT_ID *a);
++int i2d_ESS_CERT_ID(const ESS_CERT_ID *a, unsigned char **pp);
++ESS_CERT_ID *d2i_ESS_CERT_ID(ESS_CERT_ID **a, const unsigned char **pp,
++                             long length);
++ESS_CERT_ID *ESS_CERT_ID_dup(ESS_CERT_ID *a);
++
++ESS_SIGNING_CERT *ESS_SIGNING_CERT_new(void);
++void ESS_SIGNING_CERT_free(ESS_SIGNING_CERT *a);
++int i2d_ESS_SIGNING_CERT(const ESS_SIGNING_CERT *a, unsigned char **pp);
++ESS_SIGNING_CERT *d2i_ESS_SIGNING_CERT(ESS_SIGNING_CERT **a,
++                                       const unsigned char **pp, long length);
++ESS_SIGNING_CERT *ESS_SIGNING_CERT_dup(ESS_SIGNING_CERT *a);
++ESS_SIGNING_CERT *ESS_SIGNING_CERT_new_init(X509 *signcert,
++                                            STACK_OF(X509) *certs,
++                                            int issuer_needed);
++
++ESS_CERT_ID_V2 *ESS_CERT_ID_V2_new(void);
++void ESS_CERT_ID_V2_free(ESS_CERT_ID_V2 *a);
++int i2d_ESS_CERT_ID_V2(const ESS_CERT_ID_V2 *a, unsigned char **pp);
++ESS_CERT_ID_V2 *d2i_ESS_CERT_ID_V2(ESS_CERT_ID_V2 **a,
++                                   const unsigned char **pp, long length);
++ESS_CERT_ID_V2 *ESS_CERT_ID_V2_dup(ESS_CERT_ID_V2 *a);
++
++ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_new(void);
++void ESS_SIGNING_CERT_V2_free(ESS_SIGNING_CERT_V2 *a);
++int i2d_ESS_SIGNING_CERT_V2(const ESS_SIGNING_CERT_V2 *a, unsigned char **pp);
++ESS_SIGNING_CERT_V2 *d2i_ESS_SIGNING_CERT_V2(ESS_SIGNING_CERT_V2 **a,
++                                             const unsigned char **pp,
++                                             long length);
++ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_dup(ESS_SIGNING_CERT_V2 *a);
++ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_new_init(const EVP_MD *hash_alg,
++                                                  X509 *signcert,
++                                                  STACK_OF(X509) *certs,
++                                                  int issuer_needed);
++
++# ifdef  __cplusplus
++}
++# endif
++#endif
+diff --git a/include/openssl/esserr.h b/include/openssl/esserr.h
+new file mode 100644
+index 0000000000..e8fdb1d2ae
+--- /dev/null
++++ b/include/openssl/esserr.h
+@@ -0,0 +1,38 @@
++/*
++ * Generated by util/mkerr.pl DO NOT EDIT
++ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
++ *
++ * Licensed under the Apache License 2.0 (the "License").  You may not use
++ * this file except in compliance with the License.  You can obtain a copy
++ * in the file LICENSE in the source distribution or at
++ * https://www.openssl.org/source/license.html
++ */
++
++#ifndef HEADER_ESSERR_H
++# define HEADER_ESSERR_H
++
++# include <openssl/opensslconf.h>
++
++# ifdef  __cplusplus
++extern "C"
++# endif
++int ERR_load_ESS_strings(void);
++
++/*
++ * ESS function codes.
++ */
++# define ESS_F_ESS_CERT_ID_NEW_INIT                       100
++# define ESS_F_ESS_CERT_ID_V2_NEW_INIT                    101
++# define ESS_F_ESS_SIGNING_CERT_ADD                       104
++# define ESS_F_ESS_SIGNING_CERT_NEW_INIT                  102
++# define ESS_F_ESS_SIGNING_CERT_V2_ADD                    105
++# define ESS_F_ESS_SIGNING_CERT_V2_NEW_INIT               103
++
++/*
++ * ESS reason codes.
++ */
++# define ESS_R_ESS_SIGNING_CERTIFICATE_ERROR              102
++# define ESS_R_ESS_SIGNING_CERT_ADD_ERROR                 100
++# define ESS_R_ESS_SIGNING_CERT_V2_ADD_ERROR              101
++
++#endif
+diff --git a/include/openssl/ts.h b/include/openssl/ts.h
+index 3b58aa527e..8e8a4cc7d6 100644
+--- a/include/openssl/ts.h
++++ b/include/openssl/ts.h
+@@ -23,6 +23,7 @@
+ # include <openssl/dsa.h>
+ # include <openssl/dh.h>
+ # include <openssl/tserr.h>
++# include <openssl/ess.h>
+ # ifdef  __cplusplus
+ extern "C" {
+ # endif
+@@ -55,16 +56,6 @@ typedef struct TS_tst_info_st TS_TST_INFO;
+ 
+ 
+ typedef struct TS_status_info_st TS_STATUS_INFO;
+-typedef struct ESS_issuer_serial ESS_ISSUER_SERIAL;
+-typedef struct ESS_cert_id ESS_CERT_ID;
+-typedef struct ESS_signing_cert ESS_SIGNING_CERT;
+-
+-DEFINE_STACK_OF(ESS_CERT_ID)
+-
+-typedef struct ESS_cert_id_v2_st ESS_CERT_ID_V2;
+-typedef struct ESS_signing_cert_v2_st ESS_SIGNING_CERT_V2;
+-
+-DEFINE_STACK_OF(ESS_CERT_ID_V2)
+ 
+ typedef struct TS_resp_st TS_RESP;
+ 
+@@ -139,43 +130,6 @@ TS_ACCURACY *d2i_TS_ACCURACY(TS_ACCURACY **a, const unsigned char **pp,
+                              long length);
+ TS_ACCURACY *TS_ACCURACY_dup(TS_ACCURACY *a);
+ 
+-ESS_ISSUER_SERIAL *ESS_ISSUER_SERIAL_new(void);
+-void ESS_ISSUER_SERIAL_free(ESS_ISSUER_SERIAL *a);
+-int i2d_ESS_ISSUER_SERIAL(const ESS_ISSUER_SERIAL *a, unsigned char **pp);
+-ESS_ISSUER_SERIAL *d2i_ESS_ISSUER_SERIAL(ESS_ISSUER_SERIAL **a,
+-                                         const unsigned char **pp,
+-                                         long length);
+-ESS_ISSUER_SERIAL *ESS_ISSUER_SERIAL_dup(ESS_ISSUER_SERIAL *a);
+-
+-ESS_CERT_ID *ESS_CERT_ID_new(void);
+-void ESS_CERT_ID_free(ESS_CERT_ID *a);
+-int i2d_ESS_CERT_ID(const ESS_CERT_ID *a, unsigned char **pp);
+-ESS_CERT_ID *d2i_ESS_CERT_ID(ESS_CERT_ID **a, const unsigned char **pp,
+-                             long length);
+-ESS_CERT_ID *ESS_CERT_ID_dup(ESS_CERT_ID *a);
+-
+-ESS_SIGNING_CERT *ESS_SIGNING_CERT_new(void);
+-void ESS_SIGNING_CERT_free(ESS_SIGNING_CERT *a);
+-int i2d_ESS_SIGNING_CERT(const ESS_SIGNING_CERT *a, unsigned char **pp);
+-ESS_SIGNING_CERT *d2i_ESS_SIGNING_CERT(ESS_SIGNING_CERT **a,
+-                                       const unsigned char **pp, long length);
+-ESS_SIGNING_CERT *ESS_SIGNING_CERT_dup(ESS_SIGNING_CERT *a);
+-
+-ESS_CERT_ID_V2 *ESS_CERT_ID_V2_new(void);
+-void ESS_CERT_ID_V2_free(ESS_CERT_ID_V2 *a);
+-int i2d_ESS_CERT_ID_V2(const ESS_CERT_ID_V2 *a, unsigned char **pp);
+-ESS_CERT_ID_V2 *d2i_ESS_CERT_ID_V2(ESS_CERT_ID_V2 **a,
+-                                   const unsigned char **pp, long length);
+-ESS_CERT_ID_V2 *ESS_CERT_ID_V2_dup(ESS_CERT_ID_V2 *a);
+-
+-ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_new(void);
+-void ESS_SIGNING_CERT_V2_free(ESS_SIGNING_CERT_V2 *a);
+-int i2d_ESS_SIGNING_CERT_V2(const ESS_SIGNING_CERT_V2 *a, unsigned char **pp);
+-ESS_SIGNING_CERT_V2 *d2i_ESS_SIGNING_CERT_V2(ESS_SIGNING_CERT_V2 **a,
+-                                             const unsigned char **pp,
+-                                             long length);
+-ESS_SIGNING_CERT_V2 *ESS_SIGNING_CERT_V2_dup(ESS_SIGNING_CERT_V2 *a);
+-
+ int TS_REQ_set_version(TS_REQ *a, long version);
+ long TS_REQ_get_version(const TS_REQ *a);
+ 
+diff --git a/include/openssl/tserr.h b/include/openssl/tserr.h
+index 07f23339c8..8e0053dfd1 100644
+--- a/include/openssl/tserr.h
++++ b/include/openssl/tserr.h
+@@ -29,12 +29,6 @@ int ERR_load_TS_strings(void);
+  */
+ #  define TS_F_DEF_SERIAL_CB                               110
+ #  define TS_F_DEF_TIME_CB                                 111
+-#  define TS_F_ESS_ADD_SIGNING_CERT                        112
+-#  define TS_F_ESS_ADD_SIGNING_CERT_V2                     147
+-#  define TS_F_ESS_CERT_ID_NEW_INIT                        113
+-#  define TS_F_ESS_CERT_ID_V2_NEW_INIT                     156
+-#  define TS_F_ESS_SIGNING_CERT_NEW_INIT                   114
+-#  define TS_F_ESS_SIGNING_CERT_V2_NEW_INIT                157
+ #  define TS_F_INT_TS_RESP_VERIFY_TOKEN                    149
+ #  define TS_F_PKCS7_TO_TS_TST_INFO                        148
+ #  define TS_F_TS_ACCURACY_SET_MICROS                      115
+diff --git a/util/libcrypto.num b/util/libcrypto.num
+index 436f799bca..0b59893695 100644
+--- a/util/libcrypto.num
++++ b/util/libcrypto.num
+@@ -10,7 +10,7 @@ TS_RESP_CTX_new                         9	1_1_0	EXIST::FUNCTION:TS
+ PKCS5_PBE_add                           10	1_1_0	EXIST::FUNCTION:
+ i2d_DSAparams                           11	1_1_0	EXIST::FUNCTION:DSA
+ X509_NAME_get0_der                      12	1_1_0	EXIST::FUNCTION:
+-i2d_ESS_ISSUER_SERIAL                   13	1_1_0	EXIST::FUNCTION:TS
++i2d_ESS_ISSUER_SERIAL                   13	1_1_0	EXIST::FUNCTION:
+ X509at_get_attr_by_NID                  14	1_1_0	EXIST::FUNCTION:
+ X509_PUBKEY_set0_param                  15	1_1_0	EXIST::FUNCTION:
+ PKCS12_it                               16	1_1_0	EXIST:!EXPORT_VAR_AS_FUNCTION:VARIABLE:
+@@ -322,7 +322,7 @@ d2i_OCSP_RESPID                         322	1_1_0	EXIST::FUNCTION:OCSP
+ BIO_s_accept                            323	1_1_0	EXIST::FUNCTION:SOCK
+ EVP_whirlpool                           324	1_1_0	EXIST::FUNCTION:WHIRLPOOL
+ OCSP_ONEREQ_get1_ext_d2i                325	1_1_0	EXIST::FUNCTION:OCSP
+-d2i_ESS_SIGNING_CERT                    326	1_1_0	EXIST::FUNCTION:TS
++d2i_ESS_SIGNING_CERT                    326	1_1_0	EXIST::FUNCTION:
+ EC_KEY_set_default_method               327	1_1_0	EXIST::FUNCTION:EC
+ X509_OBJECT_up_ref_count                328	1_1_0	EXIST::FUNCTION:
+ RAND_load_file                          329	1_1_0	EXIST::FUNCTION:
+@@ -577,7 +577,7 @@ CMAC_CTX_copy                           577	1_1_0	EXIST::FUNCTION:CMAC
+ EVP_camellia_128_cfb128                 579	1_1_0	EXIST::FUNCTION:CAMELLIA
+ DH_compute_key_padded                   580	1_1_0	EXIST::FUNCTION:DH
+ ERR_load_CONF_strings                   581	1_1_0	EXIST::FUNCTION:
+-ESS_ISSUER_SERIAL_dup                   582	1_1_0	EXIST::FUNCTION:TS
++ESS_ISSUER_SERIAL_dup                   582	1_1_0	EXIST::FUNCTION:
+ BN_GF2m_mod_exp_arr                     583	1_1_0	EXIST::FUNCTION:EC2M
+ ASN1_UTF8STRING_free                    584	1_1_0	EXIST::FUNCTION:
+ BN_X931_generate_prime_ex               585	1_1_0	EXIST::FUNCTION:
+@@ -653,7 +653,7 @@ PEM_read_bio_CMS                        653	1_1_0	EXIST::FUNCTION:CMS
+ PEM_get_EVP_CIPHER_INFO                 654	1_1_0	EXIST::FUNCTION:
+ X509V3_EXT_print                        655	1_1_0	EXIST::FUNCTION:
+ i2d_OCSP_SINGLERESP                     656	1_1_0	EXIST::FUNCTION:OCSP
+-ESS_CERT_ID_free                        657	1_1_0	EXIST::FUNCTION:TS
++ESS_CERT_ID_free                        657	1_1_0	EXIST::FUNCTION:
+ PEM_SignInit                            658	1_1_0	EXIST::FUNCTION:
+ EVP_CIPHER_CTX_set_key_length           659	1_1_0	EXIST::FUNCTION:
+ X509_delete_ext                         660	1_1_0	EXIST::FUNCTION:
+@@ -1429,7 +1429,7 @@ X509_NAME_new                           1417	1_1_0	EXIST::FUNCTION:
+ ASN1_item_pack                          1418	1_1_0	EXIST::FUNCTION:
+ ASN1_BIT_STRING_set_asc                 1419	1_1_0	EXIST::FUNCTION:
+ d2i_GENERAL_NAME                        1420	1_1_0	EXIST::FUNCTION:
+-i2d_ESS_CERT_ID                         1421	1_1_0	EXIST::FUNCTION:TS
++i2d_ESS_CERT_ID                         1421	1_1_0	EXIST::FUNCTION:
+ X509_TRUST_get_by_id                    1422	1_1_0	EXIST::FUNCTION:
+ d2i_RSA_PUBKEY_fp                       1423	1_1_0	EXIST::FUNCTION:RSA,STDIO
+ EVP_PBE_get                             1424	1_1_0	EXIST::FUNCTION:
+@@ -1711,7 +1711,7 @@ PKCS7_SIGNED_it                         1698	1_1_0	EXIST:!EXPORT_VAR_AS_FUNCTION
+ PKCS7_SIGNED_it                         1698	1_1_0	EXIST:EXPORT_VAR_AS_FUNCTION:FUNCTION:
+ b2i_PublicKey                           1699	1_1_0	EXIST::FUNCTION:DSA
+ X509_PURPOSE_cleanup                    1700	1_1_0	EXIST::FUNCTION:
+-ESS_SIGNING_CERT_dup                    1701	1_1_0	EXIST::FUNCTION:TS
++ESS_SIGNING_CERT_dup                    1701	1_1_0	EXIST::FUNCTION:
+ ENGINE_set_default_DSA                  1702	1_1_0	EXIST::FUNCTION:ENGINE
+ X509_REVOKED_new                        1703	1_1_0	EXIST::FUNCTION:
+ NCONF_WIN32                             1704	1_1_0	EXIST::FUNCTION:
+@@ -2115,7 +2115,7 @@ PEM_read                                2093	1_1_0	EXIST::FUNCTION:STDIO
+ X509_STORE_set_depth                    2094	1_1_0	EXIST::FUNCTION:
+ EC_KEY_METHOD_get_sign                  2095	1_1_0	EXIST::FUNCTION:EC
+ EVP_CIPHER_CTX_iv                       2096	1_1_0	EXIST::FUNCTION:
+-i2d_ESS_SIGNING_CERT                    2097	1_1_0	EXIST::FUNCTION:TS
++i2d_ESS_SIGNING_CERT                    2097	1_1_0	EXIST::FUNCTION:
+ TS_RESP_set_tst_info                    2098	1_1_0	EXIST::FUNCTION:TS
+ EVP_PKEY_CTX_set_data                   2099	1_1_0	EXIST::FUNCTION:
+ CMS_EnvelopedData_create                2100	1_1_0	EXIST::FUNCTION:CMS
+@@ -2326,7 +2326,7 @@ X509at_get_attr_count                   2295	1_1_0	EXIST::FUNCTION:
+ PKCS12_init                             2296	1_1_0	EXIST::FUNCTION:
+ CRYPTO_free_ex_data                     2297	1_1_0	EXIST::FUNCTION:
+ EVP_aes_128_cfb8                        2298	1_1_0	EXIST::FUNCTION:
+-ESS_ISSUER_SERIAL_free                  2299	1_1_0	EXIST::FUNCTION:TS
++ESS_ISSUER_SERIAL_free                  2299	1_1_0	EXIST::FUNCTION:
+ BN_mod_exp_mont_word                    2300	1_1_0	EXIST::FUNCTION:
+ X509V3_EXT_nconf_nid                    2301	1_1_0	EXIST::FUNCTION:
+ UTF8_putc                               2302	1_1_0	EXIST::FUNCTION:
+@@ -2653,7 +2653,7 @@ IPAddressRange_it                       2618	1_1_0	EXIST:EXPORT_VAR_AS_FUNCTION:
+ PEM_read_bio_DSAPrivateKey              2619	1_1_0	EXIST::FUNCTION:DSA
+ CMS_get0_type                           2620	1_1_0	EXIST::FUNCTION:CMS
+ ASN1_PCTX_free                          2621	1_1_0	EXIST::FUNCTION:
+-ESS_SIGNING_CERT_new                    2622	1_1_0	EXIST::FUNCTION:TS
++ESS_SIGNING_CERT_new                    2622	1_1_0	EXIST::FUNCTION:
+ X509V3_EXT_conf_nid                     2623	1_1_0	EXIST::FUNCTION:
+ EC_KEY_check_key                        2624	1_1_0	EXIST::FUNCTION:EC
+ PKCS5_PBKDF2_HMAC                       2625	1_1_0	EXIST::FUNCTION:
+@@ -3094,7 +3094,7 @@ EVP_DecryptUpdate                       3046	1_1_0	EXIST::FUNCTION:
+ CAST_cbc_encrypt                        3047	1_1_0	EXIST::FUNCTION:CAST
+ BN_BLINDING_invert                      3048	1_1_0	EXIST::FUNCTION:
+ SHA512_Update                           3049	1_1_0	EXIST::FUNCTION:
+-ESS_ISSUER_SERIAL_new                   3050	1_1_0	EXIST::FUNCTION:TS
++ESS_ISSUER_SERIAL_new                   3050	1_1_0	EXIST::FUNCTION:
+ PKCS12_SAFEBAG_get0_pkcs8               3051	1_1_0	EXIST::FUNCTION:
+ X509_get_ext_by_NID                     3052	1_1_0	EXIST::FUNCTION:
+ d2i_IPAddressFamily                     3053	1_1_0	EXIST::FUNCTION:RFC3779
+@@ -3186,7 +3186,7 @@ BN_to_ASN1_ENUMERATED                   3137	1_1_0	EXIST::FUNCTION:
+ i2d_ISSUING_DIST_POINT                  3138	1_1_0	EXIST::FUNCTION:
+ TXT_DB_free                             3139	1_1_0	EXIST::FUNCTION:
+ ASN1_STRING_set                         3140	1_1_0	EXIST::FUNCTION:
+-d2i_ESS_CERT_ID                         3141	1_1_0	EXIST::FUNCTION:TS
++d2i_ESS_CERT_ID                         3141	1_1_0	EXIST::FUNCTION:
+ EVP_PKEY_meth_set_derive                3142	1_1_0	EXIST::FUNCTION:
+ OPENSSL_LH_stats                        3143	1_1_0	EXIST::FUNCTION:STDIO
+ NCONF_dump_fp                           3144	1_1_0	EXIST::FUNCTION:STDIO
+@@ -3281,7 +3281,7 @@ i2d_X509_ALGORS                         3233	1_1_0	EXIST::FUNCTION:
+ EVP_camellia_192_cfb1                   3234	1_1_0	EXIST::FUNCTION:CAMELLIA
+ TS_RESP_CTX_add_failure_info            3235	1_1_0	EXIST::FUNCTION:TS
+ EVP_PBE_alg_add                         3236	1_1_0	EXIST::FUNCTION:
+-ESS_CERT_ID_dup                         3237	1_1_0	EXIST::FUNCTION:TS
++ESS_CERT_ID_dup                         3237	1_1_0	EXIST::FUNCTION:
+ CMS_SignerInfo_get0_signature           3238	1_1_0	EXIST::FUNCTION:CMS
+ EVP_PKEY_verify_recover                 3239	1_1_0	EXIST::FUNCTION:
+ i2d_PUBKEY                              3240	1_1_0	EXIST::FUNCTION:
+@@ -3405,7 +3405,7 @@ X509_ATTRIBUTE_create_by_OBJ            3356	1_1_0	EXIST::FUNCTION:
+ RSA_generate_key_ex                     3357	1_1_0	EXIST::FUNCTION:RSA
+ CMS_SignerInfo_get0_algs                3358	1_1_0	EXIST::FUNCTION:CMS
+ DIST_POINT_free                         3359	1_1_0	EXIST::FUNCTION:
+-ESS_SIGNING_CERT_free                   3360	1_1_0	EXIST::FUNCTION:TS
++ESS_SIGNING_CERT_free                   3360	1_1_0	EXIST::FUNCTION:
+ SCT_new_from_base64                     3361	1_1_0	EXIST::FUNCTION:CT
+ OpenSSL_version                         3362	1_1_0	EXIST::FUNCTION:
+ OCSP_SINGLERESP_get_ext_by_OBJ          3363	1_1_0	EXIST::FUNCTION:OCSP
+@@ -3523,7 +3523,7 @@ EVP_PKEY_save_parameters                3475	1_1_0	EXIST::FUNCTION:
+ SCT_set_source                          3476	1_1_0	EXIST::FUNCTION:CT
+ DES_set_odd_parity                      3477	1_1_0	EXIST::FUNCTION:DES
+ CMAC_CTX_free                           3478	1_1_0	EXIST::FUNCTION:CMAC
+-d2i_ESS_ISSUER_SERIAL                   3479	1_1_0	EXIST::FUNCTION:TS
++d2i_ESS_ISSUER_SERIAL                   3479	1_1_0	EXIST::FUNCTION:
+ HMAC_CTX_set_flags                      3480	1_1_0	EXIST::FUNCTION:
+ d2i_PKCS8_bio                           3481	1_1_0	EXIST::FUNCTION:
+ OCSP_ONEREQ_get_ext_count               3482	1_1_0	EXIST::FUNCTION:OCSP
+@@ -3709,7 +3709,7 @@ ERR_load_DH_strings                     3664	1_1_0	EXIST::FUNCTION:DH
+ EVP_MD_block_size                       3665	1_1_0	EXIST::FUNCTION:
+ TS_X509_ALGOR_print_bio                 3666	1_1_0	EXIST::FUNCTION:TS
+ d2i_PKCS7_ENVELOPE                      3667	1_1_0	EXIST::FUNCTION:
+-ESS_CERT_ID_new                         3669	1_1_0	EXIST::FUNCTION:TS
++ESS_CERT_ID_new                         3669	1_1_0	EXIST::FUNCTION:
+ EC_POINT_invert                         3670	1_1_0	EXIST::FUNCTION:EC
+ CAST_set_key                            3671	1_1_0	EXIST::FUNCTION:CAST
+ ENGINE_get_pkey_meth                    3672	1_1_0	EXIST::FUNCTION:ENGINE
+@@ -4276,18 +4276,18 @@ X509_CRL_print_ex                       4218	1_1_1	EXIST::FUNCTION:
+ X509_SIG_INFO_get                       4219	1_1_1	EXIST::FUNCTION:
+ X509_get_signature_info                 4220	1_1_1	EXIST::FUNCTION:
+ X509_SIG_INFO_set                       4221	1_1_1	EXIST::FUNCTION:
+-ESS_CERT_ID_V2_free                     4222	1_1_1	EXIST::FUNCTION:TS
+-ESS_SIGNING_CERT_V2_new                 4223	1_1_1	EXIST::FUNCTION:TS
+-d2i_ESS_SIGNING_CERT_V2                 4224	1_1_1	EXIST::FUNCTION:TS
+-i2d_ESS_CERT_ID_V2                      4225	1_1_1	EXIST::FUNCTION:TS
+-ESS_CERT_ID_V2_dup                      4226	1_1_1	EXIST::FUNCTION:TS
++ESS_CERT_ID_V2_free                     4222	1_1_1	EXIST::FUNCTION:
++ESS_SIGNING_CERT_V2_new                 4223	1_1_1	EXIST::FUNCTION:
++d2i_ESS_SIGNING_CERT_V2                 4224	1_1_1	EXIST::FUNCTION:
++i2d_ESS_CERT_ID_V2                      4225	1_1_1	EXIST::FUNCTION:
++ESS_CERT_ID_V2_dup                      4226	1_1_1	EXIST::FUNCTION:
+ TS_RESP_CTX_set_ess_cert_id_digest      4227	1_1_1	EXIST::FUNCTION:TS
+-d2i_ESS_CERT_ID_V2                      4228	1_1_1	EXIST::FUNCTION:TS
+-i2d_ESS_SIGNING_CERT_V2                 4229	1_1_1	EXIST::FUNCTION:TS
++d2i_ESS_CERT_ID_V2                      4228	1_1_1	EXIST::FUNCTION:
++i2d_ESS_SIGNING_CERT_V2                 4229	1_1_1	EXIST::FUNCTION:
+ TS_CONF_set_ess_cert_id_digest          4230	1_1_1	EXIST::FUNCTION:TS
+-ESS_SIGNING_CERT_V2_free                4231	1_1_1	EXIST::FUNCTION:TS
+-ESS_SIGNING_CERT_V2_dup                 4232	1_1_1	EXIST::FUNCTION:TS
+-ESS_CERT_ID_V2_new                      4233	1_1_1	EXIST::FUNCTION:TS
++ESS_SIGNING_CERT_V2_free                4231	1_1_1	EXIST::FUNCTION:
++ESS_SIGNING_CERT_V2_dup                 4232	1_1_1	EXIST::FUNCTION:
++ESS_CERT_ID_V2_new                      4233	1_1_1	EXIST::FUNCTION:
+ PEM_read_bio_ex                         4234	1_1_1	EXIST::FUNCTION:
+ PEM_bytes_read_bio_secmem               4235	1_1_1	EXIST::FUNCTION:
+ EVP_DigestSign                          4236	1_1_1	EXIST::FUNCTION:
+@@ -4591,3 +4591,6 @@ X509_ALGOR_copy                         4544	1_1_1h	EXIST::FUNCTION:
+ X509_REQ_set0_signature                 4545	1_1_1h	EXIST::FUNCTION:
+ X509_REQ_set1_signature_algo            4546	1_1_1h	EXIST::FUNCTION:
+ EC_KEY_decoded_from_explicit_params     4547	1_1_1h	EXIST::FUNCTION:EC
++ESS_SIGNING_CERT_new_init               4550	1_1_1q	EXIST::FUNCTION:
++ESS_SIGNING_CERT_V2_new_init            4551	1_1_1q	EXIST::FUNCTION:
++ERR_load_ESS_strings                    4552	1_1_1q	EXIST::FUNCTION:
+-- 
+2.37.2
+

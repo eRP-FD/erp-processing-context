@@ -43,6 +43,19 @@ shared_EVP_PKEY CryptoHelper::cHpQesPrv()
     return EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{std::move(prcKeyStr)});
 }
 
+Certificate CryptoHelper::cQesG0()
+{
+    return Certificate::fromPem(ResourceManager::instance().getStringResource(
+        "test/tsl/X509Certificate/QES-G0-Certificate.pem"));
+}
+
+shared_EVP_PKEY CryptoHelper::cQesG0Prv()
+{
+    auto prcKeyStr = ResourceManager::instance().getStringResource(
+        "test/tsl/X509Certificate/QES-G0-Certificate.prv.pem");
+    return EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{std::move(prcKeyStr)});
+}
+
 Certificate CryptoHelper::cHpQesWansim()
 {
     return Certificate::fromPem(ResourceManager::instance().getStringResource(

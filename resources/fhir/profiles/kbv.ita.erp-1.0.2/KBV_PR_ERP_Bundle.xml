@@ -148,14 +148,14 @@
         <key value="-erp-angabeNrAusstellendePerson"/>
         <severity value="error"/>
         <human value="Nummer der ausstellenden Person nicht vorhanden, aber Pflicht, wenn es sich um einen Arzt oder Zahnarzt handelt"/>
-        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.code.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.code.coding.code='01')) implies entry.where(resource is Practitioner).resource.identifier.exists()"/>
+        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.coding.code='01')) implies entry.where(resource is Practitioner).resource.identifier.exists()"/>
         <source value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"/>
       </constraint>
       <constraint>
         <key value="-erp-angabeBestriebsstaettennr"/>
         <severity value="error"/>
         <human value="Betriebsstaettennummer nicht vorhanden, aber Pflicht, wenn es sich um einen Arzt, Zahnarzt oder Arzt in Weiterbildung handelt"/>
-        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.code.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.code.coding.code='01' or entry.where(resource is Practitioner).resource.qualification.code.coding.code='03')) implies entry.where(resource is Organization).resource.identifier.exists()"/>
+        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.coding.code='01' or entry.where(resource is Practitioner).resource.qualification.coding.code='03')) implies entry.where(resource is Organization).resource.identifier.exists()"/>
         <source value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"/>
       </constraint>
       <constraint>
@@ -2869,14 +2869,14 @@
         <key value="-erp-angabeNrAusstellendePerson"/>
         <severity value="error"/>
         <human value="Nummer der ausstellenden Person nicht vorhanden, aber Pflicht, wenn es sich um einen Arzt oder Zahnarzt handelt"/>
-        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.code.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.code.coding.code='01')) implies entry.where(resource is Practitioner).resource.identifier.exists()"/>
+        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.coding.code='01')) implies entry.where(resource is Practitioner).resource.identifier.exists()"/>
         <source value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"/>
       </constraint>
       <constraint>
         <key value="-erp-angabeBestriebsstaettennr"/>
         <severity value="error"/>
         <human value="Betriebsstaettennummer nicht vorhanden, aber Pflicht, wenn es sich um einen Arzt, Zahnarzt oder Arzt in Weiterbildung handelt"/>
-        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.code.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.code.coding.code='01' or entry.where(resource is Practitioner).resource.qualification.code.coding.code='03')) implies entry.where(resource is Organization).resource.identifier.exists()"/>
+        <expression value="(entry.where(resource is Coverage).exists() and (entry.where(resource is Coverage).resource.type.coding.code='GKV' or entry.where(resource is Coverage).resource.type.coding.code='BG' or entry.where(resource is Coverage).resource.type.coding.code='SKT' or entry.where(resource is Coverage).resource.type.coding.code='UK') and (entry.where(resource is Practitioner).resource.qualification.coding.code='00' or entry.where(resource is Practitioner).resource.qualification.coding.code='01' or entry.where(resource is Practitioner).resource.qualification.coding.code='03')) implies entry.where(resource is Organization).resource.identifier.exists()"/>
         <source value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"/>
       </constraint>
       <constraint>

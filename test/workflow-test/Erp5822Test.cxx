@@ -34,7 +34,7 @@ public:
         ASSERT_TRUE(task.has_value());
         std::string accessCode{task->accessCode()};
         ASSERT_NO_FATAL_FAILURE(
-            task = taskActivate(task->prescriptionId(), accessCode,
+            task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
                                 std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
         ASSERT_TRUE(task.has_value());
         std::optional<Communication> infoReq;
@@ -79,11 +79,12 @@ public:
         for (const auto& comm: comms)
         {
             ASSERT_TRUE(comm.sender().has_value());
-            EXPECT_TRUE(comm.sender() == kvnr || comm.sender() == telematikIdApotheke);
-            ASSERT_TRUE(comm.recipient().has_value());
-            EXPECT_TRUE(comm.recipient() == kvnr || comm.recipient() == telematikIdApotheke);
-            EXPECT_TRUE(comm.recipient() == user || comm.sender() == user);
-            bool isRecipient = (comm.recipient() == user);
+            auto senderId = model::getIdentityString(comm.sender().value());
+            EXPECT_TRUE(senderId == kvnr || senderId == telematikIdApotheke);
+            auto recipientId = model::getIdentityString(comm.recipient());
+            EXPECT_TRUE(recipientId == kvnr || recipientId == telematikIdApotheke);
+            EXPECT_TRUE(recipientId == user || senderId == user);
+            bool isRecipient = (recipientId == user);
             EXPECT_EQ(isRecipient, comm.timeReceived().has_value()) << "Only Pharmacy retrieved messages";
         }
     }
@@ -116,7 +117,6 @@ public:
     std::string kvnr;
     std::string telematikIdApotheke;
     std::optional<Task> task;
-    EnvironmentVariableGuard environmentVariableGuard{"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION", "false"};
     EnvironmentVariableGuard environmentVariableGuard2{"DEBUG_DISABLE_QES_ID_CHECK", "true"};
 };
 

@@ -6,7 +6,6 @@
 #include "erp/service/MetaDataHandler.hxx"
 
 #include "erp/model/MetaData.hxx"
-#include "erp/server/request/ServerRequest.hxx"
 #include "erp/util/TLog.hxx"
 
 
@@ -19,7 +18,7 @@ void MetaDataHandler::handleRequest (PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
-    const model::MetaData metaData;
+    const model::MetaData metaData(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
     makeResponse(session, HttpStatus::OK, &metaData);
 }
 

@@ -16,21 +16,6 @@ public:
     ChargeItemPutHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
 
     void handleRequest(PcSessionContext& session) override;
-
-private:
-    void handleRequestInsurant(PcSessionContext& session,
-                               ::model::ChargeInformation& existingChargeInformation,
-                               const BlobId& blobId,
-                               const db_model::Blob& salt,
-                               const model::ChargeItem& newChargeItem,
-                               const std::string& idClaim);
-
-    void handleRequestPharmacy(PcSessionContext& session,
-                               ::model::ChargeInformation& existingChargeInformation,
-                               const BlobId& blobId,
-                               const db_model::Blob& salt,
-                               const model::ChargeItem& newChargeItem,
-                               const std::string& idClaim);
 };
 
 

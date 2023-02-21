@@ -4,11 +4,10 @@
  */
 
 #include "erp/tpm/PcrSet.hxx"
-#include "erp/util/String.hxx"
-
 #include "erp/util/Expect.hxx"
+#include "erp/util/String.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
-#include <gsl/gsl-lite.hpp>
 #include <rapidjson/pointer.h>
 
 

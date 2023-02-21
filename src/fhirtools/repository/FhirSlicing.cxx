@@ -14,6 +14,7 @@
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
+#include "fhirtools/validator/Severity.hxx"
 
 #include <algorithm>
 #include <variant>
@@ -65,10 +66,10 @@ namespace
 class SliceCondition : public FhirSlicing::Condition
 {
 public:
-    bool test(const ::Element& element) const override
+    bool test(const ::Element& element, const fhirtools::ValidatorOptions& opt) const override
     {
         return std::ranges::all_of(mConditions, [&](auto cond) {
-            return cond->test(element);
+            return cond->test(element, opt);
         });
     }
     std::vector<std::shared_ptr<Condition>> mConditions;
@@ -119,15 +120,15 @@ protected:
         : mPathExpression{std::move(pathExpression)}
     {
     }
-    bool test(const fhirtools::Element& element) const override
+    bool test(const fhirtools::Element& element, const fhirtools::ValidatorOptions& opt) const override
     {
         const auto& resultCollection = mPathExpression->eval({element.shared_from_this()});
         return std::ranges::any_of(resultCollection, [&](const auto& subElement) {
-            return testPathElement(*subElement);
+            return testPathElement(*subElement, opt);
         });
     }
 
-    virtual bool testPathElement(const ::Element&) const = 0;
+    virtual bool testPathElement(const ::Element&, const fhirtools::ValidatorOptions&) const = 0;
 
     fhirtools::ExpressionPtr mPathExpression;
 };
@@ -165,7 +166,7 @@ public:
             Fail2("ambiguous fixed values in: " + values.str(), std::logic_error);
         }
     }
-    bool testPathElement(const ::Element& element) const override
+    bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions&) const override
     {
         const auto* repo = element.getFhirStructureRepository();
         return (element.equals(ValueElement{repo, mFixed}) == true);
@@ -214,7 +215,7 @@ public:
         Expect3(! contradiction, "Contradicting pattern.", std::logic_error);
         mPattern.shrink_to_fit();
     }
-    bool testPathElement(const ::Element& element) const override
+    bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions&) const override
     {
         const auto* repo = element.getFhirStructureRepository();
         return std::ranges::all_of(mPattern, [&](auto pattern) {
@@ -280,7 +281,7 @@ class DiscriminatorPrimitiveBindingCondition : public DiscriminatorBindingCondit
 {
 public:
     using DiscriminatorBindingConditionBase::DiscriminatorBindingConditionBase;
-    bool testPathElement(const ::Element& element) const override
+    bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions&) const override
     {
         return mValueSet->containsCode(element.asString());
     }
@@ -290,7 +291,7 @@ class DiscriminatorCodingBindingCondition : public DiscriminatorBindingCondition
 {
 public:
     using DiscriminatorBindingConditionBase::DiscriminatorBindingConditionBase;
-    bool testPathElement(const ::Element& element) const override
+    bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions&) const override
     {
         auto systemSubElement = element.subElements("system");
         auto codeSubElement = element.subElements("code");
@@ -303,12 +304,12 @@ class DiscriminatorCodeableConceptBindingCondition : public DiscriminatorCodingB
 {
 public:
     using DiscriminatorCodingBindingCondition::DiscriminatorCodingBindingCondition;
-    bool testPathElement(const ::Element& element) const override
+    bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions& opt) const override
     {
         auto codingSubElements = element.subElements("coding");
         for (const auto& codingSubElement : codingSubElements)
         {
-            if (! DiscriminatorCodingBindingCondition::testPathElement(*codingSubElement))
+            if (! DiscriminatorCodingBindingCondition::testPathElement(*codingSubElement, opt))
             {
                 return false;
             }
@@ -347,11 +348,11 @@ public:
         Expect3(shouldExist.has_value(), "undefined value for exists discriminator", std::logic_error);
         mShouldExist = *shouldExist;
     }
-    bool test(const ::Element& element) const override
+    bool test(const ::Element& element, const fhirtools::ValidatorOptions& opt) const override
     {
-        return DiscriminatorCondition::test(element) == mShouldExist;
+        return DiscriminatorCondition::test(element, opt) == mShouldExist;
     }
-    bool testPathElement(const ::Element&) const override
+    bool testPathElement(const ::Element&, const fhirtools::ValidatorOptions&) const override
     {
         return true;
     }
@@ -389,7 +390,7 @@ public:
         Expect3(types.size() == 1, "multiple types", std::logic_error);
         mType = *types.begin();
     }
-    bool testPathElement(const ::Element& element) const override
+    bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions&) const override
     {
         return element.definitionPointer().element()->typeId() == mType;
     }
@@ -409,11 +410,20 @@ public:
         }
         Expect(! mProfiles.empty(), "no profile");
     }
-    bool testPathElement(const ::Element& element) const override
+    bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions& opt) const override
     {
-        auto res = fhirtools::FhirPathValidator::validateWithProfiles(
-            element.shared_from_this(), element.definitionPointer().element()->originalName(), mProfiles);
-        return res.highestSeverity() < fhirtools::Severity::error;
+        try
+        {
+            auto options = opt;
+            options.validateReferences = false;
+            auto res = fhirtools::FhirPathValidator::validateWithProfiles(
+                element.shared_from_this(), element.definitionPointer().element()->originalName(), mProfiles, options);
+            return res.highestSeverity() < fhirtools::Severity::error;
+        }
+        catch (const std::exception& ex)
+        {
+            return false;
+        }
     }
     std::set<std::string> mProfiles;
 };
@@ -451,9 +461,8 @@ std::shared_ptr<FhirSlicing::Condition> FhirSliceDiscriminator::condition(const 
     }
     Fail2("Unexpected value for DiscriminatorType: " + std::to_string(int(mType)), std::logic_error);
 }
-std::shared_ptr<FhirSlicing::Condition> fhirtools::FhirSliceDiscriminator::valueishCondition(
-    const fhirtools::FhirStructureRepository& repo, std::list<ProfiledElementTypeInfo> elementInfos,
-    const fhirtools::FhirStructureDefinition* def, ExpressionPtr pathExpression) const
+std::tuple<bool, bool, bool> fhirtools::FhirSliceDiscriminator::getvalueishConditionProperties(
+    const std::list<ProfiledElementTypeInfo>& elementInfos) const
 {
     bool pattern = false;
     bool fixed = false;
@@ -474,6 +483,14 @@ std::shared_ptr<FhirSlicing::Condition> fhirtools::FhirSliceDiscriminator::value
             binding = true;
         }
     }
+    return std::make_tuple(pattern, fixed, binding);
+}
+std::shared_ptr<FhirSlicing::Condition> fhirtools::FhirSliceDiscriminator::valueishCondition(
+    const fhirtools::FhirStructureRepository& repo, std::list<ProfiledElementTypeInfo> elementInfos,
+    const fhirtools::FhirStructureDefinition* def, ExpressionPtr pathExpression) const
+{
+    auto [pattern, fixed, binding] = getvalueishConditionProperties(elementInfos);
+
     if (pattern && fixed)
     {
         TLOG(WARNING) << "found both pattern and fixed: " << def->url() << '|' << def->version()
@@ -531,6 +548,7 @@ const std::string& FhirSliceDiscriminator::path() const
     return mPath;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 std::list<ProfiledElementTypeInfo> FhirSliceDiscriminator::collectElements(const FhirStructureRepository& repo,
                                                                            const ProfiledElementTypeInfo& parentDef,
                                                                            std::string_view path)
@@ -648,6 +666,7 @@ FhirSliceDiscriminator::collectFromValues(const FhirStructureRepository& repo,
 }
 
 std::list<ProfiledElementTypeInfo>
+// NOLINTNEXTLINE(misc-no-recursion)
 fhirtools::FhirSliceDiscriminator::collectFromResolve(const fhirtools::FhirStructureRepository& repo,
                                                       const fhirtools::ProfiledElementTypeInfo& parentDef,
                                                       std::string_view path)

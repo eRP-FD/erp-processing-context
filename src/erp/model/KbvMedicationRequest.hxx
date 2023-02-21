@@ -14,6 +14,7 @@ namespace model
 
 class Dosage;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KbvMedicationRequest : public Resource<KbvMedicationRequest, ResourceVersion::KbvItaErp>
 {
 public:

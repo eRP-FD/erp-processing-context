@@ -58,7 +58,6 @@ namespace {
     }
 
 
-
     /**
      * See gemSpec_Krypt_V2.18, A_20161-01, item 5 for the structure of p.
      */
@@ -73,9 +72,21 @@ namespace {
         std::string_view pStr = p;
         data->mVersion = pStr.substr(0, versionEnd);
         data->mAuthenticationToken = JWT(std::string(pStr.substr(versionEnd+1, authenticationTokenEnd-versionEnd-1)));
-        data->mRequestId =
-            ByteHelper::fromHex(pStr.substr(authenticationTokenEnd + 1, requestIdEnd - authenticationTokenEnd - 1));
-        data->mAesKey = SafeString(ByteHelper::fromHex(pStr.substr(requestIdEnd+1, aesKeyEnd-requestIdEnd-1)));
+        std::string_view element;
+        try
+        {
+            element = "request-id";
+            std::string_view hexRequestId =
+                pStr.substr(authenticationTokenEnd + 1, requestIdEnd - authenticationTokenEnd - 1);
+            data->mRequestId = ByteHelper::fromHex(hexRequestId);
+            element = "aes-key";
+            std::string_view hexAesKey = pStr.substr(requestIdEnd + 1, aesKeyEnd - requestIdEnd - 1);
+            data->mAesKey = SafeString(ByteHelper::fromHex(hexAesKey));
+        }
+        catch (const std::runtime_error&)
+        {
+            ErpFail(HttpStatus::BadRequest, "Invalid encoded hex value for element " + std::string{element});
+        }
 
         data->mHeaderAndBodyRaw = pStr.substr(aesKeyEnd + 1);
         return data;

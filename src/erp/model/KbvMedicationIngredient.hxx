@@ -11,6 +11,7 @@
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KbvMedicationIngredient : public KbvMedicationBase<KbvMedicationIngredient, ResourceVersion::KbvItaErp>
 {
 public:

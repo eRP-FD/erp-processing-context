@@ -30,7 +30,7 @@ public:
         std::optional<model::Timestamp> expiryDate = std::nullopt;
         std::optional<model::Timestamp> acceptDate = std::nullopt;
         std::optional<model::Task::Status> status = std::nullopt;
-        std::optional<int32_t> taskKeyBlobId = std::nullopt;
+        std::optional<BlobId> taskKeyBlobId = std::nullopt;
         std::optional<db_model::Blob> salt = std::nullopt;
         std::optional<db_model::EncryptedBlob> accessCode = std::nullopt;
         std::optional<db_model::EncryptedBlob> secret = std::nullopt;
@@ -39,7 +39,7 @@ public:
         std::optional<model::Timestamp> whenHandedOver = std::nullopt;
         std::optional<model::Timestamp> whenPrepared = std::nullopt;
         std::optional<db_model::HashedTelematikId> performer = std::nullopt;
-        std::optional<int32_t> medicationDispenseKeyBlobId = std::nullopt;
+        std::optional<BlobId> medicationDispenseKeyBlobId = std::nullopt;
         std::optional<db_model::EncryptedBlob> medicationDispenseBundle = std::nullopt;
     };
 

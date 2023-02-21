@@ -13,11 +13,6 @@ class Erp9008Test : public ErpWorkflowTest
         client = TestClient::create(std::shared_ptr<XmlValidator>(validator, &validator->mXmlValidator));
         ErpWorkflowTest::SetUp();
     }
-    EnvironmentVariableGuard ERP_FHIR_PROFILE_OLD_VALID_UNTIL
-        {"ERP_FHIR_PROFILE_OLD_VALID_UNTIL", "2020-01-01T00:00:00+01:00"};
-    EnvironmentVariableGuard ERP_FHIR_PROFILE_VALID_FROM
-        {"ERP_FHIR_PROFILE_VALID_FROM", "2020-01-01T00:00:00+01:00"};
-
 };
 
 TEST_F(Erp9008Test, run)//NOLINT(readability-function-cognitive-complexity)
@@ -32,7 +27,7 @@ TEST_F(Erp9008Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_TRUE(task.has_value());
     std::string accessCode{task->accessCode()};
     const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
-    ASSERT_NO_FATAL_FAILURE(task = taskActivate(task->prescriptionId(), accessCode, qesBundle));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, qesBundle));
     auto path = "/Communication/" + task->prescriptionId().toString();
     auto apothekenJwt = jwtApotheke();
     auto apothekenId = apothekenJwt.stringForClaim(JWT::idNumberClaim);

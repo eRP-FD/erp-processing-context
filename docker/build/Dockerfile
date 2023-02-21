@@ -3,21 +3,21 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM ubuntu:focal AS build
+FROM ubuntu:jammy AS build
 
 # Set up a c++ build environment
 # libssl1.1 install openssl1.1.1 and related certificates
 # libefiboot-dev and libefivar-dev are required by indirect dependencies from libtpmclient/libtss.
 RUN apt-get update --fix-missing && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt-get install -y  \
+    apt-get install -y software-properties-common wget && \
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -  && \
+    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     openjdk-11-jre-headless \
     gcc-11 g++-11 \
     jq \
     wget \
     libgtest-dev \
-    libssl1.1 \
     git \
     ninja-build \
     python3 \
@@ -33,16 +33,14 @@ RUN apt-get update --fix-missing && \
     xxd \
     xmlsec1 \
     xsltproc \
+    clang-tidy-15 \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Update certificates and install latest version of cmake
 RUN update-ca-certificates && \
     pip install --upgrade cmake
 
-#build clang-tidy-15
-WORKDIR /root
-COPY clang-tidy.cmake build-clang-tidy.sh /root/llvm-build/
-RUN ./llvm-build/build-clang-tidy.sh
 COPY known_hosts /root/.ssh/known_hosts
 # work around fix for CVE-2022-24765:
 RUN git config --global --add safe.directory '*'

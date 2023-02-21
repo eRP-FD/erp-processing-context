@@ -40,7 +40,7 @@ std::optional<Uuid> PostgresDatabaseCommunicationTest::insertCommunication(Commu
     if (communication.timeReceived().has_value())
     {
         database().markCommunicationsAsRetrieved({communication.id().value()}, communication.timeReceived().value(),
-                                                 std::string(communication.recipient().value()));
+                                                 model::getIdentityString(communication.recipient()));
     }
     database().commitTransaction();
     return communicationId;
@@ -58,7 +58,7 @@ uint64_t PostgresDatabaseCommunicationTest::countCommunications()
     const pqxx::result result = transaction.exec("SELECT COUNT(*) FROM erp.communication");
     transaction.commit();
     Expect(result.size() == 1, "Expecting one element as result containing count.");
-    int64_t count = 0;
+    uint64_t count = 0;
     if (!result.empty())
     {
         result.front().at(0).to(count);
@@ -108,7 +108,7 @@ void PostgresDatabaseCommunicationTest::verifyDatabaseIsTidy()
 {
     ASSERT_TRUE(database().retrieveCommunications(InsurantA, {}, {}).empty());
     ASSERT_TRUE(database().retrieveCommunications(InsurantB, {}, {}).empty());
-    ASSERT_TRUE(database().retrieveCommunications(mPharmacy, {}, {}).empty());
+    ASSERT_TRUE(database().retrieveCommunications(mPharmacy.id(), {}, {}).empty());
     database().commitTransaction();
 }
 
@@ -132,17 +132,21 @@ UrlArguments PostgresDatabaseCommunicationTest::searchForReceived (const std::st
 
 std::string PostgresDatabaseCommunicationTest::taskFile() const
 {
+    const std::string gematikVersion{
+        v_str(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+
     switch (GetParam())
     {
         case PrescriptionType::apothekenpflichigeArzneimittel:
-            return "task1.json";
+            return "task160_" + gematikVersion + ".json";
         case PrescriptionType::direkteZuweisung:
-            return "task169.json";
+            return "task169_" + gematikVersion + ".json";
         case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            return "task200_" + gematikVersion + ".json";
         case PrescriptionType::direkteZuweisungPkv:
-            Fail("Not yet implemented"); // TODO implement
+            return "task209_" + gematikVersion + ".json";
     }
-    return "task1.json";
+    Fail("Invalid prescription type");
 }
 
 
@@ -160,12 +164,12 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Insert object into database.
     std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
     Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     // The sender and timestamp json objects are usually added by the Post Communication Handler.
@@ -176,7 +180,7 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
     std::optional<Uuid> id = insertCommunication(c1);
 
     // Verify that the Communication object has been written to the database.
-    ASSERT_EQ(database().retrieveCommunications(mPharmacy, {}, {}).size(), 1);
+    ASSERT_EQ(database().retrieveCommunications(mPharmacy.id(), {}, {}).size(), 1);
     database().commitTransaction();
 
     // Verify that the id field of the Communication object has been initialized.
@@ -198,12 +202,12 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationReply)
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Insert object into database.
     std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+        .setRecipient(ActorRole::Insurant, kvnrInsurant.id())
         .setPayload("Yes. The medication is available.").createJsonString();
     Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     // The sender and timestamp json objects are usually added by the Post Communication Handler.
@@ -213,8 +217,8 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationReply)
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
     std::optional<Uuid> id = insertCommunication(c1);
 
-    // Verify that the Communication object has been writen to the database.
-    ASSERT_EQ(database().retrieveCommunications(std::string(kvnrInsurant), {}, {}).size(), 1);
+    // Verify that the Communication object has been written to the database.
+    ASSERT_EQ(database().retrieveCommunications(kvnrInsurant.id(), {}, {}).size(), 1);
     database().commitTransaction();
 
     // Verify that the id field of the Communication object has been initialized.
@@ -236,13 +240,13 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Insert object into database.
     std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(prescriptionId.toString())
         .setAccessCode(std::string(task.accessCode()))
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("I want to pick up the medication.").createJsonString();
     Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
     // The sender and timestamp json objects are usually added by the Post Communication Handler.
@@ -253,7 +257,7 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
     std::optional<Uuid> id = insertCommunication(c1);
 
     // Verify that the Communication object has been writen to the database.
-    ASSERT_EQ(database().retrieveCommunications(mPharmacy, {}, {}).size(), 1);
+    ASSERT_EQ(database().retrieveCommunications(mPharmacy.id(), {}, {}).size(), 1);
     database().commitTransaction();
 
     // Verify that the id field of the Communication object has been initialized.
@@ -275,7 +279,7 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Insert object into database.
     std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
@@ -292,7 +296,7 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
     std::optional<Uuid> id = insertCommunication(c1);
 
     // Verify that the Communication object has been writen to the database.
-    ASSERT_EQ(database().retrieveCommunications(InsurantA, {}, {}).size(), 1);
+    ASSERT_EQ(database().retrieveCommunications(kvnrInsurant.id(), {}, {}).size(), 1);
     database().commitTransaction();
 
     // Verify that the id field of the Communication object has been initialized.
@@ -314,7 +318,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Count currently availabe communication objects.
     uint64_t communicationsCountPrev = countCommunications();
@@ -322,7 +326,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     // Insert objects into database.
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
     Communication infoReq = Communication::fromJsonNoValidation(jsonString);
     infoReq.setSender(kvnrInsurant);
@@ -331,7 +335,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+        .setRecipient(ActorRole::Insurant, kvnrInsurant.id())
         .setPayload("Yes. The medication is available.").createJsonString();
     Communication reply = Communication::fromJsonNoValidation(jsonString);
     reply.setSender(mPharmacy);
@@ -341,7 +345,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(prescriptionId.toString())
         .setAccessCode(std::string(task.accessCode()))
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("I want to pick up the medication").createJsonString();
     Communication dispReq = Communication::fromJsonNoValidation(jsonString);
     dispReq.setSender(kvnrInsurant);
@@ -374,11 +378,11 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 4);
 
     // Retrieve communication objects by their ids.
-    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), infoReq.sender().value());
-    std::optional<Communication> replyInserted = retrieveCommunication(idReply.value(), reply.sender().value());
-    std::optional<Communication> dispReqInserted = retrieveCommunication(idDispReq.value(), dispReq.sender().value());
+    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    std::optional<Communication> replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
+    std::optional<Communication> dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
     std::optional<Communication> representativeInserted =
-            retrieveCommunication(idRepresentative.value(), representative.sender().value());
+            retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
 
     // Verify that the objects have been stored in the database.
     ASSERT_TRUE(infoReqInserted.has_value());
@@ -392,13 +396,13 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
 
     // Delete the communication objects by their ids and sender.
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultInfoReqDelete =
-        database().deleteCommunication(idInfoReq.value(), std::string(infoReq.sender().value()));
+        database().deleteCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultReplyDelete =
-        database().deleteCommunication(idReply.value(), std::string(reply.sender().value()));
+        database().deleteCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultDispReqDelete =
-        database().deleteCommunication(idDispReq.value(), std::string(dispReq.sender().value()));
+        database().deleteCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultRepresentativeDelete =
-        database().deleteCommunication(idRepresentative.value(), std::string(representative.sender().value()));
+        database().deleteCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
     database().commitTransaction();
 
     // Check the results from the delete requests.
@@ -425,10 +429,10 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     ASSERT_EQ(std::get<1>(resultRepresentativeDelete).value().toXsDateTime(), "2022-01-24T12:58:00.000+00:00");
 
     // Check whether the communication objects have been deleted.
-    infoReqInserted = retrieveCommunication(idInfoReq.value(), infoReq.sender().value());
-    replyInserted = retrieveCommunication(idReply.value(), reply.sender().value());
-    dispReqInserted = retrieveCommunication(idDispReq.value(), dispReq.sender().value());
-    representativeInserted = retrieveCommunication(idRepresentative.value(), representative.sender().value());
+    infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
+    dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    representativeInserted = retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
     ASSERT_FALSE(infoReqInserted.has_value());
     ASSERT_FALSE(replyInserted.has_value());
     ASSERT_FALSE(dispReqInserted.has_value());
@@ -440,9 +444,14 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
 }
 
 
-TEST_P(PostgresDatabaseCommunicationTest, ClearAllChargeItemCommunications)//NOLINT(readability-function-cognitive-complexity)
+// GEMREQ-start A_22157
+TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (!usePostgres())
+    if (!usePostgres() ||
+        (GetParam() != model::PrescriptionType::apothekenpflichtigeArzneimittelPkv &&
+         GetParam() != model::PrescriptionType::direkteZuweisungPkv) ||
+        (model::ResourceVersion::deprecatedProfile(
+                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())))
     {
         GTEST_SKIP();
     }
@@ -454,15 +463,25 @@ TEST_P(PostgresDatabaseCommunicationTest, ClearAllChargeItemCommunications)//NOL
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
+
+    // Insert communication object into database which shall *not* be deleted:
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+                     .setPrescriptionId(prescriptionId.toString())
+                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                     .setPayload("Do you have the medication available?").createJsonString();
+    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
+    infoReq.setSender(kvnrInsurant);
+    infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-08-23T12:34:00.000+00:00"));
+    std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
 
     // Count currently available communication objects.
     uint64_t communicationsCountPrev = countCommunications();
 
-    // Insert objects into database.
+    // Insert ChargeItem related communication objects into database:
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
                      .setPrescriptionId(prescriptionId.toString())
-                     .setRecipient(ActorRole::Pharmacists, mPharmacy)
+                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                      .setPayload("I want to change a charge item.").createJsonString();
     Communication chargChangeReq = Communication::fromJsonNoValidation(jsonString);
     chargChangeReq.setSender(kvnrInsurant);
@@ -471,7 +490,7 @@ TEST_P(PostgresDatabaseCommunicationTest, ClearAllChargeItemCommunications)//NOL
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
                      .setPrescriptionId(prescriptionId.toString())
-                     .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+                     .setRecipient(ActorRole::Insurant, kvnrInsurant.id())
                      .setPayload("Ok. What do you want to change?").createJsonString();
     Communication chargChangeReply = Communication::fromJsonNoValidation(jsonString);
     chargChangeReply.setSender(mPharmacy);
@@ -481,29 +500,126 @@ TEST_P(PostgresDatabaseCommunicationTest, ClearAllChargeItemCommunications)//NOL
     // Verify that the id fields of the Communication objects have been initialized.
     ASSERT_TRUE(idChargChangeReq.has_value());
     ASSERT_EQ(chargChangeReq.id(), idChargChangeReq.value());
-    ASSERT_TRUE(idChargChangeReq.has_value());
-    ASSERT_EQ(chargChangeReply.id(), idChargChangeReq.value());
+    ASSERT_TRUE(idChargChangeReply.has_value());
+    ASSERT_EQ(chargChangeReply.id(), idChargChangeReply.value());
 
     // Count currently available communication objects. 2 new rows must have been added.
     uint64_t communicationsCountCurr = countCommunications();
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 2);
 
-    // Delete the communication objects
+    // Delete the ChargeItem related communication objects
     database().clearAllChargeItemCommunications(kvnrInsurant);
     database().commitTransaction();
 
     // Check whether the communication objects have been deleted.
     const auto chargChangeReqRetrieved = retrieveCommunication(
         idChargChangeReq.value(),
-        chargChangeReq.sender().value());
+        model::getIdentityString(chargChangeReq.sender().value()));
+    ASSERT_FALSE(chargChangeReqRetrieved.has_value());
     const auto chargChangeReplyRetrieved = retrieveCommunication(
         idChargChangeReply.value(),
-        chargChangeReply.sender().value());
+        model::getIdentityString(chargChangeReply.sender().value()));
+    ASSERT_FALSE(chargChangeReplyRetrieved.has_value());
 
     // Count currently available communication objects. The 2 new rows must have been deleted again.
     communicationsCountCurr = countCommunications();
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev);
 }
+// GEMREQ-end A_22157
+
+
+// GEMREQ-start A_22117-01
+TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForChargeItem)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (!usePostgres() ||
+        (GetParam() != model::PrescriptionType::apothekenpflichtigeArzneimittelPkv &&
+         GetParam() != model::PrescriptionType::direkteZuweisungPkv) ||
+        (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())))
+    {
+        GTEST_SKIP();
+    }
+
+    // Make sure that there are no leftovers from previous tests.
+    verifyDatabaseIsTidy();
+
+    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task1 = Task::fromJsonNoValidation(jsonString);
+    PrescriptionId prescriptionId1 = insertTask(task1);
+    Task task2 = Task::fromJsonNoValidation(jsonString);
+    PrescriptionId prescriptionId2 = insertTask(task2);
+    const auto kvnrInsurant = task1.kvnr().value();
+
+    // Insert communication objects into database which shall *not* be deleted:
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+                     .setPrescriptionId(prescriptionId1.toString())
+                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                     .setPayload("Do you have the medication available?").createJsonString();
+    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
+    infoReq.setSender(kvnrInsurant);
+    infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-11-23T12:34:00.000+00:00"));
+    insertCommunication(infoReq);
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
+                     .setPrescriptionId(prescriptionId2.toString())
+                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                     .setPayload("I want to change this charge item.").createJsonString();
+    Communication chargChangeReq1 = Communication::fromJsonNoValidation(jsonString);
+    chargChangeReq1.setSender(kvnrInsurant);
+    chargChangeReq1.setTimeSent(Timestamp::fromXsDateTime("2022-11-23T12:34:00.000+00:00"));
+    insertCommunication(chargChangeReq1);
+
+    // Count currently available communication objects.
+    uint64_t communicationsCountPrev = countCommunications();
+
+    // Insert ChargeItem related communication objects into database:
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
+                     .setPrescriptionId(prescriptionId1.toString())
+                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                     .setPayload("I want to change a charge item.").createJsonString();
+    Communication chargChangeReq = Communication::fromJsonNoValidation(jsonString);
+    chargChangeReq.setSender(kvnrInsurant);
+    chargChangeReq.setTimeSent(Timestamp::fromXsDateTime("2022-11-23T12:34:00.000+00:00"));
+    std::optional<Uuid> idChargChangeReq = insertCommunication(chargChangeReq);
+
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
+                     .setPrescriptionId(prescriptionId1.toString())
+                     .setRecipient(ActorRole::Insurant, kvnrInsurant.id())
+                     .setPayload("Ok. What do you want to change?").createJsonString();
+    Communication chargChangeReply = Communication::fromJsonNoValidation(jsonString);
+    chargChangeReply.setSender(mPharmacy);
+    chargChangeReply.setTimeSent(Timestamp::fromXsDateTime("2022-11-23T12:45:00.000+00:00"));
+    std::optional<Uuid> idChargChangeReply = insertCommunication(chargChangeReply);
+
+    // Verify that the id fields of the Communication objects have been initialized.
+    ASSERT_TRUE(idChargChangeReq.has_value());
+    ASSERT_EQ(chargChangeReq.id(), idChargChangeReq.value());
+    ASSERT_TRUE(idChargChangeReply.has_value());
+    ASSERT_EQ(chargChangeReply.id(), idChargChangeReply.value());
+
+    // Count currently available communication objects. 2 new rows must have been added.
+    uint64_t communicationsCountCurr = countCommunications();
+    ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 2);
+
+    // Delete the ChargeItem related communication objects
+    database().deleteCommunicationsForChargeItem(prescriptionId1);
+    database().commitTransaction();
+
+    // Check whether the communication objects have been deleted.
+    const auto chargChangeReqRetrieved = retrieveCommunication(
+        idChargChangeReq.value(),
+        model::getIdentityString(chargChangeReq.sender().value()));
+    ASSERT_FALSE(chargChangeReqRetrieved.has_value());
+    const auto chargChangeReplyRetrieved = retrieveCommunication(
+        idChargChangeReply.value(),
+        model::getIdentityString(chargChangeReply.sender().value()));
+    ASSERT_FALSE(chargChangeReplyRetrieved.has_value());
+
+    // Count currently available communication objects.
+    communicationsCountCurr = countCommunications();
+    ASSERT_EQ(communicationsCountCurr, communicationsCountPrev);
+}
+// GEMREQ-end A_22117-01
 
 
 TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT(readability-function-cognitive-complexity)
@@ -520,7 +636,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     Uuid invalidId;
 
@@ -530,7 +646,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
     // Insert objects into database.
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
     Communication infoReq = Communication::fromJsonNoValidation(jsonString);
     infoReq.setSender(kvnrInsurant);
@@ -546,7 +662,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 1);
 
     // Retrieve communication objects by their ids.
-    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), infoReq.sender().value());
+    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
 
     // Verify that the objects have been stored in the database.
     ASSERT_TRUE(infoReqInserted.has_value());
@@ -554,7 +670,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
 
     // Delete the communication object by its id and sender.
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultInfoReqDelete =
-        database().deleteCommunication(invalidId, std::string(infoReq.sender().value()));
+        database().deleteCommunication(invalidId, model::getIdentityString(infoReq.sender().value()));
     database().commitTransaction();
 
     // Result must be empty.
@@ -562,7 +678,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
     ASSERT_FALSE(std::get<1>(resultInfoReqDelete).has_value());
 
     // Check whether the communication objects have been deleted.
-    infoReqInserted = retrieveCommunication(idInfoReq.value(), infoReq.sender().value());
+    infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
     ASSERT_TRUE(infoReqInserted.has_value());
 
     // Count currently availabe communication objects. The new row must not have been deleted.
@@ -585,7 +701,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Count currently availabe communication objects.
     uint64_t communicationsCountPrev = countCommunications();
@@ -593,7 +709,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     // Insert objects into database.
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
     Communication infoReq = Communication::fromJsonNoValidation(jsonString);
     infoReq.setSender(kvnrInsurant);
@@ -602,7 +718,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+        .setRecipient(ActorRole::Insurant, kvnrInsurant.id())
         .setPayload("Yes. The medication is available.").createJsonString();
     Communication reply = Communication::fromJsonNoValidation(jsonString);
     reply.setSender(mPharmacy);
@@ -612,7 +728,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(prescriptionId.toString())
         .setAccessCode(std::string(task.accessCode()))
-        .setRecipient(ActorRole::Pharmacists, mPharmacy)
+        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("I want to pick up the medication").createJsonString();
     Communication dispReq = Communication::fromJsonNoValidation(jsonString);
     dispReq.setSender(kvnrInsurant);
@@ -644,11 +760,11 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 4);
 
     // Retrieve communication objects by their ids.
-    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), infoReq.sender().value());
-    std::optional<Communication> replyInserted = retrieveCommunication(idReply.value(), reply.sender().value());
-    std::optional<Communication> dispReqInserted = retrieveCommunication(idDispReq.value(), dispReq.sender().value());
+    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    std::optional<Communication> replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
+    std::optional<Communication> dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
     std::optional<Communication> representativeInserted =
-        retrieveCommunication(idRepresentative.value(), representative.sender().value());
+        retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
 
     // Verify that the objects have been stored in the database.
     ASSERT_TRUE(infoReqInserted.has_value());
@@ -662,13 +778,13 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
 
     // Delete the communication objects by their ids and sender.
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultInfoReqDelete =
-        database().deleteCommunication(idInfoReq.value(), mPharmacy);
+        database().deleteCommunication(idInfoReq.value(), mPharmacy.id());
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultReplyDelete =
         database().deleteCommunication(idReply.value(), InsurantA);
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultDispReqDelete =
-        database().deleteCommunication(idDispReq.value(), mPharmacy);
+        database().deleteCommunication(idDispReq.value(), mPharmacy.id());
     std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultRepresentativeDelete =
-        database().deleteCommunication(idRepresentative.value(), mPharmacy);
+        database().deleteCommunication(idRepresentative.value(), mPharmacy.id());
     database().commitTransaction();
 
     // Results must be empty.
@@ -682,10 +798,10 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     ASSERT_FALSE(std::get<1>(resultRepresentativeDelete).has_value());
 
     // Check whether the communication objects have been deleted.
-    infoReqInserted = retrieveCommunication(idInfoReq.value(), infoReq.sender().value());
-    replyInserted = retrieveCommunication(idReply.value(), reply.sender().value());
-    dispReqInserted = retrieveCommunication(idDispReq.value(), dispReq.sender().value());
-    representativeInserted = retrieveCommunication(idRepresentative.value(), representative.sender().value());
+    infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
+    dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    representativeInserted = retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
     ASSERT_TRUE(infoReqInserted.has_value());
     ASSERT_TRUE(replyInserted.has_value());
     ASSERT_TRUE(dispReqInserted.has_value());
@@ -711,14 +827,14 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipie
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const std::string kvnrInsurant = task.kvnr().value().id();
 
     // Set up a small set of communication objects.
 
     const std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(prescriptionId.toString())
             .setAccessCode(std::string(task.accessCode()))
-            .setSender(ActorRole::Insurant, std::string(kvnrInsurant))
+            .setSender(ActorRole::Insurant, kvnrInsurant)
             .setRecipient(ActorRole::Insurant, InsurantA)
             .setPayload("json blob A")
             .setTimeSent("2022-01-23T12:34:00Z").createJsonString();
@@ -728,7 +844,7 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipie
     const std::string jsonStringC2 = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(prescriptionId.toString())
             .setAccessCode(std::string(task.accessCode()))
-            .setSender(ActorRole::Insurant, std::string(kvnrInsurant))
+            .setSender(ActorRole::Insurant, kvnrInsurant)
             .setRecipient(ActorRole::Insurant, InsurantA)
             .setTimeSent("2022-01-23T12:45:00Z")
             .setPayload("json blob B").createJsonString();
@@ -764,7 +880,7 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Set up a small set of communication objects.
 
@@ -824,7 +940,7 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)//NOLINT(r
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Set up a small set of communication objects.
 
@@ -890,7 +1006,7 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     // Set up a small set of communication objects.
 
@@ -952,16 +1068,18 @@ TEST_P(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)//NO
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurantB = model::Kvnr{InsurantB};
+    const auto kvnrInsurantC = model::Kvnr{InsurantC};
 
     // Set up a small set of communication objects with three mutual exclusive pairs of senders and receivers.
 
     std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+        .setRecipient(ActorRole::Insurant, kvnrInsurant.id())
         .setPayload("json blob A").createJsonString();
     Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
-    c1.setSender(InsurantB);
+    c1.setSender(kvnrInsurantB);
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     insertCommunication(c1);
 
@@ -987,37 +1105,37 @@ TEST_P(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)//NO
 
     {
         // Verify that we find 2 communication objects for kvnrInsurant <-> InsurantB.
-        const auto count = database().countRepresentativeCommunications(std::string(kvnrInsurant), InsurantB, prescriptionId);
+        const auto count = database().countRepresentativeCommunications(kvnrInsurant, kvnrInsurantB, prescriptionId);
         EXPECT_EQ(count, 2);
     }
 
     {
         // Verify that we find 2 communication objects for InsurantB <-> kvnrInsurant.
-        const auto count = database().countRepresentativeCommunications(InsurantB, std::string(kvnrInsurant), prescriptionId);
+        const auto count = database().countRepresentativeCommunications(kvnrInsurantB, kvnrInsurant, prescriptionId);
         EXPECT_EQ(count, 2);
     }
 
     {
         // Verify that we find only find 1 communication object for kvnrInsurant <-> InsurantC.
-        const auto count = database().countRepresentativeCommunications(std::string(kvnrInsurant), InsurantC, prescriptionId);
+        const auto count = database().countRepresentativeCommunications(kvnrInsurant, kvnrInsurantC, prescriptionId);
         EXPECT_EQ(count, 1);
     }
 
     {
         // Verify that we find only find 1 communication object for InsurantC <-> kvnrInsurant.
-        const auto count = database().countRepresentativeCommunications(InsurantC, std::string(kvnrInsurant), prescriptionId);
+        const auto count = database().countRepresentativeCommunications(kvnrInsurantC, kvnrInsurant, prescriptionId);
         EXPECT_EQ(count, 1);
     }
 
     {
         // Verify that we don't find any communication object for InsurantB <-> InsurantC.
-        const auto count = database().countRepresentativeCommunications(InsurantB, InsurantC, prescriptionId);
+        const auto count = database().countRepresentativeCommunications(kvnrInsurantB, kvnrInsurantC, prescriptionId);
         EXPECT_EQ(count, 0);
     }
 
     {
         // Verify that we don't find any communication object for InsurantC <-> InsurantB.
-        const auto count = database().countRepresentativeCommunications(InsurantC, InsurantB, prescriptionId);
+        const auto count = database().countRepresentativeCommunications(kvnrInsurantC, kvnrInsurantB, prescriptionId);
         EXPECT_EQ(count, 0);
     }
     database().commitTransaction();
@@ -1038,16 +1156,18 @@ TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)//NOLINT(
     std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurantB = model::Kvnr{InsurantB};
+    const auto kvnrInsurantC = model::Kvnr{InsurantC};
 
     // Set up a small set of communication objects with three mutual exclusive pairs of senders and receivers.
 
     std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId(prescriptionId.toString())
-        .setRecipient(ActorRole::Insurant, std::string(kvnrInsurant))
+        .setRecipient(ActorRole::Insurant, kvnrInsurant.id())
         .setPayload("json blob A").createJsonString();
     Communication c1 = Communication::fromJsonNoValidation(jsonStringC1);
-    c1.setSender(InsurantB);
+    c1.setSender(kvnrInsurantB);
     c1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00Z"));
     const auto c1id = insertCommunication(c1);
 
@@ -1074,11 +1194,11 @@ TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)//NOLINT(
 
     // Mark c1 and c2 as received.
     database().markCommunicationsAsRetrieved(
-        {c1id.value(), c2id.value()}, Timestamp::fromXsDateTime("2021-01-24T12:34:56Z"), std::string(kvnrInsurant));
+        {c1id.value(), c2id.value()}, Timestamp::fromXsDateTime("2021-01-24T12:34:56Z"), kvnrInsurant.id());
     database().commitTransaction();
 
     // Verify that c1 has been updated.
-    auto expectedC1 = database().retrieveCommunications(std::string(kvnrInsurant), c1id.value(), {});
+    auto expectedC1 = database().retrieveCommunications(kvnrInsurant.id(), c1id.value(), {});
     ASSERT_EQ(expectedC1.size(), 1);
     EXPECT_EQ(expectedC1.front().contentString(), "json blob A");
     EXPECT_EQ(expectedC1.front().timeReceived().value().toXsDateTime(), "2021-01-24T12:34:56.000+00:00");
@@ -1109,13 +1229,13 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
     std::string jsonString = FileHelper::readFileAsString(dataPath  + "/" + taskFile());
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
-    std::string_view kvnrInsurant = task.kvnr().value();
+    const auto kvnrInsurant = task.kvnr().value();
 
     {
         jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
                 .setPrescriptionId(prescriptionId.toString())
                 .setAccessCode(std::string(task.accessCode()))
-                .setRecipient(ActorRole::Pharmacists, mPharmacy)
+                .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                 .setPayload("Message text 1.").createJsonString();
         Communication comm = Communication::fromJsonNoValidation(jsonString);
         comm.setSender(kvnrInsurant);
@@ -1126,7 +1246,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
         jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
                 .setPrescriptionId(prescriptionId.toString())
                 .setAccessCode(std::string(task.accessCode()))
-                .setRecipient(ActorRole::Pharmacists, mPharmacy)
+                .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                 .setPayload("Message text 1.").createJsonString();
         Communication comm = Communication::fromJsonNoValidation(jsonString);
         comm.setSender(kvnrInsurant);
@@ -1154,4 +1274,6 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseCommunicationTestInst, PostgresDatabaseCommunicationTest,
                          testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                         model::PrescriptionType::direkteZuweisung));
+                                         model::PrescriptionType::direkteZuweisung,
+                                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                         model::PrescriptionType::direkteZuweisungPkv));

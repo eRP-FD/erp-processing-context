@@ -12,7 +12,7 @@
 #include <string>
 
 RateLimiter::RateLimiter(std::shared_ptr<RedisInterface> iface, std::string_view redisKeyPrefix, size_t calls,
-                         uint64_t timespan)
+                         std::chrono::duration<float> timespan)
     : mInterface(std::move(iface))
     , mRedisKeyPrefix(redisKeyPrefix)
     , mNumCalls(calls)
@@ -25,7 +25,7 @@ void RateLimiter::setUpperLimitCalls(size_t calls)
     mNumCalls = calls;
 }
 
-void RateLimiter::setTimespan(uint64_t timespan)
+void RateLimiter::setTimespan(std::chrono::duration<float> timespan)
 {
     mTimespan = timespan;
 }
@@ -36,8 +36,7 @@ bool RateLimiter::updateCallsCounter(
 {
     using namespace std::chrono;
     const auto nowVal = nowValue();
-    const auto tSpan = time_point<system_clock, milliseconds>(milliseconds(mTimespan));
-    const auto spanVal = tSpan.time_since_epoch().count();
+    const auto spanVal = std::chrono::duration_cast<std::chrono::milliseconds>(mTimespan).count();
     const auto tBucket = nowVal - (nowVal % spanVal);
     const auto tUpper = tBucket + spanVal;
 
@@ -61,7 +60,7 @@ bool RateLimiter::updateCallsCounter(
         else if (calls > static_cast<int>(mNumCalls) && nowVal < tUpper)
         {
             // Key will be blocked from now on.
-            VLOG(1) << "Access with given key blocked and will expire in about " << (exp.time_since_epoch().count() - nowVal) << " ms." << std::endl;
+            TVLOG(1) << "Access with given key blocked and will expire in about " << (exp.time_since_epoch().count() - nowVal) << " ms." << std::endl;
             mInterface->setKeyFieldValue(baseKey, "", "");
             mInterface->setKeyExpireAt(baseKey, exp);
             return false;
@@ -69,7 +68,7 @@ bool RateLimiter::updateCallsCounter(
         else
         {
             // Allow access with given key.
-            VLOG(1) << "request #" << calls << " within " << spanVal << " ms." << std::endl;
+            TVLOG(1) << "request #" << calls << " within " << spanVal << " ms." << std::endl;
         }
         return true;
     }
@@ -86,7 +85,7 @@ std::string_view RateLimiter::redisKeyPrefix() const
     return mRedisKeyPrefix;
 }
 
-uint64_t RateLimiter::nowValue() const {
+int64_t RateLimiter::nowValue() const {
     using namespace std::chrono;
     const auto tNow = time_point_cast<milliseconds>(system_clock::now());
     const auto nowVal = tNow.time_since_epoch().count();

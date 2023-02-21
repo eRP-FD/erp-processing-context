@@ -378,6 +378,13 @@ std::string Timestamp::toGermanDate() const
     return s.str();
 }
 
+std::string Timestamp::toGermanDateFormat() const
+{
+    std::ostringstream s;
+    s << date::format("%d.%m.%Y", date::make_zoned(model::Timestamp::GermanTimezone, mDateAndTime));
+    return s.str();
+}
+
 
 std::string Timestamp::toXsGYearMonth() const
 {

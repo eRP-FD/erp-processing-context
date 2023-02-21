@@ -12,6 +12,7 @@
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class OuterResponseErrorData : public ResourceBase
 {
 public:

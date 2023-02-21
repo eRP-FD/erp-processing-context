@@ -78,8 +78,8 @@ std::shared_ptr<xmlXPathObject> XmlDocument::getXpathObject (
             Fail2("did not find element", std::runtime_error);
         }
 
-        const size_t resultCount = xpathObject->nodesetval->nodeNr;
-        if (resultCount == 0)
+        const auto resultCount = xpathObject->nodesetval->nodeNr;
+        if (resultCount <= 0)
         {
             Fail2("did not find the requested element", std::runtime_error);
         }

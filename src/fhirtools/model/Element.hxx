@@ -62,6 +62,7 @@ public:
         std::optional<Scheme> scheme{};
         std::string pathOrId{};
         std::optional<std::string> containedId{};
+        // NOLINTNEXTLINE(hicpp-use-nullptr,modernize-use-nullptr)
         std::weak_ordering operator<=>(const Identity&) const = default;
         bool operator==(const Identity&) const;
     };
@@ -70,7 +71,7 @@ public:
         static IdentityAndResult fromReferenceString(std::string_view referenceString,
                                                      std::string_view elementFullPath);
         Identity identity{};
-        ValidationResultList result{};
+        ValidationResults result{};
 
         auto operator<=>(const IdentityAndResult&) const = delete;
         auto operator==(const IdentityAndResult&) const = delete;
@@ -125,9 +126,9 @@ public:
                                                      bool allowResourceId = true) const;
     [[nodiscard]] IdentityAndResult referenceTargetIdentity(std::string_view elementFullPath) const;
 
-    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
     resolveReference(std::string_view elementFullPath) const;
-    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
     resolveReference(const Identity& reference, std::string_view elementFullPath) const;
 
     // like operator<=>, but can return {} in special cases, see http://hl7.org/fhirpath/#equality
@@ -142,11 +143,11 @@ public:
 protected:
     // the element, that contains the current resource
     [[nodiscard]] std::shared_ptr<const Element> resourceRootParent() const;
-    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
     resolveContainedReference(std::string_view containedId) const;
-    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
     resolveUrlReference(const Identity& urlIdentity, std::string_view elementFullPath) const;
-    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
     resolveBundleReference(std::string_view fullUrl, std::string_view elementFullPath) const;
 
     const FhirStructureRepository* mFhirStructureRepository;

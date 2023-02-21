@@ -5,7 +5,7 @@
 
 #include "erp/model/Binary.hxx"
 #include "erp/util/String.hxx"
-
+#include "erp/model/ResourceNames.hxx"
 
 #include <gtest/gtest.h>
 
@@ -25,7 +25,13 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
     const std::string data = "binary_data_content";
     const auto profilePointer = ::rapidjson::Pointer{"/meta/profile/0"};
     const auto contentTypePointer = ::rapidjson::Pointer{"/contentType"};
+    bool isDeprecated = deprecatedProfile(
+        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+    auto sdBinary = isDeprecated ? model::resource::structure_definition::deprecated::binary
+                                 : model::resource::structure_definition::binary;
 
+    auto sdDigest = isDeprecated ? model::resource::structure_definition::deprecated::digest
+                                 : model::resource::structure_definition::digest;
     {
         model::FriendlyBinary binary(id, data);
         ASSERT_EQ(id, binary.id());
@@ -35,7 +41,8 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
         ASSERT_TRUE(profile);
         const auto profileParts = String::split(profile.value(), '|');
         ASSERT_GE(profileParts.size(), 1);
-        EXPECT_EQ(profileParts[0], "https://gematik.de/fhir/StructureDefinition/ErxBinary");
+
+        EXPECT_EQ(profileParts[0], sdBinary);
 
         const auto contentType = binary.getOptionalStringValue(contentTypePointer);
         ASSERT_TRUE(contentType.has_value());
@@ -43,7 +50,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
     }
 
     {
-        model::FriendlyBinary binary(id, data, ::model::Binary::Type::Base64);
+        model::FriendlyBinary binary(id, data, ::model::Binary::Type::Digest);
         ASSERT_EQ(id, binary.id());
         ASSERT_EQ(data, binary.data());
 
@@ -51,7 +58,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
         ASSERT_TRUE(profile);
         const auto profileParts = String::split(profile.value(), '|');
         ASSERT_GE(profileParts.size(), 1);
-        EXPECT_EQ(profileParts[0], "http://hl7.org/fhir/StructureDefinition/Binary");
+        EXPECT_EQ(profileParts[0], sdDigest);
 
         const auto contentType = binary.getOptionalStringValue(contentTypePointer);
         ASSERT_TRUE(contentType.has_value());

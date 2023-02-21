@@ -22,7 +22,7 @@
 class ContentType
 {
 public:
-    static ContentType fromString (const std::string contentTypeValue);
+    static ContentType fromString (const std::string& contentTypeValue);
 
     /**
      * Return the first part of the Content-Type, the actual type and sub type.

@@ -48,7 +48,7 @@ TEST(ParameterTest, CanGetChargeItemMarkingFlag)
             },
             {
               "name": "path",
-              "valueString": "ChargeItem.extension('https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_MarkingFlag').extension('taxOffice')"
+              "valueString": "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('taxOffice')"
             },
             {
               "name": "name",
@@ -69,7 +69,7 @@ TEST(ParameterTest, CanGetChargeItemMarkingFlag)
             },
             {
               "name": "path",
-              "valueString": "ChargeItem.extension('https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_MarkingFlag').extension('insuranceProvider')"
+              "valueString": "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('insuranceProvider')"
             },
             {
               "name": "name",
@@ -87,8 +87,8 @@ TEST(ParameterTest, CanGetChargeItemMarkingFlag)
     const auto parameter = model::Parameters::fromJsonNoValidation(json);
     ASSERT_EQ(parameter.count(), 2);
 
-    std::optional<model::ChargeItemMarkingFlag> chargeItemMarkingFlag{};
-    ASSERT_NO_THROW(chargeItemMarkingFlag = parameter.getChargeItemMarkingFlag());
+    std::optional<model::ChargeItemMarkingFlags> chargeItemMarkingFlag{};
+    ASSERT_NO_THROW(chargeItemMarkingFlag = parameter.getChargeItemMarkingFlags());
     ASSERT_TRUE(chargeItemMarkingFlag.has_value());
 
     auto markings = chargeItemMarkingFlag->getAllMarkings();

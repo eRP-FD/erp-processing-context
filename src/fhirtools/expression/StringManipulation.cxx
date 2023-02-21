@@ -4,12 +4,12 @@
  */
 
 #include "fhirtools/expression/StringManipulation.hxx"
-
-#include <regex>
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/util/Gsl.hxx"
+
+#include <regex>
 
 namespace fhirtools
 {
@@ -49,13 +49,13 @@ Collection StringManipSubstring::eval(const Collection& collection) const
     {
         return {};
     }
-    const size_t start = startResult.single()->asInt();
+    const size_t start = gsl::narrow<size_t>(startResult.single()->asInt());
     const auto& asString = collection.single()->asString();
     if (start >= asString.size())
     {
         return {};
     }
-    const size_t length = mRhs ? mRhs->eval(collection).single()->asInt() : std::string::npos;
+    const size_t length = mRhs ? gsl::narrow<size_t>(mRhs->eval(collection).single()->asInt()) : std::string::npos;
 
     return {makeStringElement(asString.substr(start, length))};
 }

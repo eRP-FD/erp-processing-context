@@ -22,8 +22,9 @@ void ConsentGetHandler::handleRequest (PcSessionContext& session)
     A_22160.start("Filter Consent according to kvnr of insurant from access token");
     const auto kvnrClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(kvnrClaim.has_value(), "JWT does not contain Kvnr");
+    const model::Kvnr kvnr{*kvnrClaim, model::Kvnr::Type::pkv};
 
-    const auto consent = session.database()->retrieveConsent(kvnrClaim.value());
+    const auto consent = session.database()->retrieveConsent(kvnr);
     A_22160.finish();
 
     model::Bundle bundle(model::BundleType::searchset, model::ResourceBase::NoProfile);
@@ -36,8 +37,8 @@ void ConsentGetHandler::handleRequest (PcSessionContext& session)
             {},
             model::Bundle::SearchMode::match,
             consent.value().jsonDocument());
+        bundle.setTotalSearchMatches(1);
     }
 
     makeResponse(session, HttpStatus::OK, &bundle);
 }
-

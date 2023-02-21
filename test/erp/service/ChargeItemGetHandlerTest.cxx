@@ -6,10 +6,8 @@
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/model/Patient.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/ByteHelper.hxx"
-#include "erp/util/Uuid.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
 #include "test/erp/model/CommunicationTest.hxx"
@@ -29,6 +27,16 @@ public:
         ServerTestBase()
     {
     }
+
+    void SetUp() override
+    {
+        if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+        {
+            GTEST_SKIP();
+        }
+        ServerTestBase::SetUp();
+    }
 protected:
 
     void insertChargeItem(// NOLINT(readability-function-cognitive-complexity)
@@ -45,7 +53,7 @@ protected:
             auto db = createDatabase();
             model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
                              "09409348029834029384023984209");
-            task.setKvnr(insurant);
+            task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::pkv});
             std::optional<model::PrescriptionId> prescriptionId;
             ASSERT_NO_THROW(prescriptionId.emplace(db->storeTask(task)));
             task.setPrescriptionId(*prescriptionId);
@@ -67,7 +75,7 @@ protected:
 
             const auto& dispenseItemXML =
                 resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
-            auto dispenseItem = model::Bundle::fromXmlNoValidation(dispenseItemXML);
+            auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
             auto signedDispenseItem =
                 ::model::Binary{dispenseItem.getIdentifier().toString(),
                                 ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
@@ -111,14 +119,14 @@ protected:
         db->commitTransaction();
     }
 
-    void sendRequest( // NOLINT(readability-function-cognitive-complexity)
+    void sendGetAllChargeItemsRequest( // NOLINT(readability-function-cognitive-complexity)
         HttpsClient& client,
         JWT& jwt,
         std::vector<model::ChargeItem>& chargeItemsResponse,
         std::size_t& totalSearchMatches,
         std::optional<std::vector<std::string>>&& filters = {},
         std::optional<std::pair<size_t, size_t>>&& paging = {},
-        HttpStatus expectedHttpStatus = HttpStatus::OK)
+        const HttpStatus expectedHttpStatus = HttpStatus::OK)
     {
         totalSearchMatches = 0;
         std::string path = "/ChargeItem";
@@ -152,84 +160,48 @@ protected:
             path += "&__offset=" + std::to_string(std::get<1>(*paging));
         }
 
-        // Create the inner request
-        ClientRequest request(createGetHeader(path, jwt), "");
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request, jwt));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
-
-        ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
-        ASSERT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, expectedHttpStatus,
-                                                           innerResponse.getHeader().contentType().value()));
-
-        if (expectedHttpStatus == HttpStatus::OK)
+        const std::optional<model::Bundle> result = sendGetRequest(client, jwt, totalSearchMatches, path, expectedHttpStatus);
+        if(result.has_value())
         {
-            model::Bundle responseBundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
-            if(innerResponse.getHeader().contentType() == std::string(ContentMimeType::fhirJsonUtf8))
+            for (size_t index = 0; index < result->getResourceCount(); ++index)
             {
-                ASSERT_NO_FATAL_FAILURE(responseBundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody()));
+                ASSERT_NO_FATAL_FAILURE(
+                    chargeItemsResponse.emplace_back(model::ChargeItem::fromJson(result->getResource(index))));
             }
-            else
-            {
-                ASSERT_NO_FATAL_FAILURE(responseBundle = model::Bundle::fromXmlNoValidation(innerResponse.getBody()));
-            }
-
-            for (size_t index = 0; index < responseBundle.getResourceCount(); ++index)
-            {
-                ASSERT_NO_FATAL_FAILURE(chargeItemsResponse.emplace_back(
-                    model::ChargeItem::fromJson(responseBundle.getResource(index))));
-            }
-
-            totalSearchMatches = responseBundle.getTotalSearchMatches();
         }
     }
 
-    std::optional<model::Bundle> sendRequest(
+    std::optional<model::Bundle> sendGetRequest(
         HttpsClient& client,
         JWT& jwt,
         std::size_t& totalSearchMatches,
-        std::string& argument)
+        std::string& argument,
+        const HttpStatus expectedHttpStatus = HttpStatus::OK)
     {
-        // Create the inner request
-        ClientRequest request(createGetHeader(argument, jwt), "");
+        std::optional<model::Bundle> result;
+        sendGetRequest(client, jwt, argument, result, expectedHttpStatus);
+        totalSearchMatches = result.has_value() ? result->getTotalSearchMatches() : 0;
 
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request, jwt));
-        auto innerResponse = verifyOuterResponse(outerResponse);
-        if (innerResponse.getHeader().status() == HttpStatus::OK)
-        {
-            model::Bundle responseBundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
-            if(innerResponse.getHeader().contentType() == std::string(ContentMimeType::fhirJsonUtf8))
-            {
-            responseBundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
-            }
-            else
-            {
-            responseBundle = model::Bundle::fromXmlNoValidation(innerResponse.getBody());
-            }
-            totalSearchMatches = responseBundle.getTotalSearchMatches();
-            return responseBundle;
-        }
-        return {};
+        return result;
     }
 
-    void sendRequest(
+    void sendGetRequest(
         HttpsClient& client,
         JWT& jwt,
         const std::string& argument,
         std::optional<model::Bundle>& chargeItemBundle,
-        HttpStatus expectedHttpStatus = HttpStatus::OK)
+        const HttpStatus expectedHttpStatus = HttpStatus::OK)
     {
         // Create the inner request
         ClientRequest request(createGetHeader(argument, jwt), "");
-        PcServiceContext mContext = StaticData::makePcServiceContext();
 
         // Send the request.
-        auto outerResponse = client.send(encryptRequest(request, jwt));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto outerResponse = client.send(encryptRequest(request, jwt));
+        const auto innerResponse = verifyOuterResponse(outerResponse);
+
+        ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
+        ASSERT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, expectedHttpStatus,
+                                                           innerResponse.getHeader().contentType().value()));
 
         EXPECT_TRUE(innerResponse.getHeader().status() == expectedHttpStatus);
 
@@ -237,11 +209,11 @@ protected:
         {
             if(innerResponse.getHeader().contentType() == std::string(ContentMimeType::fhirJsonUtf8))
             {
-                chargeItemBundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
+                ASSERT_NO_FATAL_FAILURE(chargeItemBundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody()));
             }
             else
             {
-                chargeItemBundle = model::Bundle::fromXmlNoValidation(innerResponse.getBody());
+                ASSERT_NO_FATAL_FAILURE(chargeItemBundle = model::Bundle::fromXmlNoValidation(innerResponse.getBody()));
             }
         }
     }
@@ -256,15 +228,16 @@ protected:
     }
 };
 
+// GEMREQ-start A_22119
 TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllInsurant)
 {
     // Insert chargeItem into database
     //--------------------------
 
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
+    static const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -288,29 +261,35 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllInsurant)
 
     A_22122.test("Existing supportingInformation, no referenced data sets");
     {
-        // non-existence of referenced data sets is verified by the construction of charge items from all resources of the result bundle in sendrequest()
-        sendRequest(client, jwt, chargeItems, totalSearchMatches);
+        // non-existence of referenced data sets is verified by the construction of charge items from all resources of the result bundle in sendGetRequest()
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches);
+        A_22119.test("Only charge items with KV number from authorization header found");
         EXPECT_EQ(chargeItems.size(), 3);
         EXPECT_EQ(totalSearchMatches, 3);
 
         for (const auto& chargeItem : chargeItems)
         {
-            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem));
-            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem));
-            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt));
+            A_22119.test("Only charge items with KV number from authorization header found");
+            EXPECT_EQ(chargeItem.subjectKvnr(), InsurantA);
+
+            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle));
+            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle));
+            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle));
+            EXPECT_FALSE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBinary));
             EXPECT_FALSE(chargeItem.containedBinary());
         }
     }
 
     deleteChargeItems(prescriptionIDs);
 }
+// GEMREQ-end A_22119
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllPharmacie)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllPharmacy)
 {
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
+    static const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
         {InsurantB, pharmacyA, std::nullopt},
@@ -330,22 +309,22 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllPharmacie)
     std::vector<model::ChargeItem> chargeItems;
     std::size_t totalSearchMatches = 0;
     JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyB);
-    sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, {}, ::HttpStatus::Forbidden);
+    sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, {}, {}, ::HttpStatus::Forbidden);
     EXPECT_EQ(chargeItems.size(), 0);
     EXPECT_EQ(totalSearchMatches, 0);
 
     deleteChargeItems(prescriptionIDs);
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter) // NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FilterByDate) // NOLINT(readability-function-cognitive-complexity)
 {
     // Insert ChargeItem into database
     //--------------------------
 
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
+    static const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-01-01T17:13:00+01:00")},
         {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-01-01T17:13:30+01:00")},
         {InsurantA, pharmacyB, model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00")},
@@ -370,7 +349,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter) // NOLINT(readability-fun
         std::vector<std::string> filters = { "entered-date=lt2021-02-02" };
         std::vector<model::ChargeItem> chargeItems;
         JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantC);
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
         EXPECT_EQ(chargeItems.size(), 0);
     }
 
@@ -378,7 +357,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter) // NOLINT(readability-fun
         std::vector<std::string> filters = { "entered-date=lt2021-06-06" };
         std::vector<model::ChargeItem> chargeItems;
         JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantA);
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
         EXPECT_EQ(chargeItems.size(), 4);
     }
 
@@ -386,7 +365,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter) // NOLINT(readability-fun
         std::vector<std::string> filters = { "entered-date=gt2021-01-01T17:13:00%2B01:00" };
         std::vector<model::ChargeItem> chargeItems;
         JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantA);
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
         EXPECT_EQ(chargeItems.size(), 3);
     }
 
@@ -394,8 +373,37 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_Filter) // NOLINT(readability-fun
         std::vector<std::string> filters = { "entered-date=ge2021-01-01T17:13:00%2B01:00" };
         std::vector<model::ChargeItem> chargeItems;
         JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantA);
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
         EXPECT_EQ(chargeItems.size(), 4);
+    }
+
+    using namespace std::chrono_literals;
+
+    {
+        auto lastUpdatedTime = (model::Timestamp::now() - 5s).toXsDateTime();
+        lastUpdatedTime = lastUpdatedTime.substr(0, lastUpdatedTime.rfind('.'));
+
+        std::vector<std::string> filters = { "_lastUpdated=ge" + lastUpdatedTime };
+        std::vector<model::ChargeItem> chargeItems;
+        JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantA);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
+        EXPECT_EQ(chargeItems.size(), 4);
+    }
+
+    std::this_thread::sleep_for(1s);
+    insertChargeItem({ {InsurantA, pharmacyB, model::Timestamp::fromXsDateTime("2021-06-06T17:13:00+01:00")} },
+                     prescriptionIDs,
+                     MockDatabase::mockAccessCode);
+
+    {
+        auto lastUpdatedTime = model::Timestamp::now().toXsDateTime();
+        lastUpdatedTime = lastUpdatedTime.substr(0, lastUpdatedTime.rfind('.'));
+
+        std::vector<std::string> filters = { "_lastUpdated=ge" + lastUpdatedTime };
+        std::vector<model::ChargeItem> chargeItems;
+        JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantA);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
+        EXPECT_EQ(chargeItems.size(), 1);
     }
 
     deleteChargeItems(prescriptionIDs);
@@ -406,9 +414,9 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging) // NOLINT(readability-
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
-    std::string pharmacyC = "606358759";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
+    static const std::string pharmacyC = "606358759";
 
     std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
@@ -447,7 +455,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging) // NOLINT(readability-
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -460,7 +468,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging) // NOLINT(readability-
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -473,7 +481,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_Paging) // NOLINT(readability-
     for (const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -488,14 +496,14 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging) // NOLINT(reada
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
-    std::string pharmacyC = "606358759";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
+    static const std::string pharmacyC = "606358759";
 
     std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
     model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
-    int countInsurantPharmacy = 11;
+    static const int countInsurantPharmacy = 11;
 	patientsPharmacies.reserve(100);
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
@@ -533,7 +541,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging) // NOLINT(reada
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, filters, paging);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, filters, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -546,7 +554,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging) // NOLINT(reada
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - paging.second;
         auto expectedPage = (remainder >= paging.first) ? paging.first : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -559,7 +567,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FiltersPaging) // NOLINT(reada
     for(const auto& paging : pagings)
     {
         std::vector<model::ChargeItem> chargeItems;
-        sendRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
+        sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, {}, paging);
         auto remainder = totalSearch - std::get<1>(paging);
         auto expectedPage = (remainder >= std::get<0>(paging)) ? std::get<0>(paging) : remainder <= 0 ? 0 : remainder;
         ASSERT_EQ(chargeItems.size(), expectedPage);
@@ -574,14 +582,14 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
-    std::string pharmacyC = "606358759";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
+    static const std::string pharmacyC = "606358759";
 
     std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmacies;
 
     model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
-    int countInsurantPharmacy = 11;
+    static const int countInsurantPharmacy = 11;
 	patientsPharmacies.reserve(100);
     for (int idxPatient = 0; idxPatient < countInsurantPharmacy; ++idxPatient)
     {
@@ -626,7 +634,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
         std::optional<std::string> nextLink = {};
         for (int idx = 0; idx < hasLinkCount; ++idx)
         {
-            bundle = sendRequest(client, jwt, totalSearchMatches, argument);
+            bundle = sendGetRequest(client, jwt, totalSearchMatches, argument);
             EXPECT_EQ(totalSearchMatches, totalSearch);
             nextLink = bundle->getLink(model::Link::Type::Next);
             EXPECT_TRUE(nextLink.has_value());
@@ -638,7 +646,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
                       "/ChargeItem?entered-date=gt2021-09-25T11:34:56+00:00&_count=" + std::to_string(paging.first) +
                           "&__offset="+ std::to_string(((idx+1) * paging.first) + paging.second));
         }
-        bundle = sendRequest(client, jwt, totalSearchMatches, argument);
+        bundle = sendGetRequest(client, jwt, totalSearchMatches, argument);
         EXPECT_EQ(totalSearchMatches, totalSearch);
         nextLink = bundle->getLink(model::Link::Type::Next);
         EXPECT_FALSE(nextLink.has_value());
@@ -658,7 +666,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
         std::optional<std::string> nextLink = {};
         for (int idx = 0; idx < hasLinkCount; ++idx)
         {
-            bundle = sendRequest(client, jwt, totalSearchMatches, argument);
+            bundle = sendGetRequest(client, jwt, totalSearchMatches, argument);
             EXPECT_EQ(totalSearchMatches, totalSearch);
             nextLink = bundle->getLink(model::Link::Type::Next);
             EXPECT_TRUE(nextLink.has_value());
@@ -670,7 +678,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
                       "/ChargeItem?entered-date=le2021-11-25T11:34:56+00:00&_count=" + std::to_string(paging.first) +
                           "&__offset=" + std::to_string(((idx + 1) * paging.first) + paging.second));
         }
-        bundle = sendRequest(client, jwt, totalSearchMatches, argument);
+        bundle = sendGetRequest(client, jwt, totalSearchMatches, argument);
         EXPECT_EQ(totalSearchMatches, totalSearch);
         nextLink = bundle->getLink(model::Link::Type::Next);
         EXPECT_FALSE(nextLink.has_value());
@@ -679,15 +687,15 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
     deleteChargeItems(prescriptionIDs);
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-function-cognitive-complexity)
 {
     // Insert chargeItem into database
     //--------------------------
 
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
+    static const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantB, pharmacyB, std::nullopt},
     };
@@ -706,17 +714,16 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cog
     {
         std::string argument = {"/ChargeItem/" + prescriptionIDs[0]};
         JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyA);
-        sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
         EXPECT_FALSE(chargeItemBundle.has_value());
 
         argument += std::string{"?ac="} + MockDatabase::mockAccessCode.data();
-        sendRequest(client, jwt, argument, chargeItemBundle);
+        sendGetRequest(client, jwt, argument, chargeItemBundle);
         EXPECT_TRUE(chargeItemBundle.has_value());
 
         auto chargeItem = chargeItemBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
         ASSERT_EQ(chargeItem.size(), 1);
 
-        A_22125.test("Insurant check");
         EXPECT_EQ(chargeItem[0].subjectKvnr(), InsurantA);
 
         A_22126.test("Telematik-ID check");
@@ -729,19 +736,19 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cog
 
         ASSERT_EQ(prescription.size(), 1);
         EXPECT_TRUE(
-            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).has_value());
+            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).has_value());
         EXPECT_EQ(
-            ::std::string{"Bundle/"} + ::std::string{*prescription[0].id()},
-            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).value());
+            Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeaturePrescription)}.toUrn(),
+            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).value());
 
         const auto dispenseItem = chargeItemBundle->getResourcesByType<::model::Bundle>("Bundle");
         ASSERT_EQ(dispenseItem.size(), 1);
         EXPECT_TRUE(
-            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
-        EXPECT_EQ(::std::string{"Bundle/"} + dispenseItem[0].getId().toString(),
-                  chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).value());
+            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
+        EXPECT_EQ(Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeatureDispenseItem)}.toUrn(),
+                  chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).value());
 
-        EXPECT_TRUE(chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).has_value());
+        EXPECT_TRUE(chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle).has_value());
 
         EXPECT_FALSE(chargeItem[0].containedBinary());
     }
@@ -751,17 +758,16 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cog
         std::string argument = {"/ChargeItem/" + prescriptionIDs[1]};
         JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyB);
         chargeItemBundle.reset();
-        sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
         EXPECT_FALSE(chargeItemBundle.has_value());
 
         argument += std::string{"?ac="} + MockDatabase::mockAccessCode.data();
-        sendRequest(client, jwt, argument, chargeItemBundle);
+        sendGetRequest(client, jwt, argument, chargeItemBundle);
         EXPECT_TRUE(chargeItemBundle.has_value());
 
         auto chargeItem = chargeItemBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
         ASSERT_EQ(chargeItem.size(), 1);
 
-        A_22125.test("Insurant check");
         EXPECT_EQ(chargeItem[0].subjectKvnr(), InsurantB);
 
         A_22126.test("Telematik-ID check");
@@ -774,19 +780,19 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cog
 
         ASSERT_EQ(prescription.size(), 1);
         EXPECT_TRUE(
-            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).has_value());
+            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).has_value());
         EXPECT_EQ(
-            ::std::string{"Bundle/"} + ::std::string{*prescription[0].id()},
-            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).value());
+            Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeaturePrescription)}.toUrn(),
+            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).value());
 
         const auto dispenseItem = chargeItemBundle->getResourcesByType<::model::Bundle>("Bundle");
         ASSERT_EQ(dispenseItem.size(), 1);
         EXPECT_TRUE(
-            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
-        EXPECT_EQ(::std::string{"Bundle/"} + dispenseItem[0].getId().toString(),
-                  chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).value());
+            chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
+        EXPECT_EQ(Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeatureDispenseItem)}.toUrn(),
+                  chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).value());
 
-        EXPECT_TRUE(chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).has_value());
+        EXPECT_TRUE(chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle).has_value());
 
         EXPECT_FALSE(chargeItem[0].containedBinary());
     }
@@ -794,14 +800,14 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet)//NOLINT(readability-function-cog
     deleteChargeItems(prescriptionIDs);
 }
 
-TEST_F(ChargeItemGetHandlerTest, ChargeItemGetNoTask)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacyNoTask)//NOLINT(readability-function-cognitive-complexity)
 {
     // Insert chargeItem into database
     //--------------------------
 
-    ::std::string pharmacyA = "606358757";
+    static const ::std::string pharmacyA = "606358757";
 
-    ::std::vector<::std::tuple<::std::string, ::std::string, ::std::optional<::model::Timestamp>>>
+    static const ::std::vector<::std::tuple<::std::string, ::std::string, ::std::optional<::model::Timestamp>>>
         patientsPharmaciesChargeItems = {{InsurantA, pharmacyA, std::nullopt}};
 
     ::std::vector<::std::string> prescriptionIDs;
@@ -815,17 +821,16 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetNoTask)//NOLINT(readability-functi
 
     ::std::string argument = {"/ChargeItem/" + prescriptionIDs[0]};
     auto jwt = mJwtBuilder.makeJwtApotheke(pharmacyA);
-    sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+    sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
     EXPECT_FALSE(chargeItemBundle.has_value());
 
     argument += ::std::string{"?ac="} + ::std::string{::MockDatabase::mockAccessCode};
-    sendRequest(client, jwt, argument, chargeItemBundle);
+    sendGetRequest(client, jwt, argument, chargeItemBundle);
     EXPECT_TRUE(chargeItemBundle.has_value());
 
     auto chargeItem = chargeItemBundle->getResourcesByType<::model::ChargeItem>("ChargeItem");
     ASSERT_EQ(chargeItem.size(), 1);
 
-    A_22125.test("Insurant check");
     EXPECT_EQ(chargeItem[0].subjectKvnr(), InsurantA);
 
     A_22126.test("Telematik-ID check");
@@ -836,9 +841,9 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetNoTask)//NOLINT(readability-functi
     ASSERT_EQ(dispenseItem.size(), 1);
 
     EXPECT_TRUE(
-        chargeItem[0].supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
-    ASSERT_EQ(::std::string{"Bundle/"} + dispenseItem[0].getId().toString(),
-              chargeItem[0].supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem).value());
+        chargeItem[0].supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
+    ASSERT_EQ(Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeatureDispenseItem)}.toUrn(),
+              chargeItem[0].supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle).value());
 
     deleteChargeItems({prescriptionIDs});
 }
@@ -848,10 +853,10 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_BAD)
     // Insert chargeItem into database
     //--------------------------
 
-    std::string pharmacyA = "606358757";
-    std::string pharmacyB = "606358758";
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
+    static const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
         {InsurantA, pharmacyA, std::nullopt},
         {InsurantA, pharmacyB, std::nullopt},
     };
@@ -870,7 +875,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_BAD)
     {
         std::string argument = {"/ChargeItem/"};
         JWT jwt = mJwtBuilder.makeJwtArzt(pharmacyA);
-        sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
         EXPECT_FALSE(chargeItemBundle.has_value());
     }
 
@@ -878,7 +883,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_BAD)
     {
         std::string argument = {"/ChargeItem/" + prescriptionIDs[1]};
         JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyA);
-        sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
         EXPECT_FALSE(chargeItemBundle.has_value());
     }
 
@@ -886,7 +891,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_BAD)
     {
         std::string argument = {"/ChargeItem/" + prescriptionIDs[0]};
         JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyB);
-        sendRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
         EXPECT_FALSE(chargeItemBundle.has_value());
     }
 

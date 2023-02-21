@@ -109,6 +109,7 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
 
 
     // For GET /MedicationDispense see gemSpec_FD_eRp_V1.1.1, 6.2.1
+    // GEMREQ-start A_19405
     A_19405.start("Register the allowed professionOIDs");
     const oids medicationDispenseEndpointOIDs{oid_versicherter};
     handlerManager.onGetDo("/MedicationDispense",
@@ -116,6 +117,7 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     handlerManager.onGetDo("/MedicationDispense/{id}",
             std::make_unique<GetMedicationDispenseHandler>(medicationDispenseEndpointOIDs));
     A_19405.finish();
+    // GEMREQ-end A_19405
 
 
     // For GET /Communication see gemSpec_FD_eRp_V1.1.1, 6.3.1
@@ -167,52 +169,77 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     {
         // PKV endpoints:
 
-        // Resource ChargeItem (gemF_eRp_PKV_V1.0.0_CC, 6.1.4)
-        const oids chargeItemOIDsExceptCreation{oid_versicherter, oid_oeffentliche_apotheke, oid_krankenhausapotheke};
+        // Resource ChargeItem (gemF_eRp_PKV_V1.0.1, 6.1.4)
+
+        A_22112.start("If called without specifying an <id>, issue error code 405 to prevent "
+                      "deletion of multiple resources in one request via a single request");
+        // GEMREQ-start A_22113#regop
         A_22113.start("Register the allowed professionOIDs");
         handlerManager.onDeleteDo("/ChargeItem/{id}",
                                   std::make_unique<ChargeItemDeleteHandler>(oids{oid_versicherter}));
         A_22113.finish();
+        // GEMREQ-end A_22113#regop
+        A_22112.finish();
 
         A_22879.start("If called without specifying an <id>, issue error code 405 to prevent "
                       "changing multiple resources in one request via a single request");
+        // GEMREQ-start A_22875#regop
         A_22875.start("Only 'oid_versicherter' users are allowed to call the operation");
         handlerManager.onPatchDo("/ChargeItem/{id}", std::make_unique<ChargeItemPatchHandler>(oids{oid_versicherter}));
         A_22875.finish();
+        // GEMREQ-end A_22875#regop
         A_22879.finish();
 
+        // GEMREQ-start A_22118#regop
         A_22118.start("Register the allowed professionOIDs");
         handlerManager.onGetDo("/ChargeItem", std::make_unique<ChargeItemGetAllHandler>(oids{oid_versicherter}));
         A_22118.finish();
+        // GEMREQ-end A_22118#regop
 
+        // GEMREQ-start A_22124#regop
         A_22124.start("Register the allowed professionOIDs");
         handlerManager.onGetDo("/ChargeItem/{id}",
-                               std::make_unique<ChargeItemGetByIdHandler>(chargeItemOIDsExceptCreation));
+                               std::make_unique<ChargeItemGetByIdHandler>(
+                                   oids{oid_versicherter, oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
         A_22124.finish();
+        // GEMREQ-end A_22124#regop
 
+        // GEMREQ-start A_22129#regop
         A_22129.start("Register the allowed professionOIDs");
         handlerManager.onPostDo("/ChargeItem", std::make_unique<ChargeItemPostHandler>(
                                                    oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
         A_22129.finish();
+        // GEMREQ-end A_22129#regop
 
+        // GEMREQ-start A_22144#regop
         A_22144.start("Register the allowed professionOIDs");
-        handlerManager.onPutDo("/ChargeItem/{id}",
-                               std::make_unique<ChargeItemPutHandler>(chargeItemOIDsExceptCreation));
+        handlerManager.onPutDo("/ChargeItem/{id}", std::make_unique<ChargeItemPutHandler>(
+                                                       oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
         A_22144.finish();
+        // GEMREQ-end A_22144#regop
 
-        // Resource Consent (gemF_eRp_PKV_V1.0.0_CC, 6.1.5)
+        // Resource Consent (gemF_eRp_PKV_V1.0.1, 6.1.5)
+
+        // GEMREQ-start consentoids
         const oids consentOIDs{oid_versicherter};
+        // GEMREQ-end consentoids
+        // GEMREQ-start A_22155#regop
         A_22155.start("Register the allowed professionOIDs");
         handlerManager.onDeleteDo("/Consent", std::make_unique<ConsentDeleteHandler>(consentOIDs));
         A_22155.finish();
+        // GEMREQ-end A_22155#regop
 
+        // GEMREQ-start A_22159#regop
         A_22159.start("Register the allowed professionOIDs");
         handlerManager.onGetDo("/Consent", std::make_unique<ConsentGetHandler>(consentOIDs));
         A_22159.finish();
+        // GEMREQ-end A_22159#regop
 
+        // GEMREQ-start A_22161#regop
         A_22161.start("Register the allowed professionOIDs");
         handlerManager.onPostDo("/Consent", std::make_unique<ConsentPostHandler>(consentOIDs));
         A_22161.finish();
+        // GEMREQ-end A_22161#regop
     }
 }
 }

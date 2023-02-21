@@ -28,10 +28,33 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                cleanWs()
-                commonCheckout()
+        stage ('Checkout & reqmd in parallel') {
+            parallel  {
+                stage('Checkout') {
+                    steps {
+                        cleanWs()
+                        commonCheckout()
+                    }
+                }
+
+                stage('Verify that reqmd docs are up-to-date') {
+                    agent {
+                        label 'ios' // ios nodes have ~/.netrc set up to be able to download reqmd
+                    }
+                    steps {
+                        cleanWs()
+                        commonCheckout()
+
+                        sh """
+                            #!/bin/bash -l
+                            set -e
+                            export LC_ALL=en_US.UTF-8
+                            export LANG=en_US.UTF-8
+                            doc/requirements/reqmd.sh
+                            git diff --quiet -- . || (set +v; echo "ERROR: Changes done by reqmd. Please run this tool before committing. Update files:"; git status --short; exit 1)
+                        """
+                    }
+                }
             }
         }
 
@@ -51,7 +74,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.2'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.2'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -68,7 +91,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.8.1"
+                                    def erp_release_version = "1.9.0"
                                     sh "scripts/ci-build.sh " +
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'"
@@ -77,104 +100,133 @@ pipeline {
                         }
                     }
                 }
-                stage ("Upload Conan Packages") {
-                    when {
-                        anyOf {
-                            branch 'master'
-                            branch 'release/*'
-                        }
-                    }
-                    steps {
-                        script {
-                            sh """#!/bin/bash
-                                declare -a public_packages=(
-                                        boost
-                                        date
-                                        glog
-                                        gsl-lite
-                                        gtest
-                                        hiredis
-                                        libcurl
-                                        libpq
-                                        libpqxx
-                                        libxml2
-                                        magic_enum
-                                        openssl
-                                        rapidjson
-                                        redis-plus-plus
-                                        zlib
-                                        zstd
-                                )
-
-                                declare -a private_packages=(
-                                        asn1c
-                                        csxapi
-                                        hsmclient
-                                        swtpm2
-                                        tpmclient
-                                        tss
-                                )
-                                upload_packages() {
-                                    local repo="\$1"
-                                    shift
-                                    local -a packages=("\$@")
-                                    for package in "\${packages[@]}" ; do
-                                        conan upload --all \
-                                                    --remote \${repo} \
-                                                    --no-overwrite all \
-                                                    --confirm \
-                                                    "\${package}/*"
-                                    done
+                stage ("test, analyze in parallel"){
+                    parallel  {
+                        stage ("Upload Conan Packages") {
+                            when {
+                                anyOf {
+                                    branch 'master'
+                                    branch 'release/*'
                                 }
-                                upload_packages erp "\${private_packages[@]}"
-                                upload_packages conan-center-binaries "\${public_packages[@]}"
-                            """
+                            }
+                            steps {
+                                script {
+                                    sh """#!/bin/bash
+                                        declare -a public_packages=(
+                                                boost
+                                                date
+                                                glog
+                                                gsl-lite
+                                                gtest
+                                                hiredis
+                                                libcurl
+                                                libpq
+                                                libpqxx
+                                                libxml2
+                                                magic_enum
+                                                openssl
+                                                rapidjson
+                                                redis-plus-plus
+                                                zlib
+                                                zstd
+                                        )
+
+                                        declare -a private_packages=(
+                                                asn1c
+                                                csxapi
+                                                hsmclient
+                                                swtpm2
+                                                tpmclient
+                                                tss
+                                        )
+                                        upload_packages() {
+                                            local repo="\$1"
+                                            shift
+                                            local -a packages=("\$@")
+                                            for package in "\${packages[@]}" ; do
+                                                conan upload --all \
+                                                            --remote \${repo} \
+                                                            --no-overwrite all \
+                                                            --confirm \
+                                                            "\${package}/*"
+                                            done
+                                        }
+                                        upload_packages erp "\${private_packages[@]}"
+                                        upload_packages conan-center-binaries "\${public_packages[@]}"
+                                    """
+                                }
+                            }
                         }
-                    }
-                }
-                stage('Dependency Track') {
-                    when {
-                        anyOf {
-                            branch 'master'
-                            branch 'release/*'
+                        stage('Dependency Track') {
+                            when {
+                                anyOf {
+                                    branch 'master'
+                                    branch 'release/*'
+                                }
+                            }
+                            steps {
+                                dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
+                                    projectVersion: "${currentBuild.displayName}", synchronous: true
+                                dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
+                                    projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
+                            }
                         }
-                    }
-                    steps {
-                        dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
-                            projectVersion: "${currentBuild.displayName}", synchronous: true
-                        dependencyTrackPublisher artifact: "jenkins-build-debug/bom.xml", projectName: "erp-processing-context",
-                            projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
-                    }
-                }
-                stage ("Run Tests") {
-                    steps {
-                        sh """
-                            # Run the unit and integration tests
-                            cd jenkins-build-debug/bin
-                            ls -al
-                            ./erp-test --gtest_output=xml:erp-test.xml
-                            ./fhirtools-test --gtest_output=xml:fhirtools-test.xml
-                        """
-                    }
-                    post {
-                        always {
-                            junit "jenkins-build-debug/bin/*-test.xml"
+                        stage ("Run Tests (2023 profile set)") {
+                            steps {
+                                sh """
+                                    # Run the unit and integration tests
+                                    cd jenkins-build-debug/bin
+                                    ERP_FHIR_PROFILE_VALID_FROM="2022-11-01T00:00:00+01:00" ERP_FHIR_PROFILE_RENDER_FROM="2022-11-01T00:00:00+01:00" ERP_ENROLMENT_SERVER_PORT=9193 ERP_ENROLMENT_ACTIVATE_FOR_PORT=9192 ERP_ADMIN_SERVER_PORT=9998 ERP_SERVER_PORT=9192 ./erp-test --gtest_output=xml:erp-test-2023.xml
+                                """
+                            }
+                            post {
+                                always {
+                                    junit "jenkins-build-debug/bin/*-test-2023.xml"
+                                }
+                            }
                         }
-                    }
-                }
-                stage('Static Analysis') {
-                    steps {
-                        sh "scripts/ci-static-analysis.sh " +
-                                "--build-path=jenkins-build-debug " +
-                                "--source-path=. " +
-                                "--clang-tidy-bin=/usr/local/bin/clang-tidy " +
-                                "--output=clang-tidy.txt"
-                        staticAnalysis("SonarQubeeRp")
-                        timeout(time: 5, unit: 'MINUTES') {
-                            waitForQualityGate abortPipeline: true
+                        stage ("Run Tests") {
+                            steps {
+                                sh """
+                                    # Run the unit and integration tests
+                                    cd jenkins-build-debug/bin
+                                    ls -al
+                                    ./erp-test --gtest_output=xml:erp-test.xml
+                                    ./fhirtools-test --gtest_output=xml:fhirtools-test.xml
+                                """
+                            }
+                            post {
+                                always {
+                                    junit "jenkins-build-debug/bin/*-test.xml"
+                                }
+                            }
                         }
-                        // Fix build folder file permissions
-                        sh "chmod o+w build/"
+                        stage('Static Analysis') {
+                            when {
+                                not {
+                                    anyOf {
+                                        branch 'master'
+                                        branch 'release/*'
+                                    }
+                                }
+                            }
+                            steps {
+                                sh "scripts/ci-static-analysis.sh " +
+                                        "--build-path=jenkins-build-debug " +
+                                        "--source-path=. " +
+                                        "--clang-tidy-bin=clang-tidy-15 " +
+                                        "--output=clang-tidy.txt " +
+                                        "--change-target=${env.CHANGE_TARGET} " +
+                                        "--git-commit=${env.GIT_COMMIT}"
+                                archiveArtifacts artifacts: 'clang-tidy.txt', allowEmptyArchive:true
+                                staticAnalysis("SonarQubeeRp")
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    waitForQualityGate abortPipeline: true
+                                }
+                                // Fix build folder file permissions
+                                sh "chmod o+w build/"
+                            }
+                        }
                     }
                 }
             }
@@ -195,7 +247,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.8.1"
+                                def release_version = "1.9.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -231,7 +283,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.8.1"
+                                def release_version = "1.9.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -264,7 +316,7 @@ pipeline {
                         cat erp-performancetest/config-templates/TestKarten-achelos/QES.pem > resources/integration-test/QES.pem
                         echo >> resources/integration-test/QES.pem
                         cat erp-performancetest/config-templates/TestKarten-achelos/QES_prv.pem >> resources/integration-test/QES.pem
-                        tar czf erp-tests.tar.gz jenkins-build-debug resources/test resources/integration-test scripts/test_report.xslt
+                        tar czf erp-tests.tar.gz jenkins-build-debug resources/test resources/integration-test scripts/test_report.xslt || [ \$? -eq 1 ]
                     """
                     archiveArtifacts artifacts: 'erp-tests.tar.gz', fingerprint: true
                 }

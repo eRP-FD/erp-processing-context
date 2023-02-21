@@ -11,14 +11,26 @@
 class Erp5874Test : public ErpWorkflowTest
 {
 public:
-    const std::string createRequest =
-R"(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/><valueCoding><system value="https://gematik.de/fhir/CodeSystem/Flowtype"/><code value="160"/></valueCoding></parameter></Parameters>)";
 
 };
 
 
 TEST_F(Erp5874Test, run)
 {
+    const auto gematikVersion{model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()};
+    const auto csFlowtype = (gematikVersion < model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0)
+                            ? model::resource::code_system::deprecated::flowType
+                            : model::resource::code_system::flowType;
+    const std::string createRequest = R"--(<Parameters xmlns="http://hl7.org/fhir">
+  <parameter>
+    <name value="workflowType"/>
+    <valueCoding>
+      <system value=")--" + std::string(csFlowtype) + R"--("/>
+      <code value="160"/>
+    </valueCoding>
+  </parameter>
+</Parameters>)--";
+
     ClientResponse innerResponse;
     ASSERT_NO_FATAL_FAILURE(
             std::tie(std::ignore, innerResponse) =

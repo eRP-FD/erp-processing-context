@@ -8,6 +8,7 @@
 
 #include "erp/crypto/Jws.hxx"
 #include "erp/crypto/Jwt.hxx"
+#include "erp/model/Kvnr.hxx"
 
 #include <rapidjson/document.h>
 
@@ -32,6 +33,9 @@ public:
 
     [[nodiscard]]
     JWT makeJwtVersicherter(const std::string& kvnr);
+
+    [[nodiscard]]
+    JWT makeJwtVersicherter(const model::Kvnr& kvnr);
 
     [[nodiscard]]
     JWT getJWT(const rapidjson::Document& claims);

@@ -372,6 +372,15 @@ void TrustStore::setCacheOcspData (const std::string& fingerprint, OcspResponseD
 }
 
 
+void TrustStore::cleanCachedOcspData(const std::string& fingerprint)
+{
+     std::lock_guard guard(mMutex);
+
+    cleanupOcspCache();
+    mOcspCache.erase(fingerprint);
+}
+
+
 std::optional<TrustStore::OcspResponseData> TrustStore::getCachedOcspData (const std::string& fingerprint)
 {
     std::lock_guard guard(mMutex);
@@ -397,7 +406,7 @@ void TrustStore::cleanupOcspCache ()
 
     for (auto it = mOcspCache.begin(), ite = mOcspCache.end(); it != ite;)
     {
-        const bool olderThanGracePeriod = ((now - it->second.timeStamp) > it->second.gracePeriod);
+        const bool olderThanGracePeriod = ((now - it->second.producedAt) > it->second.gracePeriod);
         if (olderThanGracePeriod)
             it = mOcspCache.erase(it);
         else

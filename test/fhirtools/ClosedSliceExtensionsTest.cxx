@@ -29,7 +29,7 @@ class ClosedSliceExtensionsReportTest : public ClosedSliceExtensionsNoReportTest
 protected:
     fhirtools::ValidatorOptions validatorOptions() override
     {
-        return { .reportUnknownExtensions = true };
+        return { .reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::enable };
     }
 };
 

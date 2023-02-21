@@ -7,8 +7,9 @@
 #include "erp/model/Extension.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/model/Timestamp.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "test/util/ResourceManager.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <gtest/gtest.h>
@@ -47,8 +48,9 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
     auto signingTime = model::Timestamp::fromXsDate(std::string{params.signingTime});
     auto acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDate});
     auto expiryDate = model::Timestamp::fromGermanDate(std::string{params.expiryDate});
-    auto& resourceManager = ResourceManager::instance();
-    auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
+
+    const auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>();
+
     switch (prescriptionType)
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
@@ -56,30 +58,33 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv:
-            bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle_PKV.xml");
             acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
             break;
     }
-    bundle = patchVersionsInBundle(bundle);
-    bundle = String::replaceAll(bundle, "2021-06-08", std::string{params.signingTime});
-    std::string kvnr;
-    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-    boost::replace_all(bundle, "X234567890"sv, kvnr);
 
     // Create Task for Workflow
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(prescriptionType));
     ASSERT_TRUE(task.has_value());
     auto accessCode = std::string{task->accessCode()};
-    boost::replace_all(bundle, "160.000.000.004.713.80", task->prescriptionId().toString());
+
+    bool deprecatedKbv = model::ResourceVersion::deprecatedProfile(serverGematikProfileVersion());
+
+    std::string kvnr;
+    ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
+    std::string bundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = task->prescriptionId(), .timestamp = signingTime, .kvnr = kvnr, .kbvVersion = kbvVersion});
+
     // Activate Task with given signing time
     ASSERT_NO_FATAL_FAILURE(
-        task = taskActivate(task->prescriptionId(), accessCode, toCadesBesSignature(bundle, signingTime))
+        task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, toCadesBesSignature(bundle, signingTime))
     );
     ASSERT_TRUE(task.has_value());
     ASSERT_EQ(task->acceptDate(), acceptDate);
     ASSERT_EQ(task->expiryDate(), expiryDate);
-    auto ext = task->getExtension("https://gematik.de/fhir/StructureDefinition/PrescriptionType");
+    auto sdPrescriptionType = deprecatedKbv ? model::resource::structure_definition::deprecated::prescriptionType
+                                            : model::resource::structure_definition::prescriptionType;
+    auto ext = task->getExtension(sdPrescriptionType);
     ASSERT_TRUE(ext.has_value());
     auto flowTypeDisplay = ext->valueCodingDisplay();
     ASSERT_TRUE(flowTypeDisplay.has_value());
@@ -111,7 +116,10 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
     auto performerTypeCodingCode = getOptionalStringValue(*performerTypeCoding, codePtr);
     auto performerTypeCodingDisplay = getOptionalStringValue(*performerTypeCoding, displayPtr);
     ASSERT_TRUE(performerTypeCodingSystem.has_value());
-    ASSERT_EQ(std::string{*performerTypeCodingSystem}, "urn:ietf:rfc:3986");
+    if (deprecatedKbv)
+        ASSERT_EQ(std::string{*performerTypeCodingSystem}, "urn:ietf:rfc:3986");
+    else
+        ASSERT_EQ(std::string{*performerTypeCodingSystem}, "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_OrganizationType");
     ASSERT_TRUE(performerTypeCodingCode.has_value());
     ASSERT_EQ(std::string{*performerTypeCodingCode}, "urn:oid:1.2.276.0.76.4.54");
     ASSERT_TRUE(performerTypeCodingDisplay.has_value());
@@ -133,4 +141,3 @@ INSTANTIATE_TEST_SUITE_P(samples, ProzessParameterFlowtype,
                           model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
                           model::PrescriptionType::direkteZuweisungPkv))
 );
-

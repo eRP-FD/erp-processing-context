@@ -71,7 +71,7 @@ public:
     }
 
     VauRequestHandlerNotAllowedMethodTest()
-        : jwtVersicherter(JwtBuilder::testBuilder().makeJwtVersicherter({"X987654321"})), teeProtocol(),
+        : jwtVersicherter(JwtBuilder::testBuilder().makeJwtVersicherter(std::string{"X987654321"})), teeProtocol(),
           mClient(createClient()),
           taskId(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711)
                      .toString())

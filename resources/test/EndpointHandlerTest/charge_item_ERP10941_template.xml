@@ -1,17 +1,18 @@
 <ChargeItem xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/ErxChargeItem|1.1.1" />
+    <profile value="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem|1.0" />
     <tag>
       <display value="Example for PKV billing information." />
     </tag>
   </meta>
   <contained>
     <Binary>
+      <id value="dispense-bundle-123"/>
       <contentType value="application/pkcs7-mime"/>
       <data value="##DISPENSE_BUNDLE##"/>
     </Binary>
   </contained>
-  <extension url="https://gematik.de/fhir/StructureDefinition/MarkingFlag">
+  <extension url="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag">
     <extension url="insuranceProvider">
       <valueBoolean value="false"/>
     </extension>
@@ -22,7 +23,7 @@
       <valueBoolean value="false"/>
     </extension>
   </extension>
-  <extension url="https://gematik.de/fhir/StructureDefinition/MarkingFlag">
+  <extension url="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag">
     <extension url="insuranceProvider">
       <valueBoolean value="true"/>
     </extension>
@@ -34,7 +35,7 @@
     </extension>
   </extension>
   <identifier>
-    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+    <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
     <value value="##PRESCRIPTION_ID##" />
   </identifier>
   <status value="billable"/>
@@ -52,8 +53,12 @@
   </subject>
   <enterer>
     <identifier>
-      <system value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
+      <system value="https://gematik.de/fhir/sid/telematik-id"/>
       <value value="606358757"/>
     </identifier>
   </enterer>
+  <supportingInformation>
+    <reference value="#dispense-bundle-123" />
+    <display value="Binary" />
+ </supportingInformation>
 </ChargeItem>

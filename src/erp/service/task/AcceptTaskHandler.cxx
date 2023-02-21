@@ -167,8 +167,10 @@ void AcceptTaskHandler::checkMultiplePrescription(const model::KbvBundle& prescr
             const date::year_month_day validFrom = floor<date::days>(startDate->toChronoTimePoint());
             if (today < validFrom)
             {
+                std::string germanFmtTs = model::Timestamp(startDate->toChronoTimePoint()).toGermanDateFormat();
+
                 std::ostringstream ss;
-                ss << "Teilverordnung ab " << validFrom << " einlösbar.";
+                ss << "Teilverordnung ab " << germanFmtTs << " einlösbar.";
                 ErpFail(HttpStatus::Forbidden, ss.str());
             }
         }

@@ -47,7 +47,7 @@ public:
 TEST_F(MockEnrolmentManagerTest, successfulSetupAndTeeToken)
 {
     // Create blob cache without adding any blobs.
-    auto blobCache = std::make_shared<BlobCache>(std::move(std::make_unique<MockBlobDatabase>()));
+    auto blobCache = std::make_shared<BlobCache>(std::make_unique<MockBlobDatabase>());
 
     // Use TPM and HSM (simulators) to setup the necessary blobs for TEE token negotiation.
     TpmProxyDirect tpm (*blobCache);
@@ -62,7 +62,7 @@ TEST_F(MockEnrolmentManagerTest, successfulSetupAndTeeToken)
 TEST_F(MockEnrolmentManagerTest, failForMissingBlobs)
 {
     // Create blob cache without adding any blobs.
-    auto blobCache = std::make_shared<BlobCache>(std::move(std::make_unique<MockBlobDatabase>()));
+    auto blobCache = std::make_shared<BlobCache>(std::make_unique<MockBlobDatabase>());
 
     // Do NOT set up the necessary blobs.
 

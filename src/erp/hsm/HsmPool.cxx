@@ -32,7 +32,8 @@ HsmPool::HsmPool (
       mKeepAliveUpdateToken(Timer::NotAJob),
       mHsmIdleTimeout(std::chrono::seconds(
           Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS, 15 * 60))),
-      mMaxSessionCount(Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_MAX_SESSION_COUNT, 5)),
+      mMaxSessionCount(gsl::narrow<size_t>(
+          Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_MAX_SESSION_COUNT, 5))),
       mMaxUsedSessionCount(0),
       mTimerManager(std::move(timerManager))
 {
@@ -41,7 +42,7 @@ HsmPool::HsmPool (
 
     TerminationHandler::instance().registerCallback(
         [this]
-        (const bool hasError) noexcept
+        (const bool hasError)
         {
             releasePool();
 

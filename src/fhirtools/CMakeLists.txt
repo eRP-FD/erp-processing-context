@@ -22,6 +22,8 @@ target_include_directories(fhirtools
         "${ANTLR_fhirtools_OUTPUT_DIR}"
 )
 
+add_custom_target(generated_source DEPENDS ${ANTLR_fhirtools_CXX_OUTPUTS})
+
 if (CMAKE_COMPILER_IS_GNUCXX)
     set_property(SOURCE ${ANTLR_fhirtools_CXX_OUTPUTS} APPEND PROPERTY COMPILE_FLAGS "-Wno-unused-parameter")
 endif()
@@ -51,6 +53,7 @@ target_sources(fhirtools
         repository/FhirStructureDefinition.cxx
         repository/FhirStructureRepository.cxx
         repository/internal/FhirStructureDefinitionParser.cxx
+        repository/internal/FhirStructureRepositoryFixer.cxx
         util/SaxHandler.cxx
         util/Utf8Helper.cxx
         util/VaListHelper.cxx

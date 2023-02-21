@@ -4,14 +4,14 @@
 #ifndef FHIRTOOLS_INTERNAL_VALIDATOR_VALIDATIONDATA_H
 #define FHIRTOOLS_INTERNAL_VALIDATOR_VALIDATIONDATA_H
 
+#include "fhirtools/validator/Severity.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/internal/ProfileSolver.hxx"
+
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
-
-#include "fhirtools/validator/Severity.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include "fhirtools/validator/internal/ProfileSolver.hxx"
 
 namespace fhirtools
 {
@@ -30,8 +30,8 @@ public:
     ValidationData(std::unique_ptr<ProfiledElementTypeInfo> initMapKey);
     void add(Severity, std::string message, std::string elementFullPath, const FhirStructureDefinition* profile);
     void add(FhirConstraint constraint, std::string elementFullPath, const FhirStructureDefinition* profile);
-    void append(ValidationResultList);
-    const ValidationResultList& results() const;
+    void append(ValidationResults);
+    const ValidationResults& results() const;
     [[nodiscard]] bool isFailed() const;
     void fail();
     void merge(const ValidationData& other);
@@ -39,7 +39,7 @@ public:
 
 private:
     std::unique_ptr<ProfiledElementTypeInfo> mMapKey;
-    ValidationResultList mResult{};
+    ValidationResults mResult{};
     bool mFailed = false;
 };
 

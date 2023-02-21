@@ -65,7 +65,7 @@ private:
     void on_read (ServerRequest request, SessionDataPointer&& data);
     void do_handleRequest (ServerRequest request, SessionDataPointer&& data);
     void do_write (ServerResponse response, const bool keepConnectionAlive, SessionDataPointer&& data);
-    void on_write (const bool keepConnectionAlive, SessionDataPointer&& data) noexcept;
+    void on_write (const bool keepConnectionAlive, SessionDataPointer&& data);
     void do_close (SessionDataPointer&& data);
     void on_shutdown (boost::beast::error_code ec, SessionDataPointer&& data);
 

@@ -145,11 +145,11 @@ X509Store TslManager::getTslTrustedCertificateStore(
 }
 
 
+// GEMREQ-start A_22141#verifyCertificate, A_20159-02#verifyCertificate
 void TslManager::verifyCertificate(const TslMode tslMode,
                                    X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
-                                   const OcspResponsePtr& ocspResponse,
-                                   const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint)
+                                   const OcspCheckDescriptor& ocspCheckDescriptor)
 {
     // no mutex is necessary because trust store is thread safe
     try
@@ -163,21 +163,22 @@ void TslManager::verifyCertificate(const TslMode tslMode,
             typeRestrictions,
             *mRequestSender,
             getTrustStore(tslMode),
-            ocspResponse,
-            referenceTimePoint);
+            ocspCheckDescriptor);
     }
     catch(...)
     {
         HANDLE_EXCEPTION("certificate verification failed");
     }
 }
+// GEMREQ-end A_22141#verifyCertificate, A_20159-02#verifyCertificate
 
 
+// GEMREQ-start A_20765-02#ocspResponse
 TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
     const TslMode tslMode,
     X509Certificate& certificate,
     const std::unordered_set<CertificateType>& typeRestrictions,
-    const bool forceOcspRequest)
+    const OcspCheckDescriptor& ocspCheckDescriptor)
 {
     // no mutex is necessary because trust store is thread safe
     try
@@ -188,7 +189,9 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
         const TslService::UpdateResult updateResult = internalUpdate(true);
         GS_A_4898.finish();
 
-        if (updateResult == TslService::UpdateResult::NotUpdated && ! forceOcspRequest)
+        if (updateResult == TslService::UpdateResult::NotUpdated
+            && ocspCheckDescriptor.mode == OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE
+            && ocspCheckDescriptor.providedOcspResponse == nullptr)
         {
             // the cached OCSP-Response still can be used, if it exists and is still valid
             ocspResponse = getTrustStore(tslMode).getCachedOcspData(certificate.getSha256FingerprintHex());
@@ -201,10 +204,10 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
                 typeRestrictions,
                 *mRequestSender,
                 getTrustStore(tslMode),
-                {},
-                std::nullopt,
-                forceOcspRequest);
+                ocspCheckDescriptor);
 
+            // The certificate check was successful, so the cache must have now OCSP response according to the
+            // mode from `ocspCheckDescriptor.mode` specified for the check.
             ocspResponse = getTrustStore(tslMode).getCachedOcspData(certificate.getSha256FingerprintHex());
 
             TslExpect4(ocspResponse.has_value(),
@@ -222,6 +225,7 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
         HANDLE_EXCEPTION("ocsp response retrieval failed");
     }
 }
+// GEMREQ-end A_20765-02#ocspResponse
 
 
 void TslManager::updateTrustStoresOnDemand()

@@ -122,9 +122,10 @@ list(
         model/Device.cxx
         model/ErxReceipt.cxx
         model/Extension.cxx
-        model/extensions/ChargeItemMarkingFlag.cxx
+        model/extensions/ChargeItemMarkingFlags.cxx
         model/extensions/KBVEXERPAccident.cxx
         model/extensions/KBVEXFORLegalBasis.cxx
+        model/extensions/KBVMedicationCategory.cxx
         model/extensions/KBVMultiplePrescription.cxx
         model/Health.cxx
         model/KbvBundle.cxx
@@ -139,6 +140,7 @@ list(
         model/KbvOrganization.cxx
         model/KbvPractitioner.cxx
         model/KbvPracticeSupply.cxx
+        model/Kvnr.cxx
         model/Link.cxx
         model/MedicationDispense.cxx
         model/MedicationDispenseId.cxx
@@ -158,6 +160,7 @@ list(
         model/Signature.cxx
         model/Subscription.cxx
         model/Task.cxx
+        model/TelematikId.cxx
         model/TimePeriod.cxx
         model/Timestamp.cxx
         pc/CFdSigErpManager.cxx

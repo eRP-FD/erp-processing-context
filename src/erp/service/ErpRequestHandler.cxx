@@ -21,10 +21,12 @@ ErpRequestHandler::ErpRequestHandler (const Operation operation, const std::init
 }
 
 
+// GEMREQ-start allowedForProfessionOID
 bool ErpRequestHandler::allowedForProfessionOID (std::string_view professionOid) const
 {
     return mAllowedProfessionOIDs.count(professionOid) > 0;
 }
+// GEMREQ-end allowedForProfessionOID
 
 
 Operation ErpRequestHandler::getOperation (void) const
@@ -142,9 +144,9 @@ std::string ErpRequestHandler::getLinkBase ()
     return Configuration::instance().getStringValue(ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL);
 }
 
-std::string ErpRequestHandler::getLanguageFromHeader(const Header& requestHeader)
+std::optional<std::string> ErpRequestHandler::getLanguageFromHeader(const Header& requestHeader)
 {
-    return requestHeader.header(Header::AcceptLanguage).value_or("de");  // Default: German
+    return requestHeader.header(Header::AcceptLanguage);
 }
 void ErpRequestHandler::preHandleRequestHook(SessionContext& session)
 {

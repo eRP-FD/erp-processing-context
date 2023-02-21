@@ -82,6 +82,7 @@ template<class Stream> class NumberAsStringParserWriter;
  * pointers and need the string values of values referenced by the pointers you may use
  * the helper method "getStringValueFromPointer".
  */
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class NumberAsStringParserDocument : public rapidjson::Document
 {
 /**

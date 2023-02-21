@@ -52,7 +52,7 @@ public:
 TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Timestamp startTime = model::Timestamp::now();
-    auto kvnr = generateNewRandomKVNR();
+    auto kvnr = generateNewRandomKVNR().id();
     auto task1 = createClosedTask(kvnr);
 
 
@@ -125,7 +125,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
 
 TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto kvnr = generateNewRandomKVNR();
+    auto kvnr = generateNewRandomKVNR().id();
     auto task1 = createClosedTask(kvnr);
     auto task2 = createClosedTask(kvnr);
     auto task3 = createClosedTask(kvnr);
@@ -223,7 +223,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
 
 TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsNextPageLink)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto kvnr = generateNewRandomKVNR();
+    auto kvnr = generateNewRandomKVNR().id();
     std::vector<model::PrescriptionId> tasks;
     for (size_t i = 0; i < 11; ++i)
     {

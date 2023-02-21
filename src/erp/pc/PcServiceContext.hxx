@@ -13,7 +13,6 @@
 #include "erp/hsm/KeyDerivation.hxx"
 #include "erp/idp/Idp.hxx"
 #include "erp/pc/CFdSigErpManager.hxx"
-#include "erp/pc/SeedTimer.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.hxx"
@@ -41,12 +40,15 @@ class TelematicPseudonymManager;
 class InCodeValidator;
 class JsonValidator;
 class XmlValidator;
-class SeedTimer;
+template <typename>
+class PeriodicTimer;
 class RegistrationInterface;
+class SeedTimerHandler;
 class Tpm;
 class RequestHandlerManager;
 class RegistrationManager;
 
+using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 
 /**
  * This collection of factories can be extended to allow other classes like database, hsm, etc. to

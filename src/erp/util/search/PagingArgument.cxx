@@ -26,7 +26,7 @@ size_t toSizeT(const std::string& numberString, const std::string& fieldName, bo
                   "trailing characters are not permitted in a numerical argument: " + fieldName);
         ErpExpect(count>=0, HttpStatus::BadRequest, fieldName + " can not be negative");
         ErpExpect(count!=0 || zeroAllowed, HttpStatus::BadRequest, fieldName + " zero is not supported");
-        return maxValue?std::min(static_cast<size_t>(count), *maxValue):count;
+        return maxValue?std::min(static_cast<size_t>(count), *maxValue):static_cast<size_t>(count);
     }
     catch (const std::invalid_argument&)
     {

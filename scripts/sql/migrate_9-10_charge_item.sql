@@ -52,7 +52,7 @@ CALL pg_temp.set_task_partitions_permissions('erp.charge_item');
 
 REVOKE ALL ON erp.charge_item from role_proc_user;
 ALTER TABLE erp.charge_item owner to role_proc_admin;
-GRANT INSERT, SELECT, UPDATE ON erp.charge_item to role_proc_user;
+GRANT INSERT, SELECT, UPDATE, DELETE ON erp.charge_item to role_proc_user;
 
 ------------------------------------------------------
 -- Remove charge-item-related columns in task table --

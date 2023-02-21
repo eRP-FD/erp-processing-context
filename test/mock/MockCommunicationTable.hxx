@@ -21,9 +21,6 @@
 
 class MockAccountTable;
 class UrlArguments;
-namespace fhirtools {
-class Timestamp;
-}
 namespace model
 {
 class PrescriptionId;
@@ -65,6 +62,7 @@ public:
     deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender);
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId);
     void deleteChargeItemCommunicationsForKvnr(const db_model::HashedKvnr& hashedKvnr);
+    void deleteCommunicationsForChargeItem(const model::PrescriptionId& id);
 
     void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds,
                                        const model::Timestamp& retrieved,

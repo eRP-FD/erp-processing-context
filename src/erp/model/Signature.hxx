@@ -19,6 +19,7 @@ namespace model
 
 // Reduced version of Signature resource, contains only functionality currently needed;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Signature : public Resource<Signature>
 {
 public:

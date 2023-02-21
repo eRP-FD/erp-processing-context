@@ -12,6 +12,7 @@ namespace model
 {
 
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KbvPracticeSupply : public Resource<KbvPracticeSupply, ResourceVersion::KbvItaErp>
 {
 public:

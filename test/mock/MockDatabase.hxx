@@ -214,6 +214,7 @@ public:
     void clearAllChargeInformation(const db_model::HashedKvnr& insurant) override;
 
     void clearAllChargeItemCommunications(const db_model::HashedKvnr& insurant) override;
+    void deleteCommunicationsForChargeItem(const model::PrescriptionId& id) override;
 
     uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
                                                const std::optional<UrlArguments>& search) override;

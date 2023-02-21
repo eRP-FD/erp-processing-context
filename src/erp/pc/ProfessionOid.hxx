@@ -30,7 +30,9 @@ namespace profession_oid
     constexpr static std::string_view oid_ps_psychotherapeut         = "1.2.276.0.76.4.46";
     constexpr static std::string_view oid_kuj_psychotherapeut        = "1.2.276.0.76.4.47";
     constexpr static std::string_view oid_rettungsassistent          = "1.2.276.0.76.4.48";
+    // GEMREQ-start oid_versicherter
     constexpr static std::string_view oid_versicherter               = "1.2.276.0.76.4.49";
+    // GEMREQ-end oid_versicherter
     constexpr static std::string_view oid_notfallsanitaeter          = "1.2.276.0.76.4.178";
     constexpr static std::string_view oid_pfleger_hpc                = "1.2.276.0.76.4.232";
     constexpr static std::string_view oid_altenpfleger_hpc           = "1.2.276.0.76.4.233";
@@ -49,8 +51,10 @@ namespace profession_oid
     constexpr static std::string_view oid_zahnarztpraxis                     = "1.2.276.0.76.4.51";
     constexpr static std::string_view oid_praxis_psychotherapeut             = "1.2.276.0.76.4.52";
     constexpr static std::string_view oid_krankenhaus                        = "1.2.276.0.76.4.53";
+    // GEMREQ-start oid_apotheke
     constexpr static std::string_view oid_oeffentliche_apotheke              = "1.2.276.0.76.4.54";
     constexpr static std::string_view oid_krankenhausapotheke                = "1.2.276.0.76.4.55";
+    // GEMREQ-end oid_apotheke
     constexpr static std::string_view oid_bundeswehrapotheke                 = "1.2.276.0.76.4.56";
     constexpr static std::string_view oid_mobile_einrichtung_rettungsdienst  = "1.2.276.0.76.4.57";
     constexpr static std::string_view oid_bs_gematik                         = "1.2.276.0.76.4.58";

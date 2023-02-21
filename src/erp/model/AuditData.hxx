@@ -11,6 +11,7 @@
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Resource.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "erp/model/Kvnr.hxx"
 
 
 namespace model {
@@ -18,7 +19,8 @@ namespace model {
 enum class AuditEventId : std::int16_t
 {
     // Note: For any changes here be sure that the functions below are updated accordingly.
-    GET_Task = 0,                    // only allowed by insurant;
+    MIN = 0,
+    GET_Task = MIN,            // only allowed by insurant;
     GET_Task_id_insurant,
     GET_Task_id_representative,
     GET_Task_id_pharmacy,
@@ -36,8 +38,8 @@ enum class AuditEventId : std::int16_t
     DELETE_ChargeItem_id_insurant,
     DELETE_ChargeItem_id_pharmacy,
     POST_ChargeItem,           // always caused by pharmacy;
-    PUT_ChargeItem_id_insurant,
-    PUT_ChargeItem_id_pharmacy,
+    // PUT_ChargeItem_id_insurant (id 18) no longer used;
+    PUT_ChargeItem_id = 19,
     POST_Consent,              // only allowed by insurant;
     DELETE_Consent,         // only allowed by insurant;
     ChargeItem_delete_expired_id, // deletion of expired ChargeItems by maintenance script => Id 22 used by database script!
@@ -47,7 +49,8 @@ enum class AuditEventId : std::int16_t
     GET_Tasks_by_pharmacy_with_pz,
     GET_Tasks_by_pharmacy_without_pz,
     GET_Tasks_by_pharmacy_pnw_check_failed,
-    MAX = GET_Tasks_by_pharmacy_pnw_check_failed
+    Communication_delete_expired_id = 29, // deletion of expired Communications by maintenance script => Id 29 used by database script!
+    MAX = Communication_delete_expired_id
 };
 
 bool isEventCausedByPatient(AuditEventId eventId);
@@ -56,6 +59,7 @@ bool isEventCausedByMaintenanceScript(AuditEventId eventId);
 std::string createEventResourceReference(AuditEventId eventId, const std::string& resourceId);
 
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class AuditMetaData : public Resource<AuditMetaData>
 {
 public:
@@ -89,7 +93,7 @@ public:
         AuditMetaData&& metaData,
         AuditEvent::Action action,
         AuditEvent::AgentType agentType,
-        const std::string& insurantKvnr,
+        const Kvnr& insurantKvnr,
         const std::int16_t deviceId,
         std::optional<PrescriptionId> prescriptionId,
         std::optional<std::string> consentId);
@@ -98,12 +102,14 @@ public:
     AuditEventId eventId() const;
     const AuditMetaData& metaData() const;
     AuditEvent::Action action() const;
-    const std::string& insurantKvnr() const;
+    const Kvnr& insurantKvnr() const;
     std::int16_t deviceId() const;
     const std::optional<model::PrescriptionId>& prescriptionId() const;
     const std::optional<std::string>& consentId() const;
     const std::string& id() const;
     const model::Timestamp& recorded() const;
+
+    bool isValidEventId() const;
 
     void setId(const std::string& id);
     void setRecorded(const model::Timestamp& recorded);
@@ -113,7 +119,7 @@ private:
     AuditMetaData mMetaData;
     AuditEvent::Action mAction;
     AuditEvent::AgentType mAgentType;
-    std::string mInsurantKvnr;
+    Kvnr mInsurantKvnr;
     std::int16_t mDeviceId;
     std::optional<PrescriptionId> mPrescriptionId;
     std::optional<std::string> mConsentId;

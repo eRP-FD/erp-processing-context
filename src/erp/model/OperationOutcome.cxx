@@ -77,7 +77,7 @@ OperationOutcome::Issue::Type OperationOutcome::Issue::stringToType(std::string 
 
 
 OperationOutcome::OperationOutcome(Issue&& primaryIssue)
-    : Resource<OperationOutcome>(Resource::NoProfile,
+    : Resource<OperationOutcome, ResourceVersion::Fhir>(Resource::NoProfile,
                                  []() {
                                      std::call_once(onceFlag, initTemplates);
                                      return operationOutcomeTemplate;
@@ -89,7 +89,7 @@ OperationOutcome::OperationOutcome(Issue&& primaryIssue)
 
 
 OperationOutcome::OperationOutcome(NumberAsStringParserDocument&& jsonTree)
-    : Resource<OperationOutcome>(std::move(jsonTree))
+    : Resource<OperationOutcome, ResourceVersion::Fhir>(std::move(jsonTree))
 {
     std::call_once(onceFlag, initTemplates);
 }
@@ -120,7 +120,7 @@ void OperationOutcome::addIssue(Issue&& issue)
 std::vector<OperationOutcome::Issue> OperationOutcome::issues() const
 {
     std::vector<OperationOutcome::Issue> results;
-    for(auto i = 0; ; ++i)
+    for(size_t i = 0; ; ++i)
     {
         const auto* issue = getMemberInArray(issuePointer, i);
         if(issue == nullptr)

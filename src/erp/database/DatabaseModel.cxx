@@ -63,20 +63,19 @@ HashedKvnr::HashedKvnr(HashedId&& hashedKvnr)
 {
 }
 
-HashedKvnr HashedKvnr::fromKvnr(const std::string_view& kvnr,
+HashedKvnr HashedKvnr::fromKvnr(const model::Kvnr& kvnr,
                                 const SafeString& persistencyIndexKey)
 {
-    ErpExpect(kvnr.find('\0') == std::string::npos, HttpStatus::BadRequest, "null character in kvnr");
-    ErpExpect(kvnr.size() == 10, HttpStatus::BadRequest, "kvnr must have 10 characters");
+    ErpExpect(kvnr.valid(), HttpStatus::BadRequest, "Invalid KVNR");
 
     return HashedKvnr{
-        db_model::HashedId(db_model::EncryptedBlob(Pbkdf2Hmac::deriveKey(kvnr, persistencyIndexKey)))};
+        db_model::HashedId(db_model::EncryptedBlob(Pbkdf2Hmac::deriveKey(kvnr.id(), persistencyIndexKey)))};
 }
 
-HashedTelematikId HashedTelematikId::fromTelematikId(const std::string_view& id, const SafeString& persistencyIndexKey)
+HashedTelematikId HashedTelematikId::fromTelematikId(const model::TelematikId& id, const SafeString& persistencyIndexKey)
 {
     return HashedTelematikId{
-        db_model::HashedId(db_model::EncryptedBlob(Pbkdf2Hmac::deriveKey(id, persistencyIndexKey)))};
+        db_model::HashedId(db_model::EncryptedBlob(Pbkdf2Hmac::deriveKey(id.id(), persistencyIndexKey)))};
 }
 
 HashedTelematikId::HashedTelematikId(HashedId&& id)
@@ -151,16 +150,18 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     accessCode =
         codec.encode(chargeInformation.chargeItem.accessCode().value(), key, Compression::DictionaryUse::Default_json);
 
-    if (chargeInformation.chargeItem.markingFlag().has_value())
+    if (chargeInformation.chargeItem.markingFlags().has_value())
     {
-        markingFlag = codec.encode(chargeInformation.chargeItem.markingFlag().value().serializeToJsonString(), key,
-                                   Compression::DictionaryUse::Default_json);
+        Blob blob;
+        blob.append(chargeInformation.chargeItem.markingFlags().value().serializeToJsonString());
+        markingFlags = blob;
     }
 
     ModelExpect(chargeInformation.chargeItem.subjectKvnr(), "Missing kvnr");
-    kvnr =
-        codec.encode(chargeInformation.chargeItem.subjectKvnr().value(), key, Compression::DictionaryUse::Default_json);
+    kvnr = codec.encode(chargeInformation.chargeItem.subjectKvnr().value().id(), key,
+                        Compression::DictionaryUse::Default_json);
 
+    // GEMREQ-start A_22134#prescription
     if (chargeInformation.prescription && chargeInformation.unsignedPrescription)
     {
         prescription =
@@ -168,14 +169,18 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
         prescriptionJson = codec.encode(chargeInformation.unsignedPrescription.value().serializeToJsonString(), key,
                                         ::Compression::DictionaryUse::Default_json);
     }
+    // GEMREQ-end A_22134#prescription
 
+    // GEMREQ-start A_22137#chargeItemBilling
     ModelExpect(chargeInformation.dispenseItem.data(), "Missing signed dispense data.");
     billingData =
         codec.encode(chargeInformation.dispenseItem.data().value(), key, ::Compression::DictionaryUse::Default_xml);
 
     billingDataJson = codec.encode(chargeInformation.unsignedDispenseItem.serializeToJsonString(), key,
                                    ::Compression::DictionaryUse::Default_json);
+    // GEMREQ-end A_22137#chargeItemBilling
 
+    // GEMREQ-start A_22135#receipt
     if (chargeInformation.receipt)
     {
         receiptXml = codec.encode(chargeInformation.receipt.value().serializeToXmlString(), key,
@@ -183,6 +188,7 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
         receiptJson = codec.encode(chargeInformation.receipt.value().serializeToJsonString(), key,
                                    ::Compression::DictionaryUse::Default_json);
     }
+    // GEMREQ-end A_22135#receipt
 }
 
 ::model::ChargeInformation ChargeItem::toChargeInformation(const ::SafeString& key, const ::DataBaseCodec& codec) const
@@ -190,7 +196,7 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     try
     {
         auto prescriptionBundle = ::model::Bundle::fromJsonNoValidation(codec.decode(prescriptionJson.value(), key));
-        auto billingBundle = ::model::Bundle::fromJsonNoValidation(codec.decode(billingDataJson, key));
+        auto billingBundle = ::model::AbgabedatenPkvBundle::fromJsonNoValidation(codec.decode(billingDataJson, key));
 
         auto chargeInformation = ::model::ChargeInformation{
             ::model::ChargeItem{},
@@ -205,28 +211,29 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
         chargeInformation.chargeItem.setSubjectKvnr(codec.decode(kvnr, key));
         chargeInformation.chargeItem.setEntererTelematikId(codec.decode(enterer, key));
         chargeInformation.chargeItem.setEnteredDate(enteredDate);
-        chargeInformation.chargeItem.setAccessCode(codec.decode(accessCode, key));
+        // Check required, because for GET /ChargeItem (all items), access code is no longer provided.
+        if (!accessCode.empty()) {
+            chargeInformation.chargeItem.setAccessCode(codec.decode(accessCode, key));
+        }
 
-        if (markingFlag.has_value())
+        if (markingFlags.has_value())
         {
-            chargeInformation.chargeItem.setMarkingFlag(
-                ::model::ChargeItemMarkingFlag::fromJsonNoValidation(codec.decode(markingFlag.value(), key)));
+            const std::string str{ reinterpret_cast<const char*>(markingFlags.value().data()), markingFlags.value().size() };
+            chargeInformation.chargeItem.setMarkingFlags(::model::ChargeItemMarkingFlags::fromJsonNoValidation(str));
         }
 
         A_22134.start("KBV prescription bundle");
         chargeInformation.chargeItem.setSupportingInfoReference(
-            ::model::ChargeItem::SupportingInfoType::prescriptionItem, chargeInformation.unsignedPrescription.value());
+            ::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
         A_22134.finish();
 
 
         A_22137.start("Set PKV dispense item reference in ChargeItem");
-        chargeInformation.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem,
-                                                                chargeInformation.unsignedDispenseItem);
+        chargeInformation.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
         A_22137.finish();
 
         A_22135.start("Receipt");
-        chargeInformation.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt,
-                                                                chargeInformation.receipt.value());
+        chargeInformation.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
         A_22135.finish();
 
         return chargeInformation;

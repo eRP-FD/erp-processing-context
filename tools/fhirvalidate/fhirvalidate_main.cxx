@@ -52,9 +52,9 @@ int main(int argc, char* argv[])
             auto rootElement =
                 std::make_shared<ErpElement>(&fhir.structureRepository(), std::weak_ptr<const ErpElement>{},
                                              std::string{*resourceType}, &doc.value());
-            auto validationResult =
-                fhirtools::FhirPathValidator::validate({rootElement}, std::string{*resourceType},
-                                                       {.reportUnknownExtensions = true});
+            auto validationResult = fhirtools::FhirPathValidator::validate(
+                {rootElement}, std::string{*resourceType},
+                {.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::onlyOpenSlicing});
 
             validationResult.dumpToLog();
         }

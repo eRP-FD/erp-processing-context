@@ -16,6 +16,7 @@
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class AuditEvent : public Resource<AuditEvent>
 {
 public:
@@ -60,7 +61,8 @@ public:
     static const std::unordered_map<AgentType, std::pair<std::string_view,std::string_view>> AgentTypeStrings;
     static const std::unordered_map<std::string_view, AgentType> AgentTypeNamesReverse;
 
-    explicit AuditEvent();
+    explicit AuditEvent(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
+                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
 
     void setId(const std::string_view& id);
     void setLanguage(const std::string_view& language);

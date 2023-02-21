@@ -54,6 +54,13 @@ std::string canonicalJson(const std::string& json)
     return result;
 }
 
+const std::map<ActorRole, std::string_view> ActorRoleToResourceIdDeprecated = {
+    { ActorRole::Insurant,       naming_system::deprecated::gkvKvid10   },
+    { ActorRole::Representative, naming_system::deprecated::gkvKvid10   },
+    { ActorRole::Doctor,         naming_system::deprecated::telematicID },
+    { ActorRole::Pharmacists,    naming_system::deprecated::telematicID }
+};
+
 const std::map<ActorRole, std::string_view> ActorRoleToResourceId = {
     { ActorRole::Insurant,       naming_system::gkvKvid10   },
     { ActorRole::Representative, naming_system::gkvKvid10   },
@@ -61,12 +68,15 @@ const std::map<ActorRole, std::string_view> ActorRoleToResourceId = {
     { ActorRole::Pharmacists,    naming_system::telematicID }
 };
 
-const std::string_view& actorRoleToResourceId(ActorRole actorRole)
+const std::string_view& actorRoleToResourceId(ActorRole actorRole,
+                                              ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
 {
+    if (ResourceVersion::deprecatedProfile(profileVersion))
+        return ActorRoleToResourceIdDeprecated.find(actorRole)->second;
     return ActorRoleToResourceId.find(actorRole)->second;
 }
 
-CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(Communication::MessageType messageType) :
+CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(Communication::MessageType messageType, model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion) :
     mMessageType(messageType),
     mPrescriptionId(),
     mAccessCode(),
@@ -74,7 +84,8 @@ CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(Communication::Me
     mRecipient(),
     mTimeSent(),
     mTimeReceived(),
-    mPayload()
+    mPayload(),
+    mProfileVersion(profileVersion)
 {
 }
 
@@ -134,6 +145,8 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
             "basedOn": [{"reference": "Task/%1%"}])";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
             "basedOn": [{"reference": "Task/%1%/$accept?ac=%2%"}])";
+    static constexpr const char* fmtSpecBasedOnChargeItemId = R"(
+            "basedOn": [{"reference": "ChargeItem/%1%"}])";
     static constexpr const char* fmtSpecAbout = R"(
             "about": [{"reference": "%1%"}])";
     static constexpr const char* fmtSpecSender = R"(
@@ -144,7 +157,7 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
             "sent": "%1%")";
     static constexpr const char* fmtSpecReceived = R"(
             "received": "%1%")";
-    static constexpr const char* fmtSpecPayloadContentString = R"--(
+    static constexpr const char* fmtSpecPayloadContentStringDeprecated = R"--(
             "payload": [
               {
                 "extension": [
@@ -171,16 +184,77 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
                 "contentString": "%1%"
               }
             ])--";
+    static constexpr const char* fmtSpecPayloadContentString = R"--(
+            "payload": [
+              {
+                "contentString": "%1%"
+              }
+            ])--";
+    static constexpr const char* fmtSpecPayloadInfoReqContentString = R"--(
+            "payload": [
+              {
+                "extension":  [
+                    {
+                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_InsuranceProvider",
+                        "valueIdentifier": {
+                            "system": "http://fhir.de/sid/arge-ik/iknr",
+                            "value": "109500969"
+                        }
+                    },
+                    {
+                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SubstitutionAllowedType",
+                        "valueBoolean": false
+                    },
+                    {
+                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType",
+                        "valueCoding": {
+                            "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType",
+                            "code": "160"
+                        }
+                    },
+                    {
+                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PackageQuantity",
+                        "valueQuantity": {
+                            "system": "http://unitsofmeasure.org",
+                            "value": 1
+                        }
+                    },
+                    {
+                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType",
+                        "extension":  [
+                            {
+                                "url": "onPremise",
+                                "valueBoolean": true
+                            },
+                            {
+                                "url": "shipment",
+                                "valueBoolean": false
+                            },
+                            {
+                                "url": "delivery",
+                                "valueBoolean": true
+                            }
+                        ]
+                    }
+                ],
+                "contentString": "%1%"
+              }
+            ])--";
     std::string body = R"({"resourceType": "Communication",)";
 
+    const bool isChargeItemRelated =
+        mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
+
     std::string urlBase{};
-    if (mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply)
+    if (isChargeItemRelated)
     {
         urlBase = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_";
     }
     else
     {
-        urlBase = "https://gematik.de/fhir/StructureDefinition/ErxCommunication";
+        urlBase = ResourceVersion::deprecatedProfile(mProfileVersion)
+                      ? structure_definition::deprecated::communication
+                      : "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_";
     }
 
     body += boost::str(
@@ -188,24 +262,31 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += "," + boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
     else if (mPrescriptionId.has_value())
-        body += "," + boost::str(boost::format(fmtSpecBasedOnTaskId) % mPrescriptionId.value());
+        body += "," + boost::str(boost::format(isChargeItemRelated ? fmtSpecBasedOnChargeItemId : fmtSpecBasedOnTaskId) % mPrescriptionId.value());
     body += R"(, "status":"unknown")";
     if (mAbout.has_value())
         body += "," + boost::str(boost::format(fmtSpecAbout) % mAbout.value());
     if (mSender.has_value())
         body += "," + boost::str(boost::format(fmtSpecSender)
-            % actorRoleToResourceId(std::get<0>(mSender.value()))
+            % actorRoleToResourceId(std::get<0>(mSender.value()), mProfileVersion)
             % std::get<1>(mSender.value()));
     if (mRecipient.has_value())
         body += "," + boost::str(boost::format(fmtSpecRecipient)
-            % actorRoleToResourceId(std::get<0>(mRecipient.value()))
+            % actorRoleToResourceId(std::get<0>(mRecipient.value()), mProfileVersion)
             % std::get<1>(mRecipient.value()));
     if (mTimeSent.has_value())
         body += "," + boost::str(boost::format(fmtSpecSent) % mTimeSent.value());
     if (mTimeReceived.has_value())
         body += "," + boost::str(boost::format(fmtSpecReceived) % mTimeReceived.value());
     if (mPayload.has_value())
-        body += "," + boost::str(boost::format(fmtSpecPayloadContentString) % mPayload.value());
+    {
+        if (ResourceVersion::deprecatedProfile(mProfileVersion))
+            body += "," + boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % mPayload.value());
+        else if (mMessageType == Communication::MessageType::InfoReq)
+            body += "," + boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % mPayload.value());
+        else
+            body += "," + boost::str(boost::format(fmtSpecPayloadContentString) % mPayload.value());
+    }
     if (mAbout)
     {
         std::string id{*mAbout};
@@ -213,10 +294,10 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
         {
             id = id.substr(1);
         }
-        body+= R"(, "contained":  [
+        constexpr auto aboutBodyFmtDeprecated = R"(, "contained":  [
         {
             "resourceType": "Medication",
-            "id": ")" + id + R"(",
+            "id": "%1%",
             "meta": {
                 "profile":  [
                     "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2"
@@ -269,6 +350,87 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
             }
         }
     ])";
+
+        constexpr auto aboutBodyFmt = R"--(, "contained":  [
+            {
+            "resourceType": "Medication",
+            "id": "%1%",
+            "meta": {
+                "profile":  [
+                    "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.1.0"
+                ]
+            },
+            "extension":  [
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type",
+                    "valueCodeableConcept": {
+                        "coding":  [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "version": "http://snomed.info/sct/900000000000207008/version/20220331",
+                                "code": "763158003",
+                                "display": "Medicinal product (product)"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category",
+                    "valueCoding": {
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category",
+                        "code": "00"
+                    }
+                },
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine",
+                    "valueBoolean": false
+                },
+                {
+                    "url": "http://fhir.de/StructureDefinition/normgroesse",
+                    "valueCode": "N1"
+                }
+            ],
+            "code": {
+                "coding":  [
+                    {
+                        "system": "http://fhir.de/CodeSystem/ifa/pzn",
+                        "code": "06313728"
+                    }
+                ],
+                "text": "Sumatriptan-1a Pharma 100 mg Tabletten"
+            },
+            "form": {
+                "coding":  [
+                    {
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
+                        "code": "TAB"
+                    }
+                ]
+            },
+            "amount": {
+                "numerator": {
+                    "unit": "St",
+                    "extension":  [
+                        {
+                            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize",
+                            "valueString": "20 St."
+                        }
+                    ]
+                },
+                "denominator": {
+                    "value": 1
+                }
+            }
+        }])--";
+
+        if (ResourceVersion::deprecatedProfile(mProfileVersion))
+        {
+            body += boost::str(boost::format(aboutBodyFmtDeprecated) % id);
+        }
+        else
+        {
+            body += boost::str(boost::format(aboutBodyFmt) % id);
+        }
     }
     body += "}";
     return body;
@@ -282,6 +444,8 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
             <basedOn> <reference value="Task/%1%"/> </basedOn>)";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
             <basedOn> <reference value="Task/%1%/$accept?ac=%2%"/> </basedOn>)";
+    static constexpr const char* fmtSpecBasedOnChargeItemId = R"(
+            <basedOn> <reference value="ChargeItem/%1%"/> </basedOn>)";
     static constexpr const char* fmtSpecAbout = R"(
             <about> <reference value="%1%"/> </about>)";
     static constexpr const char* fmtSpecSender = R"(
@@ -292,7 +456,7 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
             <sent value="%1%"/>)";
     static constexpr const char* fmtSpecReceived = R"(
             <received value="%1%"/>)";
-    static constexpr const char* fmtSpecPayloadContentString = R"--(
+    static constexpr const char* fmtSpecPayloadContentStringDeprecated = R"--(
             <payload>
               <extension url="https://gematik.de/fhir/StructureDefinition/InsuranceProvider">
                 <valueIdentifier>
@@ -312,19 +476,67 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
               </extension>
               <contentString value="%1%"/>
             </payload>)--";
+    static constexpr const char* fmtSpecPayloadContentString = R"--(
+            <payload>
+              <contentString value="%1%" />
+            </payload>)--";
+    static constexpr const char* fmtSpecPayloadInfoReqContentString =  R"--(
+        <payload>
+        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_InsuranceProvider">
+            <valueIdentifier>
+                <system value="http://fhir.de/sid/arge-ik/iknr" />
+                <value value="109500969" />
+            </valueIdentifier>
+        </extension>
+        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SubstitutionAllowedType">
+            <valueBoolean value="false" />
+        </extension>
+        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType">
+            <valueCoding>
+                <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType" />
+                <code value="160" />
+            </valueCoding>
+        </extension>
+        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PackageQuantity">
+            <valueQuantity>
+                <value value="1" />
+                <system value="http://unitsofmeasure.org" />
+            </valueQuantity>
+        </extension>
+        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType">
+            <extension url="onPremise">
+                <valueBoolean value="true" />
+            </extension>
+            <extension url="shipment">
+                <valueBoolean value="false" />
+            </extension>
+            <extension url="delivery">
+                <valueBoolean value="true" />
+            </extension>
+        </extension>
+        <contentString value="%1%" />
+    </payload>
+    )--";
     std::string body = R"(<Communication xmlns="http://hl7.org/fhir">)";
 
+    const bool isChargeItemRelated =
+        mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
+
     std::string urlBase{};
-    if (mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply)
+    if (isChargeItemRelated)
     {
         urlBase = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_";
     }
     else
     {
-        urlBase = "https://gematik.de/fhir/StructureDefinition/ErxCommunication";
+        urlBase = ResourceVersion::deprecatedProfile(mProfileVersion)
+                      ? structure_definition::deprecated::communication
+                      : "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_";
     }
 
-    body += boost::str(boost::format(fmtSpecProfile) % ::model::ResourceVersion::versionizeProfile(urlBase + std::string{Communication::messageTypeToString(mMessageType)}));
+    body += boost::str(boost::format(fmtSpecProfile) %
+                       ::model::ResourceVersion::versionizeProfile(
+                           urlBase + std::string{Communication::messageTypeToString(mMessageType)}));
     if (mAbout)
     {
         std::string id{*mAbout};
@@ -381,25 +593,31 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
     else if (mPrescriptionId.has_value())
-        body += boost::str(boost::format(fmtSpecBasedOnTaskId) % mPrescriptionId.value());
+        body += boost::str(boost::format(isChargeItemRelated ? fmtSpecBasedOnChargeItemId : fmtSpecBasedOnTaskId) % mPrescriptionId.value());
     body += R"(<status value="unknown"/>)";
     if (mAbout.has_value())
         body += boost::str(boost::format(fmtSpecAbout) % mAbout.value());
     if (mSender.has_value())
         body += boost::str(boost::format(fmtSpecSender)
-            % actorRoleToResourceId(std::get<0>(mSender.value()))
+            % actorRoleToResourceId(std::get<0>(mSender.value()), mProfileVersion)
             % std::get<1>(mSender.value()));
     if (mRecipient.has_value())
         body += boost::str(boost::format(fmtSpecRecipient)
-            % actorRoleToResourceId(std::get<0>(mRecipient.value()))
+            % actorRoleToResourceId(std::get<0>(mRecipient.value()), mProfileVersion)
             % std::get<1>(mRecipient.value()));
     if (mTimeSent.has_value())
         body += boost::str(boost::format(fmtSpecSent) % mTimeSent.value());
     if (mTimeReceived.has_value())
         body += boost::str(boost::format(fmtSpecReceived) % mTimeReceived.value());
     if (mPayload.has_value())
-        body += boost::str(boost::format(fmtSpecPayloadContentString) % mPayload.value());
+    {
+        if (ResourceVersion::deprecatedProfile(mProfileVersion))
+            body += boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % mPayload.value());
+        else if (mMessageType == Communication::MessageType::InfoReq)
+            body += boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % mPayload.value());
+        else
+            body += boost::str(boost::format(fmtSpecPayloadContentString) % mPayload.value());
+    }
     body += "</Communication>";
     return body;
 }
-

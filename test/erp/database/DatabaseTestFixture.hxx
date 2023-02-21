@@ -18,7 +18,8 @@
 #include <gtest/gtest.h>
 
 
-class DatabaseTestFixture : public ::testing::Test
+template <typename TestClass = ::testing::Test>
+class DatabaseTestFixture : public TestClass
 {
 protected:
     DatabaseFrontend database()

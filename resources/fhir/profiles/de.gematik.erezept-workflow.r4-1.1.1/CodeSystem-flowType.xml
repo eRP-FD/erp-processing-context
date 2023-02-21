@@ -1,2 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CodeSystem xmlns="http://hl7.org/fhir"><url value="https://gematik.de/fhir/CodeSystem/Flowtype"/><version value="1.1.1"/><name value="FlowtypeCS"/><title value="CodeSystem of Flowtypes"/><status value="draft"/><experimental value="false"/><publisher value="gematik GmbH"/><contact><telecom><system value="url"/><value value="http://www.gematik.de"/></telecom></contact><description value="Shows the different types of the ePrescription according to the prescription forms."/><copyright value="gematik GmbH"/><caseSensitive value="true"/><content value="complete"/><concept><code value="160"/><display value="Muster 16 (Apothekenpflichtige Arzneimittel)"/></concept><concept><code value="169"/><display value="Muster 16 (Direkte Zuweisung)"/></concept><concept><code value="200"/><display value="PKV (Apothekenpflichtige Arzneimittel)"/></concept></CodeSystem>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <url value="https://gematik.de/fhir/CodeSystem/Flowtype"/>
+  <version value="1.1.1"/>
+  <name value="FlowtypeCS"/>
+  <title value="CodeSystem of Flowtypes"/>
+  <status value="draft"/>
+  <experimental value="false"/>
+  <publisher value="gematik GmbH"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://www.gematik.de"/>
+    </telecom>
+  </contact>
+  <description value="Shows the different types of the ePrescription according to the prescription forms."/>
+  <copyright value="gematik GmbH"/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <concept>
+    <code value="160"/>
+    <display value="Muster 16 (Apothekenpflichtige Arzneimittel)"/>
+  </concept>
+  <concept>
+    <code value="169"/>
+    <display value="Muster 16 (Direkte Zuweisung)"/>
+  </concept>
+  <concept>
+    <code value="200"/>
+    <display value="PKV (Apothekenpflichtige Arzneimittel)"/>
+  </concept>
+</CodeSystem>

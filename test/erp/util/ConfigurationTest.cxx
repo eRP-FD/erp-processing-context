@@ -51,9 +51,9 @@ TEST_F(ConfigurationTest, getSafeStringValue)
 TEST_F(ConfigurationTest, getIntValue)
 {
     ScopedSetEnv scopeEnv(configuration.getEnvironmentVariableName(ConfigurationKey::SERVER_THREAD_COUNT), "17");
-    const size_t value = Configuration::instance().getIntValue(ConfigurationKey::SERVER_THREAD_COUNT);
+    const auto value = Configuration::instance().getIntValue(ConfigurationKey::SERVER_THREAD_COUNT);
 
-    ASSERT_EQ(value, 17u);
+    ASSERT_EQ(value, 17);
 }
 
 
@@ -64,9 +64,9 @@ TEST_F(ConfigurationTest, getOptionalIntValue)
 
     const auto configuration = createConfiguration();
 
-    const size_t value = configuration->getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 7684);
+    const auto value = configuration->getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 7684);
 
-    ASSERT_EQ(value, 7684u);
+    ASSERT_EQ(value, 7684);
 }
 
 

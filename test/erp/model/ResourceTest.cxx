@@ -12,6 +12,8 @@
 #include "erp/util/String.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <erp/util/Configuration.hxx>
 #include <gtest/gtest.h>
@@ -34,17 +36,22 @@ class FriendlyResourceBase : public ResourceBase
 
 TEST(ResourceBaseTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto [gematikVersion, kbvVersion, _] = ResourceVersion::current();
+    const auto envGuards = testutils::getOverlappingFhirProfileEnvironment();
+    const auto [oldGematikVersion, oldPatientenRechnungVersion, oldKbvVersion, oldAbdaPkvVersion, oldFhirVersion] =
+        ResourceVersion::profileVersionFromBundle(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01);
+    const auto [newGematikVersion, newPatientenRechnungVersion, newKbvVersion, newAbdaPkvVersion, newFhirVersion] =
+        ResourceVersion::profileVersionFromBundle(ResourceVersion::FhirProfileBundleVersion::v_2023_07_01);
 
-    const ::std::array<::std::pair<::std::string_view, ::std::string_view>, 3> profileTypes = {
-        ::std::make_pair("https://gematik.de/fhir/StructureDefinition/ErxReceipt"sv,
-                         ResourceVersion::v_str(gematikVersion)),
-        ::std::make_pair("https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"sv,
-                         ResourceVersion::v_str(kbvVersion)),
-        ::std::make_pair("http://hl7.org/fhir/StructureDefinition/Binary"sv, "4.0.1"sv)};
+    const std::array<std::pair<std::string_view, std::string_view>, 3> profileTypes = {
+        // only supported by old profile
+        std::make_pair(resource::structure_definition::deprecated::receipt, ResourceVersion::v_str(oldGematikVersion)),
+        // only supported by new profiles
+        std::make_pair(resource::structure_definition::receipt, ResourceVersion::v_str(newGematikVersion)),
+        // a generic fhir profile
+        std::make_pair(resource::structure_definition::deprecated::digest, ResourceVersion::v_str(newFhirVersion))};
 
-
-    ::std::unique_ptr<FriendlyResourceBase> resource;
+    //NOLINTBEGIN(cppcoreguidelines-owning-memory)
+    std::unique_ptr<FriendlyResourceBase> resource;
     for (const auto& type : profileTypes)
     {
         ASSERT_NO_THROW(resource.reset(new FriendlyResourceBase{type.first}));
@@ -53,16 +60,16 @@ TEST(ResourceBaseTest, Constructor)//NOLINT(readability-function-cognitive-compl
         const auto profileParts = String::split(profile.value(), '|');
         ASSERT_EQ(profileParts.size(), 2);
         EXPECT_EQ(profileParts[0], type.first);
-        EXPECT_EQ(profileParts[1], type.second);
+        EXPECT_EQ(profileParts[1], type.second) << "Profile = " << profileParts[0];
     }
 
     {
-        EXPECT_THROW(resource.reset(new FriendlyResourceBase{""}), ::std::logic_error);
-        EXPECT_THROW(resource.reset(new FriendlyResourceBase{"https://company.com/invalid/profile"}),
-                     ::std::logic_error);
+        EXPECT_ANY_THROW(resource.reset(new FriendlyResourceBase{""}));
+        EXPECT_ANY_THROW(resource.reset(new FriendlyResourceBase{"https://company.com/invalid/profile"}));
     }
+    //NOLINTEND(cppcoreguidelines-owning-memory)
 }
-}
+} // namespace model
 
 class ResourceGenericValidationTest : public ::testing::TestWithParam<Configuration::GenericValidationMode>
 {
@@ -72,14 +79,16 @@ protected:
                       const fhirtools::ValidatorOptions& valOpts = {})
     {
         return ResourceT::fromXml(xml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), schemaType,
+                                  model::ResourceVersion::supportedBundles(),
                                   valOpts);
     }
     template<typename ResourceT = model::Parameters>
     ResourceT fromJson(std::string_view json, SchemaType schemaType = SchemaType::fhir,
                        const fhirtools::ValidatorOptions& valOpts = {})
     {
-        return ResourceT::fromJson(json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                                   *StaticData::getInCodeValidator(), schemaType, valOpts);
+        return ResourceT::fromJson(
+            json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+            schemaType, model::ResourceVersion::supportedBundles(), valOpts);
     }
 
 
@@ -114,7 +123,7 @@ protected:
 
     std::string goodBundleXML()
     {
-        return resourceManager.getStringResource(dataPath + "/kbv_bundle.xml");
+        return ResourceTemplates::kbvBundleXml();
     }
     std::string genericFailBundleXML()
     {
@@ -166,7 +175,12 @@ protected:
             else
             {
                 ASSERT_TRUE(erpException.diagnostics().has_value());
-                EXPECT_EQ(erpException.diagnostics().value(), fullDiagnostics);
+                std::vector<std::string> diagnosticsMessages = String::split(erpException.diagnostics().value(), "; ");
+                std::vector<std::string> fullDiagnosticsMessages = String::split(fullDiagnostics, "; ");
+                std::set<std::string> diagnosticsMessagesSet(diagnosticsMessages.begin(), diagnosticsMessages.end());
+                std::set<std::string> fullDiagnosticsMessagesSet(fullDiagnosticsMessages.begin(),
+                                                                 fullDiagnosticsMessages.end());
+                EXPECT_EQ(diagnosticsMessagesSet, fullDiagnosticsMessagesSet);
             }
         }
         catch (const std::exception& ex)
@@ -186,10 +200,7 @@ TEST_P(ResourceGenericValidationTest, genericValidationModeXMLnoSchema)
     static const std::string shortDiagnostics =
         "Element '{http://hl7.org/fhir}extension': The attribute 'url' is required but missing.";
     static const std::string fullDiagnostics =
-        "error: Element '{http://hl7.org/fhir}extension': The attribute 'url' is required but missing.; "
-        "Parameters.parameter[0].extension[0].url: "
-        "error: missing mandatory element "
-        "(from profile: http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); ";
+        "Element '{http://hl7.org/fhir}extension': The attribute 'url' is required but missing.";
     // clang-format on
 
     EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
@@ -271,10 +282,10 @@ TEST_P(ResourceGenericValidationTest, genericValidationModeXMLKbvBundle)
                 "[\"https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3\"]); "
     "Bundle: "
         "error: bdl-7: FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles) "
-        "(from profile: http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1); "
+        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2); "
     "Bundle: "
         "error: bdl-7: FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles) "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2); "s;
+        "(from profile: http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1); "s;
     // clang-format on
 
 

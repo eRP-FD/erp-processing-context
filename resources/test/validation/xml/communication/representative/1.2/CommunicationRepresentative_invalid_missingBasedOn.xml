@@ -1,0 +1,15 @@
+<Communication xmlns="http://hl7.org/fhir">
+  <meta>
+      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative|1.2" />
+  </meta>
+  <status value="unknown" />
+  <recipient>
+      <identifier>
+          <system value="http://fhir.de/sid/gkv/kvid-10" />
+          <value value="X234567891" />
+      </identifier>
+  </recipient>
+  <payload>
+      <contentString value="Bitte löse mein Rezept ein." />
+  </payload>
+</Communication>

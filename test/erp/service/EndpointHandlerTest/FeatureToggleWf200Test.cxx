@@ -230,5 +230,5 @@ TEST_P(FeatureToggleWF200Test, medicationDispense_getAll)//NOLINT(readability-fu
 
 
 
-INSTANTIATE_TEST_CASE_P(toggle, FeatureToggleWF200Test, ::testing::Values(true, false),
+INSTANTIATE_TEST_SUITE_P(toggle, FeatureToggleWF200Test, ::testing::Values(true, false),
                         [](auto info){ return info.param?"enabled":"disabled";});

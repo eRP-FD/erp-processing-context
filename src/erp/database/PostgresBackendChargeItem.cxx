@@ -17,22 +17,24 @@
 namespace QueryIndices
 {
 // clang-format off
-static constexpr ::pqxx::row::size_type prescription_type =  0u;
-static constexpr ::pqxx::row::size_type prescription_id   =  1u;
-static constexpr ::pqxx::row::size_type enterer           =  2u;
-static constexpr ::pqxx::row::size_type entered_date      =  3u;
-static constexpr ::pqxx::row::size_type last_modified     =  4u;
-static constexpr ::pqxx::row::size_type marking_flag      =  5u;
-static constexpr ::pqxx::row::size_type blob_id           =  6u;
-static constexpr ::pqxx::row::size_type salt              =  7u;
-static constexpr ::pqxx::row::size_type access_code       =  8u;
-static constexpr ::pqxx::row::size_type kvnr              =  9u;
-static constexpr ::pqxx::row::size_type prescription      = 10u;
-static constexpr ::pqxx::row::size_type prescription_json = 11u;
-static constexpr ::pqxx::row::size_type receipt_xml       = 12u;
-static constexpr ::pqxx::row::size_type receipt_json      = 13u;
-static constexpr ::pqxx::row::size_type billing_data      = 14u;
-static constexpr ::pqxx::row::size_type billing_data_json = 15u;
+    enum ColumnName : ::pqxx::row::size_type {
+        prescription_type,
+        prescription_id,
+        enterer,
+        entered_date,
+        last_modified,
+        marking_flag,
+        blob_id,
+        salt,
+        access_code,
+        kvnr,
+        prescription,
+        prescription_json,
+        receipt_xml,
+        receipt_json,
+        billing_data,
+        billing_data_json
+    };
 // clang-format on
 }
 
@@ -40,6 +42,7 @@ PostgresBackendChargeItem::PostgresBackendChargeItem()
 {
 #define QUERY(name, query) mQueries.name = {#name, query};
 
+// GEMREQ-start A_22137#query
     QUERY(storeChargeInformation, R"--(
         INSERT INTO erp.charge_item (prescription_type, prescription_id, enterer,
                                      entered_date,      last_modified,   marking_flag,
@@ -53,26 +56,34 @@ PostgresBackendChargeItem::PostgresBackendChargeItem()
                     $10,           $11,        $12,
                     $13,           $14,        $15,
                     $16,           $17))--")
+// GEMREQ-end A_22137#query
 
+// GEMREQ-start A_22148#query
     QUERY(updateChargeInformation, R"--(
         UPDATE erp.charge_item SET marking_flag      = $3,
                                    last_modified     = NOW(),
                                    billing_data      = $4,
-                                   billing_data_json = $5
+                                   billing_data_json = $5,
+                                   access_code       = $6
         WHERE prescription_type = $1::smallint
             AND prescription_id = $2::bigint
         )--")
+// GEMREQ-end A_22148#query
 
+// GEMREQ-start A_22117-01#query
     QUERY(deleteChargeInformation, R"--(
         DELETE FROM erp.charge_item
         WHERE prescription_type = $1::smallint
             AND prescription_id = $2::bigint
         )--")
+// GEMREQ-end A_22117-01#query
 
+// GEMREQ-start A_22157#query
     QUERY(clearAllChargeInformation, R"--(
         DELETE FROM erp.charge_item
         WHERE kvnr_hashed = $1
     )--")
+// GEMREQ-end A_22157#query
 
     QUERY(retrieveChargeInformation, R"--(
         SELECT prescription_type,                prescription_id,                   enterer,
@@ -86,16 +97,17 @@ PostgresBackendChargeItem::PostgresBackendChargeItem()
             AND prescription_id = $2::bigint
         )--")
 
+// GEMREQ-start A_22119#query
     QUERY(retrieveAllChargeItemsForInsurant, R"--(
         SELECT prescription_type,                prescription_id,                   enterer,
                EXTRACT(EPOCH FROM entered_date), EXTRACT(EPOCH FROM last_modified), marking_flag,
-               blob_id,                          salt,                              access_code,
-               kvnr,                             prescription,                      prescription_json,
-               receipt_xml,                      receipt_json,                      billing_data,
-               billing_data_json
+               blob_id,                          salt,                              kvnr,
+               prescription,                     prescription_json,                 receipt_xml,
+               receipt_json,                     billing_data,                      billing_data_json
         FROM erp.charge_item
         WHERE kvnr_hashed = $1
         )--")
+// GEMREQ-end A_22119#query
 
     QUERY(countChargeInformationForInsurant, R"--(
         SELECT COUNT(*)
@@ -105,6 +117,7 @@ PostgresBackendChargeItem::PostgresBackendChargeItem()
 #undef QUERY
 }
 
+// GEMREQ-start storeChargeInformation
 void PostgresBackendChargeItem::storeChargeInformation(::pqxx::work& transaction,
                                                        const ::db_model::ChargeItem& chargeItem,
                                                        const ::db_model::HashedKvnr& hashedKvnr) const
@@ -115,9 +128,9 @@ void PostgresBackendChargeItem::storeChargeInformation(::pqxx::work& transaction
                                                                         "PostgreSQL:storeChargeInformation");
 
     const auto markingFlag = [&chargeItem]() -> ::std::optional<::db_model::postgres_bytea_view> {
-        if (chargeItem.markingFlag)
+        if (chargeItem.markingFlags)
         {
-            return chargeItem.markingFlag->binarystring();
+            return chargeItem.markingFlags->binarystring();
         }
 
         return std::nullopt;
@@ -135,7 +148,9 @@ void PostgresBackendChargeItem::storeChargeInformation(::pqxx::work& transaction
         // clang-format on
     );
 }
+// GEMREQ-end storeChargeInformation
 
+// GEMREQ-start updateChargeInformation
 void PostgresBackendChargeItem::updateChargeInformation(::pqxx::work& transaction,
                                                         const ::db_model::ChargeItem& chargeItem) const
 {
@@ -144,15 +159,18 @@ void PostgresBackendChargeItem::updateChargeInformation(::pqxx::work& transactio
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
                                                                         "PostgreSQL:updateChargeInformation");
 
-    const auto markingFlag =
-        chargeItem.markingFlag ? ::std::make_optional(chargeItem.markingFlag->binarystring()) : ::std::nullopt;
+    const auto markingFlags =
+        chargeItem.markingFlags ? ::std::make_optional(chargeItem.markingFlags->binarystring()) : ::std::nullopt;
 
     transaction.exec_params0(mQueries.updateChargeInformation.query,
                              static_cast<uint32_t>(chargeItem.prescriptionId.type()),
-                             chargeItem.prescriptionId.toDatabaseId(), markingFlag,
-                             chargeItem.billingData.binarystring(), chargeItem.billingDataJson.binarystring());
+                             chargeItem.prescriptionId.toDatabaseId(), markingFlags,
+                             chargeItem.billingData.binarystring(), chargeItem.billingDataJson.binarystring(),
+                             chargeItem.accessCode.binarystring());
 }
+// GEMREQ-end updateChargeInformation
 
+// GEMREQ-start A_22117-01#query-call
 void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::work& transaction,
                                                         const model::PrescriptionId& id) const
 {
@@ -164,7 +182,9 @@ void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::work& transactio
     transaction.exec_params0(mQueries.deleteChargeInformation.query, static_cast<uint32_t>(id.type()),
                              id.toDatabaseId());
 }
+// GEMREQ-end A_22117-01#query-call
 
+// GEMREQ-start A_22157#query-call
 void PostgresBackendChargeItem::clearAllChargeInformation(::pqxx::work& transaction,
                                                           const ::db_model::HashedKvnr& kvnr) const
 {
@@ -175,6 +195,7 @@ void PostgresBackendChargeItem::clearAllChargeInformation(::pqxx::work& transact
 
     transaction.exec_params0(mQueries.clearAllChargeInformation.query, kvnr.binarystring());
 }
+// GEMREQ-end A_22157#query-call
 
 ::db_model::ChargeItem PostgresBackendChargeItem::retrieveChargeInformation(::pqxx::work& transaction,
                                                                             const ::model::PrescriptionId& id) const
@@ -192,6 +213,7 @@ PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::work& tran
     return retrieveChargeInformation(transaction, query, id);
 }
 
+// GEMREQ-start A_22119#query-call
 ::std::vector<::db_model::ChargeItem> PostgresBackendChargeItem::retrieveAllChargeItemsForInsurant(
     ::pqxx::work& transaction, const ::db_model::HashedKvnr& kvnr, const ::std::optional<UrlArguments>& search) const
 {
@@ -209,13 +231,14 @@ PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::work& tran
 
     TVLOG(2) << "got " << dbResult.size() << " results";
     ::std::vector<::db_model::ChargeItem> result;
-    result.reserve(dbResult.size());
+    result.reserve(gsl::narrow<size_t>(dbResult.size()));
     for (const auto& row : dbResult)
     {
-        result.emplace_back(chargeItemFromQueryResultRow(row));
+        result.emplace_back(chargeItemFromQueryResultRow(row, true));
     }
     return result;
 }
+// GEMREQ-end A_22119#query-call
 
 uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work& transaction,
                                                                       const ::db_model::HashedKvnr& kvnr,
@@ -245,11 +268,15 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
     return chargeItemFromQueryResultRow(dbResult.front());
 }
 
-::db_model::ChargeItem PostgresBackendChargeItem::chargeItemFromQueryResultRow(const ::pqxx::row& row) const
+::db_model::ChargeItem PostgresBackendChargeItem::chargeItemFromQueryResultRow(const ::pqxx::row& row, bool allInsurantChargeItems /* = false */) const
 {
-    Expect3(row.size() == 16u, "Wrong number of fields in result row", ::std::logic_error);
+    if (allInsurantChargeItems) {
+        Expect3(row.size() == 15u, "Wrong number of fields in result row", ::std::logic_error);
+    } else {
+        Expect3(row.size() == 16u, "Wrong number of fields in result row", ::std::logic_error);
+    }
 
-    const auto prescriptionType = row.at(QueryIndices::prescription_type).as<int32_t>();
+    const auto prescriptionType = gsl::narrow<uint8_t>(row.at(QueryIndices::prescription_type).as<int32_t>());
     const auto prescriptionId = ::model::PrescriptionId::fromDatabaseId(
         ::magic_enum::enum_cast<::model::PrescriptionType>(prescriptionType).value(),
         row.at(QueryIndices::prescription_id).as<int64_t>());
@@ -260,7 +287,7 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
     chargeItem.lastModified = ::model::Timestamp{row.at(QueryIndices::last_modified).as<double>()};
     if (! row.at(QueryIndices::marking_flag).is_null())
     {
-        chargeItem.markingFlag =
+        chargeItem.markingFlags =
             ::db_model::EncryptedBlob{row.at(QueryIndices::marking_flag).as<::db_model::postgres_bytea>()};
     }
 
@@ -269,22 +296,23 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
     Expect3(! row.at(QueryIndices::salt).is_null(), "Missing salt data in charge item.", ::std::logic_error);
     chargeItem.salt = ::db_model::Blob{row.at(QueryIndices::salt).as<::db_model::postgres_bytea>()};
 
-    chargeItem.accessCode =
-        ::db_model::EncryptedBlob{row.at(QueryIndices::access_code).as<::db_model::postgres_bytea>()};
-
-    chargeItem.kvnr = ::db_model::EncryptedBlob{row.at(QueryIndices::kvnr).as<::db_model::postgres_bytea>()};
+    if (!allInsurantChargeItems) {
+        chargeItem.accessCode =
+            ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::access_code).data()).as<::db_model::postgres_bytea>()};
+    }
+    chargeItem.kvnr = ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::kvnr).data()).as<::db_model::postgres_bytea>()};
     chargeItem.prescription =
-        ::db_model::EncryptedBlob{row.at(QueryIndices::prescription).as<::db_model::postgres_bytea>()};
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::prescription).data()).as<::db_model::postgres_bytea>()};
     chargeItem.prescriptionJson =
-        ::db_model::EncryptedBlob{row.at(QueryIndices::prescription_json).as<::db_model::postgres_bytea>()};
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::prescription_json).data()).as<::db_model::postgres_bytea>()};
     chargeItem.receiptXml =
-        ::db_model::EncryptedBlob{row.at(QueryIndices::receipt_xml).as<::db_model::postgres_bytea>()};
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::receipt_xml).data()).as<::db_model::postgres_bytea>()};
     chargeItem.receiptJson =
-        ::db_model::EncryptedBlob{row.at(QueryIndices::receipt_json).as<::db_model::postgres_bytea>()};
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::receipt_json).data()).as<::db_model::postgres_bytea>()};
     chargeItem.billingData =
-        ::db_model::EncryptedBlob{row.at(QueryIndices::billing_data).as<::db_model::postgres_bytea>()};
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::billing_data).data()).as<::db_model::postgres_bytea>()};
     chargeItem.billingDataJson =
-        ::db_model::EncryptedBlob{row.at(QueryIndices::billing_data_json).as<::db_model::postgres_bytea>()};
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::billing_data_json).data()).as<::db_model::postgres_bytea>()};
 
     return chargeItem;
 }

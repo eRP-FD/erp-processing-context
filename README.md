@@ -39,8 +39,8 @@ Sie sind ausschließlich für Testzwecke auf einem lokal betriebenen Server geda
 # Build Environment im Docker-Image
 ```shell
 cd docker/build
-docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1 .
-docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1
+docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.2 .
+docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.2
 ```
 
 # Tools

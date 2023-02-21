@@ -17,13 +17,13 @@
 namespace
 {
 
-std::string getKvnrFromAccessToken(const JWT& accessToken)
+model::Kvnr getKvnrFromAccessToken(const JWT& accessToken)
 {
     A_19396.start("Read Kvnr from access token");
     const auto kvnrClaim = accessToken.stringForClaim(JWT::idNumberClaim);
     Expect(kvnrClaim.has_value(), "JWT does not contain Kvnr");
     A_19396.finish();
-    return kvnrClaim.value();
+    return model::Kvnr{kvnrClaim.value()};
 }
 
 } // anonymous namespace
@@ -39,17 +39,26 @@ model::Bundle GetAllAuditEventsHandler::createBundle (
     const std::vector<model::AuditData>& auditData) const
 {
     const std::string linkBase = getLinkBase() + "/AuditEvent";
-    const auto language = getLanguageFromHeader(request.header());
+    const auto language = getLanguageFromHeader(request.header()).value_or(std::string(AuditEventTextTemplates::defaultLanguage));
     model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     for (const auto& data : auditData)
     {
-        const model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(
-            data, language, serviceContext.auditEventTextTemplates(), request.getAccessToken());
-        bundle.addResource(
-            linkBase + "/" + std::string(auditEvent.id()),
-            {},
-            model::Bundle::SearchMode::match,
-            auditEvent.jsonDocument());
+        if(data.isValidEventId())
+        {
+            const model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(
+                data, language, serviceContext.auditEventTextTemplates(), request.getAccessToken(),
+                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+            bundle.addResource(
+                linkBase + "/" + std::string(auditEvent.id()),
+                {},
+                model::Bundle::SearchMode::match,
+                auditEvent.jsonDocument());
+        }
+        else
+        {
+            TLOG(WARNING) << "Unknown audit event id " << magic_enum::enum_integer(data.eventId())
+                          << " in record read from database, ignoring this audit event.";
+        }
     }
     return bundle;
 }
@@ -98,7 +107,7 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
 
     A_19397.start("Return audit events as bundle");
     auto bundle = createBundle(session.serviceContext, session.request, auditEvents);
-    bundle.setTotalSearchMatches(totalSearchMatches);    
+    bundle.setTotalSearchMatches(totalSearchMatches);
     const auto links = arguments->getBundleLinks(getLinkBase(), "/AuditEvent", totalSearchMatches);
     for (const auto& link : links)
     {
@@ -140,10 +149,18 @@ void GetAuditEventHandler::handleRequest (PcSessionContext& session)
     ErpExpect(!auditEvents.empty(), HttpStatus::NotFound, "No AuditEvent found for id");
     ErpExpect(auditEvents.size() == 1, HttpStatus::InternalServerError, "More than one AuditEvent found for unique id");
 
+    const auto& auditData = auditEvents.front();
+    if(!auditData.isValidEventId())
+    {
+        TLOG(WARNING) << "Unknown audit event id " << magic_enum::enum_integer(auditData.eventId())
+                      << " in record read from database.";
+        ErpFail(HttpStatus::InternalServerError, "Found AuditEvent contains invalid event id");
+    }
+
     model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(
-        auditEvents.front(), getLanguageFromHeader(session.request.header()),
-        session.serviceContext.auditEventTextTemplates(), session.request.getAccessToken());
+        auditData, getLanguageFromHeader(session.request.header()).value_or(std::string(AuditEventTextTemplates::defaultLanguage)),
+        session.serviceContext.auditEventTextTemplates(), session.request.getAccessToken(),
+        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
 
     makeResponse(session, HttpStatus::OK, &auditEvent);
 }
-

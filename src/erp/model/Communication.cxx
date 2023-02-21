@@ -69,6 +69,13 @@ const std::map<Communication::MessageType, std::string_view> MessageTypeToProfil
     { Communication::MessageType::Representative,   structure_definition::communicationRepresentative   }
 };
 
+const std::map<Communication::MessageType, std::string_view> MessageTypeToProfileUrlDeprecated = {
+    { Communication::MessageType::InfoReq,          structure_definition::deprecated::communicationInfoReq          },
+    { Communication::MessageType::Reply,            structure_definition::deprecated::communicationReply            },
+    { Communication::MessageType::DispReq,          structure_definition::deprecated::communicationDispReq          },
+    { Communication::MessageType::Representative,   structure_definition::deprecated::communicationRepresentative   }
+};
+
 const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessageType = {
     {structure_definition::communicationInfoReq,          Communication::MessageType::InfoReq          },
     {structure_definition::communicationChargChangeReq,   Communication::MessageType::ChargChangeReq   },
@@ -76,6 +83,13 @@ const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessage
     {structure_definition::communicationReply,            Communication::MessageType::Reply            },
     {structure_definition::communicationDispReq,          Communication::MessageType::DispReq          },
     {structure_definition::communicationRepresentative,   Communication::MessageType::Representative   }
+};
+
+const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessageTypeDeprecated = {
+    {structure_definition::deprecated::communicationInfoReq,          Communication::MessageType::InfoReq          },
+    {structure_definition::deprecated::communicationReply,            Communication::MessageType::Reply            },
+    {structure_definition::deprecated::communicationDispReq,          Communication::MessageType::DispReq          },
+    {structure_definition::deprecated::communicationRepresentative,   Communication::MessageType::Representative   }
 };
 
 const std::map<Communication::MessageType, bool> MessageTypeHasPrescriptonId = {
@@ -87,33 +101,50 @@ const std::map<Communication::MessageType, bool> MessageTypeHasPrescriptonId = {
     { Communication::MessageType::Representative,   true  }
 };
 
-const std::string_view& Communication::messageTypeToString(MessageType messageType)
+Communication::Communication(NumberAsStringParserDocument&& document)
+    : Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>(std::move(document))
+    , mPayload(getValue(payloadPointer))
+{
+}
+
+
+bool Communication::isDeprecatedProfile() const
+{
+    return ResourceVersion::deprecatedProfile(getSchemaVersion(std::nullopt));
+}
+
+std::string_view Communication::messageTypeToString(MessageType messageType)
 {
     const auto& it = MessageTypeToString.find(messageType);
     Expect3 (it != MessageTypeToString.end(), "Message type enumerator value " + std::to_string(static_cast<int>(messageType)) + " is out of range", std::logic_error);
     return it->second;
 }
 
-Communication::MessageType Communication::stringToMessageType(const std::string_view& messageType)
+Communication::MessageType Communication::stringToMessageType(std::string_view messageType)
 {
     const auto& it = StringToMessageType.find(messageType);
     ModelExpect(it != StringToMessageType.end(), "Invalid message type " + std::string(messageType));
     return it->second;
 }
 
-const std::string_view& Communication::messageTypeToProfileUrl(MessageType messageType)
+std::string_view Communication::messageTypeToProfileUrl(MessageType messageType) const
 {
-    const auto& it = MessageTypeToProfileUrl.find(messageType);
-    ModelExpect(it != MessageTypeToProfileUrl.end(), "Message type enumerator value " + std::to_string(static_cast<int>(messageType)) + " is out of range");
+    const std::map<Communication::MessageType, std::string_view>& messageTypeMap =
+        isDeprecatedProfile() ? MessageTypeToProfileUrlDeprecated : MessageTypeToProfileUrl;
+    const auto& it = messageTypeMap.find(messageType);
+    ModelExpect(it != messageTypeMap.end(),
+                "Message type enumerator value " + std::to_string(static_cast<int>(messageType)) + " is out of range");
     return it->second;
 }
 
-Communication::MessageType Communication::profileUrlToMessageType(const std::string_view& profileUrl)
+Communication::MessageType Communication::profileUrlToMessageType(std::string_view profileUrl) const
 {
     const auto parts = String::split(profileUrl, '|');
     ModelExpect(!parts.empty(), "error processing profileUrl: " + std::string(profileUrl));
-    const auto& it = ProfileUrlToMessageType.find(parts[0]);
-    ModelExpect(it != ProfileUrlToMessageType.end(), "Could not retrieve message type from " + std::string(profileUrl));
+    const std::map<std::string_view, Communication::MessageType>& profileMap =
+        isDeprecatedProfile() ? ProfileUrlToMessageTypeDeprecated : ProfileUrlToMessageType;
+    const auto& it = profileMap.find(parts[0]);
+    ModelExpect(it != profileMap.end(), "Could not retrieve message type from " + std::string(profileUrl));
     return it->second;
 }
 
@@ -145,36 +176,52 @@ SchemaType Communication::messageTypeToSchemaType(MessageType messageType)
 
 static const std::string invalidDataMessage = "The data does not conform to that expected by the FHIR profile or is invalid";
 
-std::string Communication::retrievePrescriptionIdFromTaskReference(const std::string_view& taskReference)
+std::string Communication::retrievePrescriptionIdFromReference(
+    std::string_view reference,
+    const model::Communication::MessageType messageType)
 {
-    // taskReference may look like:
+    // Reference may look like:
     // InfoReq and Reply:           "Task/160.123.456.789.123.58" or
-    // DispReq and Representative:  "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
+    // DispReq and Representative:  "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea" or
+    // ChargChangeReq and ChargChangeReply: "ChargeItem/200.000.000.006.522.02"
     std::string path;
-    std::tie(path, std::ignore, std::ignore) = UrlHelper::splitTarget(std::string(taskReference));
+    std::tie(path, std::ignore, std::ignore) = UrlHelper::splitTarget(std::string(reference));
     std::cmatch result;
+    bool matches = false;
     if (path.find("$accept") == std::string::npos)
     {
-        static const std::regex pathRegexTaskId(UrlHelper::convertPathToRegex("Task/{id}"));
-        bool matches = std::regex_match(path.c_str(), result, pathRegexTaskId);
-        if (matches && result.size() == 2)
+        switch(messageType)
         {
-            return result.str(1);
+        case model::Communication::MessageType::ChargChangeReq:
+        case model::Communication::MessageType::ChargChangeReply:
+            {
+                 static const std::regex pathRegexChargeItemId(UrlHelper::convertPathToRegex("ChargeItem/{id}"));
+                 matches = std::regex_match(path.c_str(), result, pathRegexChargeItemId);
+            }
+            break;
+        default:
+            {
+                 static const std::regex pathRegexTaskItemId(UrlHelper::convertPathToRegex("Task/{id}"));
+                 matches = std::regex_match(path.c_str(), result, pathRegexTaskItemId);
+            }
+             break;
         }
     }
     else
     {
         static const std::regex pathRegexTaskIdAccessCode(UrlHelper::convertPathToRegex("Task/{id}/$accept"));
-        bool matches = std::regex_match(path.c_str(), result, pathRegexTaskIdAccessCode);
-        if (matches && result.size() == 2)
-        {
-            return result.str(1);
-        }
+        matches = std::regex_match(path.c_str(), result, pathRegexTaskIdAccessCode);
     }
-    ErpFail(HttpStatus::BadRequest, "Failed to parse prescription ID from task reference");
+
+    if (matches && result.size() == 2)
+    {
+        return result.str(1);
+    }
+
+    ErpFail(HttpStatus::BadRequest, "Failed to parse prescription ID from reference");
 }
 
-std::optional<std::string> Communication::retrieveAccessCodeFromTaskReference(const std::string_view& taskReference)
+std::optional<std::string> Communication::retrieveAccessCodeFromTaskReference(std::string_view taskReference)
 {
     // taskReference may look like:
     // InfoReq and Reply:           "Task/160.123.456.789.123.58" or
@@ -192,23 +239,18 @@ std::optional<std::string> Communication::retrieveAccessCodeFromTaskReference(co
     return {};
 }
 
-Communication::Communication(NumberAsStringParserDocument&& document) :
-    Resource<Communication>(std::move(document)),
-    mPayload(getValue(payloadPointer))
-{
-}
 
 Communication::MessageType Communication::messageType() const
 {
     return profileUrlToMessageType(getStringValue(metaProfile0Pointer)); // throws an exception if conversion fails
 }
 
-const std::string_view& Communication::messageTypeAsString() const
+std::string_view Communication::messageTypeAsString() const
 {
     return messageTypeToString(messageType()); // may throw an exception if the message type is not in the body
 }
 
-const std::string_view& Communication::messageTypeAsProfileUrl() const
+std::string_view Communication::messageTypeAsProfileUrl() const
 {
     return messageTypeToProfileUrl(messageType()); // may throw an exception if the message type is not in the body
 }
@@ -232,54 +274,93 @@ void Communication::setId(const Uuid& id)
     setValue(idPointer, id.toString());
 }
 
-std::optional<std::string_view> Communication::sender() const
+std::optional<Identity> Communication::sender() const
 {
-    return getOptionalStringValue(senderIdentifierValuePointer);
+    const auto senderValue = getOptionalStringValue(senderIdentifierValuePointer);
+    const auto senderSystem = getOptionalStringValue(senderIdentifierSystemPointer);
+    if (!senderValue || !senderSystem)
+        return {};
+    if (*senderSystem == resource::naming_system::telematicID ||
+        *senderSystem == resource::naming_system::deprecated::telematicID)
+    {
+        return TelematikId{*senderValue};
+    }
+    return Kvnr{*senderValue, *senderSystem};
 }
 
-void Communication::setSender(const std::string_view& sender)
+bool Communication::isReply() const
 {
-    setValue(senderIdentifierValuePointer, sender);
-    if (messageType() == MessageType::Reply)
+    const auto msgType = messageType();
+    return msgType == MessageType::Reply || msgType == MessageType::ChargChangeReply;
+}
+
+void Communication::setSender(const Identity& sender)
+{
+    if (std::holds_alternative<Kvnr>(sender))
     {
-        setValue(senderIdentifierSystemPointer, naming_system::telematicID);
+        ModelExpect(messageType() != MessageType::ChargChangeReply, "ChargChangeReply cannot be sent by insurant");
+        const auto& kvnr = std::get<Kvnr>(sender);
+        setSender(kvnr.id(), kvnr.namingSystem(isDeprecatedProfile()));
     }
     else
     {
-        setValue(senderIdentifierSystemPointer, naming_system::gkvKvid10);
+        ModelExpect(isReply(), "Requests cannot be sent from telematik-id");
+        const auto& telematikId = std::get<TelematikId>(sender);
+        auto nsTelematikId =
+            isDeprecatedProfile() ? naming_system::deprecated::telematicID : naming_system::telematicID;
+        setSender(telematikId.id(), nsTelematikId);
     }
 }
 
-std::optional<std::string_view> Communication::recipient() const
+void Communication::setSender(std::string_view sender, std::string_view namingSystem)
 {
-    return getOptionalStringValue(recipient0IdentifierValuePointer);
+    setValue(senderIdentifierValuePointer, sender);
+    setValue(senderIdentifierSystemPointer, namingSystem);
 }
 
-void Communication::setRecipient(const std::string_view& recipient)
+Identity Communication::recipient() const
 {
-    if (!hasValue(recipientPointer))
+    const auto recipientValue = getStringValue(recipient0IdentifierValuePointer);
+    const auto recipientSystem = getStringValue(recipient0IdentifierSystemPointer);
+    if (recipientSystem == resource::naming_system::telematicID ||
+        recipientSystem == resource::naming_system::deprecated::telematicID)
     {
-        rj::Value oIdentifier(rj::kObjectType);
-        const MessageType msgType = messageType();
-        if (msgType == MessageType::Reply || msgType == MessageType::Representative)
-        {
-            setKeyValue(oIdentifier, identifierSystemPointer, naming_system::gkvKvid10);
-        }
-        else
-        {
-            setKeyValue(oIdentifier, identifierSystemPointer, naming_system::telematicID);
-        }
-        setKeyValue(oIdentifier, identifierValuePointer, recipient);
+        return TelematikId{recipientValue};
+    }
+    return Kvnr{recipientValue, recipientSystem};
+}
 
+void Communication::setRecipient(const Identity& recipient)
+{
+    if (std::holds_alternative<Kvnr>(recipient))
+    {
+        ModelExpect(isReply() || messageType() == MessageType::Representative, "Insurant cannot be recipient for requests");
+        const auto& kvnr = std::get<Kvnr>(recipient);
+        setRecipient(kvnr.id(), kvnr.namingSystem(isDeprecatedProfile()));
+    }
+    else
+    {
+        ModelExpect(! isReply(), "Recipient cannot be telematik-id for replies");
+        const auto& telematikId = std::get<TelematikId>(recipient);
+        auto nsTelematikId =
+            isDeprecatedProfile() ? naming_system::deprecated::telematicID : naming_system::telematicID;
+        setRecipient(telematikId.id(), nsTelematikId);
+    }
+}
+
+void Communication::setRecipient(std::string_view recipient, std::string_view namingSystem)
+{
+    if (! hasValue(recipientPointer))
+    {
         rj::Value oRecipient(rj::kArrayType);
         setValue(recipientPointer, oRecipient);
 
+        rj::Value oIdentifier(rj::kObjectType);
         addToArray(recipientPointer, std::move(oIdentifier));
+
     }
-    else
-    {
-        setValue(recipient0IdentifierValuePointer, recipient);
-    }
+    setValue(recipient0IdentifierValuePointer, recipient);
+    setValue(recipient0IdentifierSystemPointer, namingSystem);
 }
 
 std::optional<Timestamp> Communication::timeSent() const
@@ -317,8 +398,8 @@ void model::Communication::deleteTimeReceived()
 
 PrescriptionId Communication::prescriptionId() const
 {
-    std::string_view taskReference = getStringValue(basedOn0ReferencePointer);
-    const auto& prescriptionId = retrievePrescriptionIdFromTaskReference(taskReference);
+    std::string_view reference = getStringValue(basedOn0ReferencePointer);
+    const auto& prescriptionId = retrievePrescriptionIdFromReference(reference, messageType());
     return PrescriptionId::fromString(prescriptionId);
 }
 
@@ -337,14 +418,14 @@ std::optional<std::string_view> Communication::contentString(uint32_t idx) const
     return getOptionalStringValue(rj::Pointer(ElementName::path(elements::payload, idx, elements::contentString)));
 }
 
+// GEMREQ-start A_19450-01
 void Communication::verifyPayload() const
 {
     mPayload.verifyLength();
-    mPayload.verifyUrls();
-    mPayload.verifyMimeTypes();
 }
+// GEMREQ-end A_19450-01
 
-bool Communication::canValidateGeneric(MessageType messageType)
+bool Communication::canValidateGeneric(MessageType messageType, ResourceVersion::WorkflowOrPatientenRechnungProfile profile)
 {
     switch (messageType)
     {
@@ -356,12 +437,12 @@ bool Communication::canValidateGeneric(MessageType messageType)
         case Reply:
         case ChargChangeReq:
         case ChargChangeReply:
-            return false;
+            return ! ResourceVersion::deprecatedProfile(profile);
     }
     Fail2("Unexpected value for 'messageType': " + std::to_string(intmax_t(messageType)), std::logic_error);
 }
 
 bool model::Communication::canValidateGeneric() const
 {
-    return canValidateGeneric(messageType());
+    return canValidateGeneric(messageType(), getSchemaVersion(std::nullopt));
 }

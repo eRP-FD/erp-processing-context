@@ -42,7 +42,7 @@ public:
             for (const std::string user : {InsurantF, InsurantG, InsurantH})
             {
                 auto transaction = pqxx::work(*connection);
-                auto kvnrHashed = mServer->serviceContext().getKeyDerivation().hashKvnr(user);
+                auto kvnrHashed = mServer->serviceContext().getKeyDerivation().hashKvnr(model::Kvnr{user});
                 transaction.exec_params0("DELETE FROM erp.communication WHERE sender = $1 OR recipient = $1",
                                          kvnrHashed.binarystring());
                 transaction.commit();
@@ -100,11 +100,13 @@ public:
                 {
                     const auto& communication = communications.at(index);
                     const auto messageType = communication.messageType();
-                    bool allowGenericValidation = model::Communication::canValidateGeneric(messageType);
+                    auto currentGematik = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
+                    bool allowGenericValidation = model::Communication::canValidateGeneric(messageType, currentGematik);
                     EXPECT_NO_THROW((void)model::Communication::fromXml(
                         communication.serializeToXmlString(), *StaticData::getXmlValidator(),
                         *StaticData::getInCodeValidator(),
                         model::Communication::messageTypeToSchemaType(messageType),
+                        model::ResourceVersion::supportedBundles(),
                         allowGenericValidation?std::make_optional<fhirtools::ValidatorOptions>():std::nullopt));
                     EXPECT_EQ(communication.id().value().toString(), expectedCommunicationIds[index].toString());
                 }
@@ -183,7 +185,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_noFilter)
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
 
-    EXPECT_NO_THROW(model::Communication::fromXml(
+    EXPECT_NO_THROW((void)model::Communication::fromXml(
         communication.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
         model::Communication::messageTypeToSchemaType(communication.messageType())));
 
@@ -230,7 +232,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
 
-    EXPECT_NO_THROW(model::Communication::fromXml(
+    EXPECT_NO_THROW((void)model::Communication::fromXml(
         communication.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
         model::Communication::messageTypeToSchemaType(communication.messageType())));
 
@@ -278,10 +280,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT
     const auto communication1 = model::Communication::fromJson(bundle.getResource(0));
     const auto communication2 = model::Communication::fromJson(bundle.getResource(1));
 
-    EXPECT_NO_THROW(model::Communication::fromXml(communication1.serializeToXmlString(), *StaticData::getXmlValidator(),
+    EXPECT_NO_THROW((void)model::Communication::fromXml(communication1.serializeToXmlString(), *StaticData::getXmlValidator(),
                                                   *StaticData::getInCodeValidator(),
                                                   SchemaType::Gem_erxCommunicationRepresentative));
-    EXPECT_NO_THROW(model::Communication::fromXml(communication2.serializeToXmlString(), *StaticData::getXmlValidator(),
+    EXPECT_NO_THROW((void)model::Communication::fromXml(communication2.serializeToXmlString(), *StaticData::getXmlValidator(),
                                                   *StaticData::getInCodeValidator(),
                                                   SchemaType::Gem_erxCommunicationRepresentative));
 
@@ -453,7 +455,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySender)
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::ready, InsurantF });
 
-    const std::string kvnrInsurant = std::string(givenTask.kvnr().value());
+    const std::string kvnrInsurant = givenTask.kvnr().value().id();
     const std::string pharmacyA = "3-SMC-B-Testkarte-883110000129068";
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
@@ -498,7 +500,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipient)
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::ready, InsurantF });
 
-    const std::string kvnrInsurant = std::string(givenTask.kvnr().value());
+    const std::string kvnrInsurant = givenTask.kvnr().value().id();
     const std::string pharmacyA = "3-SMC-B-Testkarte-883110000129068";
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
@@ -580,7 +582,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenders)
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::ready, InsurantF });
 
-    const std::string kvnrInsurant = std::string(givenTask.kvnr().value());
+    const std::string kvnrInsurant = givenTask.kvnr().value().id();
     const std::string pharmacyA = "3-SMC-B-Testkarte-883110000129068";
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
@@ -625,7 +627,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipients)
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::ready, InsurantF });
 
-    const std::string kvnrInsurant = std::string(givenTask.kvnr().value());
+    const std::string kvnrInsurant = givenTask.kvnr().value().id();
     const std::string pharmacyA = "3-SMC-B-Testkarte-883110000129068";
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
@@ -670,7 +672,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndRecip
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::ready, InsurantF });
 
-    const std::string kvnrInsurant = std::string(givenTask.kvnr().value());
+    const std::string kvnrInsurant = givenTask.kvnr().value().id();
     const std::string pharmacyA = "3-SMC-B-Testkarte-883110000129068";
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
@@ -715,7 +717,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndSent)
     // Setup the database.
     const auto givenTask = addTaskToDatabase({ model::Task::Status::ready, InsurantF });
 
-    const std::string kvnrInsurant = std::string(givenTask.kvnr().value());
+    const std::string kvnrInsurant = givenTask.kvnr().value().id();
     const std::string pharmacyA = "3-SMC-B-Testkarte-883110000129068";
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
@@ -786,7 +788,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipientAndRec
     const auto bundle = expectGetCommunicationResponse(outerResponse, {givenCommunication3.id().value()});
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(UrlHelper::unescapeUrl(extractPathAndArguments(selfLink.value())), 
+    EXPECT_EQ(UrlHelper::unescapeUrl(extractPathAndArguments(selfLink.value())),
             std::string("/Communication?recipient=")+InsurantH+"&received=sa2022-01-03T12:34:56+00:00");
 }
 
@@ -1470,7 +1472,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
 
 
     model::Timestamp timestamp = model::Timestamp::fromXsDateTime("2021-09-25T12:34:56+01:00");
-    for (size_t idxPatient = 0; idxPatient < 18; ++idxPatient)
+    for (int idxPatient = 0; idxPatient < 18; ++idxPatient)
     {
          const auto communication = addCommunicationToDatabase({
             task.prescriptionId(), model::Communication::MessageType::Representative,

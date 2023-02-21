@@ -10,7 +10,7 @@
 #include "erp/util/String.hxx"
 
 
-
+// NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)
 extern const char asn1_bit_string_name[] = "ASN1_BIT_STRING";
 extern const char asn1_integer_name[] = "ASN1_INTEGER";
 extern const char asn1_object_name[] = "ASN1_OBJECT";
@@ -30,7 +30,10 @@ extern const char ocsp_response_name[] = "OCSP_RESPONSE";
 extern const char rsa_name[] = "RSA";
 extern const char x509_name[] = "X509";
 extern const char x509_Name_name[] = "X509_NAME";
+extern const char x509_Store_name[] = "X509_STORE";
 extern const char ecdsa_sig_name[] = "ECDSA_SIG";
+extern const char cms_name[] = "CMS_ContentInfo";
+// NOLINTEND(cppcoreguidelines-avoid-c-arrays)
 
 
 void showAllOpenSslErrors (void)
@@ -40,9 +43,9 @@ void showAllOpenSslErrors (void)
         const unsigned long code = ERR_get_error();
         if (code == 0)
             break;
-        char buffer[1024];
-        ERR_error_string_n(code, buffer, sizeof(buffer));
-        LOG(ERROR) << buffer;
+        std::array<char, 1024> buffer{};
+        ERR_error_string_n(code, buffer.data(), buffer.size());
+        LOG(ERROR) << std::string(buffer.begin(), buffer.end());
     }
 }
 
@@ -62,8 +65,9 @@ void freeBIO (BIO* bio)
 std::string bioToString (BIO* bio)
 {
     char* data = nullptr;
-    const size_t length = BIO_get_mem_data(bio, &data);
-    return std::string(data, length);
+    const auto length = BIO_get_mem_data(bio, &data);
+    OpenSslExpect(length >= 0, "BIO_get_mem_data failed");
+    return std::string(data, static_cast<size_t>(length));
 }
 
 std::string x509NametoString(const X509_NAME* name)

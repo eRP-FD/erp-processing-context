@@ -4,8 +4,8 @@
  */
 
 #include "erp/util/Base64.hxx"
-
 #include "erp/util/Expect.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 #include <algorithm>
 #include <array>
@@ -33,7 +33,8 @@ namespace
 
         for (std::uint8_t itr = 0; itr < Base64AlphabetSizeN; ++itr)
         {
-            binaryAlphabetResult[base64Alphabet[itr]] = itr;
+            //NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+            binaryAlphabetResult[static_cast<unsigned char>(base64Alphabet[itr])] = static_cast<char>(itr);
         }
 
         // Map -_ to the same values as +/ for base64url encoding (RFC 4648)
@@ -58,8 +59,9 @@ std::string Base64::encode (std::string_view data)
     char* p = encodedData.get();
 
     // Note the implicit cast from char to uint8_t - this is well-defined even when char is signed.
-    for (std::uint8_t byte : data)
+    for (auto c : data)
     {
+        auto byte = static_cast<uint8_t>(c);
         value = (value << 8) + byte;
         valueShift = static_cast<std::int8_t>(valueShift + 8);
 
@@ -128,6 +130,7 @@ util::Buffer Base64::decode (const std::string_view& base64)
         if (paddingBytes > 0)
             Fail2("Invalid Base64 padding: " + std::string(base64), std::invalid_argument);
 
+        //NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         std::int8_t binaryDigit = binaryAlphabet[static_cast<std::uint8_t>(itr)];
         if (-1 == binaryDigit)
         {
@@ -145,7 +148,7 @@ util::Buffer Base64::decode (const std::string_view& base64)
         }
     }
 
-    const size_t decodedSize = std::distance(decodedData.get(), p);
+    const size_t decodedSize = gsl::narrow<size_t>(std::distance(decodedData.get(), p));
     return util::rawToBuffer(reinterpret_cast<uint8_t*>(decodedData.get()), decodedSize);
 }
 
@@ -179,10 +182,11 @@ std::string Base64::cleanupForDecoding (std::string data)
 
     while (readIterator != endIterator)
     {
-        const char c = *readIterator++;
+        const auto c = static_cast<uint8_t>(*readIterator++);
+        //NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index,clang-diagnostic-sign-conversion)
         if (alphabet[c] >= 0)
-            *writeIterator++ = c;
+            *writeIterator++ =  static_cast<char>(c);
     }
 
-    return data.substr(0, std::distance(data.begin(), writeIterator));
+    return data.substr(0, gsl::narrow<size_t>(std::distance(data.begin(), writeIterator)));
 }

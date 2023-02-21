@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATION_HXX
 
 #include "erp/model/CommunicationPayload.hxx"
+#include "erp/model/Identity.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/util/Uuid.hxx"
@@ -14,7 +15,8 @@
 
 namespace model
 {
-class Communication : public Resource<Communication>
+// NOLINTNEXTLINE(bugprone-exception-escape)
+class Communication : public Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>
 {
 public:
     static constexpr auto resourceTypeName = "Communication";
@@ -28,11 +30,11 @@ public:
         ChargChangeReq = 4,
         ChargChangeReply = 5
     };
-    static const std::string_view& messageTypeToString(MessageType messageType);
+    static std::string_view messageTypeToString(MessageType messageType);
     static int8_t messageTypeToInt(MessageType messageType);
-    static MessageType stringToMessageType(const std::string_view& messageType);
-    static const std::string_view& messageTypeToProfileUrl(MessageType messageType);
-    static MessageType profileUrlToMessageType(const std::string_view& profileUrl);
+    static MessageType stringToMessageType(std::string_view messageType);
+    std::string_view messageTypeToProfileUrl(MessageType messageType) const;
+    MessageType profileUrlToMessageType(std::string_view profileUrl) const;
     static bool messageTypeHasPrescriptionId(MessageType messageType);
     static SchemaType messageTypeToSchemaType(MessageType messageType);
 
@@ -53,18 +55,19 @@ public:
     static const rapidjson::Pointer identifierValuePointer;
 
     MessageType messageType() const;
-    const std::string_view& messageTypeAsString() const;
-    const std::string_view& messageTypeAsProfileUrl() const;
+    bool isReply() const;
+    std::string_view messageTypeAsString() const;
+    std::string_view messageTypeAsProfileUrl() const;
     int8_t messageTypeAsInt() const;
 
     std::optional<Uuid> id() const;
     void setId(const Uuid& id);
 
-    std::optional<std::string_view> sender() const;
-    void setSender(const std::string_view& sender);
+    std::optional<Identity> sender() const;
+    void setSender(const Identity& sender);
 
-    std::optional<std::string_view> recipient() const;
-    void setRecipient(const std::string_view& recipient);
+    Identity recipient() const;
+    void setRecipient(const Identity& recipient);
 
     std::optional<model::Timestamp> timeSent() const;
     void setTimeSent(const model::Timestamp& timestamp = model::Timestamp::now());
@@ -85,14 +88,20 @@ public:
     void verifyPayload() const;
 
     bool canValidateGeneric() const;
-    static bool canValidateGeneric(MessageType messageType);
+    static bool canValidateGeneric(MessageType messageType, ResourceVersion::WorkflowOrPatientenRechnungProfile profile);
 
 private:
-    friend Resource<Communication>;
+
+    bool isDeprecatedProfile() const;
+    friend Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>;
     explicit Communication(NumberAsStringParserDocument&& document); // internal ctor
 
-    static std::string retrievePrescriptionIdFromTaskReference(const std::string_view& taskReference);
-    static std::optional<std::string> retrieveAccessCodeFromTaskReference(const std::string_view& taskReference);
+    static std::string retrievePrescriptionIdFromReference(
+        std::string_view reference,
+        const model::Communication::MessageType messageType);
+    static std::optional<std::string> retrieveAccessCodeFromTaskReference(std::string_view taskReference);
+    void setSender(std::string_view sender, std::string_view namingSystem);
+    void setRecipient(std::string_view recipient, std::string_view namingSystem);
 
     CommunicationPayload mPayload;
 };

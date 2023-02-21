@@ -24,7 +24,7 @@ public:
     void cleanup() override;
 protected:
     void insertTasks(
-        const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>& patientsAndPharmacies,
+        const std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>>& patientsAndPharmacies,
         std::set<std::string>& patients,
         std::set<std::string>& pharmacies,
         std::map<std::string, model::Task>& tasksByPrescriptionIds,
@@ -42,6 +42,7 @@ protected:
         const std::string& fileExtension,
         const std::string& marker = std::string()) const;
     bool writeTestOutputFileEnabled = false;
+    std::string_view mNsPrescriptionId;
 private:
     model::Task createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType = GetParam().type);
     std::vector<model::MedicationDispense> closeTask(

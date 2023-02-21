@@ -17,6 +17,7 @@ namespace model
 
 // Reduced version of Device resource, contains only functionality currently needed;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Device : public Resource<Device>
 {
 public:
@@ -40,7 +41,8 @@ public:
         sms,
         other
     };
-    explicit Device();
+    explicit Device(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
+                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
 
     [[nodiscard]] std::string_view id() const;
     [[nodiscard]] Status status() const;

@@ -41,8 +41,11 @@ public:
             {},
             {},
             ocspResponderKnownCertificateCaPairs);
-
-        tslManager->addPostUpdateHook([=]{
+        std::weak_ptr<TslManager> mgrWeakPtr{tslManager};
+        tslManager->addPostUpdateHook([mgrWeakPtr, idpCertificateCa] {
+            auto tslManager = mgrWeakPtr.lock();
+            if (! tslManager)
+                return;
             TslTestHelper::addCaCertificateToTrustStore(idpCertificateCa, *tslManager, TslMode::TSL);
         });
 

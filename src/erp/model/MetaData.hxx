@@ -7,23 +7,24 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_METADATA_HXX
 
 #include "erp/model/Resource.hxx"
+#include "erp/model/ResourceVersion.hxx"
+#include "erp/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
 #include <optional>
-
-#include "erp/model/Timestamp.hxx"
 
 namespace model
 {
 
 // Reduced version of Device resource, contains only functionality currently needed;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class MetaData : public Resource<MetaData>
 {
 public:
     static constexpr auto resourceTypeName = "CapabilityStatement";
 
-    explicit MetaData();
+    explicit MetaData(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion);
 
     [[nodiscard]] model::Timestamp date() const;
     [[nodiscard]] std::string_view version() const;
@@ -33,9 +34,17 @@ public:
     void setVersion(const std::string_view& version);
     void setReleaseDate(const model::Timestamp& releaseDate);
 
+    ResourceVersion::DeGematikErezeptWorkflowR4 taskProfileVersion();
+
 private:
     friend Resource<MetaData>;
     explicit MetaData(NumberAsStringParserDocument&& jsonTree);
+
+    template<class ProfileDefinition>
+    void fillResource(const ProfileDefinition& profileDefinition);
+
+    template<class TemplateDocument>
+    void addResourceTemplate(const TemplateDocument& templateDocument);
 };
 
 }

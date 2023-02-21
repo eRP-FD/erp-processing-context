@@ -127,7 +127,7 @@
   <xs:complexType name="Gem_erxConsent.Category.Coding.Uri">
     <xs:complexContent>
       <xs:extension base="Element">
-        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/CodeSystem/Consenttype"/>
+        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -200,7 +200,7 @@
   <xs:complexType name="Gem_erxConsent.Verification">
     <xs:complexContent>
       <xs:extension base="Element">
-        <xs:sequence>          
+        <xs:sequence>
           <xs:element name="verified" type="boolean"/>
           <xs:element name="verifiedWith" type="Reference" minOccurs="0"/>
           <xs:element name="verificationDate" type="dateTime" minOccurs="0"/>

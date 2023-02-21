@@ -34,7 +34,7 @@ Task ServerTestBaseAutoCleanup::createTask(const std::string& accessCode)
 Communication ServerTestBaseAutoCleanup::addCommunicationToDatabase(const CommunicationDescriptor& descriptor)
 {
     Communication communication = ServerTestBase::addCommunicationToDatabase(descriptor);
-    mCommunicationsToRemove.emplace_back(communication.id().value(), std::string(communication.sender().value()));
+    mCommunicationsToRemove.emplace_back(communication.id().value(), model::getIdentityString(communication.sender().value()));
     return communication;
 }
 

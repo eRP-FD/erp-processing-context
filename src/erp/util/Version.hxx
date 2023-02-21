@@ -33,7 +33,7 @@ private:
 
 namespace version_literal
 {
-inline Version operator""_ver(const char ver[], size_t len)
+inline Version operator""_ver(const char* ver, size_t len)
 {
     return Version{std::string{ver, len}};
 }

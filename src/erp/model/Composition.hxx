@@ -29,6 +29,7 @@ enum class KbvStatusKennzeichen
 };
 
 // Reduced version of Composition resource, contains only functionality currently needed;
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Composition : public Resource<Composition>
 {
 public:
@@ -38,7 +39,9 @@ public:
         const model::Timestamp& start,
         const model::Timestamp& end,
         const std::string_view& author,
-        const std::string_view& prescriptionDigestIdentifier);
+        const std::string_view& prescriptionDigestIdentifier,
+        ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
+                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
 
     [[nodiscard]] std::string_view id() const;
     [[nodiscard]] std::optional<std::string_view> telematikId() const;
@@ -47,8 +50,8 @@ public:
     [[nodiscard]] std::optional<model::Timestamp> periodEnd() const;
     [[nodiscard]] std::optional<std::string_view> author() const;
     [[nodiscard]] std::optional<std::string_view> prescriptionDigestIdentifier() const;
-    // idx may by 0 or 1
-    [[nodiscard]] std::optional<std::string_view> authorIdentifierSystem(int idx) const;
+    // idx may be 0 or 1
+    [[nodiscard]] std::optional<std::string_view> authorIdentifierSystem(size_t idx) const;
 
 
     // accessor for KBV_EX_FOR_Legal_basis in extension array of KBV_PR_ERP_Composition

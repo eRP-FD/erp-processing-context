@@ -32,7 +32,7 @@ public:
         const TslMode tslMode,
         X509Certificate &certificate,
         const std::unordered_set<CertificateType> &typeRestrictions,
-        const bool forceOcspRequest) override
+        const OcspCheckDescriptor& ocspCheckDescriptor) override
     {
         if (failOcspRetrieval)
             throw std::runtime_error("OCSP RETRIEVAL FAILURE");
@@ -40,7 +40,7 @@ public:
             tslMode,
             certificate,
             typeRestrictions,
-            forceOcspRequest);
+            ocspCheckDescriptor);
     }
 
     void healthCheckTsl() const override

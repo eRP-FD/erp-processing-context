@@ -31,7 +31,7 @@ TEST_F(SecureRandomGeneratorTest, TestEntropy)//NOLINT(readability-function-cogn
         SecureRandomGenerator::shannonEntropy("eRRcKpveU5LSGarIZnTo+wGhMrMin5mBkBKskCetNV8v"),
         SecureRandomGenerator::shannonEntropy("XZSfSLMqs1oLpD7Ngya8Y59s"));
 
-    ASSERT_NEAR(SecureRandomGenerator::shannonEntropy("Entropy"), 2.80735 * std::string("Entropy").size(), 0.001);
+    ASSERT_NEAR(SecureRandomGenerator::shannonEntropy("Entropy"), 2.80735 * gsl::narrow<double>(std::string("Entropy").size()), 0.001);
 }
 
 

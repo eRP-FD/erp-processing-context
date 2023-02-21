@@ -91,7 +91,14 @@
   <xs:complexType name="Gem_erxAuditEvent.Observer.type">
     <xs:complexContent>
       <xs:extension base="Element">
-        <xs:attribute name="value" type="uri-primitive" fixed="http://hl7.org/fhir/StructureDefinition/Device"/>
+        <xs:attribute name="value">
+          <xs:simpleType>
+            <xs:restriction base="uri-primitive">
+              <xs:enumeration value="Device"/>
+              <xs:enumeration value="http://hl7.org/fhir/StructureDefinition/Device"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -133,6 +140,10 @@
   </xs:complexType>
   <xs:simpleType name="Gem_erxAuditEvent.Entity.Reference.type-list">
     <xs:restriction base="uri-primitive">
+      <xs:enumeration value="MedicationDispense"/>
+      <xs:enumeration value="Task"/>
+      <xs:enumeration value="AuditEvent"/>
+      <xs:enumeration value="Communication"/>
       <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"/>
       <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxTask"/>
       <xs:enumeration value="https://gematik.de/fhir/StructureDefinition/ErxAuditEvent"/>

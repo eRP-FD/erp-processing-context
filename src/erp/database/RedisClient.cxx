@@ -38,7 +38,7 @@ RedisClient::RedisClient()
     mOptions.user = configuration.getStringValue(ConfigurationKey::REDIS_USER);
     mOptions.password = configuration.getStringValue(ConfigurationKey::REDIS_PASSWORD);
     mOptions.tls.cacert = configuration.getOptionalStringValue(ConfigurationKey::REDIS_CERTIFICATE_PATH, "/erp/redis/REDIS_CERT");
-    mPoolOptions.size = configuration.getIntValue(ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE);
+    mPoolOptions.size = gsl::narrow<size_t>(configuration.getIntValue(ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE));
     mPoolOptions.wait_timeout = std::chrono::milliseconds(0); // Block requesting thread on wait.
     mPoolOptions.connection_lifetime = std::chrono::milliseconds(0); // Never expire connections.
     mConnection = std::make_unique<sw::redis::Redis>(Redis(mOptions, mPoolOptions));

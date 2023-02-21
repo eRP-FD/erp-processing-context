@@ -33,7 +33,7 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
         const model::Composition composition(telematicId, start, end, author, prescriptionDigestIdentifier);
 
         const model::Device device;
-        const ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Base64};
+        const ::model::Binary prescriptionDigestResource{"TestDigest", "Test", ::model::Binary::Type::Digest};
         Uuid uuid;
 
         model::ErxReceipt erxReceipt(uuid, "ErxReceipt", prescriptionId, composition, author, device, "TestDigest",

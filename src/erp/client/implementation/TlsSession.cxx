@@ -55,10 +55,10 @@ namespace
         const int error = X509_STORE_CTX_get_error(context.native_handle());
         const int errorDepth = X509_STORE_CTX_get_error_depth(context.native_handle());
         X509* errCert = X509_STORE_CTX_get_current_cert(context.native_handle());
-        char buffer[256];
-        X509_NAME_oneline(X509_get_subject_name(errCert), buffer, sizeof buffer);
+        std::array<char, 256> buffer{};
+        X509_NAME_oneline(X509_get_subject_name(errCert), buffer.data(), buffer.size());
         TVLOG(1) << "error " << error << " (" <<  X509_verify_cert_error_string(error)
-                << " at depth " << errorDepth << " in " << buffer;
+                << " at depth " << errorDepth << " in " << std::string(buffer.begin(), buffer.end());
 
         auto certificateMemory = shared_BIO::make();
         if (!PEM_write_bio_X509(certificateMemory, errCert))
@@ -68,7 +68,7 @@ namespace
         else
         {
             char* data = nullptr;
-            const size_t length = BIO_get_mem_data(certificateMemory, &data);
+            const size_t length = gsl::narrow<std::size_t>(BIO_get_mem_data(certificateMemory, &data));
             std::string errCertPem(data, length);
             TVLOG(1) << "problem certificate:\n" << errCertPem << "\n\n";
         }
@@ -80,11 +80,12 @@ namespace
      */
     [[maybe_unused]] bool verifyCertificateCallback (const bool succeded, boost::asio::ssl::verify_context& context)
     {
-        char subjectName[256];
+        std::array<char, 256> subjectName{};
 
         X509* cert = X509_STORE_CTX_get_current_cert(context.native_handle());
-        X509_NAME_oneline(X509_get_subject_name(cert), subjectName, sizeof subjectName);
-        TVLOG(1) << "verifying certificate " << subjectName << ", " << (succeded ? " has succeeded" : " has failed");
+        X509_NAME_oneline(X509_get_subject_name(cert), subjectName.data(), subjectName.size());
+        TVLOG(1) << "verifying certificate " << std::string(subjectName.begin(), subjectName.end()) << ", "
+                 << (succeded ? " has succeeded" : " has failed");
 
         if ( ! succeded)
         {

@@ -23,6 +23,7 @@
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
+#include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/JwtException.hxx"
 #include "erp/util/TLog.hxx"
@@ -354,6 +355,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         JWT authorizationJwt = getJwtFromAuthorizationHeader(innerServerRequest->header().header(Header::Authorization).value()) ;
         ErpExpect(authorizationJwt == vauJwt,
                   HttpStatus::BadRequest, "Authorization header is invalid");
+        // NOLINTNEXTLINE(hicpp-move-const-arg,performance-move-const-arg)
         innerServerRequest->setAccessToken(std::move(authorizationJwt));
 
         // Create an inner session that contains the unencrypted request and a, yet to be filled, unencrypted response.
@@ -377,16 +379,18 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
             ErpFail(HttpStatus::MethodNotAllowed, "no matching handler found.");
         }
 
-        // Determnine inner operation. Required for final response.
+        // Determine inner operation. Required for final response.
         auto* handler = matchingHandler.handlerContext->handler.get();
         innerOperation = (handler != nullptr) ? handler->getOperation() : Operation::UNKNOWN;
         outerSession.accessLog.setInnerRequestOperation(toString(innerOperation));
 
+        // GEMREQ-start A_19439
         A_20163.start("4 - verify JWT");
         A_20365.start("Pass the IDP pubkey to the verification method.");
         innerServerRequest->getAccessToken().verify(getIdpPublicKey(outerSession.serviceContext));
         A_20365.finish();
         A_20163.finish();
+        // GEMREQ-end A_19439
 
         A_20163.start(
             R"(7. Die E-Rezept-VAU MUSS aus dem "sub"-Feld-Wert mittels des CMAC-Schlüssels den 128 Bit langen CMAC-Wert
@@ -416,6 +420,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         innerSession.request.setFragment(std::move(matchingHandler.fragment));
         innerSession.request.setQueryParameters(std::move(matchingHandler.queryParameters));
 
+        // GEMREQ-start role-check
         if (checkProfessionOID(innerServerRequest,
                                matchingHandler.handlerContext->handler.get(), innerSession.response, outerSession.accessLog))
         {
@@ -429,6 +434,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
                 A_20163.start("5 - process inner request");
                 matchingHandler.handlerContext->handler->handleRequest(innerSession);
                 A_20163.finish();
+                // GEMREQ-end role-check
                 shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnSuccess();
             }
             catch(ErpException& exc)
@@ -459,10 +465,12 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
                 std::rethrow_exception(currExc);
         }
     }
+    // GEMREQ-start A_19439#catchError
     catch(...)
     {
         processException(std::current_exception(), innerServerRequest, innerServerResponse, outerSession);
     }
+    // GEMREQ-end A_19439#catchError
     makeResponse(innerServerResponse, innerOperation, innerServerRequest.get(), *innerTeeRequest, outerSession);
 }
 
@@ -559,6 +567,7 @@ Operation VauRequestHandler::getOperation (void) const
 }
 
 
+// GEMREQ-start checkProfessionOID
 bool VauRequestHandler::checkProfessionOID(
     const std::unique_ptr<ServerRequest>& innerRequest,
     const RequestHandlerInterface* handler,
@@ -609,6 +618,7 @@ bool VauRequestHandler::checkProfessionOID(
     }
     return true;
 }
+// GEMREQ-end checkProfessionOID
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void VauRequestHandler::processException(const std::exception_ptr& exception,
@@ -625,6 +635,7 @@ void VauRequestHandler::processException(const std::exception_ptr& exception,
     {
         exception_handlers::runErpExceptionHandler(e, innerRequest, innerResponse, outerSession);
     }
+    // GEMREQ-start A_19439#catchJwtError
     catch (const JwtExpiredException& exception)
     {
         A_19902.start("Handle authentication expired");
@@ -668,6 +679,15 @@ void VauRequestHandler::processException(const std::exception_ptr& exception,
             exception, innerRequest, innerResponse, outerSession, "JWT has invalid aud claim",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_21520.finish();
+    }
+    // GEMREQ-end A_19439#catchJwtError
+    catch (const TslError& e)
+    {
+        ResponseBuilder(innerResponse)
+            .status(e.getHttpStatus())
+            .clearBody()
+            .keepAlive(false);
+        outerSession.accessLog.locationFromException(e);
     }
     catch (const std::exception &e)
     {

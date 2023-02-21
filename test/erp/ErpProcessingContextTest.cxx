@@ -32,6 +32,7 @@ public:
         {
             mAllProfessionOIDs.insert(prefix + std::to_string(i));
         }
+        mAllProfessionOIDs.insert("1.3.6.1.4.1.24796.4.11.1");
 
         // add some random values:
         mAllProfessionOIDs.insert("");
@@ -41,6 +42,7 @@ public:
         mAllProfessionOIDs.insert({});
     }
 
+    // GEMREQ-start checkAllOids
     void checkAllOids (const HttpMethod method, const std::string& target, const std::set<std::string>& allowedOIDs)//NOLINT(readability-function-cognitive-complexity)
     {
         auto matchingHandler = mRequestHandlerManager.findMatchingHandler(method, target);
@@ -59,6 +61,7 @@ public:
             }
         }
     }
+    // GEMREQ-end checkAllOids
 
     RequestHandlerManager mRequestHandlerManager;
     std::set<std::string> mAllProfessionOIDs;
@@ -152,6 +155,7 @@ TEST_F(ErpProcessingContextTest, PostTaskAbort_ProfessionOIDs)
     });
 }
 
+// GEMREQ-start A_19405
 TEST_F(ErpProcessingContextTest, GetAllMedicationDispenses_ProfessionOIDs)
 {
     A_19405.test("Unit test of allowedForProfessionOID() function");
@@ -167,6 +171,7 @@ TEST_F(ErpProcessingContextTest, GetMedicationDispense_ProfessionOIDs)
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }
+// GEMREQ-end A_19405
 
 TEST_F(ErpProcessingContextTest, GetAllCommunications_ProfessionOIDs)
 {
@@ -225,6 +230,7 @@ TEST_F(ErpProcessingContextTest, GetAuditEvent_ProfessionOIDs)
 }
 
 
+// GEMREQ-start A_22113
 TEST_F(ErpProcessingContextTest, DeleteChargeItem_ProfessionOIDs)
 {
     A_22113.test("Unit test of allowedForProfessionOID() function");
@@ -232,7 +238,9 @@ TEST_F(ErpProcessingContextTest, DeleteChargeItem_ProfessionOIDs)
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }
+// GEMREQ-end A_22113
 
+// GEMREQ-start A_22118
 TEST_F(ErpProcessingContextTest, GetAllChargeItems_ProfessionOIDs)
 {
     A_22118.test("Unit test of allowedForProfessionOID() function");
@@ -241,7 +249,9 @@ TEST_F(ErpProcessingContextTest, GetAllChargeItems_ProfessionOIDs)
                      "1.2.276.0.76.4.49"// oid_versicherter
                  });
 }
+// GEMREQ-end A_22118
 
+// GEMREQ-start A_22124
 TEST_F(ErpProcessingContextTest, GetChargeItem_ProfessionOIDs)
 {
     A_22124.test("Unit test of allowedForProfessionOID() function");
@@ -251,7 +261,9 @@ TEST_F(ErpProcessingContextTest, GetChargeItem_ProfessionOIDs)
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
     });
 }
+// GEMREQ-end A_22124
 
+// GEMREQ-start A_22129
 TEST_F(ErpProcessingContextTest, PostChargeItem_ProfessionOIDs)
 {
     A_22129.test("Unit test of allowedForProfessionOID() function");
@@ -260,25 +272,30 @@ TEST_F(ErpProcessingContextTest, PostChargeItem_ProfessionOIDs)
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
     });
 }
+// GEMREQ-end A_22129
 
+// GEMREQ-start A_22144
 TEST_F(ErpProcessingContextTest, PutChargeItem_ProfessionOIDs)
 {
     A_22144.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::PUT, "/ChargeItem/{id}", {
-            "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
     });
 }
+// GEMREQ-end A_22144
 
+// GEMREQ-start A_22875
 TEST_F(ErpProcessingContextTest, PatchChargeItem_ProfessionOIDs)
 {
-    A_22144.test("Unit test of allowedForProfessionOID() function");
+    A_22875.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::PATCH, "/ChargeItem/{id}", {
                                                           "1.2.276.0.76.4.49", // oid_versicherter
                                                         });
 }
+// GEMREQ-end A_22875
 
+// GEMREQ-start A_22155
 TEST_F(ErpProcessingContextTest, DeleteConsent_ProfessionOIDs)
 {
     A_22155.test("Unit test of allowedForProfessionOID() function");
@@ -286,7 +303,9 @@ TEST_F(ErpProcessingContextTest, DeleteConsent_ProfessionOIDs)
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }
+// GEMREQ-end A_22155
 
+// GEMREQ-start A_22159
 TEST_F(ErpProcessingContextTest, GetConsent_ProfessionOIDs)
 {
     A_22159.test("Unit test of allowedForProfessionOID() function");
@@ -294,7 +313,9 @@ TEST_F(ErpProcessingContextTest, GetConsent_ProfessionOIDs)
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }
+// GEMREQ-end A_22159
 
+// GEMREQ-start A_22161
 TEST_F(ErpProcessingContextTest, PostConsent_ProfessionOIDs)
 {
     A_22161.test("Unit test of allowedForProfessionOID() function");
@@ -302,7 +323,7 @@ TEST_F(ErpProcessingContextTest, PostConsent_ProfessionOIDs)
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }
-
+// GEMREQ-end A_22161
 
 TEST_F(ErpProcessingContextTest, GetDevice_ProfessionOIDs)
 {

@@ -8,10 +8,10 @@
 #include "fhirtools/model/Collection.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/Constants.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/trim.hpp>
-#include <gsl/gsl-lite.hpp>
 #include <regex>
 #include <string_view>
 #include <utility>
@@ -19,7 +19,7 @@
 
 using fhirtools::Element;
 using fhirtools::PrimitiveElement;
-using fhirtools::ValidationResultList;
+using fhirtools::ValidationResults;
 
 namespace
 {
@@ -111,7 +111,7 @@ Element::IdentityAndResult Element::IdentityAndResult::fromReferenceString(std::
     using std::max;
     using std::min;
     auto warn = [&](std::string msg) {
-        ValidationResultList error;
+        ValidationResults error;
         error.add(Severity::warning, msg.append(referenceString), std::string{elementFullPath}, nullptr);
         return IdentityAndResult{.result{error}};
     };
@@ -294,7 +294,7 @@ const fhirtools::ProfiledElementTypeInfo& Element::definitionPointer() const
 
 Element::IdentityAndResult Element::resourceIdentity(std::string_view elementFullPath, bool allowResourceId) const
 {
-    ValidationResultList failList;
+    ValidationResults failList;
     const auto& resourceRoot = this->resourceRoot();
     Expect3(resourceRoot != nullptr, "Cannot handle references outside resources", std::logic_error);
     auto bundledId = resourceRoot->bundledResourceIdentity(elementFullPath);
@@ -302,19 +302,19 @@ Element::IdentityAndResult Element::resourceIdentity(std::string_view elementFul
     {
         return bundledId;
     }
-    failList.append(std::move(bundledId.result));
+    failList.merge(std::move(bundledId.result));
     auto containedId = resourceRoot->containedIdentity(allowResourceId, elementFullPath);
     if (containedId.identity.containedId.has_value())
     {
         return containedId;
     }
-    failList.append(std::move(containedId.result));
+    failList.merge(std::move(containedId.result));
     auto metaSourceId = resourceRoot->metaSourceIdentity(elementFullPath);
     if (! metaSourceId.identity.pathOrId.empty())
     {
         return metaSourceId;
     }
-    failList.append(std::move(metaSourceId.result));
+    failList.merge(std::move(metaSourceId.result));
     if (allowResourceId)
     {
         auto resourceId = resourceRoot->resourceTypeIdIdentity();
@@ -322,7 +322,7 @@ Element::IdentityAndResult Element::resourceIdentity(std::string_view elementFul
         {
             return resourceId;
         }
-        failList.append(resourceId.result);
+        failList.merge(resourceId.result);
     }
     return {{}, std::move(failList)};
 }
@@ -349,14 +349,14 @@ Element::IdentityAndResult Element::bundledResourceIdentity(std::string_view ele
     const auto& parent = this->parent();
     if (! parent || parent->mDefinitionPointer.element()->name() != "Bundle.entry")
     {
-        ValidationResultList validationResult;
+        ValidationResults validationResult;
         validationResult.add(Severity::debug, "Element is not in a bundle", std::string{elementFullPath}, nullptr);
         return {{}, std::move(validationResult)};
     }
     const auto& fullUrlElement = parent->subElements("fullUrl");
     if (fullUrlElement.empty())
     {
-        ValidationResultList validationResult;
+        ValidationResults validationResult;
         validationResult.add(Severity::debug, "fullUrl not set.", std::string{elementFullPath}, nullptr);
         return {.result{std::move(validationResult)}};
     }
@@ -454,7 +454,7 @@ Element::IdentityAndResult Element::referenceTargetIdentity(IdentityAndResult re
         auto ownIdentity = resourceRoot->resourceIdentity(elementFullPath);
         reference.identity.scheme = ownIdentity.identity.scheme;
         reference.identity.pathOrId = ownIdentity.identity.pathOrId;
-        reference.result.append(std::move(ownIdentity.result));
+        reference.result.merge(std::move(ownIdentity.result));
         if (reference.identity.containedId && reference.identity.containedId->empty())
         {
             reference.identity.containedId.reset();
@@ -530,7 +530,7 @@ Element::relativeReferenceTargetIdentity(IdentityAndResult&& reference,
 }
 
 
-std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+std::tuple<std::shared_ptr<const Element>, ValidationResults>
 Element::resolveReference(std::string_view elementFullPath) const
 {
     std::optional<IdentityAndResult> identity;
@@ -543,7 +543,7 @@ Element::resolveReference(std::string_view elementFullPath) const
         const auto& referenceField = subElements("reference");
         if (referenceField.empty())
         {
-            ValidationResultList result;
+            ValidationResults result;
             result.add(Severity::debug, "Reference is not a url reference", std::string{elementFullPath}, nullptr);
             return {nullptr, std::move(result)};
         }
@@ -552,16 +552,16 @@ Element::resolveReference(std::string_view elementFullPath) const
     if (identity)
     {
         auto resolved = resolveReference(identity->identity, elementFullPath);
-        get<ValidationResultList>(resolved).prepend(std::move(identity->result));
+        get<ValidationResults>(resolved).merge(std::move(identity->result));
         return resolved;
     }
     return {};
 }
 
-std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+std::tuple<std::shared_ptr<const Element>, ValidationResults>
 Element::resolveReference(const Identity& reference, std::string_view elementFullPath) const
 {
-    ValidationResultList resultList;
+    ValidationResults resultList;
     if (reference.containedId.has_value())
     {
         std::shared_ptr<const Element> referencedContainer;
@@ -576,7 +576,7 @@ Element::resolveReference(const Identity& reference, std::string_view elementFul
         if (referencedContainer)
         {
             auto result = referencedContainer->resolveContainedReference(*reference.containedId);
-            get<ValidationResultList>(result).prepend(std::move(resultList));
+            get<ValidationResults>(result).merge(std::move(resultList));
             return result;
         }
         resultList.add(Severity::debug, "reference target not found: " + to_string(reference),
@@ -592,7 +592,7 @@ Element::resolveReference(const Identity& reference, std::string_view elementFul
     return resolveUrlReference(reference, elementFullPath);
 }
 
-std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+std::tuple<std::shared_ptr<const Element>, ValidationResults>
 Element::resolveUrlReference(const Identity& urlIdentity, std::string_view elementFullPath) const
 {
     using namespace std::string_literals;
@@ -601,7 +601,7 @@ Element::resolveUrlReference(const Identity& urlIdentity, std::string_view eleme
     if (containingBundle)
     {
         auto resolution = containingBundle->resolveBundleReference(fullTargetRef.identity.url(), elementFullPath);
-        fullTargetRef.result.append(std::move(get<ValidationResultList>(resolution)));
+        fullTargetRef.result.merge(std::move(get<ValidationResults>(resolution)));
         return {std::move(get<std::shared_ptr<const Element>>(resolution)), std::move(fullTargetRef.result)};
     }
     auto ownIdentity = resourceIdentity(elementFullPath);
@@ -613,23 +613,23 @@ Element::resolveUrlReference(const Identity& urlIdentity, std::string_view eleme
             auto containerResource = this->containerResource();
             if (containerResource == nullptr)
             {
-                ValidationResultList resultList;
+                ValidationResults resultList;
                 resultList.add(Severity::error,
                                "Reference to non-existent container resource: "s.append(to_string(urlIdentity)),
                                std::string{elementFullPath}, nullptr);
                 return {nullptr, std::move(resultList)};
             }
-            return {std::move(containerResource), {}};
+            return std::make_tuple(std::move(containerResource), ValidationResults{});
         }
         return {resourceRoot(), {}};
     }
-    ValidationResultList resultList;
+    ValidationResults resultList;
     resultList.add(Severity::debug, "reference target not found: "s.append(to_string(urlIdentity)),
                    std::string{elementFullPath}, nullptr);
     return {nullptr, std::move(resultList)};
 }
 
-std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+std::tuple<std::shared_ptr<const Element>, ValidationResults>
 fhirtools::Element::resolveBundleReference(std::string_view fullUrl, std::string_view elementFullPath) const
 {
     using namespace std::string_literals;
@@ -641,7 +641,7 @@ fhirtools::Element::resolveBundleReference(std::string_view fullUrl, std::string
             const auto& resource = entry->subElements("resource");
             if (resource.empty())
             {
-                ValidationResultList resultList;
+                ValidationResults resultList;
                 resultList.add(Severity::error, "missing resource in referenced resource entry",
                                std::string{elementFullPath}, nullptr);
                 return {nullptr, std::move(resultList)};
@@ -649,16 +649,16 @@ fhirtools::Element::resolveBundleReference(std::string_view fullUrl, std::string
             return {resource[0], {}};
         }
     }
-    ValidationResultList resultList;
+    ValidationResults resultList;
     resultList.add(Severity::debug, "reference target not found: "s.append(fullUrl), std::string{elementFullPath},
                    nullptr);
     return {nullptr, std::move(resultList)};
 }
 
-std::tuple<std::shared_ptr<const Element>, ValidationResultList>
+std::tuple<std::shared_ptr<const Element>, ValidationResults>
 fhirtools::Element::resolveContainedReference(std::string_view containedId) const
 {
-    ValidationResultList resultList;
+    ValidationResults resultList;
     for (const auto& contained : subElements("contained"))
     {
         const auto& id = contained->subElements("id");
@@ -698,7 +698,7 @@ std::shared_ptr<const Element> Element::parentResource() const
     return resourceParent ? resourceParent->resourceRoot() : nullptr;
 }
 
-
+// NOLINTNEXTLINE(misc-no-recursion)
 std::shared_ptr<const Element> fhirtools::Element::resourceRoot() const
 {
     if (isResource())
@@ -727,6 +727,7 @@ std::shared_ptr<const Element> fhirtools::Element::containerResource() const
     return nullptr;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 std::shared_ptr<const Element> fhirtools::Element::containingBundle() const
 {
     const auto& resourceParent = this->resourceRootParent();
@@ -1290,6 +1291,12 @@ bool fhirtools::isImplicitConvertible(Element::Type from, Element::Type to)
     {
         return true;
     }
+    if (to == Element::Type::String)
+    {
+        // Although not allowed in the spec, always allow implicit conversion to string, because the HAPI also behaves
+        // that way.
+        return true;
+    }
     switch (from)
     {
         case Element::Type::Integer:
@@ -1332,41 +1339,42 @@ std::ostream& fhirtools::operator<<(std::ostream& os, const Element& element)
     }
 
     os << R"(, "value":)";
-    if (element.type() != Element::Type::Structured)
+    switch (element.type())
     {
-        try
-        {
+        case Element::Type::Integer:
+        case Element::Type::Decimal:
+        case Element::Type::String:
+        case Element::Type::Boolean:
+        case Element::Type::Date:
+        case Element::Type::DateTime:
+        case Element::Type::Time:
             os << '"' << element.asString() << '"';
-        }
-        catch (const std::runtime_error&)
-        {
-            os << "<null>";
-        }
-    }
-    else
-    {
-        os << "{";
-        std::string_view sep;
-        for (const auto& subElementName : element.subElementNames())
-        {
-            os << sep;
-            sep = ", ";
-            Collection c{element.subElements(subElementName)};
-            os << '"' << subElementName << R"(":)";
-            if (c.size() > 1)
+            break;
+        case Element::Type::Quantity:
+        case Element::Type::Structured: {
+            os << "{";
+            std::string_view sep;
+            for (const auto& subElementName : element.subElementNames())
             {
-                os << c;
+                os << sep;
+                sep = ", ";
+                Collection c{element.subElements(subElementName)};
+                os << '"' << subElementName << R"(":)";
+                if (c.size() > 1)
+                {
+                    os << c;
+                }
+                else if (! c.empty())
+                {
+                    os << *c[0];
+                }
+                else
+                {
+                    os << "{}";
+                }
             }
-            else if (! c.empty())
-            {
-                os << *c[0];
-            }
-            else
-            {
-                os << "{}";
-            }
+            os << "}";
         }
-        os << "}";
     }
     os << "}";
     return os;

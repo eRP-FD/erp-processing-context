@@ -27,7 +27,7 @@ std::string ByteHelper::fromHex (const std::string_view hexString)
 {
     if ((hexString.size()%2) == 1)
     {
-        Fail2("hex string should have an even number of characters", std::logic_error);
+        Fail2("hex string should have an even number of characters", std::runtime_error);
     }
     std::string s;
     s.reserve(hexString.size()/2);

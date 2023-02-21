@@ -118,3 +118,8 @@ JWT JwtBuilder::makeJwtVersicherter(const std::string& kvnr)
     setIdNummer(claims, kvnr);
     return makeValidJwt(std::move(claims));
 }
+
+JWT JwtBuilder::makeJwtVersicherter(const model::Kvnr& kvnr)
+{
+    return makeJwtVersicherter(kvnr.id());
+}

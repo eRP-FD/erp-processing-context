@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
                 auto outname = makeOutname(inFilePath, ".json"sv, ".xml"sv);
                 std::clog << origPath << " -> " << outname << std::endl;
                 std::ofstream{outname} << fhir.converter().jsonToXmlString(
-                    model::NumberAsStringParserDocument::fromJson(fileContent));
+                    model::NumberAsStringParserDocument::fromJson(fileContent), true);
             }
         }
         return EXIT_SUCCESS;

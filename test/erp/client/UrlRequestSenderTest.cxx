@@ -18,7 +18,6 @@ namespace
 {
     constexpr const char* EXPECTED_BODY = "test request body";
     constexpr const char* HOST_IP = "127.0.0.1";
-    constexpr const uint16_t PORT = 9988;
 }
 
 
@@ -101,9 +100,11 @@ TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)//NOLINT(readability-function-
 {
     std::atomic_bool blocking = true;
     std::atomic_bool serverBlockingStatus = false;
+    const auto& config = Configuration::instance();
+    const auto port = config.serverPort() + 10;
     std::unique_ptr<HttpsServer> server = createServer(
         HOST_IP,
-        PORT,
+        gsl::narrow<uint16_t>(port),
         [&blocking]() mutable -> bool
         { return blocking; },
         [&serverBlockingStatus](bool isBlocking) mutable -> void
@@ -112,7 +113,9 @@ TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)//NOLINT(readability-function-
     server->serve(1);
 
     UrlRequestSender urlRequestSender({}, 1, false);
-    EXPECT_ANY_THROW(urlRequestSender.send("https://127.0.0.1:9988/test_path", HttpMethod::POST, EXPECTED_BODY));
+    std::stringstream url;
+    url << "https://127.0.0.1:" << port << "/test_path";
+    EXPECT_ANY_THROW(urlRequestSender.send(url.str(), HttpMethod::POST, EXPECTED_BODY));
 
     // the connection should be closed by timeout before the server decides to shutdown ( 10 seconds )
     // so the request handler still should run and block

@@ -525,7 +525,7 @@ TEST_F(TslManagerTest, validateQesCertificate_Success)
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -558,7 +558,7 @@ TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAButValid_Success)
             {"http://ocsp.test.ibm.de/",
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -591,7 +591,7 @@ TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAInvalid_Failure)
             {"http://ocsp.test.ibm.de/",
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERTIFICATE_NOT_VALID_MATH},
                            HttpStatus::BadRequest);
 }
@@ -607,7 +607,7 @@ TEST_F(TslManagerTest, validateQesCertificate_UnexpectedCA_Fail)//NOLINT(readabi
     const Certificate certificate = Certificate::fromPem(certificatePem);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CA_CERT_MISSING},
                            HttpStatus::BadRequest);
 }
@@ -623,7 +623,7 @@ TEST_F(TslManagerTest, validateQesCertificate_UnexpectedCriticalExtension_Fail)/
     const Certificate certificate = Certificate::fromPem(certificatePem);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERT_TYPE_MISMATCH},
                            HttpStatus::BadRequest);
 }
@@ -666,7 +666,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspRevoked_Fail)//NOLINT(readabili
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERT_REVOKED},
                            HttpStatus::BadRequest);
 }
@@ -690,7 +690,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMissing_Fail)//NOLINT(r
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::CERTHASH_MISSING}}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERTHASH_EXTENSION_MISSING},
                            HttpStatus::BadRequest);
 }
@@ -714,7 +714,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMismatch_Fail)//NOLINT(
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::CERTHASH_MISMATCH}}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERTHASH_MISMATCH},
                            HttpStatus::BadRequest);
 }
@@ -738,7 +738,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongCertId_Fail)//NOLINT(reada
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_CERTID}}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::OCSP_CHECK_REVOCATION_ERROR},
                            HttpStatus::BadRequest);
 }
@@ -762,7 +762,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongProducedAt_Fail)//NOLINT(r
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_PRODUCED_AT}}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID},
                            HttpStatus::BadRequest);
 }
@@ -786,7 +786,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongThisUpdate_Fail)//NOLINT(r
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_THIS_UPDATE}}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID},
                            HttpStatus::BadRequest);
 }
@@ -807,7 +807,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspUnknown_Fail)//NOLINT(readabili
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
              {}}});
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERT_UNKNOWN},
                            HttpStatus::BadRequest);
 }
@@ -826,7 +826,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspNotAvailable_Fail)//NOLINT(read
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::OCSP_NOT_AVAILABLE},
                            HttpStatus::InternalServerError);
 }
@@ -850,14 +850,18 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateUnknown_Fail)//NOLIN
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    manager->addPostUpdateHook([=]{
-        TslTestHelper::removeCertificateFromTrustStore(TslTestHelper::getDefaultOcspCertificate(), *manager,
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+    manager->addPostUpdateHook([mgrWeakPtr] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
+        TslTestHelper::removeCertificateFromTrustStore(TslTestHelper::getDefaultOcspCertificate(), *tslManager,
                                                        TslMode::BNA);
-        TslTestHelper::removeCertificateFromTrustStore(TslTestHelper::getDefaultOcspCertificateCa(), *manager,
+        TslTestHelper::removeCertificateFromTrustStore(TslTestHelper::getDefaultOcspCertificateCa(), *tslManager,
                                                        TslMode::BNA);
     });
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::OCSP_CERT_MISSING},
                            HttpStatus::BadRequest);
 }
@@ -888,11 +892,16 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateSignedByBnaCa_Succes
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}},
         wansimOcspSigner);
-    manager->addPostUpdateHook([=]{
-        TslTestHelper::addCaCertificateToTrustStore(wansimOcspSignerCA, *manager, TslMode::BNA);
+
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+    manager->addPostUpdateHook([mgrWeakPtr, wansimOcspSignerCA] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
+        TslTestHelper::addCaCertificateToTrustStore(wansimOcspSignerCA, *tslManager, TslMode::BNA);
     });
 
-    EXPECT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    EXPECT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -914,13 +923,18 @@ TEST_F(TslManagerTest, validateQesCertificateNoHistoryIgnoreTimestamp_Success)
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
     // set CA StatusStartingTime to the "valid from" timestamp of the certificate
-    manager->addPostUpdateHook([=]{
-    TslTestHelper::setCaCertificateTimestamp(
-        model::Timestamp::fromFhirDateTime("2020-06-10T00:00:00Z").toChronoTimePoint(), certificateCA, *manager,
-        TslMode::BNA);
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+
+    manager->addPostUpdateHook([mgrWeakPtr, certificateCA] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
+        TslTestHelper::setCaCertificateTimestamp(
+            model::Timestamp::fromFhirDateTime("2020-06-10T00:00:00Z").toChronoTimePoint(), certificateCA, *tslManager,
+            TslMode::BNA);
     });
 
-    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -952,7 +966,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)//NOLINT(readabi
             {ocspUrl,
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 
     // turn OCSP-Responder off, the cached answer must be used
     requestSender->setUrlHandler(ocspUrl,
@@ -964,7 +978,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)//NOLINT(readabi
                                      return ClientResponse(header, "");
                                  });
 
-    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -996,7 +1010,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)//NOLINT(readab
             {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 
     // no update should happen at this point, throw exception if it happens
     requestSender->setUrlHandler(tslSha2Url,
@@ -1006,7 +1020,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)//NOLINT(readab
                                      throw std::logic_error("error");
                                  });
 
-    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}));
+    ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -1019,7 +1033,7 @@ TEST_F(TslManagerTest, validateIdpCertificateWrongType_Fail)//NOLINT(readability
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::TSL, x509Certificate, {CertificateType::C_FD_SIG}),
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::TSL, x509Certificate, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERT_TYPE_MISMATCH},
                            HttpStatus::BadRequest);
 }
@@ -1054,7 +1068,8 @@ TEST_F(TslManagerTest, validateIdpCertificateExpired_Fail)//NOLINT(readability-f
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                TslMode::TSL,
                                x509Idp,
-                               {CertificateType::C_FD_SIG}),
+                               {CertificateType::C_FD_SIG},
+                               TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERTIFICATE_NOT_VALID_TIME},
                            HttpStatus::BadRequest);
 }
@@ -1089,7 +1104,7 @@ TEST_F(TslManagerTest, validateIdpCertificateMissingPolicy_Fail)//NOLINT(readabi
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
-                                {CertificateType::C_FD_SIG}),
+                                {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERT_TYPE_INFO_MISSING},
                            HttpStatus::BadRequest);
 }
@@ -1116,10 +1131,15 @@ TEST_F(TslManagerTest, validateIdpCertificateUnknownCaKnownDn_Fail)//NOLINT(read
     );
 
     // the CA is inserted into trust store with different subject key identifier
-    manager->addPostUpdateHook([=]{
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+
+    manager->addPostUpdateHook([mgrWeakPtr, idpCertificateCa] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
         TslTestHelper::addCaCertificateToTrustStore(
             idpCertificateCa,
-            *manager,
+            *tslManager,
             TslMode::TSL,
             "differentSubjectKeyIdentifier");
     });
@@ -1128,7 +1148,7 @@ TEST_F(TslManagerTest, validateIdpCertificateUnknownCaKnownDn_Fail)//NOLINT(read
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
-                                {CertificateType::C_FD_SIG}),
+                                {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::AUTHORITYKEYID_DIFFERENT},
                            HttpStatus::BadRequest);
 }
@@ -1155,10 +1175,15 @@ TEST_F(TslManagerTest, validateIdpCertificateCAUnsupportedType_Fail)//NOLINT(rea
     );
 
     // the CA is inserted into trust store with different supported certificate type id
-    manager->addPostUpdateHook([=]{
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+
+    manager->addPostUpdateHook([mgrWeakPtr, idpCertificateCa] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
         TslTestHelper::addCaCertificateToTrustStore(
             idpCertificateCa,
-            *manager,
+            *tslManager,
             TslMode::TSL,
             std::nullopt,
             TslService::oid_egk_aut);
@@ -1168,7 +1193,7 @@ TEST_F(TslManagerTest, validateIdpCertificateCAUnsupportedType_Fail)//NOLINT(rea
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
-                                {CertificateType::C_FD_SIG}),
+                                {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::CERT_TYPE_CA_NOT_AUTHORIZED},
                            HttpStatus::BadRequest);
 }
@@ -1195,19 +1220,21 @@ TEST_F(TslManagerTest, validateIdpCertificateCaNotAuthorized_Fail)//NOLINT(reada
     );
 
     // the CA is inserted into trust store with different subject key identifier
-    manager->addPostUpdateHook([=]{
-        TslTestHelper::addCaCertificateToTrustStore(
-            idpCertificateCa,
-            *manager,
-            TslMode::TSL,
-            "differentSubjectKeyIdentifier");
+    std::weak_ptr<TslManager> mgrWeakPtr{manager};
+
+    manager->addPostUpdateHook([mgrWeakPtr, idpCertificateCa] {
+        auto tslManager = mgrWeakPtr.lock();
+        if (! tslManager)
+            return;
+        TslTestHelper::addCaCertificateToTrustStore(idpCertificateCa, *tslManager, TslMode::TSL,
+                                                    "differentSubjectKeyIdentifier");
     });
 
     X509Certificate x509Idp = X509Certificate::createFromBase64(idpCertificate.toBase64Der());
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(
                                 TslMode::TSL,
                                 x509Idp,
-                                {CertificateType::C_FD_SIG}),
+                                {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
                            {TslErrorCode::AUTHORITYKEYID_DIFFERENT},
                            HttpStatus::BadRequest);
 }
@@ -1226,13 +1253,13 @@ TEST_F(TslManagerTest, revokedOcspResponseStatus_Fail)//NOLINT(readability-funct
         {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
 
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_REVOKED},
         HttpStatus::BadRequest);
 
     // the second call is done to test handling of the OCSP-Response from cache
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_REVOKED},
         HttpStatus::BadRequest);
 }
@@ -1251,13 +1278,13 @@ TEST_F(TslManagerTest, unknownOcspResponseStatus_Fail)//NOLINT(readability-funct
         {}, {}, {{ocspUrl, {}}});
 
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::BadRequest);
 
     // the second call is done to test handling of the OCSP-Response from cache
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, false),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::BadRequest);
 }

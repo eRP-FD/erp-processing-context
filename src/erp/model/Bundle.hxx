@@ -45,6 +45,7 @@ enum class BundleType
 };
 
 template <class DerivedBundle, typename SchemaVersionType = ResourceVersion::DeGematikErezeptWorkflowR4>
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class BundleBase : public Resource<DerivedBundle, SchemaVersionType>
 {
 public:
@@ -116,6 +117,8 @@ public:
 
     void setTotalSearchMatches(std::size_t totalSearchMatches);
 
+    SchemaVersionType getSchemaVersion(const std::optional<SchemaVersionType>& fallbackVersion) const override;
+
 private:
     friend Resource<Bundle>;
 };
@@ -123,6 +126,7 @@ private:
 
 template <class DerivedBundle, typename SchemaVersionType>
 template<typename TResource>
+// NOLINTNEXTLINE(bugprone-exception-escape)
 std::vector<TResource> BundleBase<DerivedBundle, SchemaVersionType>::getResourcesByType (const std::string_view type) const
 {
     std::vector<TResource> resources;
@@ -145,6 +149,7 @@ std::vector<TResource> BundleBase<DerivedBundle, SchemaVersionType>::getResource
     return resources;
 }
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Bundle final : public BundleBase<Bundle>
 {
 public:
@@ -155,10 +160,13 @@ public:
     static constexpr auto resourceTypeName = "Bundle";
 };
 
+// NOLINTBEGIN(bugprone-exception-escape)
 extern template class BundleBase<ErxReceipt>;
 extern template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
 extern template class BundleBase<Bundle>;
 extern template class BundleBase<MedicationDispenseBundle, ResourceVersion::NotProfiled>;
+extern template class BundleBase<Bundle, ResourceVersion::AbgabedatenPkv>;
+// NOLINTEND(bugprone-exception-escape)
 
 } // end of namespace model
 

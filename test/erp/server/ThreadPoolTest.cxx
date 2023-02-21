@@ -23,7 +23,7 @@ TEST(ThreadPoolTest, runOnAllThreads)//NOLINT(readability-function-cognitive-com
 
     threadPool.setUp(workers);
     //wait until all threads have started:
-    ASSERT_NO_FATAL_FAILURE(waitFor([&]{return threadPool.getWorkerCount() >= workers;}));
+    ASSERT_NO_FATAL_FAILURE(testutils::waitFor([&]{return threadPool.getWorkerCount() >= workers;}));
 
     std::mutex idsMutex;
     std::set<std::thread::id> ids;
@@ -35,7 +35,7 @@ TEST(ThreadPoolTest, runOnAllThreads)//NOLINT(readability-function-cognitive-com
         ids.insert(std::this_thread::get_id());
     });
 
-    ASSERT_NO_FATAL_FAILURE(waitFor([&]{return callCount >= workers; }););
+    ASSERT_NO_FATAL_FAILURE(testutils::waitFor([&]{return callCount >= workers; }););
 
     threadPool.shutDown();
     EXPECT_EQ(callCount, workers);

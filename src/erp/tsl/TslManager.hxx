@@ -8,6 +8,7 @@
 
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/crypto/OpenSslHelper.hxx"
+#include "erp/tsl/OcspCheckDescriptor.hxx"
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/TslMode.hxx"
 #include "erp/tsl/TslService.hxx"
@@ -63,26 +64,22 @@ public:
      * @param tslMode                   specifies which trust store should be provided TSL or BNetzA-VL
      * @param certificate               the certificate to check
      * @param typeRestrictions          if provided, the certificate type must be in the set
-     * @param ocspResponse              optional ocsp response that should be used for OCSP check if present
-     * @param referenceTimePoint        optional timepoint to be used for OCSP response validity checks
+     * @param ocspCheckDescriptor       specifies how the OCSP check should be done
      *
      * @throws TslError in case of problems
      */
     virtual void verifyCertificate(const TslMode tslMode,
                                    X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
-                                   const OcspResponsePtr& ocspResponse = {},
-                                   const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint = std::nullopt);
+                                   const OcspCheckDescriptor& ocspCheckDescriptor);
 
     /**
-     * Allows to get OCSP-response for the provided certificate.
-     * In case there is still not outdated cached OCSP-response, it is returned.
-     * Otherwise an OCSP-request is done.
+     * Allows to get OCSP-response for the provided certificate according to specified OCSP check descriptor.
      *
      * @param tslMode                   specifies which trust store should be provided TSL or BNetzA-VL
      * @param certificate               the certificate to get OCSP-Response for
      * @param typeRestrictions          if provided, the certificate type must be in the set
-     * @param forceOcspRequest          if true the OCSP-cache should be ignored and OCSP-request must be done
+     * @param ocspCheckDescriptor       specifies how the OCSP check should be done
      *
      * @throws TslError in case of problems
      */
@@ -90,7 +87,7 @@ public:
         const TslMode tslMode,
         X509Certificate& certificate,
         const std::unordered_set<CertificateType>& typeRestrictions,
-        const bool forceOcspRequest);
+        const OcspCheckDescriptor& ocspCheckDescriptor);
 
     /**
      * Checks whether the trust stores have to be update and does the update if necessary.

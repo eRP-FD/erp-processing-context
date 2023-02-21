@@ -18,15 +18,16 @@ class RateLimiter
 {
 public:
     /**
-     * Setup a rate limiter instance with the constraint of allowing calls / timespan.
+     * Setup a rate limiter instance with a constraint of allowing calls / timespan.
      * @param iface Redis / MockRedis interface
-     * @oaram redisKeyPrefix Identification key for redis db
+     * @param redisKeyPrefix Identification key for redis db
      * @param calls Allowed calls within timespan
-     * @param timepan Timespan defined in milliseconds. Within this timespan 'calls' count are allowed.
+     * @param timepan Timespan (period must be at least milliseconds.)
      */
     RateLimiter(std::shared_ptr<RedisInterface> iface, std::string_view redisKeyPrefix, size_t calls,
-                uint64_t timespan);
+                std::chrono::duration<float> timespan);
 
+    virtual ~RateLimiter() = default;
 
     /**
      * Reconfigure instance with allowed number of calls.
@@ -37,9 +38,9 @@ public:
 
     /**
      * Reconfigure instance with a new timespan
-     * @param timespan Timespan defined in milliseconds. Within this timespan 'calls' count are allowed.
+     * @param timespan Timespan (period must be at least milliseconds.)
      */
-    void setTimespan(uint64_t timespan);
+    void setTimespan(std::chrono::duration<float> timespan);
 
 
     /**
@@ -63,13 +64,13 @@ public:
      * a time in the future, for unit tests.
      * @return Current time since epoch
      */
-    virtual uint64_t nowValue() const;
+    virtual int64_t nowValue() const;
 
 protected:
     std::shared_ptr<RedisInterface> mInterface;
     std::string_view mRedisKeyPrefix{"ERP-PC-UNCONFIGURED:"};
     size_t mNumCalls{0};
-    uint64_t mTimespan{0};
+    std::chrono::duration<float> mTimespan{0};
 };
 
 #endif//ERP_PROCESSING_CONTEXT_RATELIMITER_HXX

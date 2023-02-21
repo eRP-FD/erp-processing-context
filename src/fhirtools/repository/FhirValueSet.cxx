@@ -73,6 +73,27 @@ bool FhirValueSet::containsCode(const std::string& code, const std::string& code
 
 void FhirValueSet::finalize(FhirStructureRepository* repo)// NOLINT(misc-no-recursion)
 {
+    finalizeIncludes(repo);
+    finalizeExcludes(repo);
+    for (const auto& expand : mExpands)
+    {
+        const auto* codeSystem = repo->findCodeSystem(expand.codeSystemUrl, {});
+        bool caseSensitive = codeSystem == nullptr || codeSystem->isCaseSensitive();
+        mCodes.insert(Code{.code = expand.code, .caseSensitive = caseSensitive, .codeSystem = expand.codeSystemUrl});
+    }
+    if (mCodes.empty())
+    {
+        addError("ValueSet contains no codes after expansion");
+        mCanValidate = false;
+    }
+    TVLOG(2) << "ValueSet \"" << mUrl << "|" << mVersion << "\" finalized. Codes: " << mCodes.size()
+             << ", canValidate: " << mCanValidate << " Warning(s): " << mValidationWarning;
+    mFinalized = true;
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+void FhirValueSet::finalizeIncludes(FhirStructureRepository* repo)
+{
     for (const auto& include : mIncludes)
     {
         const auto* codeSystem = include.codeSystemUrl ? repo->findCodeSystem(*include.codeSystemUrl, {}) : nullptr;
@@ -97,6 +118,10 @@ void FhirValueSet::finalize(FhirStructureRepository* repo)// NOLINT(misc-no-recu
             }
         }
     }
+}
+
+void FhirValueSet::finalizeExcludes(FhirStructureRepository* repo)
+{
     for (auto& exclude : mExcludes)
     {
         FPExpect(exclude.valueSets.empty(), mName + ": Not implemented: ValueSet.compose.exclude.ValueSet");
@@ -108,21 +133,8 @@ void FhirValueSet::finalize(FhirStructureRepository* repo)// NOLINT(misc-no-recu
             mCodes.erase(Code{.code = code, .caseSensitive = caseSensitive, .codeSystem = *exclude.codeSystemUrl});
         }
     }
-    for (const auto& expand : mExpands)
-    {
-        const auto* codeSystem = repo->findCodeSystem(expand.codeSystemUrl, {});
-        bool caseSensitive = codeSystem == nullptr || codeSystem->isCaseSensitive();
-        mCodes.insert(Code{.code = expand.code, .caseSensitive = caseSensitive, .codeSystem = expand.codeSystemUrl});
-    }
-    if (mCodes.empty())
-    {
-        addError("ValueSet contains no codes after expansion");
-        mCanValidate = false;
-    }
-    TVLOG(2) << "ValueSet \"" << mUrl << "|" << mVersion << "\" finalized. Codes: " << mCodes.size()
-             << ", canValidate: " << mCanValidate << " Warning(s): " << mValidationWarning;
-    mFinalized = true;
 }
+
 void FhirValueSet::finalizeIncludeFilters(const std::vector<FhirValueSet::Filter>& includeFilters,
                                           const std::string& codeSystemUrl, const FhirCodeSystem* codeSystem,
                                           bool caseSensitive)

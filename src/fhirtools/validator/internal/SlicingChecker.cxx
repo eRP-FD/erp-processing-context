@@ -3,9 +3,10 @@
 
 #include "fhirtools/validator/internal/SlicingChecker.hxx"
 #include "erp/util/TLog.hxx"
-
+#include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
+
 
 using fhirtools::SlicingChecker;
 fhirtools::SlicingChecker::SlicingChecker(const fhirtools::FhirStructureDefinition* initBaseProfile,
@@ -42,7 +43,7 @@ void fhirtools::SlicingChecker::foundSliced(const fhirtools::FhirStructureDefini
                         mUnmatchedFullName + " in Slicing with rule openAtEnd",
                     std::string{fullElementName}, sliceProfile);
     }
-    size_t idx = data - mSingleSlices.begin();
+    size_t idx = gsl::narrow<size_t>(data - mSingleSlices.begin());
     if (mOrdered && idx < mLastIdx)
     {
         mResult.add(Severity::error, "slicing out of order", std::string{fullElementName}, mBaseProfile);
@@ -79,16 +80,16 @@ void SlicingChecker::finalize(std::string_view elementFullPath)
         const auto& rootElement = slice.profile->rootElement();
         std::ostringstream name;
         name << elementFullPath << '.' << rootElement->fieldName();
-        mResult.append(rootElement->cardinality().check(slice.count, name.str(), slice.profile));
+        mResult.merge(rootElement->cardinality().check(slice.count, name.str(), slice.profile));
     }
 }
 
-fhirtools::ValidationResultList fhirtools::SlicingChecker::results() &&
+fhirtools::ValidationResults fhirtools::SlicingChecker::results() &&
 {
     return std::move(mResult);
 }
 
-const fhirtools::ValidationResultList& fhirtools::SlicingChecker::results() const&
+const fhirtools::ValidationResults& fhirtools::SlicingChecker::results() const&
 {
     return mResult;
 }

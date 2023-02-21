@@ -10,7 +10,6 @@
 #include "TestClient.hxx"
 
 static constexpr auto defaultCloudServer { "localhost" };           // alternative names: erp.box.erezepttest.net, erp.lu.erezepttest.net, localhost
-static constexpr uint16_t defaultCloudPort = 9090u;
 
 class HttpsTestClient
     : public TestClient

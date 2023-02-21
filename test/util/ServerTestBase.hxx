@@ -19,6 +19,7 @@
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/KeyDerivation.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/TelematikId.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/HttpsServer.hxx"
 #include "erp/util/ByteHelper.hxx"
@@ -156,8 +157,8 @@ protected:
     static constexpr const char* InsurantB = "X000000002";
     static constexpr const char* InsurantC = "X000000003";
     static constexpr const char* InsurantD = "X000000004";
-    static constexpr const char* InsurantE = "X123456789"; // [task1.json, task2.json, task8.json]
-    static constexpr const char* InsurantF = "X234567890"; // [task4.json, task5.json, task6.json, task7.json]
+    static constexpr const char* InsurantE = "X123456789";
+    static constexpr const char* InsurantF = "X234567890";
     static constexpr const char* InsurantG = "X234567891";
     static constexpr const char* InsurantH = "X234567892";
 
@@ -168,8 +169,8 @@ protected:
     static constexpr const char* VerificationIdentityKvnrMax = "X000050007";
 
     // The names of the pharmacy and doctor will be retrieved from the JWTs.
-    std::string mPharmacy;
-    std::string mDoctor;
+    model::TelematikId mPharmacy;
+    model::TelematikId mDoctor;
 
     std::unique_ptr<PcServiceContext> mContext;
 

@@ -52,7 +52,8 @@ The data type of "identifier/0/value" is PrescriptionId.
 const rapidjson::Pointer idPointer(ElementName::path(elements::id));
 const rapidjson::Pointer prescriptionIdSystemPointer(ElementName::path(elements::identifier, 0, elements::system));
 const rapidjson::Pointer prescriptionIdValuePointer(ElementName::path(elements::identifier, 0, elements::value));
-const rapidjson::Pointer kvnrPointer(ElementName::path(elements::subject, elements::identifier, elements::value));
+const rapidjson::Pointer kvnrValuePointer(ElementName::path(elements::subject, elements::identifier, elements::value));
+const rapidjson::Pointer kvnrSystemPointer(ElementName::path(elements::subject, elements::identifier, elements::system));
 const rapidjson::Pointer telematicIdSystemPointer(
     ElementName::path(elements::performer, 0, elements::actor, elements::identifier, elements::value));
 const rapidjson::Pointer telematikIdValuePointer(
@@ -74,14 +75,14 @@ PrescriptionId MedicationDispense::prescriptionId() const
     return PrescriptionId::fromString(id);
 }
 
-std::string_view MedicationDispense::kvnr() const
+Kvnr MedicationDispense::kvnr() const
 {
-    return getStringValue(kvnrPointer);
+    return Kvnr{getStringValue(kvnrValuePointer), getStringValue(kvnrSystemPointer)};
 }
 
-std::string_view MedicationDispense::telematikId() const
+TelematikId MedicationDispense::telematikId() const
 {
-    return getStringValue(telematikIdValuePointer);
+    return TelematikId{getStringValue(telematikIdValuePointer)};
 }
 
 model::Timestamp MedicationDispense::whenHandedOver() const
@@ -113,14 +114,15 @@ void MedicationDispense::setPrescriptionId(const PrescriptionId& prescriptionId)
     setValue(prescriptionIdValuePointer, prescriptionId.toString());
 }
 
-void MedicationDispense::setKvnr(const std::string_view& kvnr)
+void MedicationDispense::setKvnr(const model::Kvnr& kvnr)
 {
-    setValue(kvnrPointer, kvnr);
+    setValue(kvnrValuePointer, kvnr.id());
+    setValue(kvnrSystemPointer, kvnr.namingSystem(deprecatedProfile(getSchemaVersion({}))));
 }
 
-void MedicationDispense::setTelematicId(const std::string_view& telematicId)
+void MedicationDispense::setTelematicId(const model::TelematikId& telematikId)
 {
-    setValue(telematikIdValuePointer, telematicId);
+    setValue(telematikIdValuePointer, telematikId.id());
 }
 
 void MedicationDispense::setWhenHandedOver(const model::Timestamp& whenHandedOver)

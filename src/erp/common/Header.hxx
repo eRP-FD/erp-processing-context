@@ -41,7 +41,7 @@ public:
     Header(
         HttpMethod method,
         std::string&& target,
-        int version,
+        unsigned int version,
         keyValueMap_t&& header,
         HttpStatus statusCode);
 
@@ -51,13 +51,13 @@ public:
     const std::string& target (void) const;
     void setTarget (const std::string& target);
 
-    static constexpr int Version_1_0 = 10;
-    static constexpr int Version_1_1 = 11;
+    static constexpr unsigned int Version_1_0 = 10;
+    static constexpr unsigned int Version_1_1 = 11;
     static constexpr std::string_view ExternalInterface_TI = "TI"; // Telematik-Infrastructure (LEI access)
     static constexpr std::string_view ExternalInterface_INTERNET = "INTERNET"; // Insurants
 
-    int version (void) const;
-    void setVersion (int version);
+    unsigned int version (void) const;
+    void setVersion (unsigned int version);
 
     std::optional<const std::string> header (const std::string& key) const;
     bool hasHeader (const std::string& key) const;
@@ -150,7 +150,7 @@ private:
 
     HttpMethod mMethod;
     std::string mTarget;
-    int mVersion;
+    unsigned int mVersion;
     keyValueMap_t mHeader;
     HttpStatus mStatusCode;
     std::vector<AcceptMimeType> mAcceptMimeTypes;

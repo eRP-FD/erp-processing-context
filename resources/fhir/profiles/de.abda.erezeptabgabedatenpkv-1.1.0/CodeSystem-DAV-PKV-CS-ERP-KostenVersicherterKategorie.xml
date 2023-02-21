@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="DAV-PKV-CS-ERP-KostenVersicherterKategorie"/>
+  <url value="http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-KostenVersicherterKategorie"/>
+  <version value="1.1"/>
+  <name value="DAV_PKV_CS_ERP_KostenVersicherterKategorie"/>
+  <status value="active"/>
+  <content value="complete"/>
+  <count value="1"/>
+  <concept>
+    <code value="0"/>
+    <display value="Zuzahlung"/>
+  </concept>
+</CodeSystem>

@@ -124,7 +124,7 @@ TEST_F(TslServiceTest, verifyCertificateRevokedCAFailing)//NOLINT(readability-fu
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_TSL_ERROR_THROW(
-        TslService::checkCertificate(certificate, {}, requestSender, *mTrustStore),
+        TslService::checkCertificate(certificate, {}, requestSender, *mTrustStore, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CA_CERTIFICATE_REVOKED_IN_TSL},
         HttpStatus::BadRequest);
 }
@@ -151,7 +151,7 @@ TEST_F(TslServiceTest, verifyCertificateValidThenRevokedCASuccess)
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_NO_THROW(
-        TslService::checkCertificate(certificate, {}, requestSender, *mTrustStore));
+        TslService::checkCertificate(certificate, {}, requestSender, *mTrustStore, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -172,7 +172,7 @@ TEST_F(TslServiceTest, verifyCertificatePolicyNoRestrictionsSuccessful)
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_NO_THROW(
-        TslService::checkCertificate(certificate, {}, requestSender, *mTrustStore));
+        TslService::checkCertificate(certificate, {}, requestSender, *mTrustStore, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -193,7 +193,7 @@ TEST_F(TslServiceTest, verifyCertificatePolicySuccessful)
           MockOcsp::CertificateOcspTestMode::SUCCESS}});
 
     EXPECT_NO_THROW(
-        TslService::checkCertificate(certificate, {CertificateType::C_HCI_AUT}, requestSender, *mTrustStore));
+        TslService::checkCertificate(certificate, {CertificateType::C_HCI_AUT}, requestSender, *mTrustStore, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
 }
 
 
@@ -202,7 +202,7 @@ TEST_F(TslServiceTest, verifyCertificatePolicyFailing)//NOLINT(readability-funct
     UrlRequestSenderMock requestSender({});
     X509Certificate certificate = X509Certificate::createFromBase64("MIIC4TCCAoegAwIBAgIRAK+JCZiHcke3vWXmfPAbuf0wCgYIKoZIzj0EAwIwgYQxIDAeBgNVBAMMF0FDTE9TLktPTVAtQ0EgVEVTVC1PTkxZMTIwMAYDVQQLDClLb21wb25lbnRlbi1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEfMB0GA1UECgwWYWNoZWxvcyBHbWJIIE5PVC1WQUxJRDELMAkGA1UEBhMCREUwHhcNMjEwMzExMjMwMDAwWhcNMjMwMzEwMjMwMDAwWjBJMRIwEAYDVQQDDAlJRFAgU2lnIDMxJjAkBgNVBAoMHWdlbWF0aWsgVEVTVC1PTkxZIC0gTk9ULVZBTElEMQswCQYDVQQGEwJERTBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAASGGZ8IhgJ+UGDseN2fDMGmSw96/28+gU3EDuaW3rpuqkM2A+XQwnK4sP1TTz2QkM10D4OErVssuTjqvU6IARJjo4IBETCCAQ0wHQYDVR0OBBYEFBZf3Tqupyv/MA5EAvsybQktzVo2MA4GA1UdDwEB/wQEAwIHgDAMBgNVHRMBAf8EAjAAMFIGA1UdIARLMEkwOwYIKoIUAEwEgSMwLzAtBggrBgEFBQcCARYhaHR0cDovL3d3dy5nZW1hdGlrLmRlL2dvL3BvbGljaWVzMAoGCCqCFABMBIFLMEYGCCsGAQUFBwEBBDowODA2BggrBgEFBQcwAYYqaHR0cDovL29jc3AtdGVzdC5vY3NwLnRlbGVtYXRpay10ZXN0OjgwODAvMB8GA1UdIwQYMBaAFITGAi50Bw/bE2uIb0TMdzHGff70MBEGBSskCAMDBAgwBjAEMAIwADAKBggqhkjOPQQDAgNIADBFAiEAilBbiEWbA8n6l3V5iIV/DgJjRVusNpyKCAyKA7Q1kEMCIDwVNy+ORXpKrLNB+YyQQHHAf+UCf4wp71GJp1KFskwn");
     EXPECT_TSL_ERROR_THROW(
-        TslService::checkCertificate(certificate, {CertificateType::C_FD_SIG}, requestSender, *mTrustStore),
+        TslService::checkCertificate(certificate, {CertificateType::C_FD_SIG}, requestSender, *mTrustStore, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_TYPE_MISMATCH},
         HttpStatus::BadRequest);
 }

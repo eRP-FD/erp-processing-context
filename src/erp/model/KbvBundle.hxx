@@ -11,6 +11,7 @@
 namespace model
 {
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KbvBundle : public BundleBase<KbvBundle, ResourceVersion::KbvItaErp>
 {
 public:

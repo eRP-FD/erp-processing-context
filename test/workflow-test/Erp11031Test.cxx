@@ -70,7 +70,7 @@ namespace
                "could not initialize compression for gzip");
 
         std::uint8_t buffer[compressBufferSize];
-        stream.avail_in = data.size();
+        stream.avail_in = gsl::narrow<uInt>(data.size());
         stream.next_in = const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(data.data()));
 
         // Use Z_FINISH as 'flush' argument for `deflate()` because the whole input is available
@@ -113,6 +113,7 @@ namespace
     std::string convertTimestampToPnwFormat(const model::Timestamp& timestamp)
     {
         const auto timestampTimeT = timestamp.toTimeT();
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         const auto* timestampTm = std::gmtime(&timestampTimeT);
 
         std::string result(pnwFormattedTimestampLength + 1, 0);
@@ -387,7 +388,7 @@ TEST_F(Erp11031Test, ValidWithPnwPzNumber)
                                                 HttpStatus::OK,
                                                 std::nullopt,
                                                 std::nullopt,
-                                                createFullyEncodedPnw(std::nullopt, value, std::move(pnwPzNumberInput)),
+                                                createFullyEncodedPnw(std::nullopt, value, pnwPzNumberInput),
                                                 telematikIdPharmacy));
 
         ASSERT_TRUE(tasks);
@@ -408,7 +409,6 @@ TEST_F(Erp11031Test, ValidWithoutPnwPzNumber)
 {
     A_22432.test("Valid PNW without PZ");
     const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
-    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::PrescriptionId> prescriptionId{};
     std::string kvnr{};
     std::optional<model::Bundle> tasks{};

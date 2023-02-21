@@ -6,6 +6,7 @@
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/ErpRequirements.hxx"
+#include "erp/model/AbgabedatenPkvBundle.hxx"
 #include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Device.hxx"
@@ -17,6 +18,7 @@
 
 namespace
 {
+    // GEMREQ-start A_22127#signBundle
     template <typename BundleT>
     void signBundle(BundleT& bundle, const std::string& authorIdentifier, const PcServiceContext& serviceContext)
     {
@@ -32,6 +34,27 @@ namespace
 
         bundle.setSignature(fullSignature);
     }
+    // GEMREQ-end A_22127#signBundle
+
+    // GEMREQ-start A_22127#counterSignDispenseItem
+    void counterSignDispenseItem(const model::Binary& dispenseItem,
+                                 model::AbgabedatenPkvBundle& dispenseItemBundle,
+                                 const std::string& authorIdentifier,
+                                 const PcServiceContext& serviceContext)
+    {
+        CadesBesSignature dispenseItemCadesBesSignature{dispenseItem.data().value().data()};
+        dispenseItemCadesBesSignature.addCounterSignature(serviceContext.getCFdSigErp(),
+                                                          serviceContext.getCFdSigErpPrv());
+
+        Expect3(dispenseItem.id().has_value(), "Dispense item has no ID", std::logic_error);
+
+        const model::Signature signature{dispenseItemCadesBesSignature.getBase64(),
+                                         model::Timestamp::now(),
+                                         authorIdentifier};
+
+        dispenseItemBundle.setSignature(signature);
+    }
+    // GEMREQ-end A_22127#counterSignDispenseItem
 }
 
 
@@ -48,12 +71,13 @@ void ChargeItemGetAllHandler::handleRequest (PcSessionContext& session)
     std::size_t totalSearchMatches{0};
     std::unordered_map<model::Link::Type, std::string> links;
 
+    // GEMREQ-start A_22119#read-kvnr
     const std::optional<std::string> idNumberClaim =
         session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(idNumberClaim.has_value(), "JWT does not contain idNumberClaim");
+    // GEMREQ-end A_22119#read-kvnr
 
-    const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
-    Expect(professionOIDClaim.has_value(), "JWT does not contain professionOIDClaim");
+    const model::Kvnr kvnr{*idNumberClaim};
 
     A_22121.start("Search parameters for ChargeItem");
     auto arguments = std::optional<UrlArguments>(
@@ -62,12 +86,14 @@ void ChargeItemGetAllHandler::handleRequest (PcSessionContext& session)
                                          {"_lastUpdated", "last_modified", ::SearchParameter::Type::Date}});
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
 
+    // GEMREQ-start A_22119#call-database
     A_22119.start("Assure identical kvnr of access token and ChargeItem resource");
-    chargeItems = session.database()->retrieveAllChargeItemsForInsurant(idNumberClaim.value(), arguments);
+    chargeItems = session.database()->retrieveAllChargeItemsForInsurant(kvnr, arguments);
     A_22119.finish();
+    // GEMREQ-end A_22119#call-database
     A_22121.finish();
     totalSearchMatches = responseIsPartOfMultiplePages(arguments->pagingArgument(), chargeItems.size())
-                             ? session.database()->countChargeInformationForInsurant(idNumberClaim.value(), arguments)
+                             ? session.database()->countChargeInformationForInsurant(kvnr, arguments)
                              : chargeItems.size();
     links = arguments->getBundleLinks(getLinkBase(), "/ChargeItem", totalSearchMatches);
 
@@ -110,6 +136,8 @@ ChargeItemGetByIdHandler::ChargeItemGetByIdHandler(const std::initializer_list<s
 {
 }
 
+// GEMREQ-start A_22125
+// GEMREQ-start A_22126#start
 void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
@@ -124,49 +152,84 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
 
     model::AuditEventId auditEventId{};
 
+    // GEMREQ-start A_22127#buildResponse
     // response bundle
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
 
     if (professionOIDClaim == profession_oid::oid_versicherter)
     {
+// GEMREQ-end A_22126#start
         A_22125.start("Assure identical kvnr of access token and ChargeItem resource");
-        ErpExpect(chargeInformation.chargeItem.subjectKvnr() == idNumberClaim.value(), HttpStatus::Forbidden,
+        Expect(chargeInformation.chargeItem.subjectKvnr().has_value(), "Retrieved ChargeItem has no kvnr");
+        ErpExpect(chargeInformation.chargeItem.subjectKvnr().value() == idNumberClaim.value(), HttpStatus::Forbidden,
                   "Mismatch between access token and Kvnr");
         A_22125.finish();
+// GEMREQ-end A_22125
 
         A_22127.start("Response for insured");
         Expect3(chargeInformation.prescription.value().data().has_value(), "Prescription binary has no data",
                 std::logic_error);
-
+        // GEMREQ-end A_22127#buildResponse
+        // GEMREQ-start A_22127#prescription
         const CadesBesSignature cadesBesSignature(std::string(chargeInformation.prescription.value().data().value()),
                                                   session.serviceContext.getTslManager());
         auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
 
         const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
         signBundle(kbvBundle, authorIdentifier, session.serviceContext);
+        // GEMREQ-end A_22127#prescription
 
+        // GEMREQ-start A_22127#receipt
         chargeInformation.receipt->removeSignature();
         signBundle(*chargeInformation.receipt, authorIdentifier, session.serviceContext);
+        // GEMREQ-end A_22127#receipt
+
+        // GEMREQ-start A_22127#dispenseItem
+        chargeInformation.unsignedDispenseItem.removeSignature();
+        counterSignDispenseItem(chargeInformation.dispenseItem,
+                                chargeInformation.unsignedDispenseItem,
+                                authorIdentifier,
+                                session.serviceContext);
+        // GEMREQ-end A_22127#dispenseItem
 
         responseBundle.addResource(getLinkBase() + "/ChargeItem/" + prescriptionId.toString(), {}, {},
                                    chargeInformation.chargeItem.jsonDocument());
-        responseBundle.addResource(chargeInformation.unsignedDispenseItem.getId().toUrn(), {}, {},
+
+        const auto dispenseItemBundleSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
+            model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+        ErpExpect(dispenseItemBundleSupportingReference.has_value(), HttpStatus::InternalServerError,
+                  "no supporting reference for dispense bundle present in charge item");
+        responseBundle.addResource(std::string{dispenseItemBundleSupportingReference.value()}, {}, {},
                                    chargeInformation.unsignedDispenseItem.jsonDocument());
-        responseBundle.addResource(kbvBundle.getId().toUrn(), {}, {}, kbvBundle.jsonDocument());
-        responseBundle.addResource(chargeInformation.receipt->getId().toUrn(), {}, {},
+
+        const auto kbvBundleSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
+            model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
+        ErpExpect(kbvBundleSupportingReference.has_value(), HttpStatus::InternalServerError,
+                  "no supporting reference for prescription bundle present in charge item");
+        responseBundle.addResource(std::string{kbvBundleSupportingReference.value()}, {}, {},
+                                   kbvBundle.jsonDocument());
+
+        const auto receiptSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
+            model::ChargeItem::SupportingInfoType::receiptBundle);
+        ErpExpect(receiptSupportingReference.has_value(), HttpStatus::InternalServerError,
+                  "no supporting reference for receipt bundle present in charge item");
+        responseBundle.addResource(std::string{receiptSupportingReference.value()}, {}, {},
                                    chargeInformation.receipt->jsonDocument());
 
         A_22127.finish();
 
         auditEventId = model::AuditEventId::GET_ChargeItem_id_insurant;
+// GEMREQ-start A_22126#id-check
     }
+
     else
     {
         A_22126.start("Assure identical TelematikId of access token and ChargeItem resource");
         ErpExpect(chargeInformation.chargeItem.entererTelematikId() == idNumberClaim.value(), HttpStatus::Forbidden,
                   "Mismatch between access token and TelematikId");
         A_22126.finish();
+// GEMREQ-end A_22126#id-check
 
         A_22611.start("verify pharmacy access code");
         ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, chargeInformation.chargeItem);
@@ -181,10 +244,25 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
         Expect3(chargeInformation.prescription->id().has_value(), "Prescription binary has no id", ::std::logic_error);
         Expect3(chargeInformation.prescription->data().has_value(), "Prescription binary has no data",
                 ::std::logic_error);
-        responseBundle.addResource(::Uuid{chargeInformation.prescription->id().value()}.toUrn(), {}, {},
+        const auto kbvBundleSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
+            model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
+        ErpExpect(kbvBundleSupportingReference.has_value(), HttpStatus::InternalServerError,
+                  "no supporting reference for prescription bundle present in charge item");
+        responseBundle.addResource(std::string{kbvBundleSupportingReference.value()}, {}, {},
                                    chargeInformation.prescription->jsonDocument());
 
-        responseBundle.addResource(chargeInformation.unsignedDispenseItem.getId().toUrn(), {}, {},
+        const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
+        chargeInformation.unsignedDispenseItem.removeSignature();
+        counterSignDispenseItem(chargeInformation.dispenseItem,
+                                chargeInformation.unsignedDispenseItem,
+                                authorIdentifier,
+                                session.serviceContext);
+
+        auto dispenseItemBundleSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
+            model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+        ErpExpect(dispenseItemBundleSupportingReference.has_value(), HttpStatus::InternalServerError,
+                  "no supporting reference for dispense bundle present in charge item");
+        responseBundle.addResource(std::string{*dispenseItemBundleSupportingReference}, {}, {},
                                    chargeInformation.unsignedDispenseItem.jsonDocument());
         A_22128.finish();
 

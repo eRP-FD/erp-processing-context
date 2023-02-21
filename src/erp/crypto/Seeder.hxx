@@ -8,7 +8,6 @@
 
 #include "erp/crypto/RandomSource.hxx"
 #include "erp/hsm/ErpTypes.hxx"
-#include "erp/util/PeriodicTimer.hxx"
 #include "erp/util/SafeString.hxx"
 
 #include <atomic>

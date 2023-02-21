@@ -1,0 +1,80 @@
+{
+  "id": "7f0b4664-3312-4ef0-8711-eac2b8d7a4c6",
+  "type": "searchset",
+  "timestamp": "2022-01-03T16:46:39.388+00:00",
+  "resourceType": "Bundle",
+  "total": 1,
+  "entry": [
+    {
+      "fullUrl": "https://erp-test.zentral.erp.splitdns.ti-dienste.de/Communication/01eb7e8d-fd93-d6a8-c9e8-13878b19082d",
+      "resource": {
+        "resourceType": "Communication",
+        "meta": {
+          "profile": [
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2"
+          ]
+        },
+        "basedOn": [
+          {
+            "reference": "Task/160.000.000.024.896.59"
+          }
+        ],
+        "status": "unknown",
+        "recipient": [
+          {
+            "identifier": {
+              "system": "http://fhir.de/sid/gkv/kvid-10",
+              "value": "X764228533"
+            }
+          }
+        ],
+        "payload": [
+          {
+            "extension": [
+              {
+                "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType|1.2",
+                "extension": [
+                  {
+                    "url": "onPremise",
+                    "valueBoolean": true
+                  },
+                  {
+                    "url": "delivery",
+                    "valueBoolean": true
+                  },
+                  {
+                    "url": "shipment",
+                    "valueBoolean": true
+                  }
+                ]
+              }
+            ],
+            "contentString": "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Info + HR code + DMC\",\"pickUpCodeHR\": \"12344321\",\"pickUpCodeDMC\": \"0123456789abcdefggfedcba9876543210\",\"url\": \"https://www.google.com\"}"
+          }
+        ],
+        "sender": {
+          "identifier": {
+            "value": "3-SMC-B-Testkarte-883110000129068",
+            "system": "https://gematik.de/fhir/sid/telematik-id"
+          }
+        },
+        "sent": "2022-01-03T16:37:54.745+00:00",
+        "id": "01eb7e8d-fd93-d6a8-c9e8-13878b19082d",
+        "received": "2022-01-03T16:39:15.000+00:00"
+      },
+      "search": {
+        "mode": "match"
+      }
+    }
+  ],
+  "link": [
+    {
+      "relation": "next",
+      "url": "https://erp-test.zentral.erp.splitdns.ti-dienste.de/Communication?_count=50&__offset=50"
+    },
+    {
+      "relation": "self",
+      "url": "https://erp-test.zentral.erp.splitdns.ti-dienste.de/Communication"
+    }
+  ]
+}

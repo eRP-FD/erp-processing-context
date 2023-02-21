@@ -15,8 +15,10 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/model/ModelException.hxx"
 #include "erp/model/NumberAsStringParserDocument.hxx"
+#include "erp/model/ResourceNames.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Uuid.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test_config.h"
 
 class TaskTest : public testing::Test
@@ -40,38 +42,51 @@ public:
     static constexpr std::string_view p_kvnrSystem           = "/for/identifier/system";
     static constexpr std::string_view p_inputArray           = "/input";
     static constexpr std::string_view p_outputArray          = "/output";
+
+    static void checkCommonTaskFields(const model::Task& task)
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_status.data())), "draft");
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_taskId.data())), "");
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_prescriptionId.data())), "");
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_accessCode.data())), "access_code");
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerType.data())),"urn:oid:1.2.276.0.76.4.54");
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerTypeDisplay.data())), "Öffentliche Apotheke");
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerTypeText.data())), "Öffentliche Apotheke");
+        ASSERT_FALSE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_lastModified.data())).empty());
+        ASSERT_FALSE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_authoredOn.data())).empty());
+    }
 };
 
-TEST_F(TaskTest, ConstructNewTask)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(TaskTest, ConstructNewTask)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_status.data())), "draft");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_taskId.data())), "");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_prescriptionId.data())), "");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_accessCode.data())), "access_code");
+    ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode.data())), "160");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay.data())), "Muster 16 (Apothekenpflichtige Arzneimittel)");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerType.data())),"urn:oid:1.2.276.0.76.4.54");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerTypeDisplay.data())), "Öffentliche Apotheke");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerTypeText.data())), "Öffentliche Apotheke");
-    ASSERT_FALSE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_lastModified.data())).empty());
-    ASSERT_FALSE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_authoredOn.data())).empty());
 }
 
-TEST_F(TaskTest, ConstructNewPkvTask)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(TaskTest, ConstructNewTaskType169)
+{
+    model::Task task(model::PrescriptionType::direkteZuweisung, "access_code");
+    ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode.data())), "169");
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay.data())), "Muster 16 (Direkte Zuweisung)");
+}
+
+TEST_F(TaskTest, ConstructNewPkvTask)
 {
     model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "access_code");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_status.data())), "draft");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_taskId.data())), "");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_prescriptionId.data())), "");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_accessCode.data())), "access_code");
+    ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode.data())), "200");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay.data())), "PKV (Apothekenpflichtige Arzneimittel)");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerType.data())),"urn:oid:1.2.276.0.76.4.54");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerTypeDisplay.data())), "Öffentliche Apotheke");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerTypeText.data())), "Öffentliche Apotheke");
-    ASSERT_FALSE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_lastModified.data())).empty());
-    ASSERT_FALSE(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_authoredOn.data())).empty());
+}
+
+TEST_F(TaskTest, ConstructNewPkvTaskType209)
+{
+    model::Task task(model::PrescriptionType::direkteZuweisungPkv, "access_code");
+    ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode.data())), "209");
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay.data())), "PKV (Direkte Zuweisung)");
 }
 
 TEST_F(TaskTest, SetId)
@@ -128,13 +143,17 @@ TEST_F(TaskTest, SetStatus)//NOLINT(readability-function-cognitive-complexity)
 
 TEST_F(TaskTest, SetAndDeleteKvnr)//NOLINT(readability-function-cognitive-complexity)
 {
+    using namespace std::string_literals;
+    bool isDeprecated =
+        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     ASSERT_EQ(rapidjson::Pointer(p_kvnr.data()).Get(task.jsonDocument()), nullptr);
     ASSERT_FALSE(task.kvnr().has_value());
 
-    task.setKvnr("X123456789");
+    auto nsGkvKvid10Id = isDeprecated ? model::resource::naming_system::deprecated::gkvKvid10 : model::resource::naming_system::gkvKvid10;
+    task.setKvnr(model::Kvnr{"X123456789"s, model::Kvnr::Type::gkv});
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnr.data())), "X123456789");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnrSystem.data())), "http://fhir.de/NamingSystem/gkv/kvid-10");
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnrSystem.data())), nsGkvKvid10Id);
     ASSERT_EQ(task.kvnr(), "X123456789");
 
     task.deleteKvnr();
@@ -144,8 +163,10 @@ TEST_F(TaskTest, SetAndDeleteKvnr)//NOLINT(readability-function-cognitive-comple
 
 TEST_F(TaskTest, FromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto task1 = FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/task1.json");
-    ASSERT_NO_THROW(model::Task::fromJsonNoValidation(task1));
+    const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
+    const auto task1 = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .kvnr = "X123456789"});
+    ASSERT_NO_THROW((void)model::Task::fromJsonNoValidation(task1));
     const auto task = model::Task::fromJsonNoValidation(task1);
     ASSERT_EQ(task.status(), model::Task::Status::ready);
     const auto prescriptionId = task.prescriptionId();
@@ -250,10 +271,24 @@ TEST_F(TaskTest, AcceptDate3Months)
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "access_code");
-    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / August / 31});
     task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
     auto expected = model::Timestamp(
-        date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / July / 23}).get_sys_time());
+        date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / November / 30}).get_sys_time());
+    ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
+    A_19445_08.finish();
+}
+
+TEST_F(TaskTest, AcceptDate3MonthsType209)
+{
+    A_19445_08.test("Task.AcceptDate = <Date of QES Creation + 3 months");
+    using namespace date;
+    using namespace date::literals;
+    model::Task task(model::PrescriptionType::direkteZuweisungPkv, "access_code");
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / August / 31});
+    task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
+    auto expected = model::Timestamp(
+        date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / November / 30}).get_sys_time());
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
     A_19445_08.finish();
 }

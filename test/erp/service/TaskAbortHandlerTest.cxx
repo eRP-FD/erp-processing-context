@@ -127,7 +127,7 @@ void TaskAbortHandlerTest::checkResultingData(
 TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string insurant = InsurantF;
-    const std::string telematicId = mPharmacy;
+    const std::string telematicId = mPharmacy.id();
 
     // Create Task in database
     auto task = addTaskToDatabase({model::Task::Status::inprogress, insurant, telematicId});
@@ -136,13 +136,13 @@ TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-functio
     std::vector<Uuid> communicationIds;
     communicationIds.emplace_back( addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::DispReq,
-        {ActorRole::Insurant, std::string(task.kvnr().value())},
+        {ActorRole::Insurant, task.kvnr().value().id()},
         {ActorRole::Pharmacists, telematicId},
         std::string(task.accessCode()),
         DispReqMessage, model::Timestamp::now() }).id().value());
     communicationIds.emplace_back( addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::DispReq,
-        {ActorRole::Insurant, std::string(task.kvnr().value())},
+        {ActorRole::Insurant, task.kvnr().value().id()},
         {ActorRole::Pharmacists, telematicId},
         std::string(task.accessCode()),
         DispReqMessage, model::Timestamp::now() }).id().value());
@@ -168,7 +168,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-functio
 TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string insurant = InsurantF;
-    const std::string telematicId = mPharmacy;
+    const std::string telematicId = mPharmacy.id();
 
     // Create Task in database
     auto task = addTaskToDatabase({ model::Task::Status::ready, insurant, telematicId });
@@ -177,7 +177,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-funct
     std::vector<Uuid> communicationIds;
     communicationIds.emplace_back(addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, std::string(task.kvnr().value())},
+        {ActorRole::Insurant, task.kvnr().value().id()},
         {ActorRole::Pharmacists, telematicId},
         {},
         InfoReqMessage, model::Timestamp::now() }).id().value());
@@ -220,11 +220,11 @@ const model::AuditData& getAuditDataForTask(
 
 TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_organization)
 {
-    const std::string kvnr = InsurantF;
-    const std::string telematicId = mPharmacy;
+    const auto kvnr = model::Kvnr{InsurantF};
+    const std::string telematicId = mPharmacy.id();
 
     // Create Task in database
-    auto task = addTaskToDatabase({model::Task::Status::inprogress, kvnr, telematicId });
+    auto task = addTaskToDatabase({model::Task::Status::inprogress, kvnr.id(), telematicId });
 
     // Call /Task/<id>/$abort for user pharmacist
     const JWT jwtPharmacy = mJwtBuilder.makeJwtApotheke(telematicId);
@@ -249,11 +249,11 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_organization)
 
 TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string kvnr = InsurantE;
-    const std::string telematicId = mPharmacy;
+    const auto kvnr = model::Kvnr{InsurantE};
+    const std::string telematicId = mPharmacy.id();
 
     // Create Task in database
-    auto task = addTaskToDatabase({model::Task::Status::completed, kvnr, telematicId });
+    auto task = addTaskToDatabase({model::Task::Status::completed, kvnr.id(), telematicId });
 
     // Call /Task/<id>/$abort for user representative
     const JWT jwtRepresentative = mJwtBuilder.makeJwtVersicherter("X987654321");
@@ -283,11 +283,11 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)//NOLINT(re
 
 TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_person)
 {
-    const std::string kvnr = InsurantE;
-    const std::string telematicId = mPharmacy;
+    const auto kvnr = model::Kvnr{InsurantE};
+    const std::string telematicId = mPharmacy.id();
 
     // Create Task in database
-    auto task = addTaskToDatabase({model::Task::Status::completed, kvnr, telematicId });
+    auto task = addTaskToDatabase({model::Task::Status::completed, kvnr.id(), telematicId });
 
     // Call /Task/<id>/$abort for user insurant
     const JWT jwtInsurant = mJwtBuilder.makeJwtVersicherter(kvnr);

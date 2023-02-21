@@ -13,6 +13,7 @@ readargs()
 {
     erp_build_version=
     erp_release_version=
+    skip_build=no
     while [ $# -gt 0 ] ; do
         case "$1" in
             --build_version=*)
@@ -20,6 +21,9 @@ readargs()
                 ;;
             --release_version=*)
                 erp_release_version="${1#*=}"
+                ;;
+            --skip-build)
+                skip_build=yes
                 ;;
             *)
                 die "Unknown option: $1"
@@ -49,7 +53,6 @@ set -x
 conan user -r erp -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
 conan user -r conan-center-binaries -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
 conan profile new --detect default
-echo -e '[build_requires]\nautomake/1.16.5' >> ~/.conan/profiles/default
 set +x
 export CC=gcc-11
 export CXX=g++-11
@@ -62,7 +65,8 @@ cmake -GNinja \
       -DERP_CONAN_ARGS="-o with_sbom=True" \
       ..
 
-ninja -l$(nproc) clean
-
-"${BUILD_WRAPPER_HOME}/build-wrapper-linux-x86-64" --out-dir sonar-reports \
-        ninja -l$(nproc) test production fhirtools-test
+if [ "$skip_build" == "yes" ]; then
+    ninja generated_source
+else
+    ninja -l$(nproc) test production fhirtools-test
+fi

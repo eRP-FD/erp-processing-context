@@ -62,7 +62,7 @@ public:
     EnrolmentHelper (
         const HsmIdentity& identity,
         const std::string& certificateFilename = "",
-        const size_t _logLevel = 1);
+        const int32_t _logLevel = 1);
     ~EnrolmentHelper (void);
 
 
@@ -125,7 +125,7 @@ protected:
         const ErpBlob& nonce,
         const ErpBlob& trustedQuote);
 
-    const size_t logLevel;
+    const int32_t logLevel;
     const std::string mCertificateFilename;
     HsmRawSession mHsmSession;
 };

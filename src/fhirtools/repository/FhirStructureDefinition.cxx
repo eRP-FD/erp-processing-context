@@ -4,14 +4,14 @@
  */
 
 #include "FhirStructureDefinition.hxx"
-
-#include <boost/algorithm/string.hpp>
-#include <ranges>
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/FhirSlicing.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Constants.hxx"
+
+#include <boost/algorithm/string.hpp>
+#include <ranges>
 
 using namespace std::string_literals;
 using fhirtools::FhirStructureDefinition;
@@ -187,8 +187,8 @@ bool FhirStructureDefinition::isSystemType() const
             Fail("isSystemType is not defined for " + to_string(mKind));
     }
     using std::to_string;
-    FPFail2("Ivalid value for FhirStructureDefinition::Kind: " +
-                           to_string(static_cast<uintmax_t>(mKind)), std::logic_error);
+    FPFail2("Ivalid value for FhirStructureDefinition::Kind: " + to_string(static_cast<uintmax_t>(mKind)),
+            std::logic_error);
 }
 
 std::ostream& fhirtools::operator<<(std::ostream& out, FhirStructureDefinition::Kind kind)
@@ -196,15 +196,15 @@ std::ostream& fhirtools::operator<<(std::ostream& out, FhirStructureDefinition::
     return (out << to_string(kind));
 }
 
-std::shared_ptr<const fhirtools::FhirElement> FhirStructureDefinition::findElement(const std::string& elementId) const
+std::shared_ptr<const fhirtools::FhirElement> FhirStructureDefinition::findElement(std::string_view elementId) const
 {
     return std::get<std::shared_ptr<const FhirElement>>(findElementAndIndex(elementId));
 }
 
 std::tuple<std::shared_ptr<const fhirtools::FhirElement>, size_t>
-fhirtools::FhirStructureDefinition::findElementAndIndex(const std::string& elementId) const
+fhirtools::FhirStructureDefinition::findElementAndIndex(std::string_view elementId) const
 {
-    Expect(! elementId.empty(), "elementId may not be empty.");
+    Expect3(! elementId.empty(), "elementId must not be empty.", std::logic_error);
     size_t typeSize = mTypeId.size();
     size_t cmpStart = 0;
     if (elementId[0] != '.')
@@ -234,7 +234,8 @@ const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStr
     const FhirStructureDefinition* parent{};
     if (kind() == Kind::slice)
     {
-        parent = repo.findTypeById(typeId());
+        ProfiledElementTypeInfo pet{&repo, typeId()};
+        parent = repo.findTypeById(pet.element()->typeId());
         Expect3(parent != nullptr, "base type for slice '" + url() + "' not found: " + typeId(), std::logic_error);
     }
     else
@@ -266,6 +267,7 @@ bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepository& repo,
     return parentType(repo)->isDerivedFrom(repo, baseUrl);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 const FhirStructureDefinition* FhirStructureDefinition::baseType(const FhirStructureRepository& repo) const
 {
     if (derivation() != Derivation::constraint)
@@ -565,7 +567,11 @@ bool FhirStructureDefinition::Builder::ensureSliceBaseElement(const std::shared_
     }
     Expect(name.suffix.empty(), "Cannot synthesize base element for: " + sliceElement->originalName());
     LOG(WARNING) << "No unsliced element for: " << sliceElement->originalName() << " - synthesizing";
-    return addElementInternal(FhirElement::Builder{*sliceElement}.name(std::string{name.baseElement}).getAndReset(),
+    auto originalName = splitSlicedName(sliceElement->originalName());
+    return addElementInternal(FhirElement::Builder{*sliceElement}
+                                  .name(std::string{name.baseElement})
+                                  .originalName(std::string{originalName.baseElement})
+                                  .getAndReset(),
                               {sliceElement->typeId()});
 }
 

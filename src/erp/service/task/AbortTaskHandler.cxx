@@ -124,14 +124,22 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
     ErpExpect(taskStatus != model::Task::Status::draft, HttpStatus::Forbidden, "Abort not expected for newly created Task");
 
-    A_22102.start("insurant not allowed to delete incomplete tasks.");
-    if (prescriptionId.type() == model::PrescriptionType::direkteZuweisung &&
-        professionOIDClaim.value() == profession_oid::oid_versicherter)
+    A_22102_01.start("insurant not allowed to delete incomplete tasks for workflow types 169 and 209.");
+    if(professionOIDClaim.value() == profession_oid::oid_versicherter)
     {
-        ErpExpect(taskStatus == model::Task::Status::completed, HttpStatus::Forbidden,
-                  "Abort for patient in WF 169 only allowed for completed Task");
+        switch (task->type())
+        {
+            case model::PrescriptionType::apothekenpflichigeArzneimittel:
+            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+                break;
+            case model::PrescriptionType::direkteZuweisung:
+            case model::PrescriptionType::direkteZuweisungPkv:
+                ErpExpect(taskStatus == model::Task::Status::completed, HttpStatus::Forbidden,
+                          "Abort for patient in workflow types 169 / 209 only allowed for completed Task");
+                break;
+        }
     }
-    A_22102.finish();
+    A_22102_01.finish();
 
     checkAccessValidity(session.auditDataCollector(), *professionOIDClaim, *task, session.request);
 
@@ -142,7 +150,7 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     task->setStatus(model::Task::Status::cancelled);
     A_19121.finish();
 
-    A_19027.start("Delete personal data");
+    A_19027_02.start("Delete personal data");
     // Task.for (KVNR of patient)
     task->deleteKvnr();
     // Task.identifier (AccessCode)
@@ -154,20 +162,9 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     task->updateLastUpdate();
 
     // Update task in database and delete related HealthCareProviderPrescription, PatientConfirmation,
-    // Receipt, MedicationDispense and ChargeItem:
+    // Receipt, MedicationDispense:
     databaseHandle->updateTaskClearPersonalData(*task);
-    switch (task->prescriptionId().type())
-    {
-        case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            databaseHandle->deleteChargeInformation(task->prescriptionId());
-            break;
-        case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
-            [[fallthrough]];
-        case ::model::PrescriptionType::direkteZuweisung:
-        case ::model::PrescriptionType::direkteZuweisungPkv:
-            break;
-    }
-    A_19027.finish();
+    A_19027_02.finish();
 
     A_19514.start("HttpStatus 204 for successful POST");
     makeResponse(session, HttpStatus::NoContent, nullptr/*body*/);

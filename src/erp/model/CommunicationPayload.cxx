@@ -26,6 +26,9 @@ CommunicationPayload::CommunicationPayload(const rj::Value* payloadValue) :
 
         const auto& array = payloadValue->GetArray();
 
+        // see https://dth01.ibmgcloud.net/jira/browse/ERP-5092
+        ModelExpect(array.Size() == 1, "Must be exactly one payload item");
+
         for (const auto* object = array.Begin(); object != array.End(); ++object)
         {
             for (const auto& itemType : CommunicationPayloadItem::types())
@@ -42,13 +45,10 @@ CommunicationPayload::CommunicationPayload(const rj::Value* payloadValue) :
                             break;
                         }
                         case CommunicationPayloadItem::Type::Attachment:
-                        {
-                            mItems.push_back(std::make_unique<CommunicationPayloadItemAttachment>(CommunicationPayloadItemAttachment(itemValue)));
-                            break;
-                        }
                         case CommunicationPayloadItem::Type::Reference:
                         {
-                            mItems.push_back(std::make_unique<CommunicationPayloadItemReference>(CommunicationPayloadItemReference(itemValue)));
+                            // see https://dth01.ibmgcloud.net/jira/browse/ERP-5092
+                            ModelFail("Only payload type 'string' allowed");
                             break;
                         }
                         default:
@@ -67,42 +67,13 @@ void CommunicationPayload::verifyLength() const
 {
     size_t length = 0;
 
-    // see https://dth01.ibmgcloud.net/jira/browse/ERP-5092
-    ModelExpect(mItems.size() == 1, "Exactly one payload item of type contentString is allowed.");
+    Expect(mItems.size() == 1, "Exactly one payload item of type contentString is allowed.");
 
     for (const auto& item : mItems)
     {
-        ModelExpect(item->type() == CommunicationPayloadItem::Type::String, "Exactly one payload item of type contentString is allowed.");
+        Expect(item->type() == CommunicationPayloadItem::Type::String, "Exactly one payload item of type contentString is allowed.");
 
         length += item->length();
         ModelExpect(length <= maxPayloadSize, "Payload must not exceed " + std::to_string(maxPayloadSize/1000) + " KB.");
-    }
-}
-
-void CommunicationPayload::verifyUrls() const
-{
-    // see https://dth01.ibmgcloud.net/jira/browse/ERP-5092
-    ModelExpect(mItems.size() == 1, "Exactly one payload item of type contentString is allowed.");
-
-    // see https://dth01.ibmgcloud.net/jira/browse/ERP-5092
-    for (const auto& item : mItems)
-    {
-        ModelExpect(item->type() == CommunicationPayloadItem::Type::String, "Exactly one payload item of type contentString is allowed.");
-
-        item->verifyUrls();
-    }
-}
-
-void CommunicationPayload::verifyMimeTypes() const
-{
-    // see https://dth01.ibmgcloud.net/jira/browse/ERP-5092
-    ModelExpect(mItems.size() == 1, "Exactly one payload item of type contentString is allowed.");
-
-    // see https://dth01.ibmgcloud.net/jira/browse/ERP-5092
-    for (const auto& item : mItems)
-    {
-        ModelExpect(item->type() == CommunicationPayloadItem::Type::String, "Exactly one payload item of type contentString is allowed.");
-
-        item->verifyMimeType();
     }
 }

@@ -32,7 +32,31 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     A_19257.finish();
 
     A_19112.start("extract and check workFlowType parameter for the prescription type of the task");
-    auto prescriptionType = parameters.getPrescriptionType();
+    ErpExpect(parameters.count() == 1, HttpStatus::BadRequest, "unexpected number of parameters");
+    ErpExpect(parameters.hasParameter("workflowType"), HttpStatus::BadRequest, "workflowType Parameter not given");
+    bool supportedWorkflow = false;
+    ErpExpect(parameters.getWorkflowSystem().has_value(), HttpStatus::BadRequest, "missing workflow system");
+    for (const auto bundle : model::ResourceVersion::supportedBundles())
+    {
+        if ((bundle == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 &&
+             parameters.getWorkflowSystem().value() == model::resource::code_system::deprecated::flowType) ||
+            parameters.getWorkflowSystem().value() == model::resource::code_system::flowType)
+        {
+            supportedWorkflow = true;
+        }
+    }
+    ErpExpect(supportedWorkflow == true, HttpStatus::BadRequest, "unknown flowType system given" + std::string{parameters.getWorkflowSystem().value()});
+
+    auto prescriptionType = [&parameters] {
+        try
+        {
+            return parameters.getPrescriptionType();
+        }
+        catch (const model::ModelException& me)
+        {
+            ErpFailWithDiagnostics(HttpStatus::BadRequest, "error getting workFlowType from parameters", me.what());
+        }
+    }();
     ErpExpect(prescriptionType.has_value(), HttpStatus::BadRequest, "Invalid workFlowType in incoming parameters");
     A_19112.finish();
     checkFeatureWf200(*prescriptionType);

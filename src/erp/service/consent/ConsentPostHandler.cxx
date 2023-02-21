@@ -22,16 +22,17 @@ void ConsentPostHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     A_22351.start("FHIR validation of input Consent resource");
-    auto consent = parseAndValidateRequestBody<model::Consent>(session, SchemaType::Gem_erxConsent, std::nullopt);
+    auto consent = parseAndValidateRequestBody<model::Consent>(session, SchemaType::fhir, std::nullopt);
     A_22351.finish();
     ErpExpect(consent.isChargingConsent(), HttpStatus::BadRequest, "Invalid consent type");
 
     A_22289.start("Assure identical kvnr of access token and Consent patient identifier");
     const auto kvnrClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(kvnrClaim.has_value(), "JWT does not contain Kvnr");
+    const model::Kvnr kvnr{*kvnrClaim, model::Kvnr::Type::pkv};
     try
     {
-        ErpExpect(consent.patientKvnr() == kvnrClaim.value(), HttpStatus::Forbidden,
+        ErpExpect(consent.patientKvnr() == kvnr, HttpStatus::Forbidden,
                   "Kvnr mismatch between access token and Consent resource patient identifier");
     }
     catch(model::ModelException& exc)
@@ -61,8 +62,7 @@ void ConsentPostHandler::handleRequest (PcSessionContext& session)
     // Collect Audit data
     session.auditDataCollector()
         .setEventId(model::AuditEventId::POST_Consent)
-        .setInsurantKvnr(*kvnrClaim)
+        .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::create)
         .setConsentId(consent.id().value_or(""));
 }
-

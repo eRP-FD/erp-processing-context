@@ -13,6 +13,7 @@ namespace model
 {
 
 template<class TDerivedMedication, typename SchemaVersionType>
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class KbvMedicationBase : public Resource<TDerivedMedication, SchemaVersionType>
 {
 public:

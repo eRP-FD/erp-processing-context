@@ -71,9 +71,6 @@ public:
     [[nodiscard]] uint64_t countAllTasksForPatient(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
                                                    const std::optional<UrlArguments>& search) const;
 
-    void deleteChargeItemSupportingInformation(::pqxx::work& transaction, const ::model::PrescriptionId& id);
-    void clearAllChargeItemSupportingInformation(::pqxx::work& transaction, const ::db_model::HashedKvnr& kvnr) const;
-
     struct TaskQueryIndexes {
         pqxx::row::size_type prescriptionIdIndex = 0;
         pqxx::row::size_type kvnrIndex = 1;
@@ -97,9 +94,7 @@ private:
     std::string taskTableName() const;
 
     struct Queries {
-        QueryDefinition clearAllChargeItemSupportingInformation;
         QueryDefinition createTask;
-        QueryDefinition deleteChargeItemSupportingInformation;
         QueryDefinition updateTask;
         QueryDefinition updateTask_secret;
         QueryDefinition updateTask_medicationDispenseReceipt;

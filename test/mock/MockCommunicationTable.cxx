@@ -63,13 +63,14 @@ uint64_t MockCommunicationTable::countRepresentativeCommunications(const db_mode
 {
     std::shared_lock lock(mutex);
     using model::Communication;
-    return std::count_if(mCommunications.begin(), mCommunications.end(), [&](const auto& rowPair) {
-        const Row& row = rowPair.second;
-        return (Communication::MessageType::Representative == row.messageType) &&
-               (prescriptionId.toDatabaseId() == row.prescriptionId) && (row.sender != row.recipient) &&
-               ((insurantA == row.sender && insurantB == row.recipient) ||
-                (insurantA == row.recipient && insurantB == row.sender));
-    });
+    return static_cast<uint64_t>(
+        std::count_if(mCommunications.begin(), mCommunications.end(), [&](const auto& rowPair) {
+            const Row& row = rowPair.second;
+            return (Communication::MessageType::Representative == row.messageType) &&
+                   (prescriptionId.toDatabaseId() == row.prescriptionId) && (row.sender != row.recipient) &&
+                   ((insurantA == row.sender && insurantB == row.recipient) ||
+                    (insurantA == row.recipient && insurantB == row.sender));
+        }));
 }
 
 
@@ -231,6 +232,23 @@ void MockCommunicationTable::deleteChargeItemCommunicationsForKvnr(const db_mode
         {
             ++it;
         }
+    }
+}
+
+
+void MockCommunicationTable::deleteCommunicationsForChargeItem(const model::PrescriptionId& id)
+{
+    std::lock_guard lock(mutex);
+    for (auto it = mCommunications.begin(); it != mCommunications.end();)
+    {
+        if (it->second.prescriptionId == id.toDatabaseId() &&
+            (model::Communication::MessageType::ChargChangeReq == it->second.messageType ||
+             model::Communication::MessageType::ChargChangeReply == it->second.messageType))
+        {
+            it = mCommunications.erase(it);
+        }
+        else
+            it++;
     }
 }
 

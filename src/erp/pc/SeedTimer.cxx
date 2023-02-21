@@ -7,19 +7,18 @@
 #include "erp/util/TLog.hxx"
 
 
-SeedTimer::SeedTimer(ThreadPool& pool, HsmPool& hsmPool,
+SeedTimerHandler::SeedTimerHandler(ThreadPool& pool, HsmPool& hsmPool,
                      std::chrono::steady_clock::duration interval,
-                     SeedTimer::AddEntropyFunction addEntropy)
-    : PeriodicTimer(interval)
+                     SeedTimerHandler::AddEntropyFunction addEntropy)
+    : FixedIntervalHandler{interval}
     , mThreadPool(pool)
     , mSeeder(hsmPool)
     , mAddEntropy(std::move(addEntropy))
-    , mInterval(interval)
     , mLastUpdate(decltype(mLastUpdate)::value_type())
 {
 }
 
-void SeedTimer::seedThisThread()
+void SeedTimerHandler::seedThisThread()
 {
     try
     {
@@ -37,12 +36,13 @@ void SeedTimer::seedThisThread()
     }
 }
 
-void SeedTimer::timerHandler()
+void SeedTimerHandler::timerHandler()
 {
     refreshSeeds();
 }
 
-void SeedTimer::refreshSeeds()
+
+void SeedTimerHandler::refreshSeeds()
 {
     TVLOG(1) << "Refreshing random seeds.";
     mLastUpdate = std::chrono::system_clock::now();
@@ -50,14 +50,14 @@ void SeedTimer::refreshSeeds()
         [this]{seedThisThread();});
 }
 
-void SeedTimer::healthCheck() const
+void SeedTimerHandler::healthCheck() const
 {
     if (mLastUpdate.load() == decltype(mLastUpdate)::value_type())
     {
         Fail2("never updated", std::runtime_error);
     }
     const auto now = std::chrono::system_clock::now();
-    if (mLastUpdate.load() + mInterval * 1.5 < now)
+    if (mLastUpdate.load() + nextInterval().value() * 1.5 < now)
     {
         Fail2("last update is too old", std::runtime_error);
     }

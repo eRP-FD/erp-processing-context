@@ -32,20 +32,25 @@ class ProfiledElementTypeInfo
 {
 public:
     explicit ProfiledElementTypeInfo(const FhirStructureDefinition* profile);
-    explicit ProfiledElementTypeInfo(const FhirStructureDefinition* profile, std::shared_ptr<const FhirElement> element);
+    explicit ProfiledElementTypeInfo(const FhirStructureDefinition* profile,
+                                     std::shared_ptr<const FhirElement> element);
     explicit ProfiledElementTypeInfo(const FhirStructureRepository* repo, std::string_view elementId);
 
+    [[nodiscard]] std::optional<ProfiledElementTypeInfo> parentElement() const;
     [[nodiscard]] std::vector<ProfiledElementTypeInfo> subElements() const;
     [[nodiscard]] std::optional<ProfiledElementTypeInfo> subField(const std::string_view& name) const;
     [[nodiscard]] std::list<ProfiledElementTypeInfo> subDefinitions(const FhirStructureRepository&,
-                                                                  std::string_view name) const;
+                                                                    std::string_view name) const;
     void typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef);
 
     [[nodiscard]] const FhirStructureDefinition* profile() const;
     [[nodiscard]] const std::shared_ptr<const FhirElement>& element() const;
     [[nodiscard]] bool isResource() const;
     [[nodiscard]] std::list<std::string> expandedNames(std::string_view name) const;
-    [[nodiscard]] std::string_view elementPath() const;
+    [[nodiscard]] std::string_view elementPath(bool includeDot = false) const;
+
+    [[nodiscard]] std::optional<ProfiledElementTypeInfo>
+    typeInfoInParentStuctureDefinition(const FhirStructureRepository&) const;
 
     //NOLINTNEXTLINE(hicpp-use-nullptr,modernize-use-nullptr)
     auto operator<=>(const ProfiledElementTypeInfo&) const = default;

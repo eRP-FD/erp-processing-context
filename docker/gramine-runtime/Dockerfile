@@ -3,14 +3,17 @@
 # (C) Copyright IBM Corp. 2022
 #
 
-# Build a simple runtime environment based on ubuntu:focal with gramine-direct installed.
+# Build a simple runtime environment based on ubuntu:jammy with gramine-direct installed.
 # This environment will be used to run the erp-processing-context with gramine-direct.
 
-FROM ubuntu:focal AS runtime
+FROM ubuntu:jammy AS runtime
 
-RUN apt-get update --fix-missing \
-    && apt-get install -y software-properties-common gnupg \
-    && rm -rf /var/lib/apt/lists/*
+# binutils provides 'readelf' which is required for gramine-sgx-sign
+RUN apt-get update --fix-missing && \
+    apt-get install -y software-properties-common \
+    binutils \
+    gnupg && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY files/gramine-keyring.gpg /usr/share/keyrings
 

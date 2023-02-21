@@ -27,6 +27,7 @@ class ChargeItem;
 class Communication;
 class Consent;
 class ErxReceipt;
+class Kvnr;
 class MedicationDispense;
 class MedicationDispenseId;
 class PrescriptionId;
@@ -71,12 +72,12 @@ public:
 
     virtual std::string storeAuditEventData(model::AuditData& auditData) = 0;
     virtual std::vector<model::AuditData> retrieveAuditEventData(
-        const std::string& kvnr,
+        const model::Kvnr& kvnr,
         const std::optional<Uuid>& id,
         const std::optional<model::PrescriptionId>& prescriptionId,
         const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAuditEventData(
-        const std::string& kvnr,
+        const model::Kvnr& kvnr,
         const std::optional<UrlArguments>& search) = 0;
 
     virtual std::optional<model::Task> retrieveTaskForUpdate (const model::PrescriptionId& taskId) = 0;
@@ -87,15 +88,15 @@ public:
     virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
     [[nodiscard]] virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
     retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) = 0;
-    
-    virtual std::vector<model::Task> retrieveAllTasksForPatient (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
-    virtual uint64_t countAllTasksForPatient (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
+
+    virtual std::vector<model::Task> retrieveAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     // @return <medications, hasNextPage>
     [[nodiscard]] virtual std::tuple<std::vector<model::MedicationDispense>, bool>
-    retrieveAllMedicationDispenses(const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
+    retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     [[nodiscard]] virtual std::optional<model::MedicationDispense>
-    retrieveMedicationDispense(const std::string& kvnr, const model::MedicationDispenseId& id) = 0;
+    retrieveMedicationDispense(const model::Kvnr& kvnr, const model::MedicationDispenseId& id) = 0;
 
     virtual CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource = RandomSource::defaultSource()) = 0;
 
@@ -110,8 +111,8 @@ public:
      * Note that sender and recipient can be interchanged, i.e. direction of the communication is ignored.
      */
     virtual uint64_t countRepresentativeCommunications(
-        const std::string& insurantA,
-        const std::string& insurantB,
+        const model::Kvnr& insurantA,
+        const model::Kvnr& insurantB,
         const model::PrescriptionId& prescriptionId) = 0;
     /**
       * Checks whether a communication object with the given `communicationId` exists in the database.
@@ -154,14 +155,14 @@ public:
         const std::string& recipient) = 0;
 
     virtual void storeConsent(const model::Consent& consent) = 0;
-    virtual std::optional<model::Consent> retrieveConsent(const std::string_view& kvnr) = 0;
-    [[nodiscard]] virtual bool clearConsent(const std::string_view& kvnr) = 0;
+    virtual std::optional<model::Consent> retrieveConsent(const model::Kvnr& kvnr) = 0;
+    [[nodiscard]] virtual bool clearConsent(const model::Kvnr& kvnr) = 0;
 
     virtual void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) = 0;
     virtual void updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt) = 0;
 
     [[nodiscard]] virtual ::std::vector<::model::ChargeItem>
-    retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
+    retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
                                       const std::optional<UrlArguments>& search) const = 0;
 
     [[nodiscard]] virtual ::model::ChargeInformation
@@ -170,9 +171,10 @@ public:
     retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const = 0;
 
     virtual void deleteChargeInformation(const model::PrescriptionId& id) = 0;
-    virtual void clearAllChargeInformation(const std::string_view& kvnr) = 0;
-    virtual void clearAllChargeItemCommunications(const std::string_view& kvnr) = 0;
-    virtual uint64_t countChargeInformationForInsurant (const std::string& kvnr, const std::optional<UrlArguments>& search) = 0;
+    virtual void clearAllChargeInformation(const model::Kvnr& kvnr) = 0;
+    virtual void clearAllChargeItemCommunications(const model::Kvnr& kvnr) = 0;
+    virtual void deleteCommunicationsForChargeItem(const model::PrescriptionId& id) = 0;
+    virtual uint64_t countChargeInformationForInsurant (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     virtual DatabaseBackend& getBackend() = 0;
 };

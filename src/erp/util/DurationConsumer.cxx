@@ -93,10 +93,8 @@ void DurationConsumer::initialize (
 }
 
 
-void DurationConsumer::reset (void)
+void DurationConsumer::reset (void) noexcept
 {
-    Expect(mIsInitialized, "not initialized");
-
     mIsInitialized = false;
     mSessionIdentifier = std::nullopt;
     mReceiver = {};

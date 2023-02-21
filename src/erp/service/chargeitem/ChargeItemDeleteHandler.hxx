@@ -6,10 +6,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEMDELETEHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_CHARGEITEMDELETEHANDLER_HXX
 
-#include "erp/service/ErpRequestHandler.hxx"
+#include "erp/service/chargeitem/ChargeItemHandlerBase.hxx"
 
 
-class ChargeItemDeleteHandler: public ErpRequestHandler
+class ChargeItemDeleteHandler: public ChargeItemHandlerBase
 {
 public:
     ChargeItemDeleteHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);

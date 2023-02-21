@@ -80,7 +80,7 @@ namespace
                 (recipient = $1 OR sender = $1))--")
 
     QUERY(retrieveCommunicationIdsStatement,   "SELECT id FROM erp.communication WHERE recipient = $1")
-    QUERY(deleteCommunicationStatement,        "DELETE FROM erp.communication WHERE id = $1::uuid AND sender = $2"
+    QUERY(deleteCommunicationStatement,        "DELETE FROM erp.communication WHERE id = $1::uuid AND sender = $2 "
                                                "RETURNING id, EXTRACT(EPOCH FROM received)")
     QUERY(updateCommunicationsRetrievedStatement, R"--(
         UPDATE erp.communication
@@ -92,7 +92,17 @@ namespace
         )--")
     QUERY(deleteCommunicationsForTaskStatement,  "DELETE FROM erp.communication WHERE prescription_id = $1 AND prescription_type = $2")
 
-    QUERY(deleteChargeItemCommunicationsForKvnrStatement,  "DELETE FROM erp.communication WHERE (sender = $1 OR recipient = $1) AND (message_type = $2 OR message_type = $3)")
+// GEMREQ-start A_22157#query-deleteChargeItemCommunicationsForKvnrStatement
+    QUERY(deleteChargeItemCommunicationsForKvnrStatement,
+          "DELETE FROM erp.communication WHERE (sender = $1 OR recipient = $1) "
+          "AND (message_type = $2 OR message_type = $3)")
+// GEMREQ-end A_22157#query-deleteChargeItemCommunicationsForKvnrStatement
+
+// GEMREQ-start A_22117-01#query-deleteCommunicationsForChargeItemStatement
+    QUERY(deleteCommunicationsForChargeItemStatement,
+          "DELETE FROM erp.communication WHERE prescription_id = $1 AND prescription_type = $2 "
+          "AND (message_type = $3 OR message_type = $4)")
+// GEMREQ-end A_22117-01#query-deleteCommunicationsForChargeItemStatement
 
     QUERY(insertAuditEventData,
           "INSERT INTO erp.auditevent (id, kvnr_hashed, event_id, action, agent_type, observer, prescription_id, prescription_type, metadata, blob_id) "
@@ -138,9 +148,11 @@ namespace
         SELECT EXTRACT(EPOCH FROM date_time) FROM erp.consent WHERE kvnr_hashed = $1
     )--")
 
+// GEMREQ-start A_22158#query
     QUERY(clearConsent, R"--(
         DELETE FROM erp.consent WHERE kvnr_hashed = $1
     )--")
+// GEMREQ-end A_22158#query
 
 #undef QUERY
 
@@ -324,7 +336,8 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
         Expect(not res.at(2).is_null(), "medication_dispense_blob_id is null.");
         Expect(not res.at(3).is_null(), "salt is null.");
         Expect(not res.at(4).is_null(), "prescription_type is null.");
-        const auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(res.at(4).as<int16_t>());
+        const auto prescription_type_opt =
+            magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(4).as<int16_t>()));
         Expect(prescription_type_opt.has_value(), "could not cast to prescription_type");
         auto id = model::PrescriptionId::fromDatabaseId(prescription_type_opt.value(), res[0].as<int64_t>());
         resultSet.emplace_back(id, db_model::EncryptedBlob{res[1].as<db_model::postgres_bytea>()},
@@ -539,7 +552,8 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
         std::optional<model::PrescriptionId> prescriptionIdRes;
         if (! res.at(6).is_null() && ! res.at(7).is_null())
         {
-            const auto prescriptionType = magic_enum::enum_cast<model::PrescriptionType>(res.at(7).as<int16_t>());
+            const auto prescriptionType =
+                magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(7).as<int16_t>()));
             Expect(prescriptionType.has_value(), "PrescriptionType could not be retrieved from audit entry");
             prescriptionIdRes.emplace(
                 model::PrescriptionId::fromDatabaseId(*prescriptionType, res.at(6).as<std::int64_t>()));
@@ -633,7 +647,8 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
     {
         Expect(res.size() == 10, "Invalid number of fields in result row: " + std::to_string(res.size()));
         Expect(!res.at(9).is_null(), "prescription_type is null");
-        auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(res.at(9).as<int16_t>());
+        auto prescription_type_opt =
+            magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(9).as<int16_t>()));
         Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
         resultSet.emplace_back(PostgresBackendTask::taskFromQueryResultRow(res, indexes, prescription_type_opt.value()));
     }
@@ -931,11 +946,13 @@ std::optional<model::Timestamp> PostgresBackend::retrieveConsentDateTime(const d
     return model::Timestamp{result.front().front().as<double>()};
 }
 
+// GEMREQ-start A_22158#query-call
 bool PostgresBackend::clearConsent(const db_model::HashedKvnr& kvnr)
 {
     auto result = mTransaction->exec_params0(::clearConsent.query, kvnr.binarystring());
     return result.affected_rows() > 0;
 }
+// GEMREQ-end A_22158#query-call
 
 void PostgresBackend::storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr)
 {
@@ -950,6 +967,7 @@ void PostgresBackend::updateChargeInformation(const ::db_model::ChargeItem& char
     mBackendChargeItem.updateChargeInformation(*mTransaction, chargeItem);
 }
 
+// GEMREQ-start A_22119#query-call
 ::std::vector<db_model::ChargeItem>
 PostgresBackend::retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvnr& kvnr,
                                                    const ::std::optional<UrlArguments>& search) const
@@ -957,6 +975,7 @@ PostgresBackend::retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvnr&
     checkCommonPreconditions();
     return mBackendChargeItem.retrieveAllChargeItemsForInsurant(*mTransaction, kvnr, search);
 }
+// GEMREQ-end A_22119#query-call
 
 ::db_model::ChargeItem PostgresBackend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
@@ -972,22 +991,24 @@ PostgresBackend::retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvnr&
     return mBackendChargeItem.retrieveChargeInformationForUpdate(*mTransaction, id);
 }
 
+// GEMREQ-start A_22117-01#query-call-deleteChargeInformation
 void PostgresBackend::deleteChargeInformation(const model::PrescriptionId& id)
 {
     checkCommonPreconditions();
     Expect(id.isPkv(), "Attempt to delete charge information for non-PKV Prescription.");
     mBackendChargeItem.deleteChargeInformation(*mTransaction, id);
-    getTaskBackend(id.type()).deleteChargeItemSupportingInformation(*mTransaction, id);
 }
+// GEMREQ-end A_22117-01#query-call-deleteChargeInformation
 
+// GEMREQ-start A_22157#query-call-clearAllChargeInformation
 void PostgresBackend::clearAllChargeInformation(const db_model::HashedKvnr& kvnr)
 {
     checkCommonPreconditions();
     mBackendChargeItem.clearAllChargeInformation(*mTransaction, kvnr);
-    mBackendTask200.clearAllChargeItemSupportingInformation(*mTransaction, kvnr);
-    mBackendTask209.clearAllChargeItemSupportingInformation(*mTransaction, kvnr);
 }
+// GEMREQ-end A_22157#query-call-clearAllChargeInformation
 
+// GEMREQ-start A_22157#query-call-clearAllChargeItemCommunications
 void PostgresBackend::clearAllChargeItemCommunications(const db_model::HashedKvnr& kvnr)
 {
     checkCommonPreconditions();
@@ -1003,6 +1024,25 @@ void PostgresBackend::clearAllChargeItemCommunications(const db_model::HashedKvn
 
     TVLOG(2) << "deleted " << result.size() << " results";
 }
+// GEMREQ-end A_22157#query-call-clearAllChargeItemCommunications
+
+// GEMREQ-start A_22117-01#query-call-deleteCommunicationsForChargeItem
+void PostgresBackend::deleteCommunicationsForChargeItem(const model::PrescriptionId& taskId)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << ::deleteCommunicationsForChargeItemStatement.query;
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryPostgres, "PostgreSQL:deleteCommunicationsForChargeItem");
+
+    const auto result = mTransaction->exec_params(
+        deleteCommunicationsForChargeItemStatement.query, taskId.toDatabaseId(),
+        static_cast<int>(magic_enum::enum_integer(taskId.type())),
+        static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReq)),
+        static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReply)));
+    
+    TVLOG(2) << "deleted " << result.size() << " results";
+}
+// GEMREQ-end A_22117-01#query-call-deleteCommunicationsForChargeItem
 
 uint64_t PostgresBackend::countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
                                                             const std::optional<UrlArguments>& search)

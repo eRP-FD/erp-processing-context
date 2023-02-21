@@ -10,6 +10,8 @@
 #include "erp/model/Parameters.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/model/TelematikId.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/ActivateTaskHandler.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
@@ -75,7 +77,7 @@ protected:
     */
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void insertTasks(
-        const std::vector<std::tuple<std::string, std::string, std::optional<Timestamp>>>& patientsPharmaciesMedicationWhenPrepared,
+        const std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<Timestamp>>>& patientsPharmaciesMedicationWhenPrepared,
         std::set<std::string>& patients,
         std::set<std::string>& pharmacies,
         std::map<std::string, Task>& tasksByPrescriptionIds,
@@ -84,19 +86,17 @@ protected:
         std::map<std::string, std::vector<std::string>>& prescriptionIdsByPharmacies,
         std::map<std::string, std::string>& medicationDispensesInputXmlStrings)
     {
-        int idxTask = 0;
-
         for (const auto& patientAndPharmacy : patientsPharmaciesMedicationWhenPrepared)
         {
-            std::string kvnrPatient = std::get<0>(patientAndPharmacy);
-            std::string pharmacy = std::get<1>(patientAndPharmacy);
+            auto kvnrPatient = std::get<0>(patientAndPharmacy);
+            auto pharmacy = std::get<1>(patientAndPharmacy);
             std::optional<Timestamp> whenPrepared = std::get<2>(patientAndPharmacy);
 
             Task task = createTask();
-            activateTask(task, std::string(kvnrPatient));
+            activateTask(task, kvnrPatient.id());
             acceptTask(task);
 
-            auto medicationDispenses = closeTask(task, pharmacy, whenPrepared, GetParam());
+            auto medicationDispenses = closeTask(task, pharmacy.id(), whenPrepared, GetParam());
 
             PrescriptionId prescriptionId = task.prescriptionId();
             ASSERT_EQ(medicationDispenses.size(), GetParam());
@@ -104,10 +104,10 @@ protected:
             PrescriptionId medicationDispenseId = medicationDispenses[0].prescriptionId();
             ASSERT_EQ(medicationDispenseId, prescriptionId);
 
-            std::string_view medicationDispenseKvnr = medicationDispenses[0].kvnr();
+            auto medicationDispenseKvnr = medicationDispenses[0].kvnr();
             ASSERT_EQ(medicationDispenseKvnr, kvnrPatient);
 
-            std::string_view medicationDispenseTelematicId = medicationDispenses[0].telematikId();
+            auto medicationDispenseTelematicId = medicationDispenses[0].telematikId();
             ASSERT_EQ(medicationDispenseTelematicId, pharmacy);
 
             std::chrono::system_clock::time_point handedOver = medicationDispenses[0].whenHandedOver().toChronoTimePoint();
@@ -124,32 +124,30 @@ protected:
                     std::make_pair(model::MedicationDispenseId(prescriptionId, i).toString(), xmlString));
             }
 
-            patients.insert(kvnrPatient);
-            pharmacies.insert(pharmacy);
+            patients.insert(kvnrPatient.id());
+            pharmacies.insert(pharmacy.id());
 
             tasksByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(task)));
             medicationDispensesByPrescriptionIds.insert(std::make_pair(prescriptionId.toString(), std::move(medicationDispenses)));
 
-            if (prescriptionIdsByPatients.find(kvnrPatient) == prescriptionIdsByPatients.end())
+            if (prescriptionIdsByPatients.find(kvnrPatient.id()) == prescriptionIdsByPatients.end())
             {
-                prescriptionIdsByPatients.insert(std::make_pair(kvnrPatient, std::vector<std::string>()));
+                prescriptionIdsByPatients.insert(std::make_pair(kvnrPatient.id(), std::vector<std::string>()));
             }
-            prescriptionIdsByPatients[kvnrPatient].push_back(prescriptionId.toString());
+            prescriptionIdsByPatients[kvnrPatient.id()].push_back(prescriptionId.toString());
 
-            if (prescriptionIdsByPharmacies.find(pharmacy) == prescriptionIdsByPharmacies.end())
+            if (prescriptionIdsByPharmacies.find(pharmacy.id()) == prescriptionIdsByPharmacies.end())
             {
-                prescriptionIdsByPharmacies.insert(std::make_pair(pharmacy, std::vector<std::string>()));
+                prescriptionIdsByPharmacies.insert(std::make_pair(pharmacy.id(), std::vector<std::string>()));
             }
-            prescriptionIdsByPharmacies[pharmacy].push_back(prescriptionId.toString());
-
-            ++idxTask;
+            prescriptionIdsByPharmacies[pharmacy.id()].push_back(prescriptionId.toString());
         }
     }
 
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void sendRequest(
         HttpsClient& client,
-        const std::string& kvnrPatient,
+        const model::Kvnr& kvnrPatient,
         std::optional<std::string> prescriptionId,
         std::vector<MedicationDispense>& medicationDispensesResponse,
         std::optional<std::vector<std::string>>&& filters = {},
@@ -215,7 +213,7 @@ protected:
 
         // Please note that each call to "makeJwtVersicherter" creates a jwt with a different signature.
         // The jwt in the header must be the same as in the access token.
-        JWT jwt = mJwtBuilder.makeJwtVersicherter(kvnrPatient);
+        JWT jwt = mJwtBuilder.makeJwtVersicherter(kvnrPatient.id());
 
         // Create the inner request
         ClientRequest request(createGetHeader(path, jwt), "");
@@ -256,7 +254,6 @@ protected:
         std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
         const std::vector<MedicationDispense>& medicationDispenses)
     {
-        int idxResource = 0;
         for (const auto& medicationDispense : medicationDispenses)
         {
             std::string medicationDispenseResponseXmlString = medicationDispense.serializeToXmlString();
@@ -267,7 +264,6 @@ protected:
             {
                 EXPECT_EQ(medicationDispenseResponseXmlString, dispenseInput->second);
             }
-            ++idxResource;
         }
     }
 };
@@ -277,10 +273,10 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
     // Insert task into database
     //--------------------------
 
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+    auto kvnrPatient = model::Kvnr{InsurantA};
+    auto pharmacy = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -314,10 +310,10 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
     // Insert task into database
     //--------------------------
 
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+    auto kvnrPatient = model::Kvnr{InsurantA};
+    auto pharmacy = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, Timestamp::now()}
     };
 
@@ -431,7 +427,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
     }
 
     {
-        std::vector<std::string> filters = { "performer=" + pharmacy };
+        std::vector<std::string> filters = { "performer=" + pharmacy.id() };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
         EXPECT_EQ(medicationDispenses.size(), GetParam());
@@ -451,7 +447,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = {
-            "performer=" + pharmacy,
+            "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
             "whenprepared=gt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
@@ -467,15 +463,15 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    auto pharmacyA = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
+    auto pharmacyB = model::TelematikId{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, std::nullopt}
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}
     };
 
     std::set<std::string> patients;
@@ -501,7 +497,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
     {
         std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses);
+        sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses);
         EXPECT_EQ(medicationDispenses.size(), prescriptionIds.size() * GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
@@ -512,15 +508,15 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, Timestamp::now()},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, Timestamp::now()},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, Timestamp::now()}
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, Timestamp::now()},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, Timestamp::now()},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, Timestamp::now()}
     };
 
     std::set<std::string> patients;
@@ -543,7 +539,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     auto client = createClient();
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
@@ -555,7 +551,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
@@ -566,7 +562,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
@@ -578,7 +574,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
@@ -589,9 +585,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantA;
-        const std::string& pharmacy = pharmacyA;
-        std::vector<std::string> filters = { "performer=" + pharmacy };
+        model::Kvnr kvnrPatient{InsurantA};
+        const auto& pharmacy = pharmacyA;
+        std::vector<std::string> filters = { "performer=" + pharmacy.id() };
         size_t expectedCount = 2 * GetParam();
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -600,9 +596,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantC;
-        const std::string& pharmacy = pharmacyA;
-        std::vector<std::string> filters = { "performer=" + pharmacy };
+        model::Kvnr kvnrPatient{InsurantC};
+        const auto& pharmacy = pharmacyA;
+        std::vector<std::string> filters = { "performer=" + pharmacy.id() };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -610,9 +606,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantA;
-        const std::string& pharmacy = pharmacyB;
-        std::vector<std::string> filters = { "performer=" + pharmacy };
+        model::Kvnr kvnrPatient{InsurantA};
+        const auto& pharmacy = pharmacyB;
+        std::vector<std::string> filters = { "performer=" + pharmacy.id() };
         size_t expectedCount = GetParam();
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -621,14 +617,14 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantA;
-        const std::string& pharmacy = pharmacyA;
+        model::Kvnr kvnrPatient{InsurantA};
+        const auto& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = {
-            "performer=" + pharmacy,
+            "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = GetParam();
@@ -639,7 +635,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     }
 
     {
-        std::string kvnrPatient = InsurantA;
+        model::Kvnr kvnrPatient{InsurantA};
         std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
@@ -661,34 +657,34 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared;
 
     for (size_t idxPatient = 0; idxPatient < 70; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyA, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantA}, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 10; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantA, pharmacyB, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantA}, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 15; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyA, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantB}, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 55; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantB, pharmacyB, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantB}, pharmacyB, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyA, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantC}, pharmacyA, Timestamp::now());
     }
     for (size_t idxPatient = 0; idxPatient < 5; ++idxPatient)
     {
-        patientsPharmaciesMedicationWhenPrepared.emplace_back(InsurantC, pharmacyB, Timestamp::now());
+        patientsPharmaciesMedicationWhenPrepared.emplace_back(model::Kvnr{InsurantC}, pharmacyB, Timestamp::now());
     }
 
     std::set<std::string> patients;
@@ -712,7 +708,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
 
     {
         std::string kvnrPatient = InsurantA;
-        const std::string& pharmacy = pharmacyA;
+        const std::string& pharmacy = pharmacyA.id();
 
         size_t expectedCountAll = 0;
 
@@ -749,7 +745,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
                 paging = {50, receivedCount/GetParam()};
             }
             std::vector<MedicationDispense> medicationDispenses;
-            sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters), std::move(sortings), std::move(paging));
+            sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses, std::move(filters), std::move(sortings), std::move(paging));
             // ASSERT to avoid endless loop if less than expected count is returned.
             ASSERT_EQ(medicationDispenses.size(), expectedCount);
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -770,36 +766,36 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
     for (const std::string& kvnrPatient : patients)
     {
         // whenhandedover is in the future
-        const std::string& pharmacy = pharmacyA;
+        const model::TelematikId& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = {
-            "performer=" + pharmacy,
+            "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses, std::move(filters));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
     for (const std::string& kvnrPatient : patients)
     {
         // whenprepared is in the future
-        const std::string& pharmacy = pharmacyA;
+        const model::TelematikId& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
         std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
         std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
         std::vector<std::string> filters = {
-            "performer=" + pharmacy,
+            "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses, std::move(filters));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -816,7 +812,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
+        sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses, std::move(filters));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 }
@@ -826,10 +822,10 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetById)
     // Insert task into database
     //--------------------------
 
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+    model::Kvnr kvnrPatient{InsurantA};
+    model::TelematikId pharmacy{"3-SMC-B-Testkarte-883110000120312"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -852,7 +848,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetById)
     // Create a client
     auto client = createClient();
 
-    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
+    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient.id())->second;
 
     for (const std::string& prescriptionId : prescriptionIds)
     {
@@ -872,15 +868,15 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, std::nullopt}
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}
     };
 
     std::set<std::string> patients;
@@ -912,7 +908,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
             {
                 model::MedicationDispenseId medicationId(model::PrescriptionId::fromString(prescriptionId), i);
                 std::vector<MedicationDispense> medicationDispenses;
-                sendRequest(client, kvnrPatient, medicationId.toString(), medicationDispenses);
+                sendRequest(client, model::Kvnr{kvnrPatient}, medicationId.toString(), medicationDispenses);
                 EXPECT_EQ(medicationDispenses.size(), 1);
                 checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
             }
@@ -924,10 +920,10 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskFilterById)
 {
     A_22070.test("One Task, Multiple Medication Dispenses");
     // ?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
-    std::string kvnrPatient = InsurantA;
-    std::string pharmacy = "3-SMC-B-Testkarte-883110000120312";
+    model::Kvnr kvnrPatient{InsurantA};
+    model::TelematikId pharmacy{"3-SMC-B-Testkarte-883110000120312"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
         {kvnrPatient, pharmacy, std::nullopt}
     };
 
@@ -945,7 +941,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskFilterById)
                 medicationDispensesInputXmlStrings);
 
     auto client = createClient();
-    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
+    std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient.id())->second;
     for (const std::string& prescriptionId : prescriptionIds)
     {
         std::vector<model::MedicationDispense> medicationDispenses;
@@ -961,15 +957,15 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
     // Insert tasks into database
     //---------------------------
 
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyB, std::nullopt},
-        {InsurantB, pharmacyA, std::nullopt},
-        {InsurantA, pharmacyA, std::nullopt},
-        {InsurantC, pharmacyB, std::nullopt}
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}
     };
 
     std::set<std::string> patients;
@@ -991,9 +987,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
     // Create a client
     auto client = createClient();
 
-    std::string kvnrPatient = InsurantA;
+    model::Kvnr kvnrPatient{InsurantA};
     PrescriptionId prescriptionId = PrescriptionId::fromString("160.000.000.004.711.86");
-    std::vector<std::string> filters = { "performer=" + pharmacyA };
+    std::vector<std::string> filters = { "performer=" + pharmacyA.id() };
     std::vector<MedicationDispense> medicationDispenses;
     sendRequest(client, kvnrPatient, prescriptionId.toString(), medicationDispenses,
                 std::move(filters), {}, {}, HttpStatus::NotFound);
@@ -1003,15 +999,15 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
 TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
 {
     A_22070.test("Several Tasks, Multiple Medication Dispenses");
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>
-        patientsPharmaciesMedicationWhenPrepared = {{InsurantA, pharmacyA, std::nullopt},
-                                                    {InsurantA, pharmacyB, std::nullopt},
-                                                    {InsurantB, pharmacyA, std::nullopt},
-                                                    {InsurantA, pharmacyA, std::nullopt},
-                                                    {InsurantC, pharmacyB, std::nullopt}};
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>>
+        patientsPharmaciesMedicationWhenPrepared = {{model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+                                                    {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+                                                    {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+                                                    {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+                                                    {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}};
 
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
@@ -1034,7 +1030,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
         for (const std::string& prescriptionId : prescriptionIds)
         {
             std::vector<MedicationDispense> medicationDispenses;
-            sendRequest(client, kvnrPatient, {}, medicationDispenses,
+            sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses,
                         {{"identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}});
             EXPECT_EQ(medicationDispenses.size(), GetParam());
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
@@ -1045,15 +1041,15 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
 TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterByIdUnknownId)
 {
     A_22070.test("One Task, Multiple Medication Dispenses, invalid PrescrptionID");
-    std::string pharmacyA = "3-SMC-B-Testkarte-883110000120312";
-    std::string pharmacyB = "3-SMC-B-Testkarte-883110000120313";
+    model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
+    model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
-    std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>>
-        patientsPharmaciesMedicationWhenPrepared = {{InsurantA, pharmacyA, std::nullopt},
-                                                    {InsurantA, pharmacyB, std::nullopt},
-                                                    {InsurantB, pharmacyA, std::nullopt},
-                                                    {InsurantA, pharmacyA, std::nullopt},
-                                                    {InsurantC, pharmacyB, std::nullopt}};
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>>
+        patientsPharmaciesMedicationWhenPrepared = {{model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+                                                    {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+                                                    {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+                                                    {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+                                                    {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}};
 
     std::set<std::string> patients;
     std::set<std::string> pharmacies;
@@ -1069,7 +1065,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterByIdUnknownId)
 
     auto client = createClient();
 
-    std::string kvnrPatient = InsurantA;
+    model::Kvnr kvnrPatient{InsurantA};
     PrescriptionId prescriptionId = PrescriptionId::fromString("160.000.000.004.711.86");
 
     std::vector<MedicationDispense> medicationDispenses;

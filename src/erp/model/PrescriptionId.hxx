@@ -14,6 +14,14 @@
 namespace model
 {
 
+// the prescriptionID -> UUID derivation
+static constexpr uint8_t uuidFeaturePrescription = 1;
+static constexpr uint8_t uuidFeatureConfirmation = 2;
+static constexpr uint8_t uuidFeatureReceipt = 3;
+static constexpr uint8_t uuidFeatureDispenseItem = 4;
+
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class PrescriptionId
 {
 public:
@@ -22,6 +30,9 @@ public:
 
     // initialize from string representation, i.e. from aaa.bbb.bbb.bbb.bbb.cc
     static PrescriptionId fromString (std::string_view prescriptionId);
+
+    // initialize from string representation, i.e. from aaa.bbb.bbb.bbb.bbb.cc, but does not perform a validation
+    static PrescriptionId fromStringNoValidation (std::string_view prescriptionId);
 
     // returns the Database ID representation for the Prescription ID
     // e.g. for 160.000.000.003.123.76 it returns 3123

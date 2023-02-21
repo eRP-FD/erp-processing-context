@@ -52,7 +52,7 @@ namespace {
     {
         auto field = fields.find(Header::ContentLength);
         if (field != fields.end())
-            return stoi(std::string(field->second));
+            return std::stoull(std::string(field->second));
         else
             return 0;
     }
@@ -74,7 +74,7 @@ Header::Header (HttpStatus statusCode)
 Header::Header(
     HttpMethod method,
     std::string&& target,
-    int version,
+    unsigned int version,
     keyValueMap_t&& header,
     HttpStatus statusCode)
     : mMethod(method),
@@ -115,13 +115,13 @@ void Header::setTarget (const std::string& target)
 }
 
 
-int Header::version (void) const
+unsigned int Header::version (void) const
 {
     return mVersion;
 }
 
 
-void Header::setVersion (const int version)
+void Header::setVersion (const unsigned int version)
 {
     mVersion = version;
 }

@@ -4,6 +4,7 @@
  */
 
 #include "erp/tsl/OcspHelper.hxx"
+#include "erp/util/Configuration.hxx"
 #include "fhirtools/util/Gsl.hxx"
 
 
@@ -109,4 +110,21 @@ OcspResponsePtr OcspHelper::stringToOcspResponse(const std::string& responseStri
     }
     const unsigned char* buffer = reinterpret_cast<const unsigned char*>(responseString.data());
     return OcspResponsePtr(d2i_OCSP_RESPONSE(nullptr, &buffer, gsl::narrow_cast<int>(responseString.size())));
+}
+
+
+std::chrono::system_clock::duration OcspHelper::getOcspGracePeriod(TslMode tslMode)
+{
+    if (tslMode == TslMode::TSL)
+    {
+        return std::chrono::seconds(
+            Configuration::instance().getOptionalIntValue(ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD,
+                                                          OcspHelper::DEFAULT_OCSP_NON_QES_GRACE_PERIOD_SECONDS));
+    }
+    else
+    {
+        return std::chrono::seconds(
+            Configuration::instance().getOptionalIntValue(ConfigurationKey::OCSP_QES_GRACE_PERIOD,
+                                                          OcspHelper::DEFAULT_OCSP_QES_GRACE_PERIOD_SECONDS));
+    }
 }

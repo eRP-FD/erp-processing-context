@@ -83,6 +83,24 @@ TEST_F(InnerTeeRequestTest, create_failForMissingHeaderEnd)
     EXPECT_ERP_EXCEPTION(innerTeeRequest.parseHeaderAndBody(), HttpStatus::BadRequest);
 }
 
+TEST_F(InnerTeeRequestTest, create_failInvalidHexToken)//NOLINT(readability-function-cognitive-complexity)
+{
+    const std::string serializedJwt =
+        JWT(Base64::encode(R"({"alg":"BP256R1"})") + "." + Base64::encode("{}") + "." + Base64::encode("three"))
+            .serialize();
+    EXPECT_ERP_EXCEPTION(
+        InnerTeeRequest{
+            SafeString("1 " + serializedJwt + " " + toHex("request-id") + "a " + toHex("aes-key") + " " +
+                       "GET /endpoint HTTP/1.1\r\nContent-Type: application/json\r\nContent-Length: 5\r\n\r\nhello")},
+        HttpStatus::BadRequest);
+
+    EXPECT_ERP_EXCEPTION(
+        InnerTeeRequest{
+            SafeString("1 " + serializedJwt + " " + toHex("request-id") + " " + "testnonhex " +
+                       "GET /endpoint HTTP/1.1\r\nContent-Type: application/json\r\nContent-Length: 5\r\n\r\nhello")},
+        HttpStatus::BadRequest);
+}
+
 TEST_F(InnerTeeRequestTest, create_failForMissingAccessToken)
 {
     // This is structurally wrong, because of the double <<space>>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <id value="AbortOperation"/>
+  <url value="https://gematik.de/fhir/erp/OperationDefinition/AbortOperationDefinition"/>
+  <version value="1.2"/>
+  <name value="Abort"/>
+  <status value="active"/>
+  <kind value="operation"/>
+  <date value="2022-04-01"/>
+  <description value="This Operation aborts the workflow of an e-prescription and deletes all the data related to that Task."/>
+  <affectsState value="true"/>
+  <code value="abort"/>
+  <resource value="Task"/>
+  <system value="false"/>
+  <type value="false"/>
+  <instance value="true"/>
+  <parameter>
+    <name value="ac"/>
+    <use value="in"/>
+    <min value="0"/>
+    <max value="1"/>
+    <documentation value="[To be used by patient and providers(doctors/dentists) only] The secret parameter that lets users access the Task exclusively as the URL an Paramter ?ac."/>
+    <type value="string"/>
+  </parameter>
+  <parameter>
+    <name value="secret"/>
+    <use value="in"/>
+    <min value="0"/>
+    <max value="1"/>
+    <documentation value="[To be used by pharmacy only] The secret parameter that lets a pharmacy access the Task exclusively as the URL an Paramter ?secret."/>
+    <type value="string"/>
+  </parameter>
+</OperationDefinition>

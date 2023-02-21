@@ -22,11 +22,13 @@ using namespace model;
 using namespace model::resource;
 
 CommunicationPostHandler::CommunicationPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
-    : ErpRequestHandler(Operation::POST_Communication, allowedProfessionOiDs),
-      mMaxMessageCount(Configuration::instance().getIntValue(ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES))
+    : ErpRequestHandler(Operation::POST_Communication, allowedProfessionOiDs)
+    , mMaxMessageCount(gsl::narrow<uint64_t>(
+          Configuration::instance().getIntValue(ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES)))
 {
 }
 
+// GEMREQ-start A_19450-01#deserialize
 void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 {
     const Header& header = session.request.header();
@@ -41,25 +43,26 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
     {
         // as a first step validate using the FHIR schema, which is good enough for the XML->JSON converter
         auto communication = parseAndValidateRequestBody<Communication>(session, SchemaType::fhir, std::nullopt);
+// GEMREQ-end A_19450-01#deserialize
         PrescriptionId prescriptionId = communication.prescriptionId();
         checkFeatureWf200(prescriptionId.type());
 
         Communication::MessageType messageType = communication.messageType();
 
-        std::string recipient = std::string(communication.recipient().value());
+        const Identity recipient{communication.recipient()};
 
         A_19448.start("set sender and send timestamp");
-        const std::optional<std::string> sender = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
-        ErpExpect(sender.has_value(), HttpStatus::BadRequest, "JWT does not contain a claim for the sender");
-        communication.setSender(sender.value());
+        const std::optional<std::string> senderClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
+        ErpExpect(senderClaim.has_value(), HttpStatus::BadRequest, "JWT does not contain a claim for the sender");
         communication.setTimeSent();
-        A_19448.finish();
 
         const std::optional<std::string> senderProfessionOid =
             session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
         ErpExpect(senderProfessionOid.has_value(), HttpStatus::BadRequest,
             "JWT does not contain a claim for the senders profession Oid");
-        validateSender(messageType, senderProfessionOid.value(), sender.value());
+        const Identity sender{validateSender(messageType, senderProfessionOid.value(), senderClaim.value())};
+        communication.setSender(sender);
+        A_19448.finish();
 
         // secondly validate against the communication profile, which can only be determined
         // by looking into the resource, which must therefore already be parsed
@@ -70,28 +73,10 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         auto* databaseHandle = session.database();
 
-        if (messageType == Communication::MessageType::ChargChangeReq ||
-            messageType == Communication::MessageType::ChargChangeReply)
-        {
-            A_22734.start("check existence of charge item");
-            try
-            {
-                static_cast<void>(databaseHandle->retrieveChargeInformation(prescriptionId));
-            }
-            catch (const ErpException& ex)
-            {
-                if (ex.status() == HttpStatus::NotFound)
-                {
-                    ErpFail(HttpStatus::BadRequest, "referenced charge item does not exist");
-                }
-
-                throw;
-            }
-            A_22734.finish();
-        }
+        checkForChargeItemReference(prescriptionId, messageType, databaseHandle);
 
         std::optional<Task> task{};
-        std::optional<std::string_view> taskKvnr{};
+        std::optional<model::Kvnr> taskKvnr{};
         if (messageType == Communication::MessageType::DispReq ||
             messageType == Communication::MessageType::InfoReq ||
             messageType == Communication::MessageType::Reply ||
@@ -114,8 +99,10 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         A_20229.start("limit KVNR -> KVNR messages to 10 per task");
         if (messageType == Communication::MessageType::Representative)
         {
-            const auto count = databaseHandle->countRepresentativeCommunications(sender.value(), recipient, prescriptionId);
-            ErpExpect(count < mMaxMessageCount, HttpStatus::TooManyRequests, "there are already " + std::to_string(mMaxMessageCount) + " KVNR to KVNR messages");
+            const auto count = databaseHandle->countRepresentativeCommunications(
+                std::get<model::Kvnr>(sender), std::get<model::Kvnr>(recipient), prescriptionId);
+            ErpExpect(count < mMaxMessageCount, HttpStatus::TooManyRequests,
+                      "there are already " + std::to_string(mMaxMessageCount) + " KVNR to KVNR messages");
         }
         A_20229.finish();
 
@@ -127,7 +114,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             if (senderProfessionOid == profession_oid::oid_versicherter)
             {
                 std::optional<std::string> headerAccessCode = header.header(Header::XAccessCode);
-                checkEligibilityOfInsurant(messageType, sender.value(), taskKvnr.value(),
+                checkEligibilityOfInsurant(messageType, std::get<model::Kvnr>(sender), taskKvnr.value(),
                                            headerAccessCode, std::string(task->accessCode()), communication.accessCode());
             }
             A_20885_02.finish();
@@ -145,7 +132,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         A_20230.finish();
 
         A_20231.start("prevent messages to self");
-        ErpExpect(recipient != sender.value(), HttpStatus::BadRequest, "messages to self are not permitted");
+        ErpExpect(recipient != sender, HttpStatus::BadRequest, "messages to self are not permitted");
         A_20231.finish();
 
         A_20752.start("Exclusion of representative communication from or of verification identity");
@@ -155,9 +142,10 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         // to representative messages.
         if (messageType == Communication::MessageType::Representative)
         {
-            ErpExpect(isVerificationIdentityKvnr(sender.value()) == isVerificationIdentityKvnr(recipient),
-                HttpStatus::BadRequest,
-                "KVNR verification identities may not access information from insurants and vice versa");
+            ErpExpect(std::get<model::Kvnr>(sender).verificationIdentity() ==
+                          std::get<model::Kvnr>(recipient).verificationIdentity(),
+                      HttpStatus::BadRequest,
+                      "KVNR verification identities may not access information from insurants and vice versa");
         }
         A_20752.finish();
 
@@ -175,9 +163,11 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             A_20753.finish();
         }
 
-        A_19450.start("do not allow malicious code in payload");
+        // GEMREQ-start A_19450-01#callVerifyPayload
+        A_19450_01.start("do not allow malicious code in payload");
         communication.verifyPayload();
-        A_19450.finish();
+        A_19450_01.finish();
+        // GEMREQ-end A_19450-01#callVerifyPayload
 
         communication.deleteTimeReceived();
 
@@ -195,14 +185,41 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             messageType == Communication::MessageType::ChargChangeReq ||
             messageType == Communication::MessageType::DispReq)
         {
-            SubscriptionPostHandler::publish(session.serviceContext, recipient);
+            SubscriptionPostHandler::publish(session.serviceContext, std::get<model::TelematikId>(recipient));
         }
         A_22367_01.finish();
+    // GEMREQ-start A_19450-01#catchModelException
     }
     catch (const ModelException& e)
     {
         TVLOG(1) << "ModelException: " << e.what();
-        ErpFail(HttpStatus::BadRequest, "caught ModelException");
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "caught ModelException", e.what());
+    }
+    // GEMREQ-end A_19450-01#catchModelException
+}
+
+void CommunicationPostHandler::checkForChargeItemReference(const PrescriptionId& prescriptionId,
+                                                           const Communication::MessageType& messageType,
+                                                           const Database* databaseHandle) const
+{
+    if (messageType == Communication::MessageType::ChargChangeReq ||
+        messageType == Communication::MessageType::ChargChangeReply)
+    {
+        A_22734.start("check existence of charge item");
+        try
+        {
+            static_cast<void>(databaseHandle->retrieveChargeInformation(prescriptionId));
+        }
+        catch (const ErpException& ex)
+        {
+            if (ex.status() == HttpStatus::NotFound)
+            {
+                ErpFail(HttpStatus::BadRequest, "referenced charge item does not exist");
+            }
+
+            throw;
+        }
+        A_22734.finish();
     }
 }
 
@@ -213,60 +230,65 @@ void CommunicationPostHandler::validateAgainstFhirProfile(
     const InCodeValidator& inCodeValidator) const
 {
     auto options = communication.canValidateGeneric()?std::make_optional(ResourceBase::defaultValidatorOptions()):std::nullopt;
-    (void)Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
-                                Communication::messageTypeToSchemaType(messageType), options);
+    (void) Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
+                                  Communication::messageTypeToSchemaType(messageType),
+                                  model::ResourceVersion::supportedBundles(),
+                                  options);
 }
 
-void CommunicationPostHandler::validateSender(
+model::Identity CommunicationPostHandler::validateSender(
     model::Communication::MessageType messageType,
     const std::string& professionOid,
     const std::string& sender) const
 {
-    if (messageType == Communication::MessageType::Reply)
+    if (messageType == Communication::MessageType::Reply ||
+        messageType == Communication::MessageType::ChargChangeReply)
     {
         ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::inner_request_role_pharmacy,
             HttpStatus::BadRequest, "Invalid sender profession oid in communication reply message");
-        ErpExpect(sender.find_first_of('-') != std::string_view::npos, HttpStatus::BadRequest,
+        ErpExpect(model::TelematikId::isTelematikId(sender), HttpStatus::BadRequest,
             "A valid Telematic ID must contain at least one \"-\"");
+        return model::TelematikId{sender};
     }
     else
     {
         ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::inner_request_role_patient,
             HttpStatus::BadRequest, "Invalid sender profession oid in communication message");
-        ErpExpect(sender.find('\0') == std::string::npos, HttpStatus::BadRequest,
-            "Null character in KVNR of sender");
-        ErpExpect(sender.size() == 10, HttpStatus::BadRequest,
-            "KVNR of sender must have 10 characters");
+        ErpExpect(Kvnr::isKvnr(sender), HttpStatus::BadRequest, "Invalid Kvnr");
+        auto kvnrType = messageType == Communication::MessageType::ChargChangeReq ? model::Kvnr::Type::pkv
+                                                                                  : model::Kvnr::Type::unspecified;
+        return model::Kvnr{sender, kvnrType};
     }
 }
 
 void CommunicationPostHandler::validateRecipient(
     model::Communication::MessageType messageType,
-    const std::string& recipient) const
+    const model::Identity& recipient) const
 {
     if (messageType == Communication::MessageType::InfoReq ||
         messageType == Communication::MessageType::ChargChangeReq ||
         messageType == Communication::MessageType::DispReq)
     {
-        ErpExpect(recipient.find_first_of('-') != std::string_view::npos, HttpStatus::BadRequest,
+        ErpExpect(std::holds_alternative<model::TelematikId>(recipient), HttpStatus::BadRequest,
+                  "Expected TelematikId, got KVNR");
+        ErpExpect(std::get<model::TelematikId>(recipient).valid(), HttpStatus::BadRequest,
             "A valid Telematic ID must contain at least one \"-\"");
     }
     else
     {
+        ErpExpect(std::holds_alternative<model::Kvnr>(recipient), HttpStatus::BadRequest,
+                  "Expected KVNR, got TelematikId");
         // Please note that the format of KVNRs is already checked when validating against the schema
         // but Telematic IDs are not validated against the schema.
         // Because of this discrepancy the code below has been kept for the sake of clarification.
-        ErpExpect(recipient.find('\0') == std::string::npos, HttpStatus::BadRequest,
-            "Null character in KVNR of recipient");
-        ErpExpect(recipient.size() == 10, HttpStatus::BadRequest,
-            "KVNR of recipient must have 10 characters");
+        ErpExpect(std::get<model::Kvnr>(recipient).valid(), HttpStatus::BadRequest, "Invalid Kvnr");
     }
 }
 
 void CommunicationPostHandler::checkEligibilityOfInsurant(
     model::Communication::MessageType messageType,
-    const std::string_view& senderKvnr,
-    const std::string_view& taskKvnr,
+    const model::Kvnr& senderKvnr,
+    const model::Kvnr& taskKvnr,
     const std::optional<std::string>& headerAccessCode,
     const std::string& taskAccessCode,
     const std::optional<std::string>& communicationAccessCode) const
@@ -319,29 +341,29 @@ void CommunicationPostHandler::checkEligibilityOfInsurant(
 
 void CommunicationPostHandler::checkVerificationIdentitiesOfKvnrs(
     Communication::MessageType messageType,
-    const std::string_view& taskKvnr,
-    const std::optional<std::string_view>& sender,
-    const std::string_view& recipient) const
+    const model::Kvnr& taskKvnr,
+    const model::Identity& sender,
+    const model::Identity& recipient) const
 {
     if (messageType == Communication::MessageType::InfoReq || messageType == Communication::MessageType::DispReq)
     {
-        ErpExpect(isVerificationIdentityKvnr(sender.value()) == isVerificationIdentityKvnr(taskKvnr),
-            HttpStatus::BadRequest,
-            "KVNR verification identities may not access information from insurants and vice versa");
+        ErpExpect(std::get<model::Kvnr>(sender).verificationIdentity() == taskKvnr.verificationIdentity(),
+                  HttpStatus::BadRequest,
+                  "KVNR verification identities may not access information from insurants and vice versa");
     }
     else if (messageType == Communication::MessageType::Reply)
     {
-        ErpExpect(isVerificationIdentityKvnr(recipient) == isVerificationIdentityKvnr(taskKvnr),
-            HttpStatus::BadRequest,
-            "KVNR verification identities may not access information from insurants and vice versa");
+        ErpExpect(std::get<model::Kvnr>(recipient).verificationIdentity() == taskKvnr.verificationIdentity(),
+                  HttpStatus::BadRequest,
+                  "KVNR verification identities may not access information from insurants and vice versa");
     }
     else if (messageType == Communication::MessageType::Representative)
     {
-        ErpExpect(isVerificationIdentityKvnr(sender.value()) == isVerificationIdentityKvnr(taskKvnr),
-            HttpStatus::BadRequest,
-            "KVNR verification identities may not access information from insurants and vice versa");
-        ErpExpect(isVerificationIdentityKvnr(recipient) == isVerificationIdentityKvnr(taskKvnr),
-            HttpStatus::BadRequest,
-            "KVNR verification identities may not access information from insurants and vice versa");
+        ErpExpect(std::get<model::Kvnr>(sender).verificationIdentity() == taskKvnr.verificationIdentity(),
+                  HttpStatus::BadRequest,
+                  "KVNR verification identities may not access information from insurants and vice versa");
+        ErpExpect(std::get<model::Kvnr>(recipient).verificationIdentity() == taskKvnr.verificationIdentity(),
+                  HttpStatus::BadRequest,
+                  "KVNR verification identities may not access information from insurants and vice versa");
     }
 }

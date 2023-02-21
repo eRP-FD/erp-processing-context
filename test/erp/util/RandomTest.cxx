@@ -28,7 +28,7 @@ TEST(RandomTest, randomIntBetween)//NOLINT(readability-function-cognitive-comple
 
 TEST(RandomTest, randomBinaryData)
 {
-    auto size = 65536;
+    size_t size = 65536;
     util::Buffer buffer = Random::randomBinaryData(size);
     ASSERT_EQ(buffer.size(), size);
 }

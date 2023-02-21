@@ -18,6 +18,7 @@ namespace model
 
 // Reduced version of Binary resource, contains only functionality currently needed;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Binary : public Resource<Binary>
 {
 public:
@@ -25,11 +26,12 @@ public:
 
     enum class Type
     {
-        Base64,
+        Digest,
         PKCS7
     };
 
-    Binary(std::string_view id, std::string_view data, const Type type = Type::PKCS7);
+    Binary(std::string_view id, std::string_view data, const Type type = Type::PKCS7, ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
+                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
 
     [[nodiscard]] std::optional<std::string_view> id() const;
     [[nodiscard]] std::optional<std::string_view> data() const;

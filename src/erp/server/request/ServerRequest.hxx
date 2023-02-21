@@ -17,14 +17,14 @@ class JWT;
 class ServerRequest
 {
 public:
-    explicit ServerRequest (Header&& header);
+    explicit ServerRequest (Header header);
 
     const Header& header (void) const;
     Header& header (void);
-    void setHeader (Header&& header);
+    void setHeader (Header header);
     void setMethod(HttpMethod method);
 
-    void setBody (std::string&& body);
+    void setBody (std::string body);
     const std::string& getBody (void) const;
 
     /**
@@ -47,7 +47,7 @@ public:
      * Query parameters can occur multiple times (for the same key) and their order can be important.
      */
     using QueryParametersType = std::vector<std::pair<std::string,std::string>>;
-    void setQueryParameters (QueryParametersType&& parameters);
+    void setQueryParameters (QueryParametersType parameters);
     const QueryParametersType& getQueryParameters (void) const;
     /**
      * This is a convenience method in case a query parameter is expected at most one times.
@@ -55,11 +55,11 @@ public:
      */
     std::optional<std::string> getQueryParameter (const std::string& key) const;
 
-    void setFragment (std::string&& fragment);
+    void setFragment (std::string fragment);
     const std::string& getFragment (void) const;
 
-    void setAccessToken(JWT&& jwt);
-    const JWT& getAccessToken(void) const; 
+    void setAccessToken(JWT jwt);
+    const JWT& getAccessToken(void) const;
 
 private:
     Header mHeader;

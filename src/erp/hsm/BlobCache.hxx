@@ -15,6 +15,8 @@
 #include <shared_mutex>
 #include <vector>
 
+class PeriodicTimerBase;
+
 /**
  * This cache is intended as the primary interface to access blobs in the blob database, either for hsm or
  * enrolment operations. It reads from an underlying (and yet to come) database on-demand and writes-through incoming
@@ -103,7 +105,7 @@ private:
     ::std::multimap<::BlobType, ::std::reference_wrapper<Entry>> mEntriesByType{};
 
     class Refresher;
-    std::unique_ptr<Refresher> mRefresher{};
+    std::unique_ptr<PeriodicTimerBase> mRefresher{};
 
     void rebuildCache(void);
 

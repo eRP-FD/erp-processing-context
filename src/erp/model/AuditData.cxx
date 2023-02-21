@@ -22,7 +22,6 @@ bool isEventCausedByPatient(AuditEventId eventId)
            eventId == AuditEventId::GET_MedicationDispense ||
            eventId == AuditEventId::GET_MedicationDispense_id ||
            eventId == AuditEventId::DELETE_ChargeItem_id_insurant ||
-           eventId == AuditEventId::PUT_ChargeItem_id_insurant ||
            eventId == AuditEventId::PATCH_ChargeItem_id ||
            eventId == AuditEventId::GET_ChargeItem_id_insurant ||
            eventId == AuditEventId::POST_Consent ||
@@ -38,7 +37,8 @@ bool isEventCausedByRepresentative(AuditEventId eventId)
 bool isEventCausedByMaintenanceScript(AuditEventId eventId)
 {
     return eventId == AuditEventId::Task_delete_expired_id ||
-           eventId == AuditEventId::ChargeItem_delete_expired_id;
+           eventId == AuditEventId::ChargeItem_delete_expired_id ||
+           eventId == AuditEventId::Communication_delete_expired_id;
 }
 
 std::string createEventResourceReference(AuditEventId eventId, const std::string& resourceId)
@@ -78,13 +78,15 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::PATCH_ChargeItem_id:
         case model::AuditEventId::DELETE_ChargeItem_id_insurant:
         case model::AuditEventId::DELETE_ChargeItem_id_pharmacy:
-        case model::AuditEventId::PUT_ChargeItem_id_insurant:
-        case model::AuditEventId::PUT_ChargeItem_id_pharmacy:
+        case model::AuditEventId::PUT_ChargeItem_id:
         case model::AuditEventId::ChargeItem_delete_expired_id:
             return "ChargeItem/" + resourceId;
         case model::AuditEventId::POST_Consent:
         case model::AuditEventId::DELETE_Consent:
             return "Consent/" + resourceId;
+        case model::AuditEventId::Communication_delete_expired_id:
+            return "Communication";
+
     }
     Fail2("Invalid event id", std::logic_error);
 }
@@ -152,7 +154,7 @@ AuditData::AuditData(
     AuditMetaData&& metaData,
     AuditEvent::Action action,
     AuditEvent::AgentType agentType,
-    const std::string& insurantKvnr,
+    const Kvnr& insurantKvnr,
     const std::int16_t deviceId,
     std::optional<PrescriptionId> prescriptionId,
     std::optional<std::string> consentId)
@@ -189,7 +191,7 @@ AuditEvent::Action AuditData::action() const
     return mAction;
 }
 
-const std::string& AuditData::insurantKvnr() const
+const Kvnr& AuditData::insurantKvnr() const
 {
     return mInsurantKvnr;
 }
@@ -217,6 +219,11 @@ const std::string& AuditData::id() const
 const model::Timestamp& AuditData::recorded() const
 {
     return mRecorded;
+}
+
+bool AuditData::isValidEventId() const
+{
+    return (mEventId >= AuditEventId::MIN && mEventId <= AuditEventId::MAX);
 }
 
 void AuditData::setId(const std::string& id)

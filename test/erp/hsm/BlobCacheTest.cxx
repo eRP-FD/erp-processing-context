@@ -365,7 +365,7 @@ TEST_F(BlobCacheTest, updateAfterKeyExpired)// NOLINT(readability-function-cogni
                                                          {},
                                                          {}}));
     ASSERT_NO_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
-    waitFor([&] {
+    testutils::waitFor([&] {
         return system_clock::now() > expiresAt;
     });
     ASSERT_ANY_THROW(cache->getBlob(BlobType::TaskKeyDerivation));
@@ -418,7 +418,7 @@ TEST_F(BlobCacheTest, updateBeforeKeyExpired)// NOLINT(readability-function-cogn
     std::thread contextThread{[&] {
         ioContext.run();
     }};
-    EXPECT_NO_FATAL_FAILURE(waitFor([&] {
+    EXPECT_NO_FATAL_FAILURE(testutils::waitFor([&] {
                                 auto entry = cache->getBlob(BlobType::TaskKeyDerivation);
                                 return entry.id == 3;
                             }););

@@ -48,7 +48,7 @@ public:
 
     UniqueXmlDocumentPtr jsonToXml(const model::NumberAsStringParserDocument& jsonDOM) const;
 
-    std::string jsonToXmlString(const model::NumberAsStringParserDocument& jsonDOM) const;
+    std::string jsonToXmlString(const model::NumberAsStringParserDocument& jsonDOM, bool formatted = false) const;
 };
 
 

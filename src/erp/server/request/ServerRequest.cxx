@@ -6,7 +6,7 @@
 #include "ServerRequest.hxx"
 
 
-ServerRequest::ServerRequest (Header&& header)
+ServerRequest::ServerRequest (Header header)
     : mHeader(std::move(header)),
       mBody(),
       mPathParameters(),
@@ -30,7 +30,7 @@ Header& ServerRequest::header (void)
 }
 
 
-void ServerRequest::setHeader (Header&& header)
+void ServerRequest::setHeader (Header header)
 {
     mHeader = std::move(header);
     mHeader.setContentLength(mBody.size());
@@ -44,7 +44,7 @@ void ServerRequest::setMethod(HttpMethod method)
 }
 
 
-void ServerRequest::setBody (std::string&& body)
+void ServerRequest::setBody (std::string body)
 {
     mBody = std::move(body);
     mHeader.setContentLength(mBody.size());
@@ -91,7 +91,7 @@ const std::unordered_map<std::string, std::string>& ServerRequest::getPathParame
 }
 
 
-void ServerRequest::setQueryParameters (std::vector<std::pair<std::string,std::string>>&& parameters)
+void ServerRequest::setQueryParameters (std::vector<std::pair<std::string,std::string>> parameters)
 {
     mQueryParameters = std::move(parameters);
 }
@@ -120,7 +120,7 @@ std::optional<std::string> ServerRequest::getQueryParameter (const std::string& 
 }
 
 
-void ServerRequest::setFragment (std::string&& fragment)
+void ServerRequest::setFragment (std::string fragment)
 {
     mFragment = std::move(fragment);
 }
@@ -131,7 +131,7 @@ const std::string& ServerRequest::getFragment (void) const
     return mFragment;
 }
 
-void ServerRequest::setAccessToken(JWT&& jwt)
+void ServerRequest::setAccessToken(JWT jwt)
 {
     mAccessToken = std::move(jwt);
 }

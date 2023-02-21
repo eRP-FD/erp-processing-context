@@ -20,7 +20,7 @@ class InCodeValidator;
 
 namespace fhirtools
 {
-class ValidationResultList;
+class ValidationResults;
 }
 
 
@@ -29,6 +29,7 @@ namespace model
 class Extension;
 class UnspecifiedResource;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class ResourceBase
 {
 public:
@@ -41,6 +42,7 @@ public:
     ResourceBase(const ResourceBase&) = delete;
     ResourceBase(ResourceBase&&) noexcept = default;
     ResourceBase& operator=(const ResourceBase&) = delete;
+    //NOLINTNEXTLINE(bugprone-exception-escape)
     ResourceBase& operator=(ResourceBase&&) noexcept = default;
 
     [[nodiscard]] std::string_view getResourceType() const;
@@ -80,6 +82,7 @@ public:
     [[nodiscard]] std::optional<std::string_view> identifierValue() const;
 
     [[nodiscard]] SchemaType getProfile() const;
+    [[nodiscard]] std::optional<std::string_view> getProfileName() const;
 
     static fhirtools::ValidatorOptions defaultValidatorOptions();
 
@@ -231,26 +234,35 @@ private:
 
 
 template<class TDerivedModel, typename SchemaVersionType = ResourceVersion::DeGematikErezeptWorkflowR4>
+// NOLINTNEXTLINE(bugprone-exception-escape)
 class Resource : public ResourceBase
 {
 public:
     [[nodiscard]] static TDerivedModel fromXmlNoValidation(std::string_view xml);
     [[nodiscard]] static TDerivedModel
     fromXml(std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator,
-            SchemaType schemaType, const std::optional<fhirtools::ValidatorOptions>& = defaultValidatorOptions(),
-            std::optional<SchemaVersionType> enforcedVersion = {});
+            SchemaType schemaType,
+            const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles =
+                model::ResourceVersion::supportedBundles(),
+            const std::optional<fhirtools::ValidatorOptions>& = defaultValidatorOptions(),
+            std::optional<SchemaVersionType> enforcedVersion = {},
+            SchemaVersionType fallbackVersion = ResourceVersion::deprecated<SchemaVersionType>());
     [[nodiscard]] static TDerivedModel fromJsonNoValidation(std::string_view json);
     [[nodiscard]] static TDerivedModel
     fromJson(std::string_view json, const JsonValidator& jsonValidator, const XmlValidator& xmlValidator,
              const InCodeValidator& inCodeValidator, SchemaType schemaType,
-             const std::optional<fhirtools::ValidatorOptions>& = defaultValidatorOptions());
+             const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles =
+                  model::ResourceVersion::supportedBundles(),
+             const std::optional<fhirtools::ValidatorOptions>& = defaultValidatorOptions(),
+             SchemaVersionType fallbackVersion = ResourceVersion::deprecated<SchemaVersionType>());
     [[nodiscard]] static TDerivedModel fromJson(const rapidjson::Value& json);
     [[nodiscard]] static TDerivedModel fromJson(model::NumberAsStringParserDocument&& json);
 
-    SchemaVersionType getSchemaVersion() const;
+    virtual SchemaVersionType getSchemaVersion(const std::optional<SchemaVersionType>& fallbackVersion) const;
 
-    [[nodiscard]] fhirtools::ValidationResultList
-    genericValidate(const fhirtools::ValidatorOptions& = defaultValidatorOptions()) const;
+    [[nodiscard]] fhirtools::ValidationResults
+    genericValidate(model::ResourceVersion::FhirProfileBundleVersion version,
+                    const fhirtools::ValidatorOptions& = defaultValidatorOptions()) const;
 
 protected:
     using ResourceBase::ResourceBase;
@@ -259,9 +271,10 @@ protected:
 
 private:
     void doValidation(std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator,
-                      SchemaType schemaType, const std::optional<fhirtools::ValidatorOptions>&,
-                      std::optional<SchemaVersionType> enforcedVersion = {}) const;
-    void doGenericValidation(const fhirtools::ValidatorOptions&,
+                      SchemaType schemaType, model::ResourceVersion::FhirProfileBundleVersion fhirBundleVersion,
+                      const std::optional<fhirtools::ValidatorOptions>&) const;
+    void doGenericValidation(model::ResourceVersion::FhirProfileBundleVersion version,
+                             const fhirtools::ValidatorOptions&,
                              const std::optional<ErpException>& = std::nullopt) const;
 
     friend class ResourceBase;
@@ -289,14 +302,16 @@ std::optional<ExtensionT> ResourceBase::getExtension(const std::string_view& url
 }
 
 
+
+// NOLINTBEGIN(bugprone-exception-escape)
 extern template class Resource<class AuditEvent>;
 extern template class Resource<class AuditMetaData>;
 extern template class Resource<class Binary>;
 extern template class Resource<class Bundle>;
-extern template class Resource<class ChargeItem>; //NOLINT(bugprone-forward-declaration-namespace)
+extern template class Resource<class ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>; //NOLINT(bugprone-forward-declaration-namespace)
 extern template class Resource<class Composition>;
-extern template class Resource<class Communication>; //NOLINT(bugprone-forward-declaration-namespace)
-extern template class Resource<class Consent>;
+extern template class Resource<class Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>; //NOLINT(bugprone-forward-declaration-namespace)
+extern template class Resource<class Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>;
 extern template class Resource<class Device>;
 extern template class Resource<class Dosage, ResourceVersion::KbvItaErp>;
 extern template class Resource<class ErxReceipt>;
@@ -316,7 +331,7 @@ extern template class Resource<class KbvPracticeSupply, ResourceVersion::KbvItaE
 extern template class Resource<class MedicationDispense>; //NOLINT(bugprone-forward-declaration-namespace)
 extern template class Resource<class MedicationDispenseBundle, ResourceVersion::NotProfiled>;
 extern template class Resource<class MetaData>;
-extern template class Resource<class OperationOutcome>;
+extern template class Resource<class OperationOutcome, ResourceVersion::Fhir>;
 extern template class Resource<class Parameters>; //NOLINT(bugprone-forward-declaration-namespace)
 extern template class Resource<class Patient, ResourceVersion::KbvItaErp>;
 extern template class Resource<class Reference>;
@@ -324,7 +339,7 @@ extern template class Resource<class Signature>;
 extern template class Resource<class Subscription>;
 extern template class Resource<class Task>;
 extern template class Resource<class UnspecifiedResource>;
+// NOLINTEND(bugprone-exception-escape)
 }
 
 #endif//ERP_PROCESSING_CONTEXT_RESOURCE_HXX
-

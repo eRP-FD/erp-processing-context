@@ -123,20 +123,20 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_NoOcspConnection_fail)//NOLINT(readab
     EXPECT_TSL_ERROR_THROW(
         (void)cFdSigErpManager.getCertificate(),
         {TslErrorCode::OCSP_NOT_AVAILABLE},
-        HttpStatus::InternalServerError);
+        HttpStatus::ServiceUnavailable);
     EXPECT_TSL_ERROR_THROW(
         cFdSigErpManager.getOcspResponseData(true),
         {TslErrorCode::OCSP_NOT_AVAILABLE},
-        HttpStatus::InternalServerError);
+        HttpStatus::ServiceUnavailable);
     EXPECT_TSL_ERROR_THROW(
         cFdSigErpManager.getOcspResponseData(false),
         {TslErrorCode::OCSP_NOT_AVAILABLE},
-        HttpStatus::InternalServerError);
+        HttpStatus::ServiceUnavailable);
     EXPECT_TSL_ERROR_THROW(
         cFdSigErpManager.getOcspResponse(),
         {TslErrorCode::OCSP_NOT_AVAILABLE},
-        HttpStatus::InternalServerError);
-    EXPECT_EQ(cFdSigErpManager.getLastValidationTimestamp(), "never successfully validated");
+        HttpStatus::ServiceUnavailable);
+    EXPECT_EQ(cFdSigErpManager.getLastOcspResponseTimestamp(), "never successfully validated");
     EXPECT_THROW(cFdSigErpManager.healthCheck(), std::runtime_error);
 }
 
@@ -158,7 +158,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)//NOLINT(readability-function
     CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
     const auto responseData = cFdSigErpManager.getOcspResponseData(false);
     EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
-    EXPECT_EQ(cFdSigErpManager.getLastValidationTimestamp(), model::Timestamp(responseData.timeStamp).toXsDateTime());
+    EXPECT_EQ(cFdSigErpManager.getLastOcspResponseTimestamp(), model::Timestamp(responseData.producedAt).toXsDateTime());
     EXPECT_NO_THROW(cFdSigErpManager.healthCheck());
     EXPECT_TRUE(cFdSigErpManager.getCertificate().toX509().isSet());
 
@@ -175,7 +175,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)//NOLINT(readability-function
 
 TEST_F(CFdSigErpManagerTest, timerUpdate_success)
 {
-    EnvironmentVariableGuard ocspGracePeriodGuard("ERP_OCSP_NON_QES_GRACE_PERIOD", "1");
+    EnvironmentVariableGuard ocspGracePeriodGuard("ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL", "1");
 
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
@@ -195,7 +195,49 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_success)
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
 
     // wait two seconds, the timer must do the validation again during this time
-    waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
+    testutils::waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
+}
+
+
+TEST_F(CFdSigErpManagerTest, timerUpdate_OCSP_fails_validation_success)
+{
+    EnvironmentVariableGuard ocspGracePeriodGuard("ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL", "1");
+
+    std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
+        CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
+
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
+    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
+        requestSender,
+        {},
+        {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+
+    // 2 URLs for TSL + 2 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
+    ASSERT_EQ(requestSender->getCounterMapSize(), 6);
+    ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
+
+    requestSender->setUrlHandler(ocspUrl,
+                                 [](const std::string&) -> ClientResponse
+                                 {
+                                     Header header;
+                                     header.setStatus(HttpStatus::NetworkConnectTimeoutError);
+                                     header.setContentLength(0);
+                                     return {header, ""};
+                                 });
+
+    // wait two seconds, the timer must do the validation again during this time
+    testutils::waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
+
+    // The second OCSP response request has failed, but that does not affect validity of C-FD-OSIG eRP certificate
+    ASSERT_EQ(requestSender->getCounter(ocspUrl), 2);
+    ASSERT_FALSE(cFdSigErpManager.wasLastOcspRequestSuccessful());
+    ASSERT_NO_THROW(cFdSigErpManager.getOcspResponseData(false));
+    ASSERT_NO_THROW(cFdSigErpManager.healthCheck());
+    ASSERT_EQ(requestSender->getCounter(ocspUrl), 2);
 }
 
 
@@ -218,11 +260,11 @@ TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)//NOLINT(readability-functio
     EXPECT_TSL_ERROR_THROW(
         cFdSigErpManager.getOcspResponseData(false),
         {TslErrorCode::CERT_UNKNOWN},
-        HttpStatus::InternalServerError);
+        HttpStatus::ServiceUnavailable);
 
     // the second call is done to test handling of the OCSP-Response from cache
     EXPECT_TSL_ERROR_THROW(
         cFdSigErpManager.getOcspResponseData(false),
         {TslErrorCode::CERT_UNKNOWN},
-        HttpStatus::InternalServerError);
+        HttpStatus::ServiceUnavailable);
 }

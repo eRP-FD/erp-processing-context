@@ -10,14 +10,17 @@
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
 #include "erp/util/WorkDay.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 #include <date/tz.h>
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once
 
 using  model::Timestamp;
+using namespace std::literals::string_view_literals;
 
 namespace model
 {
@@ -34,16 +37,16 @@ const std::string task_template = R"--(
   "identifier": [
     {
       "use": "official",
-      "system": "https://gematik.de/fhir/NamingSystem/PrescriptionID",
+      "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
       "value": ""
     }
   ],
   "intent": "order",
   "status": "draft",
   "extension": [{
-    "url": "https://gematik.de/fhir/StructureDefinition/PrescriptionType",
+    "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType",
     "valueCoding": {
-        "system": "https://gematik.de/fhir/CodeSystem/Flowtype",
+        "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType",
         "code": "",
         "display": ""
     }
@@ -54,7 +57,7 @@ const std::string task_template = R"--(
     {
       "coding": [
         {
-          "system": "urn:ietf:rfc:3986",
+          "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_OrganizationType",
           "code": "",
           "display": ""
         }
@@ -70,7 +73,7 @@ constexpr std::string_view prescriptionReference_template = R"--(
   "type": {
     "coding": [
       {
-        "system": "https://gematik.de/fhir/CodeSystem/Documenttype",
+        "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType",
         "code": ""
       }
     ]
@@ -95,7 +98,6 @@ constexpr std::string_view extension_date_template = R"--(
   "valueDate": ""
 }
 )--";
-
 
 const std::unordered_map<Task::Status, std::string_view> Task::StatusNames = {
     {Task::Status::draft, "draft"},
@@ -156,10 +158,14 @@ const rapidjson::Pointer lastModifiedPointer("/lastModified");
 const rapidjson::Pointer statusPointer("/status");
 const rapidjson::Pointer taskIdPointer("/id");
 const rapidjson::Pointer prescriptionIdPointer("/identifier/0/value");
+const rapidjson::Pointer prescriptionIdSystemPointer("/identifier/0/system");
+const rapidjson::Pointer flowtypeUrlPointer("/extension/0/url");
+const rapidjson::Pointer flowtypeSystemPointer("/extension/0/valueCoding/system");
 const rapidjson::Pointer flowtypeCodePointer("/extension/0/valueCoding/code");
 const rapidjson::Pointer flowtypeDisplayPointer("/extension/0/valueCoding/display");
 const rapidjson::Pointer performerTypePointer("/performerType/0/coding/0/code");
 const rapidjson::Pointer performerTypeDisplayPointer("/performerType/0/coding/0/display");
+const rapidjson::Pointer performerTypeSystemPointer("/performerType/0/coding/0/system");
 const rapidjson::Pointer performerTypeTextPointer("/performerType/0/text");
 const rapidjson::Pointer inputArrayPointer("/input");
 const rapidjson::Pointer outputArrayPointer("/output");
@@ -169,6 +175,7 @@ const rapidjson::Pointer extensionArrayPointer("/extension");
 // relative pointers
 // The coding array is fixed length 1
 const rapidjson::Pointer codePointerRelToInOutArray("/type/coding/0/code");
+const rapidjson::Pointer systemPointerRelToInOutArray("/type/coding/0/system");
 const rapidjson::Pointer valueStringPointerRelToInOutArray("/valueReference/reference");
 const rapidjson::Pointer systemRelPointer("/system");
 const rapidjson::Pointer valueRelPointer ("/value");
@@ -177,15 +184,14 @@ constexpr std::string_view codeInputHealthCareProviderPrescription = "1";
 constexpr std::string_view codeInputPatientConfirmation = "2";
 constexpr std::string_view codeOutputReceipt = "3";
 
-// the prescriptionID -> UUID derivation
-constexpr uint8_t uuidFeaturePrescription = 1;
-constexpr uint8_t uuidFeatureConfirmation = 2;
-constexpr uint8_t uuidFeatureRecipt = 3;
-}
+} // namespace
 
 
-Task::Task(const model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode)
-    : Resource<Task>("https://gematik.de/fhir/StructureDefinition/ErxTask",
+Task::Task(const model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode,
+           model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+    : Resource<Task>(ResourceVersion::deprecatedProfile(profileVersion)
+                         ? resource::structure_definition::deprecated::task
+                         : resource::structure_definition::task,
                      []() {
                          std::call_once(onceFlag, initTemplates);
 
@@ -199,7 +205,13 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     {
         setAccessCode(*accessCode);
     }
-
+    if (ResourceVersion::deprecatedProfile(profileVersion))
+    {
+        setValue(flowtypeUrlPointer, resource::structure_definition::deprecated::prescriptionType);
+        setValue(flowtypeSystemPointer, resource::code_system::deprecated::flowType);
+        setValue(prescriptionIdSystemPointer, resource::naming_system::deprecated::prescriptionID);
+        setValue(performerTypeSystemPointer, "urn:ietf:rfc:3986");
+    }
     A_19112.start("set Task.extension:flowType to the value of prescriptionType");
     setValue(flowtypeCodePointer,
              std::to_string(
@@ -220,9 +232,9 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     updateLastUpdate();
 }
 
-Task::Task(const PrescriptionId& id, PrescriptionType prescriptionType, Timestamp lastModified,
-           Timestamp authoredOn, Task::Status status)
-    : Task(prescriptionType, {})
+Task::Task(const PrescriptionId& id, PrescriptionType prescriptionType, Timestamp lastModified, Timestamp authoredOn,
+           Task::Status status, model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+    : Task(prescriptionType, {}, profileVersion)
 {
     setPrescriptionId(id);
     updateLastUpdate(lastModified);
@@ -243,9 +255,13 @@ Task::Status Task::status() const
     return StatusNamesReverse.at(statusStr);
 }
 
-std::optional<std::string_view> Task::kvnr() const
+std::optional<Kvnr> Task::kvnr() const
 {
-    return getOptionalStringValue(kvnrPointer);
+    auto kvid10 = getOptionalStringValue(kvnrSysPointer);
+    auto kvnr = getOptionalStringValue(kvnrPointer);
+    if (! kvid10.has_value() || ! kvnr.has_value())
+        return {};
+    return Kvnr{*kvnr, *kvid10};
 }
 
 PrescriptionId Task::prescriptionId() const
@@ -271,16 +287,19 @@ Timestamp Task::lastModifiedDate() const
 
 std::string_view Task::accessCode() const
 {
-    auto accessCode = findStringInArray(identifierArrayPointer, systemRelPointer,
-        resource::naming_system::accessCode, valueRelPointer);
+    auto nsAccessCode = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
+                            ? resource::naming_system::deprecated::accessCode
+                            : resource::naming_system::accessCode;
+    auto accessCode = findStringInArray(identifierArrayPointer, systemRelPointer, nsAccessCode, valueRelPointer);
     ModelExpect(accessCode.has_value(), "AccessCode not set in task");
     return *accessCode;
 }
 
 std::optional<std::string_view> Task::secret() const
 {
-    return findStringInArray(identifierArrayPointer, systemRelPointer,
-        resource::naming_system::secret, valueRelPointer);
+    auto nsSecret = ResourceVersion::deprecatedProfile(getSchemaVersion({})) ? resource::naming_system::deprecated::secret
+                                                                           : resource::naming_system::secret;
+    return findStringInArray(identifierArrayPointer, systemRelPointer, nsSecret, valueRelPointer);
 }
 
 std::optional<std::string_view> Task::healthCarePrescriptionUuid() const
@@ -306,12 +325,18 @@ std::optional<std::string_view> Task::uuidFromArray(const rapidjson::Pointer& ar
 
 Timestamp Task::expiryDate() const
 {
-    return dateFromExtensionArray("https://gematik.de/fhir/StructureDefinition/ExpiryDate");
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
+                   ? resource::structure_definition::deprecated::expiryDate
+                   : resource::structure_definition::expiryDate;
+    return dateFromExtensionArray(url);
 }
 
 Timestamp Task::acceptDate() const
 {
-    return dateFromExtensionArray("https://gematik.de/fhir/StructureDefinition/AcceptDate");
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
+                   ? resource::structure_definition::deprecated::acceptDate
+                   : resource::structure_definition::acceptDate;
+    return dateFromExtensionArray(url);
 }
 
 Timestamp Task::dateFromExtensionArray(std::string_view url) const
@@ -334,11 +359,13 @@ void Task::setStatus(const Task::Status newStatus)
     setValue(statusPointer, StatusNames.at(newStatus).data());
 }
 
-void Task::setKvnr(std::string_view kvnr)
+void Task::setKvnr(const Kvnr& kvnr)
 {
     ModelExpect(!hasValue(kvnrPointer), "KVNR cannot be set multiple times.");
-    setValue(kvnrPointer, kvnr);
-    setValue(kvnrSysPointer, resource::naming_system::gkvKvid10);
+    ModelExpect(kvnr.getType() != model::Kvnr::Type::unspecified, "Unspecified kvnr type not allowed");
+    const bool deprecatedProfile = ResourceVersion::deprecatedProfile(getSchemaVersion({}));
+    setValue(kvnrPointer, kvnr.id());
+    setValue(kvnrSysPointer, kvnr.namingSystem(deprecatedProfile));
 }
 
 void Task::setHealthCarePrescriptionUuid()
@@ -356,7 +383,7 @@ void Task::setPatientConfirmationUuid()
 void Task::setReceiptUuid()
 {
     addUuidToArray(outputArrayPointer, codeOutputReceipt,
-                   prescriptionId().deriveUuid(uuidFeatureRecipt));
+                   prescriptionId().deriveUuid(uuidFeatureReceipt));
 }
 
 void Task::addUuidToArray(const rapidjson::Pointer& array, std::string_view code,
@@ -368,19 +395,27 @@ void Task::addUuidToArray(const rapidjson::Pointer& array, std::string_view code
     auto newEntry = copyValue(*PrescriptionReferenceTemplate);
     setKeyValue(newEntry, codePointerRelToInOutArray, code);
     setKeyValue(newEntry, valueStringPointerRelToInOutArray, uuid);
+    if (ResourceVersion::deprecatedProfile(getSchemaVersion({})))
+    {
+        setKeyValue(newEntry, systemPointerRelToInOutArray, resource::code_system::deprecated::documentType);
+    }
     addToArray(array, std::move(newEntry));
 }
 
 void Task::setExpiryDate(const Timestamp& expiryDate)
 {
-    const std::string_view expiryDateUrl = "https://gematik.de/fhir/StructureDefinition/ExpiryDate";
-    dateToExtensionArray(expiryDateUrl, expiryDate);
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
+                   ? resource::structure_definition::deprecated::expiryDate
+                   : resource::structure_definition::expiryDate;
+    dateToExtensionArray(url, expiryDate);
 }
 
 void Task::setAcceptDate(const Timestamp& acceptDate)
 {
-    const std::string_view acceptDateUrl = "https://gematik.de/fhir/StructureDefinition/AcceptDate";
-    dateToExtensionArray(acceptDateUrl, acceptDate);
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
+                   ? resource::structure_definition::deprecated::acceptDate
+                   : resource::structure_definition::acceptDate;
+    dateToExtensionArray(url, acceptDate);
 }
 
 void Task::setAcceptDate(const Timestamp& baseTime, const std::optional<KbvStatusKennzeichen>& legalBasisCode,
@@ -401,30 +436,38 @@ void Task::setAcceptDate(const Timestamp& baseTime, const std::optional<KbvStatu
             case KbvStatusKennzeichen::entlassmanagementKennzeichenMitErsatzverordungskennzeichen:
                 A_19517_02.start("deviant accept date for Entlassrezepte");
                 // -1 because the current day is part of the duration.
-                setAcceptDate((WorkDay(baseTime) + (entlassRezeptValidityWorkingDays - 1)).toTimestamp());
+                setAcceptDate((WorkDay(baseTime) + gsl::narrow<unsigned int>(entlassRezeptValidityWorkingDays - 1))
+                                  .toTimestamp());
                 A_19517_02.finish();
                 return;
         }
     }
     A_19445_08.start(
         "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 200)>");
-    setAccepDateDependentPrescriptionType(baseTime);
+    setAcceptDateDependentPrescriptionType(baseTime);
     A_19445_08.finish();
 }
 
-void Task::setAccepDateDependentPrescriptionType(const Timestamp& baseTime)
+void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)
 {
     using namespace std::chrono_literals;
     switch (type())
     {
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv:
-            setAcceptDate(model::Timestamp{
-                date::sys_days{date::year_month_day{date::floor<date::days>(
-                                   date::make_zoned(model::Timestamp::GermanTimezone, baseTime.toChronoTimePoint())
-                                       .get_local_time())} +
-                               date::months{3}}});
+        {
+            auto acceptDay = date::year_month_day{date::floor<date::days>(
+                                 date::make_zoned(model::Timestamp::GermanTimezone, baseTime.toChronoTimePoint())
+                                     .get_local_time())} +
+                             date::months{3};
+            if (! acceptDay.ok())
+            {
+                acceptDay = acceptDay.year() / acceptDay.month() / date::last;
+            }
+            setAcceptDate(model::Timestamp{date::sys_days{acceptDay}});
             break;
+        }
+
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
             setAcceptDate(baseTime + (24h * 28));
@@ -447,27 +490,30 @@ void Task::dateToExtensionArray(std::string_view url, const Timestamp& date)
 
 void Task::setSecret(std::string_view secret)
 {
-    ModelExpect(! findStringInArray(identifierArrayPointer, systemRelPointer,
-                                    resource::naming_system::secret, valueRelPointer)
-                      .has_value(),
+    auto nsSecret = ResourceVersion::deprecatedProfile(getSchemaVersion({})) ? resource::naming_system::deprecated::secret
+                                                                           : resource::naming_system::secret;
+    ModelExpect(! findStringInArray(identifierArrayPointer, systemRelPointer, nsSecret, valueRelPointer).has_value(),
                 "Secret cannot be set multiple times.");
 
     auto newValue = copyValue(*SecretAccessCodeTemplate);
     setKeyValue(newValue, valueRelPointer, secret);
-    setKeyValue(newValue, systemRelPointer, resource::naming_system::secret);
+    setKeyValue(newValue, systemRelPointer, nsSecret);
     addToArray(identifierArrayPointer, std::move(newValue));
 }
 
 void Task::setAccessCode(std::string_view accessCode)
 {
+    auto nsAccessCode = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
+                            ? resource::naming_system::deprecated::accessCode
+                            : resource::naming_system::accessCode;
     ModelExpect(! findStringInArray(identifierArrayPointer, systemRelPointer,
-                                    resource::naming_system::accessCode, valueRelPointer)
+                                    nsAccessCode, valueRelPointer)
                       .has_value(),
                 "AccessCode cannot be set multiple times.");
 
     auto newValue = copyValue(*SecretAccessCodeTemplate);
     setKeyValue(newValue, valueRelPointer, accessCode);
-    setKeyValue(newValue, systemRelPointer, resource::naming_system::accessCode);
+    setKeyValue(newValue, systemRelPointer, nsAccessCode);
     addToArray(identifierArrayPointer, std::move(newValue));
 }
 
@@ -478,8 +524,11 @@ void Task::deleteKvnr()
 
 void Task::deleteAccessCode()
 {
+    auto nsAccessCode = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
+                            ? resource::naming_system::deprecated::accessCode
+                            : resource::naming_system::accessCode;
     const auto accessCodeAndPos =
-        findMemberInArray(identifierArrayPointer, systemRelPointer, model::resource::naming_system::accessCode, valueRelPointer, true);
+        findMemberInArray(identifierArrayPointer, systemRelPointer, nsAccessCode, valueRelPointer, true);
     if(accessCodeAndPos)
     {
         removeFromArray(identifierArrayPointer, std::get<1>(accessCodeAndPos.value()));
@@ -488,8 +537,10 @@ void Task::deleteAccessCode()
 
 void Task::deleteSecret()
 {
+    auto nsSecret = ResourceVersion::deprecatedProfile(getSchemaVersion({})) ? resource::naming_system::deprecated::secret
+                                                                           : resource::naming_system::secret;
     const auto secretAndPos =
-        findMemberInArray(identifierArrayPointer, systemRelPointer, model::resource::naming_system::secret, valueRelPointer, true);
+        findMemberInArray(identifierArrayPointer, systemRelPointer, nsSecret, valueRelPointer, true);
     if(secretAndPos)
     {
         removeFromArray(identifierArrayPointer, std::get<1>(secretAndPos.value()));
@@ -512,4 +563,4 @@ Task::Task(NumberAsStringParserDocument&& jsonTree)
     std::call_once(onceFlag, initTemplates);
 }
 
-}
+} // namespace model

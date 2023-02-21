@@ -3,63 +3,62 @@
   "id": "a0010000-0000-0000-0003-000000000000",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/StructureDefinition/ErxReceipt|1.1.1"
+      "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Bundle|1.2"
+    ],
+    "tag": [
+      {
+        "display": "Receipt Bundle 'Quittung' for completed dispensation of a prescription"
+      }
     ]
   },
+  "type": "document",
   "identifier": {
-    "system": "https://gematik.de/fhir/NamingSystem/PrescriptionID",
+    "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
     "value": "##PRESCRIPTION_ID##"
   },
-  "type": "document",
-  "timestamp": "2021-12-08T15:30:35.081+00:00",
-  "link": [
-    {
-      "relation": "self",
-      "url": "https://gematik.erppre.de:443/Task/##PRESCRIPTION_ID##/$close/"
-    }
-  ],
+  "timestamp": "2022-03-18T15:28:00+00:00",
   "entry": [
     {
-      "fullUrl": "urn:uuid:ecc8a306-b4ee-43da-8751-646c2600839a",
+      "fullUrl": "urn:uuid:c624cf47-e235-4624-af71-0a09dc9254dc",
       "resource": {
         "resourceType": "Composition",
-        "id": "ecc8a306-b4ee-43da-8751-646c2600839a",
+        "id": "c624cf47-e235-4624-af71-0a09dc9254dc",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/StructureDefinition/ErxComposition|1.1.1"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Composition|1.2"
           ]
         },
+        "status": "final",
+        "title": "Quittung",
         "extension": [
           {
-            "url": "https://gematik.de/fhir/StructureDefinition/BeneficiaryExtension",
+            "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_Beneficiary",
             "valueIdentifier": {
-              "system": "https://gematik.de/fhir/NamingSystem/TelematikID",
-              "value": "3-SMC-B-Testkarte-883110000120312"
+              "system": "https://gematik.de/fhir/sid/telematik-id",
+              "value": "3-SMC-B-Testkarte-883110000129070"
             }
           }
         ],
-        "status": "final",
         "type": {
           "coding": [
             {
-              "system": "https://gematik.de/fhir/CodeSystem/Documenttype",
               "code": "3",
+              "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType",
               "display": "Receipt"
             }
           ]
         },
-        "date": "2021-12-08T15:30:35.077+00:00",
+        "date": "2022-03-18T15:29:00+00:00",
         "author": [
           {
-            "reference": "https://gematik.erppre.de:443/Device/1"
+            "reference": "https://erp.zentral.erp.splitdns.ti-dienste.de/Device/1"
           }
         ],
-        "title": "Quittung",
         "event": [
           {
             "period": {
-              "start": "2021-12-08T15:30:34.479+00:00",
-              "end": "2021-12-08T15:30:35.077+00:00"
+              "start": "2022-03-18T15:28:00+00:00",
+              "end": "2022-03-18T15:29:00+00:00"
             }
           }
         ],
@@ -67,7 +66,7 @@
           {
             "entry": [
               {
-                "reference": "Binary/PrescriptionDigest-160.000.000.000.001.54"
+                "reference": "Binary/PrescriptionDigest-160.123.456.789.123.58"
               }
             ]
           }
@@ -75,26 +74,26 @@
       }
     },
     {
-      "fullUrl": "https://gematik.erppre.de:443/Device/1",
+      "fullUrl": "https://erp.zentral.erp.splitdns.ti-dienste.de/Device/1",
       "resource": {
         "resourceType": "Device",
         "id": "1",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/StructureDefinition/ErxDevice|1.1.1"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device|1.2"
           ]
         },
         "status": "active",
-        "serialNumber": "0.3.1",
+        "serialNumber": "1.4.0",
         "deviceName": [
           {
-            "name": "E-Rezept Fachdienst",
+            "name": "E-Rezept-Fachdienst",
             "type": "user-friendly-name"
           }
         ],
         "version": [
           {
-            "value": "0.3.1"
+            "value": "1.4.0"
           }
         ],
         "contact": [
@@ -106,18 +105,17 @@
       }
     },
     {
-      "fullUrl": "https://gematik.erppre.de:443/Task/##PRESCRIPTION_ID##/PrescriptionDigest",
+      "fullUrl": "https://erp.zentral.erp.splitdns.ti-dienste.de/Binary/PrescriptionDigest-160.123.456.789.123.58",
       "resource": {
         "resourceType": "Binary",
-        "id": "PrescriptionDigest-##PRESCRIPTION_ID##",
+        "id": "PrescriptionDigest-160.123.456.789.123.58",
         "meta": {
-          "versionId": "1",
           "profile": [
-            "http://hl7.org/fhir/StructureDefinition/Binary|4.0.1"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Digest|1.2"
           ]
         },
         "contentType": "application/octet-stream",
-        "data": "5YIW/H5cdesRy5VilWW+LsmuqH2uVaede4bLan0RWTM="
+        "data": "tJg8c5ZtdhzEEhJ0ZpAsUVFx5dKuYgQFs5oKgthi17M="
       }
     }
   ],
@@ -128,9 +126,9 @@
         "code": "1.2.840.10065.1.12.1.1"
       }
     ],
-    "when": "2021-12-08T15:30:35.085+00:00",
+    "when": "2022-03-18T15:28:00+00:00",
     "who": {
-      "reference": "https://gematik.erppre.de:443/Device/1"
+      "reference": "https://erp.zentral.erp.splitdns.ti-dienste.de/Device/1"
     },
     "sigFormat": "application/pkcs7-mime",
     "data": "MIIPiAYJKoZIhvcNAQcCoIIPeTCCD3UCAQExDTALBglghkgBZQMEAgEwggnVBgkqhkiG9w0BBwGgggnGBIIJwjw/eG1sIHZlcnNpb249IjEuMCIgZW5jb2Rpbmc9InV0Zi04Ij8+CjxCdW5kbGUgeG1sbnM9Imh0dHA6Ly9obDcub3JnL2ZoaXIiPjxpZCB2YWx1ZT0iYTAwMTAwMDAtMDAwMC0wMDAwLTAwMDMtMDAwMDAwMDAwMDAwIi8+PG1ldGE+PHByb2ZpbGUgdmFsdWU9Imh0dHBzOi8vZ2VtYXRpay5kZS9maGlyL1N0cnVjdHVyZURlZmluaXRpb24vRXJ4UmVjZWlwdHwxLjEuMSIvPjwvbWV0YT48aWRlbnRpZmllcj48c3lzdGVtIHZhbHVlPSJodHRwczovL2dlbWF0aWsuZGUvZmhpci9OYW1pbmdTeXN0ZW0vUHJlc2NyaXB0aW9uSUQiLz48dmFsdWUgdmFsdWU9IjE2MC4wMDAuMDAwLjAwMC4wMDEuNTQiLz48L2lkZW50aWZpZXI+PHR5cGUgdmFsdWU9ImRvY3VtZW50Ii8+PHRpbWVzdGFtcCB2YWx1ZT0iMjAyMS0xMi0wOFQxNTozMDozNS4wODErMDA6MDAiLz48bGluaz48cmVsYXRpb24gdmFsdWU9InNlbGYiLz48dXJsIHZhbHVlPSJodHRwczovL2dlbWF0aWsuZXJwcHJlLmRlOjQ0My9UYXNrLzE2MC4wMDAuMDAwLjAwMC4wMDEuNTQvJGNsb3NlLyIvPjwvbGluaz48ZW50cnk+PGZ1bGxVcmwgdmFsdWU9InVybjp1dWlkOmVjYzhhMzA2LWI0ZWUtNDNkYS04NzUxLTY0NmMyNjAwODM5YSIvPjxyZXNvdXJjZT48Q29tcG9zaXRpb24+PGlkIHZhbHVlPSJlY2M4YTMwNi1iNGVlLTQzZGEtODc1MS02NDZjMjYwMDgzOWEiLz48bWV0YT48cHJvZmlsZSB2YWx1ZT0iaHR0cHM6Ly9nZW1hdGlrLmRlL2ZoaXIvU3RydWN0dXJlRGVmaW5pdGlvbi9FcnhDb21wb3NpdGlvbnwxLjEuMSIvPjwvbWV0YT48ZXh0ZW5zaW9uIHVybD0iaHR0cHM6Ly9nZW1hdGlrLmRlL2ZoaXIvU3RydWN0dXJlRGVmaW5pdGlvbi9CZW5lZmljaWFyeUV4dGVuc2lvbiI+PHZhbHVlSWRlbnRpZmllcj48c3lzdGVtIHZhbHVlPSJodHRwczovL2dlbWF0aWsuZGUvZmhpci9OYW1pbmdTeXN0ZW0vVGVsZW1hdGlrSUQiLz48dmFsdWUgdmFsdWU9IjMtU01DLUItVGVzdGthcnRlLTg4MzExMDAwMDEyMDMxMiIvPjwvdmFsdWVJZGVudGlmaWVyPjwvZXh0ZW5zaW9uPjxzdGF0dXMgdmFsdWU9ImZpbmFsIi8+PHR5cGU+PGNvZGluZz48c3lzdGVtIHZhbHVlPSJodHRwczovL2dlbWF0aWsuZGUvZmhpci9Db2RlU3lzdGVtL0RvY3VtZW50dHlwZSIvPjxjb2RlIHZhbHVlPSIzIi8+PGRpc3BsYXkgdmFsdWU9IlJlY2VpcHQiLz48L2NvZGluZz48L3R5cGU+PGRhdGUgdmFsdWU9IjIwMjEtMTItMDhUMTU6MzA6MzUuMDc3KzAwOjAwIi8+PGF1dGhvcj48cmVmZXJlbmNlIHZhbHVlPSJodHRwczovL2dlbWF0aWsuZXJwcHJlLmRlOjQ0My9EZXZpY2UvMSIvPjwvYXV0aG9yPjx0aXRsZSB2YWx1ZT0iUXVpdHR1bmciLz48ZXZlbnQ+PHBlcmlvZD48c3RhcnQgdmFsdWU9IjIwMjEtMTItMDhUMTU6MzA6MzQuNDc5KzAwOjAwIi8+PGVuZCB2YWx1ZT0iMjAyMS0xMi0wOFQxNTozMDozNS4wNzcrMDA6MDAiLz48L3BlcmlvZD48L2V2ZW50PjxzZWN0aW9uPjxlbnRyeT48cmVmZXJlbmNlIHZhbHVlPSJCaW5hcnkvUHJlc2NyaXB0aW9uRGlnZXN0LTE2MC4wMDAuMDAwLjAwMC4wMDEuNTQiLz48L2VudHJ5Pjwvc2VjdGlvbj48L0NvbXBvc2l0aW9uPjwvcmVzb3VyY2U+PC9lbnRyeT48ZW50cnk+PGZ1bGxVcmwgdmFsdWU9Imh0dHBzOi8vZ2VtYXRpay5lcnBwcmUuZGU6NDQzL0RldmljZS8xIi8+PHJlc291cmNlPjxEZXZpY2U+PGlkIHZhbHVlPSIxIi8+PG1ldGE+PHByb2ZpbGUgdmFsdWU9Imh0dHBzOi8vZ2VtYXRpay5kZS9maGlyL1N0cnVjdHVyZURlZmluaXRpb24vRXJ4RGV2aWNlfDEuMS4xIi8+PC9tZXRhPjxzdGF0dXMgdmFsdWU9ImFjdGl2ZSIvPjxzZXJpYWxOdW1iZXIgdmFsdWU9IjAuMy4xIi8+PGRldmljZU5hbWU+PG5hbWUgdmFsdWU9IkUtUmV6ZXB0IEZhY2hkaWVuc3QiLz48dHlwZSB2YWx1ZT0idXNlci1mcmllbmRseS1uYW1lIi8+PC9kZXZpY2VOYW1lPjx2ZXJzaW9uPjx2YWx1ZSB2YWx1ZT0iMC4zLjEiLz48L3ZlcnNpb24+PGNvbnRhY3Q+PHN5c3RlbSB2YWx1ZT0iZW1haWwiLz48dmFsdWUgdmFsdWU9ImJldHJpZWJAZ2VtYXRpay5kZSIvPjwvY29udGFjdD48L0RldmljZT48L3Jlc291cmNlPjwvZW50cnk+PGVudHJ5PjxmdWxsVXJsIHZhbHVlPSJodHRwczovL2dlbWF0aWsuZXJwcHJlLmRlOjQ0My9UYXNrLzE2MC4wMDAuMDAwLjAwMC4wMDEuNTQvUHJlc2NyaXB0aW9uRGlnZXN0Ii8+PHJlc291cmNlPjxCaW5hcnk+PGlkIHZhbHVlPSJQcmVzY3JpcHRpb25EaWdlc3QtMTYwLjAwMC4wMDAuMDAwLjAwMS41NCIvPjxtZXRhPjx2ZXJzaW9uSWQgdmFsdWU9IjEiLz48cHJvZmlsZSB2YWx1ZT0iaHR0cDovL2hsNy5vcmcvZmhpci9TdHJ1Y3R1cmVEZWZpbml0aW9uL0JpbmFyeXw0LjAuMSIvPjwvbWV0YT48Y29udGVudFR5cGUgdmFsdWU9ImFwcGxpY2F0aW9uL29jdGV0LXN0cmVhbSIvPjxkYXRhIHZhbHVlPSI1WUlXL0g1Y2Rlc1J5NVZpbFdXK0xzbXVxSDJ1VmFlZGU0YkxhbjBSV1RNPSIvPjwvQmluYXJ5PjwvcmVzb3VyY2U+PC9lbnRyeT48L0J1bmRsZT4KoIICyDCCAsQwggJroAMCAQICBwDz8THOg8cwCgYIKoZIzj0EAwIwgYQxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZnZW1hdGlrIEdtYkggTk9ULVZBTElEMTIwMAYDVQQLDClLb21wb25lbnRlbi1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEgMB4GA1UEAwwXR0VNLktPTVAtQ0ExMCBURVNULU9OTFkwHhcNMjAxMDA3MDAwMDAwWhcNMjUwODA3MDAwMDAwWjBeMQswCQYDVQQGEwJERTEmMCQGA1UECgwdZ2VtYXRpayBURVNULU9OTFkgLSBOT1QtVkFMSUQxJzAlBgNVBAMMHkVSUCBSZWZlcmVuemVudHdpY2tsdW5nIEZEIFNpZzBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAARJXWJ+givX7fC/BzKSQUS0hvOdi8Km5hVJIW3bCtRuKAQ2IQKgdCDMqPjyd31JboIKADh0Q0z09BkdFoakxZBbo4HrMIHoMDgGCCsGAQUFBwEBBCwwKjAoBggrBgEFBQcwAYYcaHR0cDovL2VoY2EuZ2VtYXRpay5kZS9vY3NwLzAOBgNVHQ8BAf8EBAMCB4AwIQYDVR0gBBowGDAKBggqghQATASBSzAKBggqghQATASBIzAfBgNVHSMEGDAWgBQo8Pjmqch3zENF25qu1zqDrA4PqDAdBgNVHQ4EFgQUxThe4wuB3vT+NbTdhIMoGq3Pc68wDAYDVR0TAQH/BAIwADArBgUrJAgDAwQiMCAwHjAcMBowGDAKDAhFLVJlemVwdDAKBggqghQATASCAzAKBggqhkjOPQQDAgNHADBEAiAtxoZ1gHo1ju91sBCgyV7bjAkDUHpsPypY0ngAc59B3QIgfsEhZAXHBDBN/kI2RDNEiW0NNp/tinVOKYrtqNE9+WgxggK6MIICtgIBATCBkDCBhDELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMjAwBgNVBAsMKUtvbXBvbmVudGVuLUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMSAwHgYDVQQDDBdHRU0uS09NUC1DQTEwIFRFU1QtT05MWQIHAPPxMc6DxzALBglghkgBZQMEAgGgggG7MBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTIxMTIwODE1MzAzNVowLwYJKoZIhvcNAQkEMSIEIFTtLzV2Y7YfolIYLEPYIVP5NhdkaweZf7HBT5MOs4cFMHkGCSqGSIb3DQEJDzFsMGowCwYJYIZIAWUDBAEqMAsGCWCGSAFlAwQBFjALBglghkgBZQMEAQIwCgYIKoZIhvcNAwcwDgYIKoZIhvcNAwICAgCAMA0GCCqGSIb3DQMCAgFAMAcGBSsOAwIHMA0GCCqGSIb3DQMCAgEoMIHUBgsqhkiG9w0BCRACLzGBxDCBwTCBvjCBuwQgYdlxtl38E30xMMltYvuUr+qiVI+EVsZFL2QEo1wX8HAwgZYwgYqkgYcwgYQxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZnZW1hdGlrIEdtYkggTk9ULVZBTElEMTIwMAYDVQQLDClLb21wb25lbnRlbi1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEgMB4GA1UEAwwXR0VNLktPTVAtQ0ExMCBURVNULU9OTFkCBwDz8THOg8cwCgYIKoZIzj0EAwIERjBEAiBqkqpt259A+nY1z+8ohRrL2ct+naTMlvXtRdApVYoghQIgavOAT0p0Kst+neNnfvou3uJzAPiXTBRlnTBzCtN0dlw="

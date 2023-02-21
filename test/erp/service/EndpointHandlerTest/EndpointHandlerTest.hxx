@@ -23,15 +23,17 @@
 #include "test_config.h"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <gtest/gtest.h>
 #include <regex>
 #include <variant>
 
-class EndpointHandlerTest : public testing::Test
+template <typename TestClass>
+class EndpointHandlerTestT : public TestClass
 {
 public:
-    EndpointHandlerTest()
+    EndpointHandlerTestT()
         : dataPath(std::string{TEST_DATA_DIR} + "/EndpointHandlerTest")
         , mServiceContext(StaticData::makePcServiceContext([](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
             auto md = std::make_unique<MockDatabase>(hsmPool);
@@ -52,7 +54,7 @@ public:
         model::Task task{ model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode };
         task.setAcceptDate(model::Timestamp{ .0 });
         task.setExpiryDate(model::Timestamp{ .0 });
-        task.setKvnr(insurant);
+        task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::gkv});
         task.updateLastUpdate(model::Timestamp{ .0 });
         task.setStatus(taskStatus);
         model::PrescriptionId prescriptionId = database->storeTask(task);
@@ -62,7 +64,7 @@ public:
             task.setHealthCarePrescriptionUuid();
             const std::optional<std::string_view> healthCarePrescriptionUuid =
                 task.healthCarePrescriptionUuid().value();
-            const auto& kbvBundle = ResourceManager::instance().getStringResource(dataPath + "/kbv_bundle.xml");
+            const auto& kbvBundle = ResourceTemplates::kbvBundleXml();
             const model::Binary healthCarePrescriptionBundle{
                 healthCarePrescriptionUuid.value(), CryptoHelper::toCadesBesSignature(kbvBundle)};
             database->activateTask(task, healthCarePrescriptionBundle);
@@ -75,7 +77,7 @@ public:
     {
         GetAllAuditEventsHandler handler({});
 
-        Header requestHeader{ HttpMethod::GET, "/AuditEvent/", 0, {}, HttpStatus::Unknown};
+        Header requestHeader{ HttpMethod::GET, "/AuditEvent/", 0, { {Header::AcceptLanguage, "de"} }, HttpStatus::Unknown};
 
         auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
         ServerRequest serverRequest{ std::move(requestHeader) };
@@ -99,8 +101,8 @@ public:
         ASSERT_EQ(auditEvents.size(), 1);
 
         auto& auditEvent = auditEvents.front();
-        ASSERT_NO_THROW(model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                   *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
+        ASSERT_NO_THROW((void)model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
 
         auto expectedAuditEvent = model::AuditEvent::fromJsonNoValidation(
             FileHelper::readFileAsString(dataPath + "/" + expectedResultFilename));
@@ -123,5 +125,7 @@ protected:
     PcServiceContext mServiceContext;
     std::unique_ptr<JwtBuilder> mJwtBuilder;
 };
+
+using EndpointHandlerTest = EndpointHandlerTestT<::testing::Test>;
 
 #endif//ERP_PROCESSING_CONTEXT_TEST_ERP_SERVICE_ENDPOINTHANDLERTEST_ENDPOINTHANDLERTEST_HXX

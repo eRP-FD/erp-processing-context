@@ -6,10 +6,16 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTILS
 #define ERP_PROCESSING_CONTEXT_TEST_UTILS
 
+#include "test/util/EnvironmentVariableGuard.hxx"
+
 #include <gtest/gtest.h>
 #include <thread>
+#include <vector>
 
-template <typename T>
+namespace testutils
+{
+
+template<typename T>
 static void waitFor(T predicate)
 {
     for (size_t retries = 0; retries < 100; ++retries)
@@ -23,4 +29,10 @@ static void waitFor(T predicate)
     ASSERT_TRUE(predicate());
 }
 
-#endif // ERP_PROCESSING_CONTEXT_TEST_UTILS
+std::vector<EnvironmentVariableGuard> getNewFhirProfileEnvironment();
+std::vector<EnvironmentVariableGuard> getOldFhirProfileEnvironment();
+std::vector<EnvironmentVariableGuard> getOverlappingFhirProfileEnvironment();
+
+} // namespace testutils
+
+#endif// ERP_PROCESSING_CONTEXT_TEST_UTILS

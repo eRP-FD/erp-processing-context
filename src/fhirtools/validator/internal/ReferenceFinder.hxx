@@ -26,13 +26,16 @@ class ReferenceFinder
 {
 public:
     struct FinderResult {
-        ValidationResultList validationResults;
+        ValidationResults validationResults;
         ReferenceContext referenceContext;
         void merge(FinderResult&&);
     };
 
     [[nodiscard]] static FinderResult find(const Element& element, std::set<ProfiledElementTypeInfo> profiles,
                                            const ValidatorOptions&, std::string_view elementFullPath);
+
+    ReferenceFinder(const ReferenceFinder&) = delete;
+    ReferenceFinder& operator=(const ReferenceFinder&) = delete;
 
 private:
     enum class ResourceHandling
@@ -54,7 +57,7 @@ private:
     using ReferenceInfo = ReferenceContext::ReferenceInfo;
     using ResourceInfo = ReferenceContext::ResourceInfo;
     ReferenceFinder(std::set<ProfiledElementTypeInfo> profiles, std::shared_ptr<ResourceInfo> currentResource,
-                    bool followBundleEntry, bool isDocumentBundle, size_t bundleIndex);
+                    bool followBundleEntry, bool isDocumentBundle, size_t bundleIndex, const ValidatorOptions&);
 
     void findInternal(const Element& element, std::string_view elementFullPath, const std::string& resourcePath);
     void processResource(const Element& element, std::set<ProfiledElementTypeInfo> allSubPets, ElementType elementType,
@@ -77,6 +80,9 @@ private:
     static ElementType getElementType(const FhirStructureRepository& repo, const ProfiledElementTypeInfo& elementInfo);
     ResourceHandling getResourceHandling(ElementType elementType) const;
     ReferenceContext::AnchorType referenceRequirement(ResourceHandling elementType);
+    const FhirStructureDefinition* getTypeFromReferenceElement(const FhirStructureRepository& repo,
+                                                               const Element& referenceElement,
+                                                               const std::string_view elementFullPath);
 
     std::set<ProfiledElementTypeInfo> mProfiledElementTypes;
     FinderResult mResult;
@@ -84,6 +90,7 @@ private:
     bool mFollowBundleEntry = true;
     bool mIsDocumentBundle = false;
     size_t mBundleIndex;
+    const ValidatorOptions& mOptions;
 };
 
 }

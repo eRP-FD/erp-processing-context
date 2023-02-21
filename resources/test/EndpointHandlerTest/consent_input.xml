@@ -1,6 +1,6 @@
 <Consent xmlns="http://hl7.org/fhir">
    <meta>
-      <profile value="https://gematik.de/fhir/StructureDefinition/ErxConsent|1.1.1" />
+      <profile value="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|1.0" />
       <tag>
          <display value="Example for a Consent Document for saving a ChargeItem" />
       </tag>
@@ -15,14 +15,14 @@
    </scope>
    <category>
       <coding>
-         <system value="https://gematik.de/fhir/CodeSystem/Consenttype" />
+         <system value="https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType" />
          <code value="CHARGCONS" />
          <display value="Consent for saving electronic charge item" />
       </coding>
    </category>
    <patient>
       <identifier>
-         <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
+         <system value="http://fhir.de/sid/pkv/kvid-10" />
          <value value="X123456789" />
       </identifier>
    </patient>

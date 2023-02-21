@@ -97,6 +97,12 @@ private:
     bool mReverseIncludeAuditEventArgument = false;
     friend class TestUrlArguments;
 
+    /**
+     * Split rawValues into parts. If a part is empty, the method throws
+     * a ModelException (this happens for strings like ",hi", ",", ",,xyz", etc.
+     */
+    std::vector<std::string> splitCheckedArgs(const std::string& rawValues);
+
     void addSearchArguments (const std::string& name, const std::string& rawValues, const KeyDerivation& keyDerivation);
     void addDateSearchArguments(const std::string& name, const std::string& rawValues,
                                  const std::string& parameterDbName);

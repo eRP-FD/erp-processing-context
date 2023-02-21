@@ -292,9 +292,9 @@ public:
 
         };
     }
-    virtual ValidatorOptions validatorOptions()
+    ValidatorOptions validatorOptions() override
     {
-        return {.reportUnknownExtensions = true};
+        return {.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::enable};
     }
 };
 
@@ -374,7 +374,7 @@ public:
     ValidatorOptions validatorOptions() override
     {
         auto opt = SampleValidationTest::validatorOptions();
-        opt.reportUnknownExtensions = true;
+        opt.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::enable;
         return opt;
     }
 };

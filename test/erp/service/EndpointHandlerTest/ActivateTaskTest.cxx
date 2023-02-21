@@ -6,6 +6,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/service/task/ActivateTaskHandler.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 class ActivateTaskTest : public EndpointHandlerTest
 {
@@ -45,34 +46,51 @@ public:
         serverRequest.setPathParameters({"id"}, {origTask.prescriptionId().toString()});
         return serverRequest;
     }
+    struct ActivateTaskArgs {
+        HttpStatus expectedStatus = HttpStatus::OK;
+        std::optional<model::Timestamp> signingTime = std::nullopt;
+        std::optional<model::Timestamp> expectedExpiry = std::nullopt;
+        bool insertTask = false;
+        std::optional<std::reference_wrapper<std::exception_ptr>> outExceptionPtr = std::nullopt;
+    };
 
     void checkActivateTask(PcServiceContext& serviceContext, const std::string_view& taskJson,
                            const std::string_view& kbvBundleXml, const std::string_view& expectedKvnr,
-                           const HttpStatus expectedStatus = HttpStatus::OK,
-                           std::optional<model::Timestamp> signingTime = {}, bool insertTask = false)
+                           ActivateTaskArgs args)
     {
         const auto& origTask = model::Task::fromJsonNoValidation(taskJson);
 
         ActivateTaskHandler handler({});
-        ServerRequest request{serverRequest(taskJson, kbvBundleXml, signingTime)};
+        ServerRequest request{serverRequest(taskJson, kbvBundleXml, args.signingTime)};
         ServerResponse serverResponse;
         AccessLog accessLog;
         SessionContext sessionContext{serviceContext, request, serverResponse, accessLog};
-        if (insertTask)
+        if (args.insertTask)
         {
             auto& db = dynamic_cast<MockDatabase&>(sessionContext.database()->getBackend());
             db.insertTask(origTask);
         }
 
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-        if (expectedStatus != HttpStatus::OK && expectedStatus != HttpStatus::Accepted)
+        if (args.expectedStatus != HttpStatus::OK && args.expectedStatus != HttpStatus::Accepted)
         {
-            EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), expectedStatus);
+            auto callHandler = [&]{
+                try {
+                    handler.handleRequest(sessionContext);
+                } catch (...) {
+                    if (args.outExceptionPtr)
+                    {
+                        args.outExceptionPtr->get() = std::current_exception();
+                    }
+                    throw;
+                }
+            };
+            EXPECT_ERP_EXCEPTION(callHandler(), args.expectedStatus);
             return;
         }
 
         ASSERT_NO_THROW(handler.handleRequest(sessionContext));
-        ASSERT_EQ(serverResponse.getHeader().status(), expectedStatus);
+        ASSERT_EQ(serverResponse.getHeader().status(), args.expectedStatus);
 
         std::optional<model::Task> task;
         ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
@@ -86,6 +104,10 @@ public:
         EXPECT_FALSE(task->authoredOn().toXsDateTime().empty());
         EXPECT_FALSE(task->accessCode().empty());
         EXPECT_FALSE(task->expiryDate().toXsDateTime().empty());
+        if (args.expectedExpiry.has_value())
+        {
+            EXPECT_EQ(*args.expectedExpiry, task->expiryDate());
+        }
         EXPECT_FALSE(task->acceptDate().toXsDateTime().empty());
         EXPECT_TRUE(task->healthCarePrescriptionUuid().has_value());
         EXPECT_TRUE(task->patientConfirmationUuid().has_value());
@@ -95,11 +117,12 @@ public:
 
 TEST_F(ActivateTaskTest, ActivateTask)
 {
-    auto& resourceManager = ResourceManager::instance();
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, resourceManager.getStringResource(dataPath + "/task3.json"),
-                          resourceManager.getStringResource(dataPath + "/kbv_bundle.xml"), "X234567890", HttpStatus::OK,
-                          model::Timestamp::fromXsDate("2021-06-08")));
+    auto signingTime = model::Timestamp::fromXsDate("2021-06-08");
+    const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.prescriptionId = taskId, .timestamp = signingTime});
+    const auto taskJson = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext,
+                                              taskJson, kbvBundleXml, "X234567890", {.signingTime = signingTime}));
 }
 
 TEST_F(ActivateTaskTest, ActivateTaskPkv)
@@ -109,18 +132,29 @@ TEST_F(ActivateTaskTest, ActivateTaskPkv)
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50010);
     const char* const pkvKvnr = "X500000010";
+    const auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
 
-    auto& resourceManager = ResourceManager::instance();
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
-        mServiceContext,
-        replaceKvnr(
-            replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_created_template.json"),
-                                  pkvTaskId.toString()),
-            pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml"),
-                                          pkvTaskId.toString()),
-                    pkvKvnr),
-        pkvKvnr, HttpStatus::OK, model::Timestamp::fromXsDate("2021-06-08")));
+    const auto task = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = timestamp});
+    const auto bundle =
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .timestamp = timestamp, .kvnr = pkvKvnr});
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {.signingTime = timestamp}));
+}
+
+TEST_F(ActivateTaskTest, ActivateTaskPkv209)
+{
+    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
+
+    const auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50011);
+    const char* const pkvKvnr = "X500000011";
+    const auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+
+    const auto task = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = timestamp});
+    const auto bundle =
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .timestamp = timestamp, .kvnr = pkvKvnr});
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {.signingTime = timestamp}));
 }
 
 TEST_F(ActivateTaskTest, ActivateTaskPkvInvalidCoverage)
@@ -130,94 +164,143 @@ TEST_F(ActivateTaskTest, ActivateTaskPkvInvalidCoverage)
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50010);
     const char* const pkvKvnr = "X500000010";
+    const auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    const auto task = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = timestamp});
 
-    auto& resourceManager = ResourceManager::instance();
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
-        mServiceContext,
-        replaceKvnr(
-            replacePrescriptionId(resourceManager.getStringResource(dataPath + "/task_pkv_created_template.json"),
-                                  pkvTaskId.toString()),
-            pkvKvnr),
-        replaceKvnr(replacePrescriptionId(resourceManager.getStringResource(dataPath + "/kbv_gkv_bundle_template.xml"),
-                                          pkvTaskId.toString()),
-                    pkvKvnr),
-        pkvKvnr, HttpStatus::BadRequest, model::Timestamp::fromXsDate("2021-06-08")));
+    const auto bundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = pkvTaskId, .timestamp = timestamp, .kvnr = pkvKvnr, .coverageInsuranceType = "GKV"});
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {HttpStatus::BadRequest, timestamp}));
+}
+
+TEST_F(ActivateTaskTest, ActivateTaskPkvInvalidCoverage209)
+{
+    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
+
+    const auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50011);
+    const char* const pkvKvnr = "X500000011";
+    const auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    const auto task = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = timestamp});
+
+    const auto bundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = pkvTaskId, .timestamp = timestamp, .kvnr = pkvKvnr, .coverageInsuranceType = "GKV"});
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {HttpStatus::BadRequest, timestamp}));
 }
 
 TEST_F(ActivateTaskTest, ActivateTaskBrokenSignature)
 {
-    auto& resourceManager = ResourceManager::instance();
+    const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    const auto taskJson = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext,
-                                              resourceManager.getStringResource(dataPath + "/task3.json"),
+                                              taskJson,
                                               "",// empty signature
-                                              "X234567890", HttpStatus::BadRequest));
+                                              "X234567890", {HttpStatus::BadRequest}));
 }
 
 TEST_F(ActivateTaskTest, AuthoredOnSignatureDateEquality)
 {
     A_22487.test("Task aktivieren - Prüfregel Ausstellungsdatum");
-    auto& resourceManager = ResourceManager::instance();
-    auto task = resourceManager.getStringResource(dataPath + "/task3.json");
-    auto bundleTemplate = resourceManager.getStringResource(dataPath + "/kbv_bundle_authoredOn_template.xml");
-    auto time1 = model::Timestamp::fromXsDateTime("2022-06-25T22:33:00+00:00");
-    const auto* date1 = "2022-06-26";
-    auto time2 = model::Timestamp::fromXsDateTime("2022-06-25T00:33:00+00:00");
-    const auto* date2 = "2022-06-25";
-    auto time3 = model::Timestamp::fromXsDateTime("2022-06-26T12:33:00+00:00");
-    const auto* date3 = "2022-06-26";
-    auto time4 = model::Timestamp::fromXsDateTime("2022-01-25T23:33:00+00:00");
-    const auto* date4 = "2022-01-26";
-    auto time5 = model::Timestamp::fromXsDateTime("2022-01-25T22:33:00+00:00");
-    const auto* date5 = "2022-01-25";
-    auto bundle1 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date1);
-    auto bundle2 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date2);
-    auto bundle3 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date3);
-    auto bundle4 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date4);
-    auto bundle5 = String::replaceAll(bundleTemplate, "###AUTHORED_ON###", date5);
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time1));
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::BadRequest, time2));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time3));
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::BadRequest, time1));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time2));
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::BadRequest, time3));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time1));
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::BadRequest, time2));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time3));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle4, "X234567890", HttpStatus::OK, time4));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle5, "X234567890", HttpStatus::OK, time5));
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, bundle5, "X234567890", HttpStatus::BadRequest, time4));
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, bundle4, "X234567890", HttpStatus::BadRequest, time5));
+    const auto* kvnr = "X234567890";
+    const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
+    auto task =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId});
+    struct TestData
+    {
+        model::Timestamp signingTime;
+        model::Timestamp authoredDate;
+        HttpStatus expectedStatus;
+    };
+    const auto signingTime1 = model::Timestamp::fromXsDateTime("2022-06-25T22:33:00+00:00");
+    const auto authoredTime1 = model::Timestamp::fromXsDate("2022-06-26");
+    const auto signingTime2 = model::Timestamp::fromXsDateTime("2022-06-25T00:33:00+00:00");
+    const auto authoredTime2 = model::Timestamp::fromXsDate("2022-06-25");
+    const auto signingTime3 = model::Timestamp::fromXsDateTime("2022-06-26T12:33:00+00:00");
+    const auto authoredTime3 = model::Timestamp::fromXsDate("2022-06-26");
+    const auto signingTime4 = model::Timestamp::fromXsDateTime("2022-01-25T23:33:00+00:00");
+    const auto authoredTime4 = model::Timestamp::fromXsDate("2022-01-26");
+    const auto signingTime5 = model::Timestamp::fromXsDateTime("2022-01-25T22:33:00+00:00");
+    const auto authoredTime5 = model::Timestamp::fromXsDate("2022-01-25");
+    std::vector<TestData> testSet {
+        {signingTime1, authoredTime1, HttpStatus::OK},
+        {signingTime2, authoredTime1, HttpStatus::BadRequest},
+        {signingTime3, authoredTime1, HttpStatus::OK},
 
+        {signingTime1, authoredTime2, HttpStatus::BadRequest},
+        {signingTime2, authoredTime2, HttpStatus::OK},
+        {signingTime3, authoredTime2, HttpStatus::BadRequest},
+
+        {signingTime1, authoredTime3, HttpStatus::OK},
+        {signingTime2, authoredTime3, HttpStatus::BadRequest},
+        {signingTime3, authoredTime3, HttpStatus::OK},
+
+        {signingTime4, authoredTime4, HttpStatus::OK},
+        {signingTime5, authoredTime4, HttpStatus::BadRequest},
+
+        {signingTime5, authoredTime5, HttpStatus::OK},
+        {signingTime4, authoredTime5, HttpStatus::BadRequest},
+    };
+
+    for (const auto& testData : testSet)
+    {
+        const auto bundle = ResourceTemplates::kbvBundleXml(
+            {.prescriptionId = prescriptionId, .timestamp = testData.authoredDate, .kvnr = kvnr});
+        ASSERT_NO_FATAL_FAILURE(
+            checkActivateTask(mServiceContext, task, bundle, kvnr, {testData.expectedStatus, testData.signingTime}));
+    }
     EnvironmentVariableGuard environmentVariableGuard3("ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE",
                                                        "false");
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time1));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time2));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle1, "X234567890", HttpStatus::OK, time3));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time1));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time2));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle2, "X234567890", HttpStatus::OK, time3));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time1));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time2));
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle3, "X234567890", HttpStatus::OK, time3));
+    for (const auto& testData : testSet)
+    {
+        const auto bundle = ResourceTemplates::kbvBundleXml(
+            {.prescriptionId = prescriptionId, .timestamp = testData.authoredDate, .kvnr = kvnr});
+        ASSERT_NO_FATAL_FAILURE(
+            checkActivateTask(mServiceContext, task, bundle, kvnr, {.signingTime = testData.signingTime}));
+    }
 }
+
+
+TEST_F(ActivateTaskTest, ThreeMonthExpiry)
+{
+    const auto* kvnr = "X234567890";
+    const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
+    const auto timestamp = model::Timestamp::fromXsDateTime("2022-08-31T18:40:00+00:00");
+    const auto task = ResourceTemplates::taskJson({
+        .taskType = ResourceTemplates::TaskType::Draft,
+        .prescriptionId = prescriptionId,
+        .timestamp = timestamp
+    });
+    auto bundle =
+        ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
+
+    auto expectedExpiryTime = model::Timestamp::fromGermanDate("2022-11-30");
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, kvnr,
+                                              {.signingTime = timestamp, .expectedExpiry = expectedExpiryTime}));
+}
+
 
 TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
 {
     EnvironmentVariableGuard onUnknownExtensionGuard{
             "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "report"};
-    auto& resourceManager = ResourceManager::instance();
-    auto taskJson = resourceManager.getStringResource("test/EndpointHandlerTest/task_pkv_created_template.json");
-    auto bundle = resourceManager.getStringResource("test/issues/ERP-10633/Step09.xml");
-    taskJson = String::replaceAll(taskJson, "##PRESCRIPTION_ID##", "200.000.000.000.429.45");
-    auto signingTime = model::Timestamp::fromGermanDate("2022-07-25");
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, taskJson, bundle, "Y229270213", HttpStatus::Accepted, signingTime, true));
+    const auto timestamp = model::Timestamp::fromXsDate("2022-07-25");
+    const auto* kvnr = "Y229270213";
+    const auto prescriptionId = model::PrescriptionId::fromString("200.000.000.000.429.45");
+    auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
+    // intent is only used for medication request and immediately after status, where we want to insert the extension
+    auto extraStatusPos = bundle.find(R"(<intent value="order")");
+    ASSERT_NE(extraStatusPos, std::string::npos);
+    extraStatusPos = bundle.rfind("/>", extraStatusPos);
+    ASSERT_NE(extraStatusPos, std::string::npos);
+    bundle.replace(extraStatusPos, 2,
+                  R"(><extension url="subStatus"><valueBoolean value="true"/></extension></status>)");
+    auto taskJson = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, bundle, kvnr,
+                            {.expectedStatus = HttpStatus::Accepted, .signingTime = timestamp, .insertTask = true}));
 }
 
 
@@ -228,29 +311,43 @@ class ActivateTaskValidationModeTest
 
 TEST_P(ActivateTaskValidationModeTest, OnUnexpectedKbvExtension)
 {
+    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)
+    {
+        GTEST_SKIP_("Skipping test because the kbv profile has closed slicing");
+    }
     EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
                                                  std::string{magic_enum::enum_name(GetParam())}};
     A_22927.test("E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
-    auto& resourceManager = ResourceManager::instance();
-    const auto& task = resourceManager.getStringResource(dataPath + "/task3.json");
-    const auto& bundle = resourceManager.getStringResource(dataPath + "/kbv_bundle_unexpected_extension.xml");
     auto time = model::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
+    const auto* kvnr = "X234567890";
+    const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
+    const std::string_view extraExtension =
+        R"--(<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Illegal_extension">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"/>
+            <code value="00"/>
+          </valueCoding>
+        </extension>)--";
+
+    const auto task = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = time});
+    const auto bundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId, .timestamp = time, .kvnr = kvnr, .metaExtension = extraExtension});
+
     {
         EnvironmentVariableGuard onUnknownExtensionGuard{
             "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "ignore"};
-        EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, "X234567890", HttpStatus::OK, time));
+        EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, kvnr, {.signingTime = time}));
     }
     {
         EnvironmentVariableGuard onUnknownExtensionGuard{
             "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "report"};
-        EXPECT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, task, bundle, "X234567890", HttpStatus::Accepted, time));
+        EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, kvnr, {HttpStatus::Accepted, time}));
     }
     {
         EnvironmentVariableGuard onUnknownExtensionGuard{
             "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "reject"};
-        EXPECT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, task, bundle, "X234567890", HttpStatus::BadRequest, time));
+        EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, kvnr, {HttpStatus::BadRequest, time}));
     }
 }
 
@@ -258,62 +355,72 @@ TEST_P(ActivateTaskValidationModeTest, OnUnexpectedKbvExtension)
 TEST_P(ActivateTaskValidationModeTest, genericValidation)
 {
     using namespace std::string_literals;
-    // clang-format off
-    const auto message = "missing valueCoding.code in extension https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis"s;
-    const auto fullDiagnostics =
-    "Bundle.entry[0].resource{Composition}.extension[0].valueCoding: "
-        "error: Expected exactly one system and one code sub-element "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition:rechtsgrundlage:valueCoding|1.0.2); "
-    "Bundle.entry[0].resource{Composition}.extension[0].valueCoding: "
-        "error: Expected exactly one system and one code sub-element "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition:rechtsgrundlage:valueCoding|1.0.2); "
-    "Bundle.entry[0].resource{Composition}.extension[0].valueCoding.code: "
-        "error: missing mandatory element "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition:rechtsgrundlage:valueCoding|1.0.2); "
-    "Bundle.entry[0].resource{Composition}.extension[0].valueCoding: "
-        "error: Expected exactly one system and one code sub-element "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis:valueCoding|1.0.3); "
-    "Bundle.entry[0].resource{Composition}.extension[0].valueCoding: "
-        "error: Expected exactly one system and one code sub-element "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis:valueCoding|1.0.3); "
-    "Bundle.entry[0].resource{Composition}.extension[0].valueCoding.code: "
-        "error: missing mandatory element "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis:valueCoding|1.0.3); "
-    "Bundle.entry[0].resource{Composition}.subject: "
-        "error: Cannot match profile to Element 'Composition': "
-            "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3 "
-            "(referenced resource Bundle.entry[0].resource{Composition} must match one of: "
-                "[\"https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3\"]); "
-    "Bundle: "
-        "error: bdl-7: FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles) "
-        "(from profile: http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1); "
-    "Bundle: "
-        "error: bdl-7: FullUrl must be unique in a bundle, or else entries with the same fullUrl must have different meta.versionId (except in history bundles) "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2); "s;
-    // clang-format on
+    using enum Configuration::GenericValidationMode;
+    const auto message =
+        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01
+            ? "parsing / validation error"s
+            : "missing valueCoding.code in extension https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis"s;
+
+    auto time = model::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
+    const auto* kvnr = "X234567890";
+    const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
+    const std::string_view extraExtension =
+        R"--(<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Illegal_extension">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"/>
+            <code value="00"/>
+          </valueCoding>
+        </extension>)--";
+
     EnvironmentVariableGuard onUnknownExtensionGuard{"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION",
                                                      "report"};
     EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
                                                  std::string{magic_enum::enum_name(GetParam())}};
-    auto& resourceManager = ResourceManager::instance();
-    const auto& task = resourceManager.getStringResource(dataPath + "/task3.json");
-    const auto& goodBundle = resourceManager.getStringResource(dataPath + "/kbv_bundle.xml");
-    const auto& genericFailBundle = resourceManager.getStringResource(dataPath + "/kbv_bundle_duplicate_fullUrl.xml");
-    const auto& invalidExtension = resourceManager.getStringResource(dataPath + "/kbv_bundle_unexpected_extension.xml");
-    const auto& badBundle =
-        resourceManager.getStringResource(dataPath + "/kbv_bundle_duplicate_fullUrl_missing_code.xml");
-    auto time = model::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
+    const auto task = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = time});
+    const auto invalidExtensionBundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId, .timestamp = time, .kvnr = kvnr, .metaExtension = extraExtension});
 
-    EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, goodBundle, "X234567890", HttpStatus::OK, time));
-    auto expectGeneric = (GetParam() == Configuration::GenericValidationMode::require_success)
-                             ? (HttpStatus::BadRequest)
-                             : (HttpStatus::OK);
+    auto genericFailBundleDuplicateUrl = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId, .timestamp = time, .kvnr = kvnr});
+    // for generic fail, duplicate the fullUrl for two entries
+    std::string::size_type fullUrlEndPos = 0u;
+    for (int i = 0; i < 2; ++i)
+    {
+        auto fullUrlStartPos = genericFailBundleDuplicateUrl.find("<fullUrl value=", fullUrlEndPos);
+        fullUrlEndPos = genericFailBundleDuplicateUrl.find("/>", fullUrlStartPos);
+        ASSERT_NE(fullUrlStartPos, std::string::npos);
+        ASSERT_NE(fullUrlEndPos, std::string::npos);
+        ASSERT_GT(fullUrlEndPos, fullUrlStartPos);
+        fullUrlEndPos += 2;
+        genericFailBundleDuplicateUrl.replace(fullUrlStartPos, fullUrlEndPos - fullUrlStartPos, "<fullUrl value=\"http://erp-test.net/duplicateUrl\"/>");
+    }
+    auto badBundle = genericFailBundleDuplicateUrl;
+    {
+        const auto codeStartPos = genericFailBundleDuplicateUrl.find("<code");
+        const auto codeEndPos = genericFailBundleDuplicateUrl.find('>', codeStartPos);
+        ASSERT_NE(codeStartPos, std::string::npos);
+        ASSERT_NE(codeEndPos, std::string::npos);
+        ASSERT_GT(codeEndPos, codeStartPos);
+        badBundle.erase(codeStartPos, codeEndPos - codeStartPos + 1);
+    }
+    auto goodBundle = ResourceTemplates::kbvBundleXml({.timestamp = time, .kvnr = kvnr});
+
+    bool requireGenericSuccess = GetParam() == Configuration::GenericValidationMode::require_success;
+    EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, goodBundle, kvnr, {.signingTime = time}));
+    auto expectGeneric = requireGenericSuccess ? (HttpStatus::BadRequest) : (HttpStatus::OK);
     EXPECT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, genericFailBundle, "X234567890", expectGeneric, time));
+        checkActivateTask(mServiceContext, task, genericFailBundleDuplicateUrl, kvnr, {expectGeneric, time}));
     EXPECT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, invalidExtension, "X234567890", HttpStatus::Accepted, time));
-    EXPECT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, badBundle, "X234567890", HttpStatus::BadRequest, time));
+        checkActivateTask(mServiceContext, task, invalidExtensionBundle, kvnr, {HttpStatus::Accepted, time}));
+
+    // this can only fail if the generica validator requires success for new profile versions
+    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 ||
+        requireGenericSuccess)
+    {
+        EXPECT_NO_FATAL_FAILURE(
+            checkActivateTask(mServiceContext, task, badBundle, kvnr, {HttpStatus::BadRequest, time}));
+    }
     try
     {
         ActivateTaskHandler handler({});
@@ -323,7 +430,13 @@ TEST_P(ActivateTaskValidationModeTest, genericValidation)
         SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
         handler.handleRequest(sessionContext);
-        ADD_FAILURE() << "handler.handleRequest should throw.";
+        // for new profiles, there is no xsd validation, and if generic validation is disabled,
+        // nothing can throw
+        if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 ||
+            requireGenericSuccess)
+        {
+            ADD_FAILURE() << "handler.handleRequest should throw.";
+        }
     }
     catch (const ErpException& erpException)
     {
@@ -331,15 +444,19 @@ TEST_P(ActivateTaskValidationModeTest, genericValidation)
         EXPECT_EQ(erpException.what(), message);
         switch (GetParam())
         {
-            using enum Configuration::GenericValidationMode;
+
             case Configuration::GenericValidationMode::disable:
                 EXPECT_FALSE(erpException.diagnostics().has_value());
                 break;
             case Configuration::GenericValidationMode::detail_only:
             case Configuration::GenericValidationMode::ignore_errors:
-            case Configuration::GenericValidationMode::require_success:
+            case Configuration::GenericValidationMode::require_success: {
                 ASSERT_TRUE(erpException.diagnostics().has_value());
-                EXPECT_EQ(*erpException.diagnostics(), fullDiagnostics);
+                std::vector<std::string> diagnosticsMessages = String::split(erpException.diagnostics().value(), ";");
+                // as the errors may vary between profile versions, be happy if there are "enough" errors
+                // specific errors can be tested separately by the validator tests
+                EXPECT_GT(diagnosticsMessages.size(), 5);
+            }
         }
     }
 }
@@ -350,3 +467,62 @@ INSTANTIATE_TEST_SUITE_P(AllModes, ActivateTaskValidationModeTest,
                          [](auto info) { return std::string{magic_enum::enum_name(info.param)};});
 
 
+TEST_F(ActivateTaskTest, ERP_12708_kbv_bundle_RepeatedErrorMessages)
+{
+    static const std::string expectedDiagnostic{
+        R"(Bundle.entry[1].resource{Patient}.identifier[0]: error: )"
+        R"(element doesn't match any slice in closed slicing)"
+        R"( (from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.1.0); )"};
+    EnvironmentVariableGuard validFromGuard{"ERP_FHIR_PROFILE_VALID_FROM", "2022-11-01T00:00:00+01:00"};
+    ResourceManager& resourceManager = ResourceManager::instance();
+    const auto& kbvBundle =
+        resourceManager.getStringResource("test/EndpointHandlerTest/ERP-12708-kbv_bundle-RepeatedErrorMessages.xml");
+    std::string_view kvnr{"X123456789"};
+    auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
+    try {
+        ASSERT_TRUE(exception);
+        std::rethrow_exception(exception);
+    }
+    catch (const ErpException& ex)
+    {
+        ASSERT_TRUE(ex.diagnostics().has_value());
+        EXPECT_EQ(ex.diagnostics().value(), expectedDiagnostic);
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected Exception";
+    }
+}
+
+TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
+{
+    std::string_view kvnr{"X123456789"};
+    auto kbvBundle = ResourceTemplates::kbvBundleXml(
+        {.timestamp = model::Timestamp::now(), .kvnr = kvnr, .kbvVersion = model::ResourceVersion::KbvItaErp::v1_1_0});
+    kbvBundle = String::replaceAll(kbvBundle, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
+                                   "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle");
+    auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
+    try
+    {
+        ASSERT_TRUE(exception);
+        std::rethrow_exception(exception);
+    }
+    catch (const ErpException& ex)
+    {
+        ASSERT_TRUE(ex.diagnostics().has_value());
+        EXPECT_EQ(ex.diagnostics().value(), "Unable to determine profile type from name: "
+                                            "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0");
+    }
+    catch (...)
+    {
+        ADD_FAILURE() << "Unexpected Exception";
+    }
+}

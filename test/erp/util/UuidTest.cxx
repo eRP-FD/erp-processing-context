@@ -54,7 +54,7 @@ TEST(UuidTest, uuidUrnFormat)//NOLINT(readability-function-cognitive-complexity)
     EXPECT_EQ(Uuid("e6f79c0b-8d08-40c9-88ee-6a157afac6c7"), Uuid("urn:uuid:e6f79c0b-8d08-40c9-88ee-6a157afac6c7"));
     EXPECT_FALSE(Uuid("e6f79c0b-8d08-40c9-88ee-6a157afac6c7") < Uuid("urn:uuid:e6f79c0b-8d08-40c9-88ee-6a157afac6c7"));
     EXPECT_FALSE(Uuid("urn:uuid:e6f79c0b-8d08-40c9-88ee-6a157afac6c7") < Uuid("e6f79c0b-8d08-40c9-88ee-6a157afac6c7"));
-    EXPECT_EQ(Uuid("huhu").toUrn(), "huhu");
+    EXPECT_THROW(Uuid("huhu").toUrn(), std::runtime_error);
 }
 
 TEST(UuidTest, toOid)//NOLINT(readability-function-cognitive-complexity)

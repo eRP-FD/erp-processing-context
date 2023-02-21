@@ -77,7 +77,7 @@ public:
 
     static LogReceiver makeErrorLogReceiver (void);
     static LogReceiver makeWarningLogReceiver (void);
-    static LogReceiver makeVLogReceiver (const size_t logLevel);
+    static LogReceiver makeVLogReceiver (const int32_t logLevel);
 
     JsonLog& message (std::string_view text);
     JsonLog& details (std::string_view details);

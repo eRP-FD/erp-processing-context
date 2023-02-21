@@ -1,2 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CodeSystem xmlns="http://hl7.org/fhir"><url value="https://gematik.de/fhir/CodeSystem/Documenttype"/><version value="1.1.1"/><name value="DocumenttypeCS"/><title value="CodeSystem of Documenttypes"/><status value="draft"/><experimental value="false"/><publisher value="gematik GmbH"/><contact><telecom><system value="url"/><value value="http://www.gematik.de"/></telecom></contact><description value="Type of document depending on the recipient of the Bundle."/><copyright value="gematik GmbH"/><caseSensitive value="true"/><content value="complete"/><concept><code value="1"/><display value="Health Care Provider Prescription"/></concept><concept><code value="2"/><display value="Patient Confirmation"/></concept><concept><code value="3"/><display value="Receipt"/></concept></CodeSystem>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <url value="https://gematik.de/fhir/CodeSystem/Documenttype"/>
+  <version value="1.1.1"/>
+  <name value="DocumenttypeCS"/>
+  <title value="CodeSystem of Documenttypes"/>
+  <status value="draft"/>
+  <experimental value="false"/>
+  <publisher value="gematik GmbH"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://www.gematik.de"/>
+    </telecom>
+  </contact>
+  <description value="Type of document depending on the recipient of the Bundle."/>
+  <copyright value="gematik GmbH"/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <concept>
+    <code value="1"/>
+    <display value="Health Care Provider Prescription"/>
+  </concept>
+  <concept>
+    <code value="2"/>
+    <display value="Patient Confirmation"/>
+  </concept>
+  <concept>
+    <code value="3"/>
+    <display value="Receipt"/>
+  </concept>
+</CodeSystem>

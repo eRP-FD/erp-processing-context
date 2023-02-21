@@ -11,6 +11,7 @@
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/Constants.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 #include <algorithm>
 
@@ -65,6 +66,23 @@ std::vector<ProfiledElementTypeInfo> fhirtools::ProfiledElementTypeInfo::subElem
     }
     return result;
 }
+
+std::optional<ProfiledElementTypeInfo> ProfiledElementTypeInfo::parentElement() const
+{
+    std::string_view name{mElement->name()};
+    auto dot = name.rfind('.');
+    if (dot == std::string_view::npos)
+    {
+        return std::nullopt;
+    }
+    auto parElement = mProfile->findElement(name.substr(0, dot));
+    if (! parElement)
+    {
+        return std::nullopt;
+    }
+    return ProfiledElementTypeInfo{mProfile, std::move(parElement)};
+}
+
 
 std::optional<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subField(const std::string_view& name) const
 {
@@ -130,7 +148,7 @@ std::list<std::string> fhirtools::ProfiledElementTypeInfo::expandedNames(std::st
     return result;
 }
 
-std::string_view ProfiledElementTypeInfo::elementPath() const
+std::string_view ProfiledElementTypeInfo::elementPath(bool includeDot) const
 {
     const auto& typeIdLength = mProfile->typeId().size();
     static_assert(std::is_reference_v<decltype(mElement->name())>,
@@ -143,9 +161,30 @@ std::string_view ProfiledElementTypeInfo::elementPath() const
     FPExpect3(elementName.size() > typeIdLength,
               "Element name '" + elementName + "' doesn't start with it's typeId: " + mProfile->typeId(),
               std::logic_error);
-    return {elementName.begin() + typeIdLength + 1, elementName.end()};
+    return {elementName.begin() + gsl::narrow<std::string::difference_type>(typeIdLength) + (includeDot ? 0 : 1),
+            elementName.end()};
 }
 
+std::optional<ProfiledElementTypeInfo>
+fhirtools::ProfiledElementTypeInfo::typeInfoInParentStuctureDefinition(const FhirStructureRepository& repo) const
+{
+    using namespace std::string_literals;
+    if (mProfile->derivation() == FhirStructureDefinition::Derivation::basetype)
+    {
+        return std::nullopt;
+    }
+    const auto* parentType = mProfile->parentType(repo);
+    if (parentType)
+    {
+        auto path = elementPath(true);
+        const auto& parentTypeElement = path.empty() ? parentType->rootElement() : parentType->findElement(path);
+        if (parentTypeElement)
+        {
+            return ProfiledElementTypeInfo{parentType, parentTypeElement};
+        }
+    }
+    return std::nullopt;
+}
 
 void ProfiledElementTypeInfo::typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef)
 {

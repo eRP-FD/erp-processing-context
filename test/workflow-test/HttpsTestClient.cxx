@@ -98,11 +98,11 @@ uint16_t HttpsTestClient::getTargetPort(TestClient::Target target)
     switch (target)
     {
         case Target::ADMIN:
-            return config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT);
+            return gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT));
         case Target::VAU:
             return config.serverPort();
         case Target::ENROLMENT:
-            return config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT);
+            return gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT));
     }
     Fail2("Invalid value for target: " + std::to_string(static_cast<intmax_t>(target)), std::logic_error);
 }

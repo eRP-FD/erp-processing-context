@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="160.000.166.653.741.17" />
+  <meta>
+    <lastUpdated value="2022-10-04T09:17:07+02:00" />
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2" />
+  </meta>
+  <identifier>
+    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+    <value value="160.000.166.653.741.17" />
+  </identifier>
+  <type value="document" />
+  <timestamp value="2022-10-04T09:17:08.4256265+02:00" />
+  <entry>
+    <fullUrl value="https://snextui01.medico.cgmdev:8133/api/kbv/Composition/ERP.Composition-62c66083-a3a7-46a4-bebb-949941e2a652" />
+    <resource>
+      <Composition>
+        <id value="ERP.Composition-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        <meta>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2" />
+        </meta>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN" />
+            <code value="00" />
+          </valueCoding>
+        </extension>
+        <status value="final" />
+        <type>
+          <coding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART" />
+            <code value="e16A" />
+          </coding>
+        </type>
+        <subject>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Patient/KBVPatient-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        </subject>
+        <date value="2022-10-04T09:07:57+02:00" />
+        <author>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Practitioner/KBVPractitioner-KULLMANN" />
+          <type value="Practitioner" />
+        </author>
+        <author>
+          <type value="Device" />
+          <identifier>
+            <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer" />
+            <value value="Y/410/2112/36/226" />
+          </identifier>
+        </author>
+        <title value="elektronische Arzneimittelverordnung" />
+        <custodian>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Organization/KBVOrganization-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        </custodian>
+        <section>
+          <code>
+            <coding>
+              <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type" />
+              <code value="Prescription" />
+            </coding>
+          </code>
+          <entry>
+            <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/MedicationRequest/ERP.Prescription-62c66083-a3a7-46a4-bebb-949941e2a652" />
+          </entry>
+        </section>
+        <section>
+          <code>
+            <coding>
+              <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type" />
+              <code value="Coverage" />
+            </coding>
+          </code>
+          <entry>
+            <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Coverage/KBVCoverage-62c66083-a3a7-46a4-bebb-949941e2a652" />
+          </entry>
+        </section>
+      </Composition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="https://snextui01.medico.cgmdev:8133/api/kbv/MedicationRequest/ERP.Prescription-62c66083-a3a7-46a4-bebb-949941e2a652" />
+    <resource>
+      <MedicationRequest>
+        <id value="ERP.Prescription-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        <meta>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2" />
+        </meta>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_StatusCoPayment" />
+            <code value="1" />
+          </valueCoding>
+        </extension>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee">
+          <valueBoolean value="false" />
+        </extension>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG">
+          <valueBoolean value="false" />
+        </extension>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Accident">
+          <extension url="unfallkennzeichen">
+            <valueCoding>
+              <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type" />
+              <code value="1" />
+            </valueCoding>
+          </extension>
+          <extension url="unfalltag">
+  <valueDate value="2021-04-01" />
+</extension>
+        </extension>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription">
+          <extension url="Kennzeichen">
+            <valueBoolean value="true" />
+          </extension>
+          <extension url="Nummerierung">
+            <valueRatio>
+              <numerator>
+                <value value="1" />
+              </numerator>
+              <denominator>
+                <value value="4" />
+              </denominator>
+            </valueRatio>
+          </extension>
+          <extension url="Zeitraum">
+            <valuePeriod>
+              <start value="2022-10-04" />
+              <end value="2022-10-07" />
+            </valuePeriod>
+          </extension>
+        </extension>
+        <status value="active" />
+        <intent value="order" />
+        <medicationReference>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Medication/ERP.PZN-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        </medicationReference>
+        <subject>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Patient/KBVPatient-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        </subject>
+        <authoredOn value="2022-10-04" />
+        <requester>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Practitioner/KBVPractitioner-KULLMANN" />
+        </requester>
+        <insurance>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Coverage/KBVCoverage-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        </insurance>
+        <dosageInstruction>
+          <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag">
+            <valueBoolean value="true" />
+          </extension>
+          <text value="1-0-0 Tabl." />
+        </dosageInstruction>
+        <dispenseRequest>
+          <quantity>
+            <value value="1" />
+            <system value="http://unitsofmeasure.org" />
+            <code value="{Package}" />
+          </quantity>
+        </dispenseRequest>
+        <substitution>
+          <allowedBoolean value="true" />
+        </substitution>
+      </MedicationRequest>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="https://snextui01.medico.cgmdev:8133/api/kbv/Medication/ERP.PZN-62c66083-a3a7-46a4-bebb-949941e2a652" />
+    <resource>
+      <Medication>
+        <id value="ERP.PZN-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        <meta>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2" />
+        </meta>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category" />
+            <code value="00" />
+          </valueCoding>
+        </extension>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine">
+          <valueBoolean value="false" />
+        </extension>
+        <extension url="http://fhir.de/StructureDefinition/normgroesse">
+          <valueCode value="N3" />
+        </extension>
+        <code>
+          <coding>
+            <system value="http://fhir.de/CodeSystem/ifa/pzn" />
+            <code value="01014613" />
+          </coding>
+          <text value="Allopurinol AbZ 100mg" />
+        </code>
+        <form>
+          <coding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM" />
+            <code value="TAB" />
+          </coding>
+        </form>
+        <amount>
+          <numerator>
+            <value value="100" />
+            <unit value="St" />
+          </numerator>
+          <denominator>
+            <value value="1" />
+          </denominator>
+        </amount>
+      </Medication>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="https://snextui01.medico.cgmdev:8133/api/kbv/Patient/KBVPatient-62c66083-a3a7-46a4-bebb-949941e2a652" />
+    <resource>
+      <Patient>
+        <id value="KBVPatient-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        <meta>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3" />
+        </meta>
+        <identifier>
+          <use value="official" />
+          <type>
+            <coding>
+              <system value="http://fhir.de/CodeSystem/identifier-type-de-basis" />
+              <code value="GKV" />
+            </coding>
+          </type>
+          <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
+          <value value="Z091234567" />
+        </identifier>
+        <name>
+          <use value="official" />
+          <family value="Muster">
+            <extension url="http://hl7.org/fhir/StructureDefinition/humanname-own-name">
+              <valueString value="Muster" />
+            </extension>
+          </family>
+          <given value="Mann" />
+        </name>
+        <birthDate value="1941-11-25" />
+        <address>
+          <type value="both" />
+          <line value="Carl-Wolff-Str. 12">
+            <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName">
+              <valueString value="Carl-Wolff-Str." />
+            </extension>
+            <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber">
+              <valueString value="12" />
+            </extension>
+          </line>
+          <city value="Essen" />
+          <postalCode value="45279" />
+          <country value="D" />
+        </address>
+      </Patient>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="https://snextui01.medico.cgmdev:8133/api/kbv/Organization/KBVOrganization-62c66083-a3a7-46a4-bebb-949941e2a652" />
+    <resource>
+      <Organization>
+        <id value="KBVOrganization-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        <meta>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.3" />
+        </meta>
+        <identifier>
+          <use value="official" />
+          <type>
+            <coding>
+              <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+              <code value="BSNR" />
+            </coding>
+          </type>
+          <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_BSNR" />
+          <value value="241234601" />
+        </identifier>
+        <name value="Praxis Annie More" />
+        <telecom>
+          <system value="phone" />
+          <value value="0211 / 1111111" />
+        </telecom>
+        <telecom>
+          <system value="email" />
+          <value value="AM@Testpraxis.de" />
+        </telecom>
+        <telecom>
+          <system value="fax" />
+          <value value="0211 / 2222222" />
+        </telecom>
+        <address>
+          <type value="both" />
+          <line value="Musterstr. 1">
+            <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName">
+              <valueString value="Musterstr." />
+            </extension>
+            <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber">
+              <valueString value="1" />
+            </extension>
+          </line>
+          <city value="Düsseldorf" />
+          <postalCode value="40474" />
+          <country value="D" />
+        </address>
+      </Organization>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="https://snextui01.medico.cgmdev:8133/api/kbv/Coverage/KBVCoverage-62c66083-a3a7-46a4-bebb-949941e2a652" />
+    <resource>
+      <Coverage>
+        <id value="KBVCoverage-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        <meta>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3" />
+        </meta>
+        <extension url="http://fhir.de/StructureDefinition/gkv/besondere-personengruppe">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE" />
+            <code value="00" />
+          </valueCoding>
+        </extension>
+        <extension url="http://fhir.de/StructureDefinition/gkv/dmp-kennzeichen">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP" />
+            <code value="00" />
+          </valueCoding>
+        </extension>
+        <extension url="http://fhir.de/StructureDefinition/gkv/versichertenart">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS" />
+            <code value="1" />
+          </valueCoding>
+        </extension>
+        <extension url="http://fhir.de/StructureDefinition/gkv/wop">
+          <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP" />
+            <code value="00" />
+          </valueCoding>
+        </extension>
+        <status value="active" />
+        <type>
+          <coding>
+            <system value="http://fhir.de/CodeSystem/versicherungsart-de-basis" />
+            <code value="GKV" />
+          </coding>
+        </type>
+        <beneficiary>
+          <reference value="https://snextui01.medico.cgmdev:8133/api/kbv/Patient/KBVPatient-62c66083-a3a7-46a4-bebb-949941e2a652" />
+        </beneficiary>
+        <payor>
+          <identifier>
+            <use value="official" />
+            <system value="http://fhir.de/NamingSystem/arge-ik/iknr" />
+            <value value="105513034" />
+          </identifier>
+          <display value="AOK Hessen" />
+        </payor>
+      </Coverage>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="https://snextui01.medico.cgmdev:8133/api/kbv/Practitioner/KBVPractitioner-KULLMANN" />
+    <resource>
+      <Practitioner>
+        <id value="KBVPractitioner-KULLMANN" />
+        <meta>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Practitioner|1.0.3" />
+        </meta>
+        <identifier>
+          <use value="official" />
+          <type>
+            <coding>
+              <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+              <code value="LANR" />
+            </coding>
+          </type>
+          <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_ANR" />
+          <value value="838382202" />
+        </identifier>
+        <name>
+          <use value="official" />
+          <family value="Kullmann">
+            <extension url="http://hl7.org/fhir/StructureDefinition/humanname-own-name">
+              <valueString value="Kullmann" />
+            </extension>
+          </family>
+          <given value="Peter" />
+          <prefix value="Dr.med.">
+            <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier">
+              <valueCode value="AC" />
+            </extension>
+          </prefix>
+        </name>
+        <qualification>
+          <code>
+            <coding>
+              <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type" />
+              <code value="00" />
+            </coding>
+          </code>
+        </qualification>
+        <qualification>
+          <code>
+            <text value="Chefarzt für E-Rezepte" />
+          </code>
+        </qualification>
+      </Practitioner>
+    </resource>
+  </entry>
+</Bundle>

@@ -35,8 +35,9 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     A_19140.start("Retrieve dispensing information from the insured");
 
     const auto& accessToken = session.request.getAccessToken();
-    const auto kvnr = accessToken.stringForClaim(JWT::idNumberClaim);
-    ErpExpect(kvnr.has_value(), HttpStatus::BadRequest, "KvNr not contained in JWT");
+    const auto kvnrClaim = accessToken.stringForClaim(JWT::idNumberClaim);
+    ErpExpect(kvnrClaim.has_value(), HttpStatus::BadRequest, "KvNr not contained in JWT");
+    const model::Kvnr kvnr{*kvnrClaim};
 
     A_19518.start("Search parameters for MedicationDispense");
     A_22070.start("Search parameter PrescriptionID for multiple medication dispenses per task");
@@ -61,8 +62,7 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
 
     A_19406.start("Filter MedicationDispense on KVNR of the insured");
     auto* databaseHandle = session.database();
-    const auto [medicationDispenses, hasNextPage] =
-        databaseHandle->retrieveAllMedicationDispenses(kvnr.value(), arguments);
+    const auto [medicationDispenses, hasNextPage] = databaseHandle->retrieveAllMedicationDispenses(kvnr, arguments);
     A_19406.finish();
     A_22070.finish();
     A_19518.finish();
@@ -83,7 +83,8 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
 
     // Collect Audit data
     session.auditDataCollector()
-        .setInsurantKvnr(*kvnr)
+        // leave the kvnr type unspecified, as there are multiple dispenses, the kvnr type might be inconsistent(?)
+        .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::read)
         .setEventId(model::AuditEventId::GET_MedicationDispense);
 
@@ -125,8 +126,9 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     A_19141.start("Retrieve dispensing information for a single e-recipe");
 
     const auto& accessToken = session.request.getAccessToken();
-    const auto kvnr = accessToken.stringForClaim(JWT::idNumberClaim);
-    ErpExpect(kvnr.has_value(), HttpStatus::BadRequest, "KvNr not contained in JWT");
+    const auto kvnrClaim = accessToken.stringForClaim(JWT::idNumberClaim);
+    ErpExpect(kvnrClaim.has_value(), HttpStatus::BadRequest, "KvNr not contained in JWT");
+    const model::Kvnr kvnr{*kvnrClaim};
 
     const std::optional<std::string> pathId = session.request.getPathParameter("id");
     ErpExpect(pathId.has_value(), HttpStatus::BadRequest, "id path parameter is missing");
@@ -149,8 +151,7 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     A_19406.start("Filter MedicationDispense on KVNR of the insured");
     // No additional search parameters for GetMedicationDispenseById
     auto* databaseHandle = session.database();
-    const auto medicationDispense=
-        databaseHandle->retrieveMedicationDispense(kvnr.value(), medicationDispenseId);
+    const auto medicationDispense = databaseHandle->retrieveMedicationDispense(kvnr, medicationDispenseId);
     A_19406.finish();
 
     ErpExpect(medicationDispense.has_value(), HttpStatus::NotFound,
@@ -159,7 +160,7 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
 
     // Collect Audit data
     session.auditDataCollector()
-        .setInsurantKvnr(*kvnr)
+        .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::read)
         .setEventId(model::AuditEventId::GET_MedicationDispense_id)
         .setPrescriptionId(medicationDispense->prescriptionId());

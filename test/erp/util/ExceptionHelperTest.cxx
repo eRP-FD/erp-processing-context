@@ -125,7 +125,7 @@ TEST_F(ExceptionHelperTest, HsmException)
     throwAndCatchException<HsmException>(
         "HsmException(details,42420001 ERP_ERR_NO_CONNECTION without index)",
         "details",
-        0x42420001);
+        0x42420001u);
 }
 
 

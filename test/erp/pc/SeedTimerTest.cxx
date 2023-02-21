@@ -29,7 +29,7 @@ TEST(SeedTimerTest, distribute)//NOLINT(readability-function-cognitive-complexit
     // Therefore we have to assign a work object to achieve the same effect.
     boost::asio::io_context::work keepThreadsAlive(pool.ioContext());
     pool.setUp(threads);
-    ASSERT_NO_FATAL_FAILURE(waitFor([&]{return pool.getWorkerCount() >= threads; }));
+    ASSERT_NO_FATAL_FAILURE(testutils::waitFor([&]{return pool.getWorkerCount() >= threads; }));
     std::atomic_size_t callCount = 0;
     HsmPool mockHsmPool{
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
@@ -42,7 +42,7 @@ TEST(SeedTimerTest, distribute)//NOLINT(readability-function-cognitive-complexit
                         });
     seedTimer.start(pool.ioContext(), interval);
     EXPECT_EQ(callCount, 0);
-    ASSERT_NO_FATAL_FAILURE(waitFor([&]{return callCount >= threads;}));
+    ASSERT_NO_FATAL_FAILURE(testutils::waitFor([&]{return callCount >= threads;}));
     pool.shutDown();
     EXPECT_EQ(callCount, threads);
 }

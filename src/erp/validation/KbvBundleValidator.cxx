@@ -377,20 +377,24 @@ void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundl
         switch (profile)
         {
             case SchemaType::KBV_PR_ERP_Medication_Compounding:
-                (void) model::KbvMedicationCompounding::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                                inCodeValidator, profile, std::nullopt, version);
+                (void) model::KbvMedicationCompounding::fromXml(
+                    medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_FreeText:
-                (void) model::KbvMedicationFreeText::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                             inCodeValidator, profile, std::nullopt, version);
+                (void) model::KbvMedicationFreeText::fromXml(
+                    medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_Ingredient:
-                (void) model::KbvMedicationIngredient::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                               inCodeValidator, profile, std::nullopt, version);
+                (void) model::KbvMedicationIngredient::fromXml(
+                    medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_PZN:
-                (void) model::KbvMedicationPzn::fromXml(medication.serializeToXmlString(), xmlValidator,
-                                                        inCodeValidator, profile, std::nullopt, version);
+                (void) model::KbvMedicationPzn::fromXml(
+                    medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
                 break;
             default:
                 ErpFail(HttpStatus::BadRequest, "Unsupported medication profile");

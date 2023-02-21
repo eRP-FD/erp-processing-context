@@ -11,12 +11,13 @@
 namespace model
 {
 
-class MedicationDispenseBundle : public BundleBase<MedicationDispenseBundle, ResourceVersion::NotProfiled>
+// NOLINTNEXTLINE(bugprone-exception-escape)
+class MedicationDispenseBundle : public BundleBase<MedicationDispenseBundle>
 {
 public:
-    using BundleBase<MedicationDispenseBundle, ResourceVersion::NotProfiled>::BundleBase;
-    using Resource<MedicationDispenseBundle, ResourceVersion::NotProfiled>::fromXml;
-    using Resource<MedicationDispenseBundle, ResourceVersion::NotProfiled>::fromJson;
+    using BundleBase<MedicationDispenseBundle>::BundleBase;
+    using Resource<MedicationDispenseBundle>::fromXml;
+    using Resource<MedicationDispenseBundle>::fromJson;
 };
 
 }

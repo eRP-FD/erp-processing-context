@@ -10,6 +10,7 @@
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
+#include "erp/tsl/OcspHelper.hxx"
 #include "erp/tpm/PcrSet.hxx"
 #include "erp/tpm/Tpm.hxx"
 #include "erp/util/Base64.hxx"
@@ -68,22 +69,28 @@ namespace
         }
     }
 
-::std::string getBase64PcrHash(::std::string_view base64Quote, ::PcServiceContext& serviceContext)
-{
-    auto hsmPoolSession = serviceContext.getHsmPool().acquire();
-    const auto quoteData = ::ErpVector{::Base64::decode(base64Quote)};
-    const auto pcrHash = hsmPoolSession.session().parseQuote(quoteData).pcrHash;
-    return ::Base64::encode(pcrHash);
-}
+    ::std::string getBase64PcrHash(::std::string_view base64Quote, ::PcServiceContext& serviceContext)
+    {
+        auto hsmPoolSession = serviceContext.getHsmPool().acquire();
+        const auto quoteData = ::ErpVector{::Base64::decode(base64Quote)};
+        const auto pcrHash = hsmPoolSession.session().parseQuote(quoteData).pcrHash;
+        return ::Base64::encode(pcrHash);
+    }
 
-    bool isCertificateValid(const std::string& certificate, TslManager& tslManager)
+    bool isOsigCertificateValid(const std::string& certificate, TslManager& tslManager)
     {
         try
         {
             // TODO: get rid of the back and forth once X509Certificate is merged with Certificate
             const auto base64DerCertificate = Certificate::fromBase64(certificate).toBase64Der();
             auto x509Certificate = X509Certificate::createFromBase64(base64DerCertificate);
-            tslManager.verifyCertificate(TslMode::TSL, x509Certificate, {CertificateType::C_FD_OSIG});
+            tslManager.verifyCertificate(
+                TslMode::TSL,
+                x509Certificate,
+                {CertificateType::C_FD_OSIG},
+                {OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE,
+                 {std::nullopt, OcspHelper::getOcspGracePeriod(TslMode::TSL)},
+                 {}});
 
             return true;
         }
@@ -554,7 +561,7 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
         entry.certificate = requestData.getDecodedString(requestCertificate);
 
         auto& tslManager = session.serviceContext.getTslManager();
-        if (!isCertificateValid(*entry.certificate, tslManager))
+        if (!isOsigCertificateValid(*entry.certificate, tslManager))
         {
             session.response.setStatus(HttpStatus::BadRequest);
             EnrolmentModel response{};

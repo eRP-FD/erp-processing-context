@@ -41,7 +41,7 @@ public:
 private:
     ::db_model::ChargeItem retrieveChargeInformation(::pqxx::work& transaction, const ::std::string& query,
                                                      const ::model::PrescriptionId& id) const;
-    [[nodiscard]] ::db_model::ChargeItem chargeItemFromQueryResultRow(const ::pqxx::row& row) const;
+    [[nodiscard]] ::db_model::ChargeItem chargeItemFromQueryResultRow(const ::pqxx::row& row, bool allInsurantChargeItems = false) const;
 
     struct Queries {
         QueryDefinition storeChargeInformation;

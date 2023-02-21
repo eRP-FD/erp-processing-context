@@ -19,7 +19,7 @@ class XmlStringView
 public:
     constexpr XmlStringView(const char* ns, size_t size): mCString(ns), mSize(size){}
     template <size_t size>
-    explicit constexpr XmlStringView(const char(&ns)[size]): mCString(ns), mSize(size - 1){}
+    explicit constexpr XmlStringView(const char(&ns)[size]): mCString(static_cast<const char*>(ns)), mSize(size - 1){}
 
     explicit XmlStringView(const xmlChar* xmlStr): mCString(reinterpret_cast<const char*>(xmlStr)), mSize(std::strlen(mCString)){}
     explicit XmlStringView(const std::string& xmlStr): mCString(xmlStr.data()), mSize(xmlStr.size()){}

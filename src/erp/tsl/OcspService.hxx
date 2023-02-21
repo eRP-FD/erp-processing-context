@@ -9,6 +9,7 @@
 #include "erp/client/ClientBase.hxx"
 #include "erp/crypto/OpenSslHelper.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "erp/tsl/OcspCheckDescriptor.hxx"
 #include "erp/tsl/OcspUrl.hxx"
 #include "erp/tsl/X509Certificate.hxx"
 #include "fhirtools/util/Gsl.hxx"
@@ -88,10 +89,7 @@ public:
      * @param trustStore    contains the certificate of the issuer and cached
      *                      OCSP responses
      * @param validateHashExtension whether the hash extension should be validated
-     * @param ocspResponse  optional ocsp response that should be used for OCSP check if present
-     * @param referenceTimePoint        optional timepoint to be used for OCSP response validity checks
-     * @param forceOcspRequest          if true, the OCSP request must be done, provided OCSP-Response and OCSP-cache
-     *                                  are ignored
+     * @param ocspCheckDescriptor       describes the OCSP check approach to use
      *
      * @return OCSP status (good / revoked / unknown) plus revocation time
      * @throws std::runtime_error on error
@@ -103,9 +101,7 @@ public:
         const OcspUrl& ocspUrl,
         TrustStore& trustStore,
         const bool validateHashExtension,
-        const OcspResponsePtr& ocspResponse = {},
-        const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint = std::nullopt,
-        const bool forceOcspRequest = false);
+        const OcspCheckDescriptor& ocspCheckDescriptor);
 
     /**
      * Gets the OCSP status for the TSL signer certificate.

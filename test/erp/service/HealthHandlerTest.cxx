@@ -8,6 +8,7 @@
 #include "erp/service/HealthHandler.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/Health.hxx"
+#include "erp/pc/SeedTimer.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
@@ -87,10 +88,10 @@ bool HealthHandlerTestTslManager::failTsl = false;
 bool HealthHandlerTestTslManager::failBna = false;
 bool HealthHandlerTestTslManager::failOcspRetrieval = false;
 
-class HealthHandlerTestSeedTimerMock : public SeedTimer
+class HealthHandlerTestSeedTimerMock : public SeedTimerHandler
 {
 public:
-    using SeedTimer::SeedTimer;
+    using SeedTimerHandler::SeedTimerHandler;
     void healthCheck() const override
     {
         if (fail)
@@ -206,8 +207,9 @@ public:
 
         mPool.setUp(1);
         using namespace std::chrono_literals;
-        mServiceContext->setPrngSeeder(std::make_unique<HealthHandlerTestSeedTimerMock>(
-            mPool, mServiceContext->getHsmPool(), 200ms, [](const SafeString&) {}));
+        auto mockHandler = std::make_shared<HealthHandlerTestSeedTimerMock>(
+            mPool, mServiceContext->getHsmPool(), 200ms, [](const SafeString&) {});
+        mServiceContext->setPrngSeeder(std::make_unique<SeedTimer>(std::move(mockHandler)));
     }
 
     void handleRequest(bool withIdpUpdate = true)
@@ -228,7 +230,8 @@ public:
         const std::string& expectedValue)
     {
         const std::string value = pointer.Get(document)->GetString();
-        EXPECT_TRUE(value.find(expectedValue) != std::string::npos);
+        EXPECT_TRUE(value.find(expectedValue) != std::string::npos)
+            << "Actual: " << value << "\nExpected to contain: " << expectedValue;
     }
 
 protected:
@@ -440,7 +443,7 @@ TEST_F(HealthHandlerTest, CFdSigErpDown)//NOLINT(readability-function-cognitive-
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
     EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "C.FD.SIG");
     EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2025-08-07T00:00:00.000+00:00");
-    verifyRootCause(healthDocument, cFdSigErpRootCausePointer, "last validation has failed");
+    verifyRootCause(healthDocument, cFdSigErpRootCausePointer, "no successful validation available");
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
 
@@ -500,7 +503,8 @@ TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognit
     EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "");
     EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "");
     verifyRootCause(healthDocument, cFdSigErpRootCausePointer,
-                    "std::runtime_error(never successfully validated) at ");
+                    "std::runtime_error(no successful validation available) at ");
 
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
+

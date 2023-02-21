@@ -18,7 +18,7 @@
 
 namespace fhirtools
 {
-
+class FhirStructureRepositoryFixer;
 /// @brief loads and manages FhirStructureDefinitions
 class FhirStructureRepository
 {
@@ -128,6 +128,8 @@ private:
 
     std::unordered_map<DefinitionKey, std::unique_ptr<FhirValueSet>, DefinitionKey::Hash> mValueSetsByKey;
     std::unordered_map<std::string, FhirValueSet*> mLatestValueSetsByUrl;
+
+    friend class FhirStructureRepositoryFixer;
 };
 
 template<typename Self>

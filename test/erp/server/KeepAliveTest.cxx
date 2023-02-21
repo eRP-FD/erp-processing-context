@@ -179,7 +179,7 @@ TEST_F(KeepAliveTest, manyRequests_noKeepAlive)
         const auto end = std::chrono::steady_clock::now();
 
         totalDuration += end-start;
-        durations[index] = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
+        durations[index] = gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
         TVLOG(1) << "request on client side took " << static_cast<double>(durations[index])/1.e3 << "ms to complete";
     }
@@ -221,7 +221,7 @@ TEST_F(KeepAliveTest, manyRequests_keepAlive)
         const auto end = std::chrono::steady_clock::now();
 
         totalDuration += end-start;
-        durations[index] = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
+        durations[index] = gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
         TVLOG(1) << "request on client side took " << gsl::narrow<double>(durations[index])/1.e3 << "ms to complete";
     }

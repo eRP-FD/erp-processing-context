@@ -17,6 +17,8 @@
 namespace fhirtools
 {
 
+class FhirStructureRepository;
+
 /// @brief A FHIR ValueSet. http://hl7.org/fhir/valueset.html
 /// In parsing phase the ValueSets are built by the FhirValueSet::Builder.
 /// When all structure definition files have been parsed all valuesets are finalized for validation.
@@ -67,7 +69,7 @@ public:
     [[nodiscard]] const std::set<Code>& getCodes() const;
     [[nodiscard]] std::string codesToString() const;
 
-    void finalize(class FhirStructureRepository* repo);
+    void finalize(FhirStructureRepository* repo);
     [[nodiscard]] bool finalized() const;
     [[nodiscard]] bool canValidate() const;
     // Warnings may occur during loading and finalization. These Warnings are reported during each validation.
@@ -76,6 +78,8 @@ public:
     void addError(const std::string& error);
 
 private:
+    void finalizeIncludes(FhirStructureRepository* repo);
+    void finalizeExcludes(FhirStructureRepository* repo);
     void finalizeIncludeValueSets(FhirStructureRepository* repo, const std::set<std::string>& valueSets);
     void finalizeIncludeCodes(const std::set<std::string>& codes, bool caseSensitive, const std::string& codeSystemUrl);
     void finalizeIncludeFilters(const std::vector<FhirValueSet::Filter>& includeFilters,

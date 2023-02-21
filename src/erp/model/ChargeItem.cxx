@@ -39,12 +39,12 @@ const rapidjson::Pointer displayPointer(ElementName::path(elements::display));
 const rapidjson::Pointer extensionArrayPointer(ElementName::path(elements::extension));
 const rapidjson::Pointer urlPointer(ElementName::path(elements::url));
 
-const rapidjson::Pointer containedBinaryArrayPointer(ElementName::path("contained"));
+const rapidjson::Pointer containedBinaryArrayPointer(ElementName::path(elements::contained));
 const rapidjson::Pointer resourceTypePointer(ElementName::path(elements::resourceType));
 
-const rapidjson::Pointer identifierPointer(ElementName::path("identifier"));
-const rapidjson::Pointer identifierEntrySystemPointer(ElementName::path("system"));
-const rapidjson::Pointer identifierEntrySystemValuePointer(ElementName::path("value"));
+const rapidjson::Pointer identifierPointer(ElementName::path(elements::identifier));
+const rapidjson::Pointer identifierEntrySystemPointer(ElementName::path(elements::system));
+const rapidjson::Pointer identifierEntrySystemValuePointer(ElementName::path(elements::value));
 
 constexpr ::std::string_view charge_item_template = R"--(
 {
@@ -91,24 +91,26 @@ void initTemplates ()
 }  // anonymous namespace
 
 //static
-const std::unordered_map<ChargeItem::SupportingInfoType, std::pair<std::string_view, std::string_view>>
-    ChargeItem::SupportingInfoTypeNames = {
-        { ChargeItem::SupportingInfoType::prescriptionItem, { structure_definition::prescriptionItem, "E-Rezept" } },
-        { ChargeItem::SupportingInfoType::dispenseItem, { structure_definition::dispenseItem, "Abgabedatensatz" } },
-        { ChargeItem::SupportingInfoType::receipt, { structure_definition::receipt,  "Quittung" } } };
+const std::unordered_map<ChargeItem::SupportingInfoType, std::string_view>
+    ChargeItem::SupportingInfoDisplayNames = {
+        {ChargeItem::SupportingInfoType::prescriptionItemBundle, structure_definition::prescriptionItem},
+        {ChargeItem::SupportingInfoType::dispenseItemBundle, structure_definition::dispenseItem},
+        {ChargeItem::SupportingInfoType::dispenseItemBinary, "Binary"},
+        {ChargeItem::SupportingInfoType::receiptBundle, structure_definition::receipt}};
 
 ChargeItem::ChargeItem()
-    : Resource<ChargeItem>{"https://gematik.de/fhir/StructureDefinition/ErxChargeItem",
-                           []() {
-                               ::std::call_once(onceFlag, initTemplates);
-                               return chargeItemTemplate;
-                           }()
-                               .instance()}
+    : Resource<ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>{
+          resource::structure_definition::chargeItem,
+          []() {
+              ::std::call_once(onceFlag, initTemplates);
+              return chargeItemTemplate;
+          }()
+              .instance()}
 {
 }
 
-ChargeItem::ChargeItem (NumberAsStringParserDocument&& jsonTree)
-    : Resource<ChargeItem>(std::move(jsonTree))
+ChargeItem::ChargeItem(NumberAsStringParserDocument&& jsonTree)
+    : Resource<ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>(std::move(jsonTree))
 {
     std::call_once(onceFlag, initTemplates);
 }
@@ -138,9 +140,12 @@ ChargeItem::ChargeItem (NumberAsStringParserDocument&& jsonTree)
     return {};
 }
 
-::std::optional<std::string_view> ChargeItem::subjectKvnr() const
+std::optional<Kvnr> ChargeItem::subjectKvnr() const
 {
-    return getOptionalStringValue(subjectKvnrValuePointer);
+    auto kvnrValue = getOptionalStringValue(subjectKvnrValuePointer);
+    if (! kvnrValue.has_value())
+        return {};
+    return Kvnr{*kvnrValue, Kvnr::Type::pkv};
 }
 
 ::std::optional<std::string_view> ChargeItem::entererTelematikId() const
@@ -161,8 +166,8 @@ ChargeItem::ChargeItem (NumberAsStringParserDocument&& jsonTree)
 
 std::optional<std::string_view> ChargeItem::supportingInfoReference(SupportingInfoType supportingInfoType) const
 {
-    const auto* elem = findMemberInArray(supportingInformationPointer, typePointer,
-                                         SupportingInfoTypeNames.at(supportingInfoType).first);
+    auto supportingInfoName = SupportingInfoDisplayNames.at(supportingInfoType);
+    const auto* elem = findMemberInArray(supportingInformationPointer, displayPointer, supportingInfoName);
     if (elem)
         return getOptionalStringValue(*elem, referencePointer);
     return {};
@@ -170,13 +175,13 @@ std::optional<std::string_view> ChargeItem::supportingInfoReference(SupportingIn
 
 bool ChargeItem::isMarked() const
 {
-    const auto marking = markingFlag();
-    return marking && ChargeItemMarkingFlag::isMarked(marking->getAllMarkings());
+    const auto marking = markingFlags();
+    return marking && ChargeItemMarkingFlags::isMarked(marking->getAllMarkings());
 }
 
-std::optional<model::ChargeItemMarkingFlag> ChargeItem::markingFlag() const
+std::optional<model::ChargeItemMarkingFlags> ChargeItem::markingFlags() const
 {
-    return getExtension<ChargeItemMarkingFlag>();
+    return getExtension<ChargeItemMarkingFlags>();
 }
 
 std::optional<std::string_view> ChargeItem::accessCode() const
@@ -185,16 +190,18 @@ std::optional<std::string_view> ChargeItem::accessCode() const
                              identifierEntrySystemValuePointer);
 }
 
+// GEMREQ-start containedBinary
 std::optional<model::Binary> ChargeItem::containedBinary() const
 {
-    std::optional<model::Binary> result;
+    // extract the binary from "contained"
     const auto* containedBinaryResource = findMemberInArray(containedBinaryArrayPointer, resourceTypePointer, "Binary");
-    if(containedBinaryResource)
+    if (! containedBinaryResource)
     {
-        result.emplace(model::Binary::fromJson(*containedBinaryResource));
+        return {};
     }
-    return result;
+    return model::Binary::fromJson(*containedBinaryResource);
 }
+// GEMREQ-end containedBinary
 
 void ChargeItem::setId(const PrescriptionId& prescriptionId)
 {
@@ -220,13 +227,19 @@ void ChargeItem::setPrescriptionId(const PrescriptionId& prescriptionId)
     addToArray(identifierPointer, std::move(copiedValue));
 }
 
-void ChargeItem::setSubjectKvnr(const std::string_view& kvnr)
+void ChargeItem::setSubjectKvnr(std::string_view kvnr)
 {
-    setValue(subjectKvnrSystemPointer, ::model::resource::naming_system::gkvKvid10);
+    setValue(subjectKvnrSystemPointer, ::model::resource::naming_system::pkvKvid10);
     setValue(subjectKvnrValuePointer, kvnr);
 }
 
-void ChargeItem::setEntererTelematikId(const std::string_view& telematicId)
+void ChargeItem::setSubjectKvnr(const Kvnr& kvnr)
+{
+    setValue(subjectKvnrSystemPointer, ::model::resource::naming_system::pkvKvid10);
+    setValue(subjectKvnrValuePointer, kvnr.id());
+}
+
+void ChargeItem::setEntererTelematikId(std::string_view telematicId)
 {
     setValue(entererTelematikIdSystemPointer, ::model::resource::naming_system::telematicID);
     setValue(entererTelematikIdValuePointer, telematicId);
@@ -237,22 +250,12 @@ void ChargeItem::setEnteredDate(const model::Timestamp& entered)
     setValue(enteredDatePointer, entered.toXsDateTime());
 }
 
-template<class ResourceType>
-void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoType, const ResourceType& resource)
+// GEMREQ-start setSupportingInfoReference
+void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoType)
 {
-    const auto reference = [&resource]() {
-        if constexpr (::std::is_same_v<ResourceType, ::model::Bundle>)
-        {
-            return "Bundle/"s + resource.getId().toString();
-        }
-        else
-        {
-            return ::std::string{resource};
-        }
-    }();
-
-    const auto supportingInfoTypeData = SupportingInfoTypeNames.at(supportingInfoType);
-    auto* elem = findMemberInArray(supportingInformationPointer, typePointer, supportingInfoTypeData.first);
+    const auto supportingInfoTypeData = SupportingInfoDisplayNames.at(supportingInfoType);
+    const auto reference = supportingInfoTypeToReference(supportingInfoType);
+    auto* elem = findMemberInArray(supportingInformationPointer, displayPointer, supportingInfoTypeData);
     if (elem)
     {
         setKeyValue(*elem, referencePointer, reference);
@@ -260,33 +263,39 @@ void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoTyp
     else
     {
         auto entry = createEmptyObject();
-        setKeyValue(entry, typePointer, supportingInfoTypeData.first);
-        setKeyValue(entry, displayPointer, supportingInfoTypeData.second);
+        setKeyValue(entry, displayPointer, supportingInfoTypeData);
         setKeyValue(entry, referencePointer, reference);
         addToArray(supportingInformationPointer, std::move(entry));
     }
 }
+// GEMREQ-end setSupportingInfoReference
 
-template void ChargeItem::setSupportingInfoReference<::model::Bundle>(SupportingInfoType supportingInfoType,
-                                                                      const ::model::Bundle& resource);
-template void ChargeItem::setSupportingInfoReference<::std::string>(SupportingInfoType supportingInfoType,
-                                                                    const ::std::string& resource);
-template void ChargeItem::setSupportingInfoReference<::std::string_view>(SupportingInfoType supportingInfoType,
-                                                                         const ::std::string_view& resource);
 
-void ChargeItem::setMarkingFlag(const ::model::Extension& markingFlag)
+void ChargeItem::setMarkingFlags(const ::model::Extension& markingFlags)
 {
     const auto containedMarkingFlagAndPos =
-        findMemberInArray(extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
+        findMemberInArray(extensionArrayPointer, urlPointer, ChargeItemMarkingFlags::url, urlPointer);
     if (containedMarkingFlagAndPos)
     {
         removeFromArray(extensionArrayPointer, std::get<1>(containedMarkingFlagAndPos.value()));
     }
-    auto entry = this->copyValue(markingFlag.jsonDocument());
-    addToArray(extensionArrayPointer, std::move(entry));
+    auto entry = this->copyValue(markingFlags.jsonDocument());
+    const auto idx = addToArray(extensionArrayPointer, std::move(entry));
+
+    namespace rj = rapidjson;
+    const rj::Pointer markingArray{ElementName::path(elements::extension, idx, elements::extension)};
+    for(const auto& markingUrl : ChargeItemMarkingFlags::allMarkingFlags)
+    {
+        if (!findMemberInArray(markingArray, rj::Pointer{ElementName::path(resource::elements::url)}, markingUrl))
+        {
+            ChargeItemMarkingFlag markingFlag(markingUrl, false);
+            entry = this->copyValue(markingFlag.jsonDocument());
+            addToArray(markingArray, std::move(entry));
+        }
+    }
 }
 
-void ChargeItem::setAccessCode(const std::string_view& accessCode)
+void ChargeItem::setAccessCode(std::string_view accessCode)
 {
     deleteAccessCode();
 
@@ -313,8 +322,8 @@ void ChargeItem::deleteAccessCode()
 void ChargeItem::deleteSupportingInfoReference(SupportingInfoType supportingInfoType)
 {
     const auto supportInfoRefAndPos =
-        findMemberInArray(supportingInformationPointer, typePointer,
-                          SupportingInfoTypeNames.at(supportingInfoType).first, referencePointer);
+        findMemberInArray(supportingInformationPointer, displayPointer,
+                          SupportingInfoDisplayNames.at(supportingInfoType), referencePointer);
     if (supportInfoRefAndPos)
     {
         removeFromArray(supportingInformationPointer, std::get<1>(supportInfoRefAndPos.value()));
@@ -325,7 +334,8 @@ void ChargeItem::deleteSupportingInfoReference(SupportingInfoType supportingInfo
     }
 }
 
-void ChargeItem::deleteContainedBinary()
+// GEMREQ-start deleteContainedBinary
+void ChargeItem::deleteContainedBinary(bool withSupportingReference)
 {
     const auto containedBinaryResourceAndPos =
         findMemberInArray(containedBinaryArrayPointer, resourceTypePointer, "Binary", resourceTypePointer);
@@ -337,12 +347,15 @@ void ChargeItem::deleteContainedBinary()
             removeElement(containedBinaryArrayPointer);
         }
     }
+    if (withSupportingReference)
+        deleteSupportingInfoReference(SupportingInfoType::dispenseItemBinary);
 }
+// GEMREQ-end deleteContainedBinary
 
 void ChargeItem::deleteMarkingFlag()
 {
     const auto containedMarkingFlagAndPos =
-        findMemberInArray(extensionArrayPointer, urlPointer, ChargeItemMarkingFlag::url, urlPointer);
+        findMemberInArray(extensionArrayPointer, urlPointer, ChargeItemMarkingFlags::url, urlPointer);
     if (containedMarkingFlagAndPos)
     {
         removeFromArray(extensionArrayPointer, std::get<1>(containedMarkingFlagAndPos.value()));
@@ -352,5 +365,29 @@ void ChargeItem::deleteMarkingFlag()
         }
     }
 }
+// GEMREQ-start supportingInfoTypeToReference
+std::string ChargeItem::supportingInfoTypeToReference(ChargeItem::SupportingInfoType supportingInfoType) const
+{
+    const auto pId = prescriptionId();
+    ModelExpect(pId.has_value(), "ChargeItem has no PrescriptionId assigned.");
+
+    switch(supportingInfoType)
+    {
+        case SupportingInfoType::prescriptionItemBundle:
+            return Uuid{pId->deriveUuid(uuidFeaturePrescription)}.toUrn();
+        case SupportingInfoType::dispenseItemBundle:
+            return Uuid{pId->deriveUuid(uuidFeatureDispenseItem)}.toUrn();
+        case SupportingInfoType::dispenseItemBinary: {
+            const auto contained = containedBinary();
+            ModelExpect(contained.has_value(), "ChargeItem has no contained binary.");
+            ModelExpect(contained->id().has_value(), "ChargeItem contained binary has no ID.");
+            return "#" + std::string{contained->id().value()};
+        }
+        case SupportingInfoType::receiptBundle:
+            return Uuid{pId->deriveUuid(uuidFeatureReceipt)}.toUrn();
+    }
+    Fail("invalid SupportingInfoType: " + std::to_string(::uintmax_t(supportingInfoType)));
+}
+// GEMREQ-end supportingInfoTypeToReference
 
 }// namespace model

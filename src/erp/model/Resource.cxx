@@ -75,7 +75,34 @@ rj::GenericStringRef<std::string_view::value_type> stringRefFrom(const std::stri
 {
     return rj::StringRef(s.data(), s.size());
 }
+
+template<typename SchemaVersionType>
+std::optional<ResourceVersion::FhirProfileBundleVersion> isProfileSupported(SchemaVersionType profile, const std::set<ResourceVersion::FhirProfileBundleVersion>& supportedBundles)
+{
+    return ResourceVersion::isProfileSupported(profile, supportedBundles);
 }
+
+template<>
+std::optional<ResourceVersion::FhirProfileBundleVersion> isProfileSupported(ResourceVersion::NotProfiled, const std::set<ResourceVersion::FhirProfileBundleVersion>&)
+{
+    return ResourceVersion::currentBundle();
+}
+
+template<>
+std::optional<ResourceVersion::FhirProfileBundleVersion> isProfileSupported(ResourceVersion::WorkflowOrPatientenRechnungProfile profile, const std::set<ResourceVersion::FhirProfileBundleVersion>& supportedBundles)
+{
+    if (std::holds_alternative<ResourceVersion::DeGematikErezeptPatientenrechnungR4>(profile))
+    {
+        return ResourceVersion::isProfileSupported(std::get<ResourceVersion::DeGematikErezeptPatientenrechnungR4>(profile), supportedBundles);
+    }
+    else if(std::holds_alternative<ResourceVersion::DeGematikErezeptWorkflowR4>(profile))
+    {
+        return ResourceVersion::isProfileSupported(std::get<ResourceVersion::DeGematikErezeptWorkflowR4>(profile), supportedBundles);
+    }
+    return {};
+}
+
+} // namespace
 
 std::string ResourceBase::serializeToJsonString() const
 {
@@ -497,17 +524,29 @@ std::optional<std::string_view> ResourceBase::identifierValue() const
 
 SchemaType ResourceBase::getProfile() const
 {
-    const auto& profileString = getStringValue(profilePointer);
-    const auto& parts = String::split(profileString, '|');
+    const auto& profileString = getProfileName();
+    ModelExpect(profileString.has_value(), "Cannot determine SchemaType without profile name");
+    const auto& parts = String::split(*profileString, '|');
     const auto& profileWithoutVersion = parts[0];
     const auto& pathParts = String::split(profileWithoutVersion, '/');
     const auto& profile = pathParts.back();
     const auto& schemaType = magic_enum::enum_cast<SchemaType>(profile);
     ModelExpect(schemaType.has_value(),
-                "Could not extract schema type from profile string: " + std::string(profileString));
+                "Could not extract schema type from profile string: " + std::string(*profileString));
     return *schemaType;
 }
 
+std::optional<std::string_view> ResourceBase::getProfileName() const
+{
+    static const rj::Pointer profileArrayPtr("/meta/profile");
+    const auto* metaArray = getValue(profileArrayPtr);
+    if (! (metaArray && metaArray->IsArray()))
+    {
+        return std::nullopt;
+    }
+    ModelExpect(metaArray->Size() == 1, "/meta/profile array must have size 1");
+    return getStringValue(profilePointer);
+}
 
 fhirtools::ValidatorOptions ResourceBase::defaultValidatorOptions()
 {
@@ -551,35 +590,37 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXmlNoValidation(st
 template<class TDerivedModel, typename SchemaVersionType>
 TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromXml(
     std::string_view xml, const XmlValidator& validator, const InCodeValidator& inCodeValidator, SchemaType schemaType,
-    const std::optional<fhirtools::ValidatorOptions>& valOpts, std::optional<SchemaVersionType> enforcedVersion)
+    const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles,
+    const std::optional<fhirtools::ValidatorOptions>& valOpts, std::optional<SchemaVersionType> enforcedVersion,
+    SchemaVersionType fallbackVersion)
 {
-   std::optional<TDerivedModel> model;
+    std::optional<TDerivedModel> model;
     try
     {
-        model.emplace(fromXmlNoValidation(xml));
         auto fhirSchemaValidationContext = validator.getSchemaValidationContextNoVer(SchemaType::fhir);
         FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), xml, *fhirSchemaValidationContext);
-        if (schemaType != SchemaType::fhir)
-        {
-            model->doValidation(xml, validator, inCodeValidator, schemaType, valOpts, enforcedVersion);
-        }
+        model.emplace(fromXmlNoValidation(xml));
+
+        // pre-validate schema version support
+        const auto schemaVersion = model->getSchemaVersion(fallbackVersion);
+        std::optional<ResourceVersion::FhirProfileBundleVersion> bundleVersion =
+            isProfileSupported(schemaVersion, supportedBundles);
+        ModelExpect(bundleVersion.has_value(), "unsupported profile version");
+        ModelExpect(! enforcedVersion || enforcedVersion == schemaVersion,
+                "profile version mismatch, expected=" +
+                    std::string(ResourceVersion::v_str(enforcedVersion.value_or(SchemaVersionType{}))) +
+                    " found=" + std::string(ResourceVersion::v_str(schemaVersion)));
+
+        model->doValidation(xml, validator, inCodeValidator, schemaType, *bundleVersion, valOpts);
     }
-    catch (const ErpException& erpException)
+    catch (const ErpException&)
     {
-        if (valOpts && model && schemaType == SchemaType::fhir)
-        {
-            model->doGenericValidation(*valOpts, erpException);
-        }
         throw;
     }
     catch (const std::runtime_error& er)
     {
         TVLOG(1) << "runtime_error: " << er.what();
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing / validation error", er.what());
-    }
-    if (valOpts && schemaType == SchemaType::fhir)
-    {
-        model->doGenericValidation (*valOpts);
     }
     return std::move(model).value();
 }
@@ -588,20 +629,19 @@ template<class TDerivedModel, typename SchemaVersionType>
 void Resource<TDerivedModel, SchemaVersionType>::doValidation(std::string_view xml, const XmlValidator& validator,
                                                               const InCodeValidator& inCodeValidator,
                                                               SchemaType schemaType,
-                                                              const std::optional<fhirtools::ValidatorOptions>& valOpts,
-                                                              std::optional<SchemaVersionType> enforcedVersion) const
+                                                              model::ResourceVersion::FhirProfileBundleVersion fhirBundleVersion,
+                                                              const std::optional<fhirtools::ValidatorOptions>& valOpts) const
 {
-    const auto schemaVersion = getSchemaVersion();
-    ModelExpect(! enforcedVersion || enforcedVersion == schemaVersion,
-                "profile version mismatch, expected=" +
-                    std::string(ResourceVersion::v_str(enforcedVersion.value_or(SchemaVersionType{}))) +
-                    " found=" + std::string(ResourceVersion::v_str(schemaVersion)));
-
-    auto schemaValidationContext = validator.getSchemaValidationContext(schemaType, schemaVersion);
     try
     {
-        FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), xml, *schemaValidationContext);
-        inCodeValidator.validate(*this, schemaType, schemaVersion, validator);
+        if (fhirBundleVersion == ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 && schemaType != SchemaType::fhir)
+        {
+            const auto schemaVersion = getSchemaVersion(ResourceVersion::deprecated<SchemaVersionType>());
+            auto schemaValidationContext = validator.getSchemaValidationContext(schemaType, schemaVersion);
+            FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), xml, *schemaValidationContext);
+            inCodeValidator.validate(*this, schemaType, schemaVersion, validator);
+        }
+        // no xsd and incode validation from here on.
         additionalValidation();
     }
     catch (const ErpException& erpException)
@@ -612,18 +652,19 @@ void Resource<TDerivedModel, SchemaVersionType>::doValidation(std::string_view x
         }
         if (valOpts)
         {
-            doGenericValidation(*valOpts, erpException);
+            doGenericValidation(fhirBundleVersion, *valOpts, erpException);
         }
         throw;
     }
     if (valOpts)
     {
-        doGenericValidation(*valOpts);
+        doGenericValidation(fhirBundleVersion, *valOpts);
     }
 }
 
 template<typename TDerivedModel, typename SchemaVersionType>
-void Resource<TDerivedModel, SchemaVersionType>::doGenericValidation(const fhirtools::ValidatorOptions& valOpts,
+void Resource<TDerivedModel, SchemaVersionType>::doGenericValidation(
+    model::ResourceVersion::FhirProfileBundleVersion version, const fhirtools::ValidatorOptions& valOpts,
     const std::optional<ErpException>& validationErpException) const
 {
     using enum Configuration::GenericValidationMode;
@@ -641,15 +682,14 @@ void Resource<TDerivedModel, SchemaVersionType>::doGenericValidation(const fhirt
         case require_success:
             break;
     }
-    fhirtools::ValidationResultList validationResult;
+    fhirtools::ValidationResults validationResult;
     if (validationErpException && validationErpException->diagnostics())
     {
         validationResult.add(fhirtools::Severity::error, *validationErpException->diagnostics(), {}, nullptr);
     }
-
-    validationResult.append(genericValidate(valOpts));
+    validationResult.merge(genericValidate(version, valOpts));
     auto highestSeverity = validationResult.highestSeverity();
-#ifndef NDEBUG
+#ifdef ENABLE_DEBUG_LOG
     if (highestSeverity >= fhirtools::Severity::error)
     {
         validationResult.dumpToLog();
@@ -672,8 +712,9 @@ void Resource<TDerivedModel, SchemaVersionType>::additionalValidation() const
 
 
 template<class TDerivedModel, typename SchemaVersionType>
-fhirtools::ValidationResultList
-Resource<TDerivedModel, SchemaVersionType>::genericValidate(const fhirtools::ValidatorOptions& options) const
+fhirtools::ValidationResults
+Resource<TDerivedModel, SchemaVersionType>::genericValidate(model::ResourceVersion::FhirProfileBundleVersion version,
+                                                            const fhirtools::ValidatorOptions& options) const
 {
     std::string resourceTypeName;
     if constexpr (std::is_same_v<TDerivedModel, UnspecifiedResource>)
@@ -685,9 +726,8 @@ Resource<TDerivedModel, SchemaVersionType>::genericValidate(const fhirtools::Val
         resourceTypeName = TDerivedModel::resourceTypeName;
     }
     auto fhirPathElement =
-        std::make_shared<ErpElement>(&Fhir::instance().structureRepository(), std::weak_ptr<const fhirtools::Element>{},
-                                     resourceTypeName, &jsonDocument());
-
+        std::make_shared<ErpElement>(&Fhir::instance().structureRepository(version),
+                                     std::weak_ptr<const fhirtools::Element>{}, resourceTypeName, &jsonDocument());
     std::ostringstream profiles;
     std::string_view sep;
     for (const auto& prof: fhirPathElement->profiles())
@@ -709,16 +749,21 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromJsonNoValidation(s
 }
 
 template<class TDerivedModel, typename SchemaVersionType>
-TDerivedModel
-Resource<TDerivedModel, SchemaVersionType>::fromJson(std::string_view json, const JsonValidator& jsonValidator,
-                                                     const XmlValidator& xmlValidator,
-                                                     const InCodeValidator& inCodeValidator, SchemaType schemaType,
-                                                     const std::optional<fhirtools::ValidatorOptions>& valOpts)
+TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromJson(
+    std::string_view json, const JsonValidator& jsonValidator, const XmlValidator& xmlValidator,
+    const InCodeValidator& inCodeValidator, SchemaType schemaType,
+    const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles,
+    const std::optional<fhirtools::ValidatorOptions>& valOpts,
+    SchemaVersionType fallbackVersion)
 {
     try
     {
         // do a basic validation using the fhir schema
         auto model = fromJsonNoValidation(json);
+        const auto schemaVersion = model.getSchemaVersion(fallbackVersion);
+        std::optional<ResourceVersion::FhirProfileBundleVersion> bundleVersion =
+            isProfileSupported(schemaVersion, supportedBundles);
+        ModelExpect(bundleVersion.has_value(), "unsupported profile version");
         try
         {
             jsonValidator.validate(model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(model.jsonDocument()),
@@ -730,20 +775,16 @@ Resource<TDerivedModel, SchemaVersionType>::fromJson(std::string_view json, cons
             {
                 throw;
             }
-            model.doGenericValidation(*valOpts, erpException);
+            model.doGenericValidation(*bundleVersion, *valOpts, erpException);
             throw;
         }
-
-        if (schemaType != SchemaType::fhir)
+        std::string xml;
+        if (schemaType != SchemaType::fhir && supportedBundles.contains(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
         {
             // Convert to XML and do XML validation
-            const auto xml = Fhir::instance().converter().jsonToXmlString(model.jsonDocument());
-            model.doValidation(xml, xmlValidator, inCodeValidator, schemaType, valOpts);
+            xml = Fhir::instance().converter().jsonToXmlString(model.jsonDocument());
         }
-        else if (valOpts)
-        {
-            model.doGenericValidation(*valOpts);
-        }
+        model.doValidation(xml, xmlValidator, inCodeValidator, schemaType, *bundleVersion, valOpts);
         return model;
     }
     catch (const ErpException&)
@@ -771,61 +812,43 @@ TDerivedModel Resource<TDerivedModel, SchemaVersionType>::fromJson(model::Number
     return TDerivedModel(std::move(json));
 }
 
-namespace
-{
-template<typename SchemaVersionType>
-SchemaVersionType getSchemaVersionT(const std::string_view& versionString);
-
-template<>
-ResourceVersion::DeGematikErezeptWorkflowR4
-getSchemaVersionT<ResourceVersion::DeGematikErezeptWorkflowR4>(const std::string_view& versionString)
-{
-    return ResourceVersion::str_vGematik(versionString);
-}
-
-template<>
-ResourceVersion::KbvItaErp getSchemaVersionT<ResourceVersion::KbvItaErp>(const std::string_view& versionString)
-{
-    return ResourceVersion::str_vKbv(versionString);
-}
-
-template<typename SchemaVersionType>
-SchemaVersionType getFallbackVersion();
-
-template<>
-ResourceVersion::KbvItaErp getFallbackVersion<ResourceVersion::KbvItaErp>()
-{
-    ModelFail("KBV resources must always define a profile version");
-}
-
-template<>
-ResourceVersion::DeGematikErezeptWorkflowR4 getFallbackVersion<ResourceVersion::DeGematikErezeptWorkflowR4>()
-{
-    return ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>();
-}
-}
-
 template<class TDerivedModel, typename SchemaVersionType>
-SchemaVersionType Resource<TDerivedModel, SchemaVersionType>::getSchemaVersion() const
+SchemaVersionType Resource<TDerivedModel, SchemaVersionType>::getSchemaVersion(
+    const std::optional<SchemaVersionType>& fallbackVersion) const
 {
     if constexpr (! std::is_same_v<SchemaVersionType, ResourceVersion::NotProfiled>)
     {
-        static const rj::Pointer profileArrayPtr("/meta/profile");
-        static const rj::Pointer profilePtr("/meta/profile/0");
-        const auto* metaArray = getValue(profileArrayPtr);
-        ModelExpect(metaArray && metaArray->IsArray(), "/meta/profile array not found");
-        ModelExpect(metaArray->Size() == 1, "/meta/profile array must have size 1");
-        const auto profileString = getStringValue(profilePtr);
-        const auto parts = String::split(profileString, '|');
-        ModelExpect(parts.size() <= 2, "Invalid meta/profile: more than one | separator found.");
-        if (parts.size() == 2)
+        auto profileString = getProfileName();
+        if constexpr (! std::is_same_v<SchemaVersionType, ResourceVersion::WorkflowOrPatientenRechnungProfile>)
         {
-            return getSchemaVersionT<SchemaVersionType>(parts[1]);
+            // In case of unprofiled resources, simply use the current version
+            // This should only happen in unit tests for Bundles
+            if (! profileString.has_value())
+            {
+                ModelExpect(fallbackVersion.has_value(), "Unable to determine schema version without fallback");
+                TLOG(WARNING) << "Unspecified profile, using default fhir profile version";
+                return *fallbackVersion;
+            }
         }
-        else
+        ModelExpect(profileString.has_value(), "Unable to determine profile for resource");
+        const auto profileVersion = std::get<ResourceVersion::AnyProfileVersion>(
+            ResourceVersion::profileVersionFromName(*profileString, ResourceVersion::allBundles()));
+        if constexpr (std::is_same_v<SchemaVersionType, ResourceVersion::WorkflowOrPatientenRechnungProfile>)
         {
-            return getFallbackVersion<SchemaVersionType>();
+            if (std::holds_alternative<ResourceVersion::DeGematikErezeptPatientenrechnungR4>(profileVersion))
+            {
+                return std::get<ResourceVersion::DeGematikErezeptPatientenrechnungR4>(profileVersion);
+            }
+            else if (std::holds_alternative<ResourceVersion::DeGematikErezeptWorkflowR4>(profileVersion))
+            {
+                return std::get<ResourceVersion::DeGematikErezeptWorkflowR4>(profileVersion);
+            }
         }
+        else if (std::holds_alternative<SchemaVersionType>(profileVersion))
+        {
+            return std::get<SchemaVersionType>(profileVersion);
+        }
+        ModelFail("Incompatible resource for profile: " + std::string{*profileString});
     }
     return {};
 }
@@ -845,10 +868,10 @@ template class Resource<AuditEvent>;
 template class Resource<AuditMetaData>;
 template class Resource<Binary>;
 template class Resource<Bundle>;
-template class Resource<class ChargeItem>;
-template class Resource<Communication>;
+template class Resource<ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>;
+template class Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>;
 template class Resource<Composition>;
-template class Resource<class Consent>;
+template class Resource<Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>;
 template class Resource<Device>;
 template class Resource<Dosage, ResourceVersion::KbvItaErp>;
 template class Resource<ErxReceipt>;
@@ -866,9 +889,9 @@ template class Resource<KbvOrganization, ResourceVersion::KbvItaErp>;
 template class Resource<KbvPractitioner, ResourceVersion::KbvItaErp>;
 template class Resource<KbvPracticeSupply, ResourceVersion::KbvItaErp>;
 template class Resource<MedicationDispense>;
-template class Resource<MedicationDispenseBundle, ResourceVersion::NotProfiled>;
+template class Resource<MedicationDispenseBundle>;
 template class Resource<MetaData>;
-template class Resource<OperationOutcome>;
+template class Resource<OperationOutcome, ResourceVersion::Fhir>;
 template class Resource<Parameters, ResourceVersion::NotProfiled>;
 template class Resource<Patient, ResourceVersion::KbvItaErp>;
 template class Resource<Reference>;
@@ -876,8 +899,7 @@ template class Resource<Signature>;
 template class Resource<class Subscription>;
 template class Resource<Task>;
 template class Resource<UnspecifiedResource>;
+template class Resource<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>;
+
 
 }// namespace model
-
-
-

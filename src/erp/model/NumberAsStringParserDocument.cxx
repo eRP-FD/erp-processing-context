@@ -537,6 +537,7 @@ rj::Value* NumberAsStringParserDocument::findMemberInArray(
     const rj::Pointer& searchKey,
     const std::string_view& searchValue)
 {
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
     return const_cast<rj::Value*>(
        static_cast<const NumberAsStringParserDocument*>(this)->findMemberInArray(arrayPointer, searchKey, searchValue));
 }

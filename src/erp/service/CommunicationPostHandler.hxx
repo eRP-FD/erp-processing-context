@@ -8,6 +8,9 @@
 
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/model/Communication.hxx"
+#include "erp/model/Identity.hxx"
+
+#include <variant>
 
 namespace model
 {
@@ -25,27 +28,30 @@ private:
         const model::Communication& communication,
         const XmlValidator& xmlValidator,
         const InCodeValidator& inCodeValidator) const;
-    void validateSender(
+    model::Identity validateSender(
         model::Communication::MessageType messageType,
         const std::string& professionOid,
         const std::string& sender) const;
     void validateRecipient(
         model::Communication::MessageType messageType,
-        const std::string& recipient) const;
+        const model::Identity& recipient) const;
     void checkEligibilityOfInsurant(
         model::Communication::MessageType messageType,
-        const std::string_view& sender,
-        const std::string_view& taskKvnr,
+        const model::Kvnr& sender,
+        const model::Kvnr& taskKvnr,
         const std::optional<std::string>& headerAccessCode,
         const std::string& taskAccessCode,
         const std::optional<std::string>& communicationAccessCode) const;
     void checkVerificationIdentitiesOfKvnrs(
         model::Communication::MessageType messageType,
-        const std::string_view& taskKvnr,
-        const std::optional<std::string_view>& sender,
-        const std::string_view& recipient) const;
+        const model::Kvnr& taskKvnr,
+        const model::Identity& sender,
+        const model::Identity& recipient) const;
 
     uint64_t mMaxMessageCount;
+    void checkForChargeItemReference(const model::PrescriptionId& prescriptionId,
+                                     const model::Communication::MessageType& messageType,
+                                     const Database* databaseHandle) const;
 };
 
 

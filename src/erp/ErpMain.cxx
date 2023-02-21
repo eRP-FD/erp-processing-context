@@ -18,9 +18,11 @@
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
 #include "erp/registration/RegistrationManager.hxx"
 #include "erp/tpm/Tpm.hxx"
 #include "erp/tsl/error/TslError.hxx"
+#include "erp/util/Condition.hxx"
 #include "erp/util/health/HealthCheck.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -152,7 +154,8 @@ int ErpMain::runApplication (
     }
 
     log << "starting the TEE server";
-    const int threadCount = configuration.getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 10);
+    const size_t threadCount =
+        static_cast<size_t>(configuration.getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 10));
     Expect(threadCount>0, "thread count is negative or zero");
     serviceContext->getTeeServer().serve(threadCount);
 

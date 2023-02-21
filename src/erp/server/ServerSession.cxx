@@ -371,7 +371,7 @@ void ServerSession::do_write (ServerResponse response, const bool keepConnection
 }
 
 
-void ServerSession::on_write (const bool keepConnectionAlive, SessionDataPointer&& data) noexcept
+void ServerSession::on_write (const bool keepConnectionAlive, SessionDataPointer&& data)
 {
     DebugLog("on_write");
 

@@ -8,6 +8,7 @@
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/ValueElement.hxx"
 #include "fhirtools/repository/internal/FhirStructureDefinitionParser.hxx"
+#include "fhirtools/repository/internal/FhirStructureRepositoryFixer.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Constants.hxx"
 
@@ -340,7 +341,7 @@ private:
 
     void verifyFixedCodeSystems(const std::string& codeSystemUrl)
     {
-        auto codeSystem = mRepo.findCodeSystem(codeSystemUrl, {});
+        const auto* codeSystem = mRepo.findCodeSystem(codeSystemUrl, {});
         if (! codeSystem || codeSystem->isSynthesized())
         {
             unresolvedCodeSystems.insert(codeSystemUrl);
@@ -492,10 +493,12 @@ void FhirStructureRepository::load(const std::list<std::filesystem::path>& files
     TVLOG(2) << "done loading";
     Verifier verifier(*this);
     verifier.verify();
+    FhirStructureRepositoryFixer repoFixer{*this};
+    repoFixer.fix();
     const auto& requiredValueSets = verifier.getRequiredValueSets();
     for (const auto& valueSetKeyValue : mValueSetsByKey)
     {
-        auto& valueSet = valueSetKeyValue.second;
+        const auto& valueSet = valueSetKeyValue.second;
         if (! valueSet->finalized())
         {
             valueSet->finalize(this);
@@ -782,7 +785,7 @@ void fhirtools::FhirStructureRepository::addCodeSystem(std::unique_ptr<FhirCodeS
     {
         auto [it, inserted] = mCodeSystemsByKey.try_emplace(
             DefinitionKey(codeSystem->getUrl(), codeSystem->getVersion()), std::move(codeSystem));
-        FPExpect(inserted, "Duplicate CodeSystem: " + it->first.url + '|' + it->first.version);
+        FPExpect(inserted, "Duplicate CodeSystem: " + codeSystem->getUrl() + '|' + codeSystem->getVersion());
     }
 }
 
@@ -798,7 +801,7 @@ void fhirtools::FhirStructureRepository::addValueSet(std::unique_ptr<FhirValueSe
     {
         auto [it, inserted] =
             mValueSetsByKey.try_emplace(DefinitionKey(valueSet->getUrl(), valueSet->getVersion()), std::move(valueSet));
-        FPExpect(inserted, "Duplicate ValueSet: " + it->first.url + '|' + it->first.version);
+        FPExpect(inserted, "Duplicate ValueSet: " + valueSet->getUrl() + '|' + valueSet->getVersion());
         TVLOG(3) << "ValueSet inserted: " << it->first.url << '|' << it->first.version;
     }
 }

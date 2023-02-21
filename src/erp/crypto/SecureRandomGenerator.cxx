@@ -43,6 +43,7 @@ double SecureRandomGenerator::shannonEntropy (const std::string_view& data)
     // get occurrence count of each byte
     for (const char ch: data)
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         countMap[static_cast<unsigned char>(ch)]++;
     }
 

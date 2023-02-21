@@ -21,11 +21,9 @@ using fhirtools::FhirConstraint;
 using fhirtools::FhirPathValidator;
 fhirtools::FhirPathValidator::FhirPathValidator(const fhirtools::ValidatorOptions& options,
                                                 std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
-                                                std::unique_ptr<ProfiledElementTypeInfo> initElementExtensionDefPtr,
                                                 const FhirStructureRepository& repo)
     : mOptions{options}
     , mExtensionRootDefPtr{std::move(initExtensionRootDefPtr)}
-    , mElementExtensionDefPtr{std::move(initElementExtensionDefPtr)}
     , mRepo(repo)
 {
 }
@@ -37,16 +35,11 @@ fhirtools::FhirPathValidator fhirtools::FhirPathValidator::create(const fhirtool
     Expect3(repo != nullptr, "Failed to get FhirStructureRepository from element", std::logic_error);
     const auto* extensionDef = repo->findTypeById("Extension"s);
     Expect3(extensionDef != nullptr, "StructureDefinition for Extension not found.", std::logic_error);
-    auto [initElementExtensionDefPtr, idx] = repo->resolveBaseContentReference("#Element.extension");
-    Expect3(initElementExtensionDefPtr.element()->slicing().has_value(), "Element.extension must define slicing",
-            std::logic_error);
-
-    return FhirPathValidator{options, std::make_unique<ProfiledElementTypeInfo>(extensionDef),
-                             std::make_unique<ProfiledElementTypeInfo>(std::move(initElementExtensionDefPtr)), *repo};
+    return FhirPathValidator{options, std::make_unique<ProfiledElementTypeInfo>(extensionDef), *repo};
 }
 
 
-fhirtools::ValidationResultList FhirPathValidator::validate(const std::shared_ptr<const Element>& element,
+fhirtools::ValidationResults FhirPathValidator::validate(const std::shared_ptr<const Element>& element,
                                                             const std::string& elementFullPath,
                                                             const fhirtools::ValidatorOptions& options)
 {
@@ -55,27 +48,44 @@ fhirtools::ValidationResultList FhirPathValidator::validate(const std::shared_pt
     return validator.result;
 }
 
-fhirtools::ValidationResultList FhirPathValidator::validateWithProfiles(const std::shared_ptr<const Element>& element,
+fhirtools::ValidationResults FhirPathValidator::validateWithProfiles(const std::shared_ptr<const Element>& element,
                                                                         const std::string& elementFullPath,
                                                                         const std::set<std::string>& profileUrls,
                                                                         const ValidatorOptions& options)
 {
-    auto validator = create(options, element->getFhirStructureRepository());
-    const auto* structureDefinition = element->getStructureDefinition();
-    FPExpect(structureDefinition, "missing structure definition");
     std::set<ProfiledElementTypeInfo> profiles;
+    const auto& elementType = element->definitionPointer().element()->typeId();
+    ValidationResults resultList;
     for (const auto& url : profileUrls)
     {
         const auto* profile = element->getFhirStructureRepository()->findDefinitionByUrl(url);
         if (profile)
         {
-            profiles.emplace(profile);
+            if (profile->typeId() == elementType)
+            {
+                profiles.emplace(profile);
+            }
+            else
+            {
+                resultList.add(Severity::error,
+                               // NOLINTNEXTLINE(performance-inefficient-string-concatenation)
+                               "requested Profile does not match element type '" + elementType + "': " + url,
+                               elementFullPath, profile);
+            }
         }
         else
         {
-            validator.result.add(Severity::error, "profile unknown: " + url, elementFullPath, nullptr);
+            resultList.add(Severity::error, "profile unknown: " + url, elementFullPath, nullptr);
         }
     }
+    if (resultList.highestSeverity() >= Severity::error)
+    {// fail early in this case, because it occurs quite often, when slicing by profile.
+        return resultList;
+    }
+    auto validator = create(options, element->getFhirStructureRepository());
+    validator.result.merge(std::move(resultList));
+    const auto* structureDefinition = element->getStructureDefinition();
+    FPExpect(structureDefinition, "missing structure definition");
     ProfileSetValidator profileSetValidator{element->definitionPointer(), profiles, validator};
     auto referenceContext = profileSetValidator.buildReferenceContext(*element, elementFullPath);
     validator.validateElement(element, referenceContext, profileSetValidator, elementFullPath);
@@ -87,10 +97,6 @@ const fhirtools::ValidatorOptions& FhirPathValidator::options() const
     return mOptions;
 }
 
-const fhirtools::ProfiledElementTypeInfo& FhirPathValidator::elementExtensionDefPtr() const
-{
-    return *mElementExtensionDefPtr;
-}
 
 const fhirtools::ProfiledElementTypeInfo& fhirtools::FhirPathValidator::extensionRootDefPtr() const
 {
@@ -146,7 +152,7 @@ void FhirPathValidator::validateAllSubElements(const std::shared_ptr<const Eleme
             // needed to create counters for non-existing fields
             auto sub = elementInfo.subField(*element->getFhirStructureRepository(), subName);
             sub->finalize(subFullPathBase.str());
-            result.append(sub->results());
+            result.merge(sub->results());
         }
         processSubElements(element, subName, subElements, referenceContext, elementInfo, subFullPathBase.str());
     }
@@ -196,6 +202,7 @@ void FhirPathValidator::processSubElements(const std::shared_ptr<const Element>&
     }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void fhirtools::FhirPathValidator::validateResource(const std::shared_ptr<const Element>& resourceElement,
                                                     fhirtools::ReferenceContext& referenceContext,
                                                     fhirtools::ProfileSetValidator& profileSetValidator,
@@ -232,7 +239,7 @@ void FhirPathValidator::validateElement(const std::shared_ptr<const Element>& el
     profileSetValidator.process(*element, elementFullPath);
     validateAllSubElements(element, referenceContext, profileSetValidator, elementFullPath);
     profileSetValidator.finalize(elementFullPath);
-    result.append(profileSetValidator.results());
+    result.merge(profileSetValidator.results());
 }
 
 
@@ -281,7 +288,7 @@ void fhirtools::FhirPathValidator::addProfiles(const Element& element,
     }
 
     auto [identity, resultList] = element.resourceIdentity(elementFullPath);
-    result.append(std::move(resultList));
+    result.merge(std::move(resultList));
 
 
     for (const auto& resource : parentReferenceContext.resources())
@@ -296,4 +303,3 @@ void fhirtools::FhirPathValidator::addProfiles(const Element& element,
         }
     }
 }
-

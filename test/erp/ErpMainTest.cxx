@@ -13,6 +13,7 @@
 #include "erp/database/RedisClient.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/registration/RegistrationManager.hxx"
+#include "erp/util/Condition.hxx"
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/ThreadNames.hxx"
 
@@ -158,7 +159,8 @@ public:
 
     void makeRequestToProcessingContext (void)
     {
-        HttpsClient client ("127.0.0.1", 9090, 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+        const auto& config = Configuration::instance();
+        HttpsClient client ("127.0.0.1", config.serverPort(), 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown),
@@ -170,7 +172,10 @@ public:
 
     void makeRequestToEnrolmentService (void)
     {
-        HttpsClient client ("127.0.0.1", 9191, 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+        const auto& config = Configuration::instance();
+        HttpsClient client("127.0.0.1",
+                           gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
+                           30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/", 11, {}, HttpStatus::Unknown),
@@ -210,9 +215,9 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
         []
         {
             const auto& config = Configuration::instance();
-            HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
-                               std::stoi(config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
-            const auto response = client.send(
+        HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                           gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
+        const auto response = client.send(
                 ClientRequest(
                     Header(HttpMethod::POST, "/admin/shutdown", 11,
                            {
@@ -235,7 +240,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
         {
             const auto& config = Configuration::instance();
             HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
-                               std::stoi(config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
+                               gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
             const auto response = client.send(
                 ClientRequest(
                     Header(HttpMethod::POST, "/admin/shutdown", 11,

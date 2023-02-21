@@ -109,7 +109,7 @@ TEST_P(ProductionBlobDatabaseHostIpTest, storeBlob) // NOLINT(readability-functi
     (void)execute("DELETE FROM erp.blob WHERE name='" + entryName + "'");
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     HostIpTests,
     ProductionBlobDatabaseHostIpTest,
     testing::Values(

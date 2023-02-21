@@ -4,11 +4,10 @@
  */
 
 #include "PrescriptionId.hxx"
-
 #include "erp/ErpRequirements.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
-
+#include "fhirtools/util/Gsl.hxx"
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -24,6 +23,15 @@ PrescriptionId PrescriptionId::fromDatabaseId (const PrescriptionType prescripti
 }
 
 PrescriptionId PrescriptionId::fromString (const std::string_view prescriptionId)
+{
+    auto prescription = fromStringNoValidation(prescriptionId);
+    A_19218.start("Validate the incoming checksum");
+    validateChecksum(prescription.mPrescriptionType, prescription.mId, prescription.mChecksum);
+    A_19218.finish();
+    return prescription;
+}
+
+PrescriptionId PrescriptionId::fromStringNoValidation (const std::string_view prescriptionId)
 {
     const auto parts = String::split(prescriptionId, '.');
 
@@ -45,10 +53,6 @@ PrescriptionId PrescriptionId::fromString (const std::string_view prescriptionId
                + std::stoll(parts[4]);
 
     const uint8_t checksum = static_cast<uint8_t>(std::stoi(parts[5]));
-
-    A_19218.start("Validate the incoming checksum");
-    validateChecksum(*type, id, checksum);
-    A_19218.finish();
 
     return PrescriptionId(*type, id, checksum);
 }
@@ -168,7 +172,7 @@ uint8_t PrescriptionId::calculateChecksum (const PrescriptionType prescriptionTy
 {
     A_19217.start("Checksum according to [ISO 7064]");
     const auto type = static_cast<int64_t>(prescriptionType) * 1'000'000'000'000;
-    return 98 - (((type + id) * 100) % 97);
+    return gsl::narrow<uint8_t>(98 - (((type + id) * 100) % 97));
 }
 
 bool PrescriptionId::operator==(const PrescriptionId& rhs) const
@@ -182,4 +186,3 @@ bool PrescriptionId::operator!=(const PrescriptionId& rhs) const
 }
 
 }
-

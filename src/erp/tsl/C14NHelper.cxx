@@ -199,6 +199,7 @@ std::optional<std::string> C14NHelper::canonicalize(
 
     for (const auto& inclusiveNsPrefix : inclusiveNsPrefixes)
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
         prefixes.push_back(const_cast<xmlChar*>(reinterpret_cast<const xmlChar*>(inclusiveNsPrefix.c_str())));
     }
     prefixes.push_back(nullptr);

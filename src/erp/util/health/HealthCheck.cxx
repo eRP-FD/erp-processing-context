@@ -5,6 +5,7 @@
 
 #include "erp/util/health/HealthCheck.hxx"
 
+#include "erp/pc/SeedTimer.hxx"
 #include "erp/util/ExceptionHelper.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
 
@@ -35,7 +36,7 @@ void HealthCheck::update (PcServiceContext& context)
     {
         context.applicationHealth().setServiceDetails(
             ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpTimestamp,
-            "last success " + context.getCFdSigErpManager().getLastValidationTimestamp());
+            "last success " + context.getCFdSigErpManager().getLastOcspResponseTimestamp());
         context.applicationHealth().setServiceDetails(
             ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpPolicy,
             String::replaceAll(
@@ -103,7 +104,7 @@ void HealthCheck::checkRedis (PcServiceContext& context)
 
 void HealthCheck::checkSeedTimer (PcServiceContext& context)
 {
-    context.getPrngSeeder()->healthCheck();
+    context.getPrngSeeder()->handler()->healthCheck();
 }
 
 

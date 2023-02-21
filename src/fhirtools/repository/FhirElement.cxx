@@ -362,12 +362,12 @@ bool fhirtools::FhirElement::Cardinality::isConstraint(bool isArray)
 }
 
 
-fhirtools::ValidationResultList FhirElement::Cardinality::check(uint32_t count, std::string_view elementFullPath,
+fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std::string_view elementFullPath,
                                                                 const FhirStructureDefinition* profile) const
 {
     using namespace std::string_literals;
     using std::to_string;
-    ValidationResultList result;
+    ValidationResults result;
     if (min > count)
     {
         if (min == 1)

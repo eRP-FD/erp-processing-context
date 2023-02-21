@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2021
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.0.1 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.2 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -35,8 +35,7 @@ RUN conan remote clean &&\
     conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force &&\
     conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force &&\
     conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force &&\
-    conan profile new --detect default &&\
-    /usr/bin/echo -e '[build_requires]\nautomake/1.16.5' >> ~/.conan/profiles/default
+    conan profile new --detect default
 
 RUN CC=gcc-11 \
     CXX=g++-11 \
@@ -57,7 +56,7 @@ RUN git clone --depth 1 git@github.ibmgcloud.net:eRp/vau-hsm.git .
 RUN mkdir -p /erp/vau-hsm/client/test/resources
 RUN rsync -a client/test/resources/saved /erp/vau-hsm/client/test/resources/
 
-FROM ubuntu:focal AS runtime
+FROM ubuntu:jammy AS runtime
 
 RUN apt-get update --fix-missing && \
     apt-get install -y curl jq

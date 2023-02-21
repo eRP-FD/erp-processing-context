@@ -28,6 +28,8 @@ namespace model
 {
 class Timestamp;
 class PrescriptionId;
+class Kvnr;
+class TelematikId;
 }
 
 namespace db_model
@@ -50,10 +52,10 @@ public:
     [[nodiscard]] std::tuple<SafeString, OptionalDeriveKeyData> initialTaskKey(const model::PrescriptionId& taskId,
                                                                         const model::Timestamp& authoredOn);
 
-    [[nodiscard]] db_model::HashedKvnr hashKvnr(std::string_view kvnr) const;
-    [[nodiscard]] db_model::HashedTelematikId hashTelematikId(std::string_view tid) const;
+    [[nodiscard]] db_model::HashedKvnr hashKvnr(const model::Kvnr& kvnr) const;
+    [[nodiscard]] db_model::HashedTelematikId hashTelematikId(const model::TelematikId& tid) const;
 
-    /// @brief create a HashedId from indentity string
+    /// @brief create a HashedId from identity string
     /// Autodetects if it is KVNR or TelematikId
     db_model::HashedId hashIdentity(std::string_view identity) const;
 
@@ -81,7 +83,7 @@ public:
                                            const db_model::Blob& salt);
 
     [[nodiscard]] std::tuple<SafeString, OptionalDeriveKeyData> initialAuditEventKey(const db_model::HashedKvnr& kvnr);
-    
+
     [[nodiscard]] ::SafeString chargeItemKey(const ::model::PrescriptionId& taskId, ::BlobId blobId,
                                              const ::db_model::Blob& salt);
 

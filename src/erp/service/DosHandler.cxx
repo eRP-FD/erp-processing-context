@@ -13,9 +13,9 @@
 #include <string>
 
 DosHandler::DosHandler(std::shared_ptr<RedisInterface> iface)
-    : RateLimiter(iface, "ERP-PC-DOS",
-                  Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS, 100),
-                  Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS, 1000))
+    : RateLimiter(std::move(iface), "ERP-PC-DOS",
+                  gsl::narrow<size_t>(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS, 100)),
+                  std::chrono::milliseconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS, 1000)))
 {
 }
 

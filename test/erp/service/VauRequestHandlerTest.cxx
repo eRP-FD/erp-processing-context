@@ -28,6 +28,7 @@
 #include "test_config.h"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 
 class VauRequestHandlerTest : public ServerTestBase
@@ -39,6 +40,12 @@ public:
     static constexpr int timespan_ms = 4000;
     EnvironmentVariableGuard calls{"ERP_TOKEN_ULIMIT_CALLS", "5"};
     EnvironmentVariableGuard timespan{"ERP_TOKEN_ULIMIT_TIMESPAN_MS", std::to_string(timespan_ms)};
+
+    const model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVersion{
+        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()};
+    const std::string_view csFlowtype = (gematikVersion < model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0)
+                            ? model::resource::code_system::deprecated::flowType
+                            : model::resource::code_system::flowType;
 };
 
 class VauRequestHandlerTestForceMockDB : public VauRequestHandlerTest
@@ -577,7 +584,6 @@ TEST_F(VauRequestHandlerTestForceMockDB, InvalidPrescriptionHeaderTaskActivate)
 
 TEST_F(VauRequestHandlerTestForceMockDB, NoInvalidPrescriptionHeaderTaskActivate)
 {
-    auto& resourceManager = ResourceManager::instance();
     A_20704.start("NoInvalidPrescriptionHeaderTaskActivate");
 
     mMockDatabase->fillWithStaticData();
@@ -585,7 +591,7 @@ TEST_F(VauRequestHandlerTestForceMockDB, NoInvalidPrescriptionHeaderTaskActivate
     auto client = createClient();
 
     const auto cadesBesSignatureFile =
-        CryptoHelper::toCadesBesSignature(resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml"));
+        CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml());
     std::string parameters = R"--(
 <Parameters xmlns="http://hl7.org/fhir">
     <parameter>
@@ -611,9 +617,9 @@ TEST_F(VauRequestHandlerTestForceMockDB, NoInvalidPrescriptionHeaderTaskActivate
 
 TEST_F(VauRequestHandlerTest, UnsupportedAcceptHeaderERP4620)
 {
-    const auto* body =
+    const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value="https://gematik.de/fhir/CodeSystem/Flowtype"/><code value="160"/>
+    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--(/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -627,9 +633,9 @@ TEST_F(VauRequestHandlerTest, UnsupportedAcceptHeaderERP4620)
 
 TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirJson)
 {
-    const auto* body =
+    const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value="https://gematik.de/fhir/CodeSystem/Flowtype"/><code value="160"/>
+    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -644,9 +650,9 @@ TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirJson)
 
 TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirXml)
 {
-    const auto* body =
+    const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value="https://gematik.de/fhir/CodeSystem/Flowtype"/><code value="160"/>
+    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -661,9 +667,9 @@ TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirXml)
 
 TEST_F(VauRequestHandlerTest, InvalidFormatRequestParameter)
 {
-    const auto* body =
+    const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value="https://gematik.de/fhir/CodeSystem/Flowtype"/><code value="160"/>
+    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -679,7 +685,7 @@ TEST_F(VauRequestHandlerTest, InvalidAcceptHeaderERP4620)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value="https://gematik.de/fhir/CodeSystem/Flowtype"/><code value="160"/>
+    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     const std::string header =
         "POST /Task/$create HTTP/1.1\r\nContent-Type: application/json\r\nAccept:ungültig\r\nContent-Length: "
@@ -707,7 +713,7 @@ TEST_F(VauRequestHandlerTest, EmptyAcceptHeaderERP4620)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value="https://gematik.de/fhir/CodeSystem/Flowtype"/><code value="160"/>
+    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     const std::string header =
         "POST /Task/$create HTTP/1.1\r\nContent-Type: application/json\r\nAccept:\r\nContent-Length: "
@@ -737,7 +743,10 @@ TEST_F(VauRequestHandlerTest, failForMissingTls)
         makeEncryptedRequest(HttpMethod::POST, "/Task/$create",
             jwtWithProfessionOID(profession_oid::oid_arzt),{},
             std::make_pair("", "application/fhir+xml"));
-    auto client = HttpClient("127.0.0.1", 9999, 30/*connectionTimeoutSeconds*/);
+    const auto& config = Configuration::instance();
+    auto client =
+        HttpClient("127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)),
+                   30 /*connectionTimeoutSeconds*/);
 
     // As the server does not understand HTTP without TLS it can not send a proper error response.
     // But we can detect that the response is not sent completely (if at all) by looking for an exception.
@@ -868,7 +877,7 @@ TEST_F(VauRequestHandlerTest, failMessageInvalidPublicKey)
     auto client = createClient();
     auto encryptedRequest = makeEncryptedRequest(
         HttpMethod::GET, "/Communication/" + Uuid().toString(), *mJwt, {}, {}, {},
-        [](std::string& teeRequest) { teeRequest[1] = 42; });
+        [](std::string& teeRequest) { ++teeRequest[1]; });
 
     // Send the request.
     auto response = client.send(encryptedRequest);

@@ -5,6 +5,9 @@
 
 #include "Utf8Helper.hxx"
 
+#include <codecvt>
+#include <locale>
+
 namespace fhirtools
 {
 size_t Utf8Helper::utf8Length(const std::string_view& s)
@@ -45,5 +48,10 @@ std::string Utf8Helper::truncateUtf8(const std::string& s, std::size_t maxLength
 
     // If we got here, the string didn't need truncation in the first place.
     return s;
+}
+std::string Utf8Helper::unicodeLiteralToString(char16_t unicodeLiteral)
+{
+    std::wstring_convert<std::codecvt_utf8<char16_t>, char16_t> converter;
+    return converter.to_bytes(unicodeLiteral);
 }
 }

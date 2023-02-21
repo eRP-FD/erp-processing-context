@@ -35,7 +35,7 @@ namespace {
     constexpr std::string_view operationName_GET_ChargeItem_id         = "GET /ChargeItem/<id>";
     constexpr std::string_view operationName_POST_ChargeItem           = "POST /ChargeItem";
     constexpr std::string_view operationName_PUT_ChargeItem_id         = "PUT /ChargeItem/<id>";
-    constexpr std::string_view operationName_DELETE_Consent            = "DELETE /Consent/?category=CHARGCONS";
+    constexpr std::string_view operationName_DELETE_Consent            = "DELETE /Consent";
     constexpr std::string_view operationName_PATCH_ChargeItem_id       = "PATCH /ChargeItem/<id>";
     constexpr std::string_view operationName_GET_Consent               = "GET /Consent";
     constexpr std::string_view operationName_POST_Consent              = "POST /Consent";

@@ -21,7 +21,6 @@
 #include "erp/util/String.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "erp/util/Configuration.hxx"
 
 #include <zlib.h>
 
@@ -93,9 +92,10 @@ namespace
         Expect(inflateInit2(&stream, 16 + MAX_WBITS) == Z_OK, "could not initialize decompression for gzip");
 
         // Setup `text` as input buffer.
-        stream.avail_in = data.size();
+        stream.avail_in = gsl::narrow<uInt>(data.size());
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
         stream.next_in = const_cast<unsigned char*>(reinterpret_cast<const unsigned char*>(data.data()));
-        uint8_t buffer[decompressBufferSize];
+        std::array<uint8_t, decompressBufferSize> buffer{};
 
         int inflateEndResult = Z_OK;
         std::string dataResult{};
@@ -107,8 +107,8 @@ namespace
             do
             {
                 // Set up `buffer` as output buffer.
-                stream.avail_out = sizeof(buffer);
-                stream.next_out = buffer;
+                stream.avail_out = buffer.size();
+                stream.next_out = buffer.data();
 
                 // Inflate the next part of the input. This will either use up all remaining input or fill
                 // up the output buffer.
@@ -121,8 +121,8 @@ namespace
                           "Failed decoding or uncompressing the PNW");
 
                 // Append the decompressed data to the result string.
-                const size_t decompressedSize = sizeof(buffer) - stream.avail_out;
-                dataResult += std::string{reinterpret_cast<char*>(buffer), decompressedSize};
+                const size_t decompressedSize = buffer.size() - stream.avail_out;
+                dataResult += std::string{reinterpret_cast<char*>(buffer.data()), decompressedSize};
 
                 // Exit when all input and output has been processed. This avoids one last
                 // call to inflate().
@@ -409,6 +409,7 @@ void TaskHandlerBase::checkAccessCodeMatches(const ServerRequest& request, const
     A_20703.finish();
 }
 
+// GEMREQ-start A_20159-02#doUnpackCadesBesSignature
 CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile,
                                                              TslManager* tslManager)
 {
@@ -467,6 +468,7 @@ CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& 
                 "unexpected throwable");
     }
 }
+// GEMREQ-end A_20159-02#doUnpackCadesBesSignature
 
 CadesBesSignature TaskHandlerBase::unpackCadesBesSignature(const std::string& cadesBesSignatureFile,
                                                            TslManager& tslManager)
@@ -512,10 +514,11 @@ model::Bundle GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& se
     const auto& accessToken = session.request.getAccessToken();
 
     A_19115.start("retrieve KVNR from ACCESS_TOKEN");
-    const auto kvnr = accessToken.stringForClaim(JWT::idNumberClaim);
-    ErpExpect(kvnr.has_value(), HttpStatus::BadRequest,
+    const auto kvnrClaim = accessToken.stringForClaim(JWT::idNumberClaim);
+    ErpExpect(kvnrClaim.has_value(), HttpStatus::BadRequest,
               "Missing claim in ACCESS_TOKEN: " + std::string(JWT::idNumberClaim));
     A_19115.finish();
+    const model::Kvnr kvnr{*kvnrClaim};
 
     auto arguments = std::optional<UrlArguments>(
         std::in_place,
@@ -529,13 +532,13 @@ model::Bundle GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& se
 
     auto* databaseHandle = session.database();
     A_19115.start("use KVNR to filter tasks");
-    auto resultSet = databaseHandle->retrieveAllTasksForPatient(kvnr.value(), arguments);
+    auto resultSet = databaseHandle->retrieveAllTasksForPatient(kvnr, arguments);
     A_19115.finish();
 
     model::Bundle responseBundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
     std::size_t totalSearchMatches =
         responseIsPartOfMultiplePages(arguments->pagingArgument(), resultSet.size())
-            ? databaseHandle->countAllTasksForPatient(kvnr.value(), arguments)
+            ? databaseHandle->countAllTasksForPatient(kvnr, arguments)
             : resultSet.size();
 
     const auto links = arguments->getBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
@@ -572,17 +575,15 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     using namespace std::chrono;
     const auto short_limit = 1min;
     const auto long_limit = 24h;
-    const auto timespan = time_point_cast<milliseconds>(time_point<system_clock>() + short_limit).time_since_epoch().count();
-    const auto dailyTimespan =
-        time_point_cast<milliseconds>(time_point<system_clock>() + long_limit).time_since_epoch().count();
 
     A_23161.start("Rate limit per day");
     {
-        auto longValue = Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_LONG);
-        RateLimiter rateLimiterDaily(session.serviceContext.getRedisClient(), "ERP-PC-DAY", longValue, dailyTimespan);
+        auto longValue = gsl::narrow<size_t>(
+            Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_LONG));
+        RateLimiter rateLimiterDaily(session.serviceContext.getRedisClient(), "ERP-PC-DAY", longValue, long_limit);
         const auto now = system_clock::now();
-        auto exp = time_point_cast<seconds>(now + long_limit).time_since_epoch();
-        auto exp_ms = time_point<system_clock, milliseconds>(exp);
+        const auto tomorrow = date::floor<days>(now + long_limit);
+        const auto exp_ms = time_point<system_clock, milliseconds>(tomorrow);
         ErpExpect(
             rateLimiterDaily.updateCallsCounter(telematikId.value(), exp_ms),
             HttpStatus::TooManyRequests,
@@ -592,8 +593,9 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
 
     A_23160.start("Rate limit per minute");
     {
-        auto shortValue = Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_SHORT);
-        RateLimiter rateLimiter(session.serviceContext.getRedisClient(), "ERP-PC-MINUTE", shortValue, timespan);
+        auto shortValue = gsl::narrow<size_t>(
+            Configuration::instance().getIntValue(ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_SHORT));
+        RateLimiter rateLimiter(session.serviceContext.getRedisClient(), "ERP-PC-MINUTE", shortValue, short_limit);
         const auto now = system_clock::now();
         auto exp = time_point_cast<seconds>(now + short_limit).time_since_epoch();
         auto exp_ms = time_point<system_clock, milliseconds>(exp);
@@ -601,15 +603,15 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     }
     A_23160.finish();
 
-    const auto kvnr = session.request.getQueryParameter("KVNR");
-    ErpExpect(kvnr.has_value() && 10 == kvnr->length(),
-              HttpStatus::BadRequest,
-              "Missing or invalid KVNR query parameter");
+    const auto kvnrParam = session.request.getQueryParameter("KVNR");
+    ErpExpect(kvnrParam.has_value(), HttpStatus::BadRequest,  "Missing KVNR query parameter");
+    const model::Kvnr kvnr{*kvnrParam};
+    ErpExpect(kvnr.valid(), HttpStatus::BadRequest, "Invalid KVNR query parameter");
 
     // We set audit relevant data here because we need it in case of missing or invalid PNW:
     session.auditDataCollector()
         .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed) // Default, will be overridden after successful decoding PNW;
-        .setInsurantKvnr(*kvnr)
+        .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::read);
 
     A_22432.start("Check provided 'PNW' value");
@@ -624,7 +626,7 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     A_22431.start("Read tasks according to KVNR and with status 'ready'");
     const auto statusReadyFilter = getTaskStatusReadyUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
     auto* database = session.database();
-    auto tasks = database->retrieveAllTasksForPatient(kvnr.value(), statusReadyFilter);
+    auto tasks = database->retrieveAllTasksForPatient(kvnr, statusReadyFilter);
     A_22431.finish();
 
     for (auto& task : tasks) {
@@ -662,6 +664,7 @@ GetTaskHandler::GetTaskHandler(const std::initializer_list<std::string_view>& al
 {
 }
 
+// GEMREQ-start A_21360-01#handleRequest
 void GetTaskHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
@@ -683,7 +686,9 @@ void GetTaskHandler::handleRequest(PcSessionContext& session)
     // Collect Audit data
     session.auditDataCollector().setAction(model::AuditEvent::Action::read).setPrescriptionId(prescriptionId);
 }
+// GEMREQ-end A_21360-01#handleRequest
 
+// GEMREQ-start A_21360-01#handleRequestFromPatient
 void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const model::PrescriptionId& prescriptionId,
                                               const JWT& accessToken)
 {
@@ -691,7 +696,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     auto [task, healthcareProviderPrescription] =
         databaseHandle->retrieveTaskAndPrescription(prescriptionId);
 
-    checkTaskState(task);
+    checkTaskState(task, true);
 
     const auto kvnr = task->kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
@@ -712,9 +717,10 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         A_20753.start("Exclusion of representative access to or using verification identity");
         if (kvnrFromAccessToken.has_value())
         {
-            ErpExpect(isVerificationIdentityKvnr(kvnrFromAccessToken.value()) == isVerificationIdentityKvnr(kvnr.value()),
-                HttpStatus::BadRequest,
-                "KVNR verification identities may not access information from insurants and vice versa");
+            ErpExpect(isVerificationIdentityKvnr(kvnrFromAccessToken.value()) ==
+                          isVerificationIdentityKvnr(kvnr.value().id()),
+                      HttpStatus::BadRequest,
+                      "KVNR verification identities may not access information from insurants and vice versa");
         }
         A_20753.finish();
     }
@@ -733,7 +739,8 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     // Unknown clients are filtered out by the VAU Proxy, nothing to do in the erp-processing-context.
     A_20702_01.finish();
 
-    A_21360.start("remove access code from task if workflow is 169");
+// GEMREQ-start A_21360-01#handleRequestFromPatient_deleteAccessCode
+    A_21360_01.start("remove access code from task if workflow is 169 or 209");
     switch (task->type())
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
@@ -744,7 +751,8 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
             task->deleteAccessCode();
             break;
     }
-    A_21360.finish();
+    A_21360_01.finish();
+// GEMREQ-end A_21360-01#handleRequestFromPatient_deleteAccessCode
 
     A_21375.start("create response bundle for patient");
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
@@ -757,13 +765,14 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     urlArguments.parse(session.request, session.serviceContext.getKeyDerivation());
     if (urlArguments.hasReverseIncludeAuditEventArgument())
     {
-        const auto auditDatas = databaseHandle->retrieveAuditEventData(std::string(*kvnr), {}, prescriptionId, {});
+        const auto auditDatas = databaseHandle->retrieveAuditEventData(*kvnr, {}, prescriptionId, {});
         for (const auto& auditData : auditDatas)
         {
-            const auto language = getLanguageFromHeader(session.request.header());
+            const auto language =
+                getLanguageFromHeader(session.request.header()).value_or(std::string(AuditEventTextTemplates::defaultLanguage));
             const auto auditEvent = AuditEventCreator::fromAuditData(
-                auditData, language, session.serviceContext.auditEventTextTemplates(),
-                session.request.getAccessToken());
+                auditData, language, session.serviceContext.auditEventTextTemplates(), session.request.getAccessToken(),
+                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
 
             responseBundle.addResource(Uuid{auditEvent.id()}.toUrn(), {}, {}, auditEvent.jsonDocument());
         }
@@ -777,13 +786,14 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         .setEventId(auditEventId)
         .setInsurantKvnr(*kvnr);
 }
+// GEMREQ-end A_21360-01#handleRequestFromPatient
 
 void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, const model::PrescriptionId& prescriptionId)
 {
     auto* databaseHandle = session.database();
     auto [task, receipt] = databaseHandle->retrieveTaskAndReceipt(prescriptionId);
 
-    checkTaskState(task);
+    checkTaskState(task, false);
 
     A_19226.start("create response bundle for pharmacist");
     A_20703.start("Set VAU-Error-Code header field to brute-force whenever AccessCode or Secret mismatches");
@@ -820,9 +830,15 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
         .setInsurantKvnr(*kvnr);
 }
 
-void GetTaskHandler::checkTaskState(const std::optional<model::Task>& task)
+void GetTaskHandler::checkTaskState(const std::optional<model::Task>& task, bool isPatient)
 {
     ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found in DB");
+
+    if (isPatient)
+    {
+        ErpExpect(task->status() != model::Task::Status::draft, HttpStatus::Forbidden,
+                  "Status draft is not allowed for this operation");
+    }
     A_18952.start("don't return deleted mTasks");
     ErpExpect(task->status() != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
     A_18952.finish();

@@ -2,18 +2,19 @@
 <ChargeItem xmlns="http://hl7.org/fhir">
   <id value="##PRESCRIPTION_ID##" />
   <meta>
-    <profile value="https://gematik.de/fhir/StructureDefinition/ErxChargeItem|1.1.1" />
+    <profile value="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem|1.0" />
     <tag>
       <display value="Example for PKV billing information." />
     </tag>
   </meta>
   <contained>
     <Binary>
+      <id value="dispense-bundle-123"/>
       <contentType value="application/pkcs7-mime"/>
       <data value="##DISPENSE_BUNDLE##"/>
     </Binary>
   </contained>
-  <extension url="https://gematik.de/fhir/StructureDefinition/MarkingFlag">
+  <extension url="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag">
     <extension url="insuranceProvider">
       <valueBoolean value="false" />
     </extension>
@@ -25,7 +26,7 @@
     </extension>
   </extension>
   <identifier>
-    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+    <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
     <value value="##PRESCRIPTION_ID##" />
   </identifier>
   <status value="billable" />
@@ -37,30 +38,27 @@
   </code>
   <subject>
     <identifier>
-      <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
+      <system value="http://fhir.de/sid/pkv/kvid-10" />
       <value value="##KVNR##" />
     </identifier>
   </subject>
   <enterer>
     <identifier>
-      <system value="https://gematik.de/fhir/NamingSystem/TelematikID" />
+      <system value="https://gematik.de/fhir/sid/telematik-id" />
       <value value="606358757" />
     </identifier>
   </enterer>
   <enteredDate value="2021-06-01T07:13:00+05:00" />
    <supportingInformation>
-      <reference value="Bundle/8938aff5-720a-414a-b574-114bd8d1e11c" />
-      <type value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle" />
-      <display value="E-Rezept" />
+      <reference value="##PRESCRIPTION_REF##" />
+      <display value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle" />
    </supportingInformation>
    <supportingInformation>
-      <reference value="Bundle/a0010000-0000-0000-0003-000000000000" />
-      <type value="https://gematik.de/fhir/StructureDefinition/ErxReceipt" />
-      <display value="Quittung" />
+      <reference value="##RECEIPT_REF##" />
+      <display value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Bundle" />
    </supportingInformation>
    <supportingInformation>
-      <reference value="Bundle/fe4a04af-0828-4977-a5ce-bfeed16ebf10" />
-      <type value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle" />
-      <display value="Abgabedatensatz" />
+      <reference value="#dispense-bundle-123" />
+      <display value="Binary" />
    </supportingInformation>
 </ChargeItem>

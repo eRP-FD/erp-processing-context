@@ -21,7 +21,7 @@ struct OptionalDeriveKeyData;
 namespace db_model
 {
 class Blob;
-class ChargeItem;
+struct ChargeItem;
 class Task;
 }
 
@@ -53,10 +53,10 @@ public:
 
     [[nodiscard]] std::string storeAuditEventData(model::AuditData& auditData) override;
     [[nodiscard]] std::vector<model::AuditData>
-    retrieveAuditEventData(const std::string& kvnr, const std::optional<Uuid>& id,
+    retrieveAuditEventData(const model::Kvnr& kvnr, const std::optional<Uuid>& id,
                            const std::optional<model::PrescriptionId>& prescriptionId,
                            const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] uint64_t countAuditEventData(const std::string& kvnr,
+    [[nodiscard]] uint64_t countAuditEventData(const model::Kvnr& kvnr,
                                                const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]] std::optional<model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) override;
@@ -70,20 +70,20 @@ public:
     [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
     retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::vector<model::Task>
-    retrieveAllTasksForPatient(const std::string& kvnr, const std::optional<UrlArguments>& search) override;
+    retrieveAllTasksForPatient(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t
-    countAllTasksForPatient (const std::string& kvnr, const std::optional<UrlArguments>& search) override;
+    countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]] std::tuple<std::vector<model::MedicationDispense>, bool>
-    retrieveAllMedicationDispenses(const std::string& kvnr,
+    retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
                                    const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::optional<model::MedicationDispense>
-    retrieveMedicationDispense(const std::string& kvnr, const model::MedicationDispenseId& id) override;
+    retrieveMedicationDispense(const model::Kvnr& kvnr, const model::MedicationDispenseId& id) override;
 
 
     [[nodiscard]] CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource) override;
     [[nodiscard]] std::optional<Uuid> insertCommunication(model::Communication& communication) override;
-    [[nodiscard]] uint64_t countRepresentativeCommunications(const std::string& insurantA, const std::string& insurantB,
+    [[nodiscard]] uint64_t countRepresentativeCommunications(const model::Kvnr& insurantA, const model::Kvnr& insurantB,
                                                              const model::PrescriptionId& prescriptionId) override;
     [[nodiscard]] bool existCommunication(const Uuid& communicationId) override;
     [[nodiscard]] std::vector<model::Communication>
@@ -99,14 +99,14 @@ public:
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId) override;
 
     void storeConsent(const model::Consent& consent) override;
-    std::optional<model::Consent> retrieveConsent(const std::string_view& kvnr) override;
-    [[nodiscard]] bool clearConsent(const std::string_view& kvnr) override;
+    std::optional<model::Consent> retrieveConsent(const model::Kvnr& kvnr) override;
+    [[nodiscard]] bool clearConsent(const model::Kvnr& kvnr) override;
 
     void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) override;
     void updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt) override;
 
     std::vector<model::ChargeItem>
-    retrieveAllChargeItemsForInsurant(const std::string_view& kvnr,
+    retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
                                       const std::optional<UrlArguments>& search) const override;
 
     [[nodiscard]] ::model::ChargeInformation retrieveChargeInformation(const model::PrescriptionId& id) const override;
@@ -114,10 +114,11 @@ public:
     retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const override;
 
     void deleteChargeInformation(const model::PrescriptionId& id) override;
-    void clearAllChargeInformation(const std::string_view& kvnr) override;
-    void clearAllChargeItemCommunications(const std::string_view& kvnr) override;
+    void clearAllChargeInformation(const model::Kvnr& kvnr) override;
+    void clearAllChargeItemCommunications(const model::Kvnr& kvnr) override;
+    void deleteCommunicationsForChargeItem(const model::PrescriptionId& id) override;
 
-    [[nodiscard]] uint64_t countChargeInformationForInsurant(const std::string& kvnr,
+    [[nodiscard]] uint64_t countChargeInformationForInsurant(const model::Kvnr& kvnr,
                                                              const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]] DatabaseBackend& getBackend() override;

@@ -168,6 +168,7 @@ public:
     void deleteChargeInformation(const model::PrescriptionId& id) override;
     void clearAllChargeInformation(const db_model::HashedKvnr& kvnr) override;
     void clearAllChargeItemCommunications(const db_model::HashedKvnr& kvnr) override;
+    void deleteCommunicationsForChargeItem(const model::PrescriptionId& taskId) override;
 
     [[nodiscard]] uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr, 
                                                              const std::optional<UrlArguments>& search) override;

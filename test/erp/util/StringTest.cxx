@@ -17,10 +17,12 @@ class StringTest : public testing::Test
 public:
     static std::string vaListHelper(const char* msg, ...)
     {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
         std::va_list args{};
         va_start(args, msg);
-        return String::vaListToString(msg, args);
+        auto ret = String::vaListToString(msg, args);
         va_end(args);
+        return ret;
     }
 };
 
@@ -415,6 +417,7 @@ TEST_F(StringTest, truncateUtf8)//NOLINT(readability-function-cognitive-complexi
 TEST_F(StringTest, vaListToString)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
+    //NOLINTBEGIN(cppcoreguidelines-pro-type-vararg)
     EXPECT_EQ("hello world"s, vaListHelper("hello %s", "world"));
     EXPECT_EQ("hello world"s, vaListHelper("hello world"));
     EXPECT_EQ("hello 1"s, vaListHelper("hello %d", 1));
@@ -426,6 +429,7 @@ TEST_F(StringTest, vaListToString)//NOLINT(readability-function-cognitive-comple
     EXPECT_EQ("hello world"s, vaListHelper("hello %s", "world", "hello"));
 
     EXPECT_ANY_THROW(vaListHelper(nullptr));
+    //NOLINTEND(cppcoreguidelines-pro-type-vararg)
 }
 
 TEST_F(StringTest, toHexString)

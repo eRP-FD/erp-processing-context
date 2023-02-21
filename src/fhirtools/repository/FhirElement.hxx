@@ -22,7 +22,7 @@
 namespace fhirtools {
 class FhirStructureDefinition;
 class FhirValue;
-class ValidationResultList;
+class ValidationResults;
 
 /// @brief stores information of an Element in the StructureDefinition
 ///
@@ -45,7 +45,7 @@ public:
         std::optional<uint32_t> max = std::nullopt;
         bool isConstraint(bool isArray);
         auto operator<=>(const Cardinality&) const = default;
-        ValidationResultList check(uint32_t count, std::string_view elementFullPath,
+        ValidationResults check(uint32_t count, std::string_view elementFullPath,
                                    const FhirStructureDefinition*) const;
         bool restricts(const Cardinality&) const;
     private:

@@ -31,10 +31,10 @@ class ReferenceContext;
 class FhirPathValidator
 {
 public:
-    [[nodiscard]] static ValidationResultList validate(const std::shared_ptr<const Element>& element,
+    [[nodiscard]] static ValidationResults validate(const std::shared_ptr<const Element>& element,
                                                        const std::string& elementFullPath,
                                                        const ValidatorOptions& = {});
-    [[nodiscard]] static ValidationResultList validateWithProfiles(const std::shared_ptr<const Element>& element,
+    [[nodiscard]] static ValidationResults validateWithProfiles(const std::shared_ptr<const Element>& element,
                                                                    const std::string& elementFullPath,
                                                                    const std::set<std::string>& profileUrls,
                                                                    const ValidatorOptions& = {});
@@ -42,11 +42,9 @@ public:
     // internal use
     const ValidatorOptions& options() const;
     const ProfiledElementTypeInfo& extensionRootDefPtr() const;
-    const ProfiledElementTypeInfo& elementExtensionDefPtr() const;
 
 private:
     FhirPathValidator(const ValidatorOptions& options, std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
-                      std::unique_ptr<ProfiledElementTypeInfo> initElementExtensionDefPtr,
                       const FhirStructureRepository& repo);
     static FhirPathValidator create(const ValidatorOptions&, const FhirStructureRepository*);
     void validateInternal(const std::shared_ptr<const Element>& element, const std::string& elementFullPath);
@@ -64,10 +62,9 @@ private:
     void addProfiles(const Element& element, fhirtools::ProfileSetValidator& profileSetValidator,
                      fhirtools::ReferenceContext& parentReferenceContext, std::string_view elementFullPath);
 
-    ValidationResultList result;
+    ValidationResults result;
     const ValidatorOptions& mOptions;
     const std::unique_ptr<const ProfiledElementTypeInfo> mExtensionRootDefPtr;
-    const std::unique_ptr<const ProfiledElementTypeInfo> mElementExtensionDefPtr;
     const FhirStructureRepository& mRepo;
 };
 

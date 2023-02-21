@@ -21,8 +21,7 @@ public:
     explicit CommunicationPayload(const rapidjson::Value* payloadValue);
 
     void verifyLength() const;
-    void verifyUrls() const;
-    void verifyMimeTypes() const;
+
 private:
     std::vector<std::unique_ptr<CommunicationPayloadItem>> mItems;
 };

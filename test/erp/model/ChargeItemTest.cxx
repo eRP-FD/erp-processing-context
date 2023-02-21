@@ -8,6 +8,7 @@
 #include "erp/model/ChargeItem.hxx"
 #include "erp/util/Uuid.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 
@@ -21,21 +22,21 @@ namespace
 void checkSetSupportingInfoReferences(model::ChargeItem& chargeItem, const model::PrescriptionId& prescriptionId)
 {
     EXPECT_NO_THROW(chargeItem.setSupportingInfoReference(
-            model::ChargeItem::SupportingInfoType::receipt, prescriptionId.toString()));
-    EXPECT_EQ(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).value(),
-              prescriptionId.toString());
+            model::ChargeItem::SupportingInfoType::receiptBundle));
+    EXPECT_EQ(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle).value(),
+              Uuid{prescriptionId.deriveUuid(model::uuidFeatureReceipt)}.toUrn());
 
     const Uuid dispenseItemRef;
     EXPECT_NO_THROW(chargeItem.setSupportingInfoReference(
-            model::ChargeItem::SupportingInfoType::dispenseItem, dispenseItemRef.toString()));
-    EXPECT_EQ(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).value(),
-              dispenseItemRef.toString());
+            model::ChargeItem::SupportingInfoType::dispenseItemBundle));
+    EXPECT_EQ(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).value(),
+              Uuid{prescriptionId.deriveUuid(model::uuidFeatureDispenseItem)}.toUrn());
 
     const Uuid prescriptionItemRef;
     EXPECT_NO_THROW(chargeItem.setSupportingInfoReference(
-            model::ChargeItem::SupportingInfoType::prescriptionItem, prescriptionItemRef.toString()));
-    EXPECT_EQ(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).value(),
-              prescriptionItemRef.toString());
+            model::ChargeItem::SupportingInfoType::prescriptionItemBundle));
+    EXPECT_EQ(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).value(),
+              Uuid{prescriptionId.deriveUuid(model::uuidFeaturePrescription)}.toUrn());
 }
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -48,15 +49,15 @@ void checkCommon(model::ChargeItem& chargeItem)
     ASSERT_TRUE(chargeItem.enteredDate());
     EXPECT_EQ(chargeItem.enteredDate()->toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 
-    const auto receiptRef = chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt);
+    const auto receiptRef = chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle);
     ASSERT_TRUE(receiptRef.has_value());
-    EXPECT_EQ(receiptRef.value(), "160.123.456.789.123.58");
-    const auto dispenseRef = chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem);
+    EXPECT_EQ(receiptRef.value(), Uuid{chargeItem.prescriptionId()->deriveUuid(model::uuidFeatureReceipt)}.toUrn());
+    const auto dispenseRef = chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBinary);
     ASSERT_TRUE(dispenseRef.has_value());
-    EXPECT_EQ(dispenseRef.value(), "72bd741c-7ad8-41d8-97c3-9aabbdd0f5b4");
-    const auto prescriptionRef = chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem);
+    EXPECT_EQ(dispenseRef.value(), "#dispense-bundle-123");
+    const auto prescriptionRef = chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
     ASSERT_TRUE(prescriptionRef.has_value());
-    EXPECT_EQ(prescriptionRef.value(), "0428d416-149e-48a4-977c-394887b3d85c");
+    EXPECT_EQ(prescriptionRef.value(), Uuid{chargeItem.prescriptionId()->deriveUuid(model::uuidFeaturePrescription)}.toUrn());
 
     const model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.715.74");
     chargeItem.setId(prescriptionId);
@@ -84,15 +85,15 @@ void checkCommon(model::ChargeItem& chargeItem)
 
     EXPECT_NO_FATAL_FAILURE(checkSetSupportingInfoReferences(chargeItem, prescriptionId));
 
-    EXPECT_NO_THROW(chargeItem.deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::receipt));
-    EXPECT_FALSE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receipt).has_value());
+    EXPECT_NO_THROW(chargeItem.deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle));
+    EXPECT_FALSE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle).has_value());
 
-    EXPECT_NO_THROW(chargeItem.deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem));
-    EXPECT_FALSE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
+    EXPECT_NO_THROW(chargeItem.deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle));
+    EXPECT_FALSE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
 
-    EXPECT_NO_THROW(chargeItem.deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem));
+    EXPECT_NO_THROW(chargeItem.deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle));
     EXPECT_FALSE(
-        chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem).has_value());
+        chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).has_value());
 
     EXPECT_NO_FATAL_FAILURE(checkSetSupportingInfoReferences(chargeItem, prescriptionId));
 }
@@ -100,7 +101,23 @@ void checkCommon(model::ChargeItem& chargeItem)
 
 } // anonymous namespace
 
-TEST(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function-cognitive-complexity)
+class ChargeItemTest : public testing::Test
+{
+public:
+    void SetUp() override
+    {
+        envVars = testutils::getNewFhirProfileEnvironment();
+    }
+
+    void TearDown() override
+    {
+        envVars.clear();
+    }
+private:
+    std::vector<EnvironmentVariableGuard> envVars;
+};
+
+TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function-cognitive-complexity)
 {
     ::model::ChargeItem chargeItem;
 
@@ -110,7 +127,8 @@ TEST(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function-c
     ASSERT_NO_THROW(
         sourceChargeItem = ::model::ChargeItem::fromXml(
             ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem,
+            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::fhir,
+            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01},
             std::nullopt));
     ASSERT_TRUE(sourceChargeItem.has_value());
 
@@ -138,50 +156,49 @@ TEST(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function-c
     ASSERT_TRUE(chargeItem.enteredDate());
     EXPECT_EQ(chargeItem.enteredDate(), sourceChargeItem->enteredDate());
 
-    const auto sourceMarkingFlag = sourceChargeItem->markingFlag();
+    const auto sourceMarkingFlag = sourceChargeItem->markingFlags();
     if (sourceMarkingFlag)
     {
-        chargeItem.setMarkingFlag(sourceMarkingFlag.value());
+        chargeItem.setMarkingFlags(sourceMarkingFlag.value());
     }
 
-    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem,
-                                          "0428d416-149e-48a4-977c-394887b3d85c"sv);
-    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem,
-                                          "72bd741c-7ad8-41d8-97c3-9aabbdd0f5b4"sv);
-    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt, "160.123.456.789.123.58"sv);
+    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
+    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle);
 
     // The enteredDate in the selected source may be converted to a different time zone when setting it above.
     sourceChargeItem->setEnteredDate(sourceChargeItem->enteredDate().value());
 
-    sourceChargeItem->deleteContainedBinary();
+    sourceChargeItem->deleteContainedBinary(true);
 
     EXPECT_EQ(chargeItem.serializeToCanonicalJsonString(), sourceChargeItem->serializeToCanonicalJsonString());
 }
 
-TEST(ChargeItemTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::ChargeItem> optChargeItem;
     ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromXml(
-        ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem, std::nullopt));
+                        ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
+                        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir,
+                        {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}, {}));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
     EXPECT_FALSE(optChargeItem.value().isMarked());
 }
 
-TEST(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::ChargeItem> optChargeItem;
-    ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromJson(
-        ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input_marked.json"),
-        *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(), SchemaType::Gem_erxChargeItem, std::nullopt));
+    ASSERT_NO_THROW(
+        optChargeItem = model::ChargeItem::fromJson(
+            ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input_marked.json"),
+            *StaticData::getJsonValidator(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+            SchemaType::fhir, {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}, {}));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
     EXPECT_TRUE(optChargeItem->isMarked());
-    auto allMarkings = optChargeItem->markingFlag()->getAllMarkings();
+    auto allMarkings = optChargeItem->markingFlags()->getAllMarkings();
     EXPECT_TRUE(allMarkings.at("taxOffice"));
     EXPECT_FALSE(allMarkings.at("subsidy"));
     EXPECT_FALSE(allMarkings.at("insuranceProvider"));
@@ -190,29 +207,29 @@ TEST(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-com
     ASSERT_NO_THROW(optChargeItemNoMarking = model::ChargeItem::fromXmlNoValidation(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml")));
 
-    ASSERT_TRUE(optChargeItemNoMarking->markingFlag().has_value());
-    optChargeItem->setMarkingFlag(optChargeItemNoMarking->markingFlag().value());
+    ASSERT_TRUE(optChargeItemNoMarking->markingFlags().has_value());
+    optChargeItem->setMarkingFlags(optChargeItemNoMarking->markingFlags().value());
 
     EXPECT_FALSE(optChargeItem->isMarked());
-    allMarkings = optChargeItem->markingFlag()->getAllMarkings();
+    allMarkings = optChargeItem->markingFlags()->getAllMarkings();
     EXPECT_FALSE(allMarkings.at("taxOffice"));
     EXPECT_FALSE(allMarkings.at("subsidy"));
     EXPECT_FALSE(allMarkings.at("insuranceProvider"));
 
     ASSERT_NO_THROW(optChargeItem->deleteMarkingFlag());
     EXPECT_FALSE(optChargeItem.value().isMarked());
-    allMarkings = optChargeItem->markingFlag()->getAllMarkings();
+    allMarkings = optChargeItem->markingFlags()->getAllMarkings();
     EXPECT_TRUE(allMarkings.empty());
 }
 
-TEST(ChargeItemTest, ContainedBinary)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemTest, ContainedBinary)//NOLINT(readability-function-cognitive-complexity)
 {
     ::std::optional<::model::ChargeItem> chargeItem;
     ASSERT_NO_THROW(
         chargeItem = ::model::ChargeItem::fromXml(
             ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem,
-            std::nullopt));
+            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::fhir,
+            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}, {}));
     ASSERT_TRUE(chargeItem.has_value());
 
     ::std::optional<::model::Binary> containedBinary;
@@ -224,7 +241,7 @@ TEST(ChargeItemTest, ContainedBinary)//NOLINT(readability-function-cognitive-com
     EXPECT_FALSE(chargeItem->containedBinary().has_value());
 }
 
-TEST(ChargeItemTest, MarkingFlags)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemTest, MarkingFlags)//NOLINT(readability-function-cognitive-complexity)
 {
     ::model::ChargeItem chargeItem;
 
@@ -238,16 +255,18 @@ TEST(ChargeItemTest, MarkingFlags)//NOLINT(readability-function-cognitive-comple
         ASSERT_NO_THROW(sourceChargeItem = ::model::ChargeItem::fromJson(
                             ::ResourceManager::instance().getStringResource(chargeItemJson),
                             *::StaticData::getJsonValidator(), *::StaticData::getXmlValidator(),
-                            *::StaticData::getInCodeValidator(), ::SchemaType::Gem_erxChargeItem, std::nullopt))
+                            *::StaticData::getInCodeValidator(), ::SchemaType::fhir,
+                            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01},
+                            {}))
             << chargeItemJson;
         ASSERT_TRUE(sourceChargeItem.has_value());
 
-        const auto sourceMarkingFlag = sourceChargeItem->markingFlag();
+        const auto sourceMarkingFlag = sourceChargeItem->markingFlags();
         ASSERT_TRUE(sourceMarkingFlag.has_value());
-        chargeItem.setMarkingFlag(sourceMarkingFlag.value());
+        chargeItem.setMarkingFlags(sourceMarkingFlag.value());
 
         EXPECT_TRUE(chargeItem.isMarked());
-        auto targetMarkingFlag = chargeItem.markingFlag();
+        auto targetMarkingFlag = chargeItem.markingFlags();
         EXPECT_EQ(targetMarkingFlag->getAllMarkings().at("taxOffice"),
                   targetMarkingFlag->getAllMarkings().at("taxOffice"));
         EXPECT_EQ(targetMarkingFlag->getAllMarkings().at("subsidy"), targetMarkingFlag->getAllMarkings().at("subsidy"));
@@ -256,70 +275,73 @@ TEST(ChargeItemTest, MarkingFlags)//NOLINT(readability-function-cognitive-comple
     }
 }
 
-TEST(ChargeItemTest, SupportingInfoReference)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemTest, SupportingInfoReference)//NOLINT(readability-function-cognitive-complexity)
 {
     ::model::ChargeItem chargeItem;
+    const auto pId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 123456789);
+    chargeItem.setPrescriptionId(pId);
 
-    const auto prescriptionInput = "0428d416-149e-48a4-977c-394887b3d85c"sv;
-    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem, prescriptionInput);
+    const auto prescriptionInput = Uuid{pId.deriveUuid(model::uuidFeaturePrescription)}.toUrn();
+    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
     auto prescriptionReference =
-        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem);
+        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
     ASSERT_TRUE(prescriptionReference.has_value());
     EXPECT_EQ(prescriptionReference.value(), prescriptionInput);
 
-    auto dispenseInput = "72bd741c-7ad8-41d8-97c3-9aabbdd0f5b4"s;
-    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem, dispenseInput);
-    auto dispenseReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem);
+    auto dispenseInput = Uuid{pId.deriveUuid(model::uuidFeatureDispenseItem)}.toUrn();
+    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+    auto dispenseReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
     ASSERT_TRUE(dispenseReference.has_value());
     EXPECT_EQ(dispenseReference.value(), dispenseInput);
 
-    const auto receiptInput = "160.123.456.789.123.58"sv;
-    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt, receiptInput);
-    auto receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt);
+    const auto receiptInput = Uuid{pId.deriveUuid(model::uuidFeatureReceipt)}.toUrn();
+    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
+    auto receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
     ASSERT_TRUE(receiptReference.has_value());
     EXPECT_EQ(receiptReference.value(), receiptInput);
 
     const auto& dispenseItemXML =
         ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/dispense_item.xml");
     auto dispenseBundle = ::model::Bundle::fromXmlNoValidation(dispenseItemXML);
-    dispenseInput = "Bundle/"s + dispenseBundle.getId().toString();
-    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem, dispenseBundle);
-    dispenseReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem);
+    dispenseInput = Uuid{pId.deriveUuid(model::uuidFeatureDispenseItem)}.toUrn();
+    chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+    dispenseReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
     ASSERT_TRUE(dispenseReference.has_value());
     EXPECT_EQ(dispenseReference.value(), dispenseInput);
     prescriptionReference =
-        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem);
+        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
     EXPECT_TRUE(prescriptionReference.has_value());
     EXPECT_EQ(prescriptionReference.value(), prescriptionInput);
-    receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt);
+    receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
     EXPECT_TRUE(receiptReference.has_value());
     EXPECT_EQ(receiptReference.value(), receiptInput);
 
-    chargeItem.deleteSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem);
+    chargeItem.deleteSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
     EXPECT_FALSE(
-        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem).has_value());
-    dispenseReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem);
+        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle).has_value());
+    dispenseReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
     EXPECT_TRUE(dispenseReference.has_value());
     EXPECT_EQ(dispenseReference.value(), dispenseInput);
-    receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt);
+    receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
     EXPECT_TRUE(receiptReference.has_value());
     EXPECT_EQ(receiptReference.value(), receiptInput);
 
-    chargeItem.deleteSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem);
-    EXPECT_FALSE(chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
-    receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt);
+    chargeItem.deleteSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+    EXPECT_FALSE(chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
+    receiptReference = chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
     EXPECT_TRUE(receiptReference.has_value());
     EXPECT_EQ(receiptReference.value(), receiptInput);
 
-    chargeItem.deleteSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt);
-    EXPECT_FALSE(chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receipt).has_value());
+    chargeItem.deleteSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
+    EXPECT_FALSE(chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle).has_value());
 
     EXPECT_FALSE(
-        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItem).has_value());
-    EXPECT_FALSE(chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItem).has_value());
+        chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle).has_value());
+    EXPECT_FALSE(chargeItem.supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
 }
 
-TEST(ChargeItemTest, OverwriteIdentifier)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemTest, OverwriteIdentifier)//NOLINT(readability-function-cognitive-complexity)
 {
     ::model::ChargeItem chargeItem;
 
@@ -333,7 +355,7 @@ TEST(ChargeItemTest, OverwriteIdentifier)//NOLINT(readability-function-cognitive
     EXPECT_EQ(chargeItem.prescriptionId(), prescriptionId1);
 
     const auto prescriptionId2 =
-        ::model::PrescriptionId::fromDatabaseId(::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 2);
+        ::model::PrescriptionId::fromDatabaseId(::model::PrescriptionType::direkteZuweisungPkv, 2);
 
     EXPECT_NO_THROW(chargeItem.setPrescriptionId(prescriptionId2));
     ASSERT_TRUE(chargeItem.prescriptionId());
@@ -352,7 +374,7 @@ TEST(ChargeItemTest, OverwriteIdentifier)//NOLINT(readability-function-cognitive
     EXPECT_EQ(chargeItem.accessCode(), accessCode2);
 }
 
-TEST(ChargeItemTest, AccessCode)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemTest, AccessCode)//NOLINT(readability-function-cognitive-complexity)
 {
     ::model::ChargeItem chargeItem;
 
@@ -377,4 +399,3 @@ TEST(ChargeItemTest, AccessCode)//NOLINT(readability-function-cognitive-complexi
     ASSERT_TRUE(chargeItem.prescriptionId());
     EXPECT_EQ(chargeItem.prescriptionId(), prescriptionId1);
 }
-

@@ -3,4 +3,4 @@
  * (C) Copyright IBM Corp. 2022
  */
 
-#include "erp/model/extensions/KBVMedicationCatagory.hxx"
+#include "erp/model/extensions/KBVMedicationCategory.hxx"

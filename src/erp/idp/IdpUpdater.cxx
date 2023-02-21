@@ -8,6 +8,7 @@
 #include "erp/common/Constants.hxx"
 #include "erp/crypto/Jwt.hxx"
 #include "erp/tsl/error/TslError.hxx"
+#include "erp/tsl/OcspHelper.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/JsonLog.hxx"
@@ -277,6 +278,7 @@ void IdpUpdater::verifyCertificate (const std::vector<Certificate>& certificateC
 }
 
 
+// GEMREQ-start A_20158
 void IdpUpdater::doVerifyCertificate (const std::vector<Certificate>& certificateChain)
 {
     A_20158_01.start("verify updated IDP signer certificate");
@@ -288,12 +290,16 @@ void IdpUpdater::doVerifyCertificate (const std::vector<Certificate>& certificat
     mTslManager.verifyCertificate(
         TslMode::TSL,
         x509,
-        {CertificateType::C_FD_SIG});
+        {CertificateType::C_FD_SIG},
+        {OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE,
+         {std::nullopt, OcspHelper::getOcspGracePeriod(TslMode::TSL)},
+         {}});
 
     Expect(x509.checkValidityPeriod(), "Invalid IDP certificate");
 
     A_20158_01.finish();
 }
+// GEMREQ-end A_20158
 
 
 void IdpUpdater::reportUpdateStatus (const UpdateStatus status, std::string_view details)

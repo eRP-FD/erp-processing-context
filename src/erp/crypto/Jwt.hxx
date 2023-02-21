@@ -35,7 +35,8 @@ public:
      */
     explicit JWT(std::string jwt);
 
-    JWT& operator=(JWT&& other) = default;
+    // NOLINTNEXTLINE(bugprone-exception-escape)
+    JWT& operator=(JWT&& other) noexcept = default;
 
     bool operator==(const JWT& jwt) const;
 

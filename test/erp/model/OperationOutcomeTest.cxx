@@ -195,7 +195,8 @@ TEST(OperationOutcomeTest, ConstructFromXml)
 )";
 
     ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(OperationOutcome::fromXml(
-        xml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir)));
+        xml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir,
+        model::ResourceVersion::supportedBundles())));
 }
 
 

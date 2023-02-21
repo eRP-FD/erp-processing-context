@@ -7,6 +7,7 @@
 
 #include "fhirtools/validator/internal/ProfileValidator.hxx"
 #include "fhirtools/validator/internal/ReferenceContext.hxx"
+#include "fhirtools/repository/FhirSlicing.hxx"
 
 #include <map>
 #include <memory>
@@ -83,7 +84,7 @@ public:
 
     const ProfileValidator& getValidator(const ProfileValidator::MapKey&) const;
 
-    ValidationResultList results() const;
+    ValidationResults results() const;
 
     void finalize(std::string_view elementFullPath);
 
@@ -111,6 +112,8 @@ private:
     void finalizeSliceCheckers(std::string_view elementFullPath);
     std::set<ProfileValidator::MapKey> initialFailed() const;
     void propagateFailures();
+    bool hasMostSlices(const ProfiledElementTypeInfo&) const;
+    std::optional<FhirSlicing::SlicingRules> getRuleOverride(const ProfiledElementTypeInfo&) const;
 
     using CounterKey = ProfileValidatorCounterKey;
     using CounterData = ProfileValidatorCounterData;
@@ -122,7 +125,7 @@ private:
     std::set<ProfileValidator::MapKey> mIncludeInResult;
     std::map<ProfiledElementTypeInfo, SlicingChecker> mSliceCheckers;
     std::shared_ptr<const FhirElement> mElementInParent;
-    ValidationResultList mResults;
+    ValidationResults mResults;
     std::reference_wrapper<const FhirPathValidator> mValidator;
     std::list<ProfileSolver> mSolvers;
     std::set<const FhirStructureDefinition*> mExtraFailedProfiles;

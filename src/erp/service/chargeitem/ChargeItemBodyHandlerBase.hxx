@@ -13,8 +13,8 @@
 
 namespace model
 {
+class AbgabedatenPkvBundle;
 class Binary;
-class Bundle;
 class ChargeItem;
 }
 
@@ -26,8 +26,10 @@ public:
 
 protected:
     static std::optional<model::Binary> getDispenseItemBinary(const model::ChargeItem& chargeItem);
-    ::model::Bundle validatedBundleFromSigned(const ::model::Binary& containedBinary, ::SchemaType schemaType,
-                                              ::PcServiceContext& serviceContext, ::VauErrorCode onError);
+    static std::pair<::model::AbgabedatenPkvBundle, std::string> validatedBundleFromSigned(
+        const ::model::Binary& containedBinary,
+        ::PcServiceContext& serviceContext,
+        ::VauErrorCode onError);
 };
 
 

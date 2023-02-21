@@ -87,8 +87,10 @@ const rj::Pointer valuePointer(ElementName::path(elements::value));
 }  // anonymous namespace
 
 
-Device::Device()
-    : Resource<Device>("https://gematik.de/fhir/StructureDefinition/ErxDevice",
+Device::Device(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+    : Resource<Device>(ResourceVersion::deprecatedProfile(profileVersion)
+                           ? resource::structure_definition::deprecated::device
+                           : resource::structure_definition::device,
                        []() {
                            std::call_once(onceFlag, initTemplates);
                            return deviceTemplate;

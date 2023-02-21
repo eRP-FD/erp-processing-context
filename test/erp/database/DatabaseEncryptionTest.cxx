@@ -47,7 +47,7 @@ protected:
         model::Task task{model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode};
         task.setAcceptDate(model::Timestamp{1.0});
         task.setExpiryDate(model::Timestamp{2.0});
-        task.setKvnr(InsurantA);
+        task.setKvnr(model::Kvnr{std::string{InsurantA}, model::Kvnr::Type::gkv});
         task.updateLastUpdate(model::Timestamp{3.0});
         task.setStatus(model::Task::Status::completed);
         task.setSecret(secret);
@@ -249,8 +249,8 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     builder.setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.");
     builder.setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
     auto communication = model::Communication::fromJsonNoValidation(builder.createJsonString());
-    communication.setSender(InsurantA);
-    communication.setRecipient(mPharmacy);
+    communication.setSender(model::Kvnr{InsurantA, model::Kvnr::Type::gkv});
+    communication.setRecipient(model::TelematikId{mPharmacy});
     communication.setTimeSent(model::Timestamp{(int64_t)1612134000});
     auto id = db.insertCommunication(communication);
     ASSERT_TRUE(id.has_value());
@@ -264,10 +264,10 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     //  0: id uuid DEFAULT erp.gen_suuid(CURRENT_TIMESTAMP) NOT NULL,
     //     not encrypted
     //  1: sender bytea NOT NULL,
-    auto senderHashed = getKeyDerivation().hashIdentity(communication.sender().value());
+    auto senderHashed = getKeyDerivation().hashIdentity(model::getIdentityString(communication.sender().value()));
     EXPECT_EQ(db_model::EncryptedBlob{row[col::sender].as<db_model::postgres_bytea>()}, senderHashed);
     //  2: recipient bytea NOT NULL,
-    auto recipientHashed = getKeyDerivation().hashIdentity(communication.recipient().value());
+    auto recipientHashed = getKeyDerivation().hashIdentity(model::getIdentityString(communication.recipient()));
     EXPECT_EQ(db_model::EncryptedBlob{row[col::recipient].as<db_model::postgres_bytea>()}, recipientHashed);
     //  3: message_type smallint NOT NULL,
     //     not encrypted
@@ -282,7 +282,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     //  8: message_for_sender bytea NOT NULL,
     auto senderBlobId = gsl::narrow<BlobId>(row[col::sender_blob_id].as<int32_t>());
     {
-        auto key = communicationKey(communication.sender().value(), senderHashed, senderBlobId);
+        auto key = communicationKey(model::getIdentityString(communication.sender().value()), senderHashed, senderBlobId);
         db_model::EncryptedBlob encryptedMessage{row[col::message_for_sender].as<db_model::postgres_bytea>()};
         std::optional<model::Communication> decryptedMessage;
         ASSERT_NO_THROW(decryptedMessage =
@@ -295,7 +295,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     //  9: message_for_recipient bytea NOT NULL,
     auto recipientBlobId = gsl::narrow<BlobId>(row[col::recipient_blob_id].as<int32_t>());
     {
-        auto key = communicationKey(communication.recipient().value(), recipientHashed, recipientBlobId);
+        auto key = communicationKey(model::getIdentityString(communication.recipient()), recipientHashed, recipientBlobId);
         db_model::EncryptedBlob encryptedMessage{row[col::message_for_recipient].as<db_model::postgres_bytea>()};
         std::optional<model::Communication> decryptedMessage;
         ASSERT_NO_THROW(decryptedMessage =
@@ -331,11 +331,12 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
             prescription_type,
         };
     };
+    const model::Kvnr kvnr{std::string{InsurantA}};
     model::AuditData auditData{model::AuditEventId::GET_Task,
                                model::AuditMetaData{agentName, InsurantA, pnwPzNumber},
                                model::AuditEvent::Action::read,
                                model::AuditEvent::AgentType::human,
-                               std::string{InsurantA},
+                               kvnr,
                                4711,
                                std::nullopt, std::nullopt};
     auto& db = database();
@@ -346,7 +347,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
     auto row = txn.exec_params1("SELECT * FROM erp.auditevent WHERE id = $1", id);
     txn.commit();
     ASSERT_EQ(row.size(), 10) << "Expected table `erp.auditevent` to have 10 columns.";
-    auto kvnrHashed = getKeyDerivation().hashKvnr(InsurantA);
+    auto kvnrHashed = getKeyDerivation().hashKvnr(kvnr);
     auto blobId = gsl::narrow<BlobId>(row[col::blob_id].as<int32_t>());
     const auto& key = auditeventKey(kvnrHashed, blobId);
     //  0: id uuid DEFAULT erp.gen_suuid(CURRENT_TIMESTAMP) NOT NULL,

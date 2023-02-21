@@ -205,7 +205,8 @@ Decryptor<KeyLengthBits>::Decryptor (
 template <size_t KeyLengthBits>
 void Decryptor<KeyLengthBits>::decrypt (const std::string_view& data)
 {
-    Expect3(mOffset + data.size() <= mPlaintext.size(), "input data is too long", AesGcmException);
+    Expect3(gsl::narrow<size_t>(mOffset) + data.size() <= mPlaintext.size(), "input data is too long",
+            AesGcmException);
 
     const int status = EVP_DecryptUpdate(
         mCipherContext.get(),

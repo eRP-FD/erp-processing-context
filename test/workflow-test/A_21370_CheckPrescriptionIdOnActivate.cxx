@@ -7,7 +7,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <boost/algorithm/string.hpp>
 
@@ -24,17 +24,15 @@ public:
 
     std::string getBundleWithId(const std::string& id)
     {
-        auto bundle = resourceManager.getStringResource("test/EndpointHandlerTest/kbv_bundle.xml");
-        bundle = patchVersionsInBundle(bundle);
-        auto kbvBundle = model::KbvBundle::fromXml(bundle, *StaticData::getXmlValidator(),
-                                                *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-                                                {{.allowNonLiteralAuthorReference = true}});
-        const auto bundlePrescriptionId = kbvBundle.getIdentifier().toString();
-        return toCadesBesSignature(boost::replace_all_copy(bundle, bundlePrescriptionId, id),
-                                   model::Timestamp::fromXsDate("2021-06-08"));
+        auto timestamp = model::Timestamp::fromXsDate("2021-06-08");
+        auto prescriptionId = model::PrescriptionId::fromStringNoValidation(id);
+        auto bundleXml = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp});
+        auto kbvBundle = model::KbvBundle::fromXml(
+            bundleXml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+            model::ResourceVersion::supportedBundles(),
+            {{.allowNonLiteralAuthorReference = true}});
+        return toCadesBesSignature(bundleXml, timestamp);
     }
-
-    ResourceManager& resourceManager = ResourceManager::instance();
 };
 
 
@@ -69,7 +67,7 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)//NOLINT(readability-functi
             // the checksum will be recalculated, therefore the resulting ID has a different
             // workflow type and a different checksum
             auto wrongId = model::PrescriptionId::fromDatabaseId(wrongWorkflow, correctId.toDatabaseId());
-            ASSERT_NO_FATAL_FAILURE(taskActivate(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
+            ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
                                                 HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
                                                 "Flowtype mismatch between Task and QES-Bundle"));
             A_21370.finish();
@@ -81,7 +79,7 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)//NOLINT(readability-functi
             auto wrongId = correctId.toString();
             wrongId.replace(0, 3, std::to_string(int(wrongWorkflow)));
             // checksum error will already cause BAD REQUEST, therefore we get a diffent operation outcome
-            ASSERT_NO_FATAL_FAILURE(taskActivate(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
+            ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
                                                 HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
                                                 "Error while extracting prescriptionId from QES-Bundle"));
             A_21370.finish();
@@ -93,7 +91,7 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)//NOLINT(readability-functi
         // the checksum will be recalculated, therefore the resulting ID has a different
         // id-number and a different checksum
         auto wrongId = model::PrescriptionId::fromDatabaseId(correctWorkflow, correctId.toDatabaseId() + 1);
-        ASSERT_NO_FATAL_FAILURE(taskActivate(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
+        ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
                                             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
                                             "PrescriptionId mismatch between Task and QES-Bundle"));
         A_21370.finish();
@@ -104,7 +102,7 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)//NOLINT(readability-functi
         auto wrongId = correctId.toString();
         wrongId.replace(4, 3, (wrongId.substr(4, 3) == "999"sv)?"000"sv:"999"sv);
         // checksum error will already cause BAD REQUEST, therefore we get a diffent operation outcome
-        ASSERT_NO_FATAL_FAILURE(taskActivate(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
+        ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, getBundleWithId(wrongId),
                                             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
                                             "Error while extracting prescriptionId from QES-Bundle"));
         A_21370.finish();

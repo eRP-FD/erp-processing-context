@@ -15,11 +15,6 @@ namespace boost
     {
         class context;
     }
-
-    namespace system
-    {
-        class error_code;
-    }
 }
 
 /**

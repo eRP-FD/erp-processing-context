@@ -287,8 +287,19 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
 
     for (const auto& [url, knownCertificatesPairs] : ocspResponderKnownCertificateCaPairs)
     {
-        requestSender->setOcspUrlRequestHandler(url, knownCertificatesPairs, getDefaultOcspCertificate(),
-                                                getDefaultOcspPrivateKey());
+        if (url == "http://ocsp-testref.tsl.telematik-test/ocsp")
+        {
+            // solve collision with TSL Signer OCSP Responder
+            std::vector<MockOcsp::CertificatePair> extendedKnownCertificatePairs(knownCertificatesPairs.begin(), knownCertificatesPairs.end());
+            extendedKnownCertificatePairs.emplace_back(MockOcsp::CertificatePair{getTslSignerCertificate(), getTslSignerCACertificate(), MockOcsp::CertificateOcspTestMode::SUCCESS});
+            requestSender->setOcspUrlRequestHandler(
+                url, extendedKnownCertificatePairs, getDefaultOcspCertificate(), getDefaultOcspPrivateKey());
+        }
+        else
+        {
+            requestSender->setOcspUrlRequestHandler(
+                url, knownCertificatesPairs, getDefaultOcspCertificate(), getDefaultOcspPrivateKey());
+        }
     }
 
     std::unique_ptr<TrustStore> trustStore(std::move(tslTrustStore));
@@ -306,13 +317,24 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
         std::unique_ptr<TrustStore>{}));
     Expect(result != nullptr, "can not create TSL manager");
 
-    result->addPostUpdateHook([=]{
+    std::weak_ptr<Manager> mgrWeakPtr{result};
+    result->addPostUpdateHook([mgrWeakPtr, ocspCertificate] {
+        auto manager = mgrWeakPtr.lock();
+        if (! manager)
+            return;
         Certificate ocspCertificateToUse = ocspCertificate.has_value() ? *ocspCertificate : getDefaultOcspCertificate();
-        addOcspCertificateToTrustStore(ocspCertificateToUse, *result->mTslTrustStore);
-        addOcspCertificateToTrustStore(ocspCertificateToUse, *result->mBnaTrustStore);
+        addOcspCertificateToTrustStore(ocspCertificateToUse, *manager->mTslTrustStore);
+        addOcspCertificateToTrustStore(ocspCertificateToUse, *manager->mBnaTrustStore);
     });
 
     return result;
+}
+
+
+OcspCheckDescriptor TslTestHelper::getDefaultTestOcspCheckDescriptor()
+{
+    // use the default PKI OCSP grace period 10 minutes for the test scenarios
+    return {OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE, {std::nullopt, std::chrono::seconds(600)}, {}};
 }
 
 

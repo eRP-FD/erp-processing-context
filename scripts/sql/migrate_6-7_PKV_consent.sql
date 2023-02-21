@@ -17,6 +17,6 @@ CREATE INDEX IF NOT EXISTS consent_idx ON erp.task_200 USING hash (kvnr_hashed);
 
 REVOKE ALL ON erp.consent from role_proc_user;
 ALTER TABLE erp.consent owner to role_proc_admin;
-GRANT INSERT, SELECT, UPDATE ON erp.consent to role_proc_user;
+GRANT INSERT, SELECT, UPDATE, DELETE ON erp.consent to role_proc_user;
 
 COMMIT;

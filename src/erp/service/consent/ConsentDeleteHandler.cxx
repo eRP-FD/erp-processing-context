@@ -15,6 +15,8 @@ ConsentDeleteHandler::ConsentDeleteHandler(const std::initializer_list<std::stri
 {
 }
 
+// GEMREQ-start A_22157
+// GEMREQ-start A_22158
 void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
@@ -25,31 +27,33 @@ void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
     A_22154.finish();
 
     A_22874.start("Category must have value 'CHARGCONS'");
-    ErpExpect(*category == "CHARGCONS", HttpStatus::BadRequest, "Category must be 'CHARGCONS'");
+    ErpExpect(*category == model::Consent::chargingConsentType, HttpStatus::BadRequest,
+              "Category must be '" + std::string(model::Consent::chargingConsentType) + "'");
     A_22874.finish();
 
-    const auto kvnr = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
-    Expect(kvnr.has_value(), "ACCESS_TOKEN does not contain KVNR");
+    const auto kvnrClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
+    Expect(kvnrClaim.has_value(), "ACCESS_TOKEN does not contain KVNR");
+    const model::Kvnr kvnr{*kvnrClaim, model::Kvnr::Type::pkv};
+
+    auto* databaseHandle = session.database();
 
     A_22158.start("Delete the consent matched by the KVNR from the ACCESS_TOKEN");
-    ErpExpect(session.database()->clearConsent(*kvnr),
+    ErpExpect(databaseHandle->clearConsent(kvnr),
               HttpStatus::NotFound,
-              "Could not find any consent from given KVNR ");
+              "Could not find any consent for given KVNR ");
     A_22158.finish();
+// GEMREQ-end A_22158
 
-    A_22157.start("Delete all charge information for insurant matched by the KVNR from the ACCESS_TOKEN");
-    session.database()->clearAllChargeInformation(*kvnr);
+    A_22157.start("Delete all charge information and related communication for insurant matched by the KVNR from the ACCESS_TOKEN");
+    databaseHandle->clearAllChargeInformation(kvnr);
+    databaseHandle->clearAllChargeItemCommunications(kvnr);
     A_22157.finish();
-
-    A_22117_01.start("Delete all charge information & communications for insurant matched by the KVNR from the ACCESS_TOKEN");
-    session.database()->clearAllChargeInformation(*kvnr);
-    session.database()->clearAllChargeItemCommunications(*kvnr);
-    A_22117_01.finish();
+// GEMREQ-end A_22157
 
     // Collect Audit data
     session.auditDataCollector()
         .setEventId(model::AuditEventId::DELETE_Consent)
-        .setInsurantKvnr(*kvnr)
+        .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::del);
 
     session.response.setStatus(HttpStatus::NoContent);

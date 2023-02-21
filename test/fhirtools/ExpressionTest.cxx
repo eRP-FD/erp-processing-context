@@ -925,6 +925,20 @@ TEST_F(ExpressionTest, StringManipMatches)
             checkBoolResult(result, true);
         }
     }
+    {
+        const StringManipMatches stringManipMatches(&repo,
+                                                    std::make_shared<LiteralStringExpression>(&repo, "^\\d{8}$"s));
+        {
+            const auto result = stringManipMatches.eval(
+                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "06313728"s)});
+            checkBoolResult(result, true);
+        }
+        {
+            const auto result = stringManipMatches.eval(
+                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "006313728"s)});
+            checkBoolResult(result, false);
+        }
+    }
 }
 
 TEST_F(ExpressionTest, StringManipReplaceMatches)

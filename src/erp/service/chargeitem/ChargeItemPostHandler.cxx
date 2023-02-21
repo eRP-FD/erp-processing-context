@@ -24,7 +24,7 @@ void checkChargeItemConsistency(
     const model::ChargeItem& chargeItem,
     const model::PrescriptionId& prescriptionId,
     const std::string_view& telematikId,
-    const std::string_view& kvnr)
+    const model::Kvnr& kvnr)
 {
     try
     {
@@ -53,6 +53,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
+    // GEMREQ-start A_22135#getReceipt, A_22134#getReceipt
     A_22130.start("Check existence of 'task' parameter");
     const auto prescriptionId = parseIdFromQuery(session.request, session.accessLog, "task");
     A_22130.finish();
@@ -65,6 +66,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 
     A_22131.start("Check existence of referenced task in status 'completed'");
     auto [task, prescription, receipt] = databaseHandle->retrieveTaskAndPrescriptionAndReceipt(prescriptionId);
+    // GEMREQ-end A_22135#getReceipt, A_22134#getReceipt
 
     ErpExpect(task.has_value(), HttpStatus::Conflict, "Referenced task not found for provided prescription id");
     ErpExpect(task->status() == model::Task::Status::completed, HttpStatus::Conflict, "Referenced task must be in status 'completed'");
@@ -84,11 +86,11 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 
     A_22136.start("Validate input ChargeItem resource");
     std::optional<model::ChargeItem> chargeItemOptional{};
-    std::optional<model::ChargeItemMarkingFlag> markingFlag{};
+    std::optional<model::ChargeItemMarkingFlags> markingFlags{};
     try
     {
-        chargeItemOptional = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir, std::nullopt);
-        markingFlag = chargeItemOptional->markingFlag();
+        chargeItemOptional = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir);
+        markingFlags = chargeItemOptional->markingFlags();
     }
     catch (const model::ModelException& exc)
     {
@@ -97,7 +99,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 
     auto& chargeItem = *chargeItemOptional;
     ErpExpect(
-        !markingFlag.has_value(),
+        ! markingFlags.has_value(),
         HttpStatus::BadRequest,
         "Marking flag should not be set in POST ChargeItem by pharmacy");
 
@@ -117,42 +119,48 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
         "Die versicherte Person hat keine Einwilligung im E-Rezept Fachdienst hinterlegt. Abrechnungsinformation kann nicht gespeichert werden.");
     A_22133.finish();
 
+    // GEMREQ-start A_22134#setReference
     A_22134.start("KBV prescription bundle");
     Expect3(prescription.has_value(), "No prescription found", std::logic_error);
     Expect3(prescription.value().data().has_value(), "Prescription binary has no data", std::logic_error);
     const auto signedPrescription =
         ::CadesBesSignature{::std::string{prescription->data().value()}, session.serviceContext.getTslManager(), true};
     auto prescriptionBundle = ::model::Bundle::fromXmlNoValidation(signedPrescription.payload());
-    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItem, prescriptionBundle);
+    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
     A_22134.finish();
+    // GEMREQ-end A_22134#setReference
 
+    // GEMREQ-start A_22135#setReference
     A_22135.start("Receipt");
     Expect3(receipt.has_value(), "No receipt found", std::logic_error);
-    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::receipt, *receipt);
-    // removal of signature can be done on retrieval;
+    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle);
     A_22135.finish();
+    // GEMREQ-end A_22135#setReference
 
-    A_22137.start("Extract PKV dispense item");
-    auto dispenseItem = getDispenseItemBinary(chargeItem);
+    // GEMREQ-start A_22137#remove-binary
+    auto rawDispenseItem = getDispenseItemBinary(chargeItem);
     chargeItem.deleteContainedBinary();
-    A_22137.finish();
+    // GEMREQ-end A_22137#remove-binary
 
+    // GEMREQ-start A_22141#chargeItemCadesBes, A_22140
     A_22138.start("Validate PKV dispense item");
     A_22139.start("Check signature of PKV dispense bundle");
     A_22140.start("Check signature certificate of PKV dispense bundle");
     A_22141.start("Check signature certificate SMC-B");
-    A_22142.start("Save OCSP response for signature certificate");
-    auto dispenseItemBundle = validatedBundleFromSigned(*dispenseItem, SchemaType::fhir /* TODO correct schema */,
-                                                        session.serviceContext, ::VauErrorCode::invalid_dispense);
-    A_22142.finish();
+    auto [dispenseItemBundle, dispenseItemWithOcsp] = validatedBundleFromSigned(
+        *rawDispenseItem,
+        session.serviceContext,
+        ::VauErrorCode::invalid_dispense);
+
     A_22141.finish();
     A_22140.finish();
     A_22139.finish();
     A_22138.finish();
+    // GEMREQ-end A_22141#chargeItemCadesBes, A_22140
 
-    A_22137.start("Set PKV dispense item reference in ChargeItem");
-    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItem, dispenseItemBundle);
-    A_22137.finish();
+    // GEMREQ-start A_22137#addBundleRef
+    chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+    // GEMREQ-end A_22137#addBundleRef
 
     A_22143.start("Fill ChargeItem.enteredDate");
     chargeItem.setEnteredDate(model::Timestamp::now());
@@ -160,20 +168,28 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 
     chargeItem.setId(prescriptionId);
 
+    // GEMREQ-start A_22614#setAccessCode
     A_22614.start("create access code for pharmacy");
-    auto pharmacyAccessCode = ChargeItemHandlerBase::createPharmacyAccessCode();
-    chargeItem.setAccessCode(std::move(pharmacyAccessCode));
+    const auto pharmacyAccessCode = ChargeItemHandlerBase::createPharmacyAccessCode();
+    chargeItem.setAccessCode(pharmacyAccessCode);
     A_22614.finish();
+    // GEMREQ-end A_22614#setAccessCode
 
     session.response.setHeader(Header::Location, getLinkBase() + "/ChargeItem/" + prescriptionId.toString());
 
-    const auto chargeInformation = ::model::ChargeInformation{
-        ::std::move(chargeItem),           ::std::move(prescription.value()), ::std::move(prescriptionBundle),
-        ::std::move(dispenseItem.value()), ::std::move(dispenseItemBundle),   ::std::move(receipt.value())};
+    // GEMREQ-start A_22137#storeChargeItem, A_22135#storeChargeItem, A_22134#storeChargeItem
+    model::Binary dispenseItemBinary = model::Binary{*rawDispenseItem->id(), dispenseItemWithOcsp};
+    const auto chargeInformation = model::ChargeInformation{.chargeItem = std::move(chargeItem),
+                                                            .prescription = std::move(prescription.value()),
+                                                            .unsignedPrescription = std::move(prescriptionBundle),
+                                                            .dispenseItem = std::move(dispenseItemBinary),
+                                                            .unsignedDispenseItem = std::move(dispenseItemBundle),
+                                                            .receipt = std::move(receipt.value())};
 
     databaseHandle->storeChargeInformation(chargeInformation);
 
     makeResponse(session, HttpStatus::Created, &chargeInformation.chargeItem);
+    // GEMREQ-end A_22137#storeChargeItem, A_22135#storeChargeItem, A_22134#storeChargeItem
 
     // Collect Audit data
     session.auditDataCollector()

@@ -91,7 +91,7 @@ void SubscriptionPostHandler::handleRequest(PcSessionContext& session)
     }
 }
 
-void SubscriptionPostHandler::publish(PcServiceContext& serviceContext, std::string_view recipient)
+void SubscriptionPostHandler::publish(PcServiceContext& serviceContext, const model::TelematikId& recipient)
 {
     try
     {
@@ -100,12 +100,12 @@ void SubscriptionPostHandler::publish(PcServiceContext& serviceContext, std::str
         if (pseudonymManager.withinGracePeriod(
                 date::year_month_day(std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now()))))
         {
-            redis->publish(MessageChannel, pseudonymManager.sign(0, recipient).hex());
-            redis->publish(MessageChannel, pseudonymManager.sign(1, recipient).hex());
+            redis->publish(MessageChannel, pseudonymManager.sign(0, recipient.id()).hex());
+            redis->publish(MessageChannel, pseudonymManager.sign(1, recipient.id()).hex());
         }
         else
         {
-            redis->publish(MessageChannel, pseudonymManager.sign(recipient).hex());
+            redis->publish(MessageChannel, pseudonymManager.sign(recipient.id()).hex());
         }
     }
     catch (const sw::redis::Error& exception)

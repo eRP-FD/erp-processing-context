@@ -20,6 +20,7 @@
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
@@ -111,9 +112,9 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     const auto linkBase = getLinkBase();
     const auto authorIdentifier = model::Device::createReferenceString(linkBase);
     const std::string prescriptionDigestIdentifier = "PrescriptionDigest-" + prescriptionId.toString();
-    model::Composition compositionResource(telematikIdFromAccessToken.value(), inProgressDate, completedTimestamp,
+    const model::Composition compositionResource(telematikIdFromAccessToken.value(), inProgressDate, completedTimestamp,
                                            authorIdentifier, "Binary/" + prescriptionDigestIdentifier);
-    model::Device deviceResource;
+    const model::Device deviceResource;
 
     A_19233.start("Save bundle reference in task.output");
     task->setReceiptUuid();
@@ -122,23 +123,23 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19233_03.start("Add the prescription signature digest");
     ErpExpect(prescription.has_value() && prescription.value().data().has_value(), ::HttpStatus::InternalServerError,
               "No matching prescription found.");
-    const auto digest =
+    const std::string digest =
         CadesBesSignature{::std::string{prescription.value().data().value()}}.getMessageDigest();
-    ErpExpect(digest, ::HttpStatus::InternalServerError, "Cannot get prescription message digest.");
-    const auto base64Digest = ::Base64::encode(digest.value());
+    const auto base64Digest = ::Base64::encode(digest);
     const auto prescriptionDigestResource =
-        ::model::Binary{prescriptionDigestIdentifier, base64Digest, ::model::Binary::Type::Base64};
+        ::model::Binary{prescriptionDigestIdentifier, base64Digest, ::model::Binary::Type::Digest};
 
     const auto taskUrl = linkBase + "/Task/" + prescriptionId.toString();
+    const auto prescriptionDigestUrl = linkBase + "/Binary/" + prescriptionDigestIdentifier;
     model::ErxReceipt responseReceipt(Uuid(*task->receiptUuid()), taskUrl + "/$close/", prescriptionId,
                                       compositionResource, authorIdentifier, deviceResource,
-                                      taskUrl + "/PrescriptionDigest", prescriptionDigestResource);
+                                      prescriptionDigestUrl, prescriptionDigestResource);
     A_19233_03.finish();
     A_19233.finish();
 
     A_19233.start("Sign the receipt with ID.FD.SIG using [RFC5652] with profile CAdES-BES ([CAdES]) ");
-    std::string serialized = responseReceipt.serializeToXmlString();
-    std::string base64SignatureData =
+    const std::string serialized = responseReceipt.serializeToXmlString();
+    const std::string base64SignatureData =
         CadesBesSignature(
             session.serviceContext.getCFdSigErp(),
             session.serviceContext.getCFdSigErpPrv(),
@@ -148,7 +149,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19233.finish();
 
     A_19233.start("Set signature");
-    model::Signature signature(base64SignatureData, model::Timestamp::now(), authorIdentifier);
+    const model::Signature signature(base64SignatureData, model::Timestamp::now(), authorIdentifier);
     responseReceipt.setSignature(signature);
     A_19233.finish();
 
@@ -178,7 +179,7 @@ std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFrom
 {
     A_22069.start("Detect input resource type: Bundle or MedicationDispense");
     const auto resourceDetector =
-        parseAndValidateRequestBody<model::UnspecifiedResource>(session, SchemaType::fhir);
+        parseAndValidateRequestBody<model::UnspecifiedResource>(session, SchemaType::fhir, std::nullopt);
     const auto resourceType = resourceDetector.getResourceType();
     ErpExpect(resourceType == model::Bundle::resourceTypeName ||
                   resourceType == model::MedicationDispense::resourceTypeName,
@@ -187,15 +188,14 @@ std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFrom
 
     if (resourceType == model::Bundle::resourceTypeName)
     {
-        auto bundle = parseAndValidateRequestBody<model::MedicationDispenseBundle>(
-            session, SchemaType::MedicationDispenseBundle, std::nullopt);
+        auto bundle = parseAndValidateRequestBody<model::MedicationDispenseBundle>(session, SchemaType::fhir);
         return bundle.getResourcesByType<model::MedicationDispense>();
     }
     else
     {
         std::vector<model::MedicationDispense> ret;
-        ret.emplace_back(parseAndValidateRequestBody<model::MedicationDispense>(
-            session, SchemaType::Gem_erxMedicationDispense, std::nullopt));
+        ret.emplace_back(
+            parseAndValidateRequestBody<model::MedicationDispense>(session, SchemaType::Gem_erxMedicationDispense));
         return ret;
     }
 }
