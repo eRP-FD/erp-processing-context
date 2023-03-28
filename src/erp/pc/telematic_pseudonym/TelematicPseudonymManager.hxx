@@ -43,6 +43,9 @@ private:
     date::year_month_day mKey1End{};
     date::year_month_day mKey2Start{};
     date::year_month_day mKey2End{};
+#ifdef FRIEND_TEST
+    FRIEND_TEST(CommunicationPostEndpointTest, ERP_12846_SubscriptionKeyRefresh);
+#endif
 };
 
 #endif

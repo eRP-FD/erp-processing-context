@@ -13,6 +13,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <cstring>
 #include <iomanip>
+#include <regex>
 
 namespace model
 {
@@ -33,28 +34,38 @@ PrescriptionId PrescriptionId::fromString (const std::string_view prescriptionId
 
 PrescriptionId PrescriptionId::fromStringNoValidation (const std::string_view prescriptionId)
 {
+    // the first part could be alphanumeric by A_19217, but there isnt any flowtype value
+    // with alpha characters
+    static const std::regex re("^[0-9]{3}\\.[0-9]{3}\\.[0-9]{3}\\.[0-9]{3}\\.[0-9]{3}\\.[0-9]{2}$");
+    const std::string id{prescriptionId};
+    ModelExpect(std::regex_match(id, re), "Wrong format of Prescription ID: " + id);
+
     const auto parts = String::split(prescriptionId, '.');
 
-    ModelExpect(parts.size() == 6u, "Wrong format of Prescription ID: " + std::string(prescriptionId));
-    for (size_t i = 0; i < 5u; ++i)
+    try
     {
-        ModelExpect(parts[i].size() == 3, "Wrong format of Prescription ID: " + std::string(prescriptionId));
+        uint8_t part0 = static_cast<uint8_t>(std::stoi(parts[0]));
+        const auto type = magic_enum::enum_cast<PrescriptionType>(part0);
+        ModelExpect(type.has_value(), "Unsupported prescription type " + parts[0]);
+
+
+        int64_t id = std::stoll(parts[1]) * 1'000'000'000
+                + std::stoll(parts[2]) * 1'000'000
+                + std::stoll(parts[3]) * 1'000
+                + std::stoll(parts[4]);
+
+        const uint8_t checksum = static_cast<uint8_t>(std::stoi(parts[5]));
+        return PrescriptionId(*type, id, checksum);
     }
-    ModelExpect(parts[5].size() == 2, "Wrong format of Prescription ID: " + std::string(prescriptionId));
-
-    uint8_t part0 = static_cast<uint8_t>(std::stoi(parts[0]));
-    const auto type = magic_enum::enum_cast<PrescriptionType>(part0);
-    ModelExpect(type.has_value(), "Unsupported prescription type " + parts[0]);
-
-
-    int64_t id = std::stoll(parts[1]) * 1'000'000'000
-               + std::stoll(parts[2]) * 1'000'000
-               + std::stoll(parts[3]) * 1'000
-               + std::stoll(parts[4]);
-
-    const uint8_t checksum = static_cast<uint8_t>(std::stoi(parts[5]));
-
-    return PrescriptionId(*type, id, checksum);
+    catch (const std::out_of_range&)
+    {
+        // cannot happen as the numbers are limited to 3 digits
+        ModelFail("out_of_range for prescriptionId");
+    }
+    catch (const std::invalid_argument&)
+    {
+        ModelFail("prescription id contains non-numbers");
+    }
 }
 
 PrescriptionId::PrescriptionId (const PrescriptionType prescriptionType, const int64_t id, const uint8_t checksum)

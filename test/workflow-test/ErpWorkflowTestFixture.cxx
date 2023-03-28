@@ -638,8 +638,7 @@ void ErpWorkflowTestBase::checkAuditEvents(std::vector<std::optional<std::string
             EXPECT_EQ(entityWhatIdentifierValue.value(), resourceIds.at(i));
             if (auditEvent.entityWhatReference() != "MedicationDispense")
             {
-                EXPECT_TRUE(auditEvent.entityWhatReference().find(entityWhatIdentifierValue.value()) !=
-                            std::string::npos)
+                EXPECT_TRUE(String::ends_with(auditEvent.entityWhatReference(), "/" + std::string(entityWhatIdentifierValue.value())))
                     << auditEvent.entityWhatReference();
             }
         }

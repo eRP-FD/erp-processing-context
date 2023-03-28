@@ -214,6 +214,11 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
                        "OCSP response - can not parse provided in cache OCSP response",
                        TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
                        tslMode);
+            ocspResponse->fromCache = false;
+        }
+        else
+        {
+            ocspResponse->fromCache = true;
         }
 
         OcspService::checkOcspStatus(ocspResponse->status, std::nullopt, getTrustStore(tslMode));

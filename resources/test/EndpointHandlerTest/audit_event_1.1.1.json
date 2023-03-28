@@ -54,7 +54,7 @@
   "entity": [
     {
       "what": {
-        "reference": "Task/160.100.000.000.000.42/$activate",
+        "reference": "Task/160.100.000.000.000.42",
         "identifier": {
           "use": "official",
           "system": "https://gematik.de/fhir/NamingSystem/PrescriptionID",

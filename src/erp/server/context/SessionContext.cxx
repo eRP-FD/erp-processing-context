@@ -10,12 +10,14 @@ SessionContext::SessionContext(
     PcServiceContext& serviceContext,
     ServerRequest& request,
     ServerResponse& response,
-    AccessLog& log)
+    AccessLog& log,
+    model::Timestamp initSessionTime)
     : serviceContext(serviceContext)
     , request(request)
     , response(response)
     , accessLog(log)
     , callerWantsJson(false)
+    , mSessionTime(initSessionTime)
 {
 }
 
@@ -38,4 +40,9 @@ Database* SessionContext::database()
 std::unique_ptr<Database> SessionContext::releaseDatabase()
 {
     return std::move(mDatabase);
+}
+
+const model::Timestamp& SessionContext::sessionTime() const
+{
+    return mSessionTime;
 }

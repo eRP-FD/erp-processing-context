@@ -49,9 +49,18 @@ TEST(PrescriptionIdTest, example2)
 TEST(PrescriptionIdTest, wrongChecksum)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19218.test("validate incorrect checksums");
-    ASSERT_ANY_THROW(model::PrescriptionId::fromString("160.123.456.789.123.11"));
-    ASSERT_ANY_THROW(model::PrescriptionId::fromString("160.023.456.789.123.58"));
-    ASSERT_ANY_THROW(model::PrescriptionId::fromString("161.123.456.789.123.58"));
+    ASSERT_THROW(model::PrescriptionId::fromString("160.123.456.789.123.11"), model::ModelException);
+    ASSERT_THROW(model::PrescriptionId::fromString("160.023.456.789.123.58"), model::ModelException);
+    ASSERT_THROW(model::PrescriptionId::fromString("161.123.456.789.123.58"), model::ModelException);
+}
+
+TEST(PrescriptionIdTest, wrongFormat)//NOLINT(readability-function-cognitive-complexity)
+{
+    ASSERT_THROW(model::PrescriptionId::fromString("160.123.456.789.123.101"), model::ModelException);
+    ASSERT_THROW(model::PrescriptionId::fromString("160.123.456.789.123"), model::ModelException);
+    ASSERT_THROW(model::PrescriptionId::fromString("160.000. 00.000.123.76"), model::ModelException);
+    ASSERT_THROW(model::PrescriptionId::fromString("160.123.a56.789.123.58"), model::ModelException);
+    ASSERT_THROW(model::PrescriptionId::fromString("l60.123.a56.789.123.58"), model::ModelException);
 }
 
 TEST(PrescriptionIdTest, deriveUuid)//NOLINT(readability-function-cognitive-complexity)
@@ -112,4 +121,3 @@ TEST(PrescriptionIdTest, fromMedicationDispenseId)//NOLINT(readability-function-
         EXPECT_EQ(medid.getIndex(), 99);
     }
 }
-

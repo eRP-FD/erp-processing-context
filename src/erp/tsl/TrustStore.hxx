@@ -43,6 +43,7 @@ public:
         std::chrono::system_clock::duration gracePeriod{0};
         std::chrono::system_clock::time_point producedAt;
         std::chrono::system_clock::time_point receivedAt;
+        bool fromCache{true};
         std::string response;
     };
 

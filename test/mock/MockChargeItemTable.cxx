@@ -25,6 +25,17 @@ void MockChargeItemTable::storeChargeInformation(const ::db_model::ChargeItem& c
         case model::PrescriptionType::direkteZuweisungPkv:
             break;
     }
+
+    const auto item = ::std::find_if(::std::begin(mChargeItems), ::std::end(mChargeItems), [&chargeItem](const auto& item)
+    {
+        return (::std::get<::db_model::ChargeItem>(item).prescriptionId == chargeItem.prescriptionId);
+    });
+
+    if(item != mChargeItems.end())
+    {
+        throw pqxx::unique_violation(R"(ERROR:  duplicate key value violates unique constraint "charge_item_pkey")");
+    }
+
     mChargeItems.emplace_back(chargeItem, kvnr);
 }
 

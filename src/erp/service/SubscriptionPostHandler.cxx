@@ -91,21 +91,26 @@ void SubscriptionPostHandler::handleRequest(PcSessionContext& session)
     }
 }
 
-void SubscriptionPostHandler::publish(PcServiceContext& serviceContext, const model::TelematikId& recipient)
+void SubscriptionPostHandler::publish(SessionContext& sessionContext, const model::TelematikId& recipient)
 {
     try
     {
+        auto& serviceContext{sessionContext.serviceContext};
         auto redis = serviceContext.getRedisClient();
         auto& pseudonymManager = serviceContext.getTelematicPseudonymManager();
-        if (pseudonymManager.withinGracePeriod(
-                date::year_month_day(std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now()))))
+        auto utcToday = date::floor<date::days>(sessionContext.sessionTime().toChronoTimePoint());
+        // ensureKeysUptodateForDay is probably redundant, but it's quick when the keys are up-to-date:
+        pseudonymManager.ensureKeysUptodateForDay(utcToday);
+        if (pseudonymManager.withinGracePeriod(utcToday))
         {
             redis->publish(MessageChannel, pseudonymManager.sign(0, recipient.id()).hex());
             redis->publish(MessageChannel, pseudonymManager.sign(1, recipient.id()).hex());
         }
         else
         {
-            redis->publish(MessageChannel, pseudonymManager.sign(recipient.id()).hex());
+            // key rotation happens immediately after the grace-period ends
+            // therefore key 0 is always the current key and key 1 is now the next key to become valid:
+            redis->publish(MessageChannel, pseudonymManager.sign(0, recipient.id()).hex());
         }
     }
     catch (const sw::redis::Error& exception)

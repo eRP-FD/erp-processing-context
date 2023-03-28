@@ -54,20 +54,15 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::GET_Task_id_representative:
         case model::AuditEventId::GET_Task_id_pharmacy:
         case model::AuditEventId::Task_delete_expired_id:
-            return "Task/" + resourceId;
         case model::AuditEventId::POST_Task_activate:
-            return "Task/" + resourceId + "/$activate";
         case model::AuditEventId::POST_Task_accept:
-            return "Task/" + resourceId + "/$accept";
         case model::AuditEventId::POST_Task_reject:
-            return "Task/" + resourceId + "/$reject";
         case model::AuditEventId::POST_Task_close:
-            return "Task/" + resourceId + "/$close";
         case model::AuditEventId::POST_Task_abort_doctor:
         case model::AuditEventId::POST_Task_abort_insurant:
         case model::AuditEventId::POST_Task_abort_representative:
         case model::AuditEventId::POST_Task_abort_pharmacy:
-            return "Task/" + resourceId + "/$abort";
+            return "Task/" + resourceId;
         case model::AuditEventId::GET_MedicationDispense:
             return "MedicationDispense";
         case model::AuditEventId::GET_MedicationDispense_id:

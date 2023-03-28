@@ -360,7 +360,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
 
         // Create an inner session that contains the unencrypted request and a, yet to be filled, unencrypted response.
         PcSessionContext innerSession(outerSession.serviceContext, *innerServerRequest, innerServerResponse,
-                                      outerSession.accessLog);
+                                      outerSession.accessLog, outerSession.sessionTime());
 
         // Look up the secondary request handler. Required for determining the inner operation.
         const std::string& target = innerServerRequest->header().target();

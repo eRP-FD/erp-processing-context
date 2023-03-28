@@ -16,6 +16,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
 
+#include <pqxx/except>
 
 namespace
 {
@@ -103,9 +104,6 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
         HttpStatus::BadRequest,
         "Marking flag should not be set in POST ChargeItem by pharmacy");
 
-    // TODO in unserem Schema is Binary == Gem_erxBinary mit contentType == application/pkcs7-mime, aber laut https://simplifier.net/erezept-workflow/GemerxBinary für
-    // "PCKS signed ePrescription Bundle". Im PKV-Feature-Dokument wird contentType für das containedbinary nicht spezifiziert.
-    // In ActivateTask wird die Signatur für Prescription im Enveloping gesendet, d.h. "signed data are sub-element of signature"
     const auto kvnr = task->kvnr();
     Expect3(kvnr.has_value(), "Referenced task has no KV number", std::logic_error);
     checkChargeItemConsistency(chargeItem, prescriptionId, telematikIdClaim.value(), kvnr.value());
@@ -186,7 +184,14 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
                                                             .unsignedDispenseItem = std::move(dispenseItemBundle),
                                                             .receipt = std::move(receipt.value())};
 
-    databaseHandle->storeChargeInformation(chargeInformation);
+    try
+    {
+        databaseHandle->storeChargeInformation(chargeInformation);
+    }
+    catch(const pqxx::unique_violation& exc)
+    {
+        ErpFail(HttpStatus::Conflict, "ChargeItem already exists for this prescription ID");
+    }
 
     makeResponse(session, HttpStatus::Created, &chargeInformation.chargeItem);
     // GEMREQ-end A_22137#storeChargeItem, A_22135#storeChargeItem, A_22134#storeChargeItem

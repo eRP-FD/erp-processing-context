@@ -91,7 +91,7 @@ TEST(AuditEventTest, ConstructFromJson)//NOLINT(readability-function-cognitive-c
     const std::string_view sourceObserverReference = "Device/1234";
     const auto whatIdentifierSystem = isDeprecated ? model::resource::naming_system::deprecated::prescriptionID
                                                    : model::resource::naming_system::prescriptionID;
-    const std::string whatReference = "Task/" + std::string(whatIdentifierValue) + "/$activate";
+    const std::string whatReference = "Task/" + std::string(whatIdentifierValue);
     const std::string_view entityName = "X122446688";
     const auto entityDescription = whatIdentifierValue;
 

@@ -452,13 +452,12 @@ void MockDatabase::fillWithStaticData ()
 
     // PKV related test data:
     // PKV tasks
-    // Activated task with consent (added below):
+    // Activated task with consent and charge item (added below):
     const auto pkvTaskId1 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
     const char* const pkvKvnr1 = "X500000000";
     auto taskPkv1 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId1, .kvnr = pkvKvnr1}));
     taskPkv1.setHealthCarePrescriptionUuid();
-
     // Activated task without consent:
     const auto pkvTaskId1a = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
     const char* const pkvKvnr1a = "X500000001";
@@ -568,6 +567,17 @@ void MockDatabase::fillWithStaticData ()
     const auto taskPkv4 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId4, .kvnr = pkvKvnr1a}));
     insertTask(taskPkv4);
+
+    // Closed task with consent but without charge item:
+    const auto pkvTaskId5 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50022);
+    const auto taskPkv5 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId5, .kvnr = pkvKvnr1}));
+    const auto& kbvBundlePkv5 = CryptoHelper::toCadesBesSignature(
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId5, .kvnr = pkvKvnr1}));
+    const auto healthCarePrescriptionBundlePkv5 =
+        model::Binary(taskPkv5.healthCarePrescriptionUuid().value(), kbvBundlePkv3).serializeToJsonString();
+    const auto receipt5 = replacePrescriptionId(FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId5.toString());
+    insertTask(taskPkv5, std::nullopt, healthCarePrescriptionBundlePkv5, receipt5);
 
     // static ChargeItem for task for insurant with consent (added above):
     const auto chargeItemTemplateXml = resourceManager.getStringResource(dataPath + "/charge_item_PUT_template.xml");

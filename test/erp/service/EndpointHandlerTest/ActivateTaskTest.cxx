@@ -58,6 +58,7 @@ public:
                            const std::string_view& kbvBundleXml, const std::string_view& expectedKvnr,
                            ActivateTaskArgs args)
     {
+        mockDatabase.reset();
         const auto& origTask = model::Task::fromJsonNoValidation(taskJson);
 
         ActivateTaskHandler handler({});
@@ -67,8 +68,9 @@ public:
         SessionContext sessionContext{serviceContext, request, serverResponse, accessLog};
         if (args.insertTask)
         {
-            auto& db = dynamic_cast<MockDatabase&>(sessionContext.database()->getBackend());
-            db.insertTask(origTask);
+            createDatabase(mServiceContext.getHsmPool(), mServiceContext.getKeyDerivation());
+            ASSERT_NE(mockDatabase, nullptr);
+            mockDatabase->insertTask(origTask);
         }
 
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
@@ -423,6 +425,7 @@ TEST_P(ActivateTaskValidationModeTest, genericValidation)
     }
     try
     {
+        mockDatabase.reset();
         ActivateTaskHandler handler({});
         ServerRequest request{serverRequest(task, badBundle, time)};
         ServerResponse serverResponse;

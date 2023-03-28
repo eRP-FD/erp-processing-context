@@ -70,6 +70,9 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         validateAgainstFhirProfile(messageType, communication, session.serviceContext.getXmlValidator(),
                                    session.serviceContext.getInCodeValidator());
         A_19447.finish();
+        // ERP-12846: ensure current keys are loaded before starting DB-Transaction
+        auto utcToday = date::floor<date::days>(session.sessionTime().toChronoTimePoint());
+        session.serviceContext.getTelematicPseudonymManager().ensureKeysUptodateForDay(utcToday);
 
         auto* databaseHandle = session.database();
 
@@ -185,7 +188,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             messageType == Communication::MessageType::ChargChangeReq ||
             messageType == Communication::MessageType::DispReq)
         {
-            SubscriptionPostHandler::publish(session.serviceContext, std::get<model::TelematikId>(recipient));
+            SubscriptionPostHandler::publish(session, std::get<model::TelematikId>(recipient));
         }
         A_22367_01.finish();
     // GEMREQ-start A_19450-01#catchModelException
@@ -335,7 +338,7 @@ void CommunicationPostHandler::checkEligibilityOfInsurant(
         // If the headers access code is not equal to the access code of the referenced task
         // the setting of the message must be canceled in order to prevent misleading test messages.
         ErpExpect(headerAccessCode.value() == taskAccessCode, HttpStatus::BadRequest,
-                "Access code of header not equal to cccess code of referenced task");
+                "Access code of header not equal to access code of referenced task");
     }
 }
 

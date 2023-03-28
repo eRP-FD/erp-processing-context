@@ -11,19 +11,20 @@
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
+#include "test_config.h"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
+#include "test/mock/MockDatabaseProxy.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
-#include "test/util/StaticData.hxx"
-#include "test_config.h"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
 #include <regex>
@@ -35,13 +36,11 @@ class EndpointHandlerTestT : public TestClass
 public:
     EndpointHandlerTestT()
         : dataPath(std::string{TEST_DATA_DIR} + "/EndpointHandlerTest")
-        , mServiceContext(StaticData::makePcServiceContext([](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
-            auto md = std::make_unique<MockDatabase>(hsmPool);
-            md->fillWithStaticData();
-            return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
+        , mServiceContext(StaticData::makePcServiceContext([this](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return createDatabase(hsmPool, keyDerivation);
         }))
+        , mJwtBuilder{std::make_unique<JwtBuilder>(MockCryptography::getIdpPrivateKey())}
     {
-        mJwtBuilder = std::make_unique<JwtBuilder>(MockCryptography::getIdpPrivateKey());
     }
 
     model::Task addTaskToDatabase(
@@ -121,11 +120,27 @@ public:
     }
 
 protected:
+    std::unique_ptr<MockDatabase> mockDatabase;
     std::string dataPath;
     PcServiceContext mServiceContext;
     std::unique_ptr<JwtBuilder> mJwtBuilder;
+    std::unique_ptr<DatabaseFrontend> createDatabase(HsmPool& hsmPool, KeyDerivation& keyDerivation);
 };
 
 using EndpointHandlerTest = EndpointHandlerTestT<::testing::Test>;
+
+
+template<typename TestClass>
+std::unique_ptr<DatabaseFrontend> EndpointHandlerTestT<TestClass>::createDatabase(HsmPool& hsmPool,
+                                                                                  KeyDerivation& keyDerivation)
+{
+    if (! mockDatabase)
+    {
+        mockDatabase = std::make_unique<MockDatabase>(hsmPool);
+        mockDatabase->fillWithStaticData();
+    }
+    auto md = std::make_unique<MockDatabaseProxy>(*mockDatabase);
+    return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
+}
 
 #endif//ERP_PROCESSING_CONTEXT_TEST_ERP_SERVICE_ENDPOINTHANDLERTEST_ENDPOINTHANDLERTEST_HXX

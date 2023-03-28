@@ -9,6 +9,7 @@
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
+#include "test/util/LogTestBase.hxx"
 #include "test/util/TestUtils.hxx"
 
 #include "test_config.h"
@@ -267,4 +268,57 @@ TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)//NOLINT(readability-functio
         cFdSigErpManager.getOcspResponseData(false),
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::ServiceUnavailable);
+}
+
+
+TEST_F(CFdSigErpManagerTest, signatureStatusValid_withinGracePeriod)
+{
+    LogTestBase::TestLogSink logSink;
+    EnvironmentVariableGuard ocspGracePeriodGuard(ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL, "10");
+
+    std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
+        CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
+
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
+    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
+        requestSender, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+
+    // get the ocsp once to fill the cache
+    ASSERT_TRUE(cFdSigErpManager.wasLastOcspRequestSuccessful());
+    // health check
+    ASSERT_NO_THROW(cFdSigErpManager.healthCheck());
+    ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
+
+    // request a second time, no ocsp request expected, instead taken from cache
+    EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
+    ASSERT_NO_THROW(cFdSigErpManager.healthCheck());
+    ASSERT_TRUE(cFdSigErpManager.wasLastOcspRequestSuccessful());
+    ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
+
+    // force a new OCSP request and simulate a network error
+    requestSender->setUrlHandler(ocspUrl, [](const std::string&) -> ClientResponse {
+        Header header;
+        header.setStatus(HttpStatus::NetworkConnectTimeoutError);
+        header.setContentLength(0);
+        return {header, ""};
+    });
+
+    cFdSigErpManager.getOcspResponseData(true);
+    ASSERT_FALSE(cFdSigErpManager.wasLastOcspRequestSuccessful());
+
+    // request the same data, but allow a cache hit
+    EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
+    ASSERT_FALSE(cFdSigErpManager.wasLastOcspRequestSuccessful());
+
+    // we expect only a single warning (from the first request)
+    int warnings{0};
+    logSink.visitLines([&](const std::string& line) {
+        if (line.find("OCSP request has failed, last successful OCSP response was done at") != std::string::npos)
+            warnings++;
+    });
+    ASSERT_EQ(warnings, 1);
 }

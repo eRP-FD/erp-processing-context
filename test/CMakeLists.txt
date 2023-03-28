@@ -250,6 +250,7 @@ list(
         erp/service/EndpointHandlerTest/AcceptTaskTest.cxx
         erp/service/EndpointHandlerTest/ActivateTaskTest.cxx
         erp/service/EndpointHandlerTest/CloseTaskTest.cxx
+        erp/service/EndpointHandlerTest/CommunicationPostEndpointTest.cxx
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
         erp/service/EndpointHandlerTest/FeatureToggleWf200Test.cxx

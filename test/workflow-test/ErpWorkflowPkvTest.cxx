@@ -964,6 +964,38 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications)
 // GEMREQ-end A_22157
 // GEMREQ-end A_22158
 
+TEST_P(ErpWorkflowPkvTestP, PkvChargeItemMultiplePostSameTask)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (isUnsupportedFlowtype(GetParam()))
+        GTEST_SKIP();
+
+    model::Timestamp startTime = model::Timestamp::now();
+    const auto kvnr = generateNewRandomKVNR().id();
+
+    // Create consent
+    std::optional<model::Consent> consent;
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr, startTime));
+    ASSERT_TRUE(consent.has_value());
+
+    // Create closed task
+    std::optional<model::PrescriptionId> prescriptionId;
+    std::optional<model::KbvBundle> kbvBundle;
+    std::optional<model::ErxReceipt> closeReceipt;
+    std::string accessCode;
+    std::string secret;
+    ASSERT_NO_FATAL_FAILURE(
+            createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
+    // Create a charge item for task
+    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    std::optional<model::ChargeItem> createdChargeItem;
+    ASSERT_NO_FATAL_FAILURE(createdChargeItem = chargeItemPost(*prescriptionId, kvnr, telematikIdPharmacy, secret));
+
+    // Try to create another charge item for same task -> Error 409
+    ASSERT_NO_FATAL_FAILURE(
+        createdChargeItem = chargeItemPost(*prescriptionId, kvnr, telematikIdPharmacy, secret,
+                                           HttpStatus::Conflict, model::OperationOutcome::Issue::Type::conflict));
+}
+
 // GEMREQ-start InstantiateTest
 INSTANTIATE_TEST_SUITE_P(ErpWorkflowPkvTestPInst, ErpWorkflowPkvTestP,
                          testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,

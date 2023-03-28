@@ -65,6 +65,7 @@ constexpr fhirtools::ValidatorOptions receiptValidationOptions
 
 using namespace ::std::literals;
 
+
 /**
  * When creating an EndpointHandlerTest instance a PcServiceContext is created as a member of the
  * EndpointHandlerTest class (mServiceContext). Access to the database is controlled via the
@@ -813,37 +814,37 @@ void callHandlerWithResponseStatusCheck(
     ASSERT_EQ(status, expectedStatus);
 }
 // GEMREQ-end callHandlerWithResponseStatusCheck
+}// anonymous namespace
 
-template<class HandlerType>
-void checkTaskOperation(
-    const std::string& operationName,
-    PcServiceContext& serviceContext,
-    JWT jwt,
-    const std::variant<int64_t, std::string>& taskId,
-    Header::keyValueMap_t&& headers,
-    QueryParameters&& queryParameters,
-    const HttpStatus expectedStatus,
-    model::PrescriptionType type = model::PrescriptionType::apothekenpflichigeArzneimittel)
+class TaskOperationEndpointTest : public EndpointHandlerTest
 {
-    HandlerType handler({});
-    const auto id = getId(taskId, type);
-    Header requestHeader{ HttpMethod::POST, "/Task/" + id + "/" + operationName + "/", 0, std::move(headers), HttpStatus::Unknown};
+protected:
+    template<class HandlerType>
+    void checkTaskOperation(const std::string& operationName, PcServiceContext& serviceContext, JWT jwt,
+                            const std::variant<int64_t, std::string>& taskId, Header::keyValueMap_t&& headers,
+                            QueryParameters&& queryParameters, const HttpStatus expectedStatus,
+                            model::PrescriptionType type = model::PrescriptionType::apothekenpflichigeArzneimittel)
+    {
+        mockDatabase.reset();
+        HandlerType handler({});
+        const auto id = getId(taskId, type);
+        Header requestHeader{HttpMethod::POST, "/Task/" + id + "/" + operationName + "/", 0, std::move(headers),
+                             HttpStatus::Unknown};
 
-    ServerRequest serverRequest{ std::move(requestHeader) };
-    serverRequest.setPathParameters({ "id" }, { id });
-    serverRequest.setAccessToken(std::move(jwt));
-    serverRequest.setQueryParameters(std::move(queryParameters));
+        ServerRequest serverRequest{std::move(requestHeader)};
+        serverRequest.setPathParameters({"id"}, {id});
+        serverRequest.setAccessToken(std::move(jwt));
+        serverRequest.setQueryParameters(std::move(queryParameters));
 
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext{serviceContext, serverRequest, serverResponse, accessLog};
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{serviceContext, serverRequest, serverResponse, accessLog};
 
-    ASSERT_NO_FATAL_FAILURE(callHandlerWithResponseStatusCheck(sessionContext, handler, expectedStatus));
-}
+        ASSERT_NO_FATAL_FAILURE(callHandlerWithResponseStatusCheck(sessionContext, handler, expectedStatus));
+    }
+};
 
-} // anonymous namespace
-
-TEST_F(EndpointHandlerTest, AbortTask)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(TaskOperationEndpointTest, AbortTask)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
     const std::string operation = "$abort";
@@ -903,7 +904,7 @@ TEST_F(EndpointHandlerTest, AbortTask)//NOLINT(readability-function-cognitive-co
     EXPECT_NO_FATAL_FAILURE(checkTaskOperation<AbortTaskHandler>(operation, mServiceContext, jwtPharmacy, taskNotInProgressId, { }, { }, HttpStatus::Forbidden));
 }
 
-TEST_F(EndpointHandlerTest, AbortTask169NotAllowed)
+TEST_F(TaskOperationEndpointTest, AbortTask169NotAllowed)
 {
     const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
     const std::string operation = "$abort";
@@ -917,7 +918,7 @@ TEST_F(EndpointHandlerTest, AbortTask169NotAllowed)
         operation, mServiceContext, jwtInsurant1, task, {}, {}, HttpStatus::Forbidden, model::PrescriptionType::direkteZuweisung));
 }
 
-TEST_F(EndpointHandlerTest, RejectTask)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(TaskOperationEndpointTest, RejectTask)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto jwt = JwtBuilder::testBuilder().makeJwtApotheke();
     const std::string operation = "$reject";
@@ -1576,6 +1577,7 @@ TEST_F(EndpointHandlerTest, DeleteChargeItem)//NOLINT(readability-function-cogni
                                      JwtBuilder::testBuilder().makeJwtVersicherter(kvnr),
                                      pkvTaskId.toString(), HttpStatus::NoContent));
 
+    mockDatabase.reset();
     A_22114.test("kvnr check");
     EXPECT_NO_FATAL_FAILURE(
         checkDeleteChargeItemHandler(mServiceContext,
@@ -1583,6 +1585,7 @@ TEST_F(EndpointHandlerTest, DeleteChargeItem)//NOLINT(readability-function-cogni
                                      pkvTaskId.toString(), HttpStatus::Forbidden));
 // GEMREQ-end A_22114
 
+    mockDatabase.reset();
     A_22115.test("Delete chargeItem");
     EXPECT_NO_FATAL_FAILURE(
         checkDeleteChargeItemHandler(mServiceContext,
@@ -1654,7 +1657,7 @@ TEST_F(EndpointHandlerTest, PostChargeItem)//NOLINT(readability-function-cogniti
     {
         GTEST_SKIP();
     }
-    const auto pkvTaskId= model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
+    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50022);
     const char* const pkvKvnr = "X500000000";
 
     auto& resourceManager = ResourceManager::instance();
@@ -1796,7 +1799,7 @@ TEST_F(EndpointHandlerTest, PostChargeItemNonQes)//NOLINT(readability-function-c
         { CertificateType::C_HCI_OSIG },
         TslTestHelper::getDefaultTestOcspCheckDescriptor());
 
-    const auto pkvTaskId= model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
+    const auto pkvTaskId= model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50022);
     const char* const pkvKvnr = "X500000000";
 
     auto& resourceManager = ResourceManager::instance();

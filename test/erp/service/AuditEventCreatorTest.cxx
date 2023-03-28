@@ -355,7 +355,7 @@ TEST_F(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognit
     EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionId.toString());
     EXPECT_EQ(auditEvent.entityDescription(), prescriptionId.toString());
-    EXPECT_EQ(auditEvent.entityWhatReference(), "Task/"+prescriptionId.toString()+ "/$abort");
+    EXPECT_EQ(auditEvent.entityWhatReference(), "Task/"+prescriptionId.toString());
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 

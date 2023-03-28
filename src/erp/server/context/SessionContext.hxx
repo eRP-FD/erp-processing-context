@@ -6,9 +6,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_CONTEXT_SESSIONCONTEXT_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_CONTEXT_SESSIONCONTEXT_HXX
 
-#include "erp/service/AuditDataCollector.hxx"
 #include "erp/database/Database.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/server/AccessLog.hxx"
+#include "erp/service/AuditDataCollector.hxx"
 
 #include <boost/core/noncopyable.hpp>
 #include <functional>
@@ -29,7 +30,8 @@ class PcServiceContext;
 class SessionContext : private boost::noncopyable
 {
 public:
-    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& log);
+    SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& log,
+                   model::Timestamp initSessionTime = model::Timestamp::now());
 
     PcServiceContext& serviceContext;
     ServerRequest& request;
@@ -40,10 +42,12 @@ public:
     AuditDataCollector& auditDataCollector();
     Database* database();
     std::unique_ptr<Database> releaseDatabase();
+    const model::Timestamp& sessionTime() const;
 
 private:
     std::unique_ptr<AuditDataCollector> mAuditDataCollector;
     std::unique_ptr<Database> mDatabase;
+    model::Timestamp mSessionTime;
 };
 
 

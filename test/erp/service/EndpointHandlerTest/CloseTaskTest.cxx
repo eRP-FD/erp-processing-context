@@ -57,6 +57,7 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
 
     for (const auto& payload : {medicationDispenseXml, medicationDispenseBundleXml})
     {
+        mockDatabase.reset();
         serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
         serverRequest.setBody(payload);
         ServerResponse serverResponse;

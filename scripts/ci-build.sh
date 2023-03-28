@@ -41,7 +41,7 @@ test -n "${erp_release_version}" || die "missing argument --release_version="
 
 mkdir -p jenkins-build-debug
 cd jenkins-build-debug
-pip3 install conan --upgrade
+pip3 install "conan<2.0" --upgrade
 pip3 install --user packageurl-python
 conan --version
 conan remote clean

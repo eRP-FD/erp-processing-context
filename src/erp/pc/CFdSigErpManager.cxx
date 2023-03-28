@@ -119,9 +119,7 @@ TrustStore::OcspResponseData
 CFdSigErpManager::internalGetOcspResponseData(const Certificate& certificate, const bool forceOcspRequest)
 {
     // internal implementation call, it has to be guarded by mutex in caller public/protected methods
-    mLastOcspRequestSuccessful = false;
     mLastProducedAt = std::chrono::system_clock::time_point{};
-    mLastOcspSuccess = std::chrono::system_clock::time_point{};
 
     try
     {
@@ -149,11 +147,17 @@ CFdSigErpManager::internalGetOcspResponseData(const Certificate& certificate, co
                "TslManager::getCertificateOcspResponse() must only return in case of good ocsp status.");
 
         mLastProducedAt = responseData.producedAt;
-        mLastOcspSuccess = responseData.receivedAt;
-        if (responseData.receivedAt >= startPoint)
+
+        if (! responseData.fromCache || forceOcspRequest)
         {
-            // last check is only successful if last successful OCSP request was done during the last try
-            mLastOcspRequestSuccessful = true;
+            mLastOcspSuccess = responseData.receivedAt;
+            // last OCSP request is only successful if we got a new result within this request
+            mLastOcspRequestSuccessful = responseData.receivedAt >= startPoint;
+            if (! mLastOcspRequestSuccessful)
+            {
+                TLOG(WARNING) << "OCSP request has failed, last successful OCSP response was done at "
+                              << model::Timestamp(mLastOcspSuccess).toXsDateTime();
+            }
         }
 
         return responseData;
@@ -180,12 +184,6 @@ void CFdSigErpManager::healthCheck()
     if (mLastProducedAt + mOcspRequestGracePeriod < now)
     {
         Fail2("last validation is too old", std::runtime_error);
-    }
-
-    if ( ! mLastOcspRequestSuccessful)
-    {
-        TLOG(WARNING) << "at least the last validation ocsp request has failed, last successful OCSP response was done at "
-                      << model::Timestamp(mLastOcspSuccess).toXsDateTime();
     }
 }
 

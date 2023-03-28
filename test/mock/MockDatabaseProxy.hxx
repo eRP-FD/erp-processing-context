@@ -10,8 +10,6 @@
 #include "erp/database/DatabaseFrontend.hxx"
 
 class MockDatabase;
-
-
 /**
  * The SessionContext requires a database factory that returns a unique_ptr to a Database object.
  * In order to keep the MockDatabase persistent during for the duration of a test, and avoid clever
@@ -155,6 +153,14 @@ public:
 
 private:
     MockDatabase& mDatabase;
+    class TransactionMonitor
+    {
+    public:
+        TransactionMonitor();
+        ~TransactionMonitor() noexcept;
+        static thread_local bool inProgress;
+    };
+    TransactionMonitor transactionMonitor;
 };
 
 #endif
