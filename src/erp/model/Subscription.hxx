@@ -15,7 +15,7 @@ namespace model
 class Timestamp;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Subscription : public Resource<Subscription>
+class Subscription : public Resource<Subscription, ResourceVersion::NotProfiled>
 {
 public:
     static constexpr auto resourceTypeName = "Subscription";
@@ -59,7 +59,7 @@ public:
     std::optional<std::string_view> reason() const;
 
 private:
-    friend Resource<Subscription>;
+    friend class Resource;
     explicit Subscription(NumberAsStringParserDocument&& jsonTree);
 
     std::string mRecipient;

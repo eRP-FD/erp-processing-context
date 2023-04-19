@@ -41,7 +41,10 @@ public:
     void commitTransaction() override;
     void closeConnection() override;
 
+    std::string retrieveSchemaVersion() override;
+
     void healthCheck() override;
+    std::optional<DatabaseConnectionInfo> getConnectionInfo() const override;
 
     [[nodiscard]] model::PrescriptionId storeTask(const model::Task& task) override;
     void updateTaskStatusAndSecret(const model::Task& task) override;

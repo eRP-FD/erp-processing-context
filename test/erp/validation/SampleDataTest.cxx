@@ -4,6 +4,7 @@
  */
 
 #include "erp/model/KbvBundle.hxx"
+#include "erp/model/ResourceFactory.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/validation/XmlValidator.hxx"
@@ -11,6 +12,7 @@
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 #include <magic_enum.hpp>
@@ -62,6 +64,7 @@ std::vector<KonnektathonData> makeParams(const std::string_view& path,
 class SampleDataTest : public testing::TestWithParam<KonnektathonData>
 {
 protected:
+
     SampleDataTest()
     {
         invalidList = {
@@ -119,6 +122,7 @@ protected:
     }
 
     std::map<fs::path, std::string> invalidList;
+    std::vector<EnvironmentVariableGuard> envGuards  = testutils::getOverlappingFhirProfileEnvironment();
 };
 
 TEST_P(SampleDataTest, SampleDataTest)
@@ -134,9 +138,9 @@ TEST_P(SampleDataTest, SampleDataTest)
 
     try
     {
-        auto bundle =
-            model::KbvBundle::fromXml(document, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                      SchemaType::KBV_PR_ERP_Bundle, {GetParam().bundle}, options);
+        using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
+        auto bundle = KbvBundleFactory::fromXml(document, *StaticData::getXmlValidator(), {.validatorOptions = options})
+                .getValidated(SchemaType::KBV_PR_ERP_Bundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), {GetParam().bundle});
         ASSERT_FALSE(shallFail);
     }
     catch (const ErpException& erp)

@@ -13,10 +13,11 @@
 #include "erp/util/TLog.hxx"
 #include "erp/common/HttpStatus.hxx"
 
-#include <string>
-#include <stdexcept>
-#include <sstream>
 #include <cstddef>
+#include <source_location>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 #include <openssl/err.h>
 
 // to be intended to be used internal only, but due to templating it is needed in the header
@@ -89,6 +90,35 @@ namespace local
     }
 }
 
+template <typename T>
+decltype(auto) value(std::optional<T>& opt, std::source_location loc = std::source_location::current())
+{
+    if (!opt.has_value())
+    {
+        throw ExceptionWrapper<std::bad_optional_access>::create(FileNameAndLineNumber(loc.file_name(), loc.line()));
+    }
+    return *opt;
+}
+
+template <typename T>
+decltype(auto) value(std::optional<T>&& opt, std::source_location loc = std::source_location::current())
+{
+    if (!opt.has_value())
+    {
+        throw ExceptionWrapper<std::bad_optional_access>::create(FileNameAndLineNumber(loc.file_name(), loc.line()));
+    }
+    return *std::move(opt);
+}
+
+template <typename T>
+decltype(auto) value(const std::optional<T>& opt, std::source_location loc = std::source_location::current())
+{
+    if (!opt.has_value())
+    {
+        throw ExceptionWrapper<std::bad_optional_access>::create(FileNameAndLineNumber(loc.file_name(), loc.line()));
+    }
+    return *opt;
+}
 
 #define fileAndLine FileNameAndLineNumber(__FILE__, __LINE__)
 

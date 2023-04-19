@@ -102,10 +102,6 @@ bool operator==(const std::string& lhs, const MimeType& rhs)
 {
     return lhs == rhs.getMimeType();
 }
-bool operator==(const MimeType& lhs, const std::string& rhs)
-{
-    return operator==(rhs, lhs);
-}
 
 float AcceptMimeType::getQFactorWeight() const
 {

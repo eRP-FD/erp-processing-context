@@ -85,7 +85,7 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
         std::in_place,
         std::vector<SearchParameter>
         {
-            { "date", "erp.timestamp_from_suuid(id)", SearchParameter::Type::Date },
+            { "date", "id", SearchParameter::Type::DateAsUuid },
             { "subtype", "action", SearchParameter::Type::String, std::move(searchToDbValue) }
         });
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());

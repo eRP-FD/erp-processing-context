@@ -3,6 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
+#include "erp/ErpRequirements.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
@@ -124,8 +125,10 @@ void TaskAbortHandlerTest::checkResultingData(
 }
 
 
+// GEMREQ-start A_19027-03
 TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
+    A_19027_03.test("Check deletion of personal data and Task related communications");
     const std::string insurant = InsurantF;
     const std::string telematicId = mPharmacy.id();
 
@@ -163,6 +166,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-functio
     // Check database data after abort call
     ASSERT_NO_FATAL_FAILURE(checkResultingData(task.prescriptionId(), telematicId, communicationIds));
 }
+// GEMREQ-end A_19027-03
 
 
 TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-function-cognitive-complexity)

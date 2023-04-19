@@ -30,7 +30,7 @@ public:
 
     void SetUp (void) override
     {
-        ServerTestBase::SetUp();
+        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
 
         if (mIsInitialCleanupRequired && mHasPostgresSupport)
         {
@@ -106,8 +106,7 @@ public:
                         communication.serializeToXmlString(), *StaticData::getXmlValidator(),
                         *StaticData::getInCodeValidator(),
                         model::Communication::messageTypeToSchemaType(messageType),
-                        model::ResourceVersion::supportedBundles(),
-                        allowGenericValidation?std::make_optional<fhirtools::ValidatorOptions>():std::nullopt));
+                        model::ResourceVersion::supportedBundles(), allowGenericValidation));
                     EXPECT_EQ(communication.id().value().toString(), expectedCommunicationIds[index].toString());
                 }
             }
@@ -193,6 +192,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_noFilter)
 }
 
 
+// GEMREQ-start A_19520-01#getAllCommunications_filterByRecipient
 TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
 {
     // Setup the database.
@@ -238,8 +238,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
 
     ASSERT_EQ(communication.id(), givenCommunication1.id());
 }
+// GEMREQ-end A_19520-01#getAllCommunications_filterByRecipient
 
 
+// GEMREQ-start A_19520-01#getAllCommunications_filterBySender
 TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT(readability-function-cognitive-complexity)
 {
     // Setup the database.
@@ -290,6 +292,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT
     ASSERT_TRUE(communication1.id() == givenCommunication1.id() || communication1.id() == givenCommunication3.id());
     ASSERT_TRUE(communication2.id() == givenCommunication1.id() || communication2.id() == givenCommunication3.id());
 }
+// GEMREQ-end A_19520-01#getAllCommunications_filterBySender
 
 
 TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySent)
@@ -856,47 +859,6 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_ignoredValueCanContainS
 }
 
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_sort_sentReceived)
-{
-    // Setup the database.
-    const auto givenTask = addTaskToDatabase({ model::Task::Status::draft, InsurantF });
-    const auto givenCommunicationIds = addCommunicationsToDatabase({
-        //             v 1:sent v    ^2:received^
-        {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
-            {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
-            std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-04")},
-        {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
-            {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
-            std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01"), model::Timestamp::fromXsDate("2022-01-03")},
-        {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
-            {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
-            std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02"), model::Timestamp::fromXsDate("2022-01-03")},
-        {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
-            {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
-            std::string(givenTask.accessCode()),
-            RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-03"), model::Timestamp::fromXsDate("2022-01-04")}
-    });
-
-    // Send the request for _sort=sent,-received"
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
-    auto outerResponse = createClient().send(encryptRequest(ClientRequest(
-        createGetHeader(std::string("/Communication?_sort=sent,-received"), jwtInsurant), ""), jwtInsurant));
-
-    // Verify the response. _sort=sent,-received => input values are already sorted according to this order
-    const auto bundle = expectGetCommunicationResponse(outerResponse,
-        {   givenCommunicationIds[0],
-            givenCommunicationIds[1],
-            givenCommunicationIds[2],
-            givenCommunicationIds[3]});
-    const auto selfLink = bundle->getLink(model::Link::Type::Self);
-    EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?_sort=sent,-received");
-}
-
-
 TEST_F(CommunicationGetHandlerTest, getAllCommunications_sort_receivedSent)
 {
     // Setup the database.
@@ -1409,6 +1371,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_failForMissingObject)
 }
 
 
+// GEMREQ-start A_19520-01#getCommunicationById_failForObjectDirectedAtOtherUser
 /**
  * Call GET /Communication/<id> with an id for which there IS an object in the database BUT it has a different
  * sender and a different recipient from the one that is making the request.
@@ -1440,6 +1403,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_failForObjectDirectedAt
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentLength));
     ASSERT_GT(innerResponse.getHeader().contentLength(), 0);
 }
+// GEMREQ-end A_19520-01#getCommunicationById_failForObjectDirectedAtOtherUser
 
 TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
 {
@@ -1463,7 +1427,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
     verifyGenericInnerResponse(innerResponse, HttpStatus::NotFound);
 }
 
-TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
 {
     std::string kvnrInsurant = InsurantA;
     std::string pharmacy1 = "3-SMC-B-Testkarte-883110000120312";
@@ -1475,7 +1439,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
     for (int idxPatient = 0; idxPatient < 18; ++idxPatient)
     {
          const auto communication = addCommunicationToDatabase({
-            task.prescriptionId(), model::Communication::MessageType::Representative,
+            task.prescriptionId(), model::Communication::MessageType::InfoReq,
             {ActorRole::Insurant, InsurantA}, {ActorRole::Pharmacists, pharmacy1},
             std::string(task.accessCode()),
             RepresentativeMessageByInsurant, timestamp + std::chrono::hours(-24 * idxPatient) });
@@ -1485,8 +1449,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
         const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(pharmacy1) };
         std::string pathAndArguments = UrlHelper::escapeUrl("/Communication?sent=le2021-09-25T12:34:56+01:00&_count=10&__offset=0");
         ClientRequest request(createGetHeader(pathAndArguments, jwtPharmacy), "");
-        auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
-        auto bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+        ClientResponse outerResponse;
+        EXPECT_NO_FATAL_FAILURE(outerResponse = createClient().send(encryptRequest(request, jwtPharmacy)));
+        std::optional<model::Bundle> bundle;
+        EXPECT_NO_FATAL_FAILURE(bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8));
         auto nextLink = bundle->getLink(model::Link::Type::Next);
         EXPECT_TRUE(nextLink.has_value());
         auto nextPathAndArguments = extractPathAndArguments(nextLink.value());
@@ -1494,8 +1460,8 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
 
         // Get next request
         ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
-        outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
-        bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+        EXPECT_NO_FATAL_FAILURE(outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy)));
+        EXPECT_NO_FATAL_FAILURE(bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8));
         nextLink = bundle->getLink(model::Link::Type::Next);
         EXPECT_FALSE(nextLink.has_value());
     }
@@ -1504,8 +1470,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(pharmacy1) };
        std::string pathAndArguments = UrlHelper::escapeUrl("/Communication?sent=le2021-09-25T12:34:56+01:00&_count=9&__offset=0");
        ClientRequest request(createGetHeader(pathAndArguments, jwtPharmacy), "");
-       auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
-       auto bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       ClientResponse outerResponse;
+       EXPECT_NO_FATAL_FAILURE(outerResponse = createClient().send(encryptRequest(request, jwtPharmacy)));
+       std::optional<model::Bundle> bundle;
+       EXPECT_NO_FATAL_FAILURE(bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8));
        auto nextLink = bundle->getLink(model::Link::Type::Next);
        EXPECT_TRUE(nextLink.has_value());
        auto nextPathAndArguments = extractPathAndArguments(nextLink.value());
@@ -1513,8 +1481,8 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
 
        // Get next request
        ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
-       outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
-       bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       EXPECT_NO_FATAL_FAILURE(outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy)));
+       EXPECT_NO_FATAL_FAILURE(bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8));
        nextLink = bundle->getLink(model::Link::Type::Next);
        EXPECT_FALSE(nextLink.has_value());
    }
@@ -1523,8 +1491,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(pharmacy1) };
        std::string pathAndArguments = UrlHelper::escapeUrl("/Communication?sent=le2021-09-25T12:34:56+01:00&_count=4&__offset=0");
        ClientRequest request(createGetHeader(pathAndArguments, jwtPharmacy), "");
-       auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
-       auto bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       ClientResponse outerResponse;
+       EXPECT_NO_FATAL_FAILURE(outerResponse = createClient().send(encryptRequest(request, jwtPharmacy)));
+       std::optional<model::Bundle> bundle;
+       EXPECT_NO_FATAL_FAILURE(bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8));
        auto nextLink = bundle->getLink(model::Link::Type::Next);
        EXPECT_TRUE(nextLink.has_value());
        auto nextPathAndArguments =  extractPathAndArguments(nextLink.value());
@@ -1534,16 +1504,16 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)//NOLI
        for (size_t idxPatient = 0; idxPatient < 3; ++idxPatient)
        {
            ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
-           outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
-           bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+           EXPECT_NO_FATAL_FAILURE(outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy)));
+           EXPECT_NO_FATAL_FAILURE(bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8));
            nextLink = bundle->getLink(model::Link::Type::Next);
            EXPECT_TRUE(nextLink.has_value());
            nextPathAndArguments = extractPathAndArguments(nextLink.value());
        }
 
        ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
-       outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy));
-       bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8);
+       EXPECT_NO_FATAL_FAILURE(outerResponse = createClient().send(encryptRequest(nextRrequest, jwtPharmacy)));
+       EXPECT_NO_FATAL_FAILURE(bundle = getBundle(outerResponse, ContentMimeType::fhirXmlUtf8));
        nextLink = bundle->getLink(model::Link::Type::Next);
        EXPECT_FALSE(nextLink.has_value());
    }

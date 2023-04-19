@@ -67,20 +67,11 @@ std::tuple<std::string, std::string, std::string> evalAgentData(
 std::string replaceTextTemplateVariables(
     const std::string& text,
     const std::string& agentName,
-    const std::string& prescriptionId,
-    const std::optional<std::string_view>& pnwPzNumber)
+    const std::string& prescriptionId)
 {
     std::string result = String::replaceAll(text, std::string(AuditEventTextTemplates::selfVariableName), agentName);
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::agentNameVariableName), agentName);
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::prescriptionIdVariableName), prescriptionId);
-
-    if (pnwPzNumber.has_value())
-    {
-        result = String::replaceAll(
-            result,
-            std::string(AuditEventTextTemplates::pzNumberVariableName),
-            pnwPzNumber->data());
-    }
 
     return result;
 }
@@ -153,17 +144,10 @@ model::AuditEvent AuditEventCreator::fromAuditData(
     auditEvent.setEntityName(auditData.insurantKvnr().id());
     auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), resourceIdStr));
 
-    const auto isEventIdGetAllTasksWithPzNumber = (model::AuditEventId::GET_Tasks_by_pharmacy_with_pz ==
-                                                   auditData.eventId());
-
-    Expect3(isEventIdGetAllTasksWithPzNumber == auditData.metaData().pnwPzNumber().has_value(),
-            "PNW PZ number should be present if and only if event ID is GET_Tasks_by_pharmacy_with_pz",
-            std::logic_error);
-
     // text/div
     const auto [text, usedLanguage] =  textResources.retrieveTextTemplate(auditData.eventId(), language);
     auditEvent.setTextDiv(R"--(<div xmlns="http://www.w3.org/1999/xhtml">)--" +
-                          replaceTextTemplateVariables(text, agentName, resourceIdStr, auditData.metaData().pnwPzNumber()) +
+                          replaceTextTemplateVariables(text, agentName, resourceIdStr) +
                           "</div>");
     auditEvent.setLanguage(usedLanguage);
 

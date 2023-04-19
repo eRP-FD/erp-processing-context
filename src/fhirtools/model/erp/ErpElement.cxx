@@ -322,3 +322,8 @@ std::vector<std::string_view> ErpElement::profiles(const rapidjson::Value& resou
     }
     return result;
 }
+
+const rapidjson::Value* ErpElement::erpValue() const
+{
+    return mValue;
+}

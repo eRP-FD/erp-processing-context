@@ -172,8 +172,8 @@ namespace
 
         if (! isKeyUnique)
         {
-            VLOG(1) << "TSL parsing: certificate `" << key.toString()
-                    << "` already present in trust map\n";
+            TVLOG(2) << "TSL parsing: certificate `" << key.toString()
+                    << "` already present in trust map";
         }
     }
 
@@ -196,7 +196,7 @@ namespace
             {
                 // According to TUC_PKI_013 the problem with unreadable new TSL CA must be logged,
                 // but it should not affect other CAs
-                LOG(ERROR) << TslError("TI-Trust-Anchor is not a valid certificate",
+                TLOG(ERROR) << TslError("TI-Trust-Anchor is not a valid certificate",
                                        TslErrorCode::TSL_SIG_CERT_EXTRACTION_ERROR).what();
             }
             else
@@ -594,7 +594,7 @@ namespace
 
             if (! isDomainParameterBrainpoolP256r1)
             {
-                VLOG(1) << "refusing to validate non-BrainpoolP256r1-based ECC TSL signature";
+                TVLOG(1) << "refusing to validate non-BrainpoolP256r1-based ECC TSL signature";
                 return false;
             }
             // GEMREQ-end A_17205
@@ -662,7 +662,7 @@ namespace
             const std::string expectedDigestValue =
                 xmlDocument.getElementText(xpathLiteral_digestValueText);
             Expect(! expectedDigestValue.empty(), "no expected digest value is provided");
-            VLOG(2) << "Digest stored in TSL-File is [" << expectedDigestValue << "]";
+            TVLOG(2) << "Digest stored in TSL-File is [" << expectedDigestValue << "]";
 
             const std::string digestAlgorithm =
                 xmlDocument.getAttributeValue(xpathLiteral_digestAlgorithm);
@@ -720,7 +720,7 @@ namespace
             // GEMREQ-start A_17206
             // GEMREQ-start A_17205
             const std::string signatureString = xmlDocument.getElementText(xpathLiteral_signatureValue);
-            VLOG(2) << "Signature stored int TSL-File is [" << signatureString << "]";
+            TVLOG(2) << "Signature stored int TSL-File is [" << signatureString << "]";
 
             if (signerCertificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
             {
@@ -757,7 +757,7 @@ namespace
         try
         {
             std::unique_ptr<XmlValidatorContext> validatorContext =
-                xmlValidator.getSchemaValidationContextNoVer(
+                xmlValidator.getSchemaValidationContext(
                     mode == TslMode::TSL ? SchemaType::Gematik_tsl : SchemaType::BNA_tsl);
             Expect3(validatorContext != nullptr,
                     "Can not get validator context.",
@@ -1099,17 +1099,17 @@ void TslParser::performExtractions(const std::string& xml, const XmlValidator& x
     }
     catch(const TslError& e)
     {
-        LOG(ERROR) << "parsing of TSL file has failed with TslError: " << e.what();
+        TLOG(ERROR) << "parsing of TSL file has failed with TslError: " << e.what();
         throw;
     }
     catch(const std::exception& e)
     {
-        LOG(ERROR) << "parsing of TSL file has failed with unexpected exception: " << e.what();
+        TLOG(ERROR) << "parsing of TSL file has failed with unexpected exception: " << e.what();
         throw;
     }
     catch(...)
     {
-        LOG(ERROR) << "parsing of TSL file has failed";
+        TLOG(ERROR) << "parsing of TSL file has failed";
         throw;
     }
 }

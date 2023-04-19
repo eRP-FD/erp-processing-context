@@ -28,7 +28,6 @@ constexpr std::string_view signature_template = R"--(
  ],
   "when":"",
   "who":{
-    "reference":""
   },
   "sigFormat":"application/pkcs7-mime",
   "data":""
@@ -48,7 +47,8 @@ void initTemplates ()
 // definition of JSON pointers:
 const rapidjson::Pointer dataPointer ("/data");
 const rapidjson::Pointer whenPointer ("/when");
-const rapidjson::Pointer whoPointer ("/who/reference");
+const rapidjson::Pointer whoReferencePointer("/who/reference");
+const rapidjson::Pointer whoDisplayPointer("/who/display");
 const rapidjson::Pointer targetFormatPointer ("/targetFormat");
 const rapidjson::Pointer sigFormatPointer ("/sigFormat");
 const rapidjson::Pointer typeSystemPointer ("/type/0/system");
@@ -57,7 +57,14 @@ const rapidjson::Pointer typeCodePointer ("/type/0/code");
 }  // anonymous namespace
 
 
-Signature::Signature(const std::string_view& data, const model::Timestamp& when, const std::string_view& who)
+Signature::Signature(const std::string_view& data, const model::Timestamp& when, const std::string_view& whoReference)
+    : Signature(data, when, whoReference, std::nullopt)
+{
+}
+
+Signature::Signature(const std::string_view& data, const Timestamp& when,
+                     const std::optional<std::string_view> whoReference,
+                     const std::optional<std::string_view> whoDisplay)
     : Resource<Signature>(ResourceBase::NoProfile,
                           []() {
                               std::call_once(onceFlag, initTemplates);
@@ -67,7 +74,16 @@ Signature::Signature(const std::string_view& data, const model::Timestamp& when,
 {
     setValue(dataPointer, data);
     setValue(whenPointer, when.toXsDateTime());
-    setValue(whoPointer, who);
+    Expect3(whoReference.has_value() || whoDisplay.has_value(), "Either whoReference or whoDisplay must be given",
+            std::logic_error);
+    if (whoReference.has_value())
+    {
+        setValue(whoReferencePointer, *whoReference);
+    }
+    if (whoDisplay.has_value())
+    {
+        setValue(whoDisplayPointer, *whoDisplay);
+    }
 }
 
 
@@ -93,9 +109,14 @@ std::optional<model::Timestamp> Signature::when() const
 }
 
 
-std::optional<std::string_view> Signature::who () const
+std::optional<std::string_view> Signature::whoReference() const
 {
-    return getOptionalStringValue(whoPointer);
+    return getOptionalStringValue(whoReferencePointer);
+}
+
+std::optional<std::string_view> Signature::whoDisplay() const
+{
+    return getOptionalStringValue(whoDisplayPointer);
 }
 
 

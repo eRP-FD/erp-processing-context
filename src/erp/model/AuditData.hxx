@@ -47,8 +47,7 @@ enum class AuditEventId : std::int16_t
     GET_ChargeItem_id_pharmacy,
     PATCH_ChargeItem_id,
     GET_Tasks_by_pharmacy_with_pz,
-    GET_Tasks_by_pharmacy_without_pz,
-    GET_Tasks_by_pharmacy_pnw_check_failed,
+    GET_Tasks_by_pharmacy_pnw_check_failed = 28,
     Communication_delete_expired_id = 29, // deletion of expired Communications by maintenance script => Id 29 used by database script!
     MAX = Communication_delete_expired_id
 };
@@ -67,12 +66,10 @@ public:
 
     AuditMetaData(
         const std::optional<std::string_view>& agentName,
-        const std::optional<std::string_view>& agentWho,
-        const std::optional<std::string_view>& pnwPzNumber);
+        const std::optional<std::string_view>& agentWho);
 
     std::optional<std::string_view> agentName() const;
     std::optional<std::string_view> agentWho() const;
-    std::optional<std::string_view> pnwPzNumber() const;
 
     bool isEmpty() const;
 

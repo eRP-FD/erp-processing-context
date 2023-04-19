@@ -80,10 +80,6 @@ public:
     void setSecret(std::string_view secret);
     void setAccessCode(std::string_view accessCode);
 
-    // functions for the deletion of personal data:
-    void deleteKvnr();
-    void deleteInput();
-    void deleteOutput();
     void deleteAccessCode();
     void deleteSecret();
 

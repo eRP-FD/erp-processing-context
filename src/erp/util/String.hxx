@@ -29,6 +29,16 @@ public:
     static std::vector<std::string> split(const std::string& s, const std::string& separator);
 
     /**
+     * Join @p sequence using operator << separated by @p separator
+     */
+    template<typename SequenceT>
+    static std::string join(const SequenceT& sequence, std::string_view separator = ", ") requires
+        requires(std::ostream& o)
+    {
+        o << *std::begin(sequence);
+    };
+
+    /**
      * Split the given string `s` at `separator` as long as `separator` is not contained in a
      * string that is delimited with single or double quotes.
      * This method is, among others, used for parsing a Content-Type value. Therefore quoting with
@@ -213,4 +223,22 @@ std::string String::concatenateItems (Items&& ... items)
     outputItems(os, std::forward<Items>(items)...);
     return os.str();
 }
+
+template<typename SequenceT>
+std::string String::join(const SequenceT& sequence, std::string_view separator) requires requires(std::ostream& o)
+{
+    o << *std::begin(sequence);
+}
+{
+    std::ostringstream os;
+    std::string_view sep;
+    for (const auto& elem : sequence)
+    {
+        os << sep << elem;
+        sep = separator;
+    }
+    return std::move(os).str();
+}
+
+
 #endif

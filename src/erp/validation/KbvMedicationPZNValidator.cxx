@@ -46,7 +46,7 @@ void KbvMedicationPZNValidator::validate(const model::ResourceBase& resource, co
     doValidate(dynamic_cast<const model::KbvMedicationPzn&>(resource), xmlValidator, inCodeValidator);
 }
 
-void KbvMedicationPZNValidator_V1_0_1::doValidate(const model::KbvMedicationPzn& kbvMedicationpzn, const XmlValidator&,
+void KbvMedicationPZNValidator_V1_0_2::doValidate(const model::KbvMedicationPzn& kbvMedicationpzn, const XmlValidator&,
                                                   const InCodeValidator&) const
 {
     KbvValidationUtils::checkKbvExtensionValueCoding(
@@ -62,7 +62,7 @@ void KbvMedicationPZNValidator_V1_0_1::doValidate(const model::KbvMedicationPzn&
     amountNumerator_erp_codeUndSystem(kbvMedicationpzn);
 }
 
-void KbvMedicationPZNValidator_V1_0_1::erp_NormgroesseOderMenge(const model::KbvMedicationPzn& kbvMedicationpzn) const
+void KbvMedicationPZNValidator_V1_0_2::erp_NormgroesseOderMenge(const model::KbvMedicationPzn& kbvMedicationpzn) const
 {
     // -erp-NormgroesseOderMenge
     // extension('http://fhir.de/StructureDefinition/normgroesse').exists()
@@ -82,7 +82,7 @@ void KbvMedicationPZNValidator_V1_0_1::erp_NormgroesseOderMenge(const model::Kbv
     }
 }
 
-void KbvMedicationPZNValidator_V1_0_1::amountNumerator_erp_begrenzungValue(
+void KbvMedicationPZNValidator_V1_0_2::amountNumerator_erp_begrenzungValue(
     const model::KbvMedicationPzn& kbvMedicationPzn) const
 {
     try
@@ -103,7 +103,7 @@ void KbvMedicationPZNValidator_V1_0_1::amountNumerator_erp_begrenzungValue(
     }
 }
 
-void KbvMedicationPZNValidator_V1_0_1::amountNumerator_erp_codeUndSystem(
+void KbvMedicationPZNValidator_V1_0_2::amountNumerator_erp_codeUndSystem(
     const model::KbvMedicationPzn& kbvMedicationPzn) const
 {
     try

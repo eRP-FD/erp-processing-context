@@ -34,37 +34,11 @@ public:
     using SchemaPtr = std::unique_ptr<xmlSchema, std::function<void(::xmlSchemaPtr)>>;
 
     void loadSchemas(const std::vector<std::string>& paths);
-    void loadKbvSchemas(const std::string& version, const std::vector<std::string>& paths,
-                        const std::optional<model::Timestamp>& validFrom,
-                        const std::optional<model::Timestamp>& validUntil);
-    void loadGematikSchemas(const std::string& version, const std::vector<std::string>& paths,
-                            const std::optional<model::Timestamp>& validFrom,
-                            const std::optional<model::Timestamp>& validUntil);
+    void loadSchemas(const std::vector<std::string>& paths,
+                     const std::optional<model::Timestamp>& validFrom,
+                     const std::optional<model::Timestamp>& validUntil);
 
-    std::unique_ptr<XmlValidatorContext>
-    getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::DeGematikErezeptWorkflowR4 version) const;
-
-    std::unique_ptr<XmlValidatorContext>
-    getSchemaValidationContext(SchemaType schemaType,
-                               model::ResourceVersion::DeGematikErezeptPatientenrechnungR4 version) const;
-    std::unique_ptr<XmlValidatorContext>
-    getSchemaValidationContext(SchemaType schemaType,
-                               model::ResourceVersion::AbgabedatenPkv version) const;
-
-    std::unique_ptr<XmlValidatorContext>
-    getSchemaValidationContext(SchemaType schemaType,
-                               model::ResourceVersion::WorkflowOrPatientenRechnungProfile version) const;
-
-    std::unique_ptr<XmlValidatorContext>
-    getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::Fhir version) const;
-
-    std::unique_ptr<XmlValidatorContext> getSchemaValidationContext(SchemaType schemaType,
-                                                                    model::ResourceVersion::KbvItaErp version) const;
-
-    std::unique_ptr<XmlValidatorContext> getSchemaValidationContext(SchemaType schemaType,
-                                                                    model::ResourceVersion::NotProfiled = {}) const;
-
-    std::unique_ptr<XmlValidatorContext> getSchemaValidationContextNoVer(SchemaType schemaType) const;
+    std::unique_ptr<XmlValidatorContext> getSchemaValidationContext(SchemaType schemaType) const;
 
     static void checkValidityTime(const std::optional<model::Timestamp>& validFrom,
                                   const std::optional<model::Timestamp>& validUntil, const std::string& schemaNameHint);
@@ -73,12 +47,8 @@ private:
     std::tuple<SchemaType, SchemaPtr> loadSchema(const std::string& filePath) const;
     std::unique_ptr<XmlValidatorContext> getContext(xmlSchemaPtr schemaPtr) const;
 
-    using KeyGem = std::pair<SchemaType, model::ResourceVersion::DeGematikErezeptWorkflowR4>;
     using Value = std::tuple<SchemaPtr, std::optional<model::Timestamp>, std::optional<model::Timestamp>>;
-    std::map<KeyGem, Value> mGematikXmlSchemaPtrs;
-
-    using KeyKbv = std::pair<SchemaType, model::ResourceVersion::KbvItaErp>;
-    std::map<KeyKbv, Value> mKbvXmlSchemaPtrs;
+    std::map<SchemaType, Value> mXmlSchemaPtrs;
 
     std::map<SchemaType, SchemaPtr> mMiscSchemaPtrs;
 

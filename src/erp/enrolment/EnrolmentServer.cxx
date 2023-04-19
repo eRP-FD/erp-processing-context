@@ -75,5 +75,9 @@ void addEndpoints (RequestHandlerManager& handlers)
     handlers.onDeleteDo(
         "/Enrolment/VauSig",
         std::make_unique<enrolment::DeleteVauSig>());
+    handlers.onPostDo("/Enrolment/VsdmHmacKey", std::make_unique<enrolment::PostVsdmHmacKey>());
+    handlers.onGetDo("/Enrolment/VsdmHmacKey", std::make_unique<enrolment::GetVsdmHmacKey>());
+    handlers.onDeleteDo("/Enrolment/VsdmHmacKey", std::make_unique<enrolment::DeleteVsdmHmacKey>());
 }
-}
+
+} // namespace EnrolmentServer

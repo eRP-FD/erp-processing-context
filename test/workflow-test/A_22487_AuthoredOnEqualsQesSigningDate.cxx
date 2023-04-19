@@ -17,7 +17,7 @@ TEST_F(ErpWorkflowTest, AuthoredOnEqualsQesDate)
     ASSERT_FALSE(accessCode.empty());
 
     auto timestamp = model::Timestamp::fromXsDateTime("2022-05-26T14:33:00+02:00");
-    auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId.value(), .timestamp = timestamp});
+    auto bundle = kbvBundleXml({.prescriptionId = prescriptionId.value(), .timestamp = timestamp});
     taskActivateWithOutcomeValidation(prescriptionId.value(), accessCode, toCadesBesSignature(bundle, timestamp), HttpStatus::OK);
 }
 
@@ -31,7 +31,7 @@ TEST_F(ErpWorkflowTest, AuthoredOnNotEqualsQesDate)
 
     auto bundleTimestamp = model::Timestamp::fromXsDateTime("2022-05-26T14:33:00+02:00");
     auto signTimestamp = model::Timestamp::fromXsDateTime("2022-05-25T14:33:00+02:00");
-    auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId.value(), .timestamp = bundleTimestamp});
+    auto bundle = kbvBundleXml({.prescriptionId = prescriptionId.value(), .timestamp = bundleTimestamp});
 
     taskActivateWithOutcomeValidation(prescriptionId.value(), accessCode, toCadesBesSignature(bundle, signTimestamp), HttpStatus::BadRequest,
                  model::OperationOutcome::Issue::Type::invalid,

@@ -31,11 +31,18 @@ add_library(enrolment-api-client OBJECT
 
 target_link_libraries(enrolment-api-client
     PUBLIC
-        erp-processing-context-files
+       CONAN_PKG::boost
+       CONAN_PKG::date
+       CONAN_PKG::glog
+       CONAN_PKG::gsl-lite
+       CONAN_PKG::libxml2
+       CONAN_PKG::magic_enum
+       CONAN_PKG::openssl
+       CONAN_PKG::rapidjson
 )
 
-target_include_directories(erp-processing-context-files
-    PUBLIC ${PROJECT_SOURCE_DIR}/..)
+target_include_directories(enrolment-api-client
+    PUBLIC ${PROJECT_SOURCE_DIR}/.. ${CMAKE_SOURCE_DIR}/src)
 
 # The blob-db-initialization relies on HSM and TPM support. On platforms where they are not supported, the tool can
 # not be built.
@@ -47,8 +54,7 @@ if(ERP_WITH_HSM_TPM_PRODUCTION)
     target_link_libraries(
         blob-db-initialization
         PRIVATE
-            erp-mock-enrollmentmanager
-            enrolment-api-client
+            erp-hsm-tpm-mock
             erp-processing-context-files
             CONAN_PKG::magic_enum
     )
@@ -70,6 +76,8 @@ add_executable(fhirvalidate EXCLUDE_FROM_ALL fhirvalidate/fhirvalidate_main.cxx)
 target_link_libraries(fhirvalidate
     PUBLIC
         erp-processing-context-files
+        erp-test-util-lib
+        erp-test-lib
         fhirtools
 )
 

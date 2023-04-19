@@ -37,30 +37,30 @@ public:
         }
         if (! unresolvedBase.empty())
         {
-            LOG(ERROR) << R"(Could not resolve FHIR baseDefinitions: [")" + boost::join(unresolvedBase, R"(", ")") +
+            TLOG(ERROR) << R"(Could not resolve FHIR baseDefinitions: [")" + boost::join(unresolvedBase, R"(", ")") +
                               R"("])";
             mVerfied = false;
         }
         if (! missingType.empty())
         {
-            LOG(ERROR) << R"(Could not find FHIR types: [")" + boost::join(missingType, R"(", ")") + R"("])";
+            TLOG(ERROR) << R"(Could not find FHIR types: [")" + boost::join(missingType, R"(", ")") + R"("])";
             mVerfied = false;
         }
         if (! elementsWithUnresolvedType.empty())
         {
-            LOG(ERROR) << R"(Could not resolve FHIR types for: [")" +
+            TLOG(ERROR) << R"(Could not resolve FHIR types for: [")" +
                               boost::join(elementsWithUnresolvedType, R"(", ")") + R"("])";
             mVerfied = false;
         }
         if (! unresolvedProfiles.empty())
         {
-            LOG(ERROR) << R"(Could not resolve FHIR profiles: [")" + boost::join(unresolvedProfiles, R"(", ")") +
+            TLOG(ERROR) << R"(Could not resolve FHIR profiles: [")" + boost::join(unresolvedProfiles, R"(", ")") +
                               R"("])";
             mVerfied = false;
         }
         if (! unresolvedBindings.empty())
         {
-            LOG(ERROR) << R"(Could not resolve ValueSet Bindings: [")" + boost::join(unresolvedBindings, R"(", ")") +
+            TLOG(WARNING) << R"(Could not resolve ValueSet Bindings: [")" + boost::join(unresolvedBindings, R"(", ")") +
                               R"("])";
         }
 
@@ -68,12 +68,12 @@ public:
         verifyValueSetsRequiredOnly();
         if (! unresolvedCodeSystems.empty())
         {
-            LOG(ERROR) << R"(Could not resolve CodeSystems: [")" + boost::join(unresolvedCodeSystems, R"(", ")") +
+            TLOG(WARNING) << R"(Could not resolve CodeSystems: [")" + boost::join(unresolvedCodeSystems, R"(", ")") +
                               R"("])";
         }
         if (! unresolvedValueSets.empty())
         {
-            LOG(ERROR) << R"(Could not resolve ValueSets: [")" + boost::join(unresolvedValueSets, R"(", ")") + R"("])";
+            TLOG(WARNING) << R"(Could not resolve ValueSets: [")" + boost::join(unresolvedValueSets, R"(", ")") + R"("])";
         }
         Expect3(mVerfied, "FHIR-Structure-Repository verification failed", std::logic_error);
     }
@@ -91,7 +91,7 @@ private:
         {
             if (def.derivation() == FhirStructureDefinition::Derivation::basetype)
             {
-                LOG(ERROR) << "Structure definition has derivation 'basetype', but baseDefinition is defined: "
+                TLOG(ERROR) << "Structure definition has derivation 'basetype', but baseDefinition is defined: "
                            << def.url() << '|' << def.version();
                 mVerfied = false;
             }
@@ -99,7 +99,7 @@ private:
             if (! baseType)
             {
                 unresolvedBase.insert(baseDefinition);
-                LOG(ERROR) << "Failed to resolve base type for " << def.url() << '|' << def.version() << ": "
+                TLOG(ERROR) << "Failed to resolve base type for " << def.url() << '|' << def.version() << ": "
                            << baseDefinition;
             }
         }
@@ -107,7 +107,7 @@ private:
         {
             if (def.derivation() != FhirStructureDefinition::Derivation::basetype)
             {
-                LOG(ERROR) << "Profile has derivation '" << def.derivation()
+                TLOG(ERROR) << "Profile has derivation '" << def.derivation()
                            << "', but baseDefinition is not defined: " << def.url() << '|' << def.version();
                 mVerfied = false;
             }
@@ -136,7 +136,7 @@ private:
                 if (! typeDefinition)
                 {
                     missingType.insert(elementType);
-                    LOG(ERROR) << "Failed to resolve type for " << def.url() << '|' << def.version() << "@"
+                    TLOG(ERROR) << "Failed to resolve type for " << def.url() << '|' << def.version() << "@"
                                << element.originalName() << ": " << elementType;
                 }
             }
@@ -155,7 +155,7 @@ private:
             if (! mRepo.findDefinitionByUrl(profile))
             {
                 unresolvedProfiles.emplace(profile);
-                LOG(ERROR) << "Failed to resolve profile type for " << def.url() << '|' << def.version() << "@"
+                TLOG(ERROR) << "Failed to resolve profile type for " << def.url() << '|' << def.version() << "@"
                            << element.originalName() << ": " << profile;
             }
         }
@@ -164,7 +164,7 @@ private:
             if (! mRepo.findDefinitionByUrl(profile))
             {
                 unresolvedProfiles.emplace(profile);
-                LOG(ERROR) << "Failed to resolve targetProfile type for " << def.url() << '|' << def.version() << "@"
+                TLOG(ERROR) << "Failed to resolve targetProfile type for " << def.url() << '|' << def.version() << "@"
                            << element.originalName() << ": " << profile;
             }
         }
@@ -208,15 +208,15 @@ private:
             switch (bindingStrength)
             {
                 case FhirElement::BindingStrength::required:
-                    LOG(ERROR) << msg.str();
+                    TLOG(INFO) << msg.str();
                     unresolvedBindings.insert(valuesetUrlWithVersion);
                     break;
                 case FhirElement::BindingStrength::example:
-                    VLOG(2) << msg.str();
+                    TVLOG(2) << msg.str();
                     break;
                 case FhirElement::BindingStrength::extensible:
                 case FhirElement::BindingStrength::preferred:
-                    LOG(WARNING) << msg.str();
+                    TLOG(INFO) << msg.str();
                     break;
             }
         }
@@ -228,7 +228,7 @@ private:
         if (element.contentReference().empty())
         {
             elementsWithUnresolvedType.emplace(def.url() + "@" + element.name());
-            LOG(ERROR) << "Failed to resolve element type for " << def.url() << '|' << def.version() << "@"
+            TLOG(ERROR) << "Failed to resolve element type for " << def.url() << '|' << def.version() << "@"
                        << element.originalName();
         }
         else
@@ -239,7 +239,7 @@ private:
             }
             catch (const std::logic_error&)
             {
-                LOG(ERROR) << "Failed to resolve element type for " << def.url() << '|' << def.version() << "@"
+                TLOG(ERROR) << "Failed to resolve element type for " << def.url() << '|' << def.version() << "@"
                            << element.originalName() << ": " + element.contentReference();
                 elementsWithUnresolvedType.emplace(def.url() + "@" + element.name());
             }
@@ -269,7 +269,7 @@ private:
                 catch (const std::exception& ex)
                 {
                     mVerfied = false;
-                    LOG(ERROR) << "Slice verification failed " << def.url() << '|' << def.version() << ":"
+                    TLOG(ERROR) << "Slice verification failed " << def.url() << '|' << def.version() << ":"
                                << element.originalName() << ":" << slice.name() << ": " << ex.what();
                 }
             }
@@ -290,7 +290,7 @@ private:
             }
             catch (const std::exception& ex)
             {
-                LOG(ERROR) << ex.what() << ":" << def.url() << '|' << def.version() << "@" << element.originalName()
+                TLOG(ERROR) << ex.what() << ":" << def.url() << '|' << def.version() << "@" << element.originalName()
                            << ": " << constraint.getExpression();
                 mVerfied = false;
             }
@@ -412,7 +412,7 @@ private:
                 {
                     if (codeSystem->getContentType() == FhirCodeSystem::ContentType::complete)
                     {
-                        LOG(ERROR) << "code " << code << " in ValueSet " << valueSetUrl
+                        TLOG(ERROR) << "code " << code << " in ValueSet " << valueSetUrl
                                    << " not contained in referenced CodeSystem " << codeSystemUrl;
                     }
                 }
@@ -507,8 +507,8 @@ void FhirStructureRepository::load(const std::list<std::filesystem::path>& files
                 const auto valueSetFullUrl = valueSet->getUrl() + "|" + valueSet->getVersion();
                 if (requiredValueSets.contains(valueSetFullUrl) || requiredValueSets.contains(valueSet->getUrl()))
                 {
-                    TLOG(ERROR) << "Required Valueset " << valueSetFullUrl
-                                << " finalization with errors: " << valueSet->getWarnings();
+                    TLOG(INFO) << "Required Valueset " << valueSetFullUrl
+                               << " finalization with errors: " << valueSet->getWarnings();
                 }
             }
         }
@@ -833,7 +833,7 @@ void fhirtools::FhirStructureRepository::processCodeSystemSupplements(const std:
         auto builder = cs ? FhirCodeSystem::Builder(*cs) : FhirCodeSystem::Builder();
         if (cs == nullptr)
         {
-            VLOG(1) << "CodeSystem.supplements not found, synthesizing: " << supplement.getSupplements();
+            TVLOG(1) << "CodeSystem.supplements not found, synthesizing: " << supplement.getSupplements();
             builder.synthesized();
         }
         builder.url(supplement.getSupplements());

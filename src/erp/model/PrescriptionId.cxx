@@ -86,15 +86,15 @@ std::string PrescriptionId::toString () const
     // bbb.bbb.bbb.bbb = ID
     // cc = checksum
 
-    A_19217.start("Prescription type: aaa");
+    A_19217_01.start("Prescription type: aaa");
     std::ostringstream oss;
     oss << std::setfill('0');
     oss << std::setw(3) << static_cast<uint16_t>(mPrescriptionType);
-    A_19217.finish();
+    A_19217_01.finish();
 
     oss << '.';
 
-    A_19217.start("Ongoing prescription ID: bbb.bbb.bbb.bbb");
+    A_19217_01.start("Ongoing prescription ID: bbb.bbb.bbb.bbb");
     class PrescriptionIdNumpunct : public std::numpunct<char>
     {
     protected:
@@ -116,13 +116,13 @@ std::string PrescriptionId::toString () const
     strId.replace(strId.size() - tail.size(), tail.size(), tail);
 
     oss << strId;
-    A_19217.finish();
+    A_19217_01.finish();
 
     oss << '.';
 
-    A_19217.start("Checksum");
+    A_19217_01.start("Checksum");
     oss << std::setw(2) << static_cast<uint16_t>(mChecksum);
-    A_19217.finish();
+    A_19217_01.finish();
 
     return oss.str();
 }
@@ -148,19 +148,7 @@ PrescriptionType PrescriptionId::type() const
 
 bool PrescriptionId::isPkv() const
 {
-    switch (mPrescriptionType)
-    {
-        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            [[fallthrough]];
-        case model::PrescriptionType::direkteZuweisungPkv:
-            return true;
-        case model::PrescriptionType::apothekenpflichigeArzneimittel:
-            [[fallthrough]];
-        case model::PrescriptionType::direkteZuweisung:
-            return false;
-    }
-
-    return false;
+    return IsPkv(mPrescriptionType);
 }
 
 void PrescriptionId::validateChecksum (const PrescriptionType prescriptionType, const int64_t id, const uint8_t checksum)
@@ -181,7 +169,7 @@ void PrescriptionId::validateChecksum (const PrescriptionType prescriptionType, 
 
 uint8_t PrescriptionId::calculateChecksum (const PrescriptionType prescriptionType, const int64_t id)
 {
-    A_19217.start("Checksum according to [ISO 7064]");
+    A_19217_01.start("Checksum according to [ISO 7064]");
     const auto type = static_cast<int64_t>(prescriptionType) * 1'000'000'000'000;
     return gsl::narrow<uint8_t>(98 - (((type + id) * 100) % 97));
 }

@@ -86,6 +86,7 @@ const rapidjson::Pointer releasePointer("/version/release");
 const rapidjson::Pointer releasedatePointer("/version/releasedate");
 const rapidjson::Pointer startupPointer("/startup");
 const rapidjson::Pointer healthCheckErrorPointer("/healthCheckError");
+const rapidjson::Pointer connectionInfoPointer("/data/connection_info");
 const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 }
 
@@ -101,10 +102,10 @@ Health::Health()
                        .instance())
 {
     setValue(startupPointer, startupTimestamp);
-    setValue(buildPointer, ErpServerInfo::BuildVersion);
-    setValue(buildTypePointer, ErpServerInfo::BuildType);
-    setValue(releasePointer, ErpServerInfo::ReleaseVersion);
-    setValue(releasedatePointer, ErpServerInfo::ReleaseDate);
+    setValue(buildPointer, ErpServerInfo::BuildVersion());
+    setValue(buildTypePointer, ErpServerInfo::BuildType());
+    setValue(releasePointer, ErpServerInfo::ReleaseVersion());
+    setValue(releasedatePointer, ErpServerInfo::ReleaseDate());
 }
 
 void Health::setOverallStatus(const std::string_view& status)
@@ -112,9 +113,15 @@ void Health::setOverallStatus(const std::string_view& status)
     setValue(statusPointer, status);
 }
 
-void Health::setPostgresStatus(const std::string_view& status, std::optional<std::string_view> message)
+void Health::setPostgresStatus(const std::string_view& status, const std::string_view& connectionInfo,
+                               std::optional<std::string_view> message)
 {
-    setStatusInChecksArray("postgres", status, rootCausePointer, message);
+    std::map<rapidjson::Pointer, std::string_view> data{{connectionInfoPointer, connectionInfo}};
+    if (message)
+    {
+        data.emplace(rootCausePointer, *message);
+    }
+    setStatusInChecksArray("postgres", status, data);
 }
 
 void Health::setHsmStatus(const std::string_view& status, const std::string_view& device,

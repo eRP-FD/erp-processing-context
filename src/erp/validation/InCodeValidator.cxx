@@ -39,106 +39,33 @@ InCodeValidator::InCodeValidator()
                             SchemaType::KBV_PR_FOR_Practitioner,
                             SchemaType::KBV_PR_FOR_PractitionerRole};
 
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvBundleValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Composition, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvCompositionValidator_V1_0_2>());
-    mKbvValidators.try_emplace(
-        KeyKbv(SchemaType::KBV_PR_ERP_Medication_Compounding, model::ResourceVersion::KbvItaErp::v1_0_2),
-        std::make_unique<KbvMedicationCompoundingValidator_V1_0_2>());
-    mKbvValidators.try_emplace(
-        KeyKbv(SchemaType::KBV_PR_ERP_Medication_FreeText, model::ResourceVersion::KbvItaErp::v1_0_2),
-        std::make_unique<KbvMedicationFreeTextValidator_V1_0_2>());
-    mKbvValidators.try_emplace(
-        KeyKbv(SchemaType::KBV_PR_ERP_Medication_Ingredient, model::ResourceVersion::KbvItaErp::v1_0_2),
-        std::make_unique<KbvMedicationIngredientValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Medication_PZN, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvMedicationPZNValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Coverage, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvCoverageValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_Prescription, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvMedicationRequestValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Organization, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvOrganizationValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Patient, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvPatientValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_FOR_Practitioner, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvPractitionerValidator_V1_0_2>());
-    mKbvValidators.try_emplace(KeyKbv(SchemaType::KBV_PR_ERP_PracticeSupply, model::ResourceVersion::KbvItaErp::v1_0_2),
-                               std::make_unique<KbvPracticeSupplyValidator_V1_0_2>());
+    using enum SchemaType;
+    mValidators.try_emplace(KBV_PR_ERP_Bundle, std::make_unique<KbvBundleValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_ERP_Composition, std::make_unique<KbvCompositionValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_ERP_Medication_Compounding,
+                            std::make_unique<KbvMedicationCompoundingValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_ERP_Medication_FreeText, std::make_unique<KbvMedicationFreeTextValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_ERP_Medication_Ingredient,
+                            std::make_unique<KbvMedicationIngredientValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_ERP_Medication_PZN, std::make_unique<KbvMedicationPZNValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_FOR_Coverage, std::make_unique<KbvCoverageValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_ERP_Prescription, std::make_unique<KbvMedicationRequestValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_FOR_Organization, std::make_unique<KbvOrganizationValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_FOR_Patient, std::make_unique<KbvPatientValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_FOR_Practitioner, std::make_unique<KbvPractitionerValidator_V1_0_2>());
+    mValidators.try_emplace(KBV_PR_ERP_PracticeSupply, std::make_unique<KbvPracticeSupplyValidator_V1_0_2>());
 }
 
 
 void InCodeValidator::validate(const model::ResourceBase& resource, SchemaType schemaType,
-                               model::ResourceVersion::KbvItaErp version, const XmlValidator& xmlValidator) const
-{
-    if (mMandatoryValidation.count(schemaType) > 0)
-    {
-        const auto& candidate = mKbvValidators.find(KeyKbv(schemaType, version));
-        ErpExpect(candidate != mKbvValidators.end(), HttpStatus::BadRequest,
-                  "invalid profile type|version " + std::string(magic_enum::enum_name(schemaType)) + "|" +
-                      std::string(model::ResourceVersion::v_str(version)));
-        Expect(candidate->second, "nullptr registered as resource validator");
-        candidate->second->validate(resource, xmlValidator, *this);
-    }
-}
-
-
-void InCodeValidator::validate(const model::ResourceBase& resource, SchemaType schemaType,
-                               model::ResourceVersion::DeGematikErezeptWorkflowR4 version,
                                const XmlValidator& xmlValidator) const
 {
     if (mMandatoryValidation.count(schemaType) > 0)
     {
-        const auto& candidate = mGematikValidators.find(KeyGem(schemaType, version));
-        ErpExpect(candidate != mGematikValidators.end(), HttpStatus::BadRequest,
-                  "invalid profile type|version " + std::string(magic_enum::enum_name(schemaType)) + "|" +
-                      std::string(model::ResourceVersion::v_str(version)));
+        const auto& candidate = mValidators.find(schemaType);
+        ErpExpect(candidate != mValidators.end(), HttpStatus::BadRequest,
+                  "invalid profile type: " + std::string(magic_enum::enum_name(schemaType)));
         Expect(candidate->second, "nullptr registered as resource validator");
         candidate->second->validate(resource, xmlValidator, *this);
     }
-}
-
-void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType,
-                               model::ResourceVersion::NotProfiled, const XmlValidator&) const
-{
-    Expect(mMandatoryValidation.count(schemaType) == 0,
-           "In-code validation not supported for un-profiled resources.");
-}
-
-
-void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType,
-                               model::ResourceVersion::DeGematikErezeptPatientenrechnungR4, const XmlValidator&) const
-{
-    Expect(mMandatoryValidation.count(schemaType) == 0,
-           "In-code validation not supported for PKV resources.");
-}
-
-void InCodeValidator::validate(const model::ResourceBase& resource, SchemaType schemaType,
-                  model::ResourceVersion::WorkflowOrPatientenRechnungProfile version, const XmlValidator& xmlValidator) const
-{
-    if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version))
-    {
-        auto gematikVersion = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version);
-        validate(resource, schemaType, gematikVersion, xmlValidator);
-    }
-    else
-    {
-        auto patVersion = std::get<model::ResourceVersion::DeGematikErezeptPatientenrechnungR4>(version);
-        validate(resource, schemaType, patVersion, xmlValidator);
-    }
-}
-
-void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType, model::ResourceVersion::Fhir,
-                               const XmlValidator&) const
-{
-    Expect(mMandatoryValidation.count(schemaType) == 0,
-           "In-code validation not supported for fhir resources.");
-}
-
-void InCodeValidator::validate(const model::ResourceBase&, SchemaType schemaType, model::ResourceVersion::AbgabedatenPkv,
-                               const XmlValidator&) const
-{
-    Expect(mMandatoryValidation.count(schemaType) == 0,
-           "In-code validation not supported for PKV resources.");
 }

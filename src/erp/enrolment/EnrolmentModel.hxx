@@ -23,10 +23,12 @@ class EnrolmentModel
 public:
     void set (std::string_view key, std::string_view stringValue);
     void set (std::string_view key, int64_t numberValue);
+    void set(std::string_view key, const rapidjson::Value& value);
 
     bool hasValue(std::string_view key) const;
 
     std::string getString (std::string_view key) const;
+    std::optional<std::string> getOptionalString (std::string_view key) const;
     std::optional<std::string> getOptionalDecodedString (std::string_view key) const;
     std::string getDecodedString (std::string_view key) const;
     SafeString getSafeString (std::string_view key) const;
@@ -39,11 +41,18 @@ public:
 
     EnrolmentModel (void);
     explicit EnrolmentModel (std::string_view jsonText);
+    EnrolmentModel(EnrolmentModel&&) = default;
     std::string serializeToString (void) const;
+    std::string serializeToString(std::string_view key) const;
 
-private:
+    rapidjson::Document& document();
+
+    virtual ~EnrolmentModel() = default;
+
+protected:
     rapidjson::Document mDocument;
 
+    void parse(std::string_view json);
     const rapidjson::Value& getValue (std::string_view key) const;
     const rapidjson::Value* getOptionalValue (std::string_view key) const;
 };

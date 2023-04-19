@@ -5,6 +5,7 @@
 
 #include "erp/service/CommunicationPostHandler.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/model/OperationOutcome.hxx"
 
 #include "erp/ErpRequirements.hxx"
 
@@ -430,6 +431,15 @@ TEST_F(CommunicationPostHandlerTest, InfoReq)//NOLINT(readability-function-cogni
     // The sender must have been taken from the access token.
     ASSERT_NO_FATAL_FAILURE(communication.sender());
     ASSERT_EQ(model::getIdentityString(*communication.sender()), InsurantA);
+
+    {
+        // Check that it works with basedOn containing a full Url:
+        jsonString = String::replaceAll(jsonString, "Task/", "https://erp.lu2.erezepttest.net:443/Task/");
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
+    }
 }
 
 TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cognitive-complexity)
@@ -474,7 +484,7 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
                         innerResponse.getBody(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
                         SchemaType::Gem_erxCommunicationReply,
                         model::ResourceVersion::supportedBundles(),
-                        std::nullopt));
+                        false));
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
     ASSERT_TRUE(communication->id()->isValidIheUuid());
@@ -547,6 +557,15 @@ TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cogni
     // The sender must have been taken from the access token.
     ASSERT_NO_FATAL_FAILURE(communication.sender());
     ASSERT_EQ(model::getIdentityString(*communication.sender()), InsurantA);
+
+    {
+        // Check that it works with basedOn containing a full Url:
+        jsonString = String::replaceAll(jsonString, "Task/", "https://erp.lu2.erezepttest.net:443/Task/");
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
+    }
 }
 
 TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-function-cognitive-complexity)
@@ -817,7 +836,7 @@ TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)//NOLINT(rea
 
 TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_20229.test("limit KVNR -> KVNR messages to 10 per task");
+    A_20229_01.test("limit KVNR -> KVNR messages to 10 per task");
 
     std::vector<Task> tasks;
 
@@ -939,7 +958,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
 
 TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_20230.test("restrict transfer for messages following the represantive schema to prescriptions that are ready or in-progress");
+    A_20230_01.test("restrict transfer for messages following the represantive schema to prescriptions that are ready or in-progress");
 
     // see "fill_tables_with_static_testvalues.sql"
     std::vector<Task::Status> tasksStatus = {
@@ -1117,6 +1136,11 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
     // Verify and decrypt the outer response. Also the generic part of the inner response.
     innerResponse = verifyOuterResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    std::optional<OperationOutcome> outcome;
+    ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+    EXPECT_EQ(outcome.value().issues().size(), 1);
+    EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Invalid request body");
+    EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(), "Payload must not exceed 10 KB.");
 }
 
 TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentReference_notAllowed)
@@ -1147,6 +1171,11 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentReference_notAllowed)
     // Verify and decrypt the outer response. Also the generic part of the inner response.
     auto innerResponse = verifyOuterResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    std::optional<OperationOutcome> outcome;
+    ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+    EXPECT_EQ(outcome.value().issues().size(), 1);
+    EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Invalid request body");
+    EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(), "Payload type must be 'contentString'.");
 }
 
 TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentAttachment_notAllowed)
@@ -1185,12 +1214,17 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentAttachment_notAllowed
     // Verify and decrypt the outer response. Also the generic part of the inner response.
     auto innerResponse = verifyOuterResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    std::optional<OperationOutcome> outcome;
+    ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+    EXPECT_EQ(outcome.value().issues().size(), 1);
+    EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Invalid request body");
+    EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(), "Payload type must be 'contentString'.");
 }
 
 
 TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_20885_02.test("Examination of insured person and eligibility");
+    A_20885_03.test("Examination of insured person and eligibility");
 
     // Create a client
     auto client = createClient();
@@ -1884,4 +1918,215 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_MissingAboutTag)
     // Verify and decrypt the outer response. Also the generic part of the inner response.
     auto innerResponse = verifyOuterResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
+}
+
+TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+
+    auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
+                                    .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
+    const auto* telematikId = "3-SMC-B-Testkarte-883110000120312";
+    EXPECT_NO_FATAL_FAILURE(
+        addChargeItemToDatabase({ .prescriptionId = task.prescriptionId(), .kvnrStr = task.kvnr().value().id(),
+                                  .accessCode = task.accessCode(), .telematikId = telematikId,
+                                  .healthCarePrescriptionUuid = task.healthCarePrescriptionUuid().value() }));
+
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
+                                 .setPrescriptionId(task.prescriptionId().toString())
+                                 .setRecipient(ActorRole::Pharmacists, telematikId)
+                                 .setPayload("ChargeChangeReq").createJsonString();
+
+    auto client = createClient();
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value().id()) };
+
+    ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+    auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+    auto innerResponse = verifyOuterResponse(outerResponse);
+    EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
+
+    EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
+
+    // The communication id must have been set in the header field "Location"
+    std::string location = innerResponse.getHeader().header(Header::Location).value();
+    EXPECT_EQ(String::starts_with(location, std::string(structure_definition::communicationLocation)), true);
+    std::string idString = location.substr(std::string(structure_definition::communicationLocation).length());
+    Uuid id(idString);
+    EXPECT_TRUE(id.isValidIheUuid());
+
+    std::optional<Communication> communication;
+    ASSERT_NO_THROW(
+        communication = Communication::fromJson(
+            canonicalJson(innerResponse.getBody()), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
+            *StaticData::getInCodeValidator(), SchemaType::Gem_erxCommunicationChargChangeReq));
+
+    // The communication id must have been added to the json body.
+    ASSERT_TRUE(communication->id().has_value());
+    ASSERT_TRUE(communication->id()->isValidIheUuid());
+
+    // The time sent must have been added to the json body.
+    ASSERT_TRUE(communication->timeSent().has_value());
+    ASSERT_NO_FATAL_FAILURE(communication->timeSent());
+
+    // The sender must have been taken from the access token.
+    ASSERT_NO_FATAL_FAILURE(communication->sender());
+    ASSERT_EQ(model::getIdentityString(*communication->sender()), InsurantG);
+
+    {
+        // Check that it works with basedOn containing a full Url:
+        jsonString = String::replaceAll(jsonString, "ChargeItem/", "https://erp.lu2.erezepttest.net:443/ChargeItem/");
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
+    }
+}
+
+TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+
+    auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
+                                    .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
+    const auto* telematikId = "3-SMC-B-Testkarte-883110000120312";
+    EXPECT_NO_FATAL_FAILURE(
+        addChargeItemToDatabase({ .prescriptionId = task.prescriptionId(), .kvnrStr = task.kvnr().value().id(),
+                                  .accessCode = task.accessCode(), .telematikId = telematikId,
+                                  .healthCarePrescriptionUuid = task.healthCarePrescriptionUuid().value() }));
+
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
+                                 .setPrescriptionId(task.prescriptionId().toString())
+                                 .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
+                                 .setPayload("ChargeChangeReply").createJsonString();
+
+    auto client = createClient();
+    const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(telematikId) };
+    ClientRequest request(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
+
+    auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
+    auto innerResponse = verifyOuterResponse(outerResponse);
+    EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirXmlUtf8));
+
+    EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
+
+    // The communication id must have been set in the header field "Location"
+    std::string location = innerResponse.getHeader().header(Header::Location).value();
+    EXPECT_EQ(String::starts_with(location, std::string(structure_definition::communicationLocation)), true);
+    std::string idString = location.substr(std::string(structure_definition::communicationLocation).length());
+    Uuid id(idString);
+    EXPECT_TRUE(id.isValidIheUuid());
+
+    std::optional<Communication> communication;
+    ASSERT_NO_THROW(
+        communication = Communication::fromXml(
+            innerResponse.getBody(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+            SchemaType::Gem_erxCommunicationChargChangeReply, model::ResourceVersion::supportedBundles(), false));
+
+    // The communication id must have been added to the json body.
+    ASSERT_TRUE(communication->id().has_value());
+    ASSERT_TRUE(communication->id()->isValidIheUuid());
+
+    // The time sent must have been added to the json body.
+    ASSERT_TRUE(communication->timeSent().has_value());
+    ASSERT_NO_FATAL_FAILURE(communication->timeSent());
+
+    // The sender must have been taken from the access token.
+    ASSERT_NO_FATAL_FAILURE(communication->sender());
+    ASSERT_EQ(model::getIdentityString(*communication->sender()), telematikId);
+}
+
+TEST_F(CommunicationPostHandlerTest, ChargChangeReqErr)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+
+    auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
+                                    .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
+
+    auto client = createClient();
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value().id()) };
+
+    {
+        // wrong prescription ID type (not PKV)
+        const auto prescriptionId = model::PrescriptionId::fromDatabaseId(
+            model::PrescriptionType::direkteZuweisung, task.prescriptionId().toDatabaseId());
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
+                                     .setPrescriptionId(prescriptionId.toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setPayload("ChargeChangeReq")
+                                     .createJsonString();
+
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
+    }
+    {
+        // referenced ChargeItem does not exist
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setPayload("ChargeChangeReq")
+                                     .createJsonString();
+
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
+    }
+}
+
+TEST_F(CommunicationPostHandlerTest, ChargChangeReplyErr)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+
+    auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
+                                    .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
+
+    auto client = createClient();
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value().id()) };
+
+    {
+        // wrong prescription ID type (not PKV)
+        const auto prescriptionId = model::PrescriptionId::fromDatabaseId(
+            model::PrescriptionType::direkteZuweisung, task.prescriptionId().toDatabaseId());
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
+                                     .setPrescriptionId(prescriptionId.toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setPayload("ChargeChangeReply")
+                                     .createJsonString();
+
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
+    }
+    {
+        // referenced ChargeItem does not exist
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setPayload("ChargeChangeReply")
+                                     .createJsonString();
+
+        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
+    }
 }

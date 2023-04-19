@@ -81,7 +81,7 @@ public:
     void SetUp (void) override
     {
         EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-        ServerTestBase::SetUp();
+        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
     }
 
     std::unique_ptr<Database> createDatabaseFrontend()

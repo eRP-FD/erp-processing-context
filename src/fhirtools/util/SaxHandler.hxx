@@ -24,6 +24,8 @@ public:
     SaxHandler();
     virtual ~SaxHandler();
 
+    void validateStringView(const std::string_view& xmlDocument, const XmlValidatorContext& schemaValidationContext);
+
     /// @brief a single Attribute to get the related properties
     /// the libxml2-function callback gets a particulatly ugly structure for the attribute list.
     /// The classes Attribute and AttributeList are wrappers around this structure
@@ -83,7 +85,6 @@ public:
 protected:
 
     void parseStringView(const std::string_view& xmlDocument);
-    void validateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext);
     void parseAndValidateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext);
     void parseFile(const std::filesystem::path& fileName);
 

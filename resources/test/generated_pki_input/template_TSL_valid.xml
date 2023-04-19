@@ -36,6 +36,55 @@
             <TSPServices>
                 <TSPService>
                     <ServiceInformation>
+                        <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/PKC</ServiceTypeIdentifier>
+                        <ServiceName>
+                            <Name xml:lang="DE">CN=ACLOS.FD-CA1 TEST-ONLY,OU=Fachanwendungsspezifischer Dienst-CA der Telematikinfrastruktur,O=achelos GmbH NOT-VALID,C=DE</Name>
+                        </ServiceName>
+                        <ServiceDigitalIdentity>
+                            <DigitalId>
+                                <X509Certificate>
+                                    MIIDGDCCAr6gAwIBAgIRAN3ecLSmcknDgq4yONOsS5UwCgYIKoZIzj0EAwIwgYIxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMTQwMgYDVQQLDCtaZW50cmFsZSBSb290LUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMRwwGgYDVQQDDBNBQ0xPUy5SQ0EgVEVTVC1PTkxZMB4XDTIyMDEzMDIzMDAwMFoXDTI3MDEzMTIzMDAwMFowgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBMSBURVNULU9OTFkwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEkRKyr9aCrn3uTE3yFRD192nJJsfSOo/gp/mquhFtIeujGcNZReVQmr5WUHZVFBQ4ockpfsQvijvXVgQrywCBH6OB+jCB9zAdBgNVHQ4EFgQUewxVJ07lpi9dHRHXsRv2e7nhRSUwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwUgYDVR0gBEswSTBHBggqghQATASBIzA7MDkGCCsGAQUFBwIBFi1odHRwOi8vd3d3LmFjaGVsb3MuZGUvcG9saWNpZXMvRUVfcG9saWN5Lmh0bWwwPQYIKwYBBQUHAQEEMTAvMC0GCCsGAQUFBzABhiFodHRwOi8vb2NzcC5hY2hlbG9zLmRlOjgwODAvb2NzcC8wHwYDVR0jBBgwFoAULPmk1OJP+7PPyoRiOPjzguuQGaIwCgYIKoZIzj0EAwIDSAAwRQIgfXOrM/MMnPuIenTDb8RB5mqU+AuoHY8bY3eINpXPSj0CIQCDH6ge0mLLuFnD0CdPtCP0LNOkwS91dBWQFzdoKij11w==</X509Certificate>
+                            </DigitalId>
+                        </ServiceDigitalIdentity>
+                        <ServiceStatus>http://uri.etsi.org/TrstSvc/Svcstatus/inaccord</ServiceStatus>
+                        <StatusStartingTime>2022-01-30T23:00:00Z</StatusStartingTime>
+                        <ServiceSupplyPoints>
+                            <ServiceSupplyPoint>http://ocsp-test.ocsp.telematik-test:8080/</ServiceSupplyPoint>
+                        </ServiceSupplyPoints>
+                        <ServiceInformationExtensions>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.175</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_cm_tls_c</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.168</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_tls_c</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.169</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_tls_s</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.155</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_aut</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.203</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_sig</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.202</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_enc</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.283</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_osig</ns:ExtensionValue>
+                            </Extension>
+                        </ServiceInformationExtensions>
+                    </ServiceInformation>
+                </TSPService>
+                <TSPService>
+                    <ServiceInformation>
                         <ServiceTypeIdentifier>http://uri.telematik/TrstSvc/Svctype/TrustedList/schemerules/DE</ServiceTypeIdentifier>
                         <ServiceName>
                             <Name xml:lang="DE">C=DE,ST=Berlin,L=Berlin,O=Example Inc.,OU=IT,CN=BNA signer</Name>

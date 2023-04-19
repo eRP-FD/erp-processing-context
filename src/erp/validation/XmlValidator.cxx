@@ -47,111 +47,50 @@ std::tuple<SchemaType, XmlValidator::SchemaPtr> XmlValidator::loadSchema(const s
 
 void XmlValidator::loadSchemas(const std::vector<std::string>& paths)
 {
+    using namespace std::string_literals;
     for (const auto& schemaFile : paths)
     {
-        auto [schemaType, schemaPtr] = loadSchema(schemaFile);
+        SchemaType schemaType{};
+        SchemaPtr schemaPtr{};
+        std::tie(schemaType, schemaPtr) = loadSchema(schemaFile);
+        Expect3(!mMiscSchemaPtrs.contains(schemaType) && !mXmlSchemaPtrs.contains(schemaType),
+                "Schema for type already loaded: "s.append(magic_enum::enum_name(schemaType)), std::logic_error);
         mMiscSchemaPtrs.try_emplace(schemaType, std::move(schemaPtr));
     }
 }
 
 
-void XmlValidator::loadKbvSchemas(const std::string& version, const std::vector<std::string>& paths,
+void XmlValidator::loadSchemas(const std::vector<std::string>& paths,
                                   const std::optional<model::Timestamp>& validFrom,
                                   const std::optional<model::Timestamp>& validUntil)
 {
+    using namespace std::string_literals;
     for (const auto& schemaFile : paths)
     {
-        auto [schemaType, schemaPtr] = loadSchema(schemaFile);
-        auto key = std::make_pair(schemaType, model::ResourceVersion::str_vKbv(version));
-        mKbvXmlSchemaPtrs.try_emplace(key, std::make_tuple(std::move(schemaPtr), validFrom, validUntil));
+        SchemaType schemaType{};
+        SchemaPtr schemaPtr{};
+        std::tie(schemaType, schemaPtr) = loadSchema(schemaFile);
+        Expect3(!mMiscSchemaPtrs.contains(schemaType) && !mXmlSchemaPtrs.contains(schemaType),
+                "Schema for type already loaded: "s.append(magic_enum::enum_name(schemaType)), std::logic_error);
+        mXmlSchemaPtrs.try_emplace(schemaType, std::make_tuple(std::move(schemaPtr), validFrom, validUntil));
     }
 }
 
-
-void XmlValidator::loadGematikSchemas(const std::string& version, const std::vector<std::string>& paths,
-                                      const std::optional<model::Timestamp>& validFrom,
-                                      const std::optional<model::Timestamp>& validUntil)
+std::unique_ptr<XmlValidatorContext>
+XmlValidator::getSchemaValidationContext(SchemaType schemaType) const
 {
-    for (const auto& schemaFile : paths)
+    using namespace std::string_literals;
+    if (const auto& candidate = mXmlSchemaPtrs.find(schemaType); candidate != mXmlSchemaPtrs.end())
     {
-        auto [schemaType, schemaPtr] = loadSchema(schemaFile);
-        auto key = std::make_pair(schemaType, model::ResourceVersion::str_vGematik(version));
-        mGematikXmlSchemaPtrs.try_emplace(key, std::make_tuple(std::move(schemaPtr), validFrom, validUntil));
+        Expect(candidate != mXmlSchemaPtrs.end(), "no schema loaded for "s.append(magic_enum::enum_name(schemaType)));
+        const auto& [schema, validFrom, validUntil] = candidate->second;
+        Expect(schema != nullptr, "SchemaPtr is null");
+        checkValidityTime(validFrom, validUntil, std::string{magic_enum::enum_name(schemaType)});
+        return getContext(schema.get());
     }
-}
-
-
-std::unique_ptr<XmlValidatorContext>
-XmlValidator::getSchemaValidationContext(SchemaType schemaType,
-                                         model::ResourceVersion::DeGematikErezeptWorkflowR4 version) const
-{
-    const auto& candidate = mGematikXmlSchemaPtrs.find(std::make_pair(schemaType, version));
-    const std::string schemaVersionHint =
-        std::string(magic_enum::enum_name(schemaType)) + "|" + std::string(model::ResourceVersion::v_str(version));
-    Expect(candidate != mGematikXmlSchemaPtrs.end(), "no schema loaded for " + schemaVersionHint);
-
-    const auto& [schema, validFrom, validUntil] = candidate->second;
-    Expect(schema != nullptr, "SchemaPtr is null");
-    checkValidityTime(validFrom, validUntil, schemaVersionHint);
-
-    return getContext(schema.get());
-}
-
-std::unique_ptr<XmlValidatorContext>
-XmlValidator::getSchemaValidationContext(SchemaType schemaType,
-                               model::ResourceVersion::WorkflowOrPatientenRechnungProfile version) const
-{
-    if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version))
-    {
-        return getSchemaValidationContext(schemaType, std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(version));
-    }
-    return getSchemaValidationContext(schemaType, std::get<model::ResourceVersion::DeGematikErezeptPatientenrechnungR4>(version));
-}
-
-std::unique_ptr<XmlValidatorContext>
-XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::DeGematikErezeptPatientenrechnungR4) const
-{
-    return getSchemaValidationContextNoVer(schemaType);
-}
-
-std::unique_ptr<XmlValidatorContext>
-XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::AbgabedatenPkv) const
-{
-    return getSchemaValidationContextNoVer(schemaType);
-}
-
-std::unique_ptr<XmlValidatorContext>
-XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::KbvItaErp version) const
-{
-    auto candidate = mKbvXmlSchemaPtrs.find(std::make_pair(schemaType, version));
-    const std::string schemaVersionHint =
-        std::string(magic_enum::enum_name(schemaType)) + "|" + std::string(model::ResourceVersion::v_str(version));
-    Expect(candidate != mKbvXmlSchemaPtrs.end(), "no schema loaded for " + schemaVersionHint);
-    const auto& [schema, validFrom, validUntil] = candidate->second;
-    Expect(schema != nullptr, "SchemaPtr is null");
-    checkValidityTime(validFrom, validUntil, schemaVersionHint);
-
-    return getContext(schema.get());
-}
-
-std::unique_ptr<XmlValidatorContext>
-XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::NotProfiled) const
-{
-    return getSchemaValidationContextNoVer(schemaType);
-}
-
-std::unique_ptr<XmlValidatorContext>
-XmlValidator::getSchemaValidationContext(SchemaType schemaType, model::ResourceVersion::Fhir) const
-{
-    return getSchemaValidationContextNoVer(schemaType);
-}
-
-std::unique_ptr<XmlValidatorContext> XmlValidator::getSchemaValidationContextNoVer(SchemaType schemaType) const
-{
     auto candidate = mMiscSchemaPtrs.find(schemaType);
     Expect(candidate != mMiscSchemaPtrs.end() && candidate->second != nullptr,
-           "no schema loaded for type " + std::string(magic_enum::enum_name(schemaType)));
-
+        "no schema loaded for type "s.append(magic_enum::enum_name(schemaType)));
 
     return getContext(candidate->second.get());
 }

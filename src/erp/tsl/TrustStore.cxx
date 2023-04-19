@@ -61,7 +61,7 @@ namespace
             {
                 // show the warning only for the valid certificate
                 const model::Timestamp timestamp(iterator->second.serviceAcceptanceHistory.begin()->first);
-                LOG(WARNING) << TslError("Important: new TSL CA is going to be active from " + timestamp.toXsDateTime()
+                TLOG(WARNING) << TslError("Important: new TSL CA is going to be active from " + timestamp.toXsDateTime()
                                          + ", [" + iterator->second.certificate.toBase64() + "]",
                                          TslErrorCode::TSL_CA_UPDATE_WARNING).what();
             }
@@ -69,7 +69,7 @@ namespace
             {
                 // the certificates are rejected and can not be used as new CA
                 // Gematik does not require to output an error in this case
-                LOG(WARNING) << "New TSL CA is provided in TSL, but it is revoked.";
+                TLOG(WARNING) << "New TSL CA is provided in TSL, but it is revoked.";
                 result = false;
             }
         }
@@ -77,7 +77,7 @@ namespace
         {
             // According to TUC_PKI_013 the problem with multiple CAs must be logged,
             // but it should not affect other CAs
-            LOG(ERROR) << TslError("Only one new TI-Trust-Anchor is allowed",
+            TLOG(ERROR) << TslError("Only one new TI-Trust-Anchor is allowed",
                                    TslErrorCode::MULTIPLE_TRUST_ANCHOR).what();
 
             result = false;
@@ -98,12 +98,12 @@ namespace
 
     X509Certificate getMainTslSignerCa()
     {
-        VLOG(2) << "getTslSignerCa";
+        TVLOG(2) << "getTslSignerCa";
 
         const std::string initialCaDerPath = Configuration::instance().getOptionalStringValue(
             ConfigurationKey::TSL_INITIAL_CA_DER_PATH, "/erp/config/tsl/tsl-ca.der");
 
-        VLOG(1) << "initial TSL Signer CA path: " << initialCaDerPath;
+        TVLOG(2) << "initial TSL Signer CA path: " << initialCaDerPath;
         Expect(!initialCaDerPath.empty(), "Initial TSL signer CA path must be set.");
         Expect(FileHelper::exists(initialCaDerPath), "Initial TSL signer CA file must exist");
 
@@ -113,12 +113,12 @@ namespace
 
     std::optional<X509Certificate> getNewTslSignerCa()
     {
-        VLOG(2) << "getNewTslSignerCa";
+        TVLOG(2) << "getNewTslSignerCa";
         const std::string initialCaDerPathNew = Configuration::instance().getOptionalStringValue(
             ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW, "");
         if (!initialCaDerPathNew.empty())
         {
-            LOG(INFO) << "New TSL Signer CA is configured.";
+            TVLOG(0) << "New TSL Signer CA is configured.";
             return getCertificateFromDerFile(initialCaDerPathNew);
         }
 
@@ -163,16 +163,16 @@ std::vector<X509Certificate> TrustStore::getTslSignerCas() const
 
     if (newTslSignerCa.has_value())
     {
-        LOG(INFO) << "start: " << newTslSignerCaStart;
+        TVLOG(0) << "start: " << newTslSignerCaStart;
         if (newTslSignerCaStart.empty()
             || model::Timestamp::now() > model::Timestamp::fromFhirDateTime(newTslSignerCaStart))
         {
-            LOG(INFO) << "New TSL Signer CA is used.";
+            TVLOG(0) << "New TSL Signer CA is used.";
             tslSignerCaCerts.emplace_back(*newTslSignerCa);
         }
         else
         {
-            LOG(INFO) << "New TSL Signer CA is configured for future and is ignored.";
+            TVLOG(0) << "New TSL Signer CA is configured for future and is ignored.";
         }
     }
 

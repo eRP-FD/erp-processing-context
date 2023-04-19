@@ -33,7 +33,7 @@ uint64_t executeCountQuery(pqxx::work& transaction, const std::string_view& quer
 
     Expect(result.size() == 1, "Expecting one element as result containing count.");
     int64_t count = 0;
-    Expect(result.front().at(0).to(count), "Could not retrieve count of" + std::string(context) + " as int64");
+    Expect(result.front().at(0).to(count), "Could not retrieve count of " + std::string(context) + " as int64_t");
 
     return gsl::narrow<uint64_t>(count);
 }

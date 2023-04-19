@@ -45,23 +45,23 @@ class ErpProcessingContext(ConanFile):
                 'date/3.0.1',  # date can be removed as soon as we use C++20
                 'glog/0.6.0',
                 'gsl-lite/0.40.0',
-                'libxml2/2.10.3',
+                'libxml2/2.10.4',
                 'openssl/1.1.1t@erp/stable-1',
                 'rapidjson/cci.20220822',
                 'magic_enum/0.8.2',
-                'libpqxx/7.7.4',
+                'libpqxx/7.7.5',
                 'libpq/13.6',
-                'zstd/1.5.4',  # database compression
+                'zstd/1.5.5',  # database compression
                 'gtest/1.13.0',
                 'hiredis/1.1.0',
-                'redis-plus-plus/1.3.3',
+                'redis-plus-plus/1.3.7',
                 'zlib/1.2.13']
 
     def requirements(self):
         if self.options.with_tpmclient:
             self.requires('tpmclient/0.14.0')
         if self.options.with_hsmclient:
-            self.requires('hsmclient/2.5.0-B00')
+            self.requires('hsmclient/2.6.0-B70')
 
     def build_requirements(self):
         if self.options.with_sbom:

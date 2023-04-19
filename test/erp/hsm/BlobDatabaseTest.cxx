@@ -34,6 +34,7 @@ namespace {
     public:
         explicit MockBlobDatabaseWrapper (MockBlobDatabase& database) : mDatabase(database) {}
         Entry getBlob (BlobType type, BlobId id) const override {return mDatabase.getBlob(type,id);}
+        Entry getBlob (BlobType type, const ErpVector& name) const override {return mDatabase.getBlob(type, name);}
         std::vector<Entry> getAllBlobsSortedById (void) const override {return mDatabase.getAllBlobsSortedById();}
         BlobId storeBlob (Entry&& entry) override {return mDatabase.storeBlob(std::move(entry));}
         void deleteBlob (BlobType type, const ErpVector& name) override {mDatabase.deleteBlob(type,name);}

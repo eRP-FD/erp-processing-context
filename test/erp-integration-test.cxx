@@ -17,9 +17,9 @@ int main (int argc, char** argv)
 
     GLogConfiguration::init_logging(argv[0]);
     ::testing::InitGoogleTest(&argc, argv);
-    ::testing::Test::RecordProperty("BuildVersion", ErpServerInfo::BuildVersion);
-    ::testing::Test::RecordProperty("BuildType", ErpServerInfo::BuildType);
-    ::testing::Test::RecordProperty("ReleaseVersion", ErpServerInfo::ReleaseVersion);
-    ::testing::Test::RecordProperty("ReleaseDate", ErpServerInfo::ReleaseDate);
+    ::testing::Test::RecordProperty("BuildVersion", ErpServerInfo::BuildVersion().data());
+    ::testing::Test::RecordProperty("BuildType", ErpServerInfo::BuildType().data());
+    ::testing::Test::RecordProperty("ReleaseVersion", ErpServerInfo::ReleaseVersion().data());
+    ::testing::Test::RecordProperty("ReleaseDate", ErpServerInfo::ReleaseDate().data());
     return RUN_ALL_TESTS();
 }

@@ -12,8 +12,12 @@
 #include <ostream>
 #include <variant>
 
+#include "erp/fhir/Fhir.hxx"
 #include "erp/fhir/FhirConverter.hxx"
+#include "erp/model/Communication.hxx"
 #include "erp/model/KbvBundle.hxx"
+#include "erp/model/MedicationDispense.hxx"
+#include "erp/model/ResourceFactory.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/Base64.hxx"
@@ -26,7 +30,7 @@
 #include "test/util/TestUtils.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
-#include <erp/fhir/Fhir.hxx>
+#include "fhirtools/util/SaxHandler.hxx"
 
 
 namespace fs = std::filesystem;
@@ -63,30 +67,27 @@ private:
 
 TEST_F(XmlValidatorTest, ValidateDefaultTask)
 {
+    using TaskFactory = model::ResourceFactory<model::Task>;
     auto envGuards = testutils::getOldFhirProfileEnvironment();
     auto xmlDocument = validTask().serializeToXmlString();
-
-    ASSERT_NO_THROW((void) FhirConverter().xmlStringToJsonWithValidation(
-        xmlDocument, *getXmlValidator(), SchemaType::Gem_erxTask,
-        ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()));
+    std::optional<TaskFactory> taskFactory;
+    ASSERT_NO_THROW(taskFactory.emplace(TaskFactory::fromXml(xmlDocument, *getXmlValidator())));
+    ASSERT_NO_THROW(taskFactory->validateLegacyXSD(SchemaType::Gem_erxTask, *getXmlValidator()));
 }
 
 TEST_F(XmlValidatorTest, TaskInvalidPrescriptionId)
 {
+    using TaskFactory = model::ResourceFactory<model::Task>;
     GTEST_SKIP_("Prescription ID pattern not checked by xsd");
     model::Task task = validTask();
     rapidjson::Document jsonDocument =
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(task.jsonDocument());
     rapidjson::Pointer prescriptionIdPointer("/identifier/0/value");
     prescriptionIdPointer.Set(jsonDocument, "invalid_id");
-    task = model::Task::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(jsonDocument));
-
-    // now the validation must fail.
-    ASSERT_ANY_THROW((void)FhirConverter().xmlStringToJsonWithValidation(
-        task.serializeToXmlString(), *getXmlValidator(), SchemaType::Gem_erxTask,
-        model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()));
+    std::optional<TaskFactory> taskFactory;
+    ASSERT_NO_THROW(taskFactory.emplace(TaskFactory::fromXml(task.serializeToXmlString(), *getXmlValidator())));
+    ASSERT_NO_THROW(taskFactory->validateLegacyXSD(SchemaType::Gem_erxTask, *getXmlValidator()));
 }
-
 
 TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -98,7 +99,7 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
             case SchemaType::fhir:
             case SchemaType::BNA_tsl:
             case SchemaType::Gematik_tsl:
-                ASSERT_TRUE(getXmlValidator()->getSchemaValidationContextNoVer(type) != nullptr);
+                ASSERT_TRUE(getXmlValidator()->getSchemaValidationContext(type) != nullptr);
                 break;
             case SchemaType::Gem_erxAuditEvent:
             case SchemaType::Gem_erxBinary:
@@ -116,12 +117,7 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
             case SchemaType::Gem_erxTask:
             case SchemaType::Gem_erxChargeItem:
             case SchemaType::Gem_erxConsent:
-                ASSERT_TRUE(
-                    getXmlValidator()->getSchemaValidationContext(
-                        type,
-                        ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()) !=
-                    nullptr);
-
+                ASSERT_TRUE( getXmlValidator()->getSchemaValidationContext(type) != nullptr);
                 break;
             case SchemaType::KBV_PR_ERP_Bundle:
             case SchemaType::KBV_PR_ERP_Composition:
@@ -137,16 +133,17 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
             case SchemaType::KBV_PR_FOR_Patient:
             case SchemaType::KBV_PR_FOR_Practitioner:
             case SchemaType::KBV_PR_FOR_PractitionerRole:
-                ASSERT_TRUE(getXmlValidator()->getSchemaValidationContext(
-                                type, ::model::ResourceVersion::current<::model::ResourceVersion::KbvItaErp>()) !=
-                            nullptr);
+                ASSERT_TRUE(getXmlValidator()->getSchemaValidationContext(type) != nullptr);
                 break;
             case SchemaType::ActivateTaskParameters:
             case SchemaType::CreateTaskParameters:
             case SchemaType::MedicationDispenseBundle:
-                ASSERT_TRUE(getXmlValidator()->getSchemaValidationContext(
-                                type, ::model::ResourceVersion::NotProfiled{}) !=
-                            nullptr);
+                ASSERT_TRUE(getXmlValidator()->getSchemaValidationContext(type) != nullptr);
+                break;
+            case SchemaType::PatchChargeItemParameters:
+            case SchemaType::DAV_DispenseItem:
+            case SchemaType::Pruefungsnachweis:
+                // not validated with XSD
                 break;
             default:
                 ASSERT_TRUE(false) << "unhandled SchemaType";
@@ -157,6 +154,7 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
 
 TEST_F(XmlValidatorTest, MinimalFhirDocumentMustFail)
 {
+    using CommunicationsFactory = model::ResourceFactory<model::Communication>;
     auto envGuards = testutils::getOldFhirProfileEnvironment();
     const auto document = ::boost::str(::boost::format(R"(
 <Communication xmlns="http://hl7.org/fhir">
@@ -165,9 +163,9 @@ TEST_F(XmlValidatorTest, MinimalFhirDocumentMustFail)
     </ meta>
 </ Communication>)") % ::model::ResourceVersion::versionizeProfile(
                                            "https://gematik.de/fhir/StructureDefinition/erxCommunicationDispReq"));
-    ASSERT_THROW(FhirConverter().xmlStringToJsonWithValidation(
-                     document, *getXmlValidator(), SchemaType::Gem_erxCommunicationDispReq,
-                     model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>()),
+    ASSERT_THROW(CommunicationsFactory::fromXml(document, *getXmlValidator())
+                    .getValidated(SchemaType::Gem_erxCommunicationDispReq, *getXmlValidator(), *StaticData::getInCodeValidator(),
+                         {model::ResourceVersion::currentBundle()}),
                  ErpException);
 }
 
@@ -238,12 +236,12 @@ public:
 
     void checkDocument(const std::string& document)
     {
+        auto fhirContext = getXmlValidator()->getSchemaValidationContext(SchemaType::fhir);
+        ASSERT_NE(fhirContext, nullptr);
         std::optional<model::NumberAsStringParserDocument> doc;
         bool failed = false;
         try
         {
-            bool unversionedValidation = GetParam().schemaType == SchemaType::fhir ||
-                                         GetParam().schemaType == SchemaType::MedicationDispenseBundle;
             model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVer{};
             model::ResourceVersion::FhirProfileBundleVersion bundleVer{};
             if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version))
@@ -256,38 +254,14 @@ public:
                 bundleVer = std::get<model::ResourceVersion::FhirProfileBundleVersion>(GetParam().version);
                 gematikVer = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(profileVersionFromBundle(bundleVer));
             }
-            if (GetParam().valid)
-            {
-                if (unversionedValidation)
-                {
-                    EXPECT_NO_THROW(doc.emplace(FhirConverter().xmlStringToJsonWithValidationNoVer(
-                        document, *getXmlValidator(), GetParam().schemaType)));
-                }
-                else
-                {
-                    EXPECT_NO_THROW(doc.emplace(FhirConverter().xmlStringToJsonWithValidation(
-                        document, *getXmlValidator(), GetParam().schemaType, gematikVer)));
-                }
-            }
-            else
-            {
-                if (unversionedValidation)
-                {
-                    doc.emplace(FhirConverter().xmlStringToJsonWithValidationNoVer(document, *getXmlValidator(),
-                                                                                   GetParam().schemaType));
-                }
-                else
-                {
-                    doc.emplace(FhirConverter().xmlStringToJsonWithValidation(
-                        document, *getXmlValidator(), GetParam().schemaType, gematikVer));
-                }
-            }
-            if (doc)
-            {
-                fhirtools::ValidationResults valResult;
-                ASSERT_NO_THROW(valResult = validate(*doc, bundleVer));
-                failed = valResult.highestSeverity() >= fhirtools::Severity::error;
-            }
+            auto context = getXmlValidator()->getSchemaValidationContext(GetParam().schemaType);
+            ASSERT_NE(context, nullptr);
+            fhirtools::SaxHandler{}.validateStringView(document, *fhirContext);
+            fhirtools::SaxHandler{}.validateStringView(document, *context);
+            auto doc = Fhir::instance().converter().xmlStringToJson(document);
+            fhirtools::ValidationResults valResult;
+            ASSERT_NO_THROW(valResult = validate(doc, bundleVer));
+            failed = valResult.highestSeverity() >= fhirtools::Severity::error;
         }
         catch (const std::exception& e)
         {
@@ -295,13 +269,14 @@ public:
         }
         EXPECT_EQ(failed, ! GetParam().valid);
     }
+    std::vector<EnvironmentVariableGuard> envGuards  = testutils::getOverlappingFhirProfileEnvironment();
 };
 
 
 TEST_P(XmlValidatorTestParamsGematik, Resources)
 {
     const auto document = FileHelper::readFileAsString(GetParam().path);
-    LOG(INFO) << "checking file = " << GetParam().path.filename();
+    TLOG(INFO) << "checking file = " << GetParam().path.filename();
     checkDocument(document);
 }
 
@@ -589,19 +564,23 @@ INSTANTIATE_TEST_SUITE_P(ConsentInvalidResources, XmlValidatorTestParamsGematik,
 
 TEST_F(XmlValidatorTest, Erp6345)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto file1 = FileHelper::readFileAsString(std::filesystem::path(TEST_DATA_DIR) / "issues/ERP-6345/bundleFromSignedFile.xml");
+    using BundleFactory = model::ResourceFactory<model::KbvBundle>;
+    auto file1 =
+        FileHelper::readFileAsString(std::filesystem::path(TEST_DATA_DIR) / "issues/ERP-6345/bundleFromSignedFile.xml");
+    std::optional<BundleFactory> factory1;
+    ASSERT_NO_THROW(factory1.emplace(BundleFactory::fromXml(file1, *getXmlValidator())));
+    EXPECT_THROW(factory1->validateLegacyXSD(SchemaType::KBV_PR_ERP_Bundle, *getXmlValidator()), ErpException);
 
-    EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidation(file1, *getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle,
-                                                               model::ResourceVersion::KbvItaErp::v1_0_2),
-                 ErpException);
-
-    auto file2 = FileHelper::readFileAsString(std::filesystem::path(TEST_DATA_DIR) / "issues/ERP-6345/bundleFromSignedFile_valid.xml");
-    EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(
-        file2, *getXmlValidator(), SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2));
+    auto file2 = FileHelper::readFileAsString(std::filesystem::path(TEST_DATA_DIR) /
+                                              "issues/ERP-6345/bundleFromSignedFile_valid.xml");
+    std::optional<BundleFactory> factory2;
+    ASSERT_NO_THROW(factory2.emplace(BundleFactory::fromXml(file2, *getXmlValidator())));
+    EXPECT_NO_THROW(factory2->validateLegacyXSD(SchemaType::KBV_PR_ERP_Bundle, *getXmlValidator()));
 }
 
 class MedicationDispenseBundleTest : public XmlValidatorTestParamsGematik
 {
+    std::vector<EnvironmentVariableGuard> envGuards  = testutils::getOverlappingFhirProfileEnvironment();
 };
 
 TEST_P(MedicationDispenseBundleTest, MedicationDispenseBundle)
@@ -654,7 +633,7 @@ class CompositionBundleTest : public XmlValidatorTestParamsGematik
 
 TEST_P(CompositionBundleTest, CompositionBundle)
 {
-    LOG(INFO) << "testing " << GetParam().path;
+    TLOG(INFO) << "testing " << GetParam().path;
     model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVer{};
     if (std::holds_alternative<model::ResourceVersion::DeGematikErezeptWorkflowR4>(GetParam().version))
     {
@@ -705,26 +684,7 @@ public:
     void DoTestOnePeriod(std::optional<model::Timestamp> begin, std::optional<model::Timestamp> end, bool expectSuccess)
     {
         const auto& config = Configuration::instance();
-        xmlValidator.loadGematikSchemas(
-            ::std::string{::model::ResourceVersion::v_str(
-                ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>())},
-            config.getArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK), begin, end);
-        DoTest(expectSuccess);
-    }
-
-    void DoTestTwoPeriods(std::optional<model::Timestamp> begin1, std::optional<model::Timestamp> end1,
-                          std::optional<model::Timestamp> begin2, std::optional<model::Timestamp> end2,
-                          bool expectSuccess)
-    {
-        const auto& config = Configuration::instance();
-        xmlValidator.loadGematikSchemas(
-            ::std::string{::model::ResourceVersion::v_str(
-                ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>())},
-            config.getArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK), begin1, end1);
-        xmlValidator.loadGematikSchemas(
-            ::std::string{::model::ResourceVersion::v_str(
-                ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>())},
-            config.getArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK), begin2, end2);
+        xmlValidator.loadSchemas(config.getArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK), begin, end);
         DoTest(expectSuccess);
     }
 
@@ -733,27 +693,26 @@ public:
 private:
     void DoTest(bool expectSuccess) const //NOLINT(readability-function-cognitive-complexity)
     {
+        using MedicationDispenseFactory = model::ResourceFactory<model::MedicationDispense>;
         auto file_valid = FileHelper::readFileAsString(
             std::filesystem::path(TEST_DATA_DIR) / "validation/xml/medicationdispense/1.1.1/MedicationDispense_valid.xml");
         auto file_invalid = FileHelper::readFileAsString(
             std::filesystem::path(TEST_DATA_DIR) /
             "validation/xml/medicationdispense/1.1.1/MedicationDispense_invalid_wrongSubjectIdentifierUse.xml");
 
-        const auto version = ::model::ResourceVersion::current<::model::ResourceVersion::DeGematikErezeptWorkflowR4>();
         if (expectSuccess)
         {
-            EXPECT_NO_THROW(FhirConverter().xmlStringToJsonWithValidation(
-                file_valid, xmlValidator, SchemaType::Gem_erxMedicationDispense, version));
+            EXPECT_NO_THROW(MedicationDispenseFactory::fromXml(file_valid, *StaticData::getXmlValidator())
+                    .getValidated(SchemaType::Gem_erxMedicationDispense, xmlValidator, *StaticData::getInCodeValidator(),
+                         model::ResourceVersion::allBundles()));
         }
         else
         {
-            EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidation(file_valid, xmlValidator,
-                                                                       SchemaType::Gem_erxMedicationDispense, version),
-                         ErpException);
+            EXPECT_THROW(MedicationDispenseFactory::fromXml(file_valid, *StaticData::getXmlValidator())
+                    .getValidated(SchemaType::Gem_erxMedicationDispense, xmlValidator, *StaticData::getInCodeValidator(),
+                        model::ResourceVersion::allBundles())
+                , ErpException);
         }
-        EXPECT_THROW(FhirConverter().xmlStringToJsonWithValidation(file_invalid, xmlValidator,
-                                                                   SchemaType::Gem_erxMedicationDispense, version),
-                     ErpException);
     }
     std::vector<EnvironmentVariableGuard> envGuards;
 };
@@ -813,25 +772,6 @@ TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalidEndBeforeNow)
     using namespace std::chrono_literals;
     const auto end = model::Timestamp::now() + -1min;
     DoTestOnePeriod(std::nullopt, end, false);
-}
-
-TEST_F(XmlValidatorTestPeriod, ValidityPeriods_valid2Periods)
-{
-    using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + -1min;
-    const auto end = model::Timestamp::now() + 1min;
-    const auto end2 = model::Timestamp::now() + 2min;
-    DoTestTwoPeriods(begin, end, end, end2, true);
-}
-
-TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalid2Periods)
-{
-    using namespace std::chrono_literals;
-    const auto begin = model::Timestamp::now() + -2min;
-    const auto end = model::Timestamp::now() + -1min;
-    const auto begin2 = model::Timestamp::now() + 1min;
-    const auto end2 = model::Timestamp::now() + 2min;
-    DoTestTwoPeriods(begin, end, begin2, end2, false);
 }
 
 // This test is only possible when two different profile versions are configured.

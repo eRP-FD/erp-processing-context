@@ -8,6 +8,8 @@
 
 class DurationConsumer;
 
+#include "JsonLog.hxx"
+
 #include <chrono>
 #include <functional>
 #include <optional>
@@ -27,7 +29,8 @@ public:
         const std::string& category,
         const std::string& description,
         const std::string& sessionIdentifier,
-        const std::unordered_map<std::string, std::string>& keyValueMap)>;
+        const std::unordered_map<std::string, std::string>& keyValueMap,
+        const std::optional<JsonLog::LogReceiver>& logReceiverOverride)>;
 
     explicit DurationTimer (
         Receiver& receiver,
@@ -41,7 +44,7 @@ public:
     void keyValue(const std::string& key, const std::string& value);
 
 private:
-    Receiver& mReceiver;
+    Receiver mReceiver;
     std::string mCategory;
     std::string mDescription;
     std::string mSessionIdentifier;

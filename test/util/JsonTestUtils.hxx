@@ -12,6 +12,11 @@
 #include <rapidjson/document.h>
 #include <string>
 
+namespace ResourceTemplates
+{
+struct MedicationOptions;
+}
+
 std::string canonicalJson(const std::string& json);
 std::string jsonToString(const rapidjson::Document& json);
 
@@ -44,6 +49,7 @@ public:
     CommunicationJsonStringBuilder& setTimeReceived(const std::string& timeReceived);
     CommunicationJsonStringBuilder& setPayload(const std::string& contentString);
     CommunicationJsonStringBuilder& setAbout(const std::string& about);
+    CommunicationJsonStringBuilder& setMedicationOptions(ResourceTemplates::MedicationOptions medicationOpts);
     model::Communication::MessageType messageType() const { return mMessageType; }
     std::optional<std::string> prescriptionId() const { return mPrescriptionId; }
     std::optional<std::string> accessCode() const { return mAccessCode; }
@@ -53,6 +59,8 @@ public:
     std::optional<std::string> timeReceived() const { return mTimeReceived; }
     std::optional<std::string> payload() const { return mPayload; }
     std::optional<std::string> about() const { return mAbout; }
+
+    ~CommunicationJsonStringBuilder();
 
 private:
     model::Communication::MessageType                 mMessageType;       // ["InfoReq", "ChargChangeReq", "ChargChangeReply", "Reply", "DispReq", "Representative"]
@@ -64,6 +72,7 @@ private:
     std::optional<std::string>                        mTimeReceived;      // e.g. "2020-01-23T12:34"
     std::optional<std::string>                        mPayload;           // e.g. "Hello, do you ..."
     std::optional<std::string>                        mAbout;
+    std::unique_ptr<ResourceTemplates::MedicationOptions> mMedicationOptions;
     model::ResourceVersion::DeGematikErezeptWorkflowR4 mProfileVersion;
 };
 

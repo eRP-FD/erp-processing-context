@@ -90,32 +90,19 @@ AuditDataCollector& AuditDataCollector::setConsentId(const std::string_view& con
     return *this;
 }
 
-AuditDataCollector& AuditDataCollector::setPnwPzNumber(const std::string_view& pzNumber)
-{
-    mPnwPzNumber = pzNumber;
-    return *this;
-}
-
 model::AuditData AuditDataCollector::createData() const
 {
     Expect3(mEventId.has_value(), "Event ID should not be missing", std::logic_error);
 
-    const auto isEventIdGetAllTasksWithPzNumber = (model::AuditEventId::GET_Tasks_by_pharmacy_with_pz == mEventId);
-    Expect3(isEventIdGetAllTasksWithPzNumber == mPnwPzNumber.has_value(),
-            "PNW PZ number should be present if and only if event ID is GET_Tasks_by_pharmacy_with_pz",
-            std::logic_error);
-
     const bool isEventCausedByPatient = model::isEventCausedByPatient(*mEventId);
     return model::AuditData(
         *mEventId,
-        model::AuditMetaData(isEventCausedByPatient ? std::optional<std::string>() :
-                                 model::isEventCausedByRepresentative(*mEventId) ? assertHasValue(mAgentName) : mAgentName,
-                             isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho),
-                             !isEventIdGetAllTasksWithPzNumber ? std::optional<std::string>() : assertHasValue(mPnwPzNumber)),
+        model::AuditMetaData(isEventCausedByPatient                            ? std::optional<std::string>()
+                             : model::isEventCausedByRepresentative(*mEventId) ? assertHasValue(mAgentName)
+                                                                               : mAgentName,
+                             isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho)),
         assertHasValue(mAction), model::AuditEvent::AgentType::human, assertHasValue(mInsurantKvnr),
-        assertHasValue(mDeviceId),
-        mPrescriptionId,
-        mConsentId);
+        assertHasValue(mDeviceId), mPrescriptionId, mConsentId);
 }
 
 bool AuditDataCollector::shouldCreateAuditEventOnSuccess() const noexcept

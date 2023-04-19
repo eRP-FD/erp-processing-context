@@ -7,19 +7,19 @@
 #include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/util/FileHelper.hxx"
-#include "erp/model/Kvnr.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/util/search/UrlArguments.hxx"
+#include "test_config.h"
 #include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/ResourceManager.hxx"
-
-#include "test_config.h"
+#include "test/util/ResourceTemplates.hxx"
 
 using namespace ::std::literals;
 
@@ -33,7 +33,7 @@ public:
         {
             GTEST_SKIP();
         }
-        PostgresDatabaseTest::SetUp();
+        ASSERT_NO_FATAL_FAILURE(PostgresDatabaseTest::SetUp());
     }
 
     void cleanup() override
@@ -63,10 +63,7 @@ public:
             task.setStatus(::model::Task::Status::ready);
             database().updateTaskStatusAndSecret(task);
 
-            auto prescriptionXML =
-                resourceManager.getStringResource("test/EndpointHandlerTest/kbv_pkv_bundle_template.xml");
-            prescriptionXML = String::replaceAll(prescriptionXML, "##PRESCRIPTION_ID##", id.toString());
-            prescriptionXML = String::replaceAll(prescriptionXML, "##KVNR##", ::std::string{kvnr});
+            auto prescriptionXML = ResourceTemplates::kbvBundlePkvXml({id, model::Kvnr(kvnr)});
             auto prescription = ::model::Bundle::fromXmlNoValidation(prescriptionXML);
             auto signedPrescription =
                 ::model::Binary{prescription.getId().toString(),
@@ -195,10 +192,10 @@ TEST_F(PostgresBackendChargeItemTest, storeChargeInformation)//NOLINT(readabilit
     ASSERT_TRUE(chargeInformationFromDatabase.unsignedPrescription);
     EXPECT_EQ(chargeInformation[0].unsignedPrescription->serializeToJsonString(),
               chargeInformationFromDatabase.unsignedPrescription->serializeToJsonString());
-    EXPECT_EQ(chargeInformation[0].dispenseItem.serializeToJsonString(),
-              chargeInformationFromDatabase.dispenseItem.serializeToJsonString());
-    EXPECT_EQ(chargeInformation[0].unsignedDispenseItem.serializeToJsonString(),
-              chargeInformationFromDatabase.unsignedDispenseItem.serializeToJsonString());
+    EXPECT_EQ(chargeInformation[0].dispenseItem->serializeToJsonString(),
+              chargeInformationFromDatabase.dispenseItem->serializeToJsonString());
+    EXPECT_EQ(chargeInformation[0].unsignedDispenseItem->serializeToJsonString(),
+              chargeInformationFromDatabase.unsignedDispenseItem->serializeToJsonString());
 
     ASSERT_TRUE(chargeInformationFromDatabase.receipt);
     EXPECT_EQ(chargeInformation[0].receipt->serializeToJsonString(),
@@ -302,14 +299,14 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
     ASSERT_TRUE(chargeInformationFromDatabase.unsignedPrescription);
     EXPECT_EQ(chargeInformationForUpdate.unsignedPrescription->serializeToJsonString(),
               chargeInformationFromDatabase.unsignedPrescription->serializeToJsonString());
-    EXPECT_NE(chargeInformation[0].dispenseItem.serializeToJsonString(),
-              chargeInformationFromDatabase.dispenseItem.serializeToJsonString());
-    EXPECT_EQ(chargeInformationForUpdate.dispenseItem.serializeToJsonString(),
-              chargeInformationFromDatabase.dispenseItem.serializeToJsonString());
-    EXPECT_NE(chargeInformation[0].unsignedDispenseItem.serializeToJsonString(),
-              chargeInformationFromDatabase.unsignedDispenseItem.serializeToJsonString());
-    EXPECT_EQ(chargeInformationForUpdate.unsignedDispenseItem.serializeToJsonString(),
-              chargeInformationFromDatabase.unsignedDispenseItem.serializeToJsonString());
+    EXPECT_NE(chargeInformation[0].dispenseItem->serializeToJsonString(),
+              chargeInformationFromDatabase.dispenseItem->serializeToJsonString());
+    EXPECT_EQ(chargeInformationForUpdate.dispenseItem->serializeToJsonString(),
+              chargeInformationFromDatabase.dispenseItem->serializeToJsonString());
+    EXPECT_NE(chargeInformation[0].unsignedDispenseItem->serializeToJsonString(),
+              chargeInformationFromDatabase.unsignedDispenseItem->serializeToJsonString());
+    EXPECT_EQ(chargeInformationForUpdate.unsignedDispenseItem->serializeToJsonString(),
+              chargeInformationFromDatabase.unsignedDispenseItem->serializeToJsonString());
 
     ASSERT_TRUE(chargeInformationFromDatabase.receipt);
     EXPECT_EQ(chargeInformationForUpdate.receipt->serializeToJsonString(),

@@ -566,7 +566,7 @@ bool FhirStructureDefinition::Builder::ensureSliceBaseElement(const std::shared_
         }
     }
     Expect(name.suffix.empty(), "Cannot synthesize base element for: " + sliceElement->originalName());
-    LOG(WARNING) << "No unsliced element for: " << sliceElement->originalName() << " - synthesizing";
+    TLOG(INFO) << "No unsliced element for: " << sliceElement->originalName() << " - synthesizing";
     auto originalName = splitSlicedName(sliceElement->originalName());
     return addElementInternal(FhirElement::Builder{*sliceElement}
                                   .name(std::string{name.baseElement})

@@ -25,7 +25,7 @@ protected:
                             const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator) const = 0;
 };
 
-class KbvMedicationIngredientValidator_V1_0_1 : public KbvMedicationIngredientValidator
+class KbvMedicationIngredientValidator_V1_0_2 : public KbvMedicationIngredientValidator
 {
 protected:
     void doValidate(const model::KbvMedicationIngredient& kbvMedicationCompounding, const XmlValidator& xmlValidator,
@@ -38,8 +38,6 @@ private:
     void ingredientStrengthNumerator_erp_begrenzungValue(
         const model::KbvMedicationIngredient& kbvMedicationIngredient) const;
 };
-
-using KbvMedicationIngredientValidator_V1_0_2 = KbvMedicationIngredientValidator_V1_0_1;
 
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVMEDICATIONINGREDIENTVALIDATOR_HXX

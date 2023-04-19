@@ -13,7 +13,6 @@ PostgresConnection::PostgresConnection(const std::string_view& connectionString)
     , mConnection()
     , mErrorHandler()
 {
-    connectIfNeeded();
 }
 
 
@@ -22,7 +21,11 @@ void PostgresConnection::connectIfNeeded()
     if (! mConnection || ! mConnection->is_open())
     {
         TVLOG(1) << "connecting to database";
+        mConnectionInfo = {};
         mConnection = std::make_unique<pqxx::connection>(mConnectionString);
+        mConnectionInfo = std::make_optional<DatabaseConnectionInfo>(
+            {.dbname = mConnection->dbname(), .hostname = mConnection->hostname(), .port = mConnection->port()});
+        TVLOG(1) << "connected to " << toString(mConnectionInfo.value());
         mErrorHandler = std::make_unique<ErrorHandler>(*mConnection);
     }
 }
@@ -30,8 +33,12 @@ void PostgresConnection::connectIfNeeded()
 
 void PostgresConnection::close()
 {
-    TVLOG(1) << "closing connection to database";
+    if (mConnectionInfo)
+    {
+        TVLOG(1) << "closing connection to database " << toString(*mConnectionInfo);
+    }
     mConnection.reset();
+    mConnectionInfo = {};
 }
 
 
@@ -41,11 +48,16 @@ std::unique_ptr<pqxx::work> PostgresConnection::createTransaction()
     TVLOG(1) << "transaction start";
     try
     {
+        Expect3(mConnection, "connection to database not established", std::logic_error);
         transaction = std::make_unique<pqxx::work>(*mConnection);
     }
     catch (const pqxx::broken_connection& brokenConnection)
     {
         TVLOG(1) << "caught pqxx::broken_connection: " << brokenConnection.what();
+        if (mConnectionInfo)
+        {
+            TLOG(WARNING) << "lost connection to " << toString(*mConnectionInfo);
+        }
         close();
         connectIfNeeded();
         TVLOG(1) << "transaction start 2nd try";
@@ -60,6 +72,11 @@ PostgresConnection::operator pqxx::connection&() const
 {
     Expect3(mConnection, "connection object is null", std::logic_error);
     return *mConnection;
+}
+
+std::optional<DatabaseConnectionInfo> PostgresConnection::getConnectionInfo() const
+{
+    return mConnectionInfo;
 }
 
 

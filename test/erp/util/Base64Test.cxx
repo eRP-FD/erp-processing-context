@@ -150,7 +150,7 @@ TEST_F(Base64Test, adjustSizeBeforeDecoding)
 
 TEST_F(Base64Test, cleanupForDecoding)
 {
-    const std::string data = Base64::cleanupForDecoding("1 2\t3\v4\f5\r6\n7\08"s);
+    const std::string data = Base64::cleanupForDecoding("1 2\t3\v4\f5\r6\n7\08\xff"s);
     ASSERT_EQ(data, "12345678");
 }
 

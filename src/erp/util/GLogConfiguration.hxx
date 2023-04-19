@@ -45,10 +45,9 @@ public:
         const std::string& logDir,
         int vLogMaxValue);
 
-    static std::string getProcessUuid();
-
 private:
     static int getLogLevelInt(const std::string& logLevelString);
+    static void erpLogPrefix(std::ostream& s, const google::LogMessageInfo& l, void*);
 };
 
 #endif

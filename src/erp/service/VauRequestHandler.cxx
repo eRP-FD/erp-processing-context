@@ -29,8 +29,9 @@
 #include "erp/util/TLog.hxx"
 
 #include <boost/exception/diagnostic_information.hpp>
-#include <unordered_set>
+#include <pqxx/except>
 #include <typeinfo>
+#include <unordered_set>
 
 
 namespace
@@ -237,6 +238,18 @@ void runJwtInvalidRfcFormatExceptionHandler(const JwtInvalidRfcFormatException& 
     fillErrorResponse(innerResponse, HttpStatus::Unauthorized, innerRequest, errorText, {}/*diagnostics*/);
 }
 
+template<typename PqxxException>
+void runPqxxExceptionHandler(const PqxxException& e, const std::unique_ptr<ServerRequest>& innerRequest,
+                             ServerResponse& innerResponse, AccessLog& accessLog)
+{
+    const std::string& typeinfo = typeid(e).name();
+    TVLOG(1) << "caught pqxx exception (" << typeinfo << ") " << e.what();
+    ResponseBuilder(innerResponse).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
+    accessLog.locationFromException(e);
+    accessLog.error(typeinfo + ": " + e.what());
+    fillErrorResponse(innerResponse, HttpStatus::InternalServerError, innerRequest, "internal server error", "");
+}
+
 } // namespace exception_handlers
 
 
@@ -254,10 +267,17 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
     DurationConsumerGuard durationConsumerGuard(
         sessionIdentifier, [](const std::chrono::steady_clock::duration duration, const std::string& category,
                               const std::string& description, const std::string& sessionIdentifier,
-                              const std::unordered_map<std::string, std::string>& keyValueMap) {
+                              const std::unordered_map<std::string, std::string>& keyValueMap,
+                              const std::optional<JsonLog::LogReceiver>& logReceiverOverride) {
             const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
-            auto log = timingLoggingEnabled ? JsonLog(LogId::INFO, JsonLog::makeWarningLogReceiver(), VLOG_IS_ON(0))
-                                            : JsonLog(LogId::INFO);
+            auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
+                if (logReceiverOverride)
+                {
+                    return *logReceiverOverride;
+                }
+                return timingLoggingEnabled ? JsonLog::makeInfoLogReceiver() : JsonLog::makeVLogReceiver(0);
+            };
+            JsonLog log(LogId::INFO, getLogReceiver());
             log.keyValue("log-type", "timing")
                 .keyValue("x-request-id", sessionIdentifier)
                 .keyValue("category", category)
@@ -437,7 +457,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
                 // GEMREQ-end role-check
                 shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnSuccess();
             }
-            catch(ErpException& exc)
+            catch(const ErpException& exc)
             {
                 // check if to write an audit event for error case:
                 shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnError(exc.status());
@@ -688,6 +708,18 @@ void VauRequestHandler::processException(const std::exception_ptr& exception,
             .clearBody()
             .keepAlive(false);
         outerSession.accessLog.locationFromException(e);
+    }
+    catch (const pqxx::internal_error& e)// directly derived from std::logic_error
+    {
+        exception_handlers::runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
+    }
+    catch (const pqxx::usage_error& e)// directly derived from std::logic_error
+    {
+        exception_handlers::runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
+    }
+    catch (const pqxx::failure& e)// base class for all pqxx runtime errors, derived from std::runtime_error
+    {
+        exception_handlers::runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
     }
     catch (const std::exception &e)
     {

@@ -7,7 +7,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(erp-processing-context)
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/erp-serverinfo.hxx.in" "${CMAKE_CURRENT_BINARY_DIR}/erp-serverinfo.hxx")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/erp-serverinfo.cxx.in" "${CMAKE_CURRENT_BINARY_DIR}/erp-serverinfo.cxx")
 
 set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
 
@@ -52,6 +52,7 @@ list(
         common/HttpStatus.cxx
         common/MimeType.cxx
         compression/Compression.cxx
+        compression/Deflate.cxx
         compression/ZStd.cxx
         compression/ZStdDictionary.cxx
         compression/ZStdDictionaryRepository.cxx
@@ -85,17 +86,18 @@ list(
         database/redis/RateLimiter.cxx
         hsm/BlobCache.cxx
         hsm/BlobDatabase.cxx
+        hsm/VsdmKeyCache.cxx
         enrolment/EnrolmentData.cxx
         enrolment/EnrolmentModel.cxx
         enrolment/EnrolmentRequestHandler.cxx
         enrolment/EnrolmentServer.cxx
+        enrolment/VsdmHmacKey.cxx
         fhir/Fhir.cxx
         fhir/FhirCanonicalizer.cxx
         fhir/FhirConverter.cxx
         fhir/internal/FhirJsonToXmlConverter.cxx
         fhir/internal/FhirSAXHandler.cxx
         hsm/ErpTypes.cxx
-        hsm/HsmClient.cxx
         hsm/HsmFactory.cxx
         hsm/HsmIdentity.cxx
         hsm/HsmPool.cxx
@@ -106,6 +108,7 @@ list(
         hsm/HsmSession.cxx
         hsm/HsmSessionExpiredException.cxx
         hsm/production/ProductionBlobDatabase.cxx
+        hsm/production/ProductionVsdmKeyBlobDatabase.cxx
         hsm/TeeTokenUpdater.cxx
         idp/Idp.cxx
         idp/IdpUpdater.cxx
@@ -116,7 +119,6 @@ list(
         model/ChargeItem.cxx
         model/Communication.cxx
         model/CommunicationPayload.cxx
-        model/CommunicationPayloadItem.cxx
         model/Composition.cxx
         model/Consent.cxx
         model/Device.cxx
@@ -156,6 +158,7 @@ list(
         model/PrescriptionType.cxx
         model/Reference.cxx
         model/Resource.cxx
+        model/ResourceFactory.cxx
         model/ResourceVersion.cxx
         model/Signature.cxx
         model/Subscription.cxx
@@ -223,6 +226,7 @@ list(
         service/task/ActivateTaskHandler.cxx
         service/task/CloseTaskHandler.cxx
         service/task/CreateTaskHandler.cxx
+        service/task/GetTaskHandler.cxx
         service/task/RejectTaskHandler.cxx
         service/task/TaskHandler.cxx
         tee/ErpTeeProtocol.cxx
@@ -252,6 +256,7 @@ list(
         util/ByteHelper.cxx
         util/Condition.cxx
         util/Configuration.cxx
+        util/Demangle.cxx
         util/DurationConsumer.cxx
         util/Environment.cxx
         util/ErpException.cxx
@@ -306,6 +311,7 @@ list(
         validation/XmlValidator.cxx
         xml/XmlDocument.cxx
         xml/XmlMemory.cxx
+        "${CMAKE_CURRENT_BINARY_DIR}/erp-serverinfo.cxx"
         )
 
 if(ERP_WITH_HSM_TPM_PRODUCTION)
@@ -323,14 +329,13 @@ endif()
 add_library(
     erp-processing-context-files OBJECT
     ${erp-processing-context-source-files}
-        )
+)
 
-if(ERP_WITH_HSM_MOCK)
-    target_compile_definitions(erp-processing-context-files PUBLIC WITH_HSM_MOCK=1)
-endif()
-if(ERP_WITH_HSM_TPM_PRODUCTION)
-    target_compile_definitions(erp-processing-context-files PUBLIC WITH_HSM_TPM_PRODUCTION=1)
-endif()
+target_compile_definitions(erp-processing-context-files
+    PUBLIC
+        $<$<BOOL:${ERP_WITH_HSM_MOCK}>:WITH_HSM_MOCK=1>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:WITH_HSM_TPM_PRODUCTION=1>
+)
 
 target_include_directories (
     erp-processing-context-files
@@ -355,15 +360,10 @@ target_link_libraries (
         PUBLIC CONAN_PKG::magic_enum
         PUBLIC CONAN_PKG::zstd
         PUBLIC CONAN_PKG::zlib
+        PUBLIC $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
+        PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
+        PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
 )
-if(ERP_WITH_HSM_TPM_PRODUCTION)
-    target_link_libraries (
-        erp-processing-context-files
-            PUBLIC
-            CONAN_PKG::hsmclient
-            CONAN_PKG::tpmclient
-    )
-endif()
 
 add_executable(erp-processing-context erp-main.cxx)
 

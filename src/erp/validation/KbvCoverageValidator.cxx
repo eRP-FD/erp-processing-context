@@ -57,7 +57,7 @@ void KbvCoverageValidator::validate(const model::ResourceBase& resource, const X
 }
 
 
-void KbvCoverageValidator_V1_0_1::doValidate(const model::KbvCoverage& kbvCoverage, const XmlValidator&,
+void KbvCoverageValidator_V1_0_2::doValidate(const model::KbvCoverage& kbvCoverage, const XmlValidator&,
                                              const InCodeValidator&) const
 {
     KbvValidationUtils::checkKbvExtensionValueCoding(
@@ -123,7 +123,7 @@ void KbvCoverageValidator_V1_0_1::doValidate(const model::KbvCoverage& kbvCovera
     ik_1(kbvCoverage);
 }
 
-void KbvCoverageValidator_V1_0_1::IK_zustaendige_Krankenkasse_eGK(const model::KbvCoverage& kbvCoverage) const
+void KbvCoverageValidator_V1_0_2::IK_zustaendige_Krankenkasse_eGK(const model::KbvCoverage& kbvCoverage) const
 {
     // IK-zustaendige-Krankenkasse-eGK
     // (type.coding.code='GKV'
@@ -148,7 +148,7 @@ void KbvCoverageValidator_V1_0_1::IK_zustaendige_Krankenkasse_eGK(const model::K
     }
 }
 
-void KbvCoverageValidator_V1_0_1::Versichertenart_Pflicht(const model::KbvCoverage& kbvCoverage) const
+void KbvCoverageValidator_V1_0_2::Versichertenart_Pflicht(const model::KbvCoverage& kbvCoverage) const
 {
     // Versichertenart-Pflicht
     // (type.coding.code='GKV'
@@ -174,7 +174,7 @@ void KbvCoverageValidator_V1_0_1::Versichertenart_Pflicht(const model::KbvCovera
     }
 }
 
-void KbvCoverageValidator_V1_0_1::Besondere_Personengruppe_Pflicht(const model::KbvCoverage& kbvCoverage) const
+void KbvCoverageValidator_V1_0_2::Besondere_Personengruppe_Pflicht(const model::KbvCoverage& kbvCoverage) const
 {
     // Besondere-Personengruppe-Pflicht
     // (type.coding.code='GKV'
@@ -200,7 +200,7 @@ void KbvCoverageValidator_V1_0_1::Besondere_Personengruppe_Pflicht(const model::
     }
 }
 
-void KbvCoverageValidator_V1_0_1::IK_Kostentraeger_BG_UK(const model::KbvCoverage& kbvCoverage) const
+void KbvCoverageValidator_V1_0_2::IK_Kostentraeger_BG_UK(const model::KbvCoverage& kbvCoverage) const
 {
     // IK-Kostentraeger-BG-UK
     // (type.coding.code='GKV'
@@ -225,7 +225,7 @@ void KbvCoverageValidator_V1_0_1::IK_Kostentraeger_BG_UK(const model::KbvCoverag
     }
 }
 
-void KbvCoverageValidator_V1_0_1::DMP_Pflicht(const model::KbvCoverage& kbvCoverage) const
+void KbvCoverageValidator_V1_0_2::DMP_Pflicht(const model::KbvCoverage& kbvCoverage) const
 {
     // DMP_Pflicht
     // (type.coding.code='GKV'
@@ -250,7 +250,7 @@ void KbvCoverageValidator_V1_0_1::DMP_Pflicht(const model::KbvCoverage& kbvCover
     }
 }
 
-void KbvCoverageValidator_V1_0_1::KBVdate(const model::KbvCoverage& kbvCoverage) const
+void KbvCoverageValidator_V1_0_2::KBVdate(const model::KbvCoverage& kbvCoverage) const
 {
     // KBVdate
     // end.toString().length() = 10
@@ -268,7 +268,7 @@ void KbvCoverageValidator_V1_0_1::KBVdate(const model::KbvCoverage& kbvCoverage)
     }
 }
 
-void KbvCoverageValidator_V1_0_1::ik_1(const model::KbvCoverage& kbvCoverage) const
+void KbvCoverageValidator_V1_0_2::ik_1(const model::KbvCoverage& kbvCoverage) const
 {
     // ik-1
     // matches('[0-9]{8,9}')

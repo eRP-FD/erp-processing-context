@@ -25,7 +25,6 @@ public:
     // run a function on _this_ workers thread
     void queueWork(std::function<void()>&& extraWork);
 
-    static thread_local std::atomic_size_t finishedTaskCount;
     static thread_local std::optional<std::string> tlogContext;
 
 private:

@@ -132,7 +132,7 @@ TEST_F(ExceptionHelperTest, HsmException)
 TEST_F(ExceptionHelperTest, std_runtime_error)
 {
     throwAndCatchException<std::runtime_error>(
-        "std::runtime_error(detail)",
+        "std::runtime_error(St13runtime_error)(detail)",
         "detail");
 }
 
@@ -140,7 +140,7 @@ TEST_F(ExceptionHelperTest, std_runtime_error)
 TEST_F(ExceptionHelperTest, std_logic_error)
 {
     throwAndCatchException<std::logic_error>(
-        "std::logic_error(detail)",
+        "std::logic_error(St11logic_error)(detail)",
         "detail");
 }
 
@@ -148,7 +148,7 @@ TEST_F(ExceptionHelperTest, std_logic_error)
 TEST_F(ExceptionHelperTest, std_exception)
 {
     throwAndCatchException<std::exception>(
-        "std::exception()");
+        "std::exception(St9exception)(std::exception)");
 }
 
 

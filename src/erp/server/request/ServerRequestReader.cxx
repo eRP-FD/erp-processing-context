@@ -93,7 +93,7 @@ void ServerRequestReader::on_async_read(const ServerRequestReader::RequestConsum
     }
     if (ec)
     {
-        TLOG(WARNING) << "after reading " << count << " bytes: " << ec.message();
+        TLOG(INFO) << "after reading " << count << " bytes: " << ec.message();
     }
     else
     {

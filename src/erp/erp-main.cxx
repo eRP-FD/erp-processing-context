@@ -77,12 +77,10 @@ int main (const int, const char* argv[], char** /*environment*/)
     try
     {
         GLogConfiguration::init_logging(argv[0]);
-
-        LOG(WARNING) << "Starting erp-processing-context " << ErpServerInfo::ReleaseVersion
-                    << " (build: " << ErpServerInfo::BuildVersion << "; " << ErpServerInfo::ReleaseDate << ")";
-
         ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
 
+        TLOG(INFO) << "Starting erp-processing-context " << ErpServerInfo::ReleaseVersion()
+                    << " (build: " << ErpServerInfo::BuildVersion() << "; " << ErpServerInfo::ReleaseDate() << ")";
 
         deactivateLibxmlLoggingToStderr();
 
@@ -93,13 +91,10 @@ int main (const int, const char* argv[], char** /*environment*/)
     }
     catch(...)
     {
-        LOG(ERROR) << "Unexpected exception: " << boost::current_exception_diagnostic_information();
+        TLOG(ERROR) << "Unexpected exception: " << boost::current_exception_diagnostic_information();
     }
 
-    LOG(WARNING) << "exiting erp-processing-context with exit code " << exitCode;
+    TLOG(INFO) << "exiting erp-processing-context with exit code " << exitCode;
 
     return exitCode;
 }
-
-
-

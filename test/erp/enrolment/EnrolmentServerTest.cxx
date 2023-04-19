@@ -9,16 +9,24 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/enrolment/EnrolmentModel.hxx"
 #include "erp/enrolment/EnrolmentRequestHandler.hxx"
+#include "erp/enrolment/VsdmHmacKey.hxx"
 #include "erp/erp-serverinfo.hxx"
+#include "erp/crypto/EllipticCurve.hxx"
+#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "erp/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "erp/hsm/TeeTokenUpdater.hxx"
+#include "erp/tee/OuterTeeResponse.hxx"
+#include "erp/tee/OuterTeeRequest.hxx"
 #include "erp/tpm/Tpm.hxx"
 #if !defined __APPLE__ && !defined _WIN32
 #include "erp/tpm/TpmProduction.hxx"
 #endif
 #include "erp/util/Base64.hxx"
+#include "erp/util/ByteHelper.hxx"
 #include "erp/util/Hash.hxx"
+#include "erp/util/Random.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
@@ -32,8 +40,10 @@
 #include "test/util/MockAndProductionTestBase.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
+#include "test/mock/MockVsdmKeyBlobDatabase.hxx"
 #include "test/util/StaticData.hxx"
 
+#include <rapidjson/writer.h>
 #include <gtest/gtest.h>
 
 #ifdef _WINNT_
@@ -44,36 +54,30 @@
 
 
 
-class EnrolmentServerTest : public MockAndProductionTestBase<Tpm::Factory>
+class EnrolmentServerTest : public MockAndProductionTestBase
 {
 public:
     static constexpr std::string_view mBlobId = "(012345678901234567890123456789)"; // 32 bytes, simulates a SHA256.
     static constexpr std::string_view mAkName = "< 012345678901234567890123456789 >"; // 34 bytes, simulates a TPM name object.
+    std::string defaultBasicAuth = "auth123";
+    static constexpr char vsdmOperatorId = '?';
 
     std::shared_ptr<BlobCache> blobCache;
 
-    PcServiceContext mContext = StaticData::makePcServiceContext();
-
-    EnrolmentServerTest(void) = default;
+    EnvironmentVariableGuard enrolmentApiCredentials{ConfigurationKey::ENROLMENT_API_CREDENTIALS, defaultBasicAuth};
 
     void SetUp (void) override
     {
-        MockAndProductionTestBase<Tpm::Factory>::SetUp();
+        MockAndProductionTestBase::SetUp();
 
-        // Clear the database.
-        BlobDatabaseHelper::removeUnreferencedBlobs();
-
-        blobCache = createBlobCache();
-
-        // If the tpm factory (stored in `parameter`) is missing or does produce an empty reference
+        // If the tpm factory (stored in `tpmFactory`) produces an empty reference
         // (because it is a factory that creates a "real" tpm client but that is not currently supported)
         // then skip the test.
-        if (parameter == nullptr || (*parameter)(*blobCache)==nullptr)
+        if (tpmFactory(*blobCache) == nullptr || mContext == nullptr)
         {
-            // TPM is not configured to run in this mode.
             GTEST_SKIP();
-            return;
         }
+        blobCache = createBlobCache();
 
         if (mServer == nullptr)
         {
@@ -81,20 +85,21 @@ public:
             RequestHandlerManager handlers;
             EnrolmentServer::addEndpoints(handlers);
             const auto& config = Configuration::instance();
-            Tpm::Factory tpmFactory = *parameter;
             mServer = std::make_unique<HttpsServer>(
                 "0.0.0.0",
                 config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
                 std::move(handlers),
-                mContext);
-            mServer->serve(1);
+                *mContext);
+            mServer->serve(1, "test");
         }
     }
 
 
     void TearDown (void) override
     {
+        // Clear the database
         BlobDatabaseHelper::removeUnreferencedBlobs();
+        BlobDatabaseHelper::removeTestVsdmKeyBlobs(vsdmOperatorId);
 
         if (mServer != nullptr)
         {
@@ -112,16 +117,11 @@ public:
                            30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
     }
 
-    Header createHeader (
-        const HttpMethod method,
-        std::string&& target)
+    Header createHeader(const HttpMethod method, std::string&& target)
     {
-        return Header(
-            method,
-            std::move(target),
-            Header::Version_1_1,
-            {},
-            HttpStatus::Unknown);
+        auto header = Header(method, std::move(target), Header::Version_1_1, {}, HttpStatus::Unknown);
+        header.addHeaderField(Header::Authorization, "Basic " + defaultBasicAuth);
+        return header;
     }
 
     void checkResponseHeader (const ClientResponse& response, const HttpStatus expectedStatus)
@@ -129,8 +129,16 @@ public:
         ASSERT_EQ(response.getHeader().status(), expectedStatus);
         if (!response.getBody().empty())
         {
-            ASSERT_EQ(response.getHeader().header(Header::ContentType), ContentMimeType::jsonUtf8);
+            ASSERT_EQ(response.getHeader().header(Header::ContentType), static_cast<std::string>(ContentMimeType::jsonUtf8));
         }
+    }
+
+    void checkResponseError(const ClientResponse& clientResponse, std::string_view errorDescription)
+    {
+        ASSERT_FALSE(clientResponse.getBody().empty());
+        EnrolmentModel response{clientResponse.getBody()};
+        ASSERT_EQ(response.getString("/code"), "INVALID");
+        ASSERT_EQ(response.getString("/description"), errorDescription);
     }
 
     std::string createPutBody (
@@ -186,6 +194,87 @@ public:
         return "{\"id\":\""
                + Base64::encode(id)
                + "\"}";
+    }
+
+    std::string createEncryptedVsdmKey(const util::Buffer& key)
+    {
+        auto hsmPool = mContext->getHsmPool().acquire();
+        auto& hsmSession = hsmPool.session();
+        // create ephemeral key and extract the coordinates
+        auto ephemeralKeyPair{EllipticCurve::BrainpoolP256R1->createKeyPair()};
+        const auto [x, y] =
+            EllipticCurveUtils::getPaddedXYComponents(ephemeralKeyPair, EllipticCurve::KeyCoordinateLength);
+
+        // use the VAU public key for ECIES handling
+        auto dh = EllipticCurve::BrainpoolP256R1->createDiffieHellman();
+        dh.setPrivatePublicKey(ephemeralKeyPair);
+        dh.setPeerPublicKey(hsmSession.getEciesPublicKey());
+        const auto iv{SecureRandomGenerator::generate(AesGcm128::IvLength)};
+        const auto aesKey = SafeString{
+            DiffieHellman::hkdf(dh.createSharedKey(), HsmMockClient::keyDerivationInfo, AesGcm128::KeyLength)};
+        // using the derived aesKey, encrypt the hmac key
+        const auto encryptedPayload = AesGcm128::encrypt(util::bufferToString(key), aesKey, iv);
+
+        // encode the coordinates with the algorithm explained in A_23463/
+        OuterTeeRequest message;
+        message.version = '\x01';
+        std::copy(x.begin(), x.end(), message.xComponent);
+        std::copy(y.begin(), y.end(), message.yComponent);
+        const std::string_view ivView = iv;
+        std::copy(ivView.begin(), ivView.end(), message.iv);
+        message.ciphertext = std::move(encryptedPayload.ciphertext);
+        std::copy(encryptedPayload.authenticationTag.begin(), encryptedPayload.authenticationTag.end(),
+                  message.authenticationTag);
+        return ByteHelper::toHex(message.assemble());
+    }
+
+    std::string createVsdmKeyPackage(char operatorId, char version,
+                                     const std::optional<util::Buffer>& key = std::nullopt)
+    {
+        auto package =  VsdmHmacKey{operatorId, version};
+        package.set(VsdmHmacKey::jsonKey::exp, "2025-31-12");
+        if (key)
+        {
+            const auto hashHex = ByteHelper::toHex(Hash::hmacSha256(*key, ""));
+            package.set(VsdmHmacKey::jsonKey::encryptedKey, createEncryptedVsdmKey(*key));
+            package.set(VsdmHmacKey::jsonKey::hmacEmptyString, hashHex);
+        }
+        return package.serializeToString();
+    }
+
+    std::string createVsdmKeyPostBody(uint32_t generation, std::string_view vsdmPackage)
+    {
+        std::ostringstream os;
+        auto hsmPool = mContext->getHsmPool().acquire();
+        auto& hsmSession = hsmPool.session();
+        const ErpVector vsdmKeyData = ErpVector::create(vsdmPackage);
+        ErpBlob blob = hsmSession.wrapRawPayload(vsdmKeyData, generation);
+        os << R"({"blob":{"generation":)" << blob.generation << R"(,"data":")" << Base64::encode(blob.data) << "\"}}";
+        return os.str();
+    }
+
+    std::string createVsdmKeyDeleteBody(char operatorId, char version)
+    {
+        std::ostringstream os;
+        os << R"({"vsdm":{"betreiberkennung":")" << operatorId << R"(","version":")" << version << R"("}})";
+        return os.str();
+    }
+
+    std::vector<VsdmHmacKey> vsdmHmacKeysFromResponse(const std::string& response)
+    {
+        std::vector<VsdmHmacKey> vsdmKeys;
+        EnrolmentModel model(response);
+        const auto& document = model.document();
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        for (const auto* it = document.GetArray().Begin(); it != document.GetArray().End(); ++it)
+        {
+            writer.Reset(buffer);
+            buffer.Clear();
+            it->Accept(writer);
+            vsdmKeys.emplace_back(buffer.GetString());
+        }
+        return vsdmKeys;
     }
 
     size_t toSecondsSinceEpoch (const std::chrono::system_clock::time_point t)
@@ -315,9 +404,9 @@ public:
             ::db_model::ChargeItem chargeItem{::model::PrescriptionId::fromDatabaseId(
                 ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 0)};
             chargeItem.blobId = blobId;
-
-            auto& backend = parent.database()->getBackend();
-            backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr(model::Kvnr{"X1234567890"}, ::SafeString{}));
+            auto db = parent.database();
+            auto& backend = db->getBackend();
+            backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr(model::Kvnr{"X123456789"}, ::SafeString{}));
             backend.commitTransaction();
 
             releaseKeyBlob = [&parent, id = chargeItem.prescriptionId] {
@@ -386,16 +475,15 @@ private:
     {
         if (usePostgres)
         {
-            return std::make_shared<BlobCache>(std::make_unique<ProductionBlobDatabase>());
+            return mContext->getBlobCache();
         }
         else
         {
-            auto mockBlobDatabase = std::make_unique<MockBlobDatabase>();
-            mockBlobDatabase->setBlobInUseTest( [this](BlobId blobId)
-                {
-                    return isBlobUsed(blobId);
-                });
-            return std::make_shared<BlobCache>(std::move(mockBlobDatabase));
+            auto& mockBlobDatabase = dynamic_cast<MockBlobDatabase&>(mContext->getBlobCache()->getBlobDatabase());
+            mockBlobDatabase.setBlobInUseTest([this](BlobId blobId) {
+                return isBlobUsed(blobId);
+            });
+            return mContext->getBlobCache();
         }
     }
 };
@@ -463,13 +551,13 @@ TEST_P(EnrolmentServerTest, GetEnclaveStatus)//NOLINT(readability-function-cogni
     ASSERT_TRUE(Uuid(id).isValidIheUuid());
     // The difference between the enclave time and "now" should only be as large as it takes to return that value back to us, i.e. very small.
     ASSERT_LT(gsl::narrow<size_t>(model.getInt64(enrolment::GetEnclaveStatus::responseEnclaveTime)) - secondsSinceEpoch, 1);
-    // Initial state is "NotEnrolled".
-    ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "NotEnrolled");
+    // Initial state is "QuoteKnown", as set up by MockBlobDatabase::createBlobCache()
+    ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "QuoteKnown");
 
-    EXPECT_EQ(std::string(ErpServerInfo::BuildVersion), model.getString(enrolment::GetEnclaveStatus::responseVersionBuild));
-    EXPECT_EQ(std::string(ErpServerInfo::BuildType), model.getString(enrolment::GetEnclaveStatus::responseVersionBuildType));
-    EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion), model.getString(enrolment::GetEnclaveStatus::responseVersionRelease));
-    EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate), model.getString(enrolment::GetEnclaveStatus::responseVersionReleasedate));
+    EXPECT_EQ(std::string(ErpServerInfo::BuildVersion()), model.getString(enrolment::GetEnclaveStatus::responseVersionBuild));
+    EXPECT_EQ(std::string(ErpServerInfo::BuildType()), model.getString(enrolment::GetEnclaveStatus::responseVersionBuildType));
+    EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion()), model.getString(enrolment::GetEnclaveStatus::responseVersionRelease));
+    EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate()), model.getString(enrolment::GetEnclaveStatus::responseVersionReleasedate));
 }
 
 
@@ -656,7 +744,7 @@ TEST_P(EnrolmentServerTest, PutKnownEndorsementKey_failForOverwrite)
             ClientRequest(
                 createHeader(HttpMethod::PUT, "/Enrolment/KnownEndorsementKey"),
                 createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
     }
 
     {
@@ -666,7 +754,7 @@ TEST_P(EnrolmentServerTest, PutKnownEndorsementKey_failForOverwrite)
                 createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
 
         // The second request with identical id is expected to fail.
-        ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);
+        ASSERT_EQ(response.getHeader().status(), HttpStatus::Conflict);
     }
 }
 
@@ -680,7 +768,7 @@ TEST_P(EnrolmentServerTest, DeleteKnownEndorsementKey_success)//NOLINT(readabili
                 createHeader(HttpMethod::PUT, "/Enrolment/KnownEndorsementKey"),
                 createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
         checkResponseHeader(response, HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::EndorsementKey));
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::EndorsementKey, ErpVector::create("123")));
     }
 
     auto response = createClient().send(
@@ -690,7 +778,7 @@ TEST_P(EnrolmentServerTest, DeleteKnownEndorsementKey_success)//NOLINT(readabili
 
     checkResponseHeader(response, HttpStatus::NoContent);
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::EndorsementKey));
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::EndorsementKey, ErpVector::create("123")));
 }
 
 
@@ -765,7 +853,7 @@ TEST_P(EnrolmentServerTest, PostKnownAttestationKey_failForOverwrite)
                 createPutBody(mAkName, "black box blob data", 11, {},{},{}, {},{})));
 
         // The second request with identical id is expected to fail.
-        ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);
+        ASSERT_EQ(response.getHeader().status(), HttpStatus::Conflict);
     }
 }
 
@@ -778,8 +866,8 @@ TEST_P(EnrolmentServerTest, DeleteKnownAttestationKey_success)//NOLINT(readabili
             ClientRequest(
                 createHeader(HttpMethod::PUT, "/Enrolment/KnownAttestationKey"),
                 createPutBody(mAkName, "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::AttestationPublicKey));
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::AttestationPublicKey, ErpVector::create(mAkName)));
     }
 
     auto response = createClient().send(
@@ -789,7 +877,7 @@ TEST_P(EnrolmentServerTest, DeleteKnownAttestationKey_success)//NOLINT(readabili
 
     ASSERT_EQ(response.getHeader().status(), HttpStatus::NoContent);
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::AttestationPublicKey));
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::AttestationPublicKey, ErpVector::create(mAkName)));
 }
 
 
@@ -806,16 +894,23 @@ TEST_P(EnrolmentServerTest, DeleteKnownAttestationKey_failForUnknownKey)
 
 TEST_P(EnrolmentServerTest, PostKnownQuote_successWithoutPcrSet)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto response = createClient().send(
-        ClientRequest(
-            createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
-            createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
+#if WITH_HSM_TPM_PRODUCTION > 0
+    if (GetParam() == MockBlobCache::MockTarget::MockedHsm)
+    {
+        GTEST_SKIP_("PostKnownQuote requires HSM simulator");
+    }
+#endif
+    const auto quoteBlob = blobCache->getBlob(BlobType::Quote);
 
-    checkResponseHeader(response, HttpStatus::Created);
+    auto response = createClient().send(ClientRequest(createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
+                                                      createPutBody("random-quote", quoteBlob.blob.data, 11, {}, {}, {}, {}, {})));
+
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
     ASSERT_EQ(response.getBody(), "");
-    auto entry = blobCache->getBlob(BlobType::Quote);
-    ASSERT_EQ(entry.name, ErpVector::create("123"));
-    ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
+    // we have to directly ask the db because the cache may filter it out because the quote is invalid
+    auto entry = blobCache->getBlobDatabase().getBlob(BlobType::Quote, ErpVector::create("random-quote"));
+    ASSERT_EQ(entry.name, ErpVector::create("random-quote"));
+    ASSERT_EQ(entry.blob.data, quoteBlob.blob.data);
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
     ASSERT_TRUE(entry.pcrSet.has_value());
     ASSERT_EQ(entry.pcrSet.value(), PcrSet::defaultSet());
@@ -824,40 +919,53 @@ TEST_P(EnrolmentServerTest, PostKnownQuote_successWithoutPcrSet)//NOLINT(readabi
 
 TEST_P(EnrolmentServerTest, PostKnownQuote_successWithPcrSet)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto pcrSet = PcrSet::fromString("3,4,5");
+#if WITH_HSM_TPM_PRODUCTION > 0
+    if (GetParam() == MockBlobCache::MockTarget::MockedHsm)
+    {
+        GTEST_SKIP_("PostKnownQuote requires HSM simulator");
+    }
+#endif
+    const auto pcrSet = PcrSet::fromString("0,3,4");
+
+    const auto quoteBlob = blobCache->getBlob(BlobType::Quote);
 
     auto response = createClient().send(
-        ClientRequest(
-            createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
-            createPutBody("123", "black box blob data", 11, {},{},{}, {},pcrSet)));
+        ClientRequest(createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
+                      createPutBody("random-quotepcr", quoteBlob.blob.data, 11, {}, {}, {}, {}, pcrSet)));
 
-    checkResponseHeader(response, HttpStatus::Created);
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
     ASSERT_EQ(response.getBody(), "");
-    auto entry = blobCache->getBlob(BlobType::Quote);
-    ASSERT_EQ(entry.name, ErpVector::create("123"));
-    ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
+    auto entry = blobCache->getBlobDatabase().getBlob(BlobType::Quote, ErpVector::create("random-quotepcr"));
+    ASSERT_EQ(entry.name, ErpVector::create("random-quotepcr"));
+    ASSERT_EQ(entry.blob.data, quoteBlob.blob.data);
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
     ASSERT_TRUE(entry.pcrSet.has_value());
-    ASSERT_EQ(entry.pcrSet.value(), PcrSet::fromString("3,4,5"));
+    ASSERT_EQ(entry.pcrSet.value(), PcrSet::fromString("0,3,4"));
 }
 
 
 TEST_P(EnrolmentServerTest, PostKnownQuote_failForOverwrite)
 {
+#if WITH_HSM_TPM_PRODUCTION > 0
+    if (GetParam() == MockBlobCache::MockTarget::MockedHsm)
     {
+        GTEST_SKIP_("PostKnownQuote requires HSM simulator");
+    }
+#endif
+    {
+        const auto quoteBlob = blobCache->getBlob(BlobType::Quote);
         auto response = createClient().send(
-            ClientRequest(
-                createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
-                createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::Quote));
+            ClientRequest(createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
+                          createPutBody("random-quote123", quoteBlob.blob.data, 11, {}, {}, {}, {}, {})));
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
+        ASSERT_NO_THROW(blobCache->getBlobDatabase().getBlob(BlobType::Quote, ErpVector::create("random-quote123")));
     }
 
     {
         auto response = createClient().send(
             ClientRequest(
                 createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
-                createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
+                createPutBody("random-quote123", "black box blob data", 11, {},{},{}, {},{})));
 
         // The second request with identical id is expected to fail.
         ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);
@@ -867,24 +975,31 @@ TEST_P(EnrolmentServerTest, PostKnownQuote_failForOverwrite)
 
 TEST_P(EnrolmentServerTest, DeleteKnownQuote_success)//NOLINT(readability-function-cognitive-complexity)
 {
+#if WITH_HSM_TPM_PRODUCTION > 0
+    if (GetParam() == MockBlobCache::MockTarget::MockedHsm)
+    {
+        GTEST_SKIP_("PostKnownQuote requires HSM simulator");
+    }
+#endif
     // Set up the test with a known quote that we then can delete.
     {
+        const auto quoteBlob = blobCache->getBlob(BlobType::Quote);
         auto response = createClient().send(
             ClientRequest(
                 createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
-                createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::Quote));
+                createPutBody("some-quote", quoteBlob.blob.data, 11, {},{},{}, {},{})));
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
+        ASSERT_NO_THROW(blobCache->getBlobDatabase().getBlob(BlobType::Quote, ErpVector::create("some-quote")));
     }
 
     auto response = createClient().send(
         ClientRequest(
             createHeader(HttpMethod::DELETE, "/Enrolment/KnownQuote"),
-            createDeleteBody("123")));
+            createDeleteBody("some-quote")));
 
     ASSERT_EQ(response.getHeader().status(), HttpStatus::NoContent);
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::Quote));
+    ASSERT_ANY_THROW(blobCache->getBlobDatabase().getBlob(BlobType::Quote, ErpVector::create("some-quote")));
 }
 
 
@@ -908,10 +1023,10 @@ TEST_P(EnrolmentServerTest, PostEciesKeypairBlob_success)//NOLINT(readability-fu
         ClientRequest(
             createHeader(HttpMethod::PUT, "/Enrolment/EciesKeypair"),
             createPutBody("123", "black box blob data", 11, expirySeconds,{},{}, {},{})));
-    checkResponseHeader(response, HttpStatus::Created);
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
     ASSERT_EQ(response.getBody(), "");
 
-    const auto entry = blobCache->getBlob(BlobType::EciesKeypair);
+    const auto entry = blobCache->getBlob(BlobType::EciesKeypair, ErpVector::create("123"));
     ASSERT_EQ(entry.name, ErpVector::create("123"));
     ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
@@ -931,8 +1046,8 @@ TEST_P(EnrolmentServerTest, DeleteEciesKeypairBlob_success)//NOLINT(readability-
             ClientRequest(
                 createHeader(HttpMethod::PUT, "/Enrolment/EciesKeypair"),
                 createPutBody("123", "black box blob data", 11, expirySeconds,{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::EciesKeypair));
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::EciesKeypair, ErpVector::create("123")));
     }
 
     auto response = createClient().send(
@@ -940,19 +1055,14 @@ TEST_P(EnrolmentServerTest, DeleteEciesKeypairBlob_success)//NOLINT(readability-
             createHeader(HttpMethod::DELETE, "/Enrolment/EciesKeypair"),
             createDeleteBody("123")));
 
-    checkResponseHeader(response, HttpStatus::NoContent);
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::NoContent));
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::EciesKeypair));
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::EciesKeypair, ErpVector::create("123")));
 }
 
 
 TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto start = std::chrono::system_clock::now() - std::chrono::seconds(60);
-    const auto end = std::chrono::system_clock::now() + std::chrono::seconds(60);
-    const auto startSeconds = toSecondsSinceEpoch(start);
-    const auto endSeconds = toSecondsSinceEpoch(end);
-
     struct Descriptor {std::string name; BlobType type;};
     for (const Descriptor& resource : {Descriptor{"Task",          BlobType::TaskKeyDerivation},
                                        Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
@@ -974,18 +1084,14 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)//NOLINT(readabil
             auto response = createClient().send(
                 ClientRequest(
                     createHeader(HttpMethod::PUT, "/Enrolment/" + resource.name + "/DerivationKey"),
-                    createPutBody(blobName, "black box blob data", 11, {},startSeconds,endSeconds, {},{})));
+                    createPutBody(blobName, "black box blob data", 11, {}, {}, {}, {},{})));
             checkResponseHeader(response, HttpStatus::Created);
             ASSERT_EQ(response.getBody(), "");
 
-            const auto entry = blobCache->getBlob(resource.type);
+            const auto entry = blobCache->getBlob(resource.type, ErpVector::create(blobName));
             ASSERT_EQ(entry.name, ErpVector::create(blobName));
             ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
             ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
-            ASSERT_TRUE(entry.startDateTime.has_value());
-            ASSERT_EQ(toSecondsSinceEpoch(entry.startDateTime.value()), startSeconds);
-            ASSERT_TRUE(entry.endDateTime.has_value());
-            ASSERT_EQ(toSecondsSinceEpoch(entry.endDateTime.value()), endSeconds);
         }
 
         // And delete it.
@@ -1013,11 +1119,6 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_success)//NOLINT(readabil
 
 TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto start = std::chrono::system_clock::now() - std::chrono::seconds(60);
-    const auto end = std::chrono::system_clock::now() + std::chrono::seconds(60);
-    const auto startSeconds = toSecondsSinceEpoch(start);
-    const auto endSeconds = toSecondsSinceEpoch(end);
-
     struct Descriptor {std::string name; BlobType type;};
     for (const Descriptor& resource : {Descriptor{"Task",          BlobType::TaskKeyDerivation},
                                        Descriptor{"Communication", BlobType::CommunicationKeyDerivation},
@@ -1025,23 +1126,22 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)//NOLINT(readabi
                                        Descriptor{"ChargeItem", ::BlobType::ChargeItemKeyDerivation}})
     {
         BlobId blobId{};
+        std::string name = resource.name + "123";
         // Upload the resource
         {
             auto response = createClient().send(
                 ClientRequest(
                     createHeader(HttpMethod::PUT, "/Enrolment/" + resource.name + "/DerivationKey"),
-                    createPutBody(resource.name + "123", "black box blob data", 11, {},startSeconds,endSeconds, {},{})));
+                    createPutBody(name, "black box blob data", 11, {},{} , {}, {},{})));
             checkResponseHeader(response, HttpStatus::Created);
             ASSERT_EQ(response.getBody(), "");
 
-            const auto entry = blobCache->getBlob(resource.type);
-            ASSERT_EQ(entry.name, ErpVector::create(resource.name + "123"));
+            const auto entry = blobCache->getBlob(resource.type, ErpVector::create(name));
+            ASSERT_EQ(entry.name, ErpVector::create(name));
             ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
             ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
-            ASSERT_TRUE(entry.startDateTime.has_value());
-            ASSERT_EQ(toSecondsSinceEpoch(entry.startDateTime.value()), startSeconds);
-            ASSERT_TRUE(entry.endDateTime.has_value());
-            ASSERT_EQ(toSecondsSinceEpoch(entry.endDateTime.value()), endSeconds);
+            ASSERT_FALSE(entry.startDateTime.has_value());
+            ASSERT_FALSE(entry.endDateTime.has_value());
             blobId = entry.id;
         }
 
@@ -1051,7 +1151,7 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)//NOLINT(readabi
             auto response = createClient().send(
                 ClientRequest(
                     createHeader(HttpMethod::DELETE, "/Enrolment/" + resource.name + "/DerivationKey"),
-                    createDeleteBody(resource.name + "123")));
+                    createDeleteBody(name)));
 
             checkResponseHeader(response, HttpStatus::Conflict);
             EXPECT_EQ(response.getBody(), "");
@@ -1063,7 +1163,7 @@ TEST_P(EnrolmentServerTest, PostAndDeleteDerivationKey_usedKeys)//NOLINT(readabi
             auto response = createClient().send(
                 ClientRequest(
                     createHeader(HttpMethod::DELETE, "/Enrolment/" + resource.name + "/DerivationKey"),
-                    createDeleteBody(resource.name + "123")));
+                    createDeleteBody(name)));
 
             checkResponseHeader(response, HttpStatus::NoContent);
             EXPECT_EQ(response.getBody(), "");
@@ -1082,7 +1182,7 @@ TEST_P(EnrolmentServerTest, PutKvnrHashKey_success)
 
     checkResponseHeader(response, HttpStatus::Created);
     ASSERT_EQ(response.getBody(), "");
-    const auto entry = blobCache->getBlob(BlobType::KvnrHashKey);
+    const auto entry = blobCache->getBlob(BlobType::KvnrHashKey, ErpVector::create("123"));
     ASSERT_EQ(entry.name, ErpVector::create("123"));
     ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
@@ -1097,9 +1197,9 @@ TEST_P(EnrolmentServerTest, DeleteKvnrHashKey_success)//NOLINT(readability-funct
             ClientRequest(
                 createHeader(HttpMethod::PUT, "/Enrolment/KvnrHashKey"),
                 createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
         ASSERT_EQ(response.getBody(), "");
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::KvnrHashKey));
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::KvnrHashKey, ErpVector::create("123")));
     }
 
     // And delete it.
@@ -1108,9 +1208,9 @@ TEST_P(EnrolmentServerTest, DeleteKvnrHashKey_success)//NOLINT(readability-funct
             createHeader(HttpMethod::DELETE, "/Enrolment/KvnrHashKey"),
             createDeleteBody("123")));
 
-    checkResponseHeader(response, HttpStatus::NoContent);
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::NoContent));
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::KvnrHashKey));
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::KvnrHashKey, ErpVector::create("123")));
 }
 
 
@@ -1121,9 +1221,9 @@ TEST_P(EnrolmentServerTest, PutTelematikIdHashKey_success)
             createHeader(HttpMethod::PUT, "/Enrolment/TelematikIdHashKey"),
             createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
 
-    checkResponseHeader(response, HttpStatus::Created);
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
     ASSERT_EQ(response.getBody(), "");
-    const auto entry = blobCache->getBlob(BlobType::TelematikIdHashKey);
+    const auto entry = blobCache->getBlob(BlobType::TelematikIdHashKey, ErpVector::create("123"));
     ASSERT_EQ(entry.name, ErpVector::create("123"));
     ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
@@ -1140,7 +1240,7 @@ TEST_P(EnrolmentServerTest, DeleteTelematikIdHashKey_success)//NOLINT(readabilit
                 createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
         checkResponseHeader(response, HttpStatus::Created);
         ASSERT_EQ(response.getBody(), "");
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::TelematikIdHashKey));
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::TelematikIdHashKey, ErpVector::create("123")));
     }
 
     // And delete it.
@@ -1151,24 +1251,36 @@ TEST_P(EnrolmentServerTest, DeleteTelematikIdHashKey_success)//NOLINT(readabilit
 
     checkResponseHeader(response, HttpStatus::NoContent);
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::TelematikIdHashKey));
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::TelematikIdHashKey, ErpVector::create("123")));
 }
 
 
-
-
-TEST_P(EnrolmentServerTest, PutVauSig_success)
+TEST_P(EnrolmentServerTest, PostVauSig_success)
 {
+    const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
+    auto model = EnrolmentModel(body);
+    const auto pemCert = Certificate::fromBase64(std::string{tpm::vauSigCertificate_base64}).toPem();
+    model.set("/certificate", Base64::encode(pemCert));
     auto response = createClient().send(
-        ClientRequest(
-            createHeader(HttpMethod::PUT, "/Enrolment/VauSig"),
-            createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
+        ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauSig"), model.serializeToString()));
     checkResponseHeader(response, HttpStatus::Created);
     ASSERT_EQ(response.getBody(), "");
-    const auto entry = blobCache->getBlob(BlobType::VauSig);
+    const auto entry = blobCache->getBlob(BlobType::VauSig, ErpVector::create("123"));
     ASSERT_EQ(entry.name, ErpVector::create("123"));
     ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
     ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
+    ASSERT_TRUE(entry.certificate.has_value());
+    ASSERT_EQ(entry.certificate.value(), pemCert);
+}
+
+TEST_P(EnrolmentServerTest, PostVauSigInvalid)
+{
+    const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
+    auto model = EnrolmentModel(body);
+    model.set("/certificate", tpm::vauSigCertificate_base64);
+    auto response = createClient().send(
+        ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauSig"), model.serializeToString()));
+    checkResponseHeader(response, HttpStatus::BadRequest);
 }
 
 
@@ -1176,13 +1288,15 @@ TEST_P(EnrolmentServerTest, DeleteVauSig_success)//NOLINT(readability-function-c
 {
     // Set up a hash key that can be deleted.
     {
+        const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
+        auto model = EnrolmentModel(body);
+        const auto pemCert = Certificate::fromBase64(std::string{tpm::vauSigCertificate_base64}).toPem();
+        model.set("/certificate", Base64::encode(pemCert));
         auto response = createClient().send(
-            ClientRequest(
-                createHeader(HttpMethod::PUT, "/Enrolment/VauSig"),
-            createPutBody("123", "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
+            ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauSig"), model.serializeToString()));
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
         ASSERT_EQ(response.getBody(), "");
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::VauSig));
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::VauSig, ErpVector::create("123")));
     }
 
     // And delete it.
@@ -1191,11 +1305,161 @@ TEST_P(EnrolmentServerTest, DeleteVauSig_success)//NOLINT(readability-function-c
             createHeader(HttpMethod::DELETE, "/Enrolment/VauSig"),
             createDeleteBody("123")));
 
-    checkResponseHeader(response, HttpStatus::NoContent);
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::NoContent));
     ASSERT_EQ(response.getBody(), "");
-    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::VauSig));
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::VauSig, ErpVector::create("123")));
 }
 
+TEST_P(EnrolmentServerTest, PostVsdmKey_success)//NOLINT(readability-function-cognitive-complexity)
+{
+    const char version = '1';
+    // Add vsdm hash key that can be deleted.
+    {
+        const auto key = Random::randomBinaryData(VsdmHmacKey::keyLength);
+        const auto vsdmPackage = createVsdmKeyPackage(vsdmOperatorId, version, key);
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage)));
+        checkResponseHeader(response, HttpStatus::Created);
+        ASSERT_TRUE(response.getBody().empty());
+        VsdmKeyBlobDatabase::Entry entry;
+        ASSERT_NO_THROW(entry = mContext->getVsdmKeyBlobDatabase().getBlob(vsdmOperatorId, version));
+    }
+
+    // get all keys
+    {
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/VsdmHmacKey"), ""));
+        checkResponseHeader(response, HttpStatus::OK);
+        ASSERT_FALSE(response.getBody().empty());
+        const auto vsdmHmacKeys = vsdmHmacKeysFromResponse(response.getBody());
+        bool found = false;
+        for (const auto& key : vsdmHmacKeys)
+        {
+            EXPECT_FALSE(key.hasValue(VsdmHmacKey::jsonKey::encryptedKey));
+            EXPECT_FALSE(key.hasValue(VsdmHmacKey::jsonKey::clearTextKey));
+            EXPECT_EQ(key.getString(VsdmHmacKey::jsonKey::hmacEmptyString),
+                      key.getString(VsdmHmacKey::jsonKey::hmacEmptyStringCalculated));
+            if (key.operatorId() == vsdmOperatorId && key.version() == version)
+            {
+                found = true;
+            }
+        }
+        EXPECT_TRUE(found) << "Could not find key for operator '" << vsdmOperatorId << "' and version '" << version << "'";
+    }
+
+    // And finally delete it.
+    {
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::DELETE, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyDeleteBody(vsdmOperatorId, version)));
+
+        checkResponseHeader(response, HttpStatus::NoContent);
+        ASSERT_EQ(response.getBody(), "");
+        ASSERT_ANY_THROW(mContext->getVsdmKeyBlobDatabase().getBlob(vsdmOperatorId, version));
+    }
+}
+
+TEST_P(EnrolmentServerTest, PostVsdmKeyDuplicate)
+{
+    const char version = '1';
+    // Add a first vsdm hash key
+    {
+        const auto key = Random::randomBinaryData(VsdmHmacKey::keyLength);
+        const auto vsdmPackage = createVsdmKeyPackage(vsdmOperatorId, version, key);
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage)));
+        checkResponseHeader(response, HttpStatus::Created);
+        ASSERT_TRUE(response.getBody().empty());
+        VsdmKeyBlobDatabase::Entry entry;
+        ASSERT_NO_THROW(entry = mContext->getVsdmKeyBlobDatabase().getBlob(vsdmOperatorId, version));
+    }
+
+    // Add a second with the same version
+    {
+        const auto key = Random::randomBinaryData(VsdmHmacKey::keyLength);
+        const auto vsdmPackage = createVsdmKeyPackage(vsdmOperatorId, version, key);
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage)));
+        checkResponseHeader(response, HttpStatus::Conflict);
+        ASSERT_TRUE(response.getBody().empty());
+        VsdmKeyBlobDatabase::Entry entry;
+        ASSERT_NO_THROW(entry = mContext->getVsdmKeyBlobDatabase().getBlob(vsdmOperatorId, version));
+    }
+
+    // new version should be allowed
+    const char anotherVersion = '2';
+    {
+        const auto key = Random::randomBinaryData(VsdmHmacKey::keyLength);
+        const auto vsdmPackage = createVsdmKeyPackage(vsdmOperatorId, anotherVersion, key);
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage)));
+        checkResponseHeader(response, HttpStatus::Created);
+        ASSERT_TRUE(response.getBody().empty());
+        VsdmKeyBlobDatabase::Entry entry;
+        ASSERT_NO_THROW(entry = mContext->getVsdmKeyBlobDatabase().getBlob(vsdmOperatorId, anotherVersion));
+    }
+}
+
+TEST_P(EnrolmentServerTest, PostVsdmKeyInvalid)
+{
+    const char version = '1';
+    // try to add invalid keys
+    {
+        const auto key = Random::randomBinaryData(100);
+        const auto vsdmPackage = createVsdmKeyPackage(vsdmOperatorId, version, key);
+        EnrolmentModel model{vsdmPackage};
+        model.set("/vsdm/encryptedKey", ByteHelper::toHex(util::bufferToString(key)));
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage)));
+        checkResponseHeader(response, HttpStatus::BadRequest);
+        EXPECT_NO_FATAL_FAILURE(checkResponseError(response, "Invalid hmac key length"));
+    }
+
+    // try to add a key that is too short
+    {
+        const auto key = Random::randomBinaryData(31);
+        const auto vsdmPackage = createVsdmKeyPackage(vsdmOperatorId, version, key);
+        EnrolmentModel model{vsdmPackage};
+        model.set("/vsdm/encryptedKey", ByteHelper::toHex(util::bufferToString(key)));
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage)));
+        checkResponseHeader(response, HttpStatus::BadRequest);
+        EXPECT_NO_FATAL_FAILURE(checkResponseError(response, "Invalid hmac key length"));
+    }
+
+    // try to add keys with missing hash
+    {
+        const auto vsdmPackage = createVsdmKeyPackage(vsdmOperatorId, version);
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage)));
+        checkResponseHeader(response, HttpStatus::BadRequest);
+        EXPECT_NO_FATAL_FAILURE(checkResponseError(response, "value for key '/encrypted_key' is missing"));
+    }
+
+    // try to add keys with invalid hash
+    {
+        const auto key = Random::randomBinaryData(VsdmHmacKey::keyLength);
+        const auto data = createVsdmKeyPackage(vsdmOperatorId, version, key);
+        auto vsdmPackage = EnrolmentModel{data};
+        vsdmPackage.set("/hmac_empty_string", "beef");
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyPostBody(0, vsdmPackage.serializeToString())));
+        checkResponseHeader(response, HttpStatus::BadRequest);
+        EXPECT_NO_FATAL_FAILURE(checkResponseError(response, "VSDM hash validation failed"));
+    }
+}
+
+TEST_P(EnrolmentServerTest, DeleteVsdmKey_Fail)
+{
+    const char version = '1';
+    // try to delete non-existent blob
+    {
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::DELETE, "/Enrolment/VsdmHmacKey"),
+                                                          createVsdmKeyDeleteBody(vsdmOperatorId, version)));
+
+        checkResponseHeader(response, HttpStatus::NotFound);
+        ASSERT_EQ(response.getBody(), "");
+        ASSERT_ANY_THROW(mContext->getVsdmKeyBlobDatabase().getBlob(vsdmOperatorId, version));
+    }
+}
 
 /**
  * This test will, in this order, store endorsement key, attestation key and quote and verify that each
@@ -1204,74 +1468,57 @@ TEST_P(EnrolmentServerTest, DeleteVauSig_success)//NOLINT(readability-function-c
  */
 TEST_P(EnrolmentServerTest, EnrolmentStatus)//NOLINT(readability-function-cognitive-complexity)
 {
-    // Store an endorsement key.
+    auto quoteBlob = blobCache->getBlob(BlobType::Quote);
+    auto akBlob = blobCache->getBlob(BlobType::AttestationPublicKey);
+    auto ekBlob = blobCache->getBlob(BlobType::EndorsementKey);
+    const std::set<BlobType> typeList{BlobType::EndorsementKey, BlobType::AttestationPublicKey, BlobType::Quote};
+    auto blobs = blobCache->getAllBlobsSortedById();
+    for (const auto& blob: blobs)
     {
-        auto response = createClient().send(
-            ClientRequest(
-                createHeader(HttpMethod::PUT, "/Enrolment/KnownEndorsementKey"),
-                createPutBody("ek-id", "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::EndorsementKey));
+        if (typeList.contains(blob.type))
+        {
+            blobCache->deleteBlob(blob.type, blob.name);
+        }
     }
 
+    // Store an endorsement key.
     // Verify that the enclave status changed to EkKnown.
     {
+        blobCache->storeBlob(std::move(ekBlob));
         auto statusResponse = createClient().send(ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EnclaveStatus"), ""));
-        checkResponseHeader(statusResponse, HttpStatus::OK);
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(statusResponse, HttpStatus::OK));
         EnrolmentModel model (statusResponse.getBody());
         ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "EkKnown");
     }
 
-    // Store an attestation key.
-    {
-        auto response = createClient().send(
-            ClientRequest(
-                createHeader(HttpMethod::PUT, "/Enrolment/KnownAttestationKey"),
-                createPutBody(mAkName, "black box blob data", 11, {},{},{}, {},{})));
-        ASSERT_EQ(response.getHeader().status(), HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::AttestationPublicKey));
-    }
 
+    // Store an attestation key.
     // Verify that the enclave status changed to AtKnown.
     {
+        blobCache->storeBlob(std::move(akBlob));
         auto statusResponse = createClient().send(ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EnclaveStatus"), ""));
-        checkResponseHeader(statusResponse, HttpStatus::OK);
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(statusResponse, HttpStatus::OK));
         EnrolmentModel model (statusResponse.getBody());
         ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "AkKnown");
     }
 
     // Store a quote.
-    {
-        auto response = createClient().send(
-            ClientRequest(
-                createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
-                createPutBody("quote-id", "black box blob data", 11, {},{},{}, {},{})));
-        checkResponseHeader(response, HttpStatus::Created);
-        ASSERT_NO_THROW(blobCache->getBlob(BlobType::Quote));
-    }
-
     // Verify that the enclave status changed to QuoteKnown.
     {
+        blobCache->storeBlob(std::move(quoteBlob));
         auto statusResponse = createClient().send(ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EnclaveStatus"), ""));
-        checkResponseHeader(statusResponse, HttpStatus::OK);
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(statusResponse, HttpStatus::OK));
         EnrolmentModel model (statusResponse.getBody());
         ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "QuoteKnown");
     }
 
     // Delete the endorsement key.
-    {
-        auto response = createClient().send(
-            ClientRequest(
-                createHeader(HttpMethod::DELETE, "/Enrolment/KnownEndorsementKey"),
-                createDeleteBody("ek-id")));
-        checkResponseHeader(response, HttpStatus::NoContent);
-        ASSERT_ANY_THROW(blobCache->getBlob(BlobType::EndorsementKey));
-    }
-
     // Verify that the enclave status changed back to NotEnrolled.
     {
+        auto ekBlob = blobCache->getBlob(BlobType::EndorsementKey);
+        blobCache->deleteBlob(BlobType::EndorsementKey, ekBlob.name);
         auto statusResponse = createClient().send(ClientRequest(createHeader(HttpMethod::GET, "/Enrolment/EnclaveStatus"), ""));
-        checkResponseHeader(statusResponse, HttpStatus::OK);
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(statusResponse, HttpStatus::OK));
         EnrolmentModel model (statusResponse.getBody());
         ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "NotEnrolled");
     }
@@ -1335,8 +1582,8 @@ TEST_P(EnrolmentServerTest, TestBasicAuthorization)
     }
 }
 
-InstantiateMockAndProductionTestSuite(
-    EnrolmentServer,
-    EnrolmentServerTest,
-    []{return std::make_unique<Tpm::Factory>(TpmTestHelper::createProductionTpmFactory());},
-    []{return std::make_unique<Tpm::Factory>(TpmTestHelper::createMockTpmFactory());});
+INSTANTIATE_TEST_SUITE_P(EnrolmentServer, EnrolmentServerTest,
+                         testing::Values(MockBlobCache::MockTarget::SimulatedHsm, MockBlobCache::MockTarget::MockedHsm),
+                         [](const ::testing::TestParamInfo<MockBlobCache::MockTarget>& info) {
+                             return info.param == MockBlobCache::MockTarget::SimulatedHsm ? "simulated" : "mocked";
+                         });

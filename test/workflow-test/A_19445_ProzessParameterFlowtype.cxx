@@ -9,6 +9,7 @@
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <boost/algorithm/string.hpp>
@@ -36,9 +37,11 @@ std::ostream& operator << (std::ostream& out, const Parameters& params)
 
 using ProzessParameterFlowtype = ErpWorkflowTestTemplate<::testing::TestWithParam<ParameterTuple>>;
 
-TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive-complexity)
+TEST_P(ProzessParameterFlowtype, samples)
 {
     using fn = std::optional<std::string_view> (*)(const rapidjson::Value& object, const rapidjson::Pointer& key);
+    std::vector<EnvironmentVariableGuard> envVars;
+
     static constexpr auto getOptionalStringValue =
         static_cast<fn>(&model::NumberAsStringParserDocument::getOptionalStringValue);
     A_19445_08.test("Prozessparameter - Flowtype");
@@ -49,17 +52,20 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
     auto acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDate});
     auto expiryDate = model::Timestamp::fromGermanDate(std::string{params.expiryDate});
 
-    const auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>();
+    auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>();
 
-    switch (prescriptionType)
+    if (model::IsPkv(prescriptionType))
     {
-        case model::PrescriptionType::apothekenpflichigeArzneimittel:
-        case model::PrescriptionType::direkteZuweisung:
-            break;
-        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-        case model::PrescriptionType::direkteZuweisungPkv:
-            acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
-            break;
+        if (serverUsesOldProfile())
+        {
+            GTEST_SKIP_("PKV not testable with old profiles");
+        }
+        if (kbvVersion == model::ResourceVersion::KbvItaErp::v1_0_2)
+        {
+            envVars = testutils::getOverlappingFhirProfileEnvironment();
+            kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>();
+        }
+        acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
     }
 
     // Create Task for Workflow
@@ -72,7 +78,7 @@ TEST_P(ProzessParameterFlowtype, samples)//NOLINT(readability-function-cognitive
 
     std::string kvnr;
     ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
-    std::string bundle = ResourceTemplates::kbvBundleXml(
+    std::string bundle = kbvBundleXml(
         {.prescriptionId = task->prescriptionId(), .timestamp = signingTime, .kvnr = kvnr, .kbvVersion = kbvVersion});
 
     // Activate Task with given signing time

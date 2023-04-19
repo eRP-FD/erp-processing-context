@@ -23,7 +23,6 @@ void fatalTermination()
 }
 
 
-thread_local std::atomic_size_t erp::server::Worker::finishedTaskCount = 0;
 thread_local std::optional<std::string> erp::server::Worker::tlogContext{};
 
 void erp::server::Worker::run(boost::asio::io_context& ioContext)
@@ -33,7 +32,6 @@ void erp::server::Worker::run(boost::asio::io_context& ioContext)
         while (not ioContext.stopped())
         {
             ioContext.run_one_for(std::chrono::milliseconds(100));
-            ++finishedTaskCount;
             tlogContext.reset();
 
             runExtraWork();
@@ -71,7 +69,6 @@ void erp::server::Worker::runExtraWork()
     for (auto&& extraWork: extraWorkList)
     {
         extraWork();
-        ++finishedTaskCount;
         tlogContext.reset();
     }
 }

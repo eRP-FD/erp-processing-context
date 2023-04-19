@@ -23,7 +23,7 @@ public:
                             const InCodeValidator& inCodeValidator) const = 0;
 };
 
-class KbvCoverageValidator_V1_0_1 : public KbvCoverageValidator
+class KbvCoverageValidator_V1_0_2 : public KbvCoverageValidator
 {
 public:
     void doValidate(const model::KbvCoverage& kbvCoverage, const XmlValidator& xmlValidator,
@@ -38,7 +38,5 @@ private:
     void KBVdate(const model::KbvCoverage& kbvCoverage) const;
     void ik_1(const model::KbvCoverage& kbvCoverage) const;
 };
-
-using KbvCoverageValidator_V1_0_2 = KbvCoverageValidator_V1_0_1;
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVCOVERAGEVALIDATOR_HXX

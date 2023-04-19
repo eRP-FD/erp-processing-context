@@ -16,6 +16,7 @@
 #include "test_config.h"
 
 #include <pqxx/transaction>
+#include <gtest/gtest-spi.h>
 
 
 /**
@@ -38,7 +39,7 @@ public:
 
     void SetUp (void) override
     {
-        ServerTestBase::SetUp();
+        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
 
         removeTestData();
 
@@ -95,7 +96,8 @@ public:
             {{"sent", "erp.timestamp_from_suuid(id)",     SearchParameter::Type::Date},
              {"received",  SearchParameter::Type::Date},
              {"sender",    SearchParameter::Type::HashedIdentity},
-             {"recipient", SearchParameter::Type::HashedIdentity}
+             {"recipient", SearchParameter::Type::HashedIdentity},
+             {"string", SearchParameter::Type::String},
             });
         Header header;
         ServerRequest request(std::move(header));
@@ -211,6 +213,15 @@ TEST_F(SearchArgumentTest, getSelfLinkPathParameters)
     // - the 'to-be-ignored' argument is ignored and not included in the self link.
     ASSERT_EQ(UrlHelper::unescapeUrl(search.getLinkPathArguments(model::Link::Type::Self)),
         "?sent=lt2021-09-08&recipient=X123456789&sent=lt2021-09-08T10:58:58+00:00");
+
+    // additional test for DateAsUuid, which should behave identical to Date type
+    search = UrlArguments({
+        {"sent", "id", SearchParameter::Type::DateAsUuid},
+    });
+    request.setQueryParameters({{"sent", "lt2021-09-08T23:32:58+12:34"}});
+    search.parse(request, mServer->serviceContext().getKeyDerivation());
+    ASSERT_EQ(UrlHelper::unescapeUrl(search.getLinkPathArguments(model::Link::Type::Self)),
+              "?sent=lt2021-09-08T10:58:58+00:00");
 }
 
 
@@ -243,6 +254,24 @@ TEST_F(SearchArgumentTest, multipleParameters)
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
         "(erp.timestamp_from_suuid(id) >= '2021-09-09T00:00:00+00:00') AND (recipient = '\\x"
         + hashedHex("X123456789") + "') AND (erp.timestamp_from_suuid(id) >= '2022-01-08T10:58:59+00:00')");
+}
+
+TEST_F(SearchArgumentTest, suuid)
+{
+    if (! mHasPostgresSupport)
+        GTEST_SKIP();
+    auto search = UrlArguments({
+        {"sent", "id", SearchParameter::Type::DateAsUuid},
+    });
+    Header header;
+    ServerRequest request(std::move(header));
+    request.setQueryParameters({{"sent", "gt2021-09-08"}, {"sent", "gt2022-01-08T23:32:58+12:34"}});
+    search.parse(request, mServer->serviceContext().getKeyDerivation());
+
+    const auto firstUuid = model::Timestamp::fromXsDateTime("2021-09-09T00:00:00+00:00").toDatabaseSUuid();
+    const auto secondUuid = model::Timestamp::fromXsDateTime("2022-01-08T10:58:59+00:00").toDatabaseSUuid();
+    ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
+              std::string{"(id >= '"}.append(firstUuid).append("') AND (id >= '").append(secondUuid).append("')"));
 }
 
 
@@ -294,8 +323,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
     Header header;
     ServerRequest request(std::move(header));
     request.setQueryParameters({
-        {"recipient",     "X123456789,KVNR654321"},
-        {"sender",        "X123456789,KVNR654321"},
+        {"recipient",     "X123456789,K987654321"},
+        {"sender",        "X123456789,K987654321"},
         {"sent",          "2021-09-08,2021-09-01"},
         {"received",      "gt2022-01-08,2021-09-01"} // doesn't make sense but its not a failure
         });
@@ -307,8 +336,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
     // - the 'sent' timestamps are normalized to UTC and ored.
     // - the 'received' timestamps  are normalized to UTC and ored.
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
-        "((recipient = '\\x" + hashedHex("X123456789") + "') OR (recipient = '\\x" + hashedHex("KVNR654321") + "'))"
-        + " AND ((sender = '\\x" + hashedHex("X123456789") + "') OR (sender = '\\x" + hashedHex("KVNR654321") + "'))"
+        "((recipient = '\\x" + hashedHex("X123456789") + "') OR (recipient = '\\x" + hashedHex("K987654321") + "'))"
+        + " AND ((sender = '\\x" + hashedHex("X123456789") + "') OR (sender = '\\x" + hashedHex("K987654321") + "'))"
         + " AND ((('2021-09-08T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-09T00:00:00+00:00'))"
         + " OR (('2021-09-01T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-02T00:00:00+00:00')))"
         + " AND ((received >= '2022-01-09T00:00:00+00:00') OR (received >= '2021-09-02T00:00:00+00:00'))");
@@ -329,8 +358,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValuesWithFailure)
     Header header;
     ServerRequest request(std::move(header));
     request.setQueryParameters({
-        {"recipient",     "X123456789,KVNR654321"},
-        {"sender",        "X123456789,KVNR654321"},
+        {"recipient",     "X123456789,K987654321"},
+        {"sender",        "X123456789,K987654321"},
         {"sent",          "gt2021-09-08,lt2021-09-01"} // changing prefix is not supported
         });
     ASSERT_THROW(search.parse(request, mServer->serviceContext().getKeyDerivation()), ErpException);
@@ -659,16 +688,16 @@ TEST_F(SearchArgumentTest, eq_syntax)
 TEST_F(SearchArgumentTest, eq_string_sql)
 {
     // Success with exact match.
-    testSql("recipient", "X-234567890",  1);
+    EXPECT_NO_FATAL_FAILURE(testSyntax("string", "X-234567890",  "(string = 'X-234567890')"));
     // Success with lowercase character.
     // TODO: Currently not possible to search case-insenitive
-    testSql("recipient", "x-234567890",  0);
+    EXPECT_NO_FATAL_FAILURE(testSyntax("string", "x-234567890", "(string = 'x-234567890')"));
 
     // Fail for similar but still different (Y != X) kvnr.
-    testSql("recipient", "Y-234567890",  0);
+    EXPECT_NO_FATAL_FAILURE(testSyntax("string", "Y-234567890",   "(string = 'Y-234567890')"));
 
     // Fail for spaces that are not being ignored.
-    testSql("recipient", "X-234567890 ", 0);
-    testSql("recipient", " X-234567890", 0);
-    testSql("recipient", "X-234 567890", 0);
+    EXPECT_NO_FATAL_FAILURE(testSyntax("string", "X-234567890 ",  "(string = 'X-234567890 ')"));
+    EXPECT_NO_FATAL_FAILURE(testSyntax("string", " X-234567890",  "(string = ' X-234567890')"));
+    EXPECT_NO_FATAL_FAILURE(testSyntax("string", "X-234 567890",  "(string = 'X-234 567890')"));
 }

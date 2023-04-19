@@ -35,25 +35,25 @@ namespace
         }
         catch(const TslError& e)
         {
-            LOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix << ", TslError:";
-            LOG(ERROR) << e.what();
+            TLOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix << ", TslError:";
+            TLOG(ERROR) << e.what();
             throw;
         }
         catch(const std::runtime_error& e)
         {
-            LOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix
+            TLOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix
                        << ", unexpected runtime exception: " << e.what();
             TslFail(e.what(), TslErrorCode::UNKNOWN_ERROR);
         }
         catch(const std::exception& e)
         {
-            LOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix
+            TLOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix
                        << ", unexpected exception: " << e.what();
             throw;
         }
         catch(...)
         {
-            LOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix
+            TLOG(ERROR) << fileNameAndLineNumber.fileName << ":" << fileNameAndLineNumber.line << ", " << logPrefix
                        << ", unknown exception";
             throw;
         }

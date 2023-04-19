@@ -1,6 +1,13 @@
 {
   "common": {
     "erp": {
+      "service": {
+        "task": {
+          "activate": {
+            "kbvValidationOnUnknownExtension": "reject"
+          }
+        }
+      },
       "feature": {
         "pkv": "true",
         "workflow-200": "true"
@@ -15,6 +22,9 @@
       },
       "timingCategories": ["all"],
       "fhir-profile-old": {
+        "fhir-validation": {
+          "mode": "require_success"
+        },
         "fhir": {
           "structure-files": [
             "@ERP_FHIR_RESOURCE_DIR@CodeSystem-flowType-supplements.xml"
@@ -40,36 +50,31 @@
       "use-postgres": "false",
       "use-redis-mock": "true",
       "use-idp-updater-mock": "true",
-      "additional-xml-schema": {
-        "de.gematik.erezept-workflow.r4": {
-          "1.1.1": [
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/auditevent/Gem_erxAuditEvent.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/binary/Gem_erxBinary.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/composition/Gem_erxCompositionElement.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/device/Gem_erxDevice.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/medicationdispense/Gem_erxMedicationDispense.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/organization/Gem_erxOrganizationElement.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/receipt/Gem_erxReceiptBundle.xsd",
-            "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/task/Gem_erxTask.xsd"
-          ]
-        },
-        "kbv.ita.erp": {
-          "1.0.2": [
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Coverage.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_HumanName.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Organization.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Patient.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Practitioner.xsd",
-            "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_PractitionerRole.xsd"
-          ]
-        }
-      },
+      "additional-xml-schema": [
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/auditevent/Gem_erxAuditEvent.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/binary/Gem_erxBinary.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/composition/Gem_erxCompositionElement.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/device/Gem_erxDevice.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/organization/Gem_erxOrganizationElement.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/receipt/Gem_erxReceiptBundle.xsd",
+          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/task/Gem_erxTask.xsd",
+          "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Coverage.xsd",
+          "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_HumanName.xsd",
+          "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Organization.xsd",
+          "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Patient.xsd",
+          "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Practitioner.xsd",
+          "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_PractitionerRole.xsd"
+        ],
       "client": {
         "enableAuthentication": "true",
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDkTCCAnkCFCOnltB0u6JRe7YLPXNALVAqMuXNMA0GCSqGSIb3DQEBCwUAMIGE\nMQswCQYDVQQGEwJERTELMAkGA1UECAwCSEgxEDAOBgNVBAcMB0hhbWJ1cmcxDDAK\nBgNVBAoMA0lCTTEdMBsGA1UECwwUR2VzdW5kaGVpdHNwbGF0dGZvcm0xKTAnBgNV\nBAMMIGVSUCBUZXN0IENsaWVudCBmb3IgdW5pdCB0ZXN0aW5nMB4XDTIxMDUxNzEx\nNDMwMFoXDTMxMDUxNTExNDMwMFowgYQxCzAJBgNVBAYTAkRFMQswCQYDVQQIDAJI\nSDEQMA4GA1UEBwwHSGFtYnVyZzEMMAoGA1UECgwDSUJNMR0wGwYDVQQLDBRHZXN1\nbmRoZWl0c3BsYXR0Zm9ybTEpMCcGA1UEAwwgZVJQIFRlc3QgQ2xpZW50IGZvciB1\nbml0IHRlc3RpbmcwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDnjafA\npLjHvv/u153DqkdT9q64fgvTRaP2YglqT0LbEbkL6OqfmAxOJDvPzxBPe+dVGE9c\nqEy6qubhFbyXrBIEr2fx0qVkutj/UU+B4ihrZIvVoYNm9FrYoZJFR0WrNi6plJGQ\n8x93l04US7kIM3sjYs2tJ3vqrUYnlzS8yAfLP6rPfdW75B6wJw21J12K28eM1b0K\nqTGV+Lw0cFS64AxWbGQKnxofO80sbtpvz/GBpshEuIQTj3W3qtt4z/MV2fVAq1Kz\nBb0IPNc6gKZ2kPs2SGafyw/3CCVa3Nx7uQanzYeuua1pd8zIseN5KMJRy9+V1tM9\nOjoJioWG0eMCFfpDAgMBAAEwDQYJKoZIhvcNAQELBQADggEBADZipJQ4Fueb+uC+\n+nb+VmOvfJKa4IAldrHqXdCBD54wK8PJdBkykKpGQFMSLBcPzrf+1kLasDqZTAV+\nddN4uAfVF9XHjYf7AYxbFZDiZlbDR11Usj2/v5SefCYuZWM06qSshw9gxUlAcxrV\nUpE/m15K8QYzn4qKbrQk7u0kslHciEwSBC/E3w5SPFe7NaWx12NQYSjKzn+g7wrP\nfOP0aIaYuhlozyCqrUwnAi/ha3qfrhPNBuXlf/TyEoTSZEDudfRomflLwXd1jdLT\nbhSa/RTsqOEgSnJN1dmrKf9cQLr4QgB5w0lCC3kSAdY9+hjCBmk7Rv0DHKfnbC+R\nHWOT0g8=\n-----END CERTIFICATE-----\n",
         "certificateKey": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQIBAAKCAQEA542nwKS4x77/7tedw6pHU/auuH4L00Wj9mIJak9C2xG5C+jq\nn5gMTiQ7z88QT3vnVRhPXKhMuqrm4RW8l6wSBK9n8dKlZLrY/1FPgeIoa2SL1aGD\nZvRa2KGSRUdFqzYuqZSRkPMfd5dOFEu5CDN7I2LNrSd76q1GJ5c0vMgHyz+qz33V\nu+QesCcNtSdditvHjNW9Cqkxlfi8NHBUuuAMVmxkCp8aHzvNLG7ab8/xgabIRLiE\nE491t6rbeM/zFdn1QKtSswW9CDzXOoCmdpD7Nkhmn8sP9wglWtzce7kGp82Hrrmt\naXfMyLHjeSjCUcvfldbTPTo6CYqFhtHjAhX6QwIDAQABAoIBAQDCx7VaZvYNCM1P\nw86xXla7+aGGDnmyEj3XryZOaDhMAb+QljBvab7IKNCrgXot8oNpYJa50dUhnUu0\nAc3wJE3P5SFiGZkJf+ez9lkUYAMyO5UpcsEPZPPakSdy4X5ohJ6CBjjhHrLUrdF/\nXydaD7xAywdK5hDmGzYNbbNuLjHoNJ9S701OVXBmfoIWkqx17bVddYq50PN2QT6W\nTM9qTEDR8DvdSD51buf1Tnv6cVaAj4efdtzzJAgJlvBRUo7ACG5jbi4eg6a7EHrd\nH6Qudfj9YOz/Mq7fccHLdOecbqHwdcZqP9MtRyXmaguUYK5Qh0G6McyTXegjtWrs\nnMpWXzlBAoGBAP8TBC/8AUCxzjGDhiluqi4/UniT2J0FapcT8tAZOvv8lNOfcjqf\n7mUCO9Zf4nM97djCg/t1DsCWPF1Dj3ejT0BzhvLGBnvbzM+NXjb6+i6DFc8uuib5\n8mrLJ0o2ZUE0jbhk/RsXgeR5uhyZVrnXlELhDko54X8fqgAswa3qAe+hAoGBAOhk\nyUHUP/NQGCvcKhM5wlS0uRm3thnWKjzPyVFZ3o5wbuR3ZZniwPnxLFPjEFun5lmD\nk9VdY7iVJG1Zr8Ms2om6OdEJjU62DlPtTFVw0KhOWN4SMWuFaQx5dCDHQWr32aGf\nSkjcmZmef/+bxpjjsfdyG3jQs181NVy3DcY8P+9jAoGBAJ3ZudSsImZT4qN3nlYT\nmxNlsnbWH84EZRM7kB9CDeOVStCvsrQe9xvhRwCCdBQXNhLXRXAe39NE5fRdc/J4\nyPm8xL2G2MpbmqKy/KQPqzWPf7aoVyD5uxBlylm90emJSU7ciFn0sTigMBG0vxvh\nEmpU9k/vA+J0yPK0v+MNlschAoGBAM7ArBU3AlY0Ee0jiQNlxbCawHtS6F4AHb/Q\nlSkdLVXITcBRQUExbcJwgKF5SBpjPBqzZxjSZ1/WwHvQ6QBZrWwPFFUXjHJUolak\nrd7t6ZVzbrjTssgX/yer/lcTLu49549VKj+8k6MKUpJUQtHO8YxWJn7MHmk762e7\nLDQLck5FAoGAUT05LFb7Nm7wpSmiCcrrBUKpH3nXdOeA964lMK/tOO4/bG3mAizn\nJEEc6ASk0tfWABGjQl429afbvhWlAToxqwB2f0uwUi9RrQ7h6vKZi1GudDi7jbSR\n7B4dH5SScUDpkHgKU7bbQS7Se4plvbELusIn9jYCCmfca0nSd5vNhWA=\n-----END RSA PRIVATE KEY-----\n"
       },
-      "resource-manager-path": "@ERP_RUNTIME_RESOURCE_DIR@"
+      "resource-manager-path": "@ERP_RUNTIME_RESOURCE_DIR@",
+      "vsdm-keys": [
+        "{\"betreiberkennung\":\"A\",\"version\":\"1\",\"cleartext_key\":\"FIYBBFNNWh99R+YbKqWMnQa/e2J1Qr2paQn+0gT3fWE=\"}",
+        "{\"betreiberkennung\":\"A\",\"version\":\"2\",\"cleartext_key\":\"1tHH57rVLW9VmUmOg//emiVswVSrgTV43A8fFUD/r/I=\"}"
+      ]
     },
     "mock": {
       "ecies": {
@@ -81,10 +86,10 @@
         "private-key": "-----BEGIN PRIVATE KEY-----\nMIGVAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwR6MHgCAQEEIJEeJegS5+R91IGR\ngUsfFFDntiID2L3BkOmZ565krSvPoAsGCSskAwMCCAEBB6FEA0IABIYZnwiGAn5Q\nYOx43Z8MwaZLD3r/bz6BTcQO5pbeum6qQzYD5dDCcriw/VNPPZCQzXQPg4StWyy5\nOOq9TogBEmM=\n-----END PRIVATE KEY-----"
       },
       "id.fd.sig": {
-        "cert": "-----BEGIN CERTIFICATE-----\nMIICxDCCAmugAwIBAgIHAPPxMc6DxzAKBggqhkjOPQQDAjCBhDELMAkGA1UEBhMC\nREUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMjAwBgNVBAsMKUtv\nbXBvbmVudGVuLUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMSAwHgYDVQQD\nDBdHRU0uS09NUC1DQTEwIFRFU1QtT05MWTAeFw0yMDEwMDcwMDAwMDBaFw0yNTA4\nMDcwMDAwMDBaMF4xCzAJBgNVBAYTAkRFMSYwJAYDVQQKDB1nZW1hdGlrIFRFU1Qt\nT05MWSAtIE5PVC1WQUxJRDEnMCUGA1UEAwweRVJQIFJlZmVyZW56ZW50d2lja2x1\nbmcgRkQgU2lnMFowFAYHKoZIzj0CAQYJKyQDAwIIAQEHA0IABEldYn6CK9ft8L8H\nMpJBRLSG852LwqbmFUkhbdsK1G4oBDYhAqB0IMyo+PJ3fUluggoAOHRDTPT0GR0W\nhqTFkFujgeswgegwOAYIKwYBBQUHAQEELDAqMCgGCCsGAQUFBzABhhxodHRwOi8v\nZWhjYS5nZW1hdGlrLmRlL29jc3AvMA4GA1UdDwEB/wQEAwIHgDAhBgNVHSAEGjAY\nMAoGCCqCFABMBIFLMAoGCCqCFABMBIEjMB8GA1UdIwQYMBaAFCjw+OapyHfMQ0Xb\nmq7XOoOsDg+oMB0GA1UdDgQWBBTFOF7jC4He9P41tN2Egygarc9zrzAMBgNVHRMB\nAf8EAjAAMCsGBSskCAMDBCIwIDAeMBwwGjAYMAoMCEUtUmV6ZXB0MAoGCCqCFABM\nBIIDMAoGCCqGSM49BAMCA0cAMEQCIC3GhnWAejWO73WwEKDJXtuMCQNQemw/KljS\neABzn0HdAiB+wSFkBccEME3+QjZEM0SJbQ02n+2KdU4piu2o0T35aA==\n-----END CERTIFICATE-----\n",
-        "private-key": "-----BEGIN PRIVATE KEY-----\nMIGVAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwR6MHgCAQEEIKd3WtkUFC5Z0NZl\n4MAjxjh69DnnYV5e03WbLFQoq9qDoAsGCSskAwMCCAEBB6FEA0IABEldYn6CK9ft\n8L8HMpJBRLSG852LwqbmFUkhbdsK1G4oBDYhAqB0IMyo+PJ3fUluggoAOHRDTPT0\nGR0WhqTFkFs=\n-----END PRIVATE KEY-----\n",
-        "signer-cert": "-----BEGIN CERTIFICATE-----\nMIIDGjCCAr+gAwIBAgIBFzAKBggqhkjOPQQDAjCBgTELMAkGA1UEBhMCREUxHzAd\nBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxNDAyBgNVBAsMK1plbnRyYWxl\nIFJvb3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxGzAZBgNVBAMMEkdF\nTS5SQ0EzIFRFU1QtT05MWTAeFw0xNzA4MzAxMTM2MjJaFw0yNTA4MjgxMTM2MjFa\nMIGEMQswCQYDVQQGEwJERTEfMB0GA1UECgwWZ2VtYXRpayBHbWJIIE5PVC1WQUxJ\nRDEyMDAGA1UECwwpS29tcG9uZW50ZW4tQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3Ry\ndWt0dXIxIDAeBgNVBAMMF0dFTS5LT01QLUNBMTAgVEVTVC1PTkxZMFowFAYHKoZI\nzj0CAQYJKyQDAwIIAQEHA0IABDFinQgzfsT1CN0QWwdm7e2JiaDYHocCiy1TWpOP\nyHwoPC54RULeUIBJeX199Qm1FFpgeIRP1E8cjbHGNsRbju6jggEgMIIBHDAdBgNV\nHQ4EFgQUKPD45qnId8xDRduartc6g6wOD6gwHwYDVR0jBBgwFoAUB5AzLXVTXn/4\nyDe/fskmV2jfONIwQgYIKwYBBQUHAQEENjA0MDIGCCsGAQUFBzABhiZodHRwOi8v\nb2NzcC5yb290LWNhLnRpLWRpZW5zdGUuZGUvb2NzcDASBgNVHRMBAf8ECDAGAQH/\nAgEAMA4GA1UdDwEB/wQEAwIBBjAVBgNVHSAEDjAMMAoGCCqCFABMBIEjMFsGA1Ud\nEQRUMFKgUAYDVQQKoEkMR2dlbWF0aWsgR2VzZWxsc2NoYWZ0IGbDvHIgVGVsZW1h\ndGlrYW53ZW5kdW5nZW4gZGVyIEdlc3VuZGhlaXRza2FydGUgbWJIMAoGCCqGSM49\nBAMCA0kAMEYCIQCprLtIIRx1Y4mKHlNngOVAf6D7rkYSa723oRyX7J2qwgIhAKPi\n9GSJyYp4gMTFeZkqvj8pcAqxNR9UKV7UYBlHrdxC\n-----END CERTIFICATE-----",
-        "ocsp-url": "http://ehca-testref.sig-test.telematik-test:8080/status/ecc-ocsp"
+        "cert": "-----BEGIN CERTIFICATE-----\nMIIDKjCCAtCgAwIBAgIRAPKsXeT1ZkXlvPdaotCVNxMwCgYIKoZIzj0EAwIwgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBMSBURVNULU9OTFkwHhcNMjIwMjE1MjMwMDAwWhcNMjQwMjE0MjMwMDAwWjBKMRAwDgYDVQQDDAdlcmV6ZXB0MSkwJwYDVQQKDCBJQk0gRGV1dHNjaGxhbmQgR21iSCAtIE5PVC1WQUxJRDELMAkGA1UEBhMCREUwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEfu0bMWi5ntemd8CNHmQ0kNtAusT6Hu9pEOBWj9emcDUdnooLZoJzXGIhs1A4a6s2e+pOvho0hwKP3Efyc9rJPaOCAUQwggFAMB0GA1UdDgQWBBQNDEOa7UGudzG+bFXauo1ARKbVUjAOBgNVHQ8BAf8EBAMCBkAwFwYDVR0RBBAwDoIMRVJQLklCTS5URVNUMAwGA1UdEwEB/wQCMAAwUgYDVR0gBEswSTA7BggqghQATASBIzAvMC0GCCsGAQUFBwIBFiFodHRwOi8vd3d3LmdlbWF0aWsuZGUvZ28vcG9saWNpZXMwCgYIKoIUAEwEghswRgYIKwYBBQUHAQEEOjA4MDYGCCsGAQUFBzABhipodHRwOi8vb2NzcC10ZXN0Lm9jc3AudGVsZW1hdGlrLXRlc3Q6ODA4MC8wHwYDVR0jBBgwFoAUewxVJ07lpi9dHRHXsRv2e7nhRSUwKwYFKyQIAwMEIjAgMB4wHDAaMBgwCgwIRS1SZXplcHQwCgYIKoIUAEwEggMwCgYIKoZIzj0EAwIDSAAwRQIhAJTYRDJ5vrpqovuF04iACjL0tQaCm9+QPPDGOXkH+gP0AiBRA5zc7BkrkhKM7VTtNTwyagh5xTMI4iHKbxjC6BkgVA==\n-----END CERTIFICATE-----",
+        "private-key": "-----BEGIN PRIVATE KEY-----\nMIGIAgEAMBQGByqGSM49AgEGCSskAwMCCAEBBwRtMGsCAQEEIBzB1n3SaAHDdh4mSlzHWCELyRnt75LoC8QSbqxFSDZboUQDQgAEfu0bMWi5ntemd8CNHmQ0kNtAusT6Hu9pEOBWj9emcDUdnooLZoJzXGIhs1A4a6s2e+pOvho0hwKP3Efyc9rJPQ==\n-----END PRIVATE KEY-----",
+        "signer-cert": "-----BEGIN CERTIFICATE-----\nMIIDGDCCAr6gAwIBAgIRAN3ecLSmcknDgq4yONOsS5UwCgYIKoZIzj0EAwIwgYIxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMTQwMgYDVQQLDCtaZW50cmFsZSBSb290LUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMRwwGgYDVQQDDBNBQ0xPUy5SQ0EgVEVTVC1PTkxZMB4XDTIyMDEzMDIzMDAwMFoXDTI3MDEzMTIzMDAwMFowgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBMSBURVNULU9OTFkwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEkRKyr9aCrn3uTE3yFRD192nJJsfSOo/gp/mquhFtIeujGcNZReVQmr5WUHZVFBQ4ockpfsQvijvXVgQrywCBH6OB+jCB9zAdBgNVHQ4EFgQUewxVJ07lpi9dHRHXsRv2e7nhRSUwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwUgYDVR0gBEswSTBHBggqghQATASBIzA7MDkGCCsGAQUFBwIBFi1odHRwOi8vd3d3LmFjaGVsb3MuZGUvcG9saWNpZXMvRUVfcG9saWN5Lmh0bWwwPQYIKwYBBQUHAQEEMTAvMC0GCCsGAQUFBzABhiFodHRwOi8vb2NzcC5hY2hlbG9zLmRlOjgwODAvb2NzcC8wHwYDVR0jBBgwFoAULPmk1OJP+7PPyoRiOPjzguuQGaIwCgYIKoZIzj0EAwIDSAAwRQIgfXOrM/MMnPuIenTDb8RB5mqU+AuoHY8bY3eINpXPSj0CIQCDH6ge0mLLuFnD0CdPtCP0LNOkwS91dBWQFzdoKij11w==\n-----END CERTIFICATE-----",
+        "ocsp-url": "http://ocsp-test.ocsp.telematik-test:8080/"
       },
       "use-mock-tpm": "true",
       "generated-pki-path": "@CMAKE_BINARY_DIR@/test/generated_pki"

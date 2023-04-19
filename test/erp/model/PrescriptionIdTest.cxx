@@ -15,11 +15,11 @@ TEST(PrescriptionIdTest, example1)
     // Example from
     // 2.2.1 Beispielrechnung
     // 2.2.1.1 Prüfzifferberechnung für "160.000.000.000.123.xx"
-    A_19217.test("123 from DB is correctly translated into prescription notation");
+    A_19217_01.test("123 from DB is correctly translated into prescription notation");
     auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 123);
     ASSERT_EQ(prescriptionId.toDatabaseId(), 123);
     ASSERT_EQ(prescriptionId.toString(), "160.000.000.000.123.76");
-    A_19217.finish();
+    A_19217_01.finish();
 
     A_19218.test("validate correct checksum 76");
     auto prescriptionId2 = model::PrescriptionId::fromString("160.000.000.000.123.76");
@@ -33,11 +33,11 @@ TEST(PrescriptionIdTest, example2)
     // Example from
     // 2.2.1 Beispielrechnung
     // 2.2.1.3 Prüfzifferberechnung für "160.123.456.789.123.xx"
-    A_19217.test("123456789123 from DB is correctly translated into prescription notation");
+    A_19217_01.test("123456789123 from DB is correctly translated into prescription notation");
     auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 123456789123);
     ASSERT_EQ(prescriptionId.toDatabaseId(), 123456789123);
     ASSERT_EQ(prescriptionId.toString(), "160.123.456.789.123.58");
-    A_19217.finish();
+    A_19217_01.finish();
 
     A_19218.test("validate correct checksum 58");
     auto prescriptionId2 = model::PrescriptionId::fromString("160.123.456.789.123.58");

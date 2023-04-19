@@ -22,6 +22,11 @@ std::string ByteHelper::toHex (gsl::span<const char> buffer)
     return hex;
 }
 
+std::string ByteHelper::toHex(const util::Buffer& buffer)
+{
+    return toHex(gsl::span(reinterpret_cast<const char*>(buffer.data()), buffer.size()));
+}
+
 
 std::string ByteHelper::fromHex (const std::string_view hexString)
 {

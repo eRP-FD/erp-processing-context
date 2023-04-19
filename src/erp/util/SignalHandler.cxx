@@ -36,7 +36,7 @@ void SignalHandler::registerSignalHandlers(const std::vector<int>& signals)
 
 void SignalHandler::manualTermination()
 {
-    TLOG(WARNING) << "SignalHandler::manualTermination() called, raising internalTerminationSignal "
+    TLOG(INFO) << "SignalHandler::manualTermination() called, raising internalTerminationSignal "
                   << internalTerminationSignal;
     if (std::raise(internalTerminationSignal) != 0)
     {
@@ -47,7 +47,7 @@ void SignalHandler::manualTermination()
 
 void SignalHandler::gracefulShutdown()
 {
-    TLOG(WARNING) << "SignalHandler::gracefulShutdown() called, raising SIGTERM";
+    TLOG(INFO) << "SignalHandler::gracefulShutdown() called, raising SIGTERM";
     if (std::raise(SIGTERM) != 0)
     {
         TLOG(ERROR) << "Failed to send signal.";

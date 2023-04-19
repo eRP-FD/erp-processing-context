@@ -4,25 +4,27 @@
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-
-#include "erp/erp-serverinfo.hxx"
+#include "erp/ErpRequirements.hxx"
 #include "erp/beast/BoostBeastStringWriter.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/erp-serverinfo.hxx"
 #include "erp/model/Kvnr.hxx"
+#include "erp/model/ResourceFactory.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/util/ByteHelper.hxx"
+#include "erp/util/Expect.hxx"
+#include "erp/util/Uuid.hxx"
 #include "erp/validation/XmlValidator.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
-#include "test/util/StaticData.hxx"
-#include "test/util/TestConfiguration.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
+#include "test/util/TestConfiguration.hxx"
 #include "test/util/TestUtils.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/Uuid.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <iomanip>
 #include <random>
@@ -110,6 +112,10 @@ constexpr fhirtools::ValidatorOptions receiptValidationOptions
     }
 };
 
+constexpr fhirtools::ValidatorOptions kbvValidatorOptions{
+    .allowNonLiteralAuthorReference = true
+};
+
 template<class TModelElem>
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void modelElemfromString(
@@ -118,21 +124,28 @@ void modelElemfromString(
     const std::string& contentType,
     SchemaType schemaType, const std::optional<fhirtools::ValidatorOptions>& valOpts = fhirtools::ValidatorOptions{})
 {
+    using ResourceFactory = model::ResourceFactory<TModelElem>;
+    std::optional<ResourceFactory> factory;
+    typename ResourceFactory::Options options {
+        .fallbackVersion = model::ResourceVersion::deprecated<typename TModelElem::SchemaVersionType>(),
+        .validatorOptions = valOpts,
+    };
     if (contentType == std::string(ContentMimeType::fhirXmlUtf8))
     {
-        ASSERT_NO_THROW(result = TModelElem::fromXml(
-                            str, *ErpWorkflowTestBase::getXmlValidator(), *StaticData::getInCodeValidator(), schemaType,
-                            model::ResourceVersion::supportedBundles(),
-                            valOpts));
+        ASSERT_NO_THROW(
+            factory.emplace(ResourceFactory::fromXml(str, *ErpWorkflowTestBase::getXmlValidator(), options)));
     }
     else
     {
-        ASSERT_NO_THROW(result = TModelElem::fromJson(
-                            str, *ErpWorkflowTestBase::getJsonValidator(), *ErpWorkflowTestBase::getXmlValidator(),
-                            *StaticData::getInCodeValidator(), schemaType,
-                            model::ResourceVersion::supportedBundles(),
-                            valOpts));
+        ASSERT_NO_THROW(
+            factory.emplace(ResourceFactory::fromJson(str, *ErpWorkflowTestBase::getJsonValidator(), options)));
     }
+    if (!valOpts)
+    {
+        factory->genericValidationMode(Configuration::GenericValidationMode::disable);
+    }
+    ASSERT_NO_THROW(result.emplace(std::move(*factory)
+            .getValidated(schemaType, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator())));
 }
 
 }
@@ -289,6 +302,7 @@ void ErpWorkflowTestBase::checkTaskAccept(
     EXPECT_FALSE(tasks[0].patientConfirmationUuid().has_value());
     const auto secret = tasks[0].secret();
     ASSERT_TRUE(secret.has_value());
+    EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*secret));
     const auto binaryResources = acceptResultBundle->getResourcesByType<model::Binary>("Binary");
     ASSERT_EQ(binaryResources.size(), 1);
     ASSERT_TRUE(binaryResources[0].data().has_value());
@@ -319,8 +333,10 @@ void ErpWorkflowTestBase::checkTaskAccept(
     ASSERT_TRUE(task);
     EXPECT_EQ(task->status(), model::Task::Status::inprogress);
     ASSERT_TRUE(task->secret().has_value());
+    A_19169_01.test("Check that created secret was saved with task");
     ASSERT_EQ(secret.value(), task->secret().value());
     createdSecret = secret.value();
+    EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(createdSecret));
     lastModifiedDate = task->lastModifiedDate();
 
     if(withConsent)
@@ -374,8 +390,8 @@ void ErpWorkflowTestBase::checkTaskClose(
     const auto deviceResources = closeReceipt->getResourcesByType<model::Device>("Device");
     ASSERT_EQ(deviceResources.size(), 1);
     const auto& device = deviceResources.front();
-    EXPECT_EQ(std::string{device.serialNumber()}, std::string{ErpServerInfo::ReleaseVersion});
-    EXPECT_EQ(std::string{device.version()}, std::string{ErpServerInfo::ReleaseVersion});
+    EXPECT_EQ(std::string{device.serialNumber()}, std::string{ErpServerInfo::ReleaseVersion()});
+    EXPECT_EQ(std::string{device.version()}, std::string{ErpServerInfo::ReleaseVersion()});
     const auto signature = closeReceipt->getSignature();
     ASSERT_TRUE(signature.has_value());
     EXPECT_TRUE(signature->when().has_value());
@@ -406,13 +422,16 @@ void ErpWorkflowTestBase::checkTaskClose(
     // Check receipt bundle saved during /Task/Close
     const auto bundles = taskBundle->getResourcesByType<model::Bundle>("Bundle");
     ASSERT_EQ(bundles.size(), 1);  // 1.: Receipt bundle
+    using ReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
+    std::optional<ReceiptFactory> receiptFactory;
+    ASSERT_NO_THROW(
+        receiptFactory.emplace(ReceiptFactory::fromXml(bundles.back().serializeToXmlString(), *getXmlValidator(),
+                                {.fallbackVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
+                                 .validatorOptions = receiptValidationOptions})));
+
     std::optional<model::ErxReceipt> receipt;
-    ASSERT_NO_THROW(receipt = model::ErxReceipt::fromXml(
-                        bundles.back().serializeToXmlString(), *getXmlValidator(), *StaticData::getInCodeValidator(),
-                        SchemaType::Gem_erxReceiptBundle,
-                        model::ResourceVersion::supportedBundles(),
-                        receiptValidationOptions));
-    ASSERT_TRUE(receipt);
+    ASSERT_NO_THROW(receipt.emplace(std::move(*receiptFactory).getValidated(SchemaType::Gem_erxReceiptBundle, *getXmlValidator(),
+                                                                   *StaticData::getInCodeValidator())));
     // Must be the same as the result from the service call:
     EXPECT_EQ(canonicalJson(receipt->serializeToJsonString()), canonicalJson(closeReceipt->serializeToJsonString()));
 
@@ -455,6 +474,7 @@ void ErpWorkflowTestBase::checkTaskAbort(
     ASSERT_FALSE(medicationDispenseForTask.has_value());
 
     // Check deletion of task related communication objects:
+    A_19027_03.test("Deletion of task related communications");
     checkCommunicationsDeleted(prescriptionId, kvnr, communications);
 }
 
@@ -490,8 +510,6 @@ void ErpWorkflowTestBase::checkCommunicationsDeleted(
     std::optional<model::Bundle> communicationsBundle;
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtInsurant));
     ASSERT_TRUE(communicationsBundle);
-    // TODO: the following fails because of missing "entry" array:
-    //std::vector<model::Communication> communications = communicationsBundle->getResourcesByType<model::Communication>("Communication");
     EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, prescriptionId), 0);
     for (const auto& communication : communications)
     {
@@ -840,8 +858,7 @@ void ErpWorkflowTestBase::communicationsGetInternal(std::optional<model::Bundle>
             ASSERT_NO_THROW((void) model::Communication::fromXml(
                 communication.serializeToXmlString(), *getXmlValidator(), *StaticData::getInCodeValidator(),
                 model::Communication::messageTypeToSchemaType(messageType),
-                model::ResourceVersion::supportedBundles(),
-                allowGenericValidation ? std::make_optional<fhirtools::ValidatorOptions>() : std::nullopt));
+                model::ResourceVersion::supportedBundles(), allowGenericValidation));
         }
     }
 }
@@ -1056,7 +1073,7 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
     std::string endpointPath{"/Task"};
     if (encodedPnw.has_value())
     {
-        endpointPath += "?KVNR=" + kvnr + "&PNW=" + *encodedPnw;
+        endpointPath += "?pnw=" + *encodedPnw;
     }
 
     RequestArguments args(HttpMethod::GET, endpointPath, {});
@@ -1189,11 +1206,11 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
             {
                 if (!isPatient)
                 {
-                    ASSERT_NO_THROW((void) model::ErxReceipt::fromXml(
-                        patientConfirmationOrReceipt[0].serializeToXmlString(), *getXmlValidator(),
-                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxReceiptBundle,
-                        model::ResourceVersion::supportedBundles(),
-                        receiptValidationOptions));
+                    using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
+                    ASSERT_NO_THROW((void) ErxReceiptFactory::fromXml(
+                            patientConfirmationOrReceipt[0].serializeToXmlString(), *getXmlValidator(),
+                            {.validatorOptions = receiptValidationOptions})
+                        .getValidated(SchemaType::Gem_erxReceiptBundle, *getXmlValidator(), *StaticData::getInCodeValidator()));
                     ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
                     ASSERT_FALSE(tasks[0].patientConfirmationUuid().has_value());
                     if (tasks[0].status() == model::Task::Status::completed)
@@ -1207,12 +1224,11 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
                 }
                 else
                 {
+                    using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
                     std::optional<model::KbvBundle> kbvBundle;
-                    ASSERT_NO_THROW(kbvBundle.emplace(model::KbvBundle::fromXml(
-                        patientConfirmationOrReceipt[0].serializeToXmlString(), *getXmlValidator(),
-                        *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-                        model::ResourceVersion::supportedBundles(),
-                        {{.allowNonLiteralAuthorReference = true}})));
+                    ASSERT_NO_THROW(kbvBundle.emplace(KbvBundleFactory::fromXml(
+                        patientConfirmationOrReceipt[0].serializeToXmlString(), *getXmlValidator(), {.validatorOptions = kbvValidatorOptions})
+                        .getValidated(SchemaType::KBV_PR_ERP_Bundle, *getXmlValidator(), *StaticData::getInCodeValidator())));
                     ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
                     ASSERT_TRUE(tasks[0].patientConfirmationUuid().has_value());
                     ASSERT_FALSE(tasks[0].receiptUuid().has_value());
@@ -1234,7 +1250,7 @@ std::string ErpWorkflowTestBase::medicationDispense(const std::string& kvnr,
                                                     model::ResourceVersion::FhirProfileBundleVersion bundleVersion)
 {
     std::string kbvVersionStr{model::ResourceVersion::v_str(
-        std::get<model::ResourceVersion::KbvItaErp>(model::ResourceVersion::profileVersionFromBundle(bundleVersion)))};
+        std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(model::ResourceVersion::profileVersionFromBundle(bundleVersion)))};
     std::string templateFileName = "test/EndpointHandlerTest/medication_dispense_input1_" + kbvVersionStr + ".xml";
 
     auto closeBody = ResourceManager::instance().getStringResource(templateFileName);
@@ -1252,7 +1268,24 @@ std::string ErpWorkflowTestBase::medicationDispenseBundle(
     const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense, const std::string& whenHandedOver,
     size_t numMedicationDispenses, model::ResourceVersion::FhirProfileBundleVersion bundleVersion)
 {
-    model::Bundle closeBody(model::BundleType::collection, model::ResourceBase::NoProfile, Uuid());
+    static auto v_2023_07_01_profile = std::string{model::resource::structure_definition::medicationDispenseBundle}
+            .append("|1.2");
+    model::Bundle::Profile profile;
+    switch (bundleVersion)
+    {
+        using enum model::ResourceVersion::FhirProfileBundleVersion;
+        case v_2022_01_01:
+            profile = model::Bundle::NoProfile;
+            break;
+        case v_2023_07_01:
+
+            profile = v_2023_07_01_profile;
+            break;
+    }
+    EnvironmentVariableGuard envGuard(
+        ConfigurationKey::FHIR_PROFILE_RENDER_FROM,
+        Configuration::instance().getStringValue(ConfigurationKey::FHIR_PROFILE_VALID_FROM));
+    model::Bundle closeBody{model::BundleType::collection, profile, Uuid()};
     for (size_t i = 0; i < numMedicationDispenses; ++i)
     {
         auto dispense = model::MedicationDispense::fromXmlNoValidation(
@@ -1292,7 +1325,9 @@ model::ResourceVersion::DeGematikErezeptWorkflowR4 ErpWorkflowTestBase::serverGe
 //static
 bool ErpWorkflowTestBase::isUnsupportedFlowtype(const model::PrescriptionType workflowType)
 {
-    bool featurePkvEnabled = Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false);
+    bool featurePkvEnabled =
+        Configuration::instance().featurePkvEnabled() &&
+        model::ResourceVersion::isProfileSupported(model::ResourceVersion::DeGematikErezeptPatientenrechnungR4::v1_0_0);
     switch (workflowType)
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
@@ -1316,15 +1351,19 @@ void ErpWorkflowTestBase::taskCloseInternal(
     const std::string& whenHandedOver, size_t numMedicationDispenses)
 {
     std::string closeBody;
-    auto currentFhirBundleVersion = model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>();
+    // we have to send medication dispenses according to the latest version
+    // otherwise it gets rejected
+    auto medicationDipenseRenderVersion =
+        model::ResourceVersion::fhirProfileBundleFromSchemaVersion(serverGematikProfileVersion());
     if (numMedicationDispenses == 1)
     {
-        closeBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, currentFhirBundleVersion);
+        closeBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver,
+                                       medicationDipenseRenderVersion);
     }
     else
     {
-        closeBody =
-            medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses, currentFhirBundleVersion);
+        closeBody = medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver,
+                                             numMedicationDispenses, medicationDipenseRenderVersion);
     }
 
     std::string closePath = "/Task/" + prescriptionId.toString() + "/$close?secret=" + secret;
@@ -1339,11 +1378,10 @@ void ErpWorkflowTestBase::taskCloseInternal(
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
-        ASSERT_NO_THROW(receipt = model::ErxReceipt::fromXml(
-                            serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(),
-                            SchemaType::Gem_erxReceiptBundle,
-                            model::ResourceVersion::supportedBundles(),
-                            receiptValidationOptions));
+        using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
+        ASSERT_NO_THROW(receipt = ErxReceiptFactory::fromXml(serverResponse.getBody(), *getXmlValidator(),
+                                {.validatorOptions = receiptValidationOptions})
+                        .getValidated(SchemaType::Gem_erxReceiptBundle, *getXmlValidator(), *StaticData::getInCodeValidator()));
     }
     else
     {
@@ -1381,7 +1419,7 @@ void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundl
         ASSERT_NO_THROW(bundle = model::Bundle::fromXml(serverResponse.getBody(),
                                                         *getXmlValidator(),
                                                         *StaticData::getInCodeValidator(),
-                                                        SchemaType::fhir));
+                                                        SchemaType::fhir, model::ResourceVersion::supportedBundles(), true));
     }
     else
     {
@@ -1562,12 +1600,15 @@ void ErpWorkflowTestBase::metaDataGetInternal(
     std::optional<model::MetaData>& metaData,
     const ContentMimeType& acceptContentType)
 {
-    ClientResponse response;
     JWT jwt{JwtBuilder::testBuilder().makeJwtApotheke()};  // could be any valid jwt;
-    ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(RequestArguments{HttpMethod::GET, "/metadata", {}}
-        .withJwt(jwt)
-        .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-        .withHeader(Header::Accept, acceptContentType).withExpectedInnerStatus(HttpStatus::OK)));
+    std::tuple<ClientResponse, ClientResponse> result;
+    ASSERT_NO_FATAL_FAILURE(
+        sendInternal(result, RequestArguments{HttpMethod::GET, "/metadata", {}}
+                                 .withJwt(jwt)
+                                 .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                 .withHeader(Header::Accept, acceptContentType)
+                                 .withExpectedInnerStatus(HttpStatus::OK)));
+    auto& response = std::get<1>(result);
     ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
     auto contentType = response.getHeader().header(Header::ContentType);
     ASSERT_TRUE(contentType);
@@ -1627,8 +1668,7 @@ void ErpWorkflowTestBase::consentPostInternal(
         ASSERT_NO_THROW(consent = model::Consent::fromJson(
                             serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(),
                             *StaticData::getInCodeValidator(), SchemaType::fhir,
-                            model::ResourceVersion::supportedBundles(),
-                            std::nullopt));
+                            model::ResourceVersion::supportedBundles(), false));
     }
     else
     {
@@ -1662,8 +1702,7 @@ void ErpWorkflowTestBase::consentGetInternal(
         ASSERT_NO_THROW(consentBundle = model::Bundle::fromJson(
                             serverResponse.getBody(), *getJsonValidator(), *getXmlValidator(),
                             *StaticData::getInCodeValidator(), SchemaType::fhir,
-                            model::ResourceVersion::supportedBundles(),
-                            std::nullopt));
+                            model::ResourceVersion::supportedBundles(), false));
         ASSERT_TRUE(consentBundle.has_value());
         ASSERT_LE(consentBundle->getResourceCount(), 1);
         if(consentBundle->getResourceCount() == 1)
@@ -1753,7 +1792,7 @@ void ErpWorkflowTestBase::chargeItemPostInternal(
         ASSERT_NO_THROW(
             resultChargeItem = model::ChargeItem::fromXml(
                 serverResponse.getBody(), *getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir,
-                model::ResourceVersion::supportedBundles(), std::nullopt));
+                model::ResourceVersion::supportedBundles(), false));
     }
     else
     {
@@ -1770,6 +1809,7 @@ void ErpWorkflowTestBase::chargeItemPutInternal(
     const ContentMimeType& contentType,
     const model::ChargeItem& inputChargeItem,
     const std::string& newMedicationDispenseString,
+    std::string_view accessCode,
     const HttpStatus expectedStatus,
     const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
     const std::optional<std::function<std::string(const std::string&)>>& signFunction)
@@ -1830,7 +1870,7 @@ void ErpWorkflowTestBase::chargeItemPutInternal(
                  .withJwt(jwt)
                  .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
                  .withHeader(Header::Accept, contentType)
-                 .withHeader(Header::XAccessCode, inputChargeItem.accessCode()->data())
+                 .withHeader(Header::XAccessCode, std::string(accessCode))
                  .withExpectedInnerStatus(expectedStatus)));
 
     if(expectedStatus == HttpStatus::OK)
@@ -1895,7 +1935,7 @@ void ErpWorkflowTestBase::chargeItemsGetInternal(
                 ASSERT_NO_THROW((void) model::ChargeItem::fromXml(
                     chargeItem.serializeToXmlString(), *getXmlValidator(), *StaticData::getInCodeValidator(),
                     SchemaType::fhir,
-                    model::ResourceVersion::supportedBundles(), std::nullopt));
+                    model::ResourceVersion::supportedBundles(), false));
             }
         }
     }
@@ -1951,8 +1991,7 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
         ASSERT_EQ(chargeItems.size(), 1);
         ASSERT_NO_THROW((void) model::ChargeItem::fromXml(
             chargeItems[0].serializeToXmlString(), *getXmlValidator(), *StaticData::getInCodeValidator(),
-            SchemaType::fhir, model::ResourceVersion::supportedBundles(),
-            std::nullopt));
+            SchemaType::fhir, model::ResourceVersion::supportedBundles(), false));
 
         const auto professionOIDClaim = jwt.stringForClaim(JWT::professionOIDClaim);
         if(professionOIDClaim == profession_oid::oid_versicherter)
@@ -1976,12 +2015,12 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
                 std::string signatureData;
                 ASSERT_NO_THROW(signatureData = signature->data().value().data());
                 auto cms = runsInCloudEnv() ? CadesBesSignature(signatureData) : CadesBesSignature(certs, signatureData);
+                using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
                 std::optional<model::KbvBundle> kbvBundleFromSignature;
-                ASSERT_NO_THROW(kbvBundleFromSignature = model::KbvBundle::fromXml(
-                                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                    SchemaType::KBV_PR_ERP_Bundle,
-                                    model::ResourceVersion::supportedBundles(),
-                                    {{.allowNonLiteralAuthorReference = true}}));
+                ASSERT_NO_THROW(kbvBundleFromSignature =
+                        KbvBundleFactory::fromXml(cms.payload(), *StaticData::getXmlValidator(),
+                                                  {.validatorOptions = kbvValidatorOptions})
+                        .getValidated(SchemaType::KBV_PR_ERP_Bundle, *getXmlValidator(), *StaticData::getInCodeValidator()));
                 EXPECT_FALSE(kbvBundleFromSignature->getSignature().has_value());
                 EXPECT_EQ(expectedKbvBundle->serializeToJsonString(), kbvBundleFromSignature->serializeToJsonString());
             }
@@ -1992,12 +2031,13 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
                 std::string signatureData;
                 ASSERT_NO_THROW(signatureData = signature->data().value().data());
                 auto cms = runsInCloudEnv() ? CadesBesSignature(signatureData) : CadesBesSignature(certs, signatureData);
+                using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
                 std::optional<model::ErxReceipt> receiptFromSignature;
-                ASSERT_NO_THROW(receiptFromSignature = model::ErxReceipt::fromXml(
-                                    cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                    SchemaType::Gem_erxReceiptBundle,
-                                    model::ResourceVersion::supportedBundles(),
-                                    receiptValidationOptions));
+                ASSERT_NO_THROW(receiptFromSignature =
+                        ErxReceiptFactory::fromXml(cms.payload(), *StaticData::getXmlValidator(),
+                                                   {.validatorOptions = receiptValidationOptions})
+                        .getValidated(SchemaType::Gem_erxReceiptBundle,*StaticData::getXmlValidator(),
+                             *StaticData::getInCodeValidator()));
                 EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
                 EXPECT_EQ(expectedReceipt->serializeToJsonString(), receiptFromSignature->serializeToJsonString());
             }
@@ -2230,8 +2270,49 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
     }
 }
 
+void ErpWorkflowTestBase::validateInternal(const ClientResponse& innerResponse)
+{
+    model::ResourceVersion::FhirProfileBundleVersion fhirProfileBundleVersion =
+        model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01;
+    switch (serverGematikProfileVersion())
+    {
+        case model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1:
+            fhirProfileBundleVersion = model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
+            break;
+        case model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0:
+            fhirProfileBundleVersion = model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01;
+            break;
+    }
+    model::ResourceVersion::FhirProfileBundleVersion itFhirProfileBundleVersion =
+        model::ResourceVersion::currentBundle();
+    std::optional<model::UnspecifiedResource> resourceForValidation;
+    if (fhirProfileBundleVersion > model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 &&
+        itFhirProfileBundleVersion == fhirProfileBundleVersion)
+    {
+        if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
+        {
+            resourceForValidation = model::UnspecifiedResource::fromXmlNoValidation(innerResponse.getBody());
+        }
+        else if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirJsonUtf8})
+        {
+            resourceForValidation = model::UnspecifiedResource::fromJsonNoValidation(innerResponse.getBody());
+        }
+        if (resourceForValidation.has_value())
+        {
+            fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
+            auto validationResult = resourceForValidation->genericValidate(fhirProfileBundleVersion, options);
+            auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
+            for (const auto& item : filteredValidationErrors)
+            {
+                ASSERT_LT(item.severity(), fhirtools::Severity::error) << to_string(item) << "\n"
+                                                                       << innerResponse.getBody();
+            }
+        }
+    }
+}
+
 std::string ErpWorkflowTestBase::creatTeeRequest(const Certificate& serverPublicKeyCertificate,
-                                             const ClientRequest& request, const JWT& jwt)
+                                                 const ClientRequest& request, const JWT& jwt)
 {
     return teeProtocol.createRequest(serverPublicKeyCertificate, request, jwt);
 }
@@ -2255,10 +2336,10 @@ void ErpWorkflowTestBase::checkTaskMeta(const rapidjson::Value& meta)
     const auto& profileArr = profile->value.GetArray();
     ASSERT_EQ(profileArr.Size(), static_cast<rapidjson::SizeType>(1));
     ASSERT_TRUE(profile->value[0].IsString());
-    auto sdTask = isDeprecated ? model::resource::structure_definition::deprecated::task
-                               : model::resource::structure_definition::task;
-    ASSERT_EQ(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(&profile->value[0])),
-              ::model::ResourceVersion::versionizeProfile(sdTask));
+    std::string sdTask = testutils::profile(
+        SchemaType::Gem_erxTask, isDeprecated ? model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01
+                                              : model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01);
+    ASSERT_EQ(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(&profile->value[0])), sdTask);
     const auto& lastUpdated = meta.FindMember("lastUpdated");
     if (lastUpdated != meta.MemberEnd())
     {
@@ -2347,6 +2428,7 @@ ErpWorkflowTestBase::send(const ErpWorkflowTestBase::RequestArguments& args,
 {
     std::tuple<ClientResponse, ClientResponse> result;
     sendInternal(result, args, manipEncryptedInnerRequest, manipInnerRequestHeader);
+    validateInternal(std::get<1>(result));
     return result;
 }
 std::optional<model::Task> ErpWorkflowTestBase::taskCreate(model::PrescriptionType workflowType,
@@ -2520,8 +2602,7 @@ std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(
     const model::PrescriptionId& prescriptionId,
     const model::Timestamp& timestamp)
 {
-    std::string qesBundle =
-        ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
+    std::string qesBundle = kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
     return std::make_tuple(toCadesBesSignature(qesBundle, timestamp), qesBundle);
 }
 std::optional<model::MedicationDispense> ErpWorkflowTestBase::medicationDispenseGet(
@@ -2713,6 +2794,7 @@ std::variant<model::ChargeItem, model::OperationOutcome> ErpWorkflowTestBase::ch
     const ContentMimeType& contentType,
     const model::ChargeItem& inputChargeItem,
     const std::string& newMedicationDispenseString,
+    std::string_view accessCode,
     const HttpStatus expectedStatus,
     const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
     const std::optional<std::function<std::string(const std::string&)>>& signFunction)
@@ -2724,6 +2806,7 @@ std::variant<model::ChargeItem, model::OperationOutcome> ErpWorkflowTestBase::ch
         contentType,
         inputChargeItem,
         newMedicationDispenseString,
+        accessCode,
         expectedStatus,
         expectedErrorCode,
         signFunction);
@@ -2825,9 +2908,8 @@ void ErpWorkflowTestBase::generateNewRandomKVNR(std::string& kvnr)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
-    // > 5000 to avoid generating verification identities
-    std::uniform_int_distribution<int64_t> distrib(5001, 999999999);
-
+    // > 50010 to avoid generating verification identities
+    std::uniform_int_distribution<int64_t> distrib(50010, 999999999);
     for (int tries = 0; tries < 1000; ++tries)
     {
         std::ostringstream oss;
@@ -2856,6 +2938,31 @@ std::shared_ptr<JsonValidator> ErpWorkflowTestBase::getJsonValidator()
 void ErpWorkflowTestBase::resetClient()
 {
     client = TestClient::create(getXmlValidator());
+}
+
+bool ErpWorkflowTestBase::serverUsesOldProfile()
+{
+    return serverGematikProfileVersion() == model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1;
+}
+
+std::string ErpWorkflowTestBase::kbvBundleMvoXml(ResourceTemplates::KbvBundleMvoOptions opts)
+{
+    if (! opts.kbvVersion)
+    {
+        opts.kbvVersion = serverUsesOldProfile() ? model::ResourceVersion::KbvItaErp::v1_0_2
+                                                 : model::ResourceVersion::KbvItaErp::v1_1_0;
+    }
+    return ResourceTemplates::kbvBundleMvoXml(opts);
+}
+
+std::string ErpWorkflowTestBase::kbvBundleXml(ResourceTemplates::KbvBundleOptions opts)
+{
+    if (! opts.kbvVersion)
+    {
+        opts.kbvVersion = serverUsesOldProfile() ? model::ResourceVersion::KbvItaErp::v1_0_2
+                                                 : model::ResourceVersion::KbvItaErp::v1_1_0;
+    }
+    return ResourceTemplates::kbvBundleXml(opts);
 }
 
 void ErpWorkflowTestBase::writeCurrentTestOutputFile(

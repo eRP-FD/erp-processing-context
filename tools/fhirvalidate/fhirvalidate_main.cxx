@@ -7,6 +7,8 @@
 #include <memory>
 #include <ranges>
 
+#include "erp/model/ResourceFactory.hxx"
+#include "test/util/StaticData.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
@@ -22,7 +24,6 @@ int main(int argc, char* argv[])
         auto owd = std::filesystem::current_path();
         auto here = std::filesystem::path(argv[0]).remove_filename().native();
         chdir(here.c_str());
-        const auto& fhir = Fhir::instance();
         Expect(argc > 1, "Missing input filename.");
         for (int i = 1; i < argc; ++i)
         {
@@ -36,27 +37,29 @@ int main(int argc, char* argv[])
 
             auto startPos = fileContent.find_first_of("<{");
             Expect(startPos != std::string::npos, "File type detection failed");
-            std::optional<model::NumberAsStringParserDocument> doc;
+            using Factory = model::ResourceFactory<model::UnspecifiedResource>;
+            std::optional<Factory> factory;
             if (fileContent[startPos] == '<')
             {
-                doc.emplace(Fhir::instance().converter().xmlStringToJson(fileContent));
+                factory.emplace(Factory::fromXml(fileContent, *StaticData::getXmlValidator()));
             }
             else
             {
-                doc.emplace(model::NumberAsStringParserDocument::fromJson(fileContent));
+                factory.emplace(Factory::fromJson(fileContent, *StaticData::getJsonValidator()));
             }
             rapidjson::Pointer resourceTypePtr{
                 model::resource::ElementName::path(model::resource::elements::resourceType)};
-            auto resourceType = model::NumberAsStringParserDocument::getOptionalStringValue(*doc, resourceTypePtr);
-            Expect(resourceType.has_value(), "Could not detect resourceType.");
-            auto rootElement =
-                std::make_shared<ErpElement>(&fhir.structureRepository(), std::weak_ptr<const ErpElement>{},
-                                             std::string{*resourceType}, &doc.value());
-            auto validationResult = fhirtools::FhirPathValidator::validate(
-                {rootElement}, std::string{*resourceType},
-                {.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::onlyOpenSlicing});
-
-            validationResult.dumpToLog();
+            (void)std::move(*factory).getValidated(SchemaType::fhir, *StaticData::getXmlValidator(),
+                                                   *StaticData::getInCodeValidator(),
+                                                   model::ResourceVersion::allBundles());
+        }
+    }
+    catch (const ErpException& erpException)
+    {
+        TLOG(ERROR) << "ERROR: " << erpException.what();
+        if (erpException.diagnostics().has_value())
+        {
+            TLOG(WARNING) << "Diagnostics: " << *erpException.diagnostics();
         }
     }
     catch (const std::exception& e)

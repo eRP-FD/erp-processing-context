@@ -4,6 +4,7 @@
  */
 
 #include "erp/hsm/production/HsmProductionClient.hxx"
+#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/hsm/HsmIdentity.hxx"
 #include "erp/hsm/HsmSessionExpiredException.hxx"
 #include "erp/hsm/production/HsmRawSession.hxx"
@@ -270,6 +271,19 @@ ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
     return createErpArray<Aes128Length>(reinterpret_cast<const uint8_t*>(response.AESKey));
 }
 
+shared_EVP_PKEY HsmProductionClient::getEcPublicKey(const HsmRawSession& session, ErpBlob&& ecKeyPair)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "Hsm:ERP_GetECPublicKey");
+    hsmclient::SingleBlobInput requestInput;
+    setInput(requestInput.BlobIn, ecKeyPair);
+    auto response = hsmclient::ERP_GetECPublicKey(
+        session.rawSession,
+        requestInput);
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_GetECPublicKey failed", timer);
+    return EllipticCurveUtils::x962ToPublicKey(SafeString{response.keyData, response.keyLength});
+}
+
 
 SafeString HsmProductionClient::getVauSigPrivateKey (
     const HsmRawSession& session,
@@ -327,6 +341,33 @@ ErpArray<Aes256Length> HsmProductionClient::unwrapHashKey(
     HsmExpectSuccess(response, "ERP_UnwrapHashKey failed", timer);
 
     return createErpArray<Aes256Length>(reinterpret_cast<const uint8_t*>(response.Key));
+}
+
+ErpBlob HsmProductionClient::wrapRawPayload(const HsmRawSession& session, WrapRawPayloadInput&& input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "Hsm:ERP_WrapRawPayloadWithToken");
+    hsmclient::RawPayloadWithTokenInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    requestInput.payloadLen = input.rawPayload.size();
+    setInput(requestInput.rawPayload, input.rawPayload);
+    requestInput.desiredGeneration = input.generation;
+    const auto response = hsmclient::ERP_WrapRawPayloadWithToken(session.rawSession, requestInput);
+
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_WrapRawPayloadWithToken failed", timer);
+    return convertErpBlob(response.BlobOut);
+}
+
+ErpVector HsmProductionClient::unwrapRawPayload(const HsmRawSession& session, UnwrapRawPayloadInput&& input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "Hsm:ERP_UnwrapRawPayload");
+    hsmclient::WrappedPayloadInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput(requestInput.wrappedRawPayload, input.wrappedRawPayload);
+    const auto response = hsmclient::ERP_UnwrapRawPayload(session.rawSession, requestInput);
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_UnwrapRawPayload failed", timer);
+    return createErpVector(response.payloadLen, response.rawPayload);
 }
 
 ::ParsedQuote HsmProductionClient::parseQuote(const ::ErpVector& quote) const

@@ -56,11 +56,11 @@ Tpm::AuthenticateCredentialOutput TpmMock::authenticateCredential (
     // by logging input and output values of MockEnrolmentManager::getChallengeAnswer().
 
     if (input.secretBase64 != "ACCMno94o+hePIgdbvWa6JvvX5vrrFfEpzeZF4X1/8ZTiAAg5ntsPvEsiTaqLOilvDDyJ63A3OV3D6AHP8WKNo3UXH4=")
-        LOG(WARNING) << "'secret' differs from base64 encoded content of 'secretHSM.bin'";
+        TLOG(WARNING) << "'secret' differs from base64 encoded content of 'secretHSM.bin'";
     if (input.credentialBase64 != "ACDICBOju8CAMmpxTJUGOzBAwtbAKpqzEulOS8YRHB/SRj3s2OsgAQeF2vyvmLdqwF6Yb2h8lGl1B43SDTsl8yZ8gEY=")
-        LOG(WARNING) << "'credential' differs from base64 encoded content of 'encCredHSM.bin'";
+        TLOG(WARNING) << "'credential' differs from base64 encoded content of 'encCredHSM.bin'";
     if (input.akNameBase64 != "AAuYMqOy91+RXl/w1LNlkItLVih0UAJ5qFUVZxo5FO3/5A==")
-        LOG(WARNING) << "'akName' differs from base64 encoded content of 'h80000002.bin'";
+        TLOG(WARNING) << "'akName' differs from base64 encoded content of 'h80000002.bin'";
 
     Tpm::AuthenticateCredentialOutput output;
     output.plainTextCredentialBase64 = "Hb3mbn5C6VCKXgLMtD4gEp69dfd+klXaQSlgJdjIn00=";
@@ -81,11 +81,11 @@ Tpm::QuoteOutput TpmMock::getQuote (
 
     // Check soft requirements for stubbed enrolment service.
     if (input.nonceBase64 != tpm::QuoteNONCESaved_bin_base64)
-        LOG(WARNING) << "'nonce' differs from base64 encoded content of 'QuoteNONCESaved.bin'";
+        TLOG(WARNING) << "'nonce' differs from base64 encoded content of 'QuoteNONCESaved.bin'";
     if (input.pcrSet.size() != 1)
-        LOG(WARNING) << "'pcrSet' does not contain exactly a single element";
+        TLOG(WARNING) << "'pcrSet' does not contain exactly a single element";
     else if (input.pcrSet[0] != 0)
-        LOG(WARNING) << "'pcrSet' is not [0]";
+        TLOG(WARNING) << "'pcrSet' is not [0]";
 
     QuoteOutput output;
     output.quotedDataBase64 = tpm::attest_bin_base64;

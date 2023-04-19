@@ -350,8 +350,7 @@ void MockDatabase::insertAuditEvent(const model::AuditEvent& auditEvent,
             key,
             model::AuditMetaData(
                 auditEvent.agentName(),
-                std::get<1>(auditEvent.agentWho()),
-                (model::AuditEventId::GET_Tasks_by_pharmacy_with_pz == id ? std::make_optional<std::string_view>("pnwPzNumber") : std::nullopt)).serializeToJsonString()),
+                std::get<1>(auditEvent.agentWho())).serializeToJsonString()),
         auditEvent.action(),
         hashedKvnr,
         gsl::narrow_cast<int16_t>(deviceId),
@@ -403,7 +402,7 @@ void MockDatabase::fillWithStaticData ()
 
     const auto taskId5 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
     const auto task5 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = taskId5, 
+        {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = taskId5,
          .timestamp = model::Timestamp::fromFhirDateTime("2021-02-02T16:18:43.036+00:00")}));
 
     const auto taskId6 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4716);
@@ -757,6 +756,11 @@ void MockDatabase::closeConnection()
 bool MockDatabase::isCommitted() const
 {
     return true;
+}
+
+std::string MockDatabase::retrieveSchemaVersion()
+{
+    return Database::expectedSchemaVersion;
 }
 
 void MockDatabase::healthCheck()

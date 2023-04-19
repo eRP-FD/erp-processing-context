@@ -6,6 +6,7 @@
 #include "erp/model/Kvnr.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/util/Expect.hxx"
 #include "erp/util/Random.hxx"
 #include "erp/util/String.hxx"
 

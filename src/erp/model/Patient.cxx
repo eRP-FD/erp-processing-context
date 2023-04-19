@@ -42,13 +42,10 @@ Kvnr Patient::kvnr() const
         const auto kvnrTypeString = NumberAsStringParserDocument::getStringValueFromValue(typePointerValue);
         // for gkv we have the old and the new naming system, so compare with the pkv value only
         const auto kvnrType = kvnrTypeString == resource::naming_system::pkvKvid10 ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
-        if (Configuration::instance().featureWf200Enabled() || kvnrType == model::Kvnr::Type::gkv)
-        {
-            const auto* kvnrPointerValue = kvnrPointer.Get(*item);
-            ModelExpect(kvnrPointerValue && kvnrPointerValue->IsString(),
-                        "missing identifier/value in identifier array entry");
-            return Kvnr{NumberAsStringParserDocument::getStringValueFromValue(kvnrPointerValue), kvnrType};
-        }
+        const auto* kvnrPointerValue = kvnrPointer.Get(*item);
+        ModelExpect(kvnrPointerValue && kvnrPointerValue->IsString(),
+                    "missing identifier/value in identifier array entry");
+        return Kvnr{NumberAsStringParserDocument::getStringValueFromValue(kvnrPointerValue), kvnrType};
     }
     ModelFail("KVNR not found in identifier array.");
 }

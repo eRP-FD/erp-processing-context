@@ -33,7 +33,8 @@ public:
     explicit Health();
 
     void setOverallStatus(const std::string_view& status);
-    void setPostgresStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setPostgresStatus(const std::string_view& status, const std::string_view& connectionInfo,
+                           std::optional<std::string_view> message = std::nullopt);
     void setHsmStatus(const std::string_view& status, const std::string_view& device,
                       std::optional<std::string_view> message = std::nullopt);
     void setRedisStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);

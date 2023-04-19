@@ -11,6 +11,7 @@
 #include "erp/compression/ZStd.hxx"
 #include "erp/crypto/CMAC.hxx"
 #include "erp/database/DatabaseBackend.hxx"
+#include "erp/database/DatabaseConnectionInfo.hxx"
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/model/AuditData.hxx"
@@ -52,9 +53,19 @@ void DatabaseFrontend::closeConnection()
     mBackend->closeConnection();
 }
 
+std::string DatabaseFrontend::retrieveSchemaVersion()
+{
+    return mBackend->retrieveSchemaVersion();
+}
+
 void DatabaseFrontend::healthCheck()
 {
     mBackend->healthCheck();
+}
+
+std::optional<DatabaseConnectionInfo> DatabaseFrontend::getConnectionInfo() const
+{
+    return mBackend->getConnectionInfo();
 }
 
 std::tuple<std::vector<model::MedicationDispense>, bool>
@@ -259,10 +270,12 @@ void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
                                                   encryptReceipt);
 }
 
+// GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData
 void DatabaseFrontend::updateTaskClearPersonalData(const model::Task& task)
 {
     mBackend->updateTaskClearPersonalData(task.prescriptionId(), task.status(), task.lastModifiedDate());
 }
+// GEMREQ-end A_19027-03#query-call-updateTaskClearPersonalData
 
 std::string DatabaseFrontend::storeAuditEventData(model::AuditData& auditData)
 {
@@ -323,7 +336,7 @@ DatabaseFrontend::retrieveAuditEventData(const model::Kvnr& kvnr, const std::opt
         }
         else
         {
-            ret.emplace_back(item.eventId, AuditMetaData({}, {}, {}), item.action, item.agentType, model::Kvnr{kvnr},
+            ret.emplace_back(item.eventId, AuditMetaData({}, {}), item.action, item.agentType, model::Kvnr{kvnr},
                              item.deviceId, item.prescriptionId, consentId);
         }
         ret.back().setId(item.id);
@@ -527,10 +540,12 @@ void DatabaseFrontend::markCommunicationsAsRetrieved(const std::vector<Uuid>& co
     return mBackend->markCommunicationsAsRetrieved(communicationIds, retrieved, mDerivation.hashIdentity(recipient));
 }
 
+// GEMREQ-start A_19027-03#query-call-deleteCommunicationsForTask
 void DatabaseFrontend::deleteCommunicationsForTask(const model::PrescriptionId& taskId)
 {
     return mBackend->deleteCommunicationsForTask(taskId);
 }
+// GEMREQ-end A_19027-03#query-call-deleteCommunicationsForTask
 
 void DatabaseFrontend::storeConsent(const Consent& consent)
 {
@@ -610,9 +625,14 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
 
     ::std::vector<::model::ChargeItem> result;
     ::std::transform(::std::begin(dbChargeItems), ::std::end(dbChargeItems), ::std::back_inserter(result),
-                     [this](const auto& item) {
-                         const auto encryptionData = chargeItemKey(item.prescriptionId, item.blobId, item.salt);
-                         return item.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec).chargeItem;
+                     [this, &kvnr](const auto& item) {
+                                 const auto encryptionData = chargeItemKey(item.prescriptionId, item.blobId, item.salt);
+                                 ::model::ChargeItem chargeItem = item.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec).chargeItem;
+                                 if (!chargeItem.subjectKvnr().has_value())
+                                 {
+                                     chargeItem.setSubjectKvnr(kvnr);
+                                 }
+                                 return chargeItem;
                      });
 
     return result;
@@ -748,7 +768,7 @@ std::optional<model::Bundle> DatabaseFrontend::getDispenseItem(const std::option
 
 SafeString DatabaseFrontend::taskKey(const model::PrescriptionId& taskId)
 {
-    A_19700.start("Get key derivation infromation for updates.");
+    A_19700.start("Get key derivation information for updates.");
     const auto [blobId, salt, authoredOn] = mBackend->getTaskKeyData(taskId);
     A_19700.finish();
     return mDerivation.taskKey(taskId, authoredOn, blobId, salt);
@@ -760,7 +780,7 @@ std::optional<SafeString> DatabaseFrontend::taskKey(const db_model::Task& dbTask
     {
         return std::nullopt;
     }
-    A_19700.start("Get key derivation infromation for retrievals.");
+    A_19700.start("Get key derivation information for retrievals.");
     Expect(not dbTask.salt.empty(), "missing salt in task.");
     auto key = std::make_optional(mDerivation.taskKey(dbTask.prescriptionId, dbTask.authoredOn,
                                                       dbTask.blobId, dbTask.salt));

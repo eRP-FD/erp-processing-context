@@ -503,8 +503,11 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter)
     }
 }
 
+// GEMREQ-start A_19406-01#SeveralTasksGetAllSeveralFilters-1
 TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
+// GEMREQ-end A_19406-01#SeveralTasksGetAllSeveralFilters-1
 {
+    // GEMREQ-start A_19406-01#SeveralTasksGetAllSeveralFilters-2
     // Insert tasks into database
     //---------------------------
 
@@ -531,11 +534,12 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
         tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
         prescriptionIdsByPatients, prescriptionIdsByPharmacies,
         medicationDispensesInputXmlStrings);
+    // GEMREQ-end A_19406-01#SeveralTasksGetAllSeveralFilters-2
 
+    // GEMREQ-start A_19406-01#SeveralTasksGetAllSeveralFilters-3
     // GET Medication Dispenses
     //-------------------------
 
-    // Create a client
     auto client = createClient();
 
     {
@@ -549,6 +553,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
         EXPECT_EQ(medicationDispenses.size(), expectedCount);
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
+    // GEMREQ-end A_19406-01#SeveralTasksGetAllSeveralFilters-3
 
     {
         model::Kvnr kvnrPatient{InsurantA};
@@ -918,7 +923,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
 
 TEST_P(MedicationDispenseGetHandlerTest, OneTaskFilterById)
 {
-    A_22070.test("One Task, Multiple Medication Dispenses");
+    A_22070_02.test("One Task, Multiple Medication Dispenses");
     // ?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
     model::Kvnr kvnrPatient{InsurantA};
     model::TelematikId pharmacy{"3-SMC-B-Testkarte-883110000120312"};
@@ -998,7 +1003,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
 
 TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
 {
-    A_22070.test("Several Tasks, Multiple Medication Dispenses");
+    A_22070_02.test("Several Tasks, Multiple Medication Dispenses");
     model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
     model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 
@@ -1040,7 +1045,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
 
 TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterByIdUnknownId)
 {
-    A_22070.test("One Task, Multiple Medication Dispenses, invalid PrescrptionID");
+    A_22070_02.test("One Task, Multiple Medication Dispenses, invalid PrescrptionID");
     model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
     model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
 

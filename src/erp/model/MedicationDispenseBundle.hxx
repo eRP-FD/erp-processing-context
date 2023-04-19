@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_MEDICATIONDISPENSEBUNDLE_HXX
 
 #include "erp/model/Bundle.hxx"
+#include "erp/validation/SchemaType.hxx"
 
 namespace model
 {
@@ -15,6 +16,8 @@ namespace model
 class MedicationDispenseBundle : public BundleBase<MedicationDispenseBundle>
 {
 public:
+    static constexpr SchemaType schemaType = SchemaType::MedicationDispenseBundle;
+
     using BundleBase<MedicationDispenseBundle>::BundleBase;
     using Resource<MedicationDispenseBundle>::fromXml;
     using Resource<MedicationDispenseBundle>::fromJson;

@@ -13,6 +13,7 @@
 #include "erp/util/InvalidConfigurationException.hxx"
 #include "erp/util/String.hxx"
 #include "erp/validation/XmlValidator.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <stdexcept>
 #include <string>
@@ -77,15 +78,12 @@ namespace {
      */
     void parseConfigFile(const std::string& configFile, rapidjson::Document& configuration)
     {
+        using namespace std::string_literals;
         const std::string fileContent = FileHelper::readFileAsString(configFile);
         rapidjson::Document tmp;
         tmp.Parse(fileContent);
-        if (tmp.HasParseError())
-        {
-            TLOG(ERROR) << "JSON parse error: " << rapidjson::GetParseError_En(tmp.GetParseError());
-            return;
-        }
-
+        Expect3(!tmp.HasParseError(), "JSON parse error: "s.append(rapidjson::GetParseError_En(tmp.GetParseError())),
+                std::logic_error);
         mergeConfig(configuration, tmp, configuration.GetAllocator());
     }
 
@@ -134,7 +132,7 @@ namespace {
         {
             // MODE 1: load exactly one config file as specified by environment override
             // do not catch exception, if the environment variable is set the file must exist
-            TLOG(WARNING) << "loading config file " << configFileName.value();
+            TLOG(INFO) << "loading config file " << configFileName.value();
             parseConfigFile(configFileName.value(), configuration);
             ++loaded;
         }
@@ -154,15 +152,14 @@ namespace {
             {
                 try
                 {
-                    TLOG(WARNING) << "loading config file " << configFile.second;
+                    TLOG(INFO) << "loading config file " << configFile.second;
                     parseConfigFile(configFile.second.string(), configuration);
                     ++loaded;
                 }
                 catch (...)
                 {
-                    // we don't need to abort, config file can be replaced by
-                    // environment variables completely
                     TLOG(ERROR) << "Not able to read the configuration file from " << configFile.second;
+                    throw;
                 }
             }
         }
@@ -173,7 +170,7 @@ namespace {
         }
         else
         {
-            TLOG(WARNING) << "loaded " << loaded << " configuration file" << (loaded > 1?"s":"");
+            TLOG(INFO) << "loaded " << loaded << " configuration file" << (loaded > 1?"s":"");
         }
 
         return configuration;
@@ -285,7 +282,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVER_PRIVATE_KEY                             , {"ERP_SERVER_PRIVATE_KEY"                             , "/erp/server/certificateKey"}},
     {ConfigurationKey::SERVER_REQUEST_PATH                            , {"ERP_SERVER_REQUEST_PATH"                            , "/erp/server/requestPath"}},
     {ConfigurationKey::SERVER_PROXY_CERTIFICATE                       , {"ERP_SERVER_PROXY_CERTIFICATE"                       , "/erp/server/proxy/certificate"}},
-    {ConfigurationKey::SERVICE_GENERIC_VALIDATION_MODE                , {"ERP_SERVICE_GENERIC_VALIDATION_MODE"                , "/erp/service/genericValidation"}},
+    {ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE    , {"ERP_SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE"    , "/erp/fhir-profile-old/fhir-validation/mode"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD, {"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD", "/erp/service/task/activate/entlassRezeptValidityInWorkDays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS                 , {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS"                 , "/erp/service/task/activate/holidays"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv"}},
@@ -331,29 +328,33 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REDIS_CERTIFICATE_PATH                         , {"ERP_REDIS_CERTIFICATE_PATH"                         , "/erp/redis/certificatePath"}},
     {ConfigurationKey::REDIS_CONNECTION_TIMEOUT                       , {"ERP_REDIS_CONNECTION_TIMEOUT"                       , "/erp/redis/connectionTimeout"}},
     {ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE                      , {"ERP_REDIS_CONNECTIONPOOL_SIZE"                      , "/erp/redis/connectionPoolSize"}},
+    {ConfigurationKey::REDIS_SENTINEL_HOSTS                           , {"ERP_REDIS_SENTINEL_HOSTS"                           , "/erp/redis/sentinelHosts"}},
+    {ConfigurationKey::REDIS_SENTINEL_MASTER_NAME                     , {"ERP_REDIS_SENTINEL_MASTER_NAME"                     , "/erp/redis/sentinelMasterName"}},
+    {ConfigurationKey::REDIS_SENTINEL_SOCKET_TIMEOUT                  , {"ERP_REDIS_SENTINEL_SOCKET_TIMEOUT"                  , "/erp/redis/sentinelSocketTimeout"}},
     {ConfigurationKey::TOKEN_ULIMIT_CALLS                             , {"ERP_TOKEN_ULIMIT_CALLS"                             , "/erp/server/token/ulimitCalls"}},
     {ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS                       , {"ERP_TOKEN_ULIMIT_TIMESPAN_MS"                       , "/erp/server/token/ulimitTimespanMS"}},
     {ConfigurationKey::REPORT_LEIPS_KEY_ENABLE                        , {"ERP_REPORT_LEIPS_KEY_ENABLE"                        , "/erp/report/leips/enable"}},
     {ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS      , {"ERP_REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS"      , "/erp/report/leips/refreshIntervalSeconds"}},
     {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds"}},
     {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds"}},
-    {ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_SHORT              , {"ERP_REPORT_ALL_TASKS_RATE_LIMIT_SHORT"              , "/erp/report/getAllTasksRateLimiter/shortTermCalls"}},
-    {ConfigurationKey::REPORT_ALL_TASKS_RATE_LIMIT_LONG               , {"ERP_REPORT_ALL_TASKS_RATE_LIMIT_LONG"               , "/erp/report/getAllTasksRateLimiter/longTermCalls"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL                   , {"ERP_FHIR_PROFILE_OLD_VALID_UNTIL"                   , "/erp/fhir-profile-old/valid-until"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV                , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_KBV"                , "/erp/fhir-profile-old/kbv.ita.erp"}},
     {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK            , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK"            , "/erp/fhir-profile-old/de.gematik.erezept-workflow.r4"}},
     {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD                 , {"ERP_FHIR_STRUCTURE_DEFINITIONS_OLD"                 , "/erp/fhir-profile-old/fhir/structure-files"}},
     {ConfigurationKey::ERP_FHIR_VERSION_OLD                           , {"ERP_FHIR_VERSION_OLD"                               , "/erp/fhir-profile-old/erp-fhir-version"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-bundled-resource"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-contained-resource"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile-old/fhir-validation/levels/mandatory-resolvable-reference-failure"}},
     {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir-profile/fhir/structure-files"}},
     {ConfigurationKey::ERP_FHIR_VERSION                               , {"ERP_FHIR_VERSION"                                   , "/erp/fhir-profile/erp-fhir-version"}},
     {ConfigurationKey::FHIR_PROFILE_VALID_FROM                        , {"ERP_FHIR_PROFILE_VALID_FROM"                        , "/erp/fhir-profile/valid-from"}},
     {ConfigurationKey::FHIR_PROFILE_RENDER_FROM                       , {"ERP_FHIR_PROFILE_RENDER_FROM"                       , "/erp/fhir-profile/render-from"}},
     {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV                    , {"ERP_FHIR_PROFILE_XML_SCHEMA_KBV"                    , "/erp/fhir-profile/kbv.ita.erp"}},
     {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK                , {"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK"                , "/erp/fhir-profile/de.gematik.erezept-workflow.r4"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "erp/fhir-validation/levels/unreferenced-bundled-resource"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "erp/fhir-validation/levels/unreferenced-contained-resource"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "erp/fhir-validation/levels/mandatory-resolvable-reference-failure"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-bundled-resource"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-contained-resource"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile/fhir-validation/levels/mandatory-resolvable-reference-failure"}},
     {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds"}},
     {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device"}},
     {ConfigurationKey::HSM_MAX_SESSION_COUNT                          , {"ERP_HSM_MAX_SESSION_COUNT"                          , "/erp/hsm/max-session-count"}},
@@ -375,12 +376,11 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir"}},
     {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds"}},
     {ConfigurationKey::FEATURE_PKV                                    , {"ERP_FEATURE_PKV"                                    , "/erp/feature/pkv"}},
-    {ConfigurationKey::FEATURE_WORKFLOW_200                           , {"ERP_FEATURE_WORKFLOW_200"                           , "/erp/feature/workflow-200"}},
     {ConfigurationKey::ADMIN_SERVER_INTERFACE                         , {"ERP_ADMIN_SERVER_INTERFACE"                         , "/erp/admin/server/interface"}},
     {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port"}},
     {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds"}},
     {ConfigurationKey::ADMIN_CREDENTIALS                              , {"ERP_ADMIN_CREDENTIALS"                              , "/erp/admin/credentials"}},
-    {ConfigurationKey::PNW_ALLOWED_RESULTS                            , {"ERP_SERVICE_PNW_ALLOWED_RESULTS"                    , "/erp/pnw_allowed_results"}},
+    {ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS                    , {"ERP_PROOF_VALIDITY_SECONDS"                         , "/erp/vsdmValiditySeconds"}},
     });
     // clang-format on
 }
@@ -721,12 +721,12 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     if (oldValidUntilStr && oldErpFhirVersion)
     {
         (void)model::ResourceVersion::str_vBundled(*oldErpFhirVersion);
-        xmlValidator.loadKbvSchemas(*oldErpFhirVersion, oldKbvSchemas, std::nullopt, oldValidUntil);
-        xmlValidator.loadGematikSchemas(*oldErpFhirVersion, oldGematikSchemas, std::nullopt, oldValidUntil);
+        xmlValidator.loadSchemas(oldKbvSchemas, std::nullopt, oldValidUntil);
+        xmlValidator.loadSchemas(oldGematikSchemas, std::nullopt, oldValidUntil);
     }
-    xmlValidator.loadKbvSchemas(erpFhirVersion, profileKbvSchemas, profileValidfrom, std::nullopt);
-    xmlValidator.loadGematikSchemas(erpFhirVersion, profileGematikSchemas, profileValidfrom, std::nullopt);
-
+    Expect3(profileKbvSchemas.empty(), "FHIR_PROFILE_XML_SCHEMA_KBV must not contain any schemas", std::logic_error);
+    Expect3(profileGematikSchemas.empty(),
+            "FHIR_PROFILE_XML_SCHEMA_GEMATIK must not contain any schemas", std::logic_error);
 }
 
 static std::optional<uint16_t> getPortFromConfiguration (const Configuration& configuration, const ConfigurationKey key)
@@ -752,11 +752,46 @@ std::optional<uint16_t> getEnrolementServerPort (
         -1);
     if (activeForPcPort != pcPort)
     {
-        LOG(WARNING) << "Enrolment-Server (on port=" << enrolmentPort << ") is disabled (ERP_SERVER_PORT = " << pcPort
+        TLOG(INFO) << "Enrolment-Server (on port=" << enrolmentPort << ") is disabled (ERP_SERVER_PORT = " << pcPort
                      <<") != (ENROLMENT_ACTIVATE_FOR_PORT = "<< activeForPcPort << ")";
     }
 
     return activeForPcPort == pcPort ? std::optional<uint16_t>(enrolmentPort) : std::nullopt;
+}
+
+fhirtools::ValidatorOptions
+Configuration::defaultValidatorOptions(model::ResourceVersion::FhirProfileBundleVersion bundleVersion,
+                                       SchemaType schemaType) const
+{
+    using enum ConfigurationKey;
+    using Severity = fhirtools::Severity;
+    const auto& config = Configuration::instance();
+    fhirtools::ValidatorOptions options;
+    switch (bundleVersion)
+    {
+        using enum model::ResourceVersion::FhirProfileBundleVersion;
+        case v_2022_01_01:
+            options.levels.mandatoryResolvableReferenceFailure =
+                config.get<Severity>(FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
+            options.levels.unreferencedBundledResource =
+                config.get<Severity>(FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
+            options.levels.unreferencedContainedResource =
+                config.get<Severity>(FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
+            break;
+        case v_2023_07_01:
+            options.levels.mandatoryResolvableReferenceFailure =
+                config.get<Severity>(FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
+            options.levels.unreferencedBundledResource =
+                config.get<Severity>( FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
+            options.levels.unreferencedContainedResource =
+                config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
+            break;
+    }
+    if (schemaType == SchemaType::KBV_PR_ERP_Bundle)
+    {
+        options.allowNonLiteralAuthorReference = kbvValidationNonLiteralAuthorRef() == NonLiteralAutherRefMode::allow;
+    }
+    return options;
 }
 
 const Configuration& Configuration::instance()
@@ -767,31 +802,25 @@ const Configuration& Configuration::instance()
 
 void Configuration::check() const
 {
-    if (featurePkvEnabled())
-    {
-        Expect3(featureWf200Enabled(), "When FEATURE_PKV is enabled, FEATURE_WORKFLOW_200 must not be disabled.",
-                std::logic_error);
-    }
     (void) kbvValidationOnUnknownExtension();
     (void) kbvValidationNonLiteralAuthorRef();
-    (void) genericValidationMode();
+    for (auto bundleVer: magic_enum::enum_values<model::ResourceVersion::FhirProfileBundleVersion>())
+    {
+        (void)genericValidationMode(bundleVer);
+        (void)defaultValidatorOptions(bundleVer, SchemaType::fhir);
+    }
     (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
                                             fhirtools::Severity::error);
     (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
                                             fhirtools::Severity::error);
     (void) getOptional<fhirtools::Severity>(
         ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, fhirtools::Severity::error);
+    (void) getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS);
 }
 
 bool Configuration::featurePkvEnabled() const
 {
     return getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false);
-}
-
-bool Configuration::featureWf200Enabled() const
-{
-    bool featurePkv = featurePkvEnabled();
-    return getOptionalBoolValue(ConfigurationKey::FEATURE_WORKFLOW_200, featurePkv);
 }
 
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
@@ -807,10 +836,19 @@ Configuration::NonLiteralAutherRefMode Configuration::kbvValidationNonLiteralAut
 }
 
 
-Configuration::GenericValidationMode Configuration::genericValidationMode() const
+Configuration::GenericValidationMode
+Configuration::genericValidationMode(model::ResourceVersion::FhirProfileBundleVersion bundleVersion) const
 {
-    return getOptional<GenericValidationMode>(ConfigurationKey::SERVICE_GENERIC_VALIDATION_MODE,
-                                              GenericValidationMode::ignore_errors);
+    switch (bundleVersion)
+    {
+        using enum model::ResourceVersion::FhirProfileBundleVersion;
+        case v_2022_01_01:
+            return getOptional<GenericValidationMode>(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
+                                                    GenericValidationMode::ignore_errors);
+        case v_2023_07_01:
+            return GenericValidationMode::require_success;
+    }
+    Fail2("unknown FhirProfileBundleVersion: " + std::to_string(static_cast<intmax_t>(bundleVersion)), std::logic_error);
 }
 
 bool Configuration::timingLoggingEnabled(const std::string& category) const

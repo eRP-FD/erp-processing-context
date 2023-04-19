@@ -939,6 +939,35 @@ TEST_F(ExpressionTest, StringManipMatches)
             checkBoolResult(result, false);
         }
     }
+    {
+        const StringManipMatches stringManipMatches(&repo,
+                                                    std::make_shared<LiteralStringExpression>(&repo, "^[^-].*$"s));
+        {
+            const auto result =
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "+3,1415"s)});
+            checkBoolResult(result, true);
+        }
+        {
+            const auto result =
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "3,1415"s)});
+            checkBoolResult(result, true);
+        }
+        {
+            const auto result =
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "+"s)});
+            checkBoolResult(result, true);
+        }
+        {
+            const auto result =
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "-3,1415"s)});
+            checkBoolResult(result, false);
+        }
+        {
+            const auto result =
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "-"s)});
+            checkBoolResult(result, false);
+        }
+    }
 }
 
 TEST_F(ExpressionTest, StringManipReplaceMatches)

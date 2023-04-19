@@ -44,7 +44,10 @@ enum class SchemaType
     BNA_tsl,
     Gematik_tsl,
     Gem_erxChargeItem,
-    Gem_erxConsent
+    Gem_erxConsent,
+    PatchChargeItemParameters,
+    DAV_DispenseItem,
+    Pruefungsnachweis,
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SCHEMATYPE_HXX

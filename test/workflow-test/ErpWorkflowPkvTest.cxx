@@ -236,7 +236,10 @@ void checkEqualityBasic(
     EXPECT_EQ(chargeItem1.id()->toString(), chargeItem2.id()->toString());
     EXPECT_EQ(chargeItem1.prescriptionId()->toString(), chargeItem2.prescriptionId()->toString());
     EXPECT_EQ(chargeItem1.subjectKvnr(), chargeItem2.subjectKvnr());
-    EXPECT_EQ(chargeItem1.entererTelematikId(), chargeItem2.entererTelematikId());
+    if (chargeItem1.entererTelematikId().has_value() && chargeItem2.entererTelematikId().has_value())
+    {
+        EXPECT_EQ(chargeItem1.entererTelematikId(), chargeItem2.entererTelematikId());
+    }
     EXPECT_EQ(chargeItem1.enteredDate(), chargeItem2.enteredDate());
 }
 
@@ -309,7 +312,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
             createClosedTask(prescriptionIds[i], kbvBundles[i], closeReceipts[i], accessCodes[i], secrets[i],
                              GetParam(), kvnr.id()));
     }
-    // GEMREQ-start A_22614#createAccessCode
+    // GEMREQ-start A_22614-02#createAccessCode
     // Create a charge item for each task
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::vector<std::optional<model::ChargeItem>> createdChargeItems(numOfTasks);
@@ -317,11 +320,10 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
     {
         ASSERT_NO_FATAL_FAILURE(
             createdChargeItems[i] = chargeItemPost(*prescriptionIds[i], kvnr.id(), telematicIdPharmacy, secrets[i]));
-        ASSERT_TRUE(createdChargeItems[i]->accessCode().has_value());
-        EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*createdChargeItems[i]->accessCode()));
+        EXPECT_FALSE(createdChargeItems[i]->accessCode().has_value());
         EXPECT_FALSE(createdChargeItems[i]->containedBinary());
     }
-    // GEMREQ-end A_22614#createAccessCode
+    // GEMREQ-end A_22614-02#createAccessCode
 
     const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr.id());
 
@@ -342,7 +344,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
 
         closeReceipts[i]->removeSignature();
 
-        // GEMREQ-start A_22614#readAccessCode
+        // GEMREQ-start A_22614-02#readAccessCode
         ASSERT_NO_FATAL_FAILURE(
             chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8, chargeItems[i].id().value(),
                                                 std::nullopt, kbvBundles[i], closeReceipts[i]));
@@ -350,20 +352,22 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
         ASSERT_EQ(chargeItemFromBundle.size(), 1);
 
         ASSERT_TRUE(chargeItemFromBundle[0].accessCode().has_value());
-        EXPECT_EQ(*createdChargeItems[i]->accessCode(), *chargeItemFromBundle[0].accessCode());
-        // GEMREQ-end A_22614#readAccessCode
+        EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*chargeItemFromBundle[0].accessCode()));
+        accessCodes[i] = *chargeItemFromBundle[0].accessCode();
+        // GEMREQ-end A_22614-02#readAccessCode
         EXPECT_NO_FATAL_FAILURE(checkEquality(chargeItemFromBundle[0], *createdChargeItems[i]));
         EXPECT_FALSE(chargeItemFromBundle[0].containedBinary());
     }
     // Read all charge items individually by pharmacy
     for(std::size_t i = 0; i < numOfTasks; ++i)
     {
+        // GEMREQ-start A_22614-02#verifyAccessCode
         ASSERT_NO_FATAL_FAILURE(
             chargeItemsBundle = chargeItemGetId(jwtApotheke(), ContentMimeType::fhirXmlUtf8, prescriptionIds[i].value(),
-                                                *createdChargeItems[i]->accessCode(), std::nullopt, std::nullopt));
+                                                accessCodes[i], std::nullopt, std::nullopt));
         const auto chargeItemFromBundle = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
         ASSERT_EQ(chargeItemFromBundle.size(), 1);
-
+        // GEMREQ-end A_22614-02#verifyAccessCode
         EXPECT_FALSE(chargeItemFromBundle[0].accessCode().has_value());
         EXPECT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItemFromBundle[0], *createdChargeItems[i]));
         EXPECT_EQ(chargeItemFromBundle[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle),
@@ -436,23 +440,23 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
     std::variant<model::ChargeItem, model::OperationOutcome> chargeItem2Changed2;
     // remove the dispense item bundle reference, as we want to replace it
     chargeItem2Changed->deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle);
-    // GEMREQ-start A_22615#createAndReadNewAccessCode
+    // GEMREQ-start A_22615-02#createAndReadNewAccessCode
     ASSERT_NO_FATAL_FAILURE(
         chargeItem2Changed2 = chargeItemPut(jwtApotheke(), ContentMimeType::fhirXmlUtf8, *chargeItem2Changed,
-                                            dispenseBundle.serializeToXmlString()));
+                                            dispenseBundle.serializeToXmlString(), chargeItem2Changed->accessCode().value()));
     ASSERT_TRUE(std::holds_alternative<model::ChargeItem>(chargeItem2Changed2));
     const auto newAccessCode = std::get<model::ChargeItem>(chargeItem2Changed2).accessCode();
-    ASSERT_TRUE(newAccessCode.has_value());
-    EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*newAccessCode));
+    EXPECT_FALSE(newAccessCode.has_value());
     ASSERT_NO_FATAL_FAILURE(
         chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8,
-                                            std::get<model::ChargeItem>(chargeItem2Changed2).id().value(), *newAccessCode,
+                                            std::get<model::ChargeItem>(chargeItem2Changed2).id().value(), std::nullopt,
                                             kbvBundles[1], closeReceipts[1]));
     chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
     EXPECT_EQ(chargeItems.size(), 1);
     ASSERT_TRUE(chargeItems[0].accessCode().has_value());
-    EXPECT_EQ(*newAccessCode, *chargeItems[0].accessCode());
-    // GEMREQ-end A_22615#createAndReadNewAccessCode
+    EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*chargeItems[0].accessCode()));
+    EXPECT_NE(chargeItems[0].accessCode().value(), accessCodes[1]); // should differ from the one created during POST;
+    // GEMREQ-end A_22615-02#createAndReadNewAccessCode
     ASSERT_NO_FATAL_FAILURE(checkEqualityExceptSupportingInfo(chargeItems[0], *chargeItem2Changed));
     EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle),
               createdChargeItems[1]->supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle));
@@ -461,6 +465,15 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
     EXPECT_EQ(chargeItems[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle),
               Uuid{chargeItems[0].prescriptionId()->deriveUuid(model::uuidFeatureDispenseItem)}.toUrn());
     EXPECT_FALSE(chargeItems[0].containedBinary());
+
+    // GEMREQ-start A_22615-02#verifyAccessCode
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemsBundle = chargeItemGetId(jwtApotheke(), ContentMimeType::fhirJsonUtf8,
+                                            std::get<model::ChargeItem>(chargeItem2Changed2).id().value(),
+                                            *chargeItems[0].accessCode(), kbvBundles[1], closeReceipts[1]));
+    chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+    EXPECT_EQ(chargeItems.size(), 1);
+    // GEMREQ-end A_22615-02#verifyAccessCode
 
     // Check audit events
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
@@ -482,6 +495,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
           prescriptionIds[1]->toString(), // GET ChargeItem by insurant
           prescriptionIds[1]->toString(), // PUT ChargeItem
           prescriptionIds[1]->toString(), // GET ChargeItem by insurant
+          prescriptionIds[1]->toString()  // GET ChargeItem by pharmacy
         },
         kvnr.id(), "de", startTime,
         { kvnr.id(), // POST Consent
@@ -500,9 +514,10 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
           kvnr.id(), // PATCH ChargeItem by insurant
           kvnr.id(), // GET ChargeItem by insurant
           telematicIdPharmacy, // PUT ChargeItem by pharmacy
-          kvnr.id() // GET ChargeItem by insurant
+          kvnr.id(), // GET ChargeItem by insurant
+          telematicIdPharmacy // GET ChargeItem by pharmacy
         },
-        { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 21, 22, 23, 24, 33 },
+        { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 21, 22, 23, 24, 33, 35 },
         { model::AuditEvent::SubType::create,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::update, model::AuditEvent::SubType::update, model::AuditEvent::SubType::update,
@@ -519,6 +534,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
           model::AuditEvent::SubType::update,
           model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::update,
+          model::AuditEvent::SubType::read,
           model::AuditEvent::SubType::read});
 }
 
@@ -593,30 +609,42 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdTelematikIdCheck)//NOLINT(readab
     std::string secret;
     ASSERT_NO_FATAL_FAILURE(
         createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
+    closeReceipt->removeSignature();
     // Create a charge item for task
     const auto telematikIdPharmacy1 = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
-    std::optional<model::ChargeItem> createdChargeItem;
-    ASSERT_NO_FATAL_FAILURE(createdChargeItem = chargeItemPost(*prescriptionId, kvnr, telematikIdPharmacy1, secret));
+    std::optional<model::ChargeItem> postedChargeItem;
+    ASSERT_NO_FATAL_FAILURE(postedChargeItem = chargeItemPost(*prescriptionId, kvnr, telematikIdPharmacy1, secret));
+
+    std::optional<model::Bundle> chargeItemsBundle;
+    std::string chargeItemAccessCode;
+    {
+        const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+        ASSERT_NO_FATAL_FAILURE(
+            chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8, prescriptionId.value(),
+                                                std::nullopt, kbvBundle, closeReceipt));
+        const auto chargeItemFromBundle = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+        ASSERT_EQ(chargeItemFromBundle.size(), 1);
+        ASSERT_TRUE(chargeItemFromBundle[0].accessCode().has_value());
+        chargeItemAccessCode = chargeItemFromBundle[0].accessCode().value();
+    }
 
     const auto jwtPharmacy1 = JwtBuilder::testBuilder().makeJwtApotheke(telematikIdPharmacy1);
-    // Read created charge item by insurant
-    closeReceipt->removeSignature();
-    std::optional<model::Bundle> chargeItemsBundle;
+    // Read created charge item by pharmacy
     ASSERT_NO_FATAL_FAILURE(
-        chargeItemsBundle = chargeItemGetId(jwtPharmacy1, ContentMimeType::fhirJsonUtf8, createdChargeItem->id().value(),
-                                            createdChargeItem->accessCode().value(), kbvBundle, closeReceipt));
+        chargeItemsBundle = chargeItemGetId(jwtPharmacy1, ContentMimeType::fhirJsonUtf8, prescriptionId.value(),
+                                            chargeItemAccessCode, kbvBundle, closeReceipt));
     const auto chargeItemFromBundle = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
     ASSERT_EQ(chargeItemFromBundle.size(), 1);
     // Check that the found charge item is the created
-    ASSERT_NO_FATAL_FAILURE(checkEquality(chargeItemFromBundle[0], *createdChargeItem));
+    ASSERT_NO_FATAL_FAILURE(checkEquality(chargeItemFromBundle[0], *postedChargeItem));
 
     A_22126.test("Telematik-ID check");
     const auto telematikIdPharmacy2 = telematikIdPharmacy1 + "_noaccess";
     const auto jwtPharmacy2 = JwtBuilder::testBuilder().makeJwtApotheke(telematikIdPharmacy2);
     // Reading of charge item with invalid KVNR must be forbidden:
     ASSERT_NO_FATAL_FAILURE(
-        chargeItemsBundle = chargeItemGetId(jwtPharmacy2, ContentMimeType::fhirJsonUtf8, createdChargeItem->id().value(),
-                                            createdChargeItem->accessCode().value(), kbvBundle, closeReceipt,
+        chargeItemsBundle = chargeItemGetId(jwtPharmacy2, ContentMimeType::fhirJsonUtf8, prescriptionId.value(),
+                                            chargeItemAccessCode, kbvBundle, closeReceipt,
                                             HttpStatus::Forbidden, model::OperationOutcome::Issue::Type::forbidden));
 }
 // GEMREQ-end A_22126
@@ -781,6 +809,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
     std::string secret;
     ASSERT_NO_FATAL_FAILURE(
         createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
+    closeReceipt->removeSignature();
     // Create a charge item for task
     const auto telematikIdPharmacy1 = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::ChargeItem> createdChargeItem;
@@ -789,13 +818,25 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
     // a new reference to a contained binary. The contained binary will be added on chargeItemPut()
     createdChargeItem->deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle);
 
+    std::string chargeItemAccessCode;
+    {
+        const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+        std::optional<model::Bundle> chargeItemsBundle;
+        ASSERT_NO_FATAL_FAILURE(
+            chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8, prescriptionId.value(),
+                                                std::nullopt, kbvBundle, closeReceipt));
+        const auto chargeItemFromBundle = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
+        ASSERT_EQ(chargeItemFromBundle.size(), 1);
+        ASSERT_TRUE(chargeItemFromBundle[0].accessCode().has_value());
+        chargeItemAccessCode = chargeItemFromBundle[0].accessCode().value();
+    }
     const auto dispenseBundleString =
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/dispense_item.xml");
     auto dispenseBundle = model::Bundle::fromXmlNoValidation(dispenseBundleString);
     std::variant<model::ChargeItem, model::OperationOutcome> changedChargeItem;
     ASSERT_NO_FATAL_FAILURE(
         changedChargeItem = chargeItemPut(jwtApotheke(), ContentMimeType::fhirXmlUtf8, *createdChargeItem,
-                                          dispenseBundle.serializeToXmlString()));
+                                          dispenseBundle.serializeToXmlString(), chargeItemAccessCode));
     ASSERT_TRUE(std::holds_alternative<model::ChargeItem>(changedChargeItem));
 
     // Try to change with unauthorized TelematikID and validate that it is forbidden:
@@ -804,7 +845,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
     const auto jwtPharmacy2 = JwtBuilder::testBuilder().makeJwtApotheke(telematikIdPharmacy2);
     ASSERT_NO_FATAL_FAILURE(
         changedChargeItem = chargeItemPut(jwtPharmacy2, ContentMimeType::fhirXmlUtf8, *createdChargeItem,
-                                          dispenseBundle.serializeToXmlString(),
+                                          dispenseBundle.serializeToXmlString(), chargeItemAccessCode,
                                           HttpStatus::Forbidden, model::OperationOutcome::Issue::Type::forbidden));
     ASSERT_TRUE(std::holds_alternative<model::OperationOutcome>(changedChargeItem));
 // GEMREQ-end A_22146
@@ -816,7 +857,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
     // Must fail because of missing consent:
     ASSERT_NO_FATAL_FAILURE(
         changedChargeItem = chargeItemPut(jwtApotheke(), ContentMimeType::fhirXmlUtf8, *createdChargeItem,
-                                          dispenseBundle.serializeToXmlString(),
+                                          dispenseBundle.serializeToXmlString(), chargeItemAccessCode,
                                           HttpStatus::Forbidden, model::OperationOutcome::Issue::Type::forbidden));
     ASSERT_TRUE(std::holds_alternative<model::OperationOutcome>(changedChargeItem));
 }

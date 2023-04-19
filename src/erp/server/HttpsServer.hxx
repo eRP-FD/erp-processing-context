@@ -41,7 +41,7 @@ public:
      * Start to serve requests in a thread pool of the given size.
      * The current thread is *not* used to serve any requests.
      */
-    void serve (size_t threadCount);
+    void serve (size_t threadCount, std::string_view threadBaseName);
     void waitForShutdown (void);
     void shutDown (void);
     bool isStopped() const;

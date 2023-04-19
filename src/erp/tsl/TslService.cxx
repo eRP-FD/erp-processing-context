@@ -42,7 +42,7 @@ namespace
         {
             for (int i = 0; i < 3; ++i)
             {
-                VLOG(1) << "Trying to download file [" << url.toString() << "], try " << i;
+                TVLOG(2) << "Trying to download file [" << url.toString() << "], try " << i;
 
                 const std::string ciphers = Configuration::instance().getOptionalStringValue(
                     ConfigurationKey::TSL_DOWNLOAD_CIPHERS, "");
@@ -58,14 +58,14 @@ namespace
 
                 if (response.getHeader().status() == HttpStatus::OK)
                 {
-                    VLOG(1) << "Download succeeded";
+                    TVLOG(2) << "Download succeeded";
                     return response.getBody();
                 }
             }
         }
         catch(const std::runtime_error& e)
         {
-            LOG(ERROR) << "Can not Download [" << url.toString() << "], exception: " << e.what();
+            TLOG(ERROR) << "Can not Download [" << url.toString() << "], exception: " << e.what();
         }
 
         TslFail("Download failed for URL " + url.toString(), TslErrorCode::TSL_DOWNLOAD_ERROR);
@@ -334,7 +334,7 @@ namespace
                 return "C_HP_ENC";
         }
 
-        LOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
+        TLOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
         return "unknown";
     }
 
@@ -367,7 +367,7 @@ namespace
                 return TslService::oid_vk_eaa_enc;
         }
 
-        LOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
+        TLOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
         return "unknown";
     }
 
@@ -483,14 +483,14 @@ namespace
     void refreshTrustStore(std::optional<TslParser>& tslParser,
                            TrustStore& trustStore)
     {
-        VLOG(2) << "TrustServiceStatusList downloaded and refresh of TrustStore is needed";
+        TVLOG(2) << "TrustServiceStatusList downloaded and refresh of TrustStore is needed";
 
         try
         {
             Expect(tslParser.has_value(), "the parser must be provided");
 
             trustStore.refillFromTsl(*tslParser);
-            VLOG(2) << "TrustStore refreshed with downloaded TrustServiceStatusList";
+            TVLOG(2) << "TrustStore refreshed with downloaded TrustServiceStatusList";
         }
         catch(const std::runtime_error&)
         {
@@ -574,7 +574,7 @@ namespace
             }
             catch (const TslError&)
             {
-                LOG(ERROR) << "Can not access " << updateUrlString;
+                TLOG(ERROR) << "Can not access " << updateUrlString;
             }
         }
 
@@ -671,7 +671,7 @@ namespace
     {
         const auto ocspUrl = getOcspUrl(certificate, certificateType, issueCertificate, trustStore);
 
-        VLOG(2) << "Performing ocsp check with url " << ocspUrl.url << ".";
+        TVLOG(2) << "Performing ocsp check with url " << ocspUrl.url << ".";
 
         OcspService::checkOcspStatus(
             OcspService::getCurrentStatus(
@@ -927,7 +927,7 @@ TslService::refreshTslIfNecessary(
             }
             catch (const TslError&)
             {
-                LOG(ERROR) << "Can not access " << updateUrls[ind];
+                TLOG(ERROR) << "Can not access " << updateUrls[ind];
             }
         }
 
@@ -935,7 +935,7 @@ TslService::refreshTslIfNecessary(
                   "Can not download new TrustServiceStatusList version. Hash: " +
                       String::toHexString(newHash.value_or("")),
                   TslErrorCode::TSL_DOWNLOAD_ERROR);
-        TLOG(WARNING) << "Successfully downloaded " << magic_enum::enum_name(trustStore.getTslMode())
+        TLOG(INFO) << "Successfully downloaded " << magic_enum::enum_name(trustStore.getTslMode())
                       << " with hash " + String::toHexString(newHash.value_or(""));
         const auto contentHash = Hash::sha256(tslContent);
         TVLOG(1) << "Content hash: " << String::toHexString(contentHash);
@@ -1030,8 +1030,8 @@ TslService::UpdateResult TslService::triggerTslUpdateIfNecessary(
         catch(const TslError& e)
         {
             checkTrustStoreAfterUpdateError(trustStore, e);
-            LOG(ERROR) << "TSL update has failed with TslError";
-            LOG(ERROR) << e.what();
+            TLOG(ERROR) << "TSL update has failed with TslError";
+            TLOG(ERROR) << e.what();
         }
 
         // GEMREQ-start A_16490
@@ -1083,16 +1083,16 @@ TslService::checkCertificateWithoutOcspCheck(
     const std::unordered_set<CertificateType>& typeRestrictions,
     TrustStore& trustStore)
 {
-    VLOG(2) << "Checking Certificate: [" << certificate.toBase64() << "]";
+    TVLOG(2) << "Checking Certificate: [" << certificate.toBase64() << "]";
     const CertificateType certificateType = getCertificateType(certificate);
-    VLOG(2) << "Certificate of type " << to_string(certificateType) << " is being checked.";
+    TVLOG(2) << "Certificate of type " << to_string(certificateType) << " is being checked.";
     TslExpect(typeRestrictions.empty() || typeRestrictions.find(certificateType) != typeRestrictions.end(),
               "Certificate of unexpected type " + to_string(certificateType) + " provided.",
               TslErrorCode::CERT_TYPE_MISMATCH);
     Expect(trustStore.getTslMode() != TslMode::BNA || isQesCertificate(certificateType),
            "Only QES certificates are verified using BNA-TrustStore.");
 
-    VLOG(2) << "Checking certificate (" << certificate.getSubject() << ")..";
+    TVLOG(2) << "Checking certificate (" << certificate.getSubject() << ")..";
 
     checkQcStatement(certificate, certificateType);
 

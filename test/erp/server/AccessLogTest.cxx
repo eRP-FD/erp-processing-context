@@ -91,7 +91,7 @@ TEST_F(AccessLogTest, message)
     }
 
     const auto document = parseJsonLog(os.str());
-    const auto value = getStringValue(document, "/message");
+    const auto value = getStringValue(document, "/info");
     ASSERT_TRUE(value.has_value());
     ASSERT_EQ(value.value(), "message content");
 }

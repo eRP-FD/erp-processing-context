@@ -32,10 +32,10 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
-    checkFeatureWf200(prescriptionId.type());
 
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
+    // GEMREQ-start A_19169-01#readFromDB
     auto* databaseHandle = session.database();
 
     auto [task, healthCareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
@@ -45,18 +45,20 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 
     ErpExpect(healthCareProviderPrescription.has_value() && healthCareProviderPrescription->data().has_value(),
               HttpStatus::NotFound, "Healthcare provider prescription not found for prescription id");
+    // GEMREQ-end A_19169-01#readFromDB
 
     const auto cadesBesSignature =
         unpackCadesBesSignatureNoVerify(std::string{*healthCareProviderPrescription->data()});
     const auto& prescription = cadesBesSignature.payload();
     checkMultiplePrescription(model::KbvBundle::fromXmlNoValidation(prescription));
 
-    A_19169.start("Set status to in-progress, create and set secret");
+    // GEMREQ-start A_19169-01
+    A_19169_01.start("Set status to in-progress, create and set secret");
     task->setStatus(model::Task::Status::inprogress);
     const auto secret = SecureRandomGenerator::generate(32);
     task->setSecret(ByteHelper::toHex(secret));
     task->updateLastUpdate();
-    A_19169.finish();
+    A_19169_01.finish();
 
     task->setHealthCarePrescriptionUuid();
     databaseHandle->updateTaskStatusAndSecret(*task);
@@ -72,6 +74,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
         uuid = Uuid{healthCareProviderPrescription->id().value()}.toUrn();
     }
     responseBundle.addResource(uuid, {}, {}, healthCareProviderPrescription->jsonDocument());
+    // GEMREQ-end A_19169-01
 
     const auto kvnr = task->kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
@@ -127,17 +130,17 @@ void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, 
 
     const auto taskStatus = task.status();
 
-    A_19149.start("Check if task meanwhile deleted");
+    A_19149_02.start("Check if task meanwhile deleted");
     if(taskAccessCode.empty() ||
        taskStatus == model::Task::Status::cancelled)
     {
         ErpFail(HttpStatus::Gone, "Task meanwhile deleted for prescription id");
     }
-    A_19149.finish();
+    A_19149_02.finish();
 
-    A_19167_01.start("Check if access code from URL is equal to access code from task");
+    A_19167_04.start("Check if access code from URL is equal to access code from task");
     checkAccessCodeMatches(session.request, task);
-    A_19167_01.finish();
+    A_19167_04.finish();
 
     A_19168.start("Check if task has correct status");
     if(taskStatus == model::Task::Status::completed ||
@@ -153,7 +156,8 @@ void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, 
 void AcceptTaskHandler::checkMultiplePrescription(const model::KbvBundle& prescription)
 {
     A_22635.start("check MVO period start");
-    const date::year_month_day today = floor<date::days>(std::chrono::system_clock::now());
+    A_23539.start("check MVO period end");
+    const auto now = std::chrono::system_clock::now();
     const auto& medicationRequests = prescription.getResourcesByType<model::KbvMedicationRequest>();
     if (!medicationRequests.empty())
     {
@@ -164,14 +168,28 @@ void AcceptTaskHandler::checkMultiplePrescription(const model::KbvBundle& prescr
             ErpExpect(startDate.has_value(), HttpStatus::InternalServerError,
                       "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.start "
                       "not present");
-            const date::year_month_day validFrom = floor<date::days>(startDate->toChronoTimePoint());
-            if (today < validFrom)
+            const auto validFrom = startDate->toChronoTimePoint();
+            if (now < validFrom)
             {
                 std::string germanFmtTs = model::Timestamp(startDate->toChronoTimePoint()).toGermanDateFormat();
 
                 std::ostringstream ss;
                 ss << "Teilverordnung ab " << germanFmtTs << " einlösbar.";
                 ErpFail(HttpStatus::Forbidden, ss.str());
+            }
+
+            const auto endDate = mPExt->endDate();
+            if (endDate.has_value())
+            {
+                using namespace std::chrono_literals;
+                const auto validUntil = endDate->toChronoTimePoint() + 24h;
+                if (validUntil < now)
+                {
+                    std::string germanFmtTs = model::Timestamp(endDate->toChronoTimePoint()).toGermanDateFormat();
+                    std::ostringstream ss;
+                    ss << "Teilverordnung bis " << germanFmtTs << " einlösbar.";
+                    ErpFail(HttpStatus::Forbidden, ss.str());
+                }
             }
         }
     }

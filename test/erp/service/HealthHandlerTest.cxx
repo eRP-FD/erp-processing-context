@@ -205,7 +205,7 @@ public:
         mServiceContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
         mContext = std::make_unique<SessionContext>(*mServiceContext, request, response, mAccessLog);
 
-        mPool.setUp(1);
+        mPool.setUp(1, "test");
         using namespace std::chrono_literals;
         auto mockHandler = std::make_shared<HealthHandlerTestSeedTimerMock>(
             mPool, mServiceContext->getHsmPool(), 200ms, [](const SafeString&) {});
@@ -298,15 +298,15 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
     EXPECT_EQ(std::string(idpStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(cFdSigErpPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
-    EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "C.FD.SIG");
-    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2025-08-07T00:00:00.000+00:00");
+    EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "C.FD.OSIG");
+    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2024-02-14T23:00:00.000+00:00");
     EXPECT_EQ(std::string(seedTimerStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()),
               std::string(model::Health::up));
-    EXPECT_EQ(std::string(ErpServerInfo::BuildVersion), std::string(buildPointer.Get(healthDocument)->GetString()));
-    EXPECT_EQ(std::string(ErpServerInfo::BuildType), std::string(buildTypePointer.Get(healthDocument)->GetString()));
-    EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion), std::string(releasePointer.Get(healthDocument)->GetString()));
-    EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate), std::string(releasedatePointer.Get(healthDocument)->GetString()));
+    EXPECT_EQ(std::string(ErpServerInfo::BuildVersion()), std::string(buildPointer.Get(healthDocument)->GetString()));
+    EXPECT_EQ(std::string(ErpServerInfo::BuildType()), std::string(buildTypePointer.Get(healthDocument)->GetString()));
+    EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion()), std::string(releasePointer.Get(healthDocument)->GetString()));
+    EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate()), std::string(releasedatePointer.Get(healthDocument)->GetString()));
 
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
@@ -441,8 +441,8 @@ TEST_F(HealthHandlerTest, CFdSigErpDown)//NOLINT(readability-function-cognitive-
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(cFdSigErpPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
-    EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "C.FD.SIG");
-    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2025-08-07T00:00:00.000+00:00");
+    EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "C.FD.OSIG");
+    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2024-02-14T23:00:00.000+00:00");
     verifyRootCause(healthDocument, cFdSigErpRootCausePointer, "no successful validation available");
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
@@ -502,9 +502,9 @@ TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognit
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
     EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "");
     EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "");
-    verifyRootCause(healthDocument, cFdSigErpRootCausePointer,
-                    "std::runtime_error(no successful validation available) at ");
+    verifyRootCause(
+        healthDocument, cFdSigErpRootCausePointer,
+        "std::runtime_error(16ExceptionWrapperISt13runtime_errorE)(no successful validation available) at ");
 
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
-

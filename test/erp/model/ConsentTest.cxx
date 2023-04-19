@@ -16,15 +16,6 @@
 
 class ConsentTest : public testing::Test
 {
-public:
-    void SetUp() override
-    {
-        if (model::ResourceVersion::deprecatedProfile(
-                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-        {
-            GTEST_SKIP();
-        }
-    }
 };
 
 
@@ -48,6 +39,12 @@ TEST_F(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity
 
 TEST_F(ConsentTest, Construct)
 {
+    if (!model::ResourceVersion::supportedBundles()
+            .contains(model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        // constructor of BaseResource uses versionizeProfile, which fails when 2023-07-01 is not supported.
+        GTEST_SKIP();
+    }
     const auto consentType = model::Consent::Type::CHARGCONS;
     const model::Kvnr kvnr{"X123456789"};
     const model::Timestamp dateTime = model::Timestamp::now();
@@ -61,13 +58,13 @@ TEST_F(ConsentTest, Construct)
 
 TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE", "disable"};
     auto jsonString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.json");
 
     std::optional<model::Consent> optConsent;
     ASSERT_NO_THROW(optConsent = model::Consent::fromJson(
         jsonString, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(), SchemaType::fhir)); // TODO change to correct schema as soon as available
+        *StaticData::getInCodeValidator(), SchemaType::Gem_erxConsent,
+            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}));
 
     auto& consent = optConsent.value();
 
@@ -87,9 +84,7 @@ TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     jsonString = String::replaceAll(jsonString, "CHARGCONS", "INFAO");
 
     std::optional<model::Consent> optConsent2;
-    ASSERT_NO_THROW(optConsent2 = model::Consent::fromJson(
-        jsonString, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(), SchemaType::fhir));
+    ASSERT_NO_THROW(optConsent2 = model::Consent::fromJsonNoValidation(jsonString));
     EXPECT_FALSE(optConsent2.value().isChargingConsent());
     EXPECT_THROW(optConsent2.value().fillId(), model::ModelException);
 }
@@ -98,7 +93,8 @@ TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-com
 {
     auto consent = model::Consent::fromXml(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.xml"),
-        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir);  // TODO change to correct schema as soon as available
+        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxConsent,
+                                    {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01});
 
     EXPECT_FALSE(consent.id().has_value());
     const model::Kvnr kvnr{"X123456789"};

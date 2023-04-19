@@ -17,14 +17,18 @@ public:
     void TearDown (void) override;
 
 protected:
-    model::Task createTask(const std::string& accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32))) override;
+    model::Task createTask(
+        const std::string& accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32)),
+        model::PrescriptionType prescriptionType = model::PrescriptionType::apothekenpflichigeArzneimittel) override;
     model::Communication addCommunicationToDatabase(const CommunicationDescriptor& descriptor) override;
+    model::ChargeItem addChargeItemToDatabase(const ChargeItemDescriptor& descriptor) override;
 
 private:
     void cleanupDatabase (void);
 
     std::vector<model::PrescriptionId> mTasksToRemove;
     std::vector<std::pair<Uuid, std::string>> mCommunicationsToRemove;
+    std::vector<model::PrescriptionId> mChargeItemsToRemove;
 };
 
 

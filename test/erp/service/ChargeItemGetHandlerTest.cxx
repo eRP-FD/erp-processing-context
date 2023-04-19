@@ -9,13 +9,15 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-
+#include "mock/tsl/MockTslManager.hxx"
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/mock/MockDatabase.hxx"
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
+#include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/util/ServerTestBase.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <chrono>
 
@@ -35,7 +37,7 @@ public:
         {
             GTEST_SKIP();
         }
-        ServerTestBase::SetUp();
+        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
     }
 protected:
 
@@ -80,14 +82,14 @@ protected:
                 ::model::Binary{dispenseItem.getIdentifier().toString(),
                                 ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
 
-            auto prescriptionXML =
-                resourceManager.getStringResource("test/EndpointHandlerTest/kbv_pkv_bundle_template.xml");
-            prescriptionXML = ::String::replaceAll(prescriptionXML, "##PRESCRIPTION_ID##", prescriptionId->toString());
-            prescriptionXML = ::String::replaceAll(prescriptionXML, "##KVNR##", insurant);
+            auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>();
+            const std::string kbvVersionStr{v_str(kbvVersion)};
+
+            auto prescriptionXML = ResourceTemplates::kbvBundlePkvXml({*prescriptionId, model::Kvnr(insurant)});
             auto prescription = ::model::Bundle::fromXmlNoValidation(prescriptionXML);
             auto signedPrescription =
                 ::model::Binary{prescription.getId().toString(),
-                                ::CryptoHelper::toCadesBesSignature(prescription.serializeToJsonString())};
+                                ::CryptoHelper::toCadesBesSignature(prescription.serializeToXmlString())};
 
             auto receiptJson = resourceManager.getStringResource("test/EndpointHandlerTest/receipt_template.json");
             receiptJson = ::String::replaceAll(receiptJson, "##PRESCRIPTION_ID##", prescriptionId->toString());
@@ -272,8 +274,6 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllInsurant)
             A_22119.test("Only charge items with KV number from authorization header found");
             EXPECT_EQ(chargeItem.subjectKvnr(), InsurantA);
 
-            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle));
-            EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle));
             EXPECT_TRUE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle));
             EXPECT_FALSE(chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBinary));
             EXPECT_FALSE(chargeItem.containedBinary());
@@ -391,15 +391,14 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FilterByDate) // NOLINT(readab
     }
 
     std::this_thread::sleep_for(1s);
-    insertChargeItem({ {InsurantA, pharmacyB, model::Timestamp::fromXsDateTime("2021-06-06T17:13:00+01:00")} },
-                     prescriptionIDs,
-                     MockDatabase::mockAccessCode);
 
     {
         auto lastUpdatedTime = model::Timestamp::now().toXsDateTime();
+        insertChargeItem({{InsurantA, pharmacyB, model::Timestamp::fromXsDateTime("2021-06-06T17:13:00+01:00")}},
+                         prescriptionIDs, MockDatabase::mockAccessCode);
         lastUpdatedTime = lastUpdatedTime.substr(0, lastUpdatedTime.rfind('.'));
 
-        std::vector<std::string> filters = { "_lastUpdated=ge" + lastUpdatedTime };
+        std::vector<std::string> filters = {"_lastUpdated=ge" + lastUpdatedTime};
         std::vector<model::ChargeItem> chargeItems;
         JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantA);
         sendGetAllChargeItemsRequest(client, jwt, chargeItems, totalSearchMatches, std::move(filters));
@@ -701,7 +700,8 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
     };
 
     std::vector<std::string> prescriptionIDs;
-    insertChargeItem(patientsPharmaciesChargeItems, prescriptionIDs, MockDatabase::mockAccessCode);
+    ASSERT_NO_FATAL_FAILURE(
+        insertChargeItem(patientsPharmaciesChargeItems, prescriptionIDs, MockDatabase::mockAccessCode));
 
     // GET ChargeItems
     //-------------------------
@@ -714,11 +714,11 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
     {
         std::string argument = {"/ChargeItem/" + prescriptionIDs[0]};
         JWT jwt = mJwtBuilder.makeJwtApotheke(pharmacyA);
-        sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
+        ASSERT_NO_FATAL_FAILURE(sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden));
         EXPECT_FALSE(chargeItemBundle.has_value());
 
         argument += std::string{"?ac="} + MockDatabase::mockAccessCode.data();
-        sendGetRequest(client, jwt, argument, chargeItemBundle);
+        ASSERT_NO_FATAL_FAILURE(sendGetRequest(client, jwt, argument, chargeItemBundle));
         EXPECT_TRUE(chargeItemBundle.has_value());
 
         auto chargeItem = chargeItemBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
@@ -729,20 +729,18 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
         A_22126.test("Telematik-ID check");
         EXPECT_EQ(chargeItem[0].entererTelematikId(), pharmacyA);
 
-        A_22128.test("Check ChargeItem.supportingInformation");
+        A_22128_01.test("Check ChargeItem.supportingInformation");
         EXPECT_FALSE(chargeItem[0].accessCode());
 
-        const auto prescription = chargeItemBundle->getResourcesByType<::model::Binary>("Binary");
+        const auto bundles = chargeItemBundle->getResourcesByType<::model::Bundle>();
 
-        ASSERT_EQ(prescription.size(), 1);
+        ASSERT_EQ(bundles.size(), 2); // prescription and dispenseItem
         EXPECT_TRUE(
             chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).has_value());
         EXPECT_EQ(
             Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeaturePrescription)}.toUrn(),
             chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).value());
 
-        const auto dispenseItem = chargeItemBundle->getResourcesByType<::model::Bundle>("Bundle");
-        ASSERT_EQ(dispenseItem.size(), 1);
         EXPECT_TRUE(
             chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
         EXPECT_EQ(Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeatureDispenseItem)}.toUrn(),
@@ -751,6 +749,33 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
         EXPECT_TRUE(chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle).has_value());
 
         EXPECT_FALSE(chargeItem[0].containedBinary());
+
+        auto tslMgr = MockTslManager::createMockTslManager(StaticData::getXmlValidator());
+        {
+            const auto& prescription = bundles[0];
+            ASSERT_TRUE(prescription.getSignature().has_value());
+            auto sig = prescription.getSignature();
+            ASSERT_TRUE(sig.has_value());
+            auto prescriptionSigData = sig->data();
+            ASSERT_TRUE(prescriptionSigData.has_value());
+            EXPECT_NO_THROW(CadesBesSignature(std::string(prescriptionSigData.value().data()), *tslMgr, false));
+            EXPECT_FALSE(sig->whoReference().has_value());
+            ASSERT_TRUE(sig->whoDisplay().has_value());
+            EXPECT_EQ(sig->whoDisplay().value(), "Arzt");
+        }
+
+        {
+            const auto& dispenseItem = bundles[1];
+            ASSERT_TRUE(dispenseItem.getSignature().has_value());
+            auto sig = dispenseItem.getSignature();
+            ASSERT_TRUE(sig.has_value());
+            auto dispenseItemSigData = sig->data();
+            ASSERT_TRUE(dispenseItemSigData.has_value());
+            EXPECT_NO_THROW(CadesBesSignature(std::string(dispenseItemSigData.value().data()), *tslMgr, false));
+            EXPECT_FALSE(sig->whoReference().has_value());
+            ASSERT_TRUE(sig->whoDisplay().has_value());
+            EXPECT_EQ(sig->whoDisplay().value(), "Apotheke");
+        }
     }
 
     // PharmacyB, InsurantB
@@ -773,20 +798,18 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
         A_22126.test("Telematik-ID check");
         EXPECT_EQ(chargeItem[0].entererTelematikId(), pharmacyB);
 
-        A_22128.test("Check ChargeItem.supportingInformation");
+        A_22128_01.test("Check ChargeItem.supportingInformation");
         EXPECT_FALSE(chargeItem[0].accessCode());
 
-        const auto prescription = chargeItemBundle->getResourcesByType<::model::Binary>("Binary");
+        const auto bundles = chargeItemBundle->getResourcesByType<::model::Bundle>("Bundle");
 
-        ASSERT_EQ(prescription.size(), 1);
+        ASSERT_EQ(bundles.size(), 2); // prescription and dispenseItem
         EXPECT_TRUE(
             chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).has_value());
         EXPECT_EQ(
             Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeaturePrescription)}.toUrn(),
             chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).value());
 
-        const auto dispenseItem = chargeItemBundle->getResourcesByType<::model::Bundle>("Bundle");
-        ASSERT_EQ(dispenseItem.size(), 1);
         EXPECT_TRUE(
             chargeItem[0].supportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());
         EXPECT_EQ(Uuid{chargeItem[0].prescriptionId()->deriveUuid(model::uuidFeatureDispenseItem)}.toUrn(),
@@ -836,9 +859,9 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacyNoTask)//NOLINT(readab
     A_22126.test("Telematik-ID check");
     EXPECT_EQ(chargeItem[0].entererTelematikId(), pharmacyA);
 
-    A_22128.test("Check ChargeItem.supportingInformation");
-    auto dispenseItem = chargeItemBundle->getResourcesByType<model::Bundle>("Bundle");
-    ASSERT_EQ(dispenseItem.size(), 1);
+    A_22128_01.test("Check ChargeItem.supportingInformation");
+    auto bundles = chargeItemBundle->getResourcesByType<model::Bundle>("Bundle");
+    ASSERT_EQ(bundles.size(), 2); // prescription and dispenseItem
 
     EXPECT_TRUE(
         chargeItem[0].supportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle).has_value());

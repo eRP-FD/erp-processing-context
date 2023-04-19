@@ -27,16 +27,17 @@ ThreadPool::~ThreadPool (void)
 }
 
 
-void ThreadPool::setUp (
-    const size_t threadCount)
+void ThreadPool::setUp(const size_t threadCount, std::string_view threadBaseName)
 {
     // Run the I/O service on the requested number of threads
     mThreads.reserve(threadCount);
-    for(size_t index=0; index<threadCount; ++index)
+    for (size_t index = 0; index < threadCount; ++index)
     {
-        mThreads.emplace_back(
-            [this]{runWorkerOnThisThread();});
-        ThreadNames::instance().setThreadName(mThreads.back().get_id(), "thread-" + std::to_string(index));
+        mThreads.emplace_back([this] {
+            runWorkerOnThisThread();
+        });
+        ThreadNames::instance().setThreadName(mThreads.back().get_id(),
+                                              std::string(threadBaseName) + "-" + std::to_string(index));
     }
 }
 
@@ -80,7 +81,7 @@ void ThreadPool::joinAllThreads (void)
     }
     mThreads.clear();
 
-    TLOG(INFO) << "finished joining server threads";
+    TVLOG(0) << "finished joining server threads";
 }
 
 boost::asio::io_context& ThreadPool::ioContext()

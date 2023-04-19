@@ -4,7 +4,6 @@
  */
 
 #include "fhirtools/expression/FhirSupplements.hxx"
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
 #include "fhirtools/expression/LiteralExpression.hxx"
@@ -110,7 +109,7 @@ Collection Resolve::eval(const Collection& collection) const
     EVAL_TRACE;
     static constexpr std::string_view elementPathIsNotUsed{"n/a"};
     Collection result;
-    for (const auto& item: collection)
+    for (const auto& item : collection)
     {
         const auto& [element, _] = item->resolveReference(elementPathIsNotUsed);
         if (element)
@@ -135,8 +134,8 @@ Collection ConformsTo::eval(const Collection& collection) const
     }
     const auto element = collection.single();
     const auto profile = mArg->eval(collection).single()->asString();
-    const auto result =
-        FhirPathValidator::validateWithProfiles(element, element->definitionPointer().element()->name(), {profile});
+    const auto result = FhirPathValidator::validateWithProfiles(element, element->definitionPointer().element()->name(),
+                                                                {profile}, {.validateMetaProfiles = false});
     return {makeBoolElement(result.highestSeverity() < Severity::error)};
 }
 

@@ -35,6 +35,7 @@ public:
     static constexpr std::string_view requestSecret = "/secret";
     static constexpr std::string_view requestStartDateTime = "/metadata/startDateTime";
     static constexpr std::string_view requestValidFrom = "/valid-from";
+    static constexpr std::string_view requestVsdm = "/vsdm";
 
     static constexpr std::string_view responseAkName = "/akName";
     static constexpr std::string_view responseCertificate = "/certificate";
@@ -245,7 +246,25 @@ class DeleteVauSig : public DeleteBlobHandler
 public:
     DeleteVauSig();
 };
-}
+
+class PostVsdmHmacKey : public EnrolmentRequestHandlerBase
+{
+protected:
+    EnrolmentModel doHandleRequest(EnrolmentSession& session) override;
+};
+
+class GetVsdmHmacKey : public EnrolmentRequestHandlerBase
+{
+protected:
+    EnrolmentModel doHandleRequest(EnrolmentSession& session) override;
+};
+
+class DeleteVsdmHmacKey : public EnrolmentRequestHandlerBase
+{
+protected:
+    EnrolmentModel doHandleRequest(EnrolmentSession& session) override;
+};
+} // namespace enrolment
 
 
 #endif

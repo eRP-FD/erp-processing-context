@@ -130,7 +130,7 @@ public:
     void SetUp (void) override
     {
         EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-        ServerTestBase::SetUp();
+        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
     }
 
     std::unique_ptr<Database> createDatabaseFrontend()
@@ -161,12 +161,13 @@ public:
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksSuccess)
 {
-    A_21558.test("Valid professionOID claim in JWT");
+    A_21558_01.test("Valid professionOID claim in JWT");
     testEndpoint(HttpMethod::GET, "/Task", jwtVersicherter, HttpStatus::OK);
+    testEndpoint(HttpMethod::GET, "/Task", jwtOeffentliche_apotheke, HttpStatus::Forbidden);
 }
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksForbidden)
 {
-    A_21558.test("Invalid professionOID claim in JWT");
+    A_21558_01.test("Invalid professionOID claim in JWT");
     testEndpoint(HttpMethod::GET, "/Task", jwtKrankenhausapotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtZahnArzt, HttpStatus::Forbidden);

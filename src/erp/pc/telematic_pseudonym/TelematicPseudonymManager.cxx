@@ -64,14 +64,8 @@ void TelematicPseudonymManager::ensureKeysUptodateForDay(date::year_month_day da
 bool TelematicPseudonymManager::withinGracePeriod(date::year_month_day currentDate) const
 {
     using namespace date;
-
-    // Since we don't work with timestamps, we have to wrap over to
-    // the beginning of next month and compare with less. Means:
-    // Instead of checking against '<= 31.12.2021 24:00:00', check
-    // against '< 01.01.2022 00:00:00'.
-    year_month_day lim(mKey2Start);
-    lim += months{1};
-    return (currentDate >= mKey1End && currentDate < lim);
+    auto gracePeriodEndDay = sys_days{mKey1End} + days{1};
+    return (currentDate > mKey1End && currentDate <= gracePeriodEndDay);
 }
 
 bool TelematicPseudonymManager::keyUpdateRequired(date::year_month_day expirationDate) const

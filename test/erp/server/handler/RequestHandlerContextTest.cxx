@@ -4,7 +4,7 @@
  */
 
 #include "erp/server/handler/RequestHandlerContext.hxx"
-#include "erp/service/task/TaskHandler.hxx"
+#include "erp/service/task/GetTaskHandler.hxx"
 
 #include <gtest/gtest.h>
 

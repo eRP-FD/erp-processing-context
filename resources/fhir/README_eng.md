@@ -11,8 +11,8 @@
 | de.basisprofil.r4                              | 1.3.2      | https://simplifier.net/packages/de.basisprofil.r4/1.3.2                      |
 | de.gematik.erezept-workflow.r4                 | 1.1.1      | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.1.1           |
 | de.gematik.erezept-workflow.r4                 | 1.2.0      | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.2.0           |
-| de.abda.erezeptabgabedatenbasis                | 1.3.0      | https://simplifier.net/packages/de.abda.erezeptabgabedatenbasis/1.3.0          |
-| de.abda.erezeptabgabedatenpkv                  | 1.1.0      | https://simplifier.net/packages/de.abda.erezeptabgabedatenpkv/1.1.0            |
+| de.abda.erezeptabgabedatenbasis                | 1.3.1      | https://simplifier.net/packages/de.abda.erezeptabgabedatenbasis/1.3.1          |
+| de.abda.erezeptabgabedatenpkv                  | 1.2.0      | https://simplifier.net/packages/de.abda.erezeptabgabedatenpkv/1.2.0            |
 | de.gematik.erezept-patientenrechnung.r4        | 1.0.0      | https://simplifier.net/packages/de.gematik.erezept-patientenrechnung.r4/1.0.0  |
 
 # Used FHIR Components

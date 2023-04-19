@@ -6,45 +6,32 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKANDPRODUCTIONTESTBASE_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKANDPRODUCTIONTESTBASE_HXX
 
+#include "erp/tpm/Tpm.hxx"
+#include "erp/pc/PcServiceContext.hxx"
+#include "mock/tpm/TpmTestHelper.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
+#include "test/util/StaticData.hxx"
+
 #include <gtest/gtest.h>
+#include <optional>
 
 
 /**
- * Test base class that parameterizes tests for execution either with a mock or a production implementation of
- * some service. The idea is that if the production implementation is available then tests are executed for producation
+ * Test base class that parametrizes tests for execution either with a mock or a production implementation of
+ * some service. The idea is that if the production implementation is available then tests are executed for production
  * and mock implementation and only for mock otherwise.
  *
- * Additionally the parameter is a factory of the actual parameter to avoid having GTEST create static instances
- * of the parameter for each test, regardless of whether the test is actually executed.
  */
-template<class ParameterType>
-class MockAndProductionTestBase : public testing::TestWithParam<std::function<std::unique_ptr<ParameterType>()>>
+class MockAndProductionTestBase : public testing::TestWithParam<MockBlobCache::MockTarget>
 {
 public:
-    std::unique_ptr<ParameterType> parameter;
+    Tpm::Factory tpmFactory;
 
-    void SetUp (void) override
-    {
-        std::function<std::unique_ptr<ParameterType>()> factory = testing::TestWithParam<std::function<std::unique_ptr<ParameterType>()>>::GetParam();
-        parameter = factory();
-        if (parameter == nullptr)
-            GTEST_SKIP();
-#ifndef DEBUG
-        GTEST_SKIP_("disabled in Release");
-#endif
-    }
+    PcServiceContext* mContext{nullptr};
+    std::optional<PcServiceContext> mSimulatedContext;
+    std::optional<PcServiceContext> mMockedContext;
+
+    void SetUp() override;
 };
-
-#define InstantiateMockAndProductionTestSuite(BaseName,Fixture,ProductionFactory,MockFactory) \
- INSTANTIATE_TEST_SUITE_P(\
-    Simulated##BaseName,\
-    Fixture,\
-    testing::Values(ProductionFactory),\
-    [](auto&){return "simulated";});\
-INSTANTIATE_TEST_SUITE_P(\
-    Mocked##BaseName,\
-    Fixture,\
-    testing::Values(MockFactory),\
-    [](auto&){return "mocked";})
 
 #endif

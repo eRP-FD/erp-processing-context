@@ -45,6 +45,8 @@ public:
     void closeConnection() override;
     bool isCommitted() const override;
 
+    std::string retrieveSchemaVersion() override;
+
     void healthCheck() override;
 
     void fillWithStaticData();

@@ -22,6 +22,7 @@
 #include "erp/service/task/ActivateTaskHandler.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
+#include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
 #include "erp/service/chargeitem/ChargeItemDeleteHandler.hxx"
@@ -54,11 +55,12 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     using oids = std::initializer_list<std::string_view>;
 
     // For GET /Task see gemSpec_FD_eRp_V1.1.1, 6.1.1
-    A_21558.start("Register the allowed professionOIDs");
+    A_21558_01.start("Register the allowed professionOIDs");
     handlerManager.onGetDo("/Task",
             std::make_unique<GetAllTasksHandler>(oids{
-                               oid_versicherter}));
-    A_21558.finish();
+                    oid_versicherter,
+                    oid_oeffentliche_apotheke}));
+    A_21558_01.finish();
 
     A_19113_01.start("Register the allowed professionOIDs");
     handlerManager.onGetDo("/Task/{id}",

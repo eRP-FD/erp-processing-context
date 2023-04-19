@@ -98,3 +98,42 @@ TEST(PeriodicTimerTest, deleteWaitsForHandler)
     ioContext.stop();
     runner.join();
 }
+
+
+TEST(PeriodicTimerTest, exception)
+{
+    using namespace std::chrono_literals;
+    std::atomic_bool started = false;
+    std::atomic_bool completed = false;
+    struct TestTimerHandler final : public OneShotHandler {
+        TestTimerHandler(std::atomic_bool& started, std::atomic_bool& completed)
+            : mStarted{started}
+            , mCompleted{completed}
+        {
+        }
+        void timerHandler() override
+        {
+            mStarted = true;
+            throw std::runtime_error("test");
+            mCompleted = true;
+        }
+        std::atomic_bool& mStarted;
+        std::atomic_bool& mCompleted;
+    };
+
+    using TestTimer = PeriodicTimer<TestTimerHandler>;
+    auto testTimer = std::make_shared<TestTimer>(started, completed);
+    boost::asio::io_context ioContext;
+
+    testTimer->start(ioContext, tolerance);
+    std::thread runner{[&] {
+        ASSERT_THROW(ioContext.run_for(2 * interval), std::runtime_error);
+    }};
+    testutils::waitFor([&]() -> bool {
+        return started;
+    });
+    testTimer.reset();
+    EXPECT_FALSE(completed);
+    ioContext.stop();
+    runner.join();
+}

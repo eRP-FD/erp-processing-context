@@ -4,6 +4,8 @@
  */
 
 #include "erp/model/Timestamp.hxx"
+#include "erp/util/String.hxx"
+#include "erp/util/Uuid.hxx"
 #include "fhirtools/FPExpect.hxx"
 
 #include <date/tz.h>
@@ -18,12 +20,12 @@ namespace model
 namespace
 {
 /**
-     * Regarding the choice of `const char*` over std::string_view or std::string.
-     * std::chrono::parse only excepts std::string. Its documentation states that it
-     * calls std::chrono::from_stream which in turn only accepts `const char*`. Therefore
-     * it seems best to avoid the intermediate std::string which had to be manipulated to make room
-     * for the trailing '\0' amd use `const char*` directly with std::chrono::from_stream.
-     */
+ * Regarding the choice of `const char*` over std::string_view or std::string.
+ * std::chrono::parse only excepts std::string. Its documentation states that it
+ * calls std::chrono::from_stream which in turn only accepts `const char*`. Therefore
+ * it seems best to avoid the intermediate std::string which had to be manipulated to make room
+ * for the trailing '\0' amd use `const char*` directly with std::chrono::from_stream.
+ */
 constexpr const char* xsDateTimeZ = "%Y-%m-%dT%H:%M:%SZ";
 constexpr const char* xsDateTimeTz = "%Y-%m-%dT%H:%M:%S%Ez";
 constexpr const char* xsDate = "%Y-%m-%d";
@@ -32,6 +34,9 @@ constexpr const char* xsGYear = "%Y-%m-%d";
 
 constexpr const char* xsDateTimeWithoutSecondsZ = "%Y-%m-%dT%H:%MZ";
 constexpr const char* xsDateTimeWithoutSecondsTz = "%Y-%m-%dT%H:%M%Ez";
+constexpr const char* dtmDateTime = "%Y%m%d%H%M%S";
+// magic number used in gen_suuid is epoch('1536-10-22T22:30:00.000+00:00')*10
+constexpr auto dbSuuidMagic = std::chrono::seconds(136702134000);
 
 int64_t timezoneOffset()
 {
@@ -231,7 +236,6 @@ Timestamp Timestamp::fromGermanDate(const std::string& date)
     return Timestamp(inGermanTime.get_sys_time());
 }
 
-
 Timestamp Timestamp::fromXsGYearMonth(const std::string& date)
 {
     // Check the first 7 characters (YYYY-MM) to sort out cases that are allowed by xs:date but not by FHIR.
@@ -253,6 +257,19 @@ Timestamp Timestamp::fromXsGYearMonth(const std::string& date)
     ModelExpect(! stream.fail(), "invalid date format");
     ModelExpect(stream.tellg() == 10, "did not read the whole date");
 
+    return Timestamp(result);
+}
+
+Timestamp Timestamp::fromDtmDateTime(const std::string& dateAndTime)
+{
+    Timestamp::timepoint_t result;
+    std::istringstream stream(dateAndTime);
+    stream.imbue(std::locale::classic());
+
+    date::from_stream(stream, dtmDateTime, result);
+    ModelExpect(! stream.fail(), "date time has invalid format");
+    // tellg() seems to return -1 here, seems to be related to eof bit being set
+    ModelExpect(stream.rdbuf()->pubseekoff(0, std::ios::cur, std::ios::in) == 14, "did not read the whole date");
     return Timestamp(result);
 }
 
@@ -283,6 +300,17 @@ Timestamp Timestamp::fromXsGYear(const std::string& date)
 Timestamp Timestamp::fromXsTime(const std::string& time)
 {
     return model::fromXsDateTime("1970-01-01T" + time, true, false);
+}
+
+Timestamp Timestamp::fromDatabaseSUuid(const std::string& suuid)
+{
+    Uuid uuid(suuid);
+    ModelExpect(uuid.isValidIheUuid(), "Invalid uuid format");
+    const auto hexval =  String::replaceAll(suuid, "-", "").substr(0, 16);
+    const auto intval = std::strtoll(hexval.c_str(), nullptr, 16);
+    ModelExpect(intval > 0, "Error converting hex to integer");
+    auto durationSinceEpoch = std::chrono::duration_cast<duration_t>(std::chrono::microseconds(intval) - dbSuuidMagic);
+    return Timestamp(Timestamp::timepoint_t(durationSinceEpoch));
 }
 
 Timestamp Timestamp::fromTmInUtc(tm tmInUtc)
@@ -407,6 +435,20 @@ std::string Timestamp::toXsTime() const
     std::ostringstream s;
     s << date::format("%T%Ez", mDateAndTime);
     return s.str();
+}
+
+std::string Timestamp::toDatabaseSUuid() const
+{
+    // mimic the behavior of gen_suuid from the database schema
+    auto microsecsWithMagic =
+        std::chrono::duration_cast<std::chrono::microseconds>(mDateAndTime.time_since_epoch() + dbSuuidMagic).count();
+    std::ostringstream hexstream;
+    hexstream << std::hex << std::setfill('0') << std::setw(16) << microsecsWithMagic;
+    const auto hexval = std::move(hexstream).str();
+    auto hexView = std::string_view(hexval);
+    std::ostringstream uuid;
+    uuid << hexView.substr(0, 8) << "-" << hexView.substr(8, 4) << "-" << hexView.substr(12, 4) << "-0000-000000000000";
+    return std::move(uuid).str();
 }
 
 

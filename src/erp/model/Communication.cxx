@@ -7,13 +7,11 @@
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/UrlHelper.hxx"
-#include "erp/util/Uuid.hxx"
 #include "erp/util/String.hxx"
 
 #include <rapidjson/writer.h>
 #include <map>
 #include <regex>
-#include <tuple>
 
 using namespace model;
 using namespace model::resource;
@@ -34,8 +32,9 @@ const rj::Pointer Communication::recipient0IdentifierSystemPointer(ElementName::
 const rj::Pointer Communication::recipient0IdentifierValuePointer(ElementName::path(elements::recipient, 0, elements::identifier, elements::value));
 const rj::Pointer Communication::payloadPointer(ElementName::path(elements::payload));
 
-const rj::Pointer Communication::identifierSystemPointer(ElementName::path(elements::identifier, elements::system));
-const rj::Pointer Communication::identifierValuePointer(ElementName::path(elements::identifier, elements::value));
+namespace
+{
+const rj::Pointer payloadContentStringPointer(ElementName::path(elements::payload, 0, elements::contentString));
 
 const std::map<Communication::MessageType, std::string_view> MessageTypeToString = {
     { Communication::MessageType::InfoReq,          "InfoReq"          },
@@ -44,20 +43,6 @@ const std::map<Communication::MessageType, std::string_view> MessageTypeToString
     { Communication::MessageType::Reply,            "Reply"            },
     { Communication::MessageType::DispReq,          "DispReq"          },
     { Communication::MessageType::Representative,   "Representative"   }
-};
-
-int8_t model::Communication::messageTypeToInt(Communication::MessageType messageType)
-{
-    return magic_enum::enum_integer(messageType);
-}
-
-const std::map<std::string_view, Communication::MessageType> StringToMessageType = {
-    {"InfoReq",           Communication::MessageType::InfoReq          },
-    {"ChargChangeReq",    Communication::MessageType::ChargChangeReq   },
-    {"ChargChangeReply",  Communication::MessageType::ChargChangeReply },
-    {"Reply",             Communication::MessageType::Reply            },
-    {"DispReq",           Communication::MessageType::DispReq          },
-    {"Representative",    Communication::MessageType::Representative   }
 };
 
 const std::map<Communication::MessageType, std::string_view> MessageTypeToProfileUrl = {
@@ -92,14 +77,86 @@ const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessage
     {structure_definition::deprecated::communicationRepresentative,   Communication::MessageType::Representative   }
 };
 
-const std::map<Communication::MessageType, bool> MessageTypeHasPrescriptonId = {
-    { Communication::MessageType::InfoReq,          false },
-    { Communication::MessageType::ChargChangeReq,   true  },
-    { Communication::MessageType::ChargChangeReply, true  },
-    { Communication::MessageType::Reply,            false },
-    { Communication::MessageType::DispReq,          true  },
-    { Communication::MessageType::Representative,   true  }
-};
+std::string retrievePrescriptionIdFromReference(
+    std::string_view reference,
+    const model::Communication::MessageType messageType)
+{
+    // Reference may look like:
+    // InfoReq and Reply:           "[baseUrl/]Task/160.123.456.789.123.58" or
+    // DispReq and Representative:  "[baseUrl/]Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea" or
+    // ChargChangeReq and ChargChangeReply: "[baseUrl/]ChargeItem/200.000.000.006.522.02"
+    std::string path;
+    std::tie(path, std::ignore, std::ignore) = UrlHelper::splitTarget(std::string(reference));
+    std::cmatch result;
+    bool matches = false;
+    if (path.find("$accept") == std::string::npos)
+    {
+        switch(messageType)
+        {
+            case Communication::MessageType::ChargChangeReq:
+            case Communication::MessageType::ChargChangeReply:
+            {
+                static const std::regex pathRegexChargeItemId(UrlHelper::convertPathToRegex(".*ChargeItem/{id}"));
+                matches = std::regex_match(path.c_str(), result, pathRegexChargeItemId);
+            }
+            break;
+            case Communication::MessageType::InfoReq:
+            case Communication::MessageType::DispReq:
+            case Communication::MessageType::Representative:
+            case Communication::MessageType::Reply:
+            {
+                static const std::regex pathRegexTaskItemId(UrlHelper::convertPathToRegex(".*Task/{id}"));
+                matches = std::regex_match(path.c_str(), result, pathRegexTaskItemId);
+            }
+            break;
+        }
+    }
+    else
+    {
+        switch(messageType)
+        {
+            case Communication::MessageType::ChargChangeReq:
+            case Communication::MessageType::ChargChangeReply:
+                ModelFail("Invalid reference for this message type");
+            case Communication::MessageType::InfoReq:
+            case Communication::MessageType::DispReq:
+            case Communication::MessageType::Representative:
+            case Communication::MessageType::Reply:
+            {
+                static const std::regex pathRegexTaskIdAccessCode(UrlHelper::convertPathToRegex(".*Task/{id}/$accept"));
+                matches = std::regex_match(path.c_str(), result, pathRegexTaskIdAccessCode);
+            }
+        }
+    }
+
+    if (matches && result.size() == 2)
+    {
+        return result.str(1);
+    }
+
+    ModelFail("Failed to parse prescription ID from reference");
+}
+
+std::optional<std::string> retrieveAccessCodeFromTaskReference(std::string_view taskReference)
+{
+    // taskReference may look like:
+    // InfoReq and Reply:           "[baseUrl/]Task/160.123.456.789.123.58" or
+    // DispReq and Representative:  "[baseUrl/]Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
+    // The access code starts after "$accept?ac=" and goes to the end.
+    const auto& [path, query, fragment] = UrlHelper::splitTarget(std::string(taskReference));
+    const std::vector<std::pair<std::string, std::string>> queryParameters = UrlHelper::splitQuery(query);
+    for (const auto& queryParameter : queryParameters)
+    {
+        if (queryParameter.first == "ac")
+        {
+            return queryParameter.second;
+        }
+    }
+    return {};
+}
+
+} // anonymous namespace
+
 
 Communication::Communication(NumberAsStringParserDocument&& document)
     : Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>(std::move(document))
@@ -107,23 +164,20 @@ Communication::Communication(NumberAsStringParserDocument&& document)
 {
 }
 
+int8_t model::Communication::messageTypeToInt(Communication::MessageType messageType)
+{
+    return magic_enum::enum_integer(messageType);
+}
 
 bool Communication::isDeprecatedProfile() const
 {
-    return ResourceVersion::deprecatedProfile(getSchemaVersion(std::nullopt));
+    return ResourceVersion::deprecatedProfile(value(getSchemaVersion()));
 }
 
 std::string_view Communication::messageTypeToString(MessageType messageType)
 {
     const auto& it = MessageTypeToString.find(messageType);
     Expect3 (it != MessageTypeToString.end(), "Message type enumerator value " + std::to_string(static_cast<int>(messageType)) + " is out of range", std::logic_error);
-    return it->second;
-}
-
-Communication::MessageType Communication::stringToMessageType(std::string_view messageType)
-{
-    const auto& it = StringToMessageType.find(messageType);
-    ModelExpect(it != StringToMessageType.end(), "Invalid message type " + std::string(messageType));
     return it->second;
 }
 
@@ -148,13 +202,6 @@ Communication::MessageType Communication::profileUrlToMessageType(std::string_vi
     return it->second;
 }
 
-bool Communication::messageTypeHasPrescriptionId(MessageType messageType)
-{
-    const auto& it = MessageTypeHasPrescriptonId.find(messageType);
-    ModelExpect(it != MessageTypeHasPrescriptonId.end(), "Message type enumerator value " + std::to_string(static_cast<int>(messageType)) + " is out of range");
-    return it->second;
-}
-
 SchemaType Communication::messageTypeToSchemaType(MessageType messageType)
 {
     switch (messageType)
@@ -162,8 +209,9 @@ SchemaType Communication::messageTypeToSchemaType(MessageType messageType)
     case model::Communication::MessageType::InfoReq:
         return SchemaType::Gem_erxCommunicationInfoReq;
     case model::Communication::MessageType::ChargChangeReq:
+        return SchemaType::Gem_erxCommunicationChargChangeReq;
     case model::Communication::MessageType::ChargChangeReply:
-        return SchemaType::fhir;
+        return SchemaType::Gem_erxCommunicationChargChangeReply;
     case model::Communication::MessageType::Reply:
         return SchemaType::Gem_erxCommunicationReply;
     case model::Communication::MessageType::DispReq:
@@ -171,78 +219,103 @@ SchemaType Communication::messageTypeToSchemaType(MessageType messageType)
     case model::Communication::MessageType::Representative:
         return SchemaType::Gem_erxCommunicationRepresentative;
     }
-    ErpFail(HttpStatus::InternalServerError, "Converting Communication::messageType to SchemaType failed");
+    ModelFail("Converting Communication::messageType to SchemaType failed");
 }
 
-static const std::string invalidDataMessage = "The data does not conform to that expected by the FHIR profile or is invalid";
-
-std::string Communication::retrievePrescriptionIdFromReference(
-    std::string_view reference,
-    const model::Communication::MessageType messageType)
+Communication::MessageType Communication::schemaTypeToMessageType(SchemaType schemaType)
 {
-    // Reference may look like:
-    // InfoReq and Reply:           "Task/160.123.456.789.123.58" or
-    // DispReq and Representative:  "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea" or
-    // ChargChangeReq and ChargChangeReply: "ChargeItem/200.000.000.006.522.02"
-    std::string path;
-    std::tie(path, std::ignore, std::ignore) = UrlHelper::splitTarget(std::string(reference));
-    std::cmatch result;
-    bool matches = false;
-    if (path.find("$accept") == std::string::npos)
+    switch (schemaType)
     {
-        switch(messageType)
-        {
-        case model::Communication::MessageType::ChargChangeReq:
-        case model::Communication::MessageType::ChargChangeReply:
-            {
-                 static const std::regex pathRegexChargeItemId(UrlHelper::convertPathToRegex("ChargeItem/{id}"));
-                 matches = std::regex_match(path.c_str(), result, pathRegexChargeItemId);
-            }
-            break;
-        default:
-            {
-                 static const std::regex pathRegexTaskItemId(UrlHelper::convertPathToRegex("Task/{id}"));
-                 matches = std::regex_match(path.c_str(), result, pathRegexTaskItemId);
-            }
-             break;
-        }
+        case SchemaType::Gem_erxCommunicationInfoReq:
+            return model::Communication::MessageType::InfoReq;
+        case SchemaType::Gem_erxCommunicationChargChangeReq:
+            return  model::Communication::MessageType::ChargChangeReq;
+        case SchemaType::Gem_erxCommunicationChargChangeReply:
+            return model::Communication::MessageType::ChargChangeReply;
+        case SchemaType::Gem_erxCommunicationReply:
+            return model::Communication::MessageType::Reply;
+        case SchemaType::Gem_erxCommunicationDispReq:
+            return model::Communication::MessageType::DispReq;
+        case SchemaType::Gem_erxCommunicationRepresentative:
+            return model::Communication::MessageType::Representative;
+        case SchemaType::ActivateTaskParameters:
+        case SchemaType::CreateTaskParameters:
+        case SchemaType::Gem_erxAuditEvent:
+        case SchemaType::Gem_erxBinary:
+        case SchemaType::fhir:
+        case SchemaType::Gem_erxCompositionElement:
+        case SchemaType::Gem_erxDevice:
+        case SchemaType::KBV_PR_ERP_Bundle:
+        case SchemaType::KBV_PR_ERP_Composition:
+        case SchemaType::KBV_PR_ERP_Medication_Compounding:
+        case SchemaType::KBV_PR_ERP_Medication_FreeText:
+        case SchemaType::KBV_PR_ERP_Medication_Ingredient:
+        case SchemaType::KBV_PR_ERP_Medication_PZN:
+        case SchemaType::KBV_PR_ERP_PracticeSupply:
+        case SchemaType::KBV_PR_ERP_Prescription:
+        case SchemaType::KBV_PR_FOR_Coverage:
+        case SchemaType::KBV_PR_FOR_HumanName:
+        case SchemaType::KBV_PR_FOR_Organization:
+        case SchemaType::KBV_PR_FOR_Patient:
+        case SchemaType::KBV_PR_FOR_Practitioner:
+        case SchemaType::KBV_PR_FOR_PractitionerRole:
+        case SchemaType::Gem_erxMedicationDispense:
+        case SchemaType::MedicationDispenseBundle:
+        case SchemaType::Gem_erxOrganizationElement:
+        case SchemaType::Gem_erxReceiptBundle:
+        case SchemaType::Gem_erxTask:
+        case SchemaType::BNA_tsl:
+        case SchemaType::Gematik_tsl:
+        case SchemaType::Gem_erxChargeItem:
+        case SchemaType::Gem_erxConsent:
+        case SchemaType::PatchChargeItemParameters:
+        case SchemaType::DAV_DispenseItem:
+        case SchemaType::Pruefungsnachweis:
+            ModelFail("Not a Communication Schema");
     }
-    else
-    {
-        static const std::regex pathRegexTaskIdAccessCode(UrlHelper::convertPathToRegex("Task/{id}/$accept"));
-        matches = std::regex_match(path.c_str(), result, pathRegexTaskIdAccessCode);
-    }
-
-    if (matches && result.size() == 2)
-    {
-        return result.str(1);
-    }
-
-    ErpFail(HttpStatus::BadRequest, "Failed to parse prescription ID from reference");
+    Fail2("Communication::schemaTypeToMessageType: Unknown SchemaType: "
+        + std::to_string(static_cast<intmax_t>(schemaType)), std::logic_error);
 }
-
-std::optional<std::string> Communication::retrieveAccessCodeFromTaskReference(std::string_view taskReference)
-{
-    // taskReference may look like:
-    // InfoReq and Reply:           "Task/160.123.456.789.123.58" or
-    // DispReq and Representative:  "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
-    // The access code starts after "$accept?ac=" and goes to the end.
-    const auto& [path, query, fragment] = UrlHelper::splitTarget(std::string(taskReference));
-    const std::vector<std::pair<std::string, std::string>> queryParameters = UrlHelper::splitQuery(query);
-    for (const auto& queryParameter : queryParameters)
-    {
-        if (queryParameter.first == "ac")
-        {
-            return queryParameter.second;
-        }
-    }
-    return {};
-}
-
 
 Communication::MessageType Communication::messageType() const
 {
-    return profileUrlToMessageType(getStringValue(metaProfile0Pointer)); // throws an exception if conversion fails
+    const auto profileName = getStringValue(metaProfile0Pointer);
+    const auto* info = ResourceVersion::profileInfoFromProfileName(profileName);
+    if (info) {
+        try {
+            return schemaTypeToMessageType(info->schemaType);
+        }
+        catch (const ModelException&) {}
+    }
+    std::ostringstream msg;
+    msg << "invalid profile expected one of: [";
+    std::string sep;
+    if (ResourceVersion::supportedBundles().contains(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
+    {
+        auto allVersions = ResourceVersion::profileVersionFromBundle(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01);
+        auto gemVer = get<ResourceVersion::DeGematikErezeptWorkflowR4>(allVersions);
+        msg << '"' << model::resource::structure_definition::deprecated::communicationInfoReq << '|' << v_str(gemVer);
+        msg << R"(", ")" << model::resource::structure_definition::deprecated::communicationReply << '|' << v_str(gemVer);
+        msg << R"(", ")" << model::resource::structure_definition::deprecated::communicationDispReq << '|' << v_str(gemVer);
+        msg << R"(", ")" << model::resource::structure_definition::deprecated::communicationRepresentative << '|' << v_str(gemVer);
+        msg << '"';
+        sep = ", ";
+    }
+    if (ResourceVersion::supportedBundles().contains(ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        auto allVersions = ResourceVersion::profileVersionFromBundle(ResourceVersion::FhirProfileBundleVersion::v_2023_07_01);
+        auto gemVer = get<ResourceVersion::DeGematikErezeptWorkflowR4>(allVersions);
+        auto gemChargVer = get<ResourceVersion::DeGematikErezeptPatientenrechnungR4>(allVersions);
+        msg << sep << '"' << model::resource::structure_definition::communicationInfoReq << '|' << v_str(gemVer);
+        msg << R"(", ")" << model::resource::structure_definition::communicationReply << '|' << v_str(gemVer);
+        msg << R"(", ")" << model::resource::structure_definition::communicationDispReq << '|' << v_str(gemVer);
+        msg << R"(", ")" << model::resource::structure_definition::communicationRepresentative << '|' << v_str(gemVer);
+        msg << R"(", ")" << model::resource::structure_definition::communicationChargChangeReq << '|' << v_str(gemChargVer);
+        msg << R"(", ")" << model::resource::structure_definition::communicationChargChangeReply << '|' << v_str(gemChargVer);
+        msg << '"';
+    }
+    msg << "]";
+    ModelFail(std::move(msg).str());
 }
 
 std::string_view Communication::messageTypeAsString() const
@@ -253,11 +326,6 @@ std::string_view Communication::messageTypeAsString() const
 std::string_view Communication::messageTypeAsProfileUrl() const
 {
     return messageTypeToProfileUrl(messageType()); // may throw an exception if the message type is not in the body
-}
-
-int8_t model::Communication::messageTypeAsInt() const
-{
-    return messageTypeToInt(messageType());
 }
 
 std::optional<Uuid> Communication::id() const
@@ -413,9 +481,9 @@ std::optional<std::string> Communication::accessCode() const
     return {};
 }
 
-std::optional<std::string_view> Communication::contentString(uint32_t idx) const
+std::optional<std::string_view> Communication::contentString() const
 {
-    return getOptionalStringValue(rj::Pointer(ElementName::path(elements::payload, idx, elements::contentString)));
+    return getOptionalStringValue(payloadContentStringPointer);
 }
 
 // GEMREQ-start A_19450-01
@@ -430,10 +498,10 @@ bool Communication::canValidateGeneric(MessageType messageType, ResourceVersion:
     switch (messageType)
     {
         using enum model::Communication::MessageType;
-        case InfoReq:
         case DispReq:
         case Representative:
             return true;
+        case InfoReq:
         case Reply:
         case ChargChangeReq:
         case ChargChangeReply:
@@ -444,5 +512,5 @@ bool Communication::canValidateGeneric(MessageType messageType, ResourceVersion:
 
 bool model::Communication::canValidateGeneric() const
 {
-    return canValidateGeneric(messageType(), getSchemaVersion(std::nullopt));
+    return canValidateGeneric(messageType(), value(getSchemaVersion()));
 }

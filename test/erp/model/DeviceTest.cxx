@@ -17,8 +17,8 @@ TEST(DeviceTest, DefaultConstruct)//NOLINT(readability-function-cognitive-comple
 
     EXPECT_EQ(device.id(), "1");
     EXPECT_EQ(device.status(), Device::Status::active);
-    EXPECT_EQ(device.serialNumber(), ErpServerInfo::ReleaseVersion);
-    EXPECT_EQ(device.version(), ErpServerInfo::ReleaseVersion);
+    EXPECT_EQ(device.serialNumber(), ErpServerInfo::ReleaseVersion());
+    EXPECT_EQ(device.version(), ErpServerInfo::ReleaseVersion());
     EXPECT_EQ(device.name(), Device::Name);
     EXPECT_TRUE(device.contact(Device::CommunicationSystem::email).has_value());
     EXPECT_EQ(device.contact(Device::CommunicationSystem::email).value(), Device::Email);

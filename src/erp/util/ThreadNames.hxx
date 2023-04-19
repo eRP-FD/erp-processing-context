@@ -6,9 +6,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_THREADNAMES_HXX
 #define ERP_PROCESSING_CONTEXT_THREADNAMES_HXX
 
-#include <mutex>
-#include <unordered_map>
+#include <shared_mutex>
 #include <thread>
+#include <unordered_map>
 
 
 /**
@@ -17,16 +17,16 @@
 class ThreadNames
 {
 public:
-    static ThreadNames& instance (void);
+    static ThreadNames& instance();
 
-    const std::string& getCurrentThreadName (void);
-    const std::string& getThreadName (std::thread::id threadId);
-    void setThreadName (std::thread::id threadId, const std::string& threadName);
-    void setCurrentThreadName (const std::string& threadName);
+    std::string getCurrentThreadName();
+    std::string getThreadName(std::thread::id threadId);
+    void setThreadName(std::thread::id threadId, const std::string& threadName);
+    void setCurrentThreadName(const std::string& threadName);
 
 private:
-    mutable std::mutex mMutex;
-    std::unordered_map<std::thread::id,std::string> mThreadIdToNameMap;
+    mutable std::shared_mutex mMutex;
+    std::unordered_map<std::thread::id, std::string> mThreadIdToNameMap;
 };
 
 

@@ -109,9 +109,9 @@ namespace
 
     std::string getBuildNumber (void)
     {
-        return std::string(ErpServerInfo::ReleaseVersion)
-               + "/" + std::string(ErpServerInfo::BuildVersion)
-               + "/" + std::string(ErpServerInfo::BuildType);
+        return std::string(ErpServerInfo::ReleaseVersion())
+               + "/" + std::string(ErpServerInfo::BuildVersion())
+               + "/" + std::string(ErpServerInfo::BuildType());
     }
 
     /**
@@ -183,6 +183,31 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob (
         transaction->esc(getBuildNumber()));
 
     Expect(!result.empty(), "did not find the requested blob");
+    Expect(result.size() == 1, "found more than one blob");
+
+    Entry entry = convertEntry(result.front());
+
+    transaction.commit();
+    return entry;
+}
+
+BlobDatabase::Entry ProductionBlobDatabase::getBlob(BlobType type, const ErpVector& name) const
+{
+    auto transaction = createTransaction();
+
+    const pqxx::result result = transaction->exec_params(
+        "SELECT blob_id, type, name, data, generation,"
+        "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), "
+        "EXTRACT(EPOCH FROM end_date_time),"
+        "       meta, vau_certificate, pcr_hash "
+        "FROM erp.blob "
+        "WHERE (type = $1 AND name = $2)"
+        "  AND (host_ip IS NULL OR host_ip = $3)"
+        "  AND (build IS NULL OR build = $4)",
+        gsl::narrow<int16_t>(type), postgres_bytea_view(reinterpret_cast<const std::byte*>(name.data()), name.size()),
+        transaction->esc(getHostIp()), transaction->esc(getBuildNumber()));
+
+    Expect(! result.empty(), "did not find the requested blob");
     Expect(result.size() == 1, "found more than one blob");
 
     Entry entry = convertEntry(result.front());
@@ -445,12 +470,12 @@ void ProductionBlobDatabase::processStoreBlobException (void)
         else
             Fail("unknown error");
     }
-    catch (::pqxx::unique_violation& e)
+    catch (const ::pqxx::unique_violation& e)
     {
         TVLOG(1) << "unique_violation: " << e.what();
         ErpFail(::HttpStatus::Conflict, " A Blob with that ID already exists");
     }
-    catch(pqxx::integrity_constraint_violation& e)
+    catch(const pqxx::integrity_constraint_violation& e)
     {
         // Interpret all constraint violations as being caused by bad input data => BadRequest.
         TVLOG(1) << "integrity_constraint_violation: " << e.what();

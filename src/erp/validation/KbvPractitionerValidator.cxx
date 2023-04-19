@@ -14,7 +14,7 @@ void KbvPractitionerValidator::validate(const model::ResourceBase& resource, con
     doValidate(dynamic_cast<const model::KbvPractitioner&>(resource));
 }
 
-void KbvPractitionerValidator_V1_0_1::doValidate(const model::KbvPractitioner& kbvPractitioner) const
+void KbvPractitionerValidator_V1_0_2::doValidate(const model::KbvPractitioner& kbvPractitioner) const
 {
     identifierSlicing(kbvPractitioner);
     KbvValidationUtils::checkFamilyName(kbvPractitioner.name_family());
@@ -24,7 +24,7 @@ void KbvPractitionerValidator_V1_0_1::doValidate(const model::KbvPractitioner& k
     qualificationSlicing(kbvPractitioner);
 }
 
-void KbvPractitionerValidator_V1_0_1::identifierSlicing(const model::KbvPractitioner& kbvPractitioner) const
+void KbvPractitionerValidator_V1_0_2::identifierSlicing(const model::KbvPractitioner& kbvPractitioner) const
 {
     const auto& typeCodingCode = kbvPractitioner.identifierTypeCodingCode();
     const auto& typeCodingSystem = kbvPractitioner.identifierTypeCodingSystem();
@@ -79,7 +79,7 @@ static void checkQualification(const std::optional<std::string_view>& qualificat
     }
 }
 
-void KbvPractitionerValidator_V1_0_1::qualificationSlicing(const model::KbvPractitioner& kbvPractitioner) const
+void KbvPractitionerValidator_V1_0_2::qualificationSlicing(const model::KbvPractitioner& kbvPractitioner) const
 {
     // Slicing on code.text(Exists)
     const auto& text1 = kbvPractitioner.qualificationText(0);

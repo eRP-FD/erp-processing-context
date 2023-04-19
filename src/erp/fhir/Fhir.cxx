@@ -34,5 +34,6 @@ void Fhir::loadVersion(ConfigurationKey versionKey, ConfigurationKey structureKe
     std::transform(filesAsString.begin(), filesAsString.end(), std::back_inserter(files), [](const auto& str) {
         return std::filesystem::path{str};
     });
+    TLOG(INFO) << "Loading FHIR structure repository for " << magic_enum::enum_name(version);
     mStructureRepository[version].load(files);
 }

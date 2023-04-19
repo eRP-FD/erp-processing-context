@@ -44,6 +44,7 @@ public:
     [[nodiscard]] std::vector<std::string> subElementNames() const override;
     [[nodiscard]] bool hasValue() const override;
     [[nodiscard]] std::vector<std::shared_ptr<const Element>> subElements(const std::string& name) const override;
+    [[nodiscard]] const rapidjson::Value* erpValue() const;
 
 private:
     fhirtools::PrimitiveElement asPrimitiveElement() const;

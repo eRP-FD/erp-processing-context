@@ -39,7 +39,7 @@ DurationTimer::~DurationTimer (void)
         if (mStart.has_value() && mReceiver)
         {
             mReceiver(end - mStart.value(), mCategory, mDescription + " was successful", mSessionIdentifier,
-                      mKeyValueMap);
+                      mKeyValueMap, std::nullopt);
         }
     }
 }
@@ -51,7 +51,7 @@ void DurationTimer::notifyFailure(const std::string& description)
     if (mStart.has_value() && mReceiver)
     {
         mReceiver(end - mStart.value(), mCategory, mDescription + " failed: " + description, mSessionIdentifier,
-                  mKeyValueMap);
+                  mKeyValueMap, JsonLog::makeErrorLogReceiver());
         mStart = std::nullopt;
     }
 }

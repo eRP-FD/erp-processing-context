@@ -5,6 +5,7 @@
 
 #include "test/erp/database/PostgresDatabaseCommunicationTest.hxx"
 
+#include "erp/ErpRequirements.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -1219,58 +1220,88 @@ TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)//NOLINT(
 }
 
 
+// GEMREQ-start A_19027-03
 TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath  + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
-    PrescriptionId prescriptionId = insertTask(task);
-    const auto kvnrInsurant = task.kvnr().value();
 
+    A_19027_03.test("Deletion of task related communications from database");
+
+    // Make sure that there are no leftovers from previous tests.
+    verifyDatabaseIsTidy();
+
+    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
+    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    Task task1 = Task::fromJsonNoValidation(jsonString);
+    PrescriptionId prescriptionId1 = insertTask(task1);
+    Task task2 = Task::fromJsonNoValidation(jsonString);
+    PrescriptionId prescriptionId2 = insertTask(task2);
+    const auto kvnrInsurant = task1.kvnr().value();
+    
+    // Insert communication object into database which shall *not* be deleted:
     {
         jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
-                .setPrescriptionId(prescriptionId.toString())
-                .setAccessCode(std::string(task.accessCode()))
+                .setPrescriptionId(prescriptionId1.toString())
+                .setAccessCode(std::string(task1.accessCode()))
                 .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                 .setPayload("Message text 1.").createJsonString();
         Communication comm = Communication::fromJsonNoValidation(jsonString);
         comm.setSender(kvnrInsurant);
         comm.setTimeSent(Timestamp::fromXsDateTime("2021-02-17T13:34:45.940+00:00"));
-        insertCommunication(comm);
+        const auto idComm = insertCommunication(comm);
+        const auto commRetrieved = retrieveCommunication(
+            idComm.value(),
+            model::getIdentityString(comm.sender().value()));
+        ASSERT_TRUE(commRetrieved.has_value());
     }
-    {
-        jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
-                .setPrescriptionId(prescriptionId.toString())
-                .setAccessCode(std::string(task.accessCode()))
-                .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-                .setPayload("Message text 1.").createJsonString();
-        Communication comm = Communication::fromJsonNoValidation(jsonString);
-        comm.setSender(kvnrInsurant);
-        comm.setTimeSent(Timestamp::fromXsDateTime("2021-02-17T14:50:11.863+00:00"));
-        insertCommunication(comm);
-    }
-    database().deleteCommunicationsForTask(prescriptionId);
+
+    // Count currently available communication objects.
+    uint64_t communicationsCountPrev = countCommunications();
+
+    // Insert communication objects into database which shall be deleted:
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+            .setPrescriptionId(prescriptionId2.toString())
+            .setAccessCode(std::string(task2.accessCode()))
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+            .setPayload("Message text 2.").createJsonString();
+    Communication comm1 = Communication::fromJsonNoValidation(jsonString);
+    comm1.setSender(kvnrInsurant);
+    comm1.setTimeSent(Timestamp::fromXsDateTime("2021-02-17T13:34:45.940+00:00"));
+    const auto idComm1 = insertCommunication(comm1);
+    ASSERT_TRUE(idComm1.has_value());
+    
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+            .setPrescriptionId(prescriptionId2.toString())
+            .setAccessCode(std::string(task2.accessCode()))
+            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+            .setPayload("Message text 3.").createJsonString();
+    Communication comm2 = Communication::fromJsonNoValidation(jsonString);
+    comm2.setSender(kvnrInsurant);
+    comm2.setTimeSent(Timestamp::fromXsDateTime("2021-02-17T14:50:11.863+00:00"));
+    const auto idComm2 = insertCommunication(comm2);
+    ASSERT_TRUE(idComm2.has_value());
+
+    database().deleteCommunicationsForTask(prescriptionId2);
     database().commitTransaction();
 
-    const Query countCommunicationsForTask { "countCommunications",
-        "SELECT COUNT(*) FROM erp.communication WHERE prescription_id = $1" };
-
-    prepare (countCommunicationsForTask);
-
-    auto txn2 = createTransaction();
-    pqxx::result result;
-    ASSERT_NO_THROW(result = txn2.exec_prepared(
-        pqxx::zview{ countCommunicationsForTask.name },
-        prescriptionId.toDatabaseId()));
-    txn2.commit();
-    ASSERT_EQ(result.size(), 1);
-
-    ASSERT_EQ(result.front().at(0).as<int>(), 0);
+    // Check whether the communication objects have been deleted.
+    const auto comm1Retrieved = retrieveCommunication(
+        idComm1.value(),
+        model::getIdentityString(comm1.sender().value()));
+    ASSERT_FALSE(comm1Retrieved.has_value());
+    const auto comm2Retrieved = retrieveCommunication(
+        idComm2.value(),
+        model::getIdentityString(comm1.sender().value()));
+    ASSERT_FALSE(comm2Retrieved.has_value());
+    
+    // Count currently available communication objects.
+    uint64_t communicationsCountCurr = countCommunications();
+    ASSERT_EQ(communicationsCountCurr, communicationsCountPrev);    
 }
+// GEMREQ-end A_19027-03
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseCommunicationTestInst, PostgresDatabaseCommunicationTest,
                          testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,

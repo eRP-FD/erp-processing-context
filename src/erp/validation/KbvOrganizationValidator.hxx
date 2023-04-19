@@ -24,7 +24,7 @@ protected:
                                 const InCodeValidator& inCodeValidator) const = 0;
 };
 
-class KbvOrganizationValidator_V1_0_1 : public KbvOrganizationValidator
+class KbvOrganizationValidator_V1_0_2 : public KbvOrganizationValidator
 {
 protected:
     void doValidate(const model::KbvOrganization& kbvOrganization, const XmlValidator& xmlValidator,
@@ -34,8 +34,6 @@ protected:
     void telecomSlicing(const model::KbvOrganization& kbvOrganization) const;
     void addressExtensions(const model::KbvOrganization& kbvOrganization) const;
 };
-
-using KbvOrganizationValidator_V1_0_2 = KbvOrganizationValidator_V1_0_1;
 
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVORGANIZATIONVALIDATOR_HXX

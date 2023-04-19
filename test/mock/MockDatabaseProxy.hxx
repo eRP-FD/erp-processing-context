@@ -24,6 +24,9 @@ public:
     void commitTransaction() override;
     void closeConnection() override;
     bool isCommitted() const override;
+
+    std::string retrieveSchemaVersion() override;
+
     void healthCheck() override;
 
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,

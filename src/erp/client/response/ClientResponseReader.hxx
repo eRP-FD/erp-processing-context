@@ -104,7 +104,7 @@ void ClientResponseReader::closeConnection (stream_type& stream, const bool expe
             // the stream and proper shutdown protocol may impossible to perform.
             //
             // As a result we expect an exception being thrown. And ignore it.
-            LOG(ERROR) << e.what();
+            TLOG(ERROR) << e.what();
         }
         else
         {

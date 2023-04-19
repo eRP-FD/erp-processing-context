@@ -5,6 +5,7 @@
 
 #include "erp/model/Extension.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
 
 #include <rapidjson/pointer.h>

@@ -2,9 +2,12 @@
  * (C) Copyright IBM Deutschland GmbH 2022
  * (C) Copyright IBM Corp. 2022
  */
+
+#include "erp/ErpRequirements.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
+#include "erp/util/ByteHelper.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -52,8 +55,11 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     const auto tasks = resultBundle->getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     EXPECT_EQ(tasks[0].prescriptionId(), task.prescriptionId());
+
+    A_19169_01.test("Check task status, secret, QES bundle");
     EXPECT_EQ(tasks[0].status(), model::Task::Status::inprogress);
     EXPECT_TRUE(tasks[0].secret().has_value());
+    EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*tasks[0].secret()));
 
     const auto binaryResources = resultBundle->getResourcesByType<model::Binary>("Binary");
     ASSERT_EQ(binaryResources.size(), 1);

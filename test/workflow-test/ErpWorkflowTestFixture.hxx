@@ -50,6 +50,11 @@
 
 class XmlValidator;
 class JsonValidator;
+namespace ResourceTemplates
+{
+struct KbvBundleOptions;
+struct KbvBundleMvoOptions;
+}
 
 // refer to http://hl7.org/fhir/R4/datatypes.html#instant
 static const std::regex instantRegex{
@@ -320,6 +325,7 @@ public:
         const ContentMimeType& contentType,
         const model::ChargeItem& inputChargeItem,
         const std::string& newMedicationDispenseString,
+        std::string_view accessCode,
         const HttpStatus expectedStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
         const std::optional<std::function<std::string(const std::string&)>>& signFunction = std::nullopt);
@@ -450,10 +456,13 @@ public:
     static std::shared_ptr<XmlValidator> getXmlValidator();
     static std::shared_ptr<JsonValidator> getJsonValidator();
 
-    std::optional<Certificate> retrieveEciesRemoteCertificate();
-    Certificate getEciesCertificate (void);
-
     void resetClient();
+
+    bool serverUsesOldProfile();
+
+    std::string kbvBundleXml(ResourceTemplates::KbvBundleOptions opts);
+    std::string kbvBundleMvoXml(ResourceTemplates::KbvBundleMvoOptions opts);
+
 
 protected:
     virtual std::string medicationDispense(const std::string& kvnr,
@@ -479,6 +488,7 @@ private:
         std::tuple<ClientResponse, ClientResponse>& result, const RequestArguments& args,
         const std::function<void(std::string&)>& manipEncryptedInnerRequest = {},
         const std::function<void(Header&)>& manipInnerRequestHeader = {});
+    void validateInternal(const ClientResponse& innerResponse);
     virtual std::string creatTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
                                         const JWT& jwt);
     virtual std::string creatUnvalidatedTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
@@ -596,6 +606,7 @@ private:
         const ContentMimeType& contentType,
         const model::ChargeItem& inputChargeItem,
         const std::string& newMedicationDispenseString,
+        std::string_view accessCode,
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
         const std::optional<std::function<std::string(const std::string&)>>& signFunction);

@@ -17,10 +17,6 @@
 #include "erp/util/Uuid.hxx"
 #include "test/util/ErpMacros.hxx"
 
-namespace
-{
-    constexpr std::string_view pnwPzNumber = "ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY=";
-}
 
 class PostgresDatabaseTaskTest : public PostgresDatabaseTest, public testing::WithParamInterface<model::PrescriptionType>
 {
@@ -32,6 +28,8 @@ public:
             auto deleteTxn = createTransaction();
             deleteTxn.exec("DELETE FROM " + taskTableName());
             deleteTxn.commit();
+
+            prepare(mRetrieveTask);
         }
     }
 
@@ -43,20 +41,10 @@ public:
         }
     }
 
+    using PostgresDatabaseTest::taskTableName;
     std::string taskTableName() const
     {
-        switch(GetParam())
-        {
-            case model::PrescriptionType::apothekenpflichigeArzneimittel:
-                return "erp.task";
-            case model::PrescriptionType::direkteZuweisung:
-                return "erp.task_169";
-            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-                return "erp.task_200";
-            case model::PrescriptionType::direkteZuweisungPkv:
-                return "erp.task_209";
-        }
-        Fail("invalid prescription type: " + std::to_string(uintmax_t(GetParam())));
+        return taskTableName(GetParam());
     }
 
     model::PrescriptionType prescriptionType() const
@@ -66,15 +54,8 @@ public:
 
     void retrieveTaskData(pqxx::result& result, const model::PrescriptionId& prescriptionId)
     {
-        const Query retrieveTask{
-            "retrieveTask",
-            "SELECT * "
-            "FROM " + taskTableName() +
-            " WHERE prescription_id = $1"};
-        prepare(retrieveTask);
-
         auto &&txn = createTransaction();
-        ASSERT_NO_THROW(result = txn.exec_prepared(retrieveTask.name, prescriptionId.toDatabaseId()));
+        ASSERT_NO_THROW(result = txn.exec_prepared(mRetrieveTask.name, prescriptionId.toDatabaseId()));
         txn.commit();
         ASSERT_FALSE(result.empty());
     }
@@ -148,6 +129,13 @@ public:
             outTasks.emplace_back(std::move(task1));
         }
     }
+
+private:
+    const Query mRetrieveTask{
+        "retrieveTask",
+        "SELECT * "
+        "FROM " + taskTableName() +
+            " WHERE prescription_id = $1"};
 };
 
 
@@ -188,7 +176,7 @@ TEST_P(PostgresDatabaseTaskTest, InsertTask)//NOLINT(readability-function-cognit
     ASSERT_TRUE(result.front().at(row++).is_null()); // expiry_date
     ASSERT_TRUE(result.front().at(row++).is_null()); // accept_date
     ASSERT_EQ(result.front().at(row++).as<int>(), 0); // status
-    ASSERT_FALSE(result.front().at(row++).is_null()); // key_generation_id
+    ASSERT_FALSE(result.front().at(row++).is_null()); // task_key_blob_id
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // salt
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // access_code
     ASSERT_TRUE(result.front().at(row++).is_null()); // secret
@@ -197,6 +185,7 @@ TEST_P(PostgresDatabaseTaskTest, InsertTask)//NOLINT(readability-function-cognit
     ASSERT_TRUE(result.front().at(row++).is_null()); // when_handed_over
     ASSERT_TRUE(result.front().at(row++).is_null()); // when_prepared
     ASSERT_TRUE(result.front().at(row++).is_null()); // performer
+    ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_blob_id
     ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
@@ -242,7 +231,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-functio
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // expiry_date
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // accept_date
     ASSERT_EQ(result.front().at(row++).as<int>(), 1); // status
-    ASSERT_FALSE(result.front().at(row++).is_null()); // key_generation_id
+    ASSERT_FALSE(result.front().at(row++).is_null()); // task_key_blob_id
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // salt
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // access_code
     ASSERT_TRUE(result.front().at(row++).is_null()); // secret
@@ -251,6 +240,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-functio
     ASSERT_TRUE(result.front().at(row++).is_null()); // when_handed_over
     ASSERT_TRUE(result.front().at(row++).is_null()); // when_prepared
     ASSERT_TRUE(result.front().at(row++).is_null()); // performer
+    ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_blob_id
     ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
@@ -314,6 +304,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     ASSERT_EQ(std::string(healthCareProviderPrescription.value().data().value()), "HealthCareProviderPrescription");
 }
 
+// GEMREQ-start A_19115-01
 TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
@@ -321,12 +312,11 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
         GTEST_SKIP();
     }
 
-
-    A_19115.test("Ensure only own tasks can be retrieved by KVNR");
+    A_19115_01.test("Ensure only own tasks can be retrieved by KVNR");
 
     const auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    const model::Kvnr kvnr1{"XYZABC1234", kvnrType};
-    const model::Kvnr kvnr2{"XYZABC5678", kvnrType};
+    const model::Kvnr kvnr1{"X678901234", kvnrType};
+    const model::Kvnr kvnr2{"X012345678", kvnrType};
 
     // cleanup
     {
@@ -382,8 +372,6 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
             model::Bundle(model::BundleType::document, ::model::ResourceBase::NoProfile).serializeToJsonString()));
     database().commitTransaction();
 
-
-    // Now exactly one task can be retrieved for each KVNR
     const auto result1 =  database().retrieveAllTasksForPatient(kvnr1, {});
     ASSERT_EQ(result1.size(), 1);
     const auto& retrievedTask1 = result1[0];
@@ -403,7 +391,6 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
                 (retrievedTask2.prescriptionId().toDatabaseId() == id3.toDatabaseId() &&
                  retrievedTask3.prescriptionId().toDatabaseId() == id2.toDatabaseId()));
 
-
     // cleanup
     {
         auto&& txn = createTransaction();
@@ -412,7 +399,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
         txn.commit();
     }
 }
-
+// GEMREQ-end A_19115-01
 
 TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -452,7 +439,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     ASSERT_TRUE(result.front().at(row++).is_null()); // expiry_date
     ASSERT_TRUE(result.front().at(row++).is_null()); // accept_date
     ASSERT_EQ(result.front().at(row++).as<int>(), 3); // status
-    ASSERT_FALSE(result.front().at(row++).is_null()); // key_generation_id
+    ASSERT_FALSE(result.front().at(row++).is_null()); // task_key_blob_id
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // salt
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // access_code
     ASSERT_TRUE(result.front().at(row++).is_null()); // secret
@@ -461,15 +448,19 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // when_handed_over
     ASSERT_TRUE(result.front().at(row++).is_null()); // when_prepared
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // performer
+    ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_blob_id
     ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_bundle
 }
 
+// GEMREQ-start A_19027-03
 TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
     {
         GTEST_SKIP();
     }
+
+    A_19027_03.test("Deletion of personal data from database");
 
     model::Task task(prescriptionType(), "access_code");
     task.setStatus(model::Task::Status::ready);
@@ -478,46 +469,80 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
     task.setPrescriptionId(id);
 
     {
-        const char* const kvnr = InsurantA;
+        const auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
+        const model::Kvnr kvnr{InsurantA, kvnrType};
+        const auto hashedKvnr = getKeyDerivation().hashKvnr(kvnr);
         const char* const healthCareProviderPrescription = "HealthCareProviderPrescription";
         const char* const receipt = "Receipt";
         const char* const performer = "Performer";
         const char* const medicationDispense = "MedicationDispense";
+        const char* const secret = "Secret";
+        const auto whenHandedOver = model::Timestamp::now();
+        const auto whenPrepared = model::Timestamp::now();
+        SafeString key;
+        OptionalDeriveKeyData secondCallData;
+        std::tie(key, secondCallData) = getKeyDerivation().initialMedicationDispenseKey(hashedKvnr);
 
         const Query updateTaskComplete{
                 "updateTaskComplete",
                 "UPDATE " + taskTableName() +
                 " SET status = $2, kvnr = $3, healthcare_provider_prescription = $4, "
-                "    receipt = $5, performer = $6, medication_dispense_bundle = $7 "
+                "    receipt = $5, performer = $6, medication_dispense_blob_id = $7, medication_dispense_bundle = $8, "
+                "    kvnr_hashed = $9, secret = $10, when_handed_over = $11, when_prepared = $12 "
                 "WHERE prescription_id = $1"};
         prepare(updateTaskComplete);
 
         pqxx::result result;
         auto &&txn = createTransaction();
         ASSERT_NO_THROW(result = txn.exec_prepared(
-            updateTaskComplete.name, id.toDatabaseId(), 1, kvnr, healthCareProviderPrescription,
-            receipt, performer, medicationDispense));
+            updateTaskComplete.name, id.toDatabaseId(), 1, kvnr.id(), healthCareProviderPrescription,
+            receipt, performer, secondCallData.blobId, medicationDispense, hashedKvnr.binarystring(),
+            secret, whenHandedOver.toXsDateTime(), whenPrepared.toXsDateTime()));
         txn.commit();
         ASSERT_TRUE(result.empty());
     }
-
+    {
+        // make sure that all relevant database fields are filled
+        pqxx::row::size_type row = 0;
+        pqxx::result result;
+        ASSERT_NO_FATAL_FAILURE(retrieveTaskData(result, task.prescriptionId()));
+        ASSERT_EQ(result.front().at(row++).as<int64_t>(), task.prescriptionId().toDatabaseId()); // prescription_id
+        ASSERT_FALSE(result.front().at(row++).is_null()); // kvnr
+        ASSERT_FALSE(result.front().at(row++).is_null()); // kvnr_hashed
+        ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // last_modified
+        row++; // authored_on
+        row++; // expiry_date
+        row++; // accept_date
+        ASSERT_EQ(result.front().at(row++).as<int>(), 1); // status
+        row++; // task_key_blob_id
+        ASSERT_FALSE(result.front().at(row++).is_null()); // salt
+        ASSERT_FALSE(result.front().at(row++).is_null()); // access_code
+        ASSERT_FALSE(result.front().at(row++).is_null()); // secret
+        ASSERT_FALSE(result.front().at(row++).is_null()); // healthcare_provider_prescription
+        ASSERT_FALSE(result.front().at(row++).is_null()); // receipt
+        ASSERT_FALSE(result.front().at(row++).is_null()); // when_handed_over
+        ASSERT_FALSE(result.front().at(row++).is_null()); // when_prepared
+        ASSERT_FALSE(result.front().at(row++).is_null()); // performer
+        ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_blob_id
+        ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_bundle
+    }
     task.setStatus(model::Task::Status::cancelled);
     database().updateTaskClearPersonalData(task);
     database().commitTransaction();
-
     {
+        // make sure that relevant database fields are deleted
         pqxx::row::size_type row = 0;
         pqxx::result result;
         ASSERT_NO_FATAL_FAILURE(retrieveTaskData(result, task.prescriptionId()));
         ASSERT_EQ(result.front().at(row++).as<int64_t>(), task.prescriptionId().toDatabaseId()); // prescription_id
         ASSERT_TRUE(result.front().at(row++).is_null()); // kvnr
-        ASSERT_TRUE(result.front().at(row++).is_null()); // kvnr_hashed
+        ASSERT_FALSE(result.front().at(row++).is_null()); // kvnr_hashed
         ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // last_modified
-        ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // authored_on
-        ASSERT_TRUE(result.front().at(row++).is_null()); // expiry_date
-        ASSERT_TRUE(result.front().at(row++).is_null()); // accept_date
+        row++; // authored_on
+        row++; // expiry_date
+        row++; // accept_date
         ASSERT_EQ(result.front().at(row++).as<int>(), 4); // status
-        ASSERT_FALSE(result.front().at(row++).is_null()); // key_generation_id
+        row++; // task_key_blob_id
         ASSERT_TRUE(result.front().at(row++).is_null()); // salt
         ASSERT_TRUE(result.front().at(row++).is_null()); // access_code
         ASSERT_TRUE(result.front().at(row++).is_null()); // secret
@@ -526,14 +551,11 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         ASSERT_TRUE(result.front().at(row++).is_null()); // when_handed_over
         ASSERT_TRUE(result.front().at(row++).is_null()); // when_prepared
         ASSERT_TRUE(result.front().at(row++).is_null()); // performer
+        ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_blob_id
         ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
     }
-
-    const auto updatedTask = std::get<0>(database().retrieveTaskAndPrescription(task.prescriptionId()));
-    database().commitTransaction();
-    ASSERT_TRUE(updatedTask);
-    ASSERT_EQ(updatedTask->status(), model::Task::Status::cancelled);
 }
+// GEMREQ-end A_19027-03
 
 TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -542,7 +564,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)//NOLINT(readability-function
         GTEST_SKIP();
     }
 
-    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
+    const auto kvnr1 = model::Kvnr{"X012341234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -604,7 +626,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksLastModified)//NOLINT(readability-fu
         GTEST_SKIP();
     }
 
-    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
+    const auto kvnr1 = model::Kvnr{"X012341234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -685,7 +707,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)//NOLINT(readability-func
         GTEST_SKIP();
     }
 
-    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
+    const auto kvnr1 = model::Kvnr{"X012341234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -766,7 +788,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksSort)//NOLINT(readability-function-c
         GTEST_SKIP();
     }
 
-    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
+    const auto kvnr1 = model::Kvnr{"X012341234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -823,7 +845,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksPaging)//NOLINT(readability-function
         GTEST_SKIP();
     }
 
-    const auto kvnr1 = model::Kvnr{"XYZABC1234"};
+    const auto kvnr1 = model::Kvnr{"X012341234"};
 
     cleanKvnr(kvnr1, taskTableName());
 
@@ -900,7 +922,7 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     const std::string_view agentName = "Apotheke Am Grünen Baum";
     model::AuditData auditDataOrig(
         model::AuditEventId::GET_Task_id_pharmacy,
-        model::AuditMetaData(agentName, telematicId, pnwPzNumber),
+        model::AuditMetaData(agentName, telematicId),
         model::AuditEvent::Action::read, model::AuditEvent::AgentType::human, kvnr, deviceId, id, std::nullopt);
     const std::string createdUuid = database().storeAuditEventData(auditDataOrig);
     database().commitTransaction();
@@ -924,8 +946,6 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     EXPECT_EQ(entry.id(), auditDataOrig.id());
     EXPECT_EQ(entry.recorded(), auditDataOrig.recorded());
     EXPECT_FALSE(entry.consentId().has_value());
-    EXPECT_TRUE(entry.metaData().pnwPzNumber().has_value());
-    EXPECT_EQ(entry.metaData().pnwPzNumber().value(), pnwPzNumber);
 
     cleanKvnr(kvnr, taskTableName());
 }

@@ -6,11 +6,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 #define ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 
+#include "erp/ErpConstants.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/SafeString.hxx"
+#include "erp/model/ResourceVersion.hxx"
+#include "erp/validation/SchemaType.hxx"
 #include "fhirtools/validator/Severity.hxx"
 
-#include <erp/ErpConstants.hxx>
 #include <rapidjson/document.h>
 #include <filesystem>
 #include <map>
@@ -21,6 +23,10 @@
 #include "Environment.hxx"
 
 class XmlValidator;
+
+namespace fhirtools {
+class ValidatorOptions;
+}
 
 
 enum class ConfigurationKey
@@ -51,7 +57,7 @@ enum class ConfigurationKey
     SERVER_PRIVATE_KEY,
     SERVER_REQUEST_PATH,
     SERVER_PROXY_CERTIFICATE,
-    SERVICE_GENERIC_VALIDATION_MODE,
+    SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
     SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD,
     SERVICE_TASK_ACTIVATE_HOLIDAYS,
     SERVICE_TASK_ACTIVATE_EASTER_CSV,
@@ -91,6 +97,9 @@ enum class ConfigurationKey
     FHIR_PROFILE_OLD_VALID_UNTIL,
     FHIR_PROFILE_OLD_XML_SCHEMA_KBV,
     FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK,
+    FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
+    FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
+    FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
     FHIR_STRUCTURE_DEFINITIONS_OLD,
     ERP_FHIR_VERSION_OLD,
     FHIR_STRUCTURE_DEFINITIONS,
@@ -131,6 +140,9 @@ enum class ConfigurationKey
     REDIS_CERTIFICATE_PATH,
     REDIS_CONNECTION_TIMEOUT,
     REDIS_CONNECTIONPOOL_SIZE,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_MASTER_NAME,
+    REDIS_SENTINEL_SOCKET_TIMEOUT,
 
     TOKEN_ULIMIT_CALLS,
     TOKEN_ULIMIT_TIMESPAN_MS,
@@ -140,11 +152,8 @@ enum class ConfigurationKey
     REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS,
     REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS,
 
-    REPORT_ALL_TASKS_RATE_LIMIT_SHORT,
-    REPORT_ALL_TASKS_RATE_LIMIT_LONG,
     // Feature related configuration
     FEATURE_PKV,
-    FEATURE_WORKFLOW_200,
 
     // Admin interface settings
     ADMIN_SERVER_INTERFACE,
@@ -158,7 +167,7 @@ enum class ConfigurationKey
     DEBUG_ENABLE_HSM_MOCK,
     DEBUG_DISABLE_QES_ID_CHECK,
     DEBUG_ENABLE_MOCK_TSL_MANAGER,
-    PNW_ALLOWED_RESULTS
+    VSDM_PROOF_VALIDITY_SECONDS
 };
 
 
@@ -264,6 +273,10 @@ public:
         requires std::is_enum_v<EnumT>
     [[nodiscard]] EnumT getOptional(Key key, std::type_identity_t<EnumT> defaultValue) const;
 
+    template<typename EnumT>
+    [[nodiscard]] EnumT get(Key key) const
+    requires std::is_enum_v<EnumT>;
+
 protected:
     ConfigurationTemplate()
         : ConfigurationBase(Names().allStrings())
@@ -323,6 +336,20 @@ EnumT ConfigurationTemplate<Key, Names>::getOptional(Key key, std::type_identity
 {
     using namespace std::string_literals;
     auto enumStr = getOptionalStringValue(key, std::string{magic_enum::enum_name(defaultValue)});
+    auto asEnum = magic_enum::enum_cast<EnumT>(enumStr);
+    Expect3(asEnum.has_value(), "invalid value for "s.append(magic_enum::enum_name(key)) + ": " + enumStr,
+            std::logic_error);
+    return *asEnum;
+
+}
+
+template<typename Key, typename Names>
+template<typename EnumT>
+EnumT ConfigurationTemplate<Key, Names>::get(Key key) const
+requires std::is_enum_v<EnumT>
+{
+    using namespace std::string_literals;
+    auto enumStr = getStringValue(key);
     auto asEnum = magic_enum::enum_cast<EnumT>(enumStr);
     Expect3(asEnum.has_value(), "invalid value for "s.append(magic_enum::enum_name(key)) + ": " + enumStr,
             std::logic_error);
@@ -408,12 +435,13 @@ public:
     static const Configuration& instance();
     void check() const;
 
-    [[nodiscard]] bool featureWf200Enabled() const;
     [[nodiscard]] bool featurePkvEnabled() const;
     [[nodiscard]] OnUnknownExtension kbvValidationOnUnknownExtension() const;
     [[nodiscard]] NonLiteralAutherRefMode kbvValidationNonLiteralAuthorRef() const;
-    [[nodiscard]] GenericValidationMode genericValidationMode() const;
+    [[nodiscard]] GenericValidationMode genericValidationMode(model::ResourceVersion::FhirProfileBundleVersion) const;
     [[nodiscard]] bool timingLoggingEnabled(const std::string& category) const;
+    fhirtools::ValidatorOptions
+    defaultValidatorOptions(model::ResourceVersion::FhirProfileBundleVersion, SchemaType) const;
 };
 
 
@@ -430,4 +458,3 @@ extern template fhirtools::Severity
         ConfigurationKey, std::type_identity_t<fhirtools::Severity>) const;
 
 #endif // ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
-

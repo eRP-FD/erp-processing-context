@@ -6,6 +6,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTILS
 #define ERP_PROCESSING_CONTEXT_TEST_UTILS
 
+#include "erp/model/ResourceVersion.hxx"
+#include "erp/validation/SchemaType.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
@@ -32,7 +35,20 @@ static void waitFor(T predicate)
 std::vector<EnvironmentVariableGuard> getNewFhirProfileEnvironment();
 std::vector<EnvironmentVariableGuard> getOldFhirProfileEnvironment();
 std::vector<EnvironmentVariableGuard> getOverlappingFhirProfileEnvironment();
+using NewFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getNewFhirProfileEnvironment>;
+using OldFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getOldFhirProfileEnvironment>;
+using OverlappingFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getOverlappingFhirProfileEnvironment>;
 
+std::string profile(SchemaType,
+                    model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
+std::string_view gkvKvid10(model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
+std::string_view
+prescriptionIdNamespace(model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
+std::string_view
+telematikIdNamespace(model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
+
+std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
+                                                            const fhirtools::ValidatorOptions& options);
 } // namespace testutils
 
 #endif// ERP_PROCESSING_CONTEXT_TEST_UTILS

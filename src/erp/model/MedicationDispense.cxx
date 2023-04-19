@@ -117,7 +117,7 @@ void MedicationDispense::setPrescriptionId(const PrescriptionId& prescriptionId)
 void MedicationDispense::setKvnr(const model::Kvnr& kvnr)
 {
     setValue(kvnrValuePointer, kvnr.id());
-    setValue(kvnrSystemPointer, kvnr.namingSystem(deprecatedProfile(getSchemaVersion({}))));
+    setValue(kvnrSystemPointer, kvnr.namingSystem(deprecatedProfile(value(getSchemaVersion()))));
 }
 
 void MedicationDispense::setTelematicId(const model::TelematikId& telematikId)

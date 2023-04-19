@@ -7,6 +7,7 @@
 find_program(OPENSSL
     NAMES openssl
     PATHS "${CONAN_BIN_DIRS_OPENSSL}"
+    NO_DEFAULT_PATH
     REQUIRED)
 mark_as_advanced(OPENSSL)
 set(ENV{OPENSSL} "${OPENSSL}")

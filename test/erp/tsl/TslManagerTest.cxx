@@ -233,6 +233,7 @@ namespace
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Komponenten-CA der Telematikinfrastruktur/CN=GEM.KOMP-CA50 TEST-ONLY",
         "/C=DE/O=achelos GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=ACHELOS.EGK-ALVI-CA20 TEST-ONLY",
         "/C=DE/O=achelos GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=ACHELOS.EGK-ALVI-CA21 TEST-ONLY",
+        "/C=DE/O=achelos GmbH NOT-VALID/OU=Fachanwendungsspezifischer Dienst-CA der Telematikinfrastruktur/CN=ACLOS.FD-CA1 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP19 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP20 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP204 TEST-ONLY",
@@ -322,7 +323,7 @@ public:
                 std::string subjectString(subject);
                 OPENSSL_free(subject);
 
-                VLOG(1) << "trusted store certificate: " << subjectString;
+                TVLOG(1) << "trusted store certificate: " << subjectString;
                 foundCertificateSubjects.emplace(subjectString);
 
                 EXPECT_NE(expectedCertificates.end(), expectedCertificates.find(subjectString))
@@ -364,7 +365,7 @@ public:
                 std::string subjectString(subject);
                 OPENSSL_free(subject);
 
-                VLOG(1) << "trusted store certificate: " << subjectString;
+                TVLOG(1) << "trusted store certificate: " << subjectString;
                 certificatesCount++;
             }
         }
@@ -383,10 +384,10 @@ TEST_F(TslManagerTest, validTsl_Success)
     const std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
 
     X509Store store = manager->getTslTrustedCertificateStore(TslMode::TSL, std::nullopt);
-    validateTslStore(store);
+    ASSERT_NO_FATAL_FAILURE(validateTslStore(store));
 
     X509Store bnaStore = manager->getTslTrustedCertificateStore(TslMode::BNA, std::nullopt);
-    validateBnaStore(bnaStore);
+    ASSERT_NO_FATAL_FAILURE(validateBnaStore(bnaStore));
 }
 
 
@@ -404,10 +405,10 @@ TEST_F(TslManagerTest, outdatedTslUpdate_Success)
 
     // the new tsl must be imported
     X509Store store = manager->getTslTrustedCertificateStore(TslMode::TSL, std::nullopt);
-    validateTslStore(store);
+    ASSERT_NO_FATAL_FAILURE(validateTslStore(store));
 
     X509Store bnaStore = manager->getTslTrustedCertificateStore(TslMode::BNA, std::nullopt);
-    validateBnaStore(bnaStore);
+    ASSERT_NO_FATAL_FAILURE(validateBnaStore(bnaStore));
 
     EXPECT_TRUE(hookIsCalled);
 }
@@ -1253,13 +1254,13 @@ TEST_F(TslManagerTest, revokedOcspResponseStatus_Fail)//NOLINT(readability-funct
         {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
 
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_OSIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_REVOKED},
         HttpStatus::BadRequest);
 
     // the second call is done to test handling of the OCSP-Response from cache
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_OSIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_REVOKED},
         HttpStatus::BadRequest);
 }
@@ -1278,13 +1279,13 @@ TEST_F(TslManagerTest, unknownOcspResponseStatus_Fail)//NOLINT(readability-funct
         {}, {}, {{ocspUrl, {}}});
 
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_OSIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::BadRequest);
 
     // the second call is done to test handling of the OCSP-Response from cache
     EXPECT_TSL_ERROR_THROW(
-        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_SIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
+        tslManager->getCertificateOcspResponse(TslMode::TSL, certX509, {CertificateType::C_FD_OSIG}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::BadRequest);
 }

@@ -603,7 +603,7 @@ FhirSaxHandler::getTypeAndElement(const FhirStructureDefinition& baseType,
         elementId.reserve(baseElement.typeId().size() + name.size() + 1);
         elementId.append(baseElement.typeId()).append("."sv).append(name);
         element = newType->findElement(elementId);
-    ErpExpect(element != nullptr, HttpStatus::BadRequest, "Element not defined: " + getPath() + elementId);
+        ErpExpect(element != nullptr, HttpStatus::BadRequest, "Element not defined: " + getPath() + elementId);
     }
     const auto* elementType = mStructureRepo.findTypeById(element->typeId());
     if (!elementType)

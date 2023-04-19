@@ -2,8 +2,7 @@
 // (C) Copyright IBM Corp. 2022
 
 #include "fhirtools/parser/ErrorListener.hxx"
-
-#include <glog/logging.h>
+#include "erp/util/TLog.hxx"
 
 using fhirtools::ErrorListener;
 
@@ -14,12 +13,12 @@ void ErrorListener::syntaxError(antlr4::Recognizer* recognizer, antlr4::Token* o
     (void) e;
     if (offendingSymbol)
     {
-        LOG(ERROR) << "Syntax error at '" << offendingSymbol->getText() << "' in Fhir-Path Expression:" << line << ':'
+        TLOG(ERROR) << "Syntax error at '" << offendingSymbol->getText() << "' in Fhir-Path Expression:" << line << ':'
                     << charPositionInLine << ": " << msg;
     }
     else
     {
-        LOG(ERROR) << "Syntax error in Fhir-Path Expression:" << line << ':' << charPositionInLine << ": " << msg;
+        TLOG(ERROR) << "Syntax error in Fhir-Path Expression:" << line << ':' << charPositionInLine << ": " << msg;
     }
     mHadError = true;
 }

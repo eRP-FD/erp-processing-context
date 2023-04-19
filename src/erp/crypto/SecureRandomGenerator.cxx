@@ -12,13 +12,16 @@
 #include <stdexcept>
 
 
+// GEMREQ-start A_19021-02#addEntropy
 void SecureRandomGenerator::addEntropy (const SafeString& string)
 {
     double entropyBytes = shannonEntropy(string) / 8.0;
     RAND_add(static_cast<const char*>(string), gsl::narrow<int>(string.size()), entropyBytes);
 }
+// GEMREQ-end A_19021-02#addEntropy
 
 
+// GEMREQ-start A_19021-02#generate
 SafeString SecureRandomGenerator::generate (const std::size_t size)
 {
     Expect(size < static_cast<size_t>(std::numeric_limits<int>::max()), "invalid size");
@@ -32,6 +35,7 @@ SafeString SecureRandomGenerator::generate (const std::size_t size)
 
     return result;
 }
+// GEMREQ-end A_19021-02#generate
 
 
 double SecureRandomGenerator::shannonEntropy (const std::string_view& data)

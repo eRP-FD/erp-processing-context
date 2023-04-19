@@ -4,15 +4,17 @@
  */
 
 #include "test/erp/database/PostgresDatabaseTest.hxx"
-
 #include "erp/crypto/CMAC.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
+#include "erp/util/search/SearchParameter.hxx"
+#include "erp/util/search/UrlArguments.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockRandom.hxx"
-#include  "test/mock/RegistrationMock.hxx"
+#include "test/mock/RegistrationMock.hxx"
+
 
 using namespace model;
 
@@ -24,7 +26,8 @@ PostgresDatabaseTest::PostgresDatabaseTest() :
     mDatabase(nullptr),
     mBlobCache(nullptr),
     mHsmPool(nullptr),
-    mKeyDerivation(nullptr)
+    mKeyDerivation(nullptr),
+    mDurationConsumerGuard(nullptr)
 {
     mBlobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
 
@@ -33,6 +36,31 @@ PostgresDatabaseTest::PostgresDatabaseTest() :
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), std::move(blobCache)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
     mKeyDerivation = std::make_unique<KeyDerivation>(*mHsmPool);
+    mDurationConsumerGuard = std::make_unique<DurationConsumerGuard>(
+        "PostgresDatabaseTest", [](const std::chrono::steady_clock::duration duration, const std::string& category,
+                                   const std::string& description, const std::string& sessionIdentifier,
+                                   const std::unordered_map<std::string, std::string>& keyValueMap,
+                                   const std::optional<JsonLog::LogReceiver>& logReceiverOverride) {
+            const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
+            auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
+                if (logReceiverOverride)
+                {
+                    return *logReceiverOverride;
+                }
+                return timingLoggingEnabled ? JsonLog::makeInfoLogReceiver() : JsonLog::makeVLogReceiver(0);
+            };
+            JsonLog log(LogId::INFO, getLogReceiver());
+            log.keyValue("log-type", "timing")
+                .keyValue("x-request-id", sessionIdentifier)
+                .keyValue("category", category)
+                .keyValue("description", description);
+            for (const auto& item : keyValueMap)
+            {
+                log.keyValue(item.first, item.second);
+            }
+            log.keyValue("duration-us",
+                         gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(duration).count()));
+        });
 }
 
 
@@ -188,4 +216,52 @@ TEST_F(PostgresDatabaseTest, swapCMAC)//NOLINT(readability-function-cognitive-co
         auto signed_with_key0_which_was_key1 = mTelematicPseudonymManager->sign(0, source);
         EXPECT_EQ(signed_with_key0_which_was_key1.hex(), signed_with_key1.hex());
     }
+}
+
+TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+    auto allTypes = magic_enum::enum_values<model::PrescriptionType>();
+    const model::Kvnr kvnr{"X012345678", model::Kvnr::Type::gkv};
+    SearchParameter paramStatus{"status", "status", SearchParameter::Type::TaskStatus};
+    auto taskCount = [&](const std::optional<UrlArguments>& search = std::nullopt) {
+        auto count = database().countAllTasksForPatient(kvnr, search);
+        database().commitTransaction();
+        return count;
+    };
+    auto kvnrHashed = getKeyDerivation().hashKvnr(kvnr);
+    for (auto prescType : allTypes)
+    {
+        auto txn = createTransaction();
+        txn.exec_params("DELETE FROM " + taskTableName(prescType) + " WHERE kvnr_hashed = $1",
+                        kvnrHashed.binarystring());
+        txn.commit();
+    }
+    ASSERT_EQ(taskCount(), 0);
+    std::list<model::Task> tasks;
+    for (auto prescType : allTypes)
+    {
+        auto& task = tasks.emplace_back(prescType, "access_code");
+        task.setPrescriptionId(database().storeTask(task));
+        task.setStatus(model::Task::Status::ready);
+        task.setKvnr(kvnr);
+        task.setAcceptDate(model::Timestamp::now());
+        task.setExpiryDate(model::Timestamp::now() + std::chrono::days(30));
+        auto prescriptionDummy = model::Binary(Uuid().toString(), "{}");
+        database().activateTask(task, prescriptionDummy);
+    }
+    database().commitTransaction();
+    EXPECT_EQ(taskCount(), 4);
+    UrlArguments ready{{paramStatus}};
+    ready.parse({{"status", "ready"}}, getKeyDerivation());
+    EXPECT_EQ(taskCount(ready), 4);
+    auto& task = tasks.front();
+    task.setStatus(model::Task::Status::inprogress);
+    task.setSecret("secret");
+    database().updateTaskStatusAndSecret(task);
+    EXPECT_EQ(taskCount(), 4);
+    EXPECT_EQ(taskCount(ready), 3);
 }

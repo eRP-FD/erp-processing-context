@@ -4,6 +4,7 @@
  */
 
 #include "erp/model/KbvBundle.hxx"
+#include "erp/model/ResourceFactory.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -22,6 +23,26 @@
 #include "test_config.h"
 
 namespace fs = std::filesystem;
+
+namespace {
+class KbvValidationHelper
+{
+    using Factory = model::ResourceFactory<model::KbvBundle>;
+protected:
+    void validateXml(std::string_view document, model::ResourceVersion::FhirProfileBundleVersion version)
+    {
+        static fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
+        validate(Factory::fromXml(document, *StaticData::getXmlValidator(), {.validatorOptions= options}), version);
+    }
+
+private:
+    void validate(Factory&& factory, model::ResourceVersion::FhirProfileBundleVersion version)
+    {
+        (void)std::move(factory).getValidated(SchemaType::KBV_PR_ERP_Bundle,*StaticData::getXmlValidator(),
+                                     *StaticData::getInCodeValidator(), {version});
+    }
+};
+}
 
 struct TestParamsKbvBundle {
     bool valid;
@@ -52,8 +73,11 @@ makeKbvParams(bool valid, const fs::path& basePath, std::string_view startsWith,
     return params;
 }
 
-class XmlValidatorTestParamsKbvBundle : public testing::TestWithParam<TestParamsKbvBundle>
+class XmlValidatorTestParamsKbvBundle
+    : public testing::TestWithParam<TestParamsKbvBundle>
+    , protected KbvValidationHelper
 {
+
     void SetUp() override
     {
         envGuards = testutils::getOverlappingFhirProfileEnvironment();
@@ -63,30 +87,30 @@ class XmlValidatorTestParamsKbvBundle : public testing::TestWithParam<TestParams
     {
         envGuards.clear();
     }
-private:
+
     std::vector<EnvironmentVariableGuard> envGuards;
+public:
+    static std::string name(::testing::TestParamInfo<TestParamsKbvBundle> info)
+    {
+        std::regex re{"[.-]"};
+        return std::regex_replace(info.param.path.stem().string(), re, "_");
+    }
 };
 
 TEST_P(XmlValidatorTestParamsKbvBundle, Resources)//NOLINT(readability-function-cognitive-complexity)
 {
+
     ASSERT_TRUE(GetParam().schemaType == SchemaType::KBV_PR_ERP_Bundle || GetParam().schemaType == SchemaType::fhir)
         << "Test called with wrong schema type";
-    LOG(INFO) << "Testing kbv resource = " << GetParam().path.filename();
+    TLOG(INFO) << "Testing kbv resource = " << GetParam().path.filename();
     const auto document = FileHelper::readFileAsString(GetParam().path);
     if (GetParam().valid)
     {
-        std::optional<model::KbvBundle> kbvBundle;
-        EXPECT_NO_THROW((void)model::KbvBundle::fromXml(
-            document, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-            {GetParam().fhirProfileBundleVersion}, {{.allowNonLiteralAuthorReference = true}}));
+        EXPECT_NO_THROW(validateXml(document, GetParam().fhirProfileBundleVersion));
     }
     else
     {
-        EXPECT_THROW((void)model::KbvBundle::fromXml(document, *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-                                               {GetParam().fhirProfileBundleVersion},
-                                               {{.allowNonLiteralAuthorReference = true}}),
-                     ErpException);
+        EXPECT_THROW(validateXml(document, GetParam().fhirProfileBundleVersion), ErpException);
     }
 }
 
@@ -95,42 +119,49 @@ INSTANTIATE_TEST_SUITE_P(
     testing::ValuesIn(makeKbvParams(false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/unfallkennzeichnung/",
                                     "unfallkennzeichnung_invalid_", SchemaType::fhir,
                                     model::ResourceVersion::KbvItaErp::v1_0_2,
-                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
+                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)),
+                         &XmlValidatorTestParamsKbvBundle::name);
 
 INSTANTIATE_TEST_SUITE_P(
     ValidateValidAccidentDataFhir, XmlValidatorTestParamsKbvBundle,
     testing::ValuesIn(makeKbvParams(true, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/unfallkennzeichnung/",
                                     "unfallkennzeichnung_valid_", SchemaType::fhir,
                                     model::ResourceVersion::KbvItaErp::v1_0_2,
-                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
+                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)),
+                         &XmlValidatorTestParamsKbvBundle::name);
 
 INSTANTIATE_TEST_SUITE_P(
     KBV_PR_ERP_BundleValid, XmlValidatorTestParamsKbvBundle,
     testing::ValuesIn(makeKbvParams(true, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/bundle/", "Bundle_valid",
                                     SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
-                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
+                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)),
+                         &XmlValidatorTestParamsKbvBundle::name);
 INSTANTIATE_TEST_SUITE_P(
     KBV_PR_ERP_BundleSimplifierSamples, XmlValidatorTestParamsKbvBundle,
     testing::ValuesIn(makeKbvParams(true, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/simplifierSamples/", "",
                                     SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
-                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
+                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)),
+                         &XmlValidatorTestParamsKbvBundle::name);
 INSTANTIATE_TEST_SUITE_P(
     KBV_PR_ERP_BundleInvalid, XmlValidatorTestParamsKbvBundle,
     testing::ValuesIn(makeKbvParams(false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/bundle/", "Bundle_invalid",
                                     SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
-                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
+                                    model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)),
+                         &XmlValidatorTestParamsKbvBundle::name);
 
 INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_BundleValidv_2023_07_01, XmlValidatorTestParamsKbvBundle,
                          testing::ValuesIn(makeKbvParams(
                              true, fs::path(TEST_DATA_DIR) / "validation/xml/v_2023_07_01/kbv/bundle/", "Bundle_valid",
                              SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_1_0,
-                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)),
+                         &XmlValidatorTestParamsKbvBundle::name);
 
 INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_BundleInvalidv_2023_07_01, XmlValidatorTestParamsKbvBundle,
                          testing::ValuesIn(makeKbvParams(
                              false, fs::path(TEST_DATA_DIR) / "validation/xml/v_2023_07_01/kbv/bundle/", "Bundle_invalid",
                              SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_1_0,
-                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)));
+                             model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)),
+                         &XmlValidatorTestParamsKbvBundle::name);
 
 // -----------------------------
 
@@ -147,7 +178,9 @@ std::ostream& operator<<(std::ostream& os, const TestParamsKbvWithEmbedded& para
     os << params.path.filename();
     return os;
 }
-class KbvWithEmbeddedValidationTestParams : public testing::TestWithParam<TestParamsKbvWithEmbedded>
+class KbvWithEmbeddedValidationTestParams
+    : public testing::TestWithParam<TestParamsKbvWithEmbedded>
+    , protected KbvValidationHelper
 {
     void SetUp() override
     {
@@ -193,19 +226,14 @@ TEST_P(KbvWithEmbeddedValidationTestParams,
 
     if (GetParam().valid)
     {
-        EXPECT_NO_THROW((void) model::KbvBundle::fromXml(
-            kbvBundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-            {GetParam().fhirProfileBundleVersion}, {{.allowNonLiteralAuthorReference = true}}));
+        EXPECT_NO_THROW(validateXml(kbvBundle, GetParam().fhirProfileBundleVersion));
     }
     else
     {
-        EXPECT_THROW((void) model::KbvBundle::fromXml(kbvBundle, *StaticData::getXmlValidator(),
-                                                      *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-                                                      {GetParam().fhirProfileBundleVersion},
-                                                      {{.allowNonLiteralAuthorReference = true}}),
-                     ErpException);
+        EXPECT_THROW(validateXml(kbvBundle, GetParam().fhirProfileBundleVersion), ErpException);
     }
 }
+
 INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_MedicationCompounding_Valid, KbvWithEmbeddedValidationTestParams,
                          testing::ValuesIn(makeKbvWithPlaceholderParams(
                              true, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/medicationcompounding/",

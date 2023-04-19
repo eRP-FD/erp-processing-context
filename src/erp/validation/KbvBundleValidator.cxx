@@ -77,34 +77,25 @@ std::string constraintError(KbvBundleConstraint constraint, const std::optional<
 }
 }
 
-void KbvBundleValidator::validate(const model::ResourceBase& resource, const XmlValidator& xmlValidator,
-                                  const InCodeValidator& inCodeValidator) const
-{
-    doValidate(dynamic_cast<const model::KbvBundle&>(resource), xmlValidator, inCodeValidator);
-}
-
-void KbvBundleValidator_V1_0_1::validateEntries(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
-                                                const InCodeValidator& inCodeValidator,
-                                                const model::ResourceVersion::KbvItaErp& version) const
+void KbvBundleValidator_V1_0_2::validateEntries(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
+                                                const InCodeValidator& inCodeValidator) const
 {
     try
     {
-        validateMedicationProfiles(kbvBundle, xmlValidator, inCodeValidator, version);
+        validateMedicationProfiles(kbvBundle, xmlValidator, inCodeValidator);
 
-        validateEntry<model::KbvCoverage>(kbvBundle, xmlValidator, inCodeValidator, SchemaType::KBV_PR_FOR_Coverage,
-                                          version);
+        validateEntry<model::KbvCoverage>(kbvBundle, xmlValidator, inCodeValidator, SchemaType::KBV_PR_FOR_Coverage);
         validateEntry<model::KbvComposition>(kbvBundle, xmlValidator, inCodeValidator,
-                                             SchemaType::KBV_PR_ERP_Composition, version);
+                                             SchemaType::KBV_PR_ERP_Composition);
         validateEntry<model::KbvMedicationRequest>(kbvBundle, xmlValidator, inCodeValidator,
-                                                   SchemaType::KBV_PR_ERP_Prescription, version);
+                                                   SchemaType::KBV_PR_ERP_Prescription);
         validateEntry<model::KbvOrganization>(kbvBundle, xmlValidator, inCodeValidator,
-                                              SchemaType::KBV_PR_FOR_Organization, version);
-        validateEntry<model::Patient>(kbvBundle, xmlValidator, inCodeValidator, SchemaType::KBV_PR_FOR_Patient,
-                                      version);
+                                              SchemaType::KBV_PR_FOR_Organization);
+        validateEntry<model::Patient>(kbvBundle, xmlValidator, inCodeValidator, SchemaType::KBV_PR_FOR_Patient);
         validateEntry<model::KbvPractitioner>(kbvBundle, xmlValidator, inCodeValidator,
-                                              SchemaType::KBV_PR_FOR_Practitioner, version);
+                                              SchemaType::KBV_PR_FOR_Practitioner);
         validateEntry<model::KbvPracticeSupply>(kbvBundle, xmlValidator, inCodeValidator,
-                                                SchemaType::KBV_PR_ERP_PracticeSupply, version);
+                                                SchemaType::KBV_PR_ERP_PracticeSupply);
     }
     catch (const model::ModelException& ex)
     {
@@ -112,7 +103,7 @@ void KbvBundleValidator_V1_0_1::validateEntries(const model::KbvBundle& kbvBundl
     }
 }
 
-void KbvBundleValidator_V1_0_1::erp_compositionPflicht(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::erp_compositionPflicht(const model::KbvBundle& kbvBundle) const
 {
     // -erp-compositionPflicht
     // entry.where(resource is Composition).count()=1
@@ -129,7 +120,7 @@ void KbvBundleValidator_V1_0_1::erp_compositionPflicht(const model::KbvBundle& k
 }
 
 
-void KbvBundleValidator_V1_0_1::erp_angabePruefnummer(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::erp_angabePruefnummer(const model::KbvBundle& kbvBundle) const
 {
     // -erp-angabePruefnummer
     // (entry.where(resource is Coverage).exists()
@@ -159,7 +150,7 @@ void KbvBundleValidator_V1_0_1::erp_angabePruefnummer(const model::KbvBundle& kb
     }
 }
 
-void KbvBundleValidator_V1_0_1::erp_angabeZuzahlung(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::erp_angabeZuzahlung(const model::KbvBundle& kbvBundle) const
 {
     // -erp-angabeZuzahlung
     // (entry.where(resource is MedicationRequest).exists()
@@ -190,7 +181,7 @@ void KbvBundleValidator_V1_0_1::erp_angabeZuzahlung(const model::KbvBundle& kbvB
 }
 
 
-void KbvBundleValidator_V1_0_1::erp_angabePLZ(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::erp_angabePLZ(const model::KbvBundle& kbvBundle) const
 {
     // -erp-angabePLZ
     // (entry.where(resource is Patient).exists()
@@ -219,7 +210,7 @@ void KbvBundleValidator_V1_0_1::erp_angabePLZ(const model::KbvBundle& kbvBundle)
 }
 
 
-void KbvBundleValidator_V1_0_1::erp_angabeNrAusstellendePerson(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::erp_angabeNrAusstellendePerson(const model::KbvBundle& kbvBundle) const
 {
     // -erp-angabeNrAusstellendePerson
     // (entry.where(resource is Coverage).exists()
@@ -254,7 +245,7 @@ void KbvBundleValidator_V1_0_1::erp_angabeNrAusstellendePerson(const model::KbvB
 }
 
 
-void KbvBundleValidator_V1_0_1::erp_angabeBestriebsstaettennr(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::erp_angabeBestriebsstaettennr(const model::KbvBundle& kbvBundle) const
 {
     // -erp-angabeBestriebsstaettennr
     // (entry.where(resource is Coverage).exists()
@@ -301,7 +292,7 @@ void KbvBundleValidator_V1_0_1::erp_angabeBestriebsstaettennr(const model::KbvBu
 }
 
 
-void KbvBundleValidator_V1_0_1::erp_angabeRechtsgrundlage(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::erp_angabeRechtsgrundlage(const model::KbvBundle& kbvBundle) const
 {
     // -erp-angabeRechtsgrundlage
     // (entry.where(resource is MedicationRequest).exists()
@@ -335,7 +326,7 @@ void KbvBundleValidator_V1_0_1::erp_angabeRechtsgrundlage(const model::KbvBundle
 }
 
 
-void KbvBundleValidator_V1_0_1::ikKostentraegerBgUkPflicht(const model::KbvBundle& kbvBundle) const
+void KbvBundleValidator_V1_0_2::ikKostentraegerBgUkPflicht(const model::KbvBundle& kbvBundle) const
 {
     // IK-Kostentraeger-BG-UK-Pflicht
     // (entry.where(resource is Coverage).exists()
@@ -364,13 +355,13 @@ void KbvBundleValidator_V1_0_1::ikKostentraegerBgUkPflicht(const model::KbvBundl
 }
 
 
-void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundle& kbvBundle,
+void KbvBundleValidator_V1_0_2::validateMedicationProfiles(const model::KbvBundle& kbvBundle,
                                                            const XmlValidator& xmlValidator,
-                                                           const InCodeValidator& inCodeValidator,
-                                                           const model::ResourceVersion::KbvItaErp& version) const
+                                                           const InCodeValidator& inCodeValidator) const
 {
     // there are four different profiles for the Medication Resource, which cannot be distinguished in xsd.
     const auto& medications = kbvBundle.getResourcesByType<model::KbvMedicationGeneric>();
+    const auto& version = model::ResourceVersion::deprecated<model::ResourceVersion::KbvItaErp>();
     for (const auto& medication : medications)
     {
         const auto profile = medication.getProfile();
@@ -379,22 +370,22 @@ void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundl
             case SchemaType::KBV_PR_ERP_Medication_Compounding:
                 (void) model::KbvMedicationCompounding::fromXml(
                     medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
-                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, false, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_FreeText:
                 (void) model::KbvMedicationFreeText::fromXml(
                     medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
-                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, false, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_Ingredient:
                 (void) model::KbvMedicationIngredient::fromXml(
                     medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
-                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, false, version);
                 break;
             case SchemaType::KBV_PR_ERP_Medication_PZN:
                 (void) model::KbvMedicationPzn::fromXml(
                     medication.serializeToXmlString(), xmlValidator, inCodeValidator, profile,
-                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, std::nullopt, version);
+                    {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}, false, version);
                 break;
             default:
                 ErpFail(HttpStatus::BadRequest, "Unsupported medication profile");
@@ -404,19 +395,18 @@ void KbvBundleValidator_V1_0_1::validateMedicationProfiles(const model::KbvBundl
 }
 
 template<typename TResource>
-void KbvBundleValidator_V1_0_1::validateEntry(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
-                                              const InCodeValidator& inCodeValidator, SchemaType schemaType,
-                                              model::ResourceVersion::KbvItaErp version) const
+void KbvBundleValidator_V1_0_2::validateEntry(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
+                                              const InCodeValidator& inCodeValidator, SchemaType schemaType) const
 {
     const auto& entryBundle = kbvBundle.getResourcesByType<TResource>();
     for (const auto& entry : entryBundle)
     {
         //
-        inCodeValidator.validate(entry, schemaType, version, xmlValidator);
+        inCodeValidator.validate(entry, schemaType, xmlValidator);
     }
 }
 
-bool KbvBundleValidator_V1_0_1::isKostentraeger(const model::KbvBundle& kbvBundle,
+bool KbvBundleValidator_V1_0_2::isKostentraeger(const model::KbvBundle& kbvBundle,
                                                 std::set<std::string> kostentraeger) const
 {
     const auto& coverageBundle = kbvBundle.getResourcesByType<model::KbvCoverage>();
@@ -426,9 +416,10 @@ bool KbvBundleValidator_V1_0_1::isKostentraeger(const model::KbvBundle& kbvBundl
 }
 
 
-void KbvBundleValidator_V1_0_2::doValidate(const model::KbvBundle& kbvBundle, const XmlValidator& xmlValidator,
-                                           const InCodeValidator& inCodeValidator) const
+void KbvBundleValidator_V1_0_2::validate(const model::ResourceBase& resource, const XmlValidator& xmlValidator,
+                          const InCodeValidator& inCodeValidator) const
 {
+    const auto& kbvBundle = dynamic_cast<const model::KbvBundle&>(resource);
     erp_compositionPflicht(kbvBundle);
     erp_angabePruefnummer(kbvBundle);
     erp_angabeZuzahlung(kbvBundle);
@@ -439,5 +430,5 @@ void KbvBundleValidator_V1_0_2::doValidate(const model::KbvBundle& kbvBundle, co
     // -erp-versionComposition is enforced by xsd
     ikKostentraegerBgUkPflicht(kbvBundle);
 
-    validateEntries(kbvBundle, xmlValidator, inCodeValidator, model::ResourceVersion::KbvItaErp::v1_0_2);
+    validateEntries(kbvBundle, xmlValidator, inCodeValidator);
 }

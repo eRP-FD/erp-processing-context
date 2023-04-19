@@ -68,7 +68,7 @@ TEST_F(JsonValidationTest, Erp8881CommunicationExtensionUrl)
     EXPECT_NO_THROW(communication = model::Bundle::fromJsonNoValidation(resource));
     ASSERT_TRUE(communication.has_value());
     const auto validationResults =
-        communication->genericValidate(model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01);
+        communication->genericValidate(model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01, {});
     validationResults.dumpToLog();
     EXPECT_EQ(validationResults.highestSeverity(), fhirtools::Severity::error);
 

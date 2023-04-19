@@ -29,8 +29,6 @@ public:
     static constexpr std::string_view selfVariableName = "{self}";
     static constexpr std::string_view agentNameVariableName = "{agentName}";
     static constexpr std::string_view prescriptionIdVariableName = "{prescriptionId}";
-    static constexpr std::string_view pzNumberVariableName = "{PZ}";
-
 private:
     using Id2TextContainer = std::unordered_map<model::AuditEventId, std::string>;
     // Language -> (event-id -> text-template)

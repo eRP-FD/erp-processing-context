@@ -19,9 +19,9 @@ namespace
     const char* base64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 
-    template<std::uint8_t BinaryAlphabetSizeN = std::numeric_limits<std::uint8_t>::max(),
-        std::uint8_t Base64AlphabetSizeN = 64>
-    constexpr std::array<std::int8_t, BinaryAlphabetSizeN> getBinaryAlphabet ()
+    template<std::size_t BinaryAlphabetSizeN = std::numeric_limits<std::uint8_t>::max() + 1,
+             std::uint8_t Base64AlphabetSizeN = 64>
+    constexpr std::array<std::int8_t, BinaryAlphabetSizeN> getBinaryAlphabet()
     {
         static_assert(BinaryAlphabetSizeN >= Base64AlphabetSizeN);
 

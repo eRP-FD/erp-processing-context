@@ -110,7 +110,7 @@ TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)//NOLINT(readability-function-
         [&serverBlockingStatus](bool isBlocking) mutable -> void
         { serverBlockingStatus = isBlocking; });
     ASSERT_NE(server, nullptr) << "Server must be created";
-    server->serve(1);
+    server->serve(1, "test");
 
     UrlRequestSender urlRequestSender({}, 1, false);
     std::stringstream url;

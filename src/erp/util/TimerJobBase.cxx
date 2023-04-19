@@ -112,14 +112,14 @@ void TimerJobBase::run (void)
     }
     catch(const std::exception& e)
     {
-        LOG(ERROR) << "caught an exception in the [" << mJobName << "] thread, terminating the application: " << e.what();
+        TLOG(ERROR) << "caught an exception in the [" << mJobName << "] thread, terminating the application: " << e.what();
         TerminationHandler::instance().terminate();
     }
     catch(...)
     {
         // Any exception that is caught here means that the proxy client is not accessible and therefore the
         // processing client can not function correctly. => terminate
-        LOG(ERROR) << "caught an non-standard exception in the [" << mJobName << "] thread, terminating the application";
+        TLOG(ERROR) << "caught an non-standard exception in the [" << mJobName << "] thread, terminating the application";
         TerminationHandler::instance().terminate();
     }
 

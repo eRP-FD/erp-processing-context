@@ -55,6 +55,7 @@ std::string SearchArgument::valuesAsString() const
     switch (type)
     {
     case Type::Date:
+    case Type::DateAsUuid:
         return dateValuesAsString();
     case Type::HashedIdentity:
         return String::concatenateStrings(originalValues, ",");
@@ -74,6 +75,7 @@ size_t SearchArgument::valuesCount() const
     switch (type)
     {
     case Type::Date:
+    case Type::DateAsUuid:
         return std::get<std::vector<std::optional<model::TimePeriod>>>(values).size();
     case Type::HashedIdentity:
         return std::get<std::vector<db_model::HashedId>>(values).size();
@@ -94,6 +96,7 @@ std::string SearchArgument::valueAsString (size_t idx) const
     switch (type)
     {
         case Type::Date:
+        case Type::DateAsUuid:
             return dateValueAsString(idx);
         case Type::HashedIdentity:
             return originalValues[idx];
@@ -120,7 +123,7 @@ std::optional<model::TimePeriod> SearchArgument::valueAsTimePeriod (size_t idx) 
 {
     checkValueIndex(idx);
 
-    ErpExpect(type == Type::Date, HttpStatus::InternalServerError, "value is not a date");
+    ErpExpect(type == Type::Date || type == Type::DateAsUuid, HttpStatus::InternalServerError, "value is not a date");
     return std::get<std::vector<std::optional<model::TimePeriod>>>(values)[idx];
 }
 
@@ -170,7 +173,7 @@ std::string SearchArgument::prefixAsString (const Prefix prefix)
 
 void SearchArgument::appendLinkString (std::ostream& os) const
 {
-    if (type == Type::Date)
+    if (type == Type::Date || type == Type::DateAsUuid)
         os << originalName << '=' << prefixAsString() << UrlHelper::escapeUrl(valuesAsString());
     else
         os << originalName << '=' << UrlHelper::escapeUrl(valuesAsString());

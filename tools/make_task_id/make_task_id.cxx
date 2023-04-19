@@ -7,6 +7,7 @@
 #include <string>
 
 #include "erp/model/PrescriptionId.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 int main(int argc, char** argv)
 {
@@ -17,7 +18,8 @@ int main(int argc, char** argv)
     }
 
     auto prescriptionId = model::PrescriptionId::fromDatabaseId(
-        magic_enum::enum_cast<model::PrescriptionType>(std::stoll(argv[1])).value(), std::stoll(argv[2]));
+        magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(std::stoll(argv[1]))).value(),
+        std::stoll(argv[2]));
 
     std::cout << prescriptionId.toString() << std::endl;
 

@@ -45,7 +45,8 @@ public:
         HsmDevice,
         CFdSigErpTimestamp,
         CFdSigErpPolicy,
-        CFdSigErpExpiry
+        CFdSigErpExpiry,
+        DBConnectionInfo
     };
 
     struct State

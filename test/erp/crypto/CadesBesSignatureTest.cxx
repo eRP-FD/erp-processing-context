@@ -99,12 +99,12 @@ public:
             }
             else
             {
-                LOG(INFO) << "no valid index for revocation info";
+                TLOG(INFO) << "no valid index for revocation info";
             }
         }
         else
         {
-            LOG(INFO) << "no object for OCSP response revocation container";
+            TLOG(INFO) << "no object for OCSP response revocation container";
         }
 
         return OcspResponsePtr();
@@ -514,7 +514,7 @@ TEST_F(CadesBesSignatureTest, validateOcspResponseInGeneratedCMS)//NOLINT(readab
         tslManager->getCertificateOcspResponse(
             TslMode::TSL,
             certX509,
-            {CertificateType::C_FD_SIG},
+            {CertificateType::C_FD_OSIG},
             TslTestHelper::getDefaultTestOcspCheckDescriptor());
 
     std::string signedText;

@@ -7,6 +7,7 @@
 #if !defined __APPLE__ && !defined _WIN32
 #include "erp/tpm/TpmProduction.hxx"
 #endif
+#include "erp/hsm/BlobCache.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Expect.hxx"
 #include "mock/tpm/TpmMock.hxx"
@@ -57,12 +58,12 @@ Tpm::Factory TpmTestHelper::createTpmFactory (void)
     return []
     (BlobCache& blobCache)
     {
+        std::unique_ptr<Tpm> tpm;
 #ifdef TPM_SUPPORTED
         TVLOG(1) << "creating production TPM";
-        auto tpm = TpmProduction::createInstance(blobCache);
+        tpm = TpmProduction::createInstance(blobCache);
 #else
         (void)blobCache;
-        std::unique_ptr<Tpm> tpm = nullptr;
 #endif
         if (tpm == nullptr)
         {

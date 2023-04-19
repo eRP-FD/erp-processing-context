@@ -108,7 +108,20 @@ public:
      */
     static Timestamp fromXsGYear (const std::string& dateAndTime);
 
+    /**
+     * Read date time value from format YYYYMMDDHHMMSS and assume
+     * UTC time zone.
+     */
+    static Timestamp fromDtmDateTime(const std::string& dateAndTime);
+
     static Timestamp fromXsTime(const std::string& time);
+
+    /**
+     * Convert the given timestamp (sorted)uuid from the database
+     * value to a timestamp. Only the first 16 bytes (excluding dashes)
+     * are considered for timestamp extraction.
+     */
+    static Timestamp fromDatabaseSUuid(const std::string& suuid);
 
     static Timestamp fromTmInUtc(tm tmInUtc);
 
@@ -160,6 +173,11 @@ public:
      * Convert to xs:time format (hh:mm:ss[(+|-)hh:mm]).
      */
     std::string toXsTime() const;
+
+    /**
+     * Convert timestamp to a (sortable) uuid as used in the database schema.
+     */
+    std::string toDatabaseSUuid() const;
 
     /**
      * Return a std::chrono::system_clock time point so that

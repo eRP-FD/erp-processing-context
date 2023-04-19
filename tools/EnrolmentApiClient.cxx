@@ -96,7 +96,7 @@ EnrolmentApiClient::EnrolmentApiClient()
 
 ::EnrolmentModel EnrolmentApiClient::get(::std::string_view endpoint)
 {
-    return request(HttpMethod::GET, endpoint, {});
+    return request(HttpMethod::GET, endpoint, "");
 }
 
 ::EnrolmentModel EnrolmentApiClient::getQuote(const ::std::string& nonceBase64, const ::PcrSet& pcrSet)
@@ -217,15 +217,39 @@ void EnrolmentApiClient::storeBlob(::BlobType type, ::std::string_view id, const
     }
 }
 
-::EnrolmentModel EnrolmentApiClient::request(::HttpMethod method, ::std::string_view endpoint,
-                                             const ::model::NumberAsStringParserDocument& input)
+void EnrolmentApiClient::storeVsdmKey(const ErpBlob& vsdmKeyBlob)
 {
-    const auto response = send(::ClientRequest{::EnrolmentApiClient::Header{method, endpoint},
-                                               input.IsNull() ? ::std::string{} : input.serializeToJsonString()});
-    Expect(response.getHeader().status() == HttpStatus::OK,
-           (::boost::format{"Request to '%1%' failed with code %2%\nInput: %3%"} % endpoint %
-            toString(response.getHeader().status()) % input.serializeToJsonString())
+    std::ostringstream os;
+    os << R"({"blob":{"generation":)" << vsdmKeyBlob.generation << R"(,"data":")" << Base64::encode(vsdmKeyBlob.data)
+       << "\"}}";
+    const auto response = request(HttpMethod::POST, "/Enrolment/VsdmHmacKey", os.str(), HttpStatus::Created);
+}
+
+void EnrolmentApiClient::deleteVsdmKey(char operatorId, char version)
+{
+    std::ostringstream os;
+    os << R"({"vsdm":{"betreiberkennung":")" << operatorId << R"(","version":")" << version << R"("}})";
+    const auto response = send(ClientRequest{EnrolmentApiClient::Header{HttpMethod::DELETE, "/Enrolment/VsdmHmacKey"}, os.str()});
+    const auto status = response.getHeader().status();
+    Expect(status == HttpStatus::NoContent || status == HttpStatus::NotFound,
+           std::string{"VSDM Key Blob deletion failed with code "}.append(toString(response.getHeader().status())));
+}
+
+EnrolmentModel EnrolmentApiClient::request(HttpMethod method, std::string_view endpoint, const std::string& body,
+                                           HttpStatus expectedResponseStatus)
+{
+    const auto response = send(ClientRequest{EnrolmentApiClient::Header{method, endpoint}, body});
+    Expect(response.getHeader().status() == expectedResponseStatus,
+           (boost::format{"Request to '%1%' failed with code %2%\nInput: %3%"} % endpoint %
+            toString(response.getHeader().status()) % body)
                .str());
 
-    return ::EnrolmentModel{response.getBody()};
+    return response.getBody().empty() ? EnrolmentModel() : EnrolmentModel(response.getBody());
+}
+
+
+EnrolmentModel EnrolmentApiClient::request(::HttpMethod method, ::std::string_view endpoint,
+                                             const ::model::NumberAsStringParserDocument& input)
+{
+    return request(method, endpoint, input.IsNull() ? std::string{} : input.serializeToJsonString());
 }

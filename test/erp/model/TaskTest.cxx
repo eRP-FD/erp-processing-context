@@ -141,7 +141,7 @@ TEST_F(TaskTest, SetStatus)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_EQ(task.status(), model::Task::Status::draft);
 }
 
-TEST_F(TaskTest, SetAndDeleteKvnr)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(TaskTest, SetKvnr)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
     bool isDeprecated =
@@ -155,10 +155,6 @@ TEST_F(TaskTest, SetAndDeleteKvnr)//NOLINT(readability-function-cognitive-comple
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnr.data())), "X123456789");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnrSystem.data())), nsGkvKvid10Id);
     ASSERT_EQ(task.kvnr(), "X123456789");
-
-    task.deleteKvnr();
-    ASSERT_EQ(rapidjson::Pointer(p_kvnr.data()).Get(task.jsonDocument()), nullptr);
-    ASSERT_FALSE(task.kvnr().has_value());
 }
 
 TEST_F(TaskTest, FromJson)//NOLINT(readability-function-cognitive-complexity)
@@ -174,7 +170,7 @@ TEST_F(TaskTest, FromJson)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_EQ(task.type(), model::PrescriptionType::apothekenpflichigeArzneimittel);
 }
 
-TEST_F(TaskTest, SetAndDeleteUuids)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(TaskTest, SetUuids)//NOLINT(readability-function-cognitive-complexity)
 {
     auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     model::Task task(id, model::PrescriptionType::apothekenpflichigeArzneimittel,
@@ -200,26 +196,6 @@ TEST_F(TaskTest, SetAndDeleteUuids)//NOLINT(readability-function-cognitive-compl
     ASSERT_EQ(task.receiptUuid().value_or(""), uuid3);
     ASSERT_EQ(rapidjson::Pointer(p_inputArray.data()).Get(task.jsonDocument())->GetArray().Size(), static_cast<rapidjson::SizeType>(2));
     ASSERT_EQ(rapidjson::Pointer(p_outputArray.data()).Get(task.jsonDocument())->GetArray().Size(), static_cast<rapidjson::SizeType>(1));
-
-    // Delete and check
-    task.deleteOutput();
-    ASSERT_EQ(rapidjson::Pointer(p_outputArray.data()).Get(task.jsonDocument()), nullptr);
-    ASSERT_TRUE(!task.receiptUuid().has_value());
-
-    task.deleteInput();
-    ASSERT_EQ(rapidjson::Pointer(p_inputArray.data()).Get(task.jsonDocument()), nullptr);
-    ASSERT_FALSE(task.patientConfirmationUuid().has_value());
-    ASSERT_FALSE(task.healthCarePrescriptionUuid().has_value());
-
-    // Set and check again:
-    task.setHealthCarePrescriptionUuid();
-    task.setPatientConfirmationUuid();
-    task.setReceiptUuid();
-    ASSERT_EQ(task.healthCarePrescriptionUuid().value_or(""), uuid1);
-    ASSERT_EQ(task.patientConfirmationUuid().value_or(""), uuid2);
-    ASSERT_EQ(task.receiptUuid().value_or(""), uuid3);
-    ASSERT_EQ(rapidjson::Pointer(p_inputArray.data()).Get(task.jsonDocument())->GetArray().Size(), static_cast<rapidjson::SizeType>(2));
-    ASSERT_EQ(rapidjson::Pointer(p_outputArray.data()).Get(task.jsonDocument())->GetArray().Size(), static_cast<rapidjson::SizeType>(1));
 }
 
 TEST_F(TaskTest, ExpiryDate)
@@ -227,7 +203,7 @@ TEST_F(TaskTest, ExpiryDate)
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     model::Timestamp timestamp = model::Timestamp::now();
     ASSERT_NO_THROW(task.setExpiryDate(timestamp));
-    ASSERT_EQ(task.expiryDate(), model::Timestamp::fromGermanDate(timestamp.toXsDate()));
+    ASSERT_EQ(task.expiryDate(), model::Timestamp::fromGermanDate(timestamp.toGermanDate()));
 }
 
 TEST_F(TaskTest, AcceptDate)
@@ -235,7 +211,7 @@ TEST_F(TaskTest, AcceptDate)
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     model::Timestamp timestamp = model::Timestamp::now();
     ASSERT_NO_THROW(task.setAcceptDate(timestamp));
-    ASSERT_EQ(task.acceptDate(), model::Timestamp::fromGermanDate(timestamp.toXsDate()));
+    ASSERT_EQ(task.acceptDate(), model::Timestamp::fromGermanDate(timestamp.toGermanDate()));
 }
 
 

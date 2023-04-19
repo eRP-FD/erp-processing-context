@@ -21,20 +21,20 @@ void RootCertificatesMgr::loadCaCertificates(boost::asio::ssl::context& context,
 {
     if (caCertificates.size() > 0)
     {
-        LOG(INFO) << "loading ca certificates with a total size of " << caCertificates.size();
+        TVLOG(0) << "loading ca certificates with a total size of " << caCertificates.size();
         try
         {
             context.add_certificate_authority(boost::asio::buffer((const char*)caCertificates, caCertificates.size()));
         }
         catch(const boost::exception& )
         {
-            LOG(WARNING) << "loading ca certificates failed";
+            TLOG(WARNING) << "loading ca certificates failed";
             throw;
         }
     }
     else
     {
-        LOG(INFO) << "loading default root certificates, count of certificates: " << rootCertificates.size();
+        TVLOG(0) << "loading default root certificates, count of certificates: " << rootCertificates.size();
         for (std::size_t ind = 0; ind < rootCertificates.size(); ind++)
         {
             try
@@ -43,7 +43,7 @@ void RootCertificatesMgr::loadCaCertificates(boost::asio::ssl::context& context,
             }
             catch(const boost::exception& )
             {
-                LOG(WARNING) << "loading ca certificates failed at index " << ind;
+                TLOG(WARNING) << "loading ca certificates failed at index " << ind;
                 throw;
             }
         }

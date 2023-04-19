@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2022
+  ~ (C) Copyright IBM Corp. 2022
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+    <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+    <xs:include schemaLocation="../identifier/Identifier.xsd"/>
+    <xs:include schemaLocation="../medicationdispense/Gem_erxMedicationDispense.xsd"/>
+    <xs:element name="Bundle" type="MedicationDispenseBundle"/>
+    <xs:complexType name="MedicationDispenseBundle">
+        <xs:complexContent>
+            <xs:extension base="Resource">
+                <xs:sequence>
+                    <xs:element name="identifier" type="Identifier" minOccurs="0"/>
+                    <xs:element name="type" type="MedicationDispenseBundle.Type"/>
+                    <xs:element name="timestamp" type="instant" minOccurs="0"/>
+                    <xs:element name="total" type="unsignedInt" minOccurs="0" />
+                    <xs:element name="link" type="Bundle.Link" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element name="entry" type="MedicationDispenseBundle.Entry" maxOccurs="unbounded"/>
+                    <xs:element name="signature" type="Signature" minOccurs="0"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="MedicationDispenseBundle.Type">
+        <xs:complexContent>
+            <xs:extension base="Element">
+                <xs:attribute name="value" type="code-primitive" fixed="collection"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="MedicationDispenseBundle.Entry">
+        <xs:complexContent>
+            <xs:extension base="BackboneElement">
+                <xs:sequence>
+                    <xs:element name="link" type="Bundle.Link" minOccurs="0" maxOccurs="unbounded"/>
+                    <xs:element name="fullUrl" minOccurs="0" type="uri"/>
+                    <xs:element name="resource" type="MedicationDispenseBundle.ResourceContainer"/>
+                    <xs:element name="search" type="Bundle.Search" minOccurs="0"/>
+                    <xs:element name="request" type="Bundle.Request" minOccurs="0"/>
+                    <xs:element name="response" type="Bundle.Response" minOccurs="0"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="MedicationDispenseBundle.ResourceContainer">
+        <xs:choice>
+            <xs:element name="MedicationDispense" type="Gem_erxMedicationDispense"/>
+        </xs:choice>
+    </xs:complexType>
+</xs:schema>

@@ -8,7 +8,6 @@
   targetNamespace="http://hl7.org/fhir"
   elementFormDefault="qualified" version="4.0.1">
   <xs:include schemaLocation="../communication/CommunicationGeneric.xsd"/>
-  <xs:include schemaLocation="../../../../kbv.ita.erp/1.0.1/xml/KBV_PR_ERP_Medication_BundleDummy.xsd"/>
   <xs:element name="Communication" type="Gem_erxCommunicationInfoReq"/>
   <xs:complexType name="Gem_erxCommunicationInfoReq">
     <xs:complexContent>
@@ -75,7 +74,8 @@
   </xs:simpleType>
   <xs:complexType name="Gem_erxCommunicationInfoReq.ResourceContainer">
     <xs:choice>
-      <xs:element ref="Medication"/>
+      <!-- contained Medication is validated separately -->
+      <xs:element name="Medication"/>
     </xs:choice>
   </xs:complexType>
 </xs:schema>

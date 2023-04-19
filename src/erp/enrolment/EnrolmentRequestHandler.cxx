@@ -4,16 +4,20 @@
  */
 
 #include "erp/enrolment/EnrolmentRequestHandler.hxx"
+#include "erp/ErpRequirements.hxx"
+#include "erp/enrolment/VsdmHmacKey.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/hsm/ErpTypes.hxx"
+#include "erp/hsm/VsdmKeyBlobDatabase.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
-#include "erp/tsl/OcspHelper.hxx"
 #include "erp/tpm/PcrSet.hxx"
 #include "erp/tpm/Tpm.hxx"
+#include "erp/tsl/OcspHelper.hxx"
 #include "erp/util/Base64.hxx"
+#include "erp/util/ByteHelper.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Hash.hxx"
 #include "erp/util/TLog.hxx"
@@ -32,7 +36,7 @@ namespace
      */
     std::unique_ptr<Tpm> getTpm (EnrolmentSession& session)
     {
-        auto tpm = session.serviceContext.getTpmFactory()(session.serviceContext.getBlobCache());
+        auto tpm = session.serviceContext.getTpmFactory()(*session.serviceContext.getBlobCache());
         Expect(tpm!=nullptr, "TPM factory did not produce TPM instance");
         return tpm;
     }
@@ -60,7 +64,7 @@ namespace
                 PcrSet::defaultSet().toString(false)));
             const auto givenPcrSet = PcrSet::fromList(inputPcrSet);
             ErpExpect(givenPcrSet == expectedPcrSet, HttpStatus::BadRequest,
-                "given pcr set " + givenPcrSet.toString() + " is the same as the expected " + expectedPcrSet.toString());
+                "given pcr set " + givenPcrSet.toString() + " is not the same as the expected " + expectedPcrSet.toString());
         }
         catch (const std::runtime_error& e)
         {
@@ -82,7 +86,7 @@ namespace
         try
         {
             // TODO: get rid of the back and forth once X509Certificate is merged with Certificate
-            const auto base64DerCertificate = Certificate::fromBase64(certificate).toBase64Der();
+            const auto base64DerCertificate = Certificate::fromPem(certificate).toBase64Der();
             auto x509Certificate = X509Certificate::createFromBase64(base64DerCertificate);
             tslManager.verifyCertificate(
                 TslMode::TSL,
@@ -188,7 +192,7 @@ EnrolmentModel PutBlobHandler::doHandleRequest (EnrolmentSession& session)
     entry.type = mBlobType;
     entry.name = blobId;
     entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
-    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache()->storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -209,7 +213,7 @@ EnrolmentModel DeleteBlobHandler::doHandleRequest (EnrolmentSession& session)
     EnrolmentModel requestData (session.request.getBody());
     auto blobId = requestData.getDecodedErpVector(requestId);
 
-    session.serviceContext.getBlobCache().deleteBlob(mBlobType, blobId);
+    session.serviceContext.getBlobCache()->deleteBlob(mBlobType, blobId);
 
     session.response.setStatus(HttpStatus::NoContent);
     return {};
@@ -226,7 +230,7 @@ EnrolmentModel GetEnclaveStatus::doHandleRequest (EnrolmentSession& session)
     session.accessLog.setInnerRequestOperation("GET /Enrolment/EnclaveStatus");
     ErpExpect(session.request.getBody().empty(), HttpStatus::BadRequest, "no request body expected");
 
-    const auto enrolmentStatus = EnrolmentData::getEnclaveStatus(session.serviceContext.getBlobCache());
+    const auto enrolmentStatus = EnrolmentData::getEnclaveStatus(*session.serviceContext.getBlobCache());
 
     EnrolmentModel responseData;
     responseData.set(responseEnclaveId, session.serviceContext.getEnrolmentData().enclaveId.toString());
@@ -242,10 +246,10 @@ EnrolmentModel GetEnclaveStatus::doHandleRequest (EnrolmentSession& session)
         getTpm(session)->getQuote(::Tpm::QuoteInput{nonce, pcrSet.toPcrList(), ::std::string{hashAlgorithm}}, true);
     responseData.set(responsePcrHash, getBase64PcrHash(quote.quotedDataBase64, session.serviceContext));
 
-    responseData.set(responseVersionRelease, ErpServerInfo::ReleaseVersion);
-    responseData.set(responseVersionReleasedate, ErpServerInfo::ReleaseDate);
-    responseData.set(responseVersionBuild, ErpServerInfo::BuildVersion);
-    responseData.set(responseVersionBuildType, ErpServerInfo::BuildType);
+    responseData.set(responseVersionRelease, ErpServerInfo::ReleaseVersion());
+    responseData.set(responseVersionReleasedate, ErpServerInfo::ReleaseDate());
+    responseData.set(responseVersionBuild, ErpServerInfo::BuildVersion());
+    responseData.set(responseVersionBuildType, ErpServerInfo::BuildType());
     return responseData;
 }
 
@@ -361,7 +365,7 @@ EnrolmentModel PutKnownAttestationKey::doHandleRequest (EnrolmentSession& sessio
         entry.metaAkName = blobId.toArray<TpmObjectNameLength>();
     }
 
-    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache()->storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -405,7 +409,7 @@ EnrolmentModel PutKnownQuote::doHandleRequest (EnrolmentSession& session)
     const auto quote =
         getTpm(session)->getQuote(::Tpm::QuoteInput{nonce, pcrSet.value(), ::std::string{hashAlgorithm}}, true);
     entry.pcrHash = ::ErpVector{::Base64::decode(getBase64PcrHash(quote.quotedDataBase64, session.serviceContext))};
-    auto& blobCache = session.serviceContext.getBlobCache();
+    auto& blobCache = *session.serviceContext.getBlobCache();
 
 #if WITH_HSM_TPM_PRODUCTION > 0
     try
@@ -447,7 +451,7 @@ EnrolmentModel PutEciesKeypair::doHandleRequest (EnrolmentSession& session)
     entry.name = blobId;
     entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
     entry.expiryDateTime = std::chrono::system_clock::time_point(std::chrono::seconds(expiryDateTime));
-    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache()->storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -461,7 +465,7 @@ EnrolmentModel DeleteEciesKeypair::doHandleRequest (EnrolmentSession& session)
     EnrolmentModel requestData (session.request.getBody());
     auto blobId = requestData.getDecodedErpVector(requestId);
 
-    session.serviceContext.getBlobCache().deleteBlob(BlobType::EciesKeypair, blobId);
+    session.serviceContext.getBlobCache()->deleteBlob(BlobType::EciesKeypair, blobId);
 
     session.response.setStatus(HttpStatus::NoContent);
     return {};
@@ -486,7 +490,7 @@ EnrolmentModel PutDerivationKey::doHandleRequest (EnrolmentSession& session)
     entry.type = getBlobTypeForResourceType(resourceType.value());
     entry.name = blobId;
     entry.blob = ErpBlob(std::move(blobData), gsl::narrow_cast<ErpBlob::GenerationId>(blobGeneration));
-    session.serviceContext.getBlobCache().storeBlob(std::move(entry));
+    session.serviceContext.getBlobCache()->storeBlob(std::move(entry));
 
     session.response.setStatus(HttpStatus::Created);
     return {};
@@ -506,7 +510,7 @@ EnrolmentModel DeleteDerivationKey::doHandleRequest (EnrolmentSession& session)
     const auto blobType = getBlobTypeForResourceType(resourceType.value());
     const auto blobId = requestData.getDecodedErpVector(requestId);
 
-    session.serviceContext.getBlobCache().deleteBlob(blobType, blobId);
+    session.serviceContext.getBlobCache()->deleteBlob(blobType, blobId);
 
     session.response.setStatus(HttpStatus::NoContent);
     return {};
@@ -558,10 +562,11 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
             ::ErpBlob(requestData.getDecodedString(requestBlobData),
                       ::gsl::narrow_cast<::ErpBlob::GenerationId>(requestData.getInt64(requestBlobGeneration)));
 
+        // the request data contains a PEM certificate, but encoded in base64 again
         entry.certificate = requestData.getDecodedString(requestCertificate);
 
         auto& tslManager = session.serviceContext.getTslManager();
-        if (!isOsigCertificateValid(*entry.certificate, tslManager))
+        if (! isOsigCertificateValid(*entry.certificate, tslManager))
         {
             session.response.setStatus(HttpStatus::BadRequest);
             EnrolmentModel response{};
@@ -587,7 +592,7 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
                 entry.startDateTime = ::std::chrono::system_clock::now();
             }
         }
-        catch (ErpException& exception)
+        catch (const ErpException& exception)
         {
             session.accessLog.error("caught ErpException in PutVauSig::doHandleRequest");
             TVLOG(1) << "exception details: " << exception.what();
@@ -599,13 +604,13 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
             return response;
         }
 
-        session.serviceContext.getBlobCache().storeBlob(std::move(entry));
+        session.serviceContext.getBlobCache()->storeBlob(std::move(entry));
 
         session.response.setStatus(HttpStatus::Created);
 
         return {};
     }
-    catch (ErpException& exception)
+    catch (const ErpException& exception)
     {
         if (exception.status() == ::HttpStatus::BadRequest)
         {
@@ -628,6 +633,171 @@ EnrolmentModel PostVauSig::doHandleRequest(EnrolmentSession& session)
 DeleteVauSig::DeleteVauSig()
     : DeleteBlobHandler(BlobType::VauSig, "/Enrolment/VauSig")
 {
+}
+
+EnrolmentModel PostVsdmHmacKey::doHandleRequest(EnrolmentSession& session)
+{
+    session.accessLog.setInnerRequestOperation("POST /Enrolment/VsdmHmacKey");
+
+    try
+    {
+        EnrolmentModel requestData(session.request.getBody());
+        auto hsmPoolSession = session.serviceContext.getHsmPool().acquire();
+        auto& hsmSession = hsmPoolSession.session();
+
+        // extract the full package from the json request and validate the parameters
+        // note that we ignore the expiry field
+        const auto blobGeneration =
+            gsl::narrow_cast<ErpBlob::GenerationId>(requestData.getInt64(requestBlobGeneration));
+        auto vsdmBlobData = requestData.getDecodedString(requestBlobData);
+        ErpBlob vsdmBlob{std::move(vsdmBlobData), blobGeneration};
+
+        ErpVector unwrappedEntry = hsmSession.unwrapRawPayload(vsdmBlob);
+        std::string_view vsdmPackage{reinterpret_cast<const char*>(unwrappedEntry.data()), unwrappedEntry.size()};
+
+        A_23492.start("decrypt vsdm key and store it");
+        VsdmHmacKey storedVsdmPackage{vsdmPackage};
+        // get and validate the passed hmac key by testing it
+        const auto plainTextKey = storedVsdmPackage.decryptHmacKey(hsmSession, true);
+        // remove the encrypted_key, we dont need it anymore
+        storedVsdmPackage.deleteKeyInformation();
+        // store the plaintext key
+        storedVsdmPackage.setPlainTextKey(Base64::encode(plainTextKey));
+
+        const auto serializedVsdmKeyData = storedVsdmPackage.serializeToString();
+        const ErpVector vsdmKeyData = ErpVector::create(serializedVsdmKeyData);
+
+        VsdmKeyBlobDatabase::Entry vsdmKeyBlobEntry;
+        vsdmKeyBlobEntry.operatorId = storedVsdmPackage.operatorId();
+        vsdmKeyBlobEntry.version = storedVsdmPackage.version();
+        vsdmKeyBlobEntry.blob = hsmSession.wrapRawPayload(vsdmKeyData, blobGeneration);
+        vsdmKeyBlobEntry.createdDateTime = std::chrono::system_clock::now();
+        session.serviceContext.getVsdmKeyBlobDatabase().storeBlob(std::move(vsdmKeyBlobEntry));
+        A_23492.finish();
+        session.response.setStatus(HttpStatus::Created);
+    }
+    catch (const ErpException& exception)
+    {
+        session.response.setStatus(exception.status());
+        if (exception.status() == HttpStatus::BadRequest)
+        {
+            session.accessLog.error("caught ErpException in PostVsdmHmacKey::doHandleRequest");
+            TVLOG(1) << "exception details: " << exception.what();
+
+            EnrolmentModel response;
+            response.set("/code", "INVALID");
+            response.set("/description", exception.what());
+            return response;
+        }
+        else
+        {
+            throw;
+        }
+    }
+    return {};
+}
+
+EnrolmentModel GetVsdmHmacKey::doHandleRequest(EnrolmentSession& session)
+{
+    session.accessLog.setInnerRequestOperation("GET /Enrolment/VsdmHmacKey");
+
+    try
+    {
+        auto hsmPoolSession = session.serviceContext.getHsmPool().acquire();
+        auto& hsmSession = hsmPoolSession.session();
+
+        std::vector<VsdmKeyBlobDatabase::Entry> blobEntries =
+            session.serviceContext.getVsdmKeyBlobDatabase().getAllBlobs();
+        // unwrap all the keypackages and return them without the key themselves
+        EnrolmentModel response;
+        auto& responseDocument = response.document();
+        responseDocument.SetArray();
+        for (const auto& entry : blobEntries)
+        {
+            // unwrap each entry so we can access the plaintext key and recalculate the
+            // hmac against the empty string
+            ErpVector unwrappedEntry = hsmSession.unwrapRawPayload(entry.blob);
+            std::string_view payload{reinterpret_cast<const char*>(unwrappedEntry.data()), unwrappedEntry.size()};
+            VsdmHmacKey storedVsdmKeyData{payload};
+            const auto hmacEmptyString = Hash::hmacSha256(Base64::decode(storedVsdmKeyData.plainTextKey()), "");
+            auto hmacEmptyStringHex = ByteHelper::toHex(hmacEmptyString);
+            auto exp = storedVsdmKeyData.getOptionalString(VsdmHmacKey::jsonKey::exp);
+
+            A_23486.start("remove key data from output packages");
+            // create a new package which does not contain any other information than explicitly set
+            VsdmHmacKey returnedVsdmPackge{storedVsdmKeyData.operatorId(), storedVsdmKeyData.version()};
+            returnedVsdmPackge.set("/generation", entry.blob.generation);
+            auto timestamp = model::Timestamp(entry.createdDateTime);
+            returnedVsdmPackge.set("/created", timestamp.toXsDateTimeWithoutFractionalSeconds());
+            returnedVsdmPackge.set(VsdmHmacKey::jsonKey::hmacEmptyStringCalculated, hmacEmptyStringHex);
+            returnedVsdmPackge.set(VsdmHmacKey::jsonKey::hmacEmptyString,
+                                   storedVsdmKeyData.getString(VsdmHmacKey::jsonKey::hmacEmptyString));
+            if (exp)
+            {
+                returnedVsdmPackge.set(VsdmHmacKey::jsonKey::exp, *exp);
+            }
+            A_23486.finish();
+            rapidjson::Value dstVal;
+            dstVal.CopyFrom(returnedVsdmPackge.document(), responseDocument.GetAllocator());
+
+            responseDocument.PushBack(dstVal, responseDocument.GetAllocator());
+        }
+        return response;
+    }
+    catch (const ErpException& exception)
+    {
+        session.response.setStatus(exception.status());
+        if (exception.status() == HttpStatus::BadRequest)
+        {
+            session.accessLog.error("caught ErpException in GetVsdmHmacKey::doHandleRequest");
+            TVLOG(1) << "exception details: " << exception.what();
+
+            EnrolmentModel response;
+            response.set("/code", "INVALID");
+            response.set("/description", exception.what());
+            return response;
+        }
+        else
+        {
+            throw;
+        }
+    }
+    return {};
+}
+
+
+EnrolmentModel DeleteVsdmHmacKey::doHandleRequest(EnrolmentSession& session)
+{
+    session.accessLog.setInnerRequestOperation("DELETE /Enrolment/VsdmHmacKey");
+
+    try
+    {
+        EnrolmentModel requestData(session.request.getBody());
+        const std::string vsdmPackage = requestData.serializeToString(requestVsdm);
+        const VsdmHmacKey key = VsdmHmacKey{vsdmPackage};
+
+        session.serviceContext.getVsdmKeyBlobDatabase().deleteBlob(key.operatorId(), key.version());
+        session.response.setStatus(HttpStatus::NoContent);
+    }
+    catch (const ErpException& exception)
+    {
+        session.response.setStatus(exception.status());
+        if (exception.status() == HttpStatus::BadRequest)
+        {
+            session.accessLog.error("caught ErpException in DeleteVsdmHmacKey::doHandleRequest");
+            TVLOG(1) << "exception details: " << exception.what();
+
+            EnrolmentModel response;
+            response.set("/code", "INVALID");
+            response.set("/description", exception.what());
+            return response;
+        }
+        else
+        {
+            throw;
+        }
+    }
+    return {};
 }
 
 

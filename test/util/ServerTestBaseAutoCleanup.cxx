@@ -24,9 +24,11 @@ void ServerTestBaseAutoCleanup::TearDown (void)
 }
 
 
-Task ServerTestBaseAutoCleanup::createTask(const std::string& accessCode)
+Task ServerTestBaseAutoCleanup::createTask(
+    const std::string& accessCode,
+    model::PrescriptionType prescriptionType)
 {
-    Task task = ServerTestBase::createTask(accessCode);
+    Task task = ServerTestBase::createTask(accessCode, prescriptionType);
     mTasksToRemove.emplace_back(task.prescriptionId());
     return task;
 }
@@ -38,6 +40,12 @@ Communication ServerTestBaseAutoCleanup::addCommunicationToDatabase(const Commun
     return communication;
 }
 
+ChargeItem ServerTestBaseAutoCleanup::addChargeItemToDatabase(const ChargeItemDescriptor& descriptor)
+{
+    ChargeItem chargeItem = ServerTestBase::addChargeItemToDatabase(descriptor);
+    mChargeItemsToRemove.emplace_back(chargeItem.id().value());
+    return chargeItem;
+}
 
 void ServerTestBaseAutoCleanup::cleanupDatabase (void)
 {
@@ -46,6 +54,11 @@ void ServerTestBaseAutoCleanup::cleanupDatabase (void)
     {
         database->deleteCommunication(removalData.first, removalData.second);
         TVLOG(1) << "deleted communication " << removalData.first.toString();
+    }
+    for (const auto& id : mChargeItemsToRemove)
+    {
+        database->deleteChargeInformation(id);
+        TVLOG(1) << "deleted charge item " << id.toString();
     }
     database->commitTransaction();
     for (const auto& prescriptionId : mTasksToRemove)

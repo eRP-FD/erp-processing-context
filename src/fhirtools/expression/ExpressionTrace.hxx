@@ -9,7 +9,7 @@
 namespace fhirtools
 {
 #define EVAL_TRACE                                                                                                     \
-    VLOG(3) << std::source_location::current().function_name() << " " << debugInfo() << " collection: " << collection;
+    TVLOG(3) << std::source_location::current().function_name() << " " << debugInfo() << " collection: " << collection;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_FHIRTOOLS_EXPRESSION_EXPRESSIONTRACE_HXX

@@ -26,10 +26,10 @@ void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
     ErpExpect(category.has_value(), HttpStatus::MethodNotAllowed, "Category must be specified");
     A_22154.finish();
 
-    A_22874.start("Category must have value 'CHARGCONS'");
+    A_22874_01.start("Category must have value 'CHARGCONS'");
     ErpExpect(*category == model::Consent::chargingConsentType, HttpStatus::BadRequest,
               "Category must be '" + std::string(model::Consent::chargingConsentType) + "'");
-    A_22874.finish();
+    A_22874_01.finish();
 
     const auto kvnrClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(kvnrClaim.has_value(), "ACCESS_TOKEN does not contain KVNR");

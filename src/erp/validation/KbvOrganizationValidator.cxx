@@ -29,7 +29,7 @@ void KbvOrganizationValidator::validate(const model::ResourceBase& resource, con
     doValidate(dynamic_cast<const model::KbvOrganization&>(resource), xmlValidator, inCodeValidator);
 }
 
-void KbvOrganizationValidator_V1_0_1::doValidate(const model::KbvOrganization& kbvOrganization, const XmlValidator&,
+void KbvOrganizationValidator_V1_0_2::doValidate(const model::KbvOrganization& kbvOrganization, const XmlValidator&,
                                                  const InCodeValidator&) const
 {
     identifierSlicing(kbvOrganization);
@@ -37,7 +37,7 @@ void KbvOrganizationValidator_V1_0_1::doValidate(const model::KbvOrganization& k
     addressExtensions(kbvOrganization);
 }
 
-void KbvOrganizationValidator_V1_0_1::identifierSlicing(const model::KbvOrganization& kbvOrganization) const
+void KbvOrganizationValidator_V1_0_2::identifierSlicing(const model::KbvOrganization& kbvOrganization) const
 {
     const auto& identifierUse = kbvOrganization.identifierUse();
     const auto& identifierTypeCodingCode = kbvOrganization.identifierTypeCodingCode();
@@ -91,13 +91,13 @@ void KbvOrganizationValidator_V1_0_1::identifierSlicing(const model::KbvOrganiza
     }
 }
 
-void KbvOrganizationValidator_V1_0_1::telecomSlicing(const model::KbvOrganization& kbvOrganization) const
+void KbvOrganizationValidator_V1_0_2::telecomSlicing(const model::KbvOrganization& kbvOrganization) const
 {
     const auto& telefon = kbvOrganization.telecom("phone");
     ErpExpect(telefon, HttpStatus::BadRequest, "missing mandatory telecom.phone");
 }
 
-void KbvOrganizationValidator_V1_0_1::addressExtensions(const model::KbvOrganization& kbvOrganization) const
+void KbvOrganizationValidator_V1_0_2::addressExtensions(const model::KbvOrganization& kbvOrganization) const
 {
     const auto& address = kbvOrganization.address();
     if (address)

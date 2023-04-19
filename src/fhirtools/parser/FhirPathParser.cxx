@@ -26,7 +26,7 @@
 #include <source_location>
 
 
-#define TRACE VLOG(3) << std::source_location::current().function_name() << " <<< " << context->getText()
+#define TRACE TVLOG(3) << std::source_location::current().function_name() << " <<< " << context->getText()
 
 using fhirtools::FhirPathParser;
 namespace fhirtools

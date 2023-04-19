@@ -74,16 +74,16 @@ HttpsServer::HttpsServer (
        std::move(requestHandlers),
        mServiceContext
        )->run();
-   LOG(INFO) << "listening on port " << port;
+   TVLOG(0) << "listening on port " << port;
 }
 
 
-void HttpsServer::serve (const size_t threadCount)
+void HttpsServer::serve (const size_t threadCount, std::string_view threadBaseName)
 {
    Expect(threadCount > 0, "need at least 1 thread to serve");
 
-   TLOG(INFO) << "serving requests with " << threadCount << " threads";
-   mThreadPool.setUp(threadCount);
+   TVLOG(0) << "serving requests with " << threadCount << " threads";
+   mThreadPool.setUp(threadCount, threadBaseName);
 }
 
 

@@ -9,6 +9,7 @@
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
+#include "erp/model/ResourceNames.hxx"
 #include "erp/model/ResourceVersion.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/Uuid.hxx"
@@ -272,12 +273,6 @@ std::optional<std::string_view> BundleBase<DerivedBundle, SchemaVersionType>::ge
 
 
 template <class DerivedBundle, typename SchemaVersionType>
-std::string_view BundleBase<DerivedBundle, SchemaVersionType>::getResourceType (void) const
-{
-    return getStringValue(resourceTypePointer);
-}
-
-template <class DerivedBundle, typename SchemaVersionType>
 Uuid BundleBase<DerivedBundle, SchemaVersionType>::getId() const
 {
     return Uuid(std::string(getStringValue(idPointer)));
@@ -313,47 +308,9 @@ void BundleBase<DerivedBundle, SchemaVersionType>::setTotalSearchMatches(std::si
     setValue(totalPointer, rapidjson::Value(static_cast<std::uint64_t>(totalSearchMatches)));
 }
 
-template <class DerivedBundle, typename SchemaVersionType>
-SchemaVersionType BundleBase<DerivedBundle, SchemaVersionType>::getSchemaVersion(const std::optional<SchemaVersionType>& fallbackVersion) const
-{
-    // If we get unversioned bundles, we have to try to determine the
-    // version via its entries, otherwise we might end up picking the wrong version
-    // e.g. the bundles for MedicationDispense do not contain a meta.profile entry, however
-    // their entries do. Iterate over the entries until we find a profiled resource.
-    // As a last resort, use the default rendering profile version - hoping that they validate
-    // with any profile.
-    if constexpr (! std::is_same_v<SchemaVersionType, ResourceVersion::NotProfiled>)
-    {
-        if (Resource<DerivedBundle, SchemaVersionType>::getProfileName())
-        {
-            return Resource<DerivedBundle, SchemaVersionType>::getSchemaVersion(fallbackVersion);
-        }
-        for (std::size_t idx = 0; idx < getResourceCount(); ++idx)
-        {
-            auto entry = UnspecifiedResource::fromJson(getResource(idx));
-            const auto profileString = entry.getProfileName();
-            if (! profileString)
-            {
-                continue;
-            }
-            const auto anyProfileVersion = std::get<ResourceVersion::AnyProfileVersion>(
-                ResourceVersion::profileVersionFromName(*profileString, ResourceVersion::allBundles()));
-            if (std::holds_alternative<SchemaVersionType>(anyProfileVersion))
-            {
-                return std::get<SchemaVersionType>(anyProfileVersion);
-            }
-        }
-        ModelExpect(fallbackVersion.has_value(), "Unable to determine schema version without fallback");
-        TLOG(WARNING) << "Unspecified profile, using fallback fhir profile version";
-        return *fallbackVersion;
-    }
-    return {};
-}
-
-
 template class BundleBase<ErxReceipt>;
 template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
-template class BundleBase<Bundle>;
+template class BundleBase<Bundle, ResourceVersion::NotProfiled>;
 template class BundleBase<MedicationDispenseBundle>;
 template class BundleBase<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>;
 

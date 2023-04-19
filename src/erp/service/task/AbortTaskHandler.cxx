@@ -52,13 +52,13 @@ void AbortTaskHandler::checkAccessValidityOutsidePharmacy(
         const auto kvNrClaim = request.getAccessToken().stringForClaim(JWT::idNumberClaim);
         const auto kvNrFromTask = task.kvnr();
         Expect3(kvNrFromTask.has_value(), "Task has no KV number", std::logic_error);
-        A_20546_01.start("Check insurance number for insured person (patient)");
+        A_20546_03.start("Check insurance number for insured person (patient)");
         if (kvNrClaim == kvNrFromTask)
         {
             auditDataCollector.setEventId(model::AuditEventId::POST_Task_abort_insurant);
             return;
         }
-        A_20546_01.finish();
+        A_20546_03.finish();
     }
     else // For oid_arzt, oid_zahnarzt, oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut, oid_krankenhaus
     {
@@ -109,7 +109,6 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
-    checkFeatureWf200(prescriptionId.type());
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
     const auto professionOIDClaim = session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
@@ -149,22 +148,17 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     A_19121.start("Set Task status to cancelled");
     task->setStatus(model::Task::Status::cancelled);
     A_19121.finish();
-
-    A_19027_02.start("Delete personal data");
-    // Task.for (KVNR of patient)
-    task->deleteKvnr();
-    // Task.identifier (AccessCode)
-    task->deleteAccessCode();
-    // Task.identifier (Secret)
-    task->deleteSecret();
-    // Task related Communications
-    databaseHandle->deleteCommunicationsForTask(task->prescriptionId());
     task->updateLastUpdate();
 
+    // GEMREQ-start A_19027-03
+    A_19027_03.start("Delete personal data");
+    // Delete Task related Communications
+    databaseHandle->deleteCommunicationsForTask(task->prescriptionId());
     // Update task in database and delete related HealthCareProviderPrescription, PatientConfirmation,
-    // Receipt, MedicationDispense:
+    // Receipt, MedicationDispense, etc.:
     databaseHandle->updateTaskClearPersonalData(*task);
-    A_19027_02.finish();
+    A_19027_03.finish();
+    // GEMREQ-end A_19027-03
 
     A_19514.start("HttpStatus 204 for successful POST");
     makeResponse(session, HttpStatus::NoContent, nullptr/*body*/);

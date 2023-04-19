@@ -15,6 +15,7 @@
 #include "erp/fhir/Fhir.hxx"
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/Resource.hxx"
+#include "erp/model/ResourceFactory.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/handler/RequestHandlerInterface.hxx"
@@ -55,15 +56,16 @@ protected:
     /// @brief parse and validate the request body either using TModel::fromJson or TModel::fromXml based on the provided Content-Type
     template<class TModel>
     [[nodiscard]] static TModel
-    parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
-                                const std::optional<fhirtools::ValidatorOptions>& =
-                                    model::ResourceBase::defaultValidatorOptions());
+    parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType, bool validateGeneric = true);
 
     static std::optional<std::string> getLanguageFromHeader(const Header& requestHeader);
 
     static bool responseIsPartOfMultiplePages(const PagingArgument& pagingArgument, std::size_t numOfResults);
 
+    template<class TModel>
+    [[nodiscard]] static model::ResourceFactory<TModel> createResourceFactory(const SessionContext& context);
 private:
+
     static void checkValidEncoding(const ContentMimeType& contentMimeType);
 
     const Operation mOperation;
@@ -79,32 +81,40 @@ public:
 
 template<class TModel>
 TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
-                                                      const std::optional<fhirtools::ValidatorOptions>& valOpts)
+                                                      bool validateGeneric)
+{
+    auto resourceFactory = createResourceFactory<TModel>(context);
+    if (!validateGeneric)
+    {
+        resourceFactory.genericValidationMode(Configuration::GenericValidationMode::disable);
+    }
+    return std::move(resourceFactory).getValidated(schemaType, context.serviceContext.getXmlValidator(),
+                                          context.serviceContext.getInCodeValidator(),
+                                          model::ResourceVersion::supportedBundles());
+}
+
+
+template<class TModel>
+[[nodiscard]] model::ResourceFactory<TModel>
+ErpRequestHandler::createResourceFactory(const SessionContext& context)
 {
     const auto& header = context.request.header();
     const auto& body = context.request.getBody();
-    ErpExpect(header.contentType().has_value(), HttpStatus::BadRequest, "Missing ContentType in request header");
-    ContentMimeType contentMimeType(header.contentType().value());
-    const auto& mimeType = contentMimeType.getMimeType();
-
+    using ResourceFactory = typename model::ResourceFactory<TModel>;
+    typename ResourceFactory::Options options;
+    auto contentType(header.contentType());
+    ErpExpect(contentType.has_value(), HttpStatus::BadRequest, "Missing ContentType in request header");
+    ContentMimeType contentMimeType{*contentType};
     checkValidEncoding(contentMimeType);
-
+    const auto& mimeType = contentMimeType.getMimeType();
     if (mimeType == MimeType::fhirJson || mimeType == MimeType::json)
     {
-        auto resource = TModel::fromJson(
-            body, context.serviceContext.getJsonValidator(), context.serviceContext.getXmlValidator(),
-            context.serviceContext.getInCodeValidator(), schemaType,
-            model::ResourceVersion::supportedBundles(), valOpts);
-        return resource;
+        return ResourceFactory::fromJson(body, context.serviceContext.getJsonValidator(), options);
     }
     else if (mimeType == MimeType::xml || mimeType == MimeType::fhirXml)
     {
-        auto resource = TModel::fromXml(
-            body, context.serviceContext.getXmlValidator(), context.serviceContext.getInCodeValidator(), schemaType,
-            model::ResourceVersion::supportedBundles(), valOpts);
-        return resource;
+        return ResourceFactory::fromXml(body, context.serviceContext.getXmlValidator(), options);
     }
-
     ErpFail(HttpStatus::UnsupportedMediaType, "Invalid content type (mime type) received: " + header.contentType().value());
 }
 

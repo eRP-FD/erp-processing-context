@@ -49,7 +49,7 @@ public:
 private:
     void timerHandler() override
     {
-        TLOG(INFO) << "Refreshing Blob-Cache.";
+        TVLOG(0) << "Refreshing Blob-Cache.";
         try
         {
             mBlobCache.rebuildCache();
@@ -84,6 +84,18 @@ BlobCache::Entry BlobCache::getBlob(const BlobType type, const BlobId id)
                     })
         .front();
 }
+
+BlobCache::Entry BlobCache::getBlob(const BlobType type, const ErpVector& name)
+{
+    return getBlobs(mEntriesByType, type,
+                    [&name](const BlobCache::Entry& entry) {
+                        // blob was already used, also allow blobs going invalid in the meantime
+                        return (entry.name == name);
+                    })
+        .front();
+
+}
+
 
 BlobCache::Entry BlobCache::getBlob(BlobId id)
 {
@@ -129,7 +141,7 @@ void BlobCache::deleteBlob(const BlobType type, const ErpVector& name)
 
 std::vector<BlobDatabase::Entry> BlobCache::getAllBlobsSortedById (void) const
 {
-    ::std::shared_lock lock(mDatabaseMutex);
+    ::std::unique_lock lock(mDatabaseMutex);
     return mDatabase->getAllBlobsSortedById();
 }
 
@@ -152,9 +164,14 @@ void BlobCache::startRefresher(boost::asio::io_context& context, std::chrono::st
     mRefresher->start(context, interval);
 }
 
+BlobDatabase& BlobCache::getBlobDatabase()
+{
+    return *mDatabase;
+}
+
 std::vector<bool> BlobCache::hasValidBlobsOfType(std::vector<BlobType>&& blobTypes) const
 {
-    std::shared_lock lock(mDatabaseMutex);
+    std::unique_lock lock(mDatabaseMutex);
     return mDatabase->hasValidBlobsOfType(std::move(blobTypes));
 }
 
@@ -168,7 +185,7 @@ void BlobCache::rebuildCache(void)
     decltype(mEntriesByType) entriesByType;
 
     const auto allBlobsSortedById = [this]() {
-        ::std::shared_lock dbLock{mDatabaseMutex};
+        ::std::unique_lock dbLock{mDatabaseMutex};
         return mDatabase->getAllBlobsSortedById();
     }();
 

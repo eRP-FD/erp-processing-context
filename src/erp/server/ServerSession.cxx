@@ -131,16 +131,16 @@ std::tuple<bool,ServerResponse> ConcreteRequestHandler::handleRequest (
     const std::string target = getValidatedTarget(header);
     if (target.empty())
     {
-        LOG(WARNING) << "invalid request target";
+        TLOG(WARNING) << "invalid request target";
         TVLOG(1) << "invalid request target '" << header.target() << "'";
         return {false, ServerSession::getBadRequestResponse()};
     }
 
-    TLOG(INFO) << "handling request to " << target;
+    TVLOG(0) << "handling request to " << target;
     auto matchingHandler = mRequestHandlers.findMatchingHandler(header.method(), target);
     if (matchingHandler.handlerContext == nullptr)
     {
-        LOG(WARNING) << "did not find handler for request";
+        TLOG(INFO) << "did not find handler for request";
         TVLOG(1) << "did not find a handler for " << header.method() << " " << target;
         return {false, ServerSession::getNotFoundResponse()};
     }
@@ -242,7 +242,7 @@ void ServerSession::onTlsHandshakeComplete (boost::beast::error_code ec)
             case 336130204:
                 // This is an openssl error code which is used for HTTP only (no S) requests.
                 // It is unknown if there is a symbolic definition for this error code somewhere.
-                LOG(ERROR) << "HTTP requests without TLS are not supported";
+                TLOG(ERROR) << "HTTP requests without TLS are not supported";
                 break;
         }
         // Regard any error at this stage as not recoverable.
@@ -304,7 +304,7 @@ void ServerSession::do_read ()
         // application.
         // If you have seen the following message in a logfile then please modify the implementation so that
         // the exception is caught earlier.
-        LOG(ERROR) << "Caught exception. Exceptions should not reach this place. Please check the implementation";
+        TLOG(ERROR) << "Caught exception. Exceptions should not reach this place. Please check the implementation";
         logException(std::current_exception());
 
         // Having said all that, the stream is still good and a response has not yet been sent. That means that we can
@@ -460,12 +460,12 @@ void ServerSession::setLogId(const std::optional<std::string>& requestId)
 {
     if (requestId.has_value())
     {
-        TLOG(INFO) << "Handling request with id: " << *requestId;
+        TVLOG(0) << "Handling request with id: " << *requestId;
         erp::server::Worker::tlogContext = requestId;
     }
     else
     {
-        TLOG(WARNING) << "No ID in request.";
+        TVLOG(0) << "No ID in request.";
         setLogIdToRemote();
     }
 }

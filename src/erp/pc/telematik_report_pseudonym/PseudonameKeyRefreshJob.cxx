@@ -116,7 +116,9 @@ void PseudonameKeyRefreshJob::executeJob()
         }
         catch (const std::exception& exception)
         {
-            JsonLog(LogId::HSM_WARNING).message("PseudonameKeyRefreshJob failed").details(exception.what());
+            JsonLog(LogId::HSM_WARNING, JsonLog::makeWarningLogReceiver())
+                .message("PseudonameKeyRefreshJob failed")
+                .details(exception.what());
         }
     }
     A_22698.finish();

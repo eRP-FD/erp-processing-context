@@ -29,7 +29,7 @@ protected:
                             const InCodeValidator& inCodeValidator) const = 0;
 };
 
-class KbvPatientValidator_V1_0_1 : public KbvPatientValidator
+class KbvPatientValidator_V1_0_2 : public KbvPatientValidator
 {
 protected:
     void doValidate(const model::Patient& patient, const XmlValidator& xmlValidator,
@@ -50,8 +50,6 @@ protected:
                               const std::optional<std::string_view>& identifierSystem) const;
     void pkvAssigner(const std::optional<model::Reference>& assigner) const;
 };
-
-using KbvPatientValidator_V1_0_2 = KbvPatientValidator_V1_0_1;
 
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVPATIENTVALIDATOR_HXX

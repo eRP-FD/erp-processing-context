@@ -12,7 +12,7 @@
 
 AccessLog::AccessLog (void)
     : mStartTime(std::chrono::system_clock::now()),
-      mLog(LogId::ACCESS, JsonLog::makeWarningLogReceiver(), false)
+      mLog(LogId::ACCESS, JsonLog::makeInfoLogReceiver(), false)
 {
     mLog.keyValue(
         "log_type",

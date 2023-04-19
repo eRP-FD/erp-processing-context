@@ -105,7 +105,7 @@ rj::Value model::NumberAsStringParserDocument::makeString(const std::string_view
 model::NumberAsStringParserDocument model::NumberAsStringParserDocument::fromJson(std::string_view json)
 {
     NumberAsStringParserDocument document;
-    rj::StringStream s(json.data());
+    rj::MemoryStream s(json.data(), json.size());
     document.ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s);
     ModelExpect(!document.HasParseError(), "can not parse json string");
     return document;

@@ -33,6 +33,7 @@ public:
     Entry getBlob (
         BlobType type,
         BlobId id) const override;
+    Entry getBlob(BlobType type, const ErpVector& name) const override;
     std::vector<Entry> getAllBlobsSortedById (void) const override;
 
     BlobId storeBlob (Entry&& entry) override;

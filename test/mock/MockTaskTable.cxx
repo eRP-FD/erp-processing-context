@@ -169,7 +169,6 @@ void MockTaskTable::updateTaskClearPersonalData(const model::PrescriptionId& tas
     taskRow.status = taskStatus;
     taskRow.lastModified = lastModified;
     taskRow.kvnr.reset();
-    taskRow.kvnrHashed.reset();
     taskRow.salt.reset();
     taskRow.accessCode.reset();
     taskRow.secret.reset();

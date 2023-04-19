@@ -33,7 +33,7 @@ const rapidjson::Pointer channelHeaderPointer("/channel/header");
 }
 
 Subscription::Subscription(NumberAsStringParserDocument&& jsonTree)
-    : Resource<Subscription>(std::move(jsonTree))
+    : Resource(std::move(jsonTree))
 {
     // Extract recipient id from the GET arguments stored in criteria.
     const auto optionalValue = getOptionalStringValue(criteriaPointer);

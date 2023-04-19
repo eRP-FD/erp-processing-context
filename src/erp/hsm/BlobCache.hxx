@@ -63,6 +63,7 @@ public:
      * @throws if either the requested blob is neither in the cache nor in the database
      */
     Entry getBlob(::BlobType type, ::BlobId id);
+    Entry getBlob(BlobType type, const ErpVector& name);
 
     Entry getBlob(::BlobId id);
 
@@ -92,6 +93,8 @@ public:
     void setPcrHash(const ::ErpVector& pcrHash);
 
     void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);
+
+    BlobDatabase& getBlobDatabase();
 
 private:
     mutable ::std::shared_mutex mDatabaseMutex{};

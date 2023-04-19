@@ -6,6 +6,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATION_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATION_HXX
 
+#include "erp/model/Resource.hxx"
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/Identity.hxx"
 #include "erp/model/PrescriptionId.hxx"
@@ -32,12 +33,8 @@ public:
     };
     static std::string_view messageTypeToString(MessageType messageType);
     static int8_t messageTypeToInt(MessageType messageType);
-    static MessageType stringToMessageType(std::string_view messageType);
-    std::string_view messageTypeToProfileUrl(MessageType messageType) const;
-    MessageType profileUrlToMessageType(std::string_view profileUrl) const;
-    static bool messageTypeHasPrescriptionId(MessageType messageType);
     static SchemaType messageTypeToSchemaType(MessageType messageType);
-
+    static MessageType schemaTypeToMessageType(SchemaType schemaType);
     static const rapidjson::Pointer resourceTypePointer;
     static const rapidjson::Pointer idPointer;
     static const rapidjson::Pointer metaProfile0Pointer;
@@ -83,7 +80,7 @@ public:
      * The content string is often used in tests.
      * Therefore the following methods have been provided for convenience.
      */
-    std::optional<std::string_view> contentString(uint32_t idx = 0) const;
+    std::optional<std::string_view> contentString() const;
 
     void verifyPayload() const;
 
@@ -92,14 +89,13 @@ public:
 
 private:
 
+    std::string_view messageTypeToProfileUrl(MessageType messageType) const;
+    MessageType profileUrlToMessageType(std::string_view profileUrl) const;
+
     bool isDeprecatedProfile() const;
     friend Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>;
     explicit Communication(NumberAsStringParserDocument&& document); // internal ctor
 
-    static std::string retrievePrescriptionIdFromReference(
-        std::string_view reference,
-        const model::Communication::MessageType messageType);
-    static std::optional<std::string> retrieveAccessCodeFromTaskReference(std::string_view taskReference);
     void setSender(std::string_view sender, std::string_view namingSystem);
     void setRecipient(std::string_view recipient, std::string_view namingSystem);
 

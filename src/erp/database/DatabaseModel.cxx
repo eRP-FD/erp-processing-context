@@ -172,15 +172,15 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     // GEMREQ-end A_22134#prescription
 
     // GEMREQ-start A_22137#chargeItemBilling
-    ModelExpect(chargeInformation.dispenseItem.data(), "Missing signed dispense data.");
+    ModelExpect(chargeInformation.dispenseItem.has_value() && chargeInformation.dispenseItem->data(), "Missing signed dispense data.");
     billingData =
-        codec.encode(chargeInformation.dispenseItem.data().value(), key, ::Compression::DictionaryUse::Default_xml);
+        codec.encode(chargeInformation.dispenseItem->data().value(), key, ::Compression::DictionaryUse::Default_xml);
 
-    billingDataJson = codec.encode(chargeInformation.unsignedDispenseItem.serializeToJsonString(), key,
+    billingDataJson = codec.encode(chargeInformation.unsignedDispenseItem->serializeToJsonString(), key,
                                    ::Compression::DictionaryUse::Default_json);
     // GEMREQ-end A_22137#chargeItemBilling
 
-    // GEMREQ-start A_22135#receipt
+    // GEMREQ-start A_22135-01#receipt
     if (chargeInformation.receipt)
     {
         receiptXml = codec.encode(chargeInformation.receipt.value().serializeToXmlString(), key,
@@ -188,55 +188,70 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
         receiptJson = codec.encode(chargeInformation.receipt.value().serializeToJsonString(), key,
                                    ::Compression::DictionaryUse::Default_json);
     }
-    // GEMREQ-end A_22135#receipt
+    // GEMREQ-end A_22135-01#receipt
 }
 
 ::model::ChargeInformation ChargeItem::toChargeInformation(const ::SafeString& key, const ::DataBaseCodec& codec) const
 {
     try
     {
-        auto prescriptionBundle = ::model::Bundle::fromJsonNoValidation(codec.decode(prescriptionJson.value(), key));
-        auto billingBundle = ::model::AbgabedatenPkvBundle::fromJsonNoValidation(codec.decode(billingDataJson, key));
+        ::model::ChargeInformation ref;
 
-        auto chargeInformation = ::model::ChargeInformation{
-            ::model::ChargeItem{},
-            ::model::Binary{prescriptionBundle.getId().toString(), codec.decode(prescription.value(), key)},
-            ::std::move(prescriptionBundle),
-            ::model::Binary{billingBundle.getId().toString(), codec.decode(billingData, key)},
-            ::std::move(billingBundle),
-            ::model::Bundle::fromJsonNoValidation(codec.decode(receiptJson.value(), key))};
+        if (prescriptionJson.has_value() && !billingDataJson.empty())
+        {
+            auto prescriptionBundle =
+                ::model::Bundle::fromJsonNoValidation(codec.decode(prescriptionJson.value(), key));
+            auto billingBundle =
+                ::model::AbgabedatenPkvBundle::fromJsonNoValidation(codec.decode(billingDataJson, key));
+            auto receiptBundle = ::model::Bundle::fromJsonNoValidation(codec.decode(receiptJson.value(), key));
 
-        chargeInformation.chargeItem.setId(prescriptionId);
-        chargeInformation.chargeItem.setPrescriptionId(prescriptionId);
-        chargeInformation.chargeItem.setSubjectKvnr(codec.decode(kvnr, key));
-        chargeInformation.chargeItem.setEntererTelematikId(codec.decode(enterer, key));
-        chargeInformation.chargeItem.setEnteredDate(enteredDate);
-        // Check required, because for GET /ChargeItem (all items), access code is no longer provided.
-        if (!accessCode.empty()) {
-            chargeInformation.chargeItem.setAccessCode(codec.decode(accessCode, key));
+            auto chargeInformation = ::model::ChargeInformation{
+                ::model::ChargeItem{},
+                ::model::Binary{prescriptionBundle.getId().toString(), codec.decode(prescription.value(), key)},
+                ::std::move(prescriptionBundle),
+                ::model::Binary{billingBundle.getId().toString(), codec.decode(billingData, key)},
+                ::std::move(billingBundle),
+                ::std::move(receiptBundle)};
+
+            chargeInformation.chargeItem.setSubjectKvnr(codec.decode(kvnr, key));
+            chargeInformation.chargeItem.setEntererTelematikId(codec.decode(enterer, key));
+            if (!accessCode.empty())
+            {
+                chargeInformation.chargeItem.setAccessCode(codec.decode(accessCode, key));
+            }
+            ref = std::move(chargeInformation);
+        }
+        else
+        {
+            // Create an empty charge info structure due to not absent charge item properties. This is the case
+            // when asking for all charge items.
+            auto chargeInformation = ::model::ChargeInformation{ ::model::ChargeItem{}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt };
+            ref = std::move(chargeInformation);
         }
 
+        ref.chargeItem.setId(prescriptionId);
+        ref.chargeItem.setPrescriptionId(prescriptionId);
+        ref.chargeItem.setEnteredDate(enteredDate);
         if (markingFlags.has_value())
         {
             const std::string str{ reinterpret_cast<const char*>(markingFlags.value().data()), markingFlags.value().size() };
-            chargeInformation.chargeItem.setMarkingFlags(::model::ChargeItemMarkingFlags::fromJsonNoValidation(str));
+            ref.chargeItem.setMarkingFlags(::model::ChargeItemMarkingFlags::fromJsonNoValidation(str));
         }
 
         A_22134.start("KBV prescription bundle");
-        chargeInformation.chargeItem.setSupportingInfoReference(
+        ref.chargeItem.setSupportingInfoReference(
             ::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
         A_22134.finish();
 
-
         A_22137.start("Set PKV dispense item reference in ChargeItem");
-        chargeInformation.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+        ref.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
         A_22137.finish();
 
-        A_22135.start("Receipt");
-        chargeInformation.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
-        A_22135.finish();
+        A_22135_01.start("Receipt");
+        ref.chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::receiptBundle);
+        A_22135_01.finish();
 
-        return chargeInformation;
+        return ref;
     }
     catch (const ::std::exception& exception)
     {

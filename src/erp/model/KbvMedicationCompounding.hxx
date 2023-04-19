@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONCOMPOUNDING_HXX
 
 #include "erp/model/KbvMedicationBase.hxx"
+#include "erp/validation/SchemaType.hxx"
 
 namespace model
 {
@@ -15,6 +16,7 @@ namespace model
 class KbvMedicationCompounding : public KbvMedicationBase<KbvMedicationCompounding, ResourceVersion::KbvItaErp>
 {
 public:
+    static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_Compounding;
     const rapidjson::Value* ingredientArray() const;
 
 private:

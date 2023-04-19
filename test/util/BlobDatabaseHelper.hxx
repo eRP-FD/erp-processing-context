@@ -11,6 +11,7 @@ class BlobDatabaseHelper
 {
 public:
     static void removeUnreferencedBlobs (void);
+    static void removeTestVsdmKeyBlobs(char operatorId);
 };
 
 

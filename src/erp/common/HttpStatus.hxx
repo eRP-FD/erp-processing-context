@@ -7,6 +7,7 @@
 #define E_LIBRARY_COMMON_HTTPSTATUS_HXX
 
 #include <ostream>
+#include <cstdint>
 
 enum class HttpStatus
 {

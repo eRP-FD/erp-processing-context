@@ -57,6 +57,8 @@ public:
         BlobType type,
         BlobId id) const = 0;
 
+    virtual Entry getBlob(BlobType type, const ErpVector& name) const = 0;
+
     /**
      * Return all blobs sorted by id, increasingly.
      * This is intended to be used to rebuild the BlobCache.

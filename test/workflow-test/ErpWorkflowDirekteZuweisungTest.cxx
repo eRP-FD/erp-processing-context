@@ -11,6 +11,15 @@
 
 class ErpWorkflowDirekteZuweisungTestP : public ErpWorkflowTestP
 {
+protected:
+    void SetUp() override
+    {
+        ErpWorkflowTestP::SetUp();
+        if (serverUsesOldProfile() && model::IsPkv(GetParam()))
+        {
+            GTEST_SKIP_("PKV not testable with old profiles");
+        }
+    }
 };
 
 TEST_P(ErpWorkflowDirekteZuweisungTestP, PatientAbortOnlyCompletedTasks)//NOLINT(readability-function-cognitive-complexity)

@@ -4,48 +4,47 @@
  */
 
 #include "erp/util/ThreadNames.hxx"
+#include "erp/util/TLog.hxx"
 
-namespace {
-    const std::string UnknownThreadName = "unknown-thread";
-}
-
-
-
-ThreadNames& ThreadNames::instance (void)
+ThreadNames& ThreadNames::instance(void)
 {
     static ThreadNames instance;
     return instance;
 }
 
 
-const std::string& ThreadNames::getCurrentThreadName (void)
+std::string ThreadNames::getCurrentThreadName(void)
 {
     return getThreadName(std::this_thread::get_id());
 }
 
 
-const std::string& ThreadNames::getThreadName (std::thread::id threadId)
+std::string ThreadNames::getThreadName(std::thread::id threadId)
 {
-    std::lock_guard lock (mMutex);
-
+    std::shared_lock lock(mMutex);
     const auto candidate = mThreadIdToNameMap.find(threadId);
-    if (candidate != mThreadIdToNameMap.end())
-        return candidate->second;
-    else
-        return UnknownThreadName;
+    if (candidate == mThreadIdToNameMap.end()) [[unlikely]]
+    {
+        lock.unlock();
+        std::ostringstream oss;
+        oss << threadId;
+        std::unique_lock ulock(mMutex);
+        mThreadIdToNameMap[threadId] = oss.str();
+        return oss.str();
+    }
+    return candidate->second;
 }
 
 
-void ThreadNames::setThreadName (std::thread::id threadId, const std::string& threadName)
+void ThreadNames::setThreadName(std::thread::id threadId, const std::string& threadName)
 {
-    std::lock_guard lock (mMutex);
-
+    TLOG(INFO) << "threadId=" << threadId << " threadName=" << threadName;
+    std::unique_lock lock(mMutex);
     mThreadIdToNameMap[threadId] = threadName;
 }
 
 
-void ThreadNames::setCurrentThreadName (const std::string& threadName)
+void ThreadNames::setCurrentThreadName(const std::string& threadName)
 {
     setThreadName(std::this_thread::get_id(), threadName);
 }
-

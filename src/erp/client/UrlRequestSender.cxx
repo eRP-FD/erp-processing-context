@@ -98,7 +98,7 @@ ClientResponse UrlRequestSender::doSend(
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn) const
 {
-    VLOG(1) << "request to Host [" << url.mHost << "], URL: " << url.toString();
+    TVLOG(1) << "request to Host [" << url.mHost << "], URL: " << url.toString();
 
     Header::keyValueMap_t httpHeaders;
     if ( ! body.empty())

@@ -23,13 +23,9 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
 
-    A_19021.start("generate 256Bit random access code");
-    const auto accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32));
-    A_19021.finish();
-
-    A_19257.start("validate against schema");
+    A_19257_01.start("validate against schema");
     const auto parameters = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::CreateTaskParameters);
-    A_19257.finish();
+    A_19257_01.finish();
 
     A_19112.start("extract and check workFlowType parameter for the prescription type of the task");
     ErpExpect(parameters.count() == 1, HttpStatus::BadRequest, "unexpected number of parameters");
@@ -59,11 +55,16 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     }();
     ErpExpect(prescriptionType.has_value(), HttpStatus::BadRequest, "Invalid workFlowType in incoming parameters");
     A_19112.finish();
-    checkFeatureWf200(*prescriptionType);
+
+    // GEMREQ-start A_19021-02
+    A_19021_02.start("generate 256Bit random access code and add to task");
+    const auto accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32));
     model::Task task(*prescriptionType, accessCode);
+    A_19021_02.finish();
 
     auto* databaseHandle = session.database();
     const auto prescriptionId = databaseHandle->storeTask(task);
+    // GEMREQ-end A_19021-02
 
     // Note that the prescription ID is not yet permanently stored inside the encrypted task-bundle,
     // because we want to avoid a second database access for only storing this redundant information.

@@ -128,16 +128,16 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
     auto rawContainedBinary = getDispenseItemBinary(newChargeItem);
     // GEMREQ-end A_22137#getBinary
 
-    A_22616.start("verify pharmacy access code");
+    A_22616_03.start("verify pharmacy access code");
     ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, existingChargeInformation.chargeItem, true);
-    A_22616.finish();
+    A_22616_03.finish();
 
-    // GEMREQ-start A_22615#setNewAccessCode
-    A_22615.start("create access code for pharmacy");
+    // GEMREQ-start A_22615-02#setNewAccessCode
+    A_22615_02.start("create access code for pharmacy");
     const auto pharmacyAccessCode = ChargeItemHandlerBase::createPharmacyAccessCode();
     existingChargeInformation.chargeItem.setAccessCode(pharmacyAccessCode);
-    A_22615.finish();
-    // GEMREQ-end A_22615#setNewAccessCode
+    A_22615_02.finish();
+    // GEMREQ-end A_22615-02#setNewAccessCode
 
     // GEMREQ-start A_22141#chargeItemCadesBes, A_22150, A_22151
     A_22149.start("Pharmacy: validate PKV dispense item");
@@ -156,13 +156,17 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
     existingChargeInformation.chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle);
     // GEMREQ-end A_22148#addBundleRef
     model::Binary newContainedBinary{*rawContainedBinary->id(), containedBinaryWithOcsp};
-    ::std::swap(existingChargeInformation.dispenseItem, newContainedBinary);
-    ::std::swap(existingChargeInformation.unsignedDispenseItem, dispenseItemBundle);
+    ::std::swap(existingChargeInformation.dispenseItem.value(), newContainedBinary);
+    ::std::swap(existingChargeInformation.unsignedDispenseItem.value(), dispenseItemBundle);
 
     // GEMREQ-start A_22148#updateChargeInformation
     session.database()->updateChargeInformation(existingChargeInformation, blobId, salt);
     A_22152.finish();
     A_22148.finish();
+
+    A_23624.start("do not return access code in response");
+    existingChargeInformation.chargeItem.deleteAccessCode();
+    A_23624.finish();
 
     makeResponse(session, HttpStatus::OK, &existingChargeInformation.chargeItem);
     // GEMREQ-end A_22148#updateChargeInformation

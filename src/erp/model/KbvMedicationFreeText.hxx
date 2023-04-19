@@ -7,6 +7,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONFREETEXT_HXX
 
 #include "erp/model/KbvMedicationBase.hxx"
+#include "erp/validation/SchemaType.hxx"
 
 namespace model
 {
@@ -15,6 +16,8 @@ namespace model
 class KbvMedicationFreeText : public KbvMedicationBase<KbvMedicationFreeText, ResourceVersion::KbvItaErp>
 {
 public:
+    static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_FreeText;
+
 private:
     friend Resource<KbvMedicationFreeText, ResourceVersion::KbvItaErp>;
     explicit KbvMedicationFreeText(NumberAsStringParserDocument&& document);

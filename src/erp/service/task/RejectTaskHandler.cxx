@@ -24,7 +24,6 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
-    checkFeatureWf200(prescriptionId.type());
 
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
@@ -36,26 +35,26 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     const auto taskStatus = task->status();
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
 
-    A_19171.start("Check that Task is in progress");
+    A_19171_03.start("Check that Task is in progress");
     ErpExpect(taskStatus == model::Task::Status::inprogress, HttpStatus::Forbidden,
               "Task not in status in progress, is: " + std::string(model::Task::StatusNames.at(taskStatus)));
-    A_19171.finish();
+    A_19171_03.finish();
 
-    A_19171.start("Check secret");
+    A_19171_03.start("Check secret");
     const auto uriSecret = session.request.getQueryParameter("secret");
     A_20703.start("Set VAU-Error-Code header field to brute_force whenever AccessCode or Secret mismatches");
     VauExpect(uriSecret.has_value() && uriSecret.value() == task->secret(), HttpStatus::Forbidden,
               VauErrorCode::brute_force, "No or invalid secret");
     A_20703.finish();
-    A_19171.finish();
+    A_19171_03.finish();
 
-    A_19172.start("Delete secret from Task");
+    A_19172_01.start("Delete secret from Task");
     task->deleteSecret();
-    A_19172.finish();
+    A_19172_01.finish();
 
-    A_19172.start("Set Task status to ready");
+    A_19172_01.start("Set Task status to ready");
     task->setStatus(model::Task::Status::ready);
-    A_19172.finish();
+    A_19172_01.finish();
 
     task->updateLastUpdate();
     // Update task in database

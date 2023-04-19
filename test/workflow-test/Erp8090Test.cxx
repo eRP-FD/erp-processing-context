@@ -20,45 +20,46 @@ TEST_F(Erp8090Test, validCoverage1)//NOLINT(readability-function-cognitive-compl
 
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
-    auto bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-         .coverageInsuranceType = "GKV"});
+    auto bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                                .timestamp = timestamp,
+                                .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+                                .coverageInsuranceType = "GKV"});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
                                                        toCadesBesSignature(bundle, timestamp), HttpStatus::OK));
 
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
-    bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-         .coverageInsuranceType = "SEL"});
+    bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                           .timestamp = timestamp,
+                           .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+                           .coverageInsuranceType = "SEL"});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
                                                        toCadesBesSignature(bundle, timestamp), HttpStatus::OK));
 
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
-    ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv));
-    ASSERT_TRUE(task.has_value());
-    bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-         .coverageInsuranceType = "PKV"});
-    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
-                                                       toCadesBesSignature(bundle, timestamp), HttpStatus::OK));
+    if (! serverUsesOldProfile())
+    {
+        ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv));
+        ASSERT_TRUE(task.has_value());
+        bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                               .timestamp = timestamp,
+                               .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+                               .coverageInsuranceType = "PKV"});
+        ASSERT_NO_FATAL_FAILURE(
+            taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
+                                              toCadesBesSignature(bundle, timestamp), HttpStatus::OK));
 
-    ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::direkteZuweisungPkv));
-    ASSERT_TRUE(task.has_value());
-    bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-         .coverageInsuranceType = "PKV"});
-    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
-                                                       toCadesBesSignature(bundle, timestamp), HttpStatus::OK));
+        ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::direkteZuweisungPkv));
+        ASSERT_TRUE(task.has_value());
+        bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                               .timestamp = timestamp,
+                               .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+                               .coverageInsuranceType = "PKV"});
+        ASSERT_NO_FATAL_FAILURE(
+            taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
+                                              toCadesBesSignature(bundle, timestamp), HttpStatus::OK));
+    }
 }
 
 
@@ -76,23 +77,21 @@ TEST_F(Erp8090Test, validCoverage2)//NOLINT(readability-function-cognitive-compl
         R"(<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Alternative_IK"><valueIdentifier><system value=")" +
         std::string{nsArgeIknr} + R"(" /><value value="121191241" /></valueIdentifier></extension>)";
 
-    auto bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-         .coverageInsuranceType = "BG",
-         .coveragePayorExtension = extensionCoverage});
+    auto bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                                .timestamp = timestamp,
+                                .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+                                .coverageInsuranceType = "BG",
+                                .coveragePayorExtension = extensionCoverage});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
                                                        toCadesBesSignature(bundle, timestamp), HttpStatus::OK));
 
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
-    bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
-         .coverageInsuranceType = "UK",
-         .coveragePayorExtension = extensionCoverage});
+    bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                           .timestamp = timestamp,
+                           .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
+                           .coverageInsuranceType = "UK",
+                           .coveragePayorExtension = extensionCoverage});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), std::string{task->accessCode()},
         toCadesBesSignature(bundle, model::Timestamp::fromXsDate("2021-06-08")), HttpStatus::OK));
@@ -112,11 +111,10 @@ TEST_F(Erp8090Test, invalidCoverage)//NOLINT(readability-function-cognitive-comp
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
 
-    auto bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
-         .coverageInsuranceType = "SKT"});
+    auto bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                                .timestamp = timestamp,
+                                .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
+                                .coverageInsuranceType = "SKT"});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), std::string{task->accessCode()}, toCadesBesSignature(bundle, timestamp),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "Kostenträger nicht zulässig"));
@@ -126,15 +124,13 @@ TEST_F(Erp8090Test, invalidCoverage)//NOLINT(readability-function-cognitive-comp
     // the PKV feature. So skip it in this case
 
     EnvironmentVariableGuard disablePkv{ConfigurationKey::FEATURE_PKV, "false"};
-    EnvironmentVariableGuard disableWf200{ConfigurationKey::FEATURE_WORKFLOW_200, "false"};
 
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
-    bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = task->prescriptionId(),
-         .timestamp = timestamp,
-         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-         .coverageInsuranceType = "PKV"});
+    bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
+                           .timestamp = timestamp,
+                           .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+                           .coverageInsuranceType = "PKV"});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), std::string{task->accessCode()}, toCadesBesSignature(bundle, timestamp),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "Kostenträger nicht zulässig"));

@@ -9,6 +9,10 @@
 #include "erp/model/Resource.hxx"
 #include "erp/model/extensions/KBVMedicationCategory.hxx"
 
+class ErpElement;
+class XmlValidator;
+class InCodeValidator;
+
 namespace model
 {
 
@@ -45,8 +49,14 @@ public:
     {
     }
 
+    static void validateMedication(const ErpElement& medicationElement, const XmlValidator& xmlValidator,
+                                   const InCodeValidator& inCodeValidator);
 
 private:
+    template<typename MedicationModelT>
+    static void validateMedication(NumberAsStringParserDocument&& medicationDoc, const XmlValidator& xmlValidator,
+                                   const InCodeValidator& inCodeValidator);
+
     friend KbvMedicationBase<KbvMedicationGeneric, ResourceVersion::KbvItaErp>;
 };
 

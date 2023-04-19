@@ -4,6 +4,7 @@
  */
 
 #include "PeriodicTimer.hxx"
+#include "erp/util/Demangle.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
 
@@ -70,7 +71,17 @@ void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler, Ti
         {
             return;
         }
-        handler->timerHandler();
+        try
+        {
+            handler->timerHandler();
+        }
+        catch (const std::exception& e)
+        {
+            auto& handlerRef = *handler.get();
+            TLOG(ERROR) << "TimerHandler threw an exception of type " << util::demangle(typeid(e).name())
+                        << " from Timer " << util::demangle(typeid(handlerRef).name());
+            throw;
+        }
         interval = handler->nextInterval();
         if (!interval)
         {

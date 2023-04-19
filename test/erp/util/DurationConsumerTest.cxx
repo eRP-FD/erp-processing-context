@@ -92,15 +92,17 @@ TEST_F(DurationConsumerTest, DurationConsumer)//NOLINT(readability-function-cogn
     std::string description;
     std::string sessionIdentifier;
     std::unordered_map<std::string, std::string> keyValueMap;
-    DurationConsumerGuard guard ("test", [&](const auto duration_, const std::string& category_, const auto& description_, const auto& sessionIdentifier_, const std::unordered_map<std::string, std::string>& keyValueMap_)
-                                {
-                                    ++callCount;
-                                    duration = duration_;
-                                    category = category_;
-                                    description = description_;
-                                    sessionIdentifier = sessionIdentifier_;
-                                    keyValueMap = keyValueMap_;
-                                });
+    DurationConsumerGuard guard("test", [&](const auto duration_, const std::string& category_,
+                                            const auto& description_, const auto& sessionIdentifier_,
+                                            const std::unordered_map<std::string, std::string>& keyValueMap_,
+                                            const std::optional<JsonLog::LogReceiver>&) {
+        ++callCount;
+        duration = duration_;
+        category = category_;
+        description = description_;
+        sessionIdentifier = sessionIdentifier_;
+        keyValueMap = keyValueMap_;
+    });
 
     {
         auto keepAlive = DurationConsumer::getCurrent().getTimer("category", "test", {{"key", "value"}});
@@ -129,15 +131,17 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
     std::string description;
     std::string sessionIdentifier;
     std::unordered_map<std::string, std::string> keyValueMap;
-    DurationConsumerGuard guard ("test", [&](const auto duration_, const std::string& category_, const auto& description_, const auto& sessionIdentifier_, const std::unordered_map<std::string, std::string>& keyValueMap_)
-                                {
-                                    ++callCount;
-                                    duration = duration_;
-                                    category = category_;
-                                    description = description_;
-                                    sessionIdentifier = sessionIdentifier_;
-                                    keyValueMap = keyValueMap_;
-                                });
+    DurationConsumerGuard guard("test", [&](const auto duration_, const std::string& category_,
+                                            const auto& description_, const auto& sessionIdentifier_,
+                                            const std::unordered_map<std::string, std::string>& keyValueMap_,
+                                            const std::optional<JsonLog::LogReceiver>&) {
+        ++callCount;
+        duration = duration_;
+        category = category_;
+        description = description_;
+        sessionIdentifier = sessionIdentifier_;
+        keyValueMap = keyValueMap_;
+    });
 
     try
     {

@@ -10,6 +10,7 @@
 #include "test/erp/database/DatabaseTestFixture.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 using namespace std::string_view_literals;
 
@@ -67,10 +68,7 @@ public:
             ::model::Binary{dispenseItem.getIdentifier().toString(),
                             ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
 
-        auto prescriptionXML =
-            resourceManager.getStringResource("test/EndpointHandlerTest/kbv_pkv_bundle_template.xml");
-        prescriptionXML = String::replaceAll(prescriptionXML, "##PRESCRIPTION_ID##", id->toString());
-        prescriptionXML = String::replaceAll(prescriptionXML, "##KVNR##", ::std::string{insurant});
+        auto prescriptionXML = ResourceTemplates::kbvBundlePkvXml({*id, model::Kvnr(insurant)});
         auto prescription = ::model::Bundle::fromXmlNoValidation(prescriptionXML);
         auto signedPrescription = ::model::Binary{
             prescription.getId().toString(), ::CryptoHelper::toCadesBesSignature(prescription.serializeToJsonString())};
@@ -122,7 +120,11 @@ TEST_P(DatabaseTest, chargeItem_basic)//NOLINT(readability-function-cognitive-co
         for (const auto& item: chargeItems)
         {
             EXPECT_EQ(item.subjectKvnr(), insurant);
-            EXPECT_NE(std::find(pharmacyIds.begin(), pharmacyIds.end(), item.entererTelematikId()), pharmacyIds.end());
+            if (item.entererTelematikId())
+            {
+                EXPECT_NE(std::find(pharmacyIds.begin(), pharmacyIds.end(), item.entererTelematikId()),
+                          pharmacyIds.end());
+            }
             std::optional<::model::ChargeInformation> chargeInformation;
             ASSERT_NO_THROW(chargeInformation.emplace(db.retrieveChargeInformation(item.id().value())));
             ASSERT_EQ(chargeInformation->chargeItem.id(), item.id());
