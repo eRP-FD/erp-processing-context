@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
+  <xs:element name="Medication" type="KBV_PR_ERP_Medication_Ingredient"/>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient">
+    <xs:sequence>
+      <xs:element name="id" type="id"/>
+      <xs:element name="meta" type="KBV_PR_ERP_Medication_Ingredient.Meta"/>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="code" type="KBV_PR_ERP_Medication_Ingredient.Code"/>
+      <xs:element name="form" type="KBV_PR_ERP_Medication_Generics.Form"/>
+      <xs:element name="amount" type="KBV_PR_ERP_Medication_Generics.Amount" minOccurs="0"/>
+      <xs:element name="ingredient" type="KBV_PR_ERP_Medication_Ingredient.Ingredient"/>
+      <xs:element name="batch" type="Medication.Batch" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="profile" type="KBV_PR_ERP_Medication_Ingredient.Meta.profile"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Meta.profile">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Ingredient|1.0.1"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="KBV_PR_ERP_Medication_Ingredient.Code.Coding"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Code.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="KBV_PR_ERP_Medication_Ingredient.Code.Coding.system"/>
+          <xs:element name="code" type="KBV_PR_ERP_Medication_Ingredient.Code.Coding.code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Code.Coding.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Type"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Code.Coding.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="wirkstoff"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Ingredient">
+    <xs:complexContent>
+      <xs:extension base="BackboneElement">
+        <xs:sequence>
+          <xs:element name="itemCodeableConcept" type="KBV_PR_ERP_Medication_Ingredient.Ingredient.CodeableConcept"/>
+          <xs:element name="strength" type="KBV_PR_ERP_Medication_Ingredient.Ingredient.Strength"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Ingredient.CodeableConcept">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="KBV_PR_ERP_Medication_Ingredient.Ingredient.CodeableConcept.Coding" minOccurs="0"/>
+          <xs:element name="text" type="string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Ingredient.CodeableConcept.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="KBV_PR_ERP_Medication_Ingredient.Ingredient.CodeableConcept.Coding.system"/>
+          <xs:element name="code" type="code"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Ingredient.CodeableConcept.Coding.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/CodeSystem/ask"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_ERP_Medication_Ingredient.Ingredient.Strength">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="numerator" type="KBV_PR_ERP_Medication_Generics.Ratio.Numerator" minOccurs="0"/>
+          <xs:element name="denominator" type="KBV_PR_ERP_Medication_Generics.Ratio.Denominator" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

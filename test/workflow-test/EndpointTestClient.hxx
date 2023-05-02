@@ -46,7 +46,6 @@ private:
     void initEnrolmentServer();
     void initVauServer(std::shared_ptr<XmlValidator> xmlValidator);
     void initClient();
-    void initVsdmKeys();
 
     std::unique_ptr<MockDatabase> mMockDatabase;
     std::unique_ptr<HttpsServer> mServer;

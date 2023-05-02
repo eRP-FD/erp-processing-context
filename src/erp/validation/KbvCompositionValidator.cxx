@@ -44,7 +44,7 @@ void KbvCompositionValidator::validate(const model::ResourceBase& resource, cons
     doValidate(dynamic_cast<const model::KbvComposition&>(resource), xmlValidator, inCodeValidator);
 }
 
-void KbvCompositionValidator_V1_0_2::doValidate(const model::KbvComposition& kbvComposition, const XmlValidator&,
+void KbvCompositionValidator_V1_0_1::doValidate(const model::KbvComposition& kbvComposition, const XmlValidator&,
                                                 const InCodeValidator&) const
 {
     KbvValidationUtils::checkKbvExtensionValueCoding(
@@ -61,7 +61,7 @@ void KbvCompositionValidator_V1_0_2::doValidate(const model::KbvComposition& kbv
     authorSlicing(kbvComposition);
 }
 
-void KbvCompositionValidator_V1_0_2::erp_subjectAndPrescription(const model::KbvComposition& kbvComposition) const
+void KbvCompositionValidator_V1_0_1::erp_subjectAndPrescription(const model::KbvComposition& kbvComposition) const
 {
     // -erp-subjectAndPrescription
     // section.where(code.coding.code='Prescription').exists()
@@ -83,7 +83,7 @@ void KbvCompositionValidator_V1_0_2::erp_subjectAndPrescription(const model::Kbv
     }
 }
 
-void KbvCompositionValidator_V1_0_2::erp_coverageAndPrescription(const model::KbvComposition& kbvComposition) const
+void KbvCompositionValidator_V1_0_1::erp_coverageAndPrescription(const model::KbvComposition& kbvComposition) const
 {
     // -erp-coverageAndPrescription
     // section.where(code.coding.code='Prescription').exists()
@@ -105,7 +105,7 @@ void KbvCompositionValidator_V1_0_2::erp_coverageAndPrescription(const model::Kb
     }
 }
 
-void KbvCompositionValidator_V1_0_2::erp_prescriptionOrPracticeSupply(const model::KbvComposition& kbvComposition) const
+void KbvCompositionValidator_V1_0_1::erp_prescriptionOrPracticeSupply(const model::KbvComposition& kbvComposition) const
 {
     // -erp-prescriptionOrPracticeSupply
     // section.where(code.coding.code='Prescription').exists()
@@ -127,7 +127,7 @@ void KbvCompositionValidator_V1_0_2::erp_prescriptionOrPracticeSupply(const mode
     }
 }
 
-void KbvCompositionValidator_V1_0_2::authorSlicing(const model::KbvComposition& kbvComposition) const
+void KbvCompositionValidator_V1_0_1::authorSlicing(const model::KbvComposition& kbvComposition) const
 {
     try
     {
@@ -149,7 +149,7 @@ void KbvCompositionValidator_V1_0_2::authorSlicing(const model::KbvComposition& 
     }
 }
 
-void KbvCompositionValidator_V1_0_2::checkAuthor(const model::KbvComposition& kbvComposition,
+void KbvCompositionValidator_V1_0_1::checkAuthor(const model::KbvComposition& kbvComposition,
                                                  const std::string_view authorType, size_t idx) const
 {
     if (authorType == "Practitioner")

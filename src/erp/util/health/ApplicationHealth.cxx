@@ -80,11 +80,12 @@ void ApplicationHealth::down (Service service, std::optional<std::string_view> r
     std::lock_guard lock (mMutex);
 
     const auto iterator = mStates.find(service);
-    TLOG(ERROR) << "health-check " << toString(service) << ": DOWN (was "
-                << (iterator == mStates.end() ? "not set" : toString(iterator->second.status))
-                << "; " << rootCause.value_or("unknown root cause") << ")";
     if (iterator == mStates.end() || iterator->second.status != Status::Down)
     {
+        TVLOG(updateLogLevel) << "health-check " << toString(service) << ": DOWN (was "
+            << (iterator == mStates.end() ? "not set" : toString(iterator->second.status))
+            << "; " << rootCause.value_or("unknown root cause") << ")";
+
         mStates[service] = {Status::Down, {}, std::string(rootCause.value_or(""))};
 
         showUpdatedStatus(status_noLock(), downServicesString_noLock());
@@ -189,9 +190,7 @@ model::Health ApplicationHealth::model (void) const
     health.setHsmStatus(getUpDownStatus(Service::Hsm), getServiceDetail(Service::Hsm, ServiceDetail::HsmDevice),
                         getDetails(Service::Hsm));
     health.setIdpStatus(getUpDownStatus(Service::Idp), getDetails(Service::Idp));
-    health.setPostgresStatus(getUpDownStatus(Service::Postgres),
-                             getServiceDetail(Service::Postgres, ServiceDetail::DBConnectionInfo),
-                             getDetails(Service::Postgres));
+    health.setPostgresStatus(getUpDownStatus(Service::Postgres), getDetails(Service::Postgres));
     health.setRedisStatus(getUpDownStatus(Service::Redis), getDetails(Service::Redis));
     health.setSeedTimerStatus(getUpDownStatus(Service::PrngSeed), getDetails(Service::PrngSeed));
     health.setTeeTokenUpdaterStatus(getUpDownStatus(Service::TeeToken), getDetails(Service::TeeToken));

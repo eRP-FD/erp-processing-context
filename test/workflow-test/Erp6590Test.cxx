@@ -17,19 +17,20 @@ public:
         ASSERT_NO_FATAL_FAILURE(task = taskCreate());
         ASSERT_TRUE(task.has_value());
 
-        mKbvBundleXml = kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp});
-        const auto patientPos = mKbvBundleXml.find("<Patient>");
+        kbvBundleXml =
+            ResourceTemplates::kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp});
+        const auto patientPos = kbvBundleXml.find("<Patient>");
         ASSERT_NE(patientPos, std::string::npos);
-        patientIdentifierBeginPos = mKbvBundleXml.find("<identifier>", patientPos);
+        patientIdentifierBeginPos = kbvBundleXml.find("<identifier>", patientPos);
         ASSERT_NE(patientIdentifierBeginPos, std::string::npos);
         const std::string_view patIdentifierEnd{"</identifier>"};
-        patientIdentifierEndPos = mKbvBundleXml.find(patIdentifierEnd, patientIdentifierBeginPos);
+        patientIdentifierEndPos = kbvBundleXml.find(patIdentifierEnd, patientIdentifierBeginPos);
         ASSERT_NE(patientIdentifierEndPos, std::string::npos);
         patientIdentifierEndPos += patIdentifierEnd.size();
     }
 
 protected:
-    std::string mKbvBundleXml;
+    std::string kbvBundleXml;
     std::optional<model::Task> task;
     model::Timestamp timestamp = model::Timestamp::fromXsDate("2021-04-02");
     std::size_t patientIdentifierBeginPos = 0;
@@ -38,9 +39,9 @@ protected:
 
 TEST_F(Erp6590Test, fail_bundleNoPatientIdentifier)
 {
-    mKbvBundleXml.erase(patientIdentifierBeginPos, patientIdentifierEndPos - patientIdentifierBeginPos);
+    kbvBundleXml.erase(patientIdentifierBeginPos, patientIdentifierEndPos - patientIdentifierBeginPos);
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), task->accessCode(), toCadesBesSignature(mKbvBundleXml, timestamp),
+        task->prescriptionId(), task->accessCode(), toCadesBesSignature(kbvBundleXml, timestamp),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
 
@@ -48,28 +49,28 @@ TEST_F(Erp6590Test, fail_emptyPatientIdentifier)
 {
     patientIdentifierBeginPos += 13;
     patientIdentifierEndPos -= 14;
-    mKbvBundleXml.erase(patientIdentifierBeginPos, patientIdentifierEndPos - patientIdentifierBeginPos);
+    kbvBundleXml.erase(patientIdentifierBeginPos, patientIdentifierEndPos - patientIdentifierBeginPos);
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), task->accessCode(), toCadesBesSignature(mKbvBundleXml, timestamp),
+        task->prescriptionId(), task->accessCode(), toCadesBesSignature(kbvBundleXml, timestamp),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
 
 TEST_F(Erp6590Test, fail_wrongPatientIdentifierSystem)
 {
     // modify the identifier system
-    const auto kvid10Pos = mKbvBundleXml.find("kvid-10", patientIdentifierBeginPos);
+    const auto kvid10Pos = kbvBundleXml.find("kvid-10", patientIdentifierBeginPos);
     ASSERT_NE(kvid10Pos, std::string::npos);
-    mKbvBundleXml.erase(kvid10Pos, 5);
+    kbvBundleXml.erase(kvid10Pos, 5);
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), task->accessCode(), toCadesBesSignature(mKbvBundleXml, timestamp),
+        task->prescriptionId(), task->accessCode(), toCadesBesSignature(kbvBundleXml, timestamp),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
 
 TEST_F(Erp6590Test, fail_shortPatientIdentifier)
 {
-    mKbvBundleXml =
-        kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .kvnr = "S04046411"});
+    kbvBundleXml = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .kvnr = "S04046411"});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), task->accessCode(), toCadesBesSignature(mKbvBundleXml, timestamp),
+        task->prescriptionId(), task->accessCode(), toCadesBesSignature(kbvBundleXml, timestamp),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }

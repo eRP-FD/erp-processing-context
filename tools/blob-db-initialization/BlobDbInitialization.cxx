@@ -3,6 +3,7 @@
  * (C) Copyright IBM Corp. 2021
  */
 
+#include "tools/blob-db-initialization/BlobDbInitialization.hxx"
 #include "erp/client/HttpsClient.hxx"
 #include "erp/common/Constants.hxx"
 #include "erp/erp-serverinfo.hxx"
@@ -32,10 +33,6 @@ class DummyBlobDatabase : public BlobDatabase
         Fail("DummyBlobDatabase::getAllBlobsSortedById should not be called.");
     }
     BlobDatabase::Entry getBlob(BlobType, BlobId) const override
-    {
-        Fail("DummyBlobDatabase::getBlob should not be called.");
-    }
-    BlobDatabase::Entry getBlob(BlobType, const ErpVector&) const override
     {
         Fail("DummyBlobDatabase::getBlob should not be called.");
     }
@@ -73,10 +70,9 @@ Options:
     -v|--version                          print the build version number
 
 Blob types:
-    all              all blobs (dynamic, static, vsdm keys)
+    all              all blobs
     dynamic          all dynamic blobs (knowAk, knownEk, knownQuote)
     static           all static blobs (all except knowAk, knownEk, knownQuote)
-    vsdmkeys         only vsdm keys
     ak|knownAk
     ek|knownEk
     quote|knownQuote
@@ -102,6 +98,20 @@ enum class TargetEnvironment
     RU
 };
 
+struct CommandLineArguments
+{
+    std::string certificateFilename;
+    std::string staticDirectory;
+    bool deleteBeforeStore = false;
+    std::unordered_set<BlobType> blobTypes;
+    TargetEnvironment environment = TargetEnvironment::DEV;
+    bool hasBlobType(const BlobType type) const
+    {
+        return blobTypes.find(type) != blobTypes.end();
+    }
+};
+
+
 struct BlobDescriptor
 {
     BlobType type;
@@ -124,40 +134,11 @@ static std::vector<BlobDescriptor> blobDescriptors = {
     {BlobType::TaskKeyDerivation,          "task",   "taskDerivationKey",          "StaticDerivationKey.blob", "taskDerivationKeySaved.blob",  false, false, false},
     {BlobType::CommunicationKeyDerivation, "comm",   "communicationDerivationKey", "StaticDerivationKey.blob", "commDerivationKeySaved.blob",  false, false, false},
     {BlobType::AuditLogKeyDerivation,      "audit",  "auditLogDerivationKey",      "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
-    {BlobType::ChargeItemKeyDerivation,    "charge", "chargeItemDerivationKey",    "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
+    {::BlobType::ChargeItemKeyDerivation,  "charge", "chargeItemDerivationKey",    "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
     {BlobType::KvnrHashKey,                "kvnr",   "kvnrHashKey",                "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
     {BlobType::TelematikIdHashKey,         "tid",    "telematikIdHashKey",         "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
     {BlobType::VauSig,                     "vausig", "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false}};
 // clang-format on
-
-
-struct VsdmKeyBlobDescriptor
-{
-    std::string filename;
-    char operatorId;
-    char version;
-    TargetEnvironment env;
-};
-
-static std::vector<VsdmKeyBlobDescriptor> vsdmBlobDescriptors = {
-    {.filename = "vsdmkeyA1.blob", .operatorId = 'A', .version = '1', .env = TargetEnvironment::DEV},
-    {.filename = "vsdmkeyA2.blob", .operatorId = 'A', .version = '2', .env = TargetEnvironment::DEV}
-};
-
-struct CommandLineArguments
-{
-    std::string certificateFilename;
-    std::string staticDirectory;
-    bool deleteBeforeStore = false;
-    std::unordered_set<BlobType> blobTypes;
-    TargetEnvironment environment = TargetEnvironment::DEV;
-    bool hasBlobType(const BlobType type) const
-    {
-        return blobTypes.find(type) != blobTypes.end();
-    }
-    std::vector<VsdmKeyBlobDescriptor> vsdmBlobs{};
-};
-
 
 void expectArgument(const std::string& name, const int index, const int argc, const char* argv[])
 {
@@ -172,7 +153,6 @@ CommandLineArguments processCommandLine(const int argc,
                                         const char* argv[])// NOLINT(readability-function-cognitive-complexity)
 {
     CommandLineArguments arguments;
-    bool blobUpload = true;
 
     for (int index = 1; index < argc; ++index)
     {
@@ -221,7 +201,7 @@ CommandLineArguments processCommandLine(const int argc,
         }
         else if (argument == "-v" || argument == "--version")
         {
-            ::std::cout << ::ErpServerInfo::BuildVersion() << ::std::endl;
+            ::std::cout << ::ErpServerInfo::BuildVersion << ::std::endl;
             exit(EXIT_SUCCESS);//NOLINT(concurrency-mt-unsafe)
         }
         else if (argument[0] == '-')
@@ -232,30 +212,18 @@ CommandLineArguments processCommandLine(const int argc,
         {
             // Process blob type.
             if (argument == "all")
-            {
                 arguments.blobTypes.insert({BlobType::EndorsementKey, BlobType::AttestationPublicKey, BlobType::Quote,
                                             BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
                                             BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
                                             ::BlobType::ChargeItemKeyDerivation, BlobType::KvnrHashKey,
                                             BlobType::TelematikIdHashKey, BlobType::VauSig});
-                arguments.vsdmBlobs = vsdmBlobDescriptors;
-            }
             else if (argument == "static")
-            {
                 arguments.blobTypes.insert({BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
                                             BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
                                             ::BlobType::ChargeItemKeyDerivation, BlobType::KvnrHashKey,
                                             BlobType::TelematikIdHashKey, BlobType::VauSig});
-            }
             else if (argument == "dynamic")
-            {
                 arguments.blobTypes.insert({BlobType::EndorsementKey, BlobType::AttestationPublicKey, BlobType::Quote});
-            }
-            else if (argument == "vsdmkeys")
-            {
-                arguments.vsdmBlobs = vsdmBlobDescriptors;
-                blobUpload = false;
-            }
             else
             {
                 bool found = false;
@@ -272,7 +240,7 @@ CommandLineArguments processCommandLine(const int argc,
         }
     }
 
-    if (arguments.certificateFilename.empty() && blobUpload)
+    if (arguments.certificateFilename.empty())
     {
         if (arguments.staticDirectory.empty())
             usage(argv[0], "certificate file missing");
@@ -285,7 +253,7 @@ CommandLineArguments processCommandLine(const int argc,
             std::cout << "using " << arguments.certificateFilename << " as certificate filename\n";
         }
     }
-    if (arguments.blobTypes.empty() && blobUpload)
+    if (arguments.blobTypes.empty())
         usage(argv[0], "no blob type specified for upload");
 
     return arguments;
@@ -368,7 +336,6 @@ public:
             enrollDynamic(arguments);
         }
         enrollStatic(arguments);
-        enrollVsdmKeys(arguments);
     }
 
 private:
@@ -411,35 +378,6 @@ private:
         for (const auto type : arguments.blobTypes)
         {
             enroll(arguments, type);
-        }
-    }
-
-    void enrollVsdmKeys(const CommandLineArguments& arguments)
-    {
-        try
-        {
-            for(const auto& key : arguments.vsdmBlobs)
-            {
-                if (key.env != arguments.environment)
-                {
-                    std::cout << "[-] Skipping VSDM key because of mismatching environment: " << key.filename << "\n";
-                    continue;
-                }
-                std::filesystem::path path{arguments.staticDirectory};
-                path /= key.filename;
-                Expect(FileHelper::exists(path), "Could not find VSDM key blob: " + path.string());
-                ErpBlob blob = ErpBlob::fromCDump(Base64::encode(FileHelper::readFileAsString(path)));
-                if (arguments.deleteBeforeStore)
-                {
-                    deleteVsdmKey(key.operatorId, key.version);
-                }
-                std::cout << "[+] uploading VSDM key " << path.string() << "\n";
-                storeVsdmKey(blob);
-            }
-        }
-        catch (const std::exception& exception)
-        {
-            std::cerr << "Error while enrolling vsdm key: " << exception.what() << std::endl;
         }
     }
 

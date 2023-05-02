@@ -54,11 +54,6 @@ pipeline {
                             git diff --quiet -- . || (set +v; echo "ERROR: Changes done by reqmd. Please run this tool before committing. Update files:"; git status --short; exit 1)
                         """
                     }
-                    post {
-                        cleanup {
-                            cleanWs()
-                        }
-                    }
                 }
             }
         }
@@ -79,11 +74,11 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.2'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
-                    args '-u root:sudo -v $HOME/tools:$HOME/tools -v jenkins-build-ccache:${HOME}/.ccache' // -v $HOME/workspace/myproject:/myproject'
+                    args '-u root:sudo -v $HOME/tools:$HOME/tools' // -v $HOME/workspace/myproject:/myproject'
                 }
             }
             stages {
@@ -96,7 +91,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.10.0"
+                                    def erp_release_version = "1.9.0"
                                     sh "scripts/ci-build.sh " +
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'"
@@ -176,56 +171,33 @@ pipeline {
                                     projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
                             }
                         }
-                        stage ("Run Tests (2023 profiles)") {
+                        stage ("Run Tests (2023 profile set)") {
                             steps {
                                 sh """
                                     # Run the unit and integration tests
                                     cd jenkins-build-debug/bin
-                                    ./erp-test --erp_profiles="2023-07-01" --erp_instance=0 --gtest_output=xml:erp-test-2023.xml
+                                    ERP_FHIR_PROFILE_VALID_FROM="2022-11-01T00:00:00+01:00" ERP_FHIR_PROFILE_RENDER_FROM="2022-11-01T00:00:00+01:00" ERP_ENROLMENT_SERVER_PORT=9193 ERP_ENROLMENT_ACTIVATE_FOR_PORT=9192 ERP_ADMIN_SERVER_PORT=9998 ERP_SERVER_PORT=9192 ./erp-test --gtest_output=xml:erp-test-2023.xml
                                 """
                             }
                             post {
                                 always {
-                                    junit "jenkins-build-debug/bin/erp-test-2023.xml"
+                                    junit "jenkins-build-debug/bin/*-test-2023.xml"
                                 }
                             }
                         }
-                        stage ("Run Tests (2022 profiles)") {
+                        stage ("Run Tests") {
                             steps {
                                 sh """
+                                    # Run the unit and integration tests
                                     cd jenkins-build-debug/bin
-                                    ./erp-test --erp_profiles="2022-01-01" --erp_instance=1 --gtest_output=xml:erp-test-2022.xml
-                                """
-                            }
-                            post {
-                                always {
-                                    junit "jenkins-build-debug/bin/erp-test-2022.xml"
-                                }
-                            }
-                        }
-                        stage ("Run Tests (all profiles)") {
-                            steps {
-                                sh """
-                                    cd jenkins-build-debug/bin
-                                    ./erp-test --erp_profiles="all" --erp_instance=2 --gtest_output=xml:erp-test-all.xml
-                                """
-                            }
-                            post {
-                                always {
-                                    junit "jenkins-build-debug/bin/erp-test-all.xml"
-                                }
-                            }
-                        }
-                        stage ("Run Tests (fhirtools)") {
-                            steps {
-                                sh """
-                                    cd jenkins-build-debug/bin
+                                    ls -al
+                                    ./erp-test --gtest_output=xml:erp-test.xml
                                     ./fhirtools-test --gtest_output=xml:fhirtools-test.xml
                                 """
                             }
                             post {
                                 always {
-                                    junit "jenkins-build-debug/bin/fhirtools-test.xml"
+                                    junit "jenkins-build-debug/bin/*-test.xml"
                                 }
                             }
                         }
@@ -275,7 +247,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.10.0"
+                                def release_version = "1.9.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -311,7 +283,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.10.0"
+                                def release_version = "1.9.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -406,9 +378,6 @@ pipeline {
     }
 
     post {
-        cleanup {
-            cleanWs()
-        }
         failure {
             script {
                 if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME.startsWith("release/")) {

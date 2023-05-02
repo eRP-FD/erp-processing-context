@@ -34,16 +34,13 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
 
     A_19140.start("Retrieve dispensing information from the insured");
 
-    // GEMREQ-start A_19406-01#getAll-1
     const auto& accessToken = session.request.getAccessToken();
     const auto kvnrClaim = accessToken.stringForClaim(JWT::idNumberClaim);
     ErpExpect(kvnrClaim.has_value(), HttpStatus::BadRequest, "KvNr not contained in JWT");
     const model::Kvnr kvnr{*kvnrClaim};
-    // GEMREQ-end A_19406-01#getAll-1
 
-    // GEMREQ-start A_19406-01#getAll-2
     A_19518.start("Search parameters for MedicationDispense");
-    A_22070_02.start("Search parameter PrescriptionID for multiple medication dispenses per task");
+    A_22070.start("Search parameter PrescriptionID for multiple medication dispenses per task");
     auto arguments = std::optional<UrlArguments>(
         std::in_place,
         std::vector<SearchParameter>
@@ -54,19 +51,22 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
         { "identifier", "prescription_id", SearchParameter::Type::PrescriptionId}
     });
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
-    // GEMREQ-end A_19406-01#getAll-2
     const auto identifierSearchArgument = arguments->getSearchArgument("identifier");
+    if (identifierSearchArgument.has_value())
+    {
+        for (size_t i = 0; i < identifierSearchArgument->valuesCount(); ++i)
+        {
+            checkFeatureWf200(identifierSearchArgument->valueAsPrescriptionId(i).type());
+        }
+    }
 
-    // GEMREQ-start A_19406-01#getAll-3
-    A_19406_01.start("Filter MedicationDispense on KVNR of the insured");
+    A_19406.start("Filter MedicationDispense on KVNR of the insured");
     auto* databaseHandle = session.database();
     const auto [medicationDispenses, hasNextPage] = databaseHandle->retrieveAllMedicationDispenses(kvnr, arguments);
-    A_19406_01.finish();
-    // GEMREQ-end A_19406-01#getAll-3
-    A_22070_02.finish();
+    A_19406.finish();
+    A_22070.finish();
     A_19518.finish();
 
-    // GEMREQ-start A_19406-01#getAll-4
     auto bundle = createBundle(medicationDispenses);
 
     // We do no longer fill the Bundle.total field, because we cannot calculate it accurately due to possibly
@@ -80,7 +80,6 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     }
 
     makeResponse(session, HttpStatus::OK, &bundle);
-    // GEMREQ-end A_19406-01#getAll-4
 
     // Collect Audit data
     session.auditDataCollector()
@@ -126,14 +125,11 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
 
     A_19141.start("Retrieve dispensing information for a single e-recipe");
 
-    // GEMREQ-start A_19406-01#getId-1
     const auto& accessToken = session.request.getAccessToken();
     const auto kvnrClaim = accessToken.stringForClaim(JWT::idNumberClaim);
     ErpExpect(kvnrClaim.has_value(), HttpStatus::BadRequest, "KvNr not contained in JWT");
     const model::Kvnr kvnr{*kvnrClaim};
-    // GEMREQ-end A_19406-01#getId-1
 
-    // GEMREQ-start A_19406-01#getId-2
     const std::optional<std::string> pathId = session.request.getPathParameter("id");
     ErpExpect(pathId.has_value(), HttpStatus::BadRequest, "id path parameter is missing");
 
@@ -149,20 +145,18 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     }();
 
     const auto& prescriptionId = medicationDispenseId.getPrescriptionId();
+    checkFeatureWf200(prescriptionId.type());
     session.accessLog.prescriptionId(prescriptionId.toString());
-    // GEMREQ-end A_19406-01#getId-2
 
-    // GEMREQ-start A_19406-01#getId-3
-    A_19406_01.start("Filter MedicationDispense on KVNR of the insured");
+    A_19406.start("Filter MedicationDispense on KVNR of the insured");
     // No additional search parameters for GetMedicationDispenseById
     auto* databaseHandle = session.database();
     const auto medicationDispense = databaseHandle->retrieveMedicationDispense(kvnr, medicationDispenseId);
-    A_19406_01.finish();
+    A_19406.finish();
 
     ErpExpect(medicationDispense.has_value(), HttpStatus::NotFound,
               "No Medication Dispense found for Id " + pathId.value());
     makeResponse(session, HttpStatus::OK, &medicationDispense.value());
-    // GEMREQ-end A_19406-01#getId-3
 
     // Collect Audit data
     session.auditDataCollector()

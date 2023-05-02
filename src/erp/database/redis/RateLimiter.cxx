@@ -60,7 +60,7 @@ bool RateLimiter::updateCallsCounter(
         else if (calls > static_cast<int>(mNumCalls) && nowVal < tUpper)
         {
             // Key will be blocked from now on.
-            TVLOG(1) << "Access with given key blocked and will expire in about " << (exp.time_since_epoch().count() - nowVal) << " ms.";
+            TVLOG(1) << "Access with given key blocked and will expire in about " << (exp.time_since_epoch().count() - nowVal) << " ms." << std::endl;
             mInterface->setKeyFieldValue(baseKey, "", "");
             mInterface->setKeyExpireAt(baseKey, exp);
             return false;
@@ -68,14 +68,13 @@ bool RateLimiter::updateCallsCounter(
         else
         {
             // Allow access with given key.
-            TVLOG(1) << "request #" << calls << " within " << spanVal << " ms.";
+            TVLOG(1) << "request #" << calls << " within " << spanVal << " ms." << std::endl;
         }
         return true;
     }
     catch (const std::exception&)
     {
-        JsonLog(LogId::DOS_ERROR, JsonLog::makeErrorLogReceiver())
-            .message("DosHandler check failed due to previous errors, check skipped.");
+        JsonLog(LogId::DOS_ERROR).message("DosHandler check failed due to previous errors, check skipped.");
         return true;
     }
     return false;

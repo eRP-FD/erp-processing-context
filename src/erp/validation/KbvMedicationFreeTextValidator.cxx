@@ -13,7 +13,7 @@ void KbvMedicationFreeTextValidator::validate(const model::ResourceBase& resourc
     doValidate(dynamic_cast<const model::KbvMedicationFreeText&>(resource), xmlValidator, inCodeValidator);
 }
 
-void KbvMedicationFreeTextValidator_V1_0_2::doValidate(const model::KbvMedicationFreeText& kbvMedicationCompounding,
+void KbvMedicationFreeTextValidator_V1_0_1::doValidate(const model::KbvMedicationFreeText& kbvMedicationCompounding,
                                                        const XmlValidator&, const InCodeValidator&) const
 {
     KbvValidationUtils::checkKbvExtensionValueCoding(

@@ -30,19 +30,10 @@ public:
     {
         /**
          * For Date values the prefixes eq, ne, gt, ge, lt, le, sa, eb are supported while ap is not.
-         * Target values (values in the database) are treated as time points, not as implicit ranges.
+         * Target values (values in the database) are treated as time points, not as implict ranges.
          * Therefore gt and sa are treated as equivalent. Also lt and eb are treated as equivalent.
          */
         Date,
-
-        /**
-         * Identical to Date in terms of allowed operations. The difference is how the
-         * Date is printed in SQL statements: Instead of passing the datetime format to the
-         * database, converts the given datetime to a suuid as used by the database
-         * schema (cf. timestamp_from_suuid() and gen_suuid()).
-         */
-        DateAsUuid,
-
         /**
          * String values are compared case insensitive(ly?) but otherwise exactly. gemSpec_FD_eRp subjects only KVNRs and TelematikIDs
          * to text search. Therefore whitespace and special characters (which would require UTF-8 interpretation) are not supported.

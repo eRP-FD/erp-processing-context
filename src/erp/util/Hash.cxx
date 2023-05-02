@@ -7,6 +7,7 @@
 
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "erp/util/OpenSsl.hxx"
 
 
@@ -52,13 +53,7 @@ util::Buffer Hash::sha256 (const util::Buffer& data)
     return result;
 }
 
-util::Buffer Hash::hmacSha256(const util::Buffer& key, std::string_view data)
-{
-    auto dataView = std::string_view{reinterpret_cast<const char*>(key.data()), key.size()};
-    return hmacSha256(dataView, data);
-}
-
-util::Buffer Hash::hmacSha256(std::string_view key, std::string_view data)
+util::Buffer Hash::hmacSha256(const util::Buffer& key, const std::string& data)
 {
     util::Buffer result(SHA256_DIGEST_LENGTH);
     unsigned int resultSize = 0;
@@ -67,8 +62,8 @@ util::Buffer Hash::hmacSha256(std::string_view key, std::string_view data)
                                      key.data(), gsl::narrow_cast<int>(key.size()),
                                      reinterpret_cast<const unsigned char*>(data.data()), data.size(),
                                      reinterpret_cast<unsigned char*>(result.data()), &resultSize);
-    OpenSslExpect(hmacResult == reinterpret_cast<const unsigned char*>(result.data()), "HMAC() failed");
-    OpenSslExpect(resultSize == SHA256_DIGEST_LENGTH, "Unexpected digest length");
+    Expects(hmacResult == reinterpret_cast<const unsigned char*>(result.data()));
+    Expects(resultSize == SHA256_DIGEST_LENGTH);
 
     return result;
 }

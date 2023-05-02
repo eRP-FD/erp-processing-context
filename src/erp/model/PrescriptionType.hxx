@@ -24,7 +24,7 @@ enum class PrescriptionType : uint8_t
     direkteZuweisungPkv = 209u
 };
 
-bool IsPkv(PrescriptionType prescriptionType);
+void checkFeatureWf200(model::PrescriptionType prescriptionType);
 
 // mappings defined in A_19445
 static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypeDisplay{

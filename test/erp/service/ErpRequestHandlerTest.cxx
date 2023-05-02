@@ -57,7 +57,7 @@ public:
         {
             if constexpr (std::is_same_v<TModel, model::Communication>)
             {
-                ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, schemaType, false))
+                ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, schemaType, std::nullopt))
                     << "failed with " << contentMimeType << ", " << magic_enum::enum_name(schemaType) << " expectFail=false";
             }
             else
@@ -73,6 +73,9 @@ public:
     {
         switch (schemaType)
         {
+            case SchemaType::fhir:
+                testParseAndValidateRequestBodyT<model::Parameters>(body, contentMimeType, schemaType, expectFail);
+                break;
             case SchemaType::Gem_erxCommunicationDispReq:
             case SchemaType::Gem_erxCommunicationInfoReq:
             case SchemaType::Gem_erxCommunicationChargChangeReq:
@@ -89,9 +92,6 @@ public:
                 break;
             case SchemaType::ActivateTaskParameters:
             case SchemaType::CreateTaskParameters:
-                testParseAndValidateRequestBodyT<model::Parameters>(body, contentMimeType, schemaType, expectFail);
-                break;
-            case SchemaType::fhir:
             case SchemaType::Gem_erxOrganizationElement:
             case SchemaType::Gem_erxReceiptBundle:
             case SchemaType::Gem_erxTask:
@@ -115,9 +115,6 @@ public:
             case SchemaType::KBV_PR_ERP_Bundle:
             case SchemaType::KBV_PR_FOR_PractitionerRole:
             case SchemaType::KBV_PR_FOR_Patient:
-            case SchemaType::PatchChargeItemParameters:
-            case SchemaType::DAV_DispenseItem:
-            case SchemaType::Pruefungsnachweis:
 
                 ASSERT_TRUE(false) << "wrong SchemaType for this test";
                 break;
@@ -231,8 +228,8 @@ INSTANTIATE_TEST_SUITE_P(
                    SchemaType::Gem_erxCommunicationInfoReq, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
         SampleFile{"communication_reply.xml", "communication_reply.json", SchemaType::Gem_erxCommunicationReply, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
         SampleFile{"medication_dispense.xml", "medication_dispense.json", SchemaType::Gem_erxMedicationDispense, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
-        SampleFile{"task_activate_parameters.xml", "task_activate_parameters.json", SchemaType::ActivateTaskParameters, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
-        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::CreateTaskParameters, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
+        SampleFile{"task_activate_parameters.xml", "task_activate_parameters.json", SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
+        SampleFile{"task_create_parameters.xml", "task_create_parameters.json", SchemaType::fhir, model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
         SampleFile{"chargeItem_simplifier.xml", "chargeItem_simplifier.json", SchemaType::Gem_erxChargeItem, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01},
         SampleFile{"consent_simplifier.xml", "consent_simplifier.json", SchemaType::Gem_erxConsent, model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}
 ));

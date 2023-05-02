@@ -72,7 +72,7 @@ size_t SslStream::read_some(
     boost::beast::error_code& ec)
 {
     #ifdef LOG_SSL_STREAM_READS
-        TVLOG(1) << "SslStream::read_some() : starting to read";
+        VLOG(1) << "SslStream::read_some() : starting to read";
     #endif
 
     const size_t count = AsyncStreamHelper::read_some(
@@ -82,9 +82,9 @@ size_t SslStream::read_some(
         ec);
 
     #ifdef LOG_SSL_STREAM_READS
-        TVLOG(1) << "SslStream::read_some() : read " << count << " bytes";
+        VLOG(1) << "SslStream::read_some() : read " << count << " bytes";
         #if LOG_SSL_STREAM_READS > 1
-            TLOG(ERROR) << "SslStream::read_some() : ["
+            LOG(ERROR) << "SslStream::read_some() : ["
                        << String::quoteNewlines(std::string((char*)buffer.data(), count))
                        << ']';
         #endif

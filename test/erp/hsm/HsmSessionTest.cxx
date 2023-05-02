@@ -31,6 +31,7 @@
 
 #include <functional>
 #include <gtest/gtest.h>
+#include <hsmclient/ERP_Error.h>
 
 class ParameterSet
 {
@@ -476,15 +477,6 @@ TEST_P(HsmSessionTest, unwrapTelematikIdHashKey)
     const auto key = parameters.session->getTelematikIdHmacKey();
 
     ASSERT_EQ(key.size(), Aes256Length);
-}
-
-
-TEST_P(HsmSessionTest, wrapAndUnwrapPayload)
-{
-    const auto input = ErpVector::create("hello");
-    const auto wrappedInput = parameters.session->wrapRawPayload(input, 0);
-    const auto unwrappedResult = parameters.session->unwrapRawPayload(wrappedInput);
-    ASSERT_EQ(input, unwrappedResult);
 }
 
 

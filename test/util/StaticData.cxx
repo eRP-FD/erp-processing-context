@@ -2,14 +2,12 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
-#include "erp/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
-#include "test/mock/MockVsdmKeyBlobDatabase.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/TestConfiguration.hxx"
@@ -62,12 +60,6 @@ Factories StaticData::makeMockFactories()
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
                    ? std::unique_ptr<RedisInterface>(new MockRedisStore())
                    : std::unique_ptr<RedisInterface>(new RedisClient());
-    };
-    factories.vsdmKeyBlobDatabaseFactory = []() -> std::unique_ptr<VsdmKeyBlobDatabase> {
-        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
-            return std::make_unique<ProductionVsdmKeyBlobDatabase>();
-        else
-            return std::make_unique<MockVsdmKeyBlobDatabase>();
     };
 
     factories.tpmFactory = TpmMock::createFactory();

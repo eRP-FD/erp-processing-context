@@ -172,7 +172,7 @@ void SaxHandler::parseStringView(const std::string_view& xmlDocument)
     parseStringViewInternal(mHandler, xmlDocument, this);
 }
 
-void SaxHandler::validateStringView(const std::string_view& xmlDocument, const XmlValidatorContext& schemaValidationContext)
+void SaxHandler::validateStringView(const std::string_view& xmlDocument, XmlValidatorContext& schemaValidationContext)
 {
     xmlSAXHandler handler{};
     xmlSAXHandlerPtr handlerPtr = &handler;
@@ -215,7 +215,6 @@ void SaxHandler::parseAndValidateStringView(const std::string_view& xmlDocument,
 
 void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::string_view& xmlDocument, void* userData)
 {
-    ModelExpect(!xmlDocument.empty(), "xml document must not be empty");
     // This function is in principle a copy of xmlSAXUserParseMemory, but with auto ptr memory management.
 
     xmlInitParser();
@@ -264,7 +263,7 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
         // if exceptions are thrown through xmlParseDocument (from a callback in our code)
         // we have potential memory leaks, each callback must catch and store exceptions before
         // returning the control back to the libxml2 library.
-        TLOG(ERROR) << "internal error: one of the XML callbacks is missing a try/catch, which potentially leads to "
+        LOG(ERROR) << "internal error: one of the XML callbacks is missing a try/catch, which potentially leads to "
                       "memory leaks.";
         std::rethrow_exception(std::current_exception());
     }
@@ -277,7 +276,7 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
 
     if (mContext->errNo != 0 && mContext->lastError.level > XML_ERR_WARNING)
     {
-        TLOG(ERROR) << "libxml2 ctxt->errNo: " << mContext->errNo;
+        LOG(ERROR) << "libxml2 ctxt->errNo: " << mContext->errNo;
         failMaybeWithDiagnostics("Error from xmlParseDocument", mContext->lastError);
     }
     if (parseResult != 0)

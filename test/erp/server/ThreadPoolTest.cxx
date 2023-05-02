@@ -21,7 +21,7 @@ TEST(ThreadPoolTest, runOnAllThreads)//NOLINT(readability-function-cognitive-com
     // Therefore we have to assign a work object to achieve the same effect.
     boost::asio::io_context::work keepThreadsAlive(threadPool.ioContext());
 
-    threadPool.setUp(workers, "test");
+    threadPool.setUp(workers);
     //wait until all threads have started:
     ASSERT_NO_FATAL_FAILURE(testutils::waitFor([&]{return threadPool.getWorkerCount() >= workers;}));
 

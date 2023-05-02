@@ -72,10 +72,10 @@ private:
     template<class ConstBufferSequence>
     void logBuffers (const char* prefix, const ConstBufferSequence& buffers)
     {
-        TLOG(ERROR) << prefix << " : " << std::distance(buffers.begin(), buffers.end()) << " buffers";
+        LOG(ERROR) << prefix << " : " << std::distance(buffers.begin(), buffers.end()) << " buffers";
         for (const auto& buffer : buffers)
         {
-            TLOG(ERROR) << "    " << prefix << " " << buffer.size() << " [" << String::quoteNewlines(
+            LOG(ERROR) << "    " << prefix << " " << buffer.size() << " [" << String::quoteNewlines(
                 std::string{reinterpret_cast<char*>(buffer.data()), buffer.size()}) << "]";
         }
     }
@@ -89,7 +89,7 @@ std::size_t TcpStream::write_some (
 {
 #ifdef LOG_SSL_STREAM_WRITES
     {
-        TVLOG(1) << "TcpStream::write_some() : starting to write";
+        VLOG(1) << "TcpStream::write_some() : starting to write";
         std::size_t size = 0;
         std::size_t count = 0;
         for (const auto& buffer : buffers)
@@ -97,7 +97,7 @@ std::size_t TcpStream::write_some (
             size += buffer.size();
             ++count;
         }
-        TVLOG(1) << "    " << count << " buffers with " << size << " bytes";
+        VLOG(1) << "    " << count << " buffers with " << size << " bytes";
     }
 #endif
 
@@ -108,12 +108,12 @@ std::size_t TcpStream::write_some (
         ec);
 
 #ifdef LOG_SSL_STREAM_WRITES
-    TVLOG(1) << "TcpStream::write_some() : wrote " << count << " bytes with result " << ec.value();
+    VLOG(1) << "TcpStream::write_some() : wrote " << count << " bytes with result " << ec.value();
         #if LOG_SSL_STREAM_WRITES > 1
             writeBuffers("TcpStream::write_some()", buffers);
         #endif
         if (ec)
-            TVLOG(1) << "TcpStream::write_some() : error " << ec.message();
+            VLOG(1) << "TcpStream::write_some() : error " << ec.message();
 #endif
 
     return count;
@@ -128,21 +128,21 @@ void TcpStream::async_write_some(
 #ifdef LOG_SSL_STREAM_WRITES
     std::size_t size = 0;
     {
-        TVLOG(1) << "TcpStream::async_write_some() : starting to write";
+        VLOG(1) << "TcpStream::async_write_some() : starting to write";
         std::size_t count = 0;
         for (const auto& buffer : buffers)
         {
             size += buffer.size();
             ++count;
         }
-        TVLOG(1) << "    " << count << " buffers with " << size << " bytes";
+        VLOG(1) << "    " << count << " buffers with " << size << " bytes";
     }
 #endif
 
     mTcpStream->async_write_some(buffers, std::forward<WriteHandler>(handler));
 
 #ifdef LOG_SSL_STREAM_WRITES
-    TVLOG(1) << "TcpStream::async_write_some() : wrote " << size << " bytes";
+    VLOG(1) << "TcpStream::async_write_some() : wrote " << size << " bytes";
         #if LOG_SSL_STREAM_WRITES > 1
             writeBuffers("TcpStream::async_write_some()", buffers);
         #endif

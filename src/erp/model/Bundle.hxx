@@ -109,12 +109,15 @@ public:
     void setLink (Link::Type type, std::string_view link);
     [[nodiscard]] std::optional<std::string_view> getLink (Link::Type type) const;
 
+    [[nodiscard]] std::string_view getResourceType (void) const;
     [[nodiscard]] Uuid getId () const;
     [[nodiscard]] size_t getTotalSearchMatches() const;
     [[nodiscard]] BundleType getBundleType() const;
     [[nodiscard]] PrescriptionId getIdentifier() const;
 
     void setTotalSearchMatches(std::size_t totalSearchMatches);
+
+    SchemaVersionType getSchemaVersion(const std::optional<SchemaVersionType>& fallbackVersion) const override;
 
 private:
     friend Resource<Bundle>;
@@ -147,22 +150,21 @@ std::vector<TResource> BundleBase<DerivedBundle, SchemaVersionType>::getResource
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Bundle final : public BundleBase<Bundle, ResourceVersion::NotProfiled>
+class Bundle final : public BundleBase<Bundle>
 {
 public:
+    using BundleBase<Bundle>::BundleBase;
+    using Resource<Bundle>::fromXml;
+    using Resource<Bundle>::fromJson;
+
     static constexpr auto resourceTypeName = "Bundle";
-
-    using BundleBase::BundleBase;
-    using BundleBase::fromXml;
-    using BundleBase::fromJson;
-
 };
 
 // NOLINTBEGIN(bugprone-exception-escape)
 extern template class BundleBase<ErxReceipt>;
 extern template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
-extern template class BundleBase<Bundle, ResourceVersion::NotProfiled>;
-extern template class BundleBase<MedicationDispenseBundle>;
+extern template class BundleBase<Bundle>;
+extern template class BundleBase<MedicationDispenseBundle, ResourceVersion::NotProfiled>;
 extern template class BundleBase<Bundle, ResourceVersion::AbgabedatenPkv>;
 // NOLINTEND(bugprone-exception-escape)
 

@@ -24,10 +24,6 @@ public:
     const std::optional<std::string>& diagnostics() const;
     const std::optional<VauErrorCode>& vauErrorCode() const;
 
-    ErpException(const ErpException&) = default;
-    ErpException(ErpException&&) noexcept = default;
-    ErpException& operator = (const ErpException&) = default;
-    ErpException& operator = (ErpException&&) noexcept = default;
 private:
     HttpStatus mStatus;
     std::optional<std::string> mDiagnostics;

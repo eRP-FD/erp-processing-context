@@ -101,9 +101,9 @@ TEST_P(ProductionBlobDatabaseHostIpTest, storeBlob) // NOLINT(readability-functi
     else
         ASSERT_TRUE(row[0].is_null());
     if (isBuildExpected)
-        ASSERT_EQ(row[1].as<std::string>(), std::string(ErpServerInfo::ReleaseVersion())
-                                    + "/" + std::string(ErpServerInfo::BuildVersion())
-                                    + "/" + std::string(ErpServerInfo::BuildType()));
+        ASSERT_EQ(row[1].as<std::string>(), std::string(ErpServerInfo::ReleaseVersion)
+                                    + "/" + std::string(ErpServerInfo::BuildVersion)
+                                    + "/" + std::string(ErpServerInfo::BuildType));
     else
         ASSERT_TRUE(row[1].is_null());
     (void)execute("DELETE FROM erp.blob WHERE name='" + entryName + "'");
@@ -225,11 +225,8 @@ TEST_F(ProductionBlobDatabaseTest, buildForQuote)
 
     const auto result = execute("SELECT build FROM erp.blob WHERE name='blob-name'");
     ASSERT_EQ(result.size(), 1);
-    ASSERT_EQ(result.front()[0].as<std::string>(), std::string(ErpServerInfo::ReleaseVersion())
-                                                       .append("/")
-                                                       .append(ErpServerInfo::BuildVersion())
-                                                       .append("/")
-                                                       .append(ErpServerInfo::BuildType()));
+    ASSERT_EQ(result.front()[0].as<std::string>(),
+        std::string(ErpServerInfo::ReleaseVersion) + '/' + ErpServerInfo::BuildVersion + '/' + ErpServerInfo::BuildType);
 }
 
 

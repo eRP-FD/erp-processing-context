@@ -9,13 +9,11 @@
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
-#include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
-#include "test/util/TestUtils.hxx"
 
-#include <boost/algorithm/string.hpp>
 #include <gtest/gtest.h>
 
+#include "test/util/ResourceManager.hxx"
 
 
 TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
@@ -26,7 +24,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "status":"completed",
@@ -35,7 +33,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -43,7 +41,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -72,7 +70,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
@@ -81,7 +79,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
             "value":"456"
         },
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -91,7 +89,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -99,7 +97,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -128,7 +126,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
@@ -142,7 +140,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -150,7 +148,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -180,7 +178,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
@@ -194,7 +192,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -202,7 +200,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -232,7 +230,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
@@ -247,7 +245,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -255,7 +253,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -285,12 +283,12 @@ TEST(MedicationDispenseTest, WrongSchemaMissingSubject)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -302,7 +300,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingSubject)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -332,12 +330,12 @@ TEST(MedicationDispenseTest, WrongSchemaWrongSubject)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -355,7 +353,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongSubject)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -385,12 +383,12 @@ TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -400,7 +398,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -428,12 +426,12 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -443,7 +441,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -467,7 +465,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -497,12 +495,12 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -512,7 +510,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -544,19 +542,18 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
 
 TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
 {
-
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -566,7 +563,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -574,7 +571,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -603,12 +600,12 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            "https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense"
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":"https://gematik.de/fhir/NamingSystem/PrescriptionID",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -618,7 +615,7 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
             "value":"X123456789"
         }
     },
@@ -626,7 +623,7 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":"https://gematik.de/fhir/NamingSystem/TelematikID",
                     "value":"1111"
                 }
             }
@@ -679,50 +676,10 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function
     static const rapidjson::Pointer whenHandedOver(ElementName::path(elements::whenHandedOver));
     static const rapidjson::Pointer whenPrepared(ElementName::path(elements::whenPrepared));
 
-    const std::string jsonStr = R"(
-{
-    "resourceType":"MedicationDispense",
-    "id": "160.000.000.004.715.74",
-    "meta":{
-        "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
-        ]
-    },
-    "identifier":[
-        {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
-            "value":"160.000.000.004.715.74"
-        }
-    ],
-    "status":"completed",
-    "medicationReference":{
-        "reference":"Medication/1234"
-    },
-    "subject":{
-        "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
-        }
-    },
-    "performer":[
-        {
-            "actor":{
-                "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
-                    "value":"1111"
-                }
-            }
-        }
-    ],
-    "whenHandedOver":"2020-03-20T07:13:00+05:00",
-    "dosageInstruction":[
-        {
-            "text":"1-0-1-0"
-        }
-    ]
-}
-)";
-    auto md = model::NumberAsStringParserDocument::fromJson(jsonStr);
+    auto& resMan = ResourceManager::instance();
+    auto md = model::NumberAsStringParserDocument::fromJson(
+        resMan.getStringResource("test/fhir/conversion/medication_dispense.json"));
+
     auto validate = [&] {
         StaticData::getJsonValidator()->validate(copyToOriginalFormat(md), SchemaType::fhir);
         auto xmlStr = Fhir::instance().converter().jsonToXmlString(md);

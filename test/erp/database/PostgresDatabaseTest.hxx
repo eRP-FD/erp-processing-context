@@ -17,13 +17,13 @@
 #include "erp/model/TelematikId.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/Configuration.hxx"
-#include "erp/util/DurationConsumer.hxx"
 #include "erp/util/Expect.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "test_config.h"
 #include "test/erp/model/CommunicationTest.hxx"
-#include "test/util/JwtBuilder.hxx"
 #include "test/util/TestConfiguration.hxx"
+#include "test_config.h"
+#include "test/util/JwtBuilder.hxx"
+
 
 #include <boost/format.hpp>
 #include <gtest/gtest.h>
@@ -93,22 +93,6 @@ protected:
         std::string const name;
         std::string const query;
     };
-
-    std::string taskTableName(model::PrescriptionType type) const
-    {
-        switch (type)
-        {
-            case model::PrescriptionType::apothekenpflichigeArzneimittel:
-                return "erp.task";
-            case model::PrescriptionType::direkteZuweisung:
-                return "erp.task_169";
-            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-                return "erp.task_200";
-            case model::PrescriptionType::direkteZuweisungPkv:
-                return "erp.task_209";
-        }
-        Fail("invalid prescription type: " + std::to_string(uintmax_t(type)));
-    }
 
     pqxx::connection& getConnection()
     {
@@ -192,7 +176,6 @@ private:
     std::shared_ptr<BlobCache> mBlobCache;
     std::unique_ptr<HsmPool> mHsmPool;
     std::unique_ptr<KeyDerivation> mKeyDerivation;
-    std::unique_ptr<DurationConsumerGuard> mDurationConsumerGuard;
 };
 
 #endif

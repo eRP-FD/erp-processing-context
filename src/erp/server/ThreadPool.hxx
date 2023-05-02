@@ -26,7 +26,7 @@ public:
     ThreadPool (void);
     ~ThreadPool (void);
 
-    void setUp (size_t threadCount, std::string_view threadBaseName);
+    void setUp (size_t threadCount);
 
     boost::asio::io_context& ioContext();
     const boost::asio::io_context& ioContext() const;

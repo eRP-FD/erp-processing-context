@@ -54,11 +54,6 @@ bool MockDatabaseProxy::isCommitted() const
     return ! transactionMonitor.inProgress;
 }
 
-std::string MockDatabaseProxy::retrieveSchemaVersion()
-{
-    return mDatabase.retrieveSchemaVersion();
-}
-
 void MockDatabaseProxy::healthCheck()
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);

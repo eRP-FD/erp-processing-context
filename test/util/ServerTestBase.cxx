@@ -4,36 +4,37 @@
  */
 
 #include "test/util/ServerTestBase.hxx"
-#include "TestUtils.hxx"
+
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/model/ChargeItem.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/KbvBundle.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/Patient.hxx"
-#include "erp/model/ResourceFactory.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
+
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
+
+#include "test_config.h"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/RegistrationMock.hxx"
-#include "test/util/CryptoHelper.hxx"
-#include "test/util/ResourceManager.hxx"
-#include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 
 #ifdef _WINNT_
@@ -112,7 +113,7 @@ void ServerTestBase::startServer (void)
         static_cast<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)),
         std::move(handlers),
         *mContext);
-    mServer->serve(serverThreadCount, "admin-test");
+    mServer->serve(serverThreadCount);
 }
 
 
@@ -122,14 +123,14 @@ void ServerTestBase::SetUp (void)
     {
         startServer();
     }
-    catch(const std::exception& exc)
+    catch(std::exception& exc)
     {
-        TLOG(ERROR) << "starting the server failed, reason: " << exc.what();
+        LOG(ERROR) << "starting the server failed, reason: " << exc.what();
         FAIL();
     }
     catch(...)
     {
-        TLOG(ERROR) << "starting the server failed";
+        LOG(ERROR) << "starting the server failed";
         FAIL();
     }
 
@@ -142,7 +143,6 @@ void ServerTestBase::SetUp (void)
         deleteTxn.exec("DELETE FROM erp.task_200");
         deleteTxn.exec("DELETE FROM erp.task_209");
         deleteTxn.exec("DELETE FROM erp.auditevent");
-        deleteTxn.exec("DELETE FROM erp.charge_item");
         deleteTxn.commit();
     }
 }
@@ -167,7 +167,6 @@ void ServerTestBase::TearDown (void)
         deleteTxn.exec("DELETE FROM erp.task_200");
         deleteTxn.exec("DELETE FROM erp.task_209");
         deleteTxn.exec("DELETE FROM erp.auditevent");
-        deleteTxn.exec("DELETE FROM erp.charge_item");
         deleteTxn.commit();
     }
 }
@@ -290,40 +289,7 @@ ClientResponse ServerTestBase::verifyOuterResponse (const ClientResponse& outerR
     EXPECT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
     EXPECT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), MimeType::binary);
 
-    auto innerResponse = mTeeProtocol.parseResponse(outerResponse);
-    validateInnerResponse(innerResponse);
-    return innerResponse;
-}
-
-void ServerTestBase::validateInnerResponse(const ClientResponse& innerResponse) const
-{
-    auto fhirBundleVersion = model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>();
-    // Enable the output validation for the "after transition phase" case, because otherwise old profiles may occur.
-    // Old profiles cannot be validated generically due to inconsistencies.
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        std::optional<model::UnspecifiedResource> resourceForValidation;
-        if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
-        {
-            resourceForValidation = model::UnspecifiedResource::fromXmlNoValidation(innerResponse.getBody());
-        }
-        else if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirJsonUtf8})
-        {
-            resourceForValidation = model::UnspecifiedResource::fromJsonNoValidation(innerResponse.getBody());
-        }
-        if (resourceForValidation)
-        {
-            fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
-            auto validationResult = resourceForValidation->genericValidate(fhirBundleVersion, options);
-            auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
-            for (const auto& item : filteredValidationErrors)
-            {
-                ASSERT_LT(item.severity(), fhirtools::Severity::error) << to_string(item) << "\n"
-                                                                       << innerResponse.getBody();
-            }
-        }
-    }
+    return mTeeProtocol.parseResponse(outerResponse);
 }
 
 
@@ -428,7 +394,7 @@ Task ServerTestBase::addTaskToDatabase(const TaskDescriptor& descriptor)
         Fail("To cancel a task the task must have been created before");
     }
 
-    Task task = createTask(descriptor.accessCode, descriptor.prescriptionType);
+    Task task = createTask(descriptor.accessCode);
 
     if (descriptor.status == Task::Status::ready)
     {
@@ -448,10 +414,9 @@ Task ServerTestBase::addTaskToDatabase(const TaskDescriptor& descriptor)
     return task;
 }
 
-Task ServerTestBase::createTask(
-    const std::string& accessCode,
-    model::PrescriptionType prescriptionType)
+Task ServerTestBase::createTask(const std::string& accessCode)
 {
+    PrescriptionType prescriptionType = PrescriptionType::apothekenpflichigeArzneimittel;
     Task task(prescriptionType, accessCode);
     auto database = createDatabase();
     PrescriptionId prescriptionId = database->storeTask(task);
@@ -468,12 +433,11 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
 
     const auto prescriptionBundleXmlString = ResourceTemplates::kbvBundleXml(
         {.prescriptionId = prescriptionId, .kvnr = kvnrPatient});
-    static const fhirtools::ValidatorOptions validatorOptions{.allowNonLiteralAuthorReference = true};
     const auto prescriptionBundle =
-            ResourceFactory<KbvBundle>::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
-                                                {.validatorOptions = validatorOptions})
-            .getValidated(SchemaType::KBV_PR_ERP_Bundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                 model::ResourceVersion::supportedBundles());
+        KbvBundle::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
+                           *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+                           model::ResourceVersion::supportedBundles(),
+                           {{.allowNonLiteralAuthorReference = true}});
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
     ASSERT_FALSE(patients.empty());
@@ -560,6 +524,11 @@ void ServerTestBase::abortTask(Task& task)
     PrescriptionId prescriptionId = task.prescriptionId();
 
     task.setStatus(model::Task::Status::cancelled);
+    task.deleteKvnr();
+    task.deleteInput();
+    task.deleteOutput();
+    task.deleteAccessCode();
+    task.deleteSecret();
     task.updateLastUpdate();
 
     auto database = createDatabase();
@@ -652,43 +621,6 @@ model::Communication ServerTestBase::addCommunicationToDatabase(const Communicat
     communication.setId(communicationId.value());
     return communication;
 
-}
-
-model::ChargeItem ServerTestBase::addChargeItemToDatabase(const ChargeItemDescriptor& descriptor)
-{
-    auto& resourceManager = ResourceManager::instance();
-    const auto chargeItemInput = resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_input_marked.json");
-    auto chargeItem = model::ChargeItem::fromJsonNoValidation(chargeItemInput);
-    const auto dispenseItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
-    const auto dispenseItemBundle = ::model::Bundle::fromXmlNoValidation(dispenseItemXML);
-
-    const auto kbvBundlePkvXml =
-        ResourceTemplates::kbvBundleXml({.prescriptionId = descriptor.prescriptionId, .kvnr = descriptor.kvnrStr});
-    const auto& kbvBundlePkv = CryptoHelper::toCadesBesSignature(kbvBundlePkvXml);
-    auto healthCarePrescriptionBundlePkv = model::Binary(descriptor.healthCarePrescriptionUuid, kbvBundlePkv);
-
-    chargeItem.setPrescriptionId(descriptor.prescriptionId);
-    chargeItem.setSubjectKvnr(descriptor.kvnrStr);
-    chargeItem.setEntererTelematikId(descriptor.telematikId);
-    chargeItem.setAccessCode(descriptor.accessCode);
-
-    auto result = model::ChargeItem::fromJsonNoValidation(chargeItem.serializeToJsonString());
-
-    auto database = createDatabase();
-    database->storeChargeInformation(
-        model::ChargeInformation{
-            std::move(chargeItem), std::move(healthCarePrescriptionBundlePkv),
-            model::Bundle::fromXmlNoValidation(kbvBundlePkvXml),
-            model::Binary{dispenseItemBundle.getIdentifier().toString(),
-                            CryptoHelper::toCadesBesSignature(dispenseItemBundle.serializeToJsonString())},
-            model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML),
-            model::Bundle::fromJsonNoValidation(
-                String::replaceAll(
-                    resourceManager.getStringResource("test/EndpointHandlerTest/receipt_template.json"),
-                    "##PRESCRIPTION_ID##", descriptor.prescriptionId.toString()))});
-    database->commitTransaction();
-
-    return result;
 }
 
 void ServerTestBase::initializeIdp (Idp& idp)

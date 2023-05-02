@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:complexType name="Gem_erxPrescriptionID.Identifier">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="IdentifierUse.restricted" minOccurs="0"/>
+          <xs:element name="type" type="Gem_erxIdentifierTypeCodes" minOccurs="0"/>
+          <xs:element name="system" type="Gem_erxPrescriptionID.Identifier.uri"/>
+          <xs:element name="value" type="Gem_erxPrescriptionID.Identifier.value"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="assigner" type="Reference" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxIdentifierTypeCodes">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="Gem_erxIdentifierTypeCodes.Coding" minOccurs="0" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxIdentifierTypeCodes.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="Gem_erxIdentifierTypeCodes.Coding.system" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="Gem_erxIdentifierTypeCodes.Coding.code" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxIdentifierTypeCodes.Coding.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://terminology.hl7.org/CodeSystem/v2-0203"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxIdentifierTypeCodes.Coding.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="Gem_erxIdentifierTypeCodes.Coding.code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="Gem_erxIdentifierTypeCodes.Coding.code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="DL"/>
+      <xs:enumeration value="PPN"/>
+      <xs:enumeration value="BRN"/>
+      <xs:enumeration value="MR"/>
+      <xs:enumeration value="MCN"/>
+      <xs:enumeration value="EN"/>
+      <xs:enumeration value="TAX"/>
+      <xs:enumeration value="NIIP"/>
+      <xs:enumeration value="PRN"/>
+      <xs:enumeration value="MD"/>
+      <xs:enumeration value="DR"/>
+      <xs:enumeration value="ACSN"/>
+      <xs:enumeration value="UDI"/>
+      <xs:enumeration value="SNO"/>
+      <xs:enumeration value="SB"/>
+      <xs:enumeration value="PLAC"/>
+      <xs:enumeration value="FILL"/>
+      <xs:enumeration value="JHN"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Gem_erxPrescriptionID.Identifier.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="Gem_erxPrescriptionID.Identifier.value">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="prescription-id-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="prescription-id-primitive">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(([0-9]{3}\.){5}[0-9]{2})?"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="KVID.Identifier">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="IdentifierUse.restricted" minOccurs="0"/>
+          <xs:element name="type" type="KVID.CodeableConcept" minOccurs="0"/>
+          <xs:element name="system" type="KVID.Identifier.uri"/>
+          <xs:element name="value" type="string"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="assigner" type="Reference" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KVID.Identifier.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/NamingSystem/gkv/kvid-10"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KVID.CodeableConcept">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="coding" type="KVID.Coding" maxOccurs="unbounded"/>
+          <xs:element name="text" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KVID.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="system.identifier-basis.kvnr"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="code.identifier-basis.kvnr"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="system.identifier-basis.kvnr">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/CodeSystem/identifier-type-de-basis"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="code.identifier-basis.kvnr">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="code-primitive" fixed="GKV"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="TelematikID.Identifier">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="IdentifierUse" minOccurs="0"/>
+          <xs:element name="type" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="system" type="TelematikID.Identifier.uri"/>
+          <xs:element name="value" type="string"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="assigner" type="Reference" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="TelematikID.Identifier.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="https://gematik.de/fhir/NamingSystem/TelematikID"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="TelematikID.Reference">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="uri" minOccurs="0"/>
+          <xs:element name="identifier" type="TelematikID.Identifier"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KVID.Reference">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="uri" minOccurs="0"/>
+          <xs:element name="identifier" type="KVID.Identifier"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KVID_TelematikID.Reference">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="reference" type="string" minOccurs="0"/>
+          <xs:element name="type" type="uri" minOccurs="0"/>
+          <xs:element name="identifier" type="KVID_TelematikID.Identifier"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KVID_TelematikID.Identifier">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="use" type="IdentifierUse" minOccurs="0"/>
+          <xs:element name="type" type="CodeableConcept" minOccurs="0"/>
+          <xs:element name="system" type="KVID_TelematikID.Identifier.uri"/>
+          <xs:element name="value" type="string"/>
+          <xs:element name="period" type="Period" minOccurs="0"/>
+          <xs:element name="assigner" type="Reference" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KVID_TelematikID.Identifier.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="KVID_TelematikID.Identifier.uri-primitive"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="KVID_TelematikID.Identifier.uri-primitive">
+    <xs:restriction base="uri-primitive">
+      <xs:enumeration value="https://gematik.de/fhir/NamingSystem/TelematikID"/>
+      <xs:enumeration value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
+    </xs:restriction>
+  </xs:simpleType>  
+</xs:schema>

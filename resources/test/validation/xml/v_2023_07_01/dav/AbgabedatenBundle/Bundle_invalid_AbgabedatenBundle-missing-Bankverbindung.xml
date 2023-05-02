@@ -1,7 +1,7 @@
 <Bundle xmlns="http://hl7.org/fhir">
    <id value="ad80703d-8c62-44a3-b12b-2ea66eda0aa2" />
    <meta>
-      <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle|1.2" />
+      <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle|1.1" />
       <tag>
          <display value="Beispiel RezeptAbgabedatenPKV Bundle (FAM)" />
       </tag>
@@ -21,7 +21,7 @@
          <Composition>
             <id value="72183b44-61cf-4fe7-8f74-1e37d58fcea8" />
             <meta>
-               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenComposition|1.2" />
+               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenComposition|1.1" />
             </meta>
             <status value="final" />
             <type>
@@ -56,7 +56,7 @@
          <Organization>
             <id value="5dc67a4f-c936-4c26-a7c0-967673a70740" />
             <meta>
-               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Apotheke|1.2" />
+               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Apotheke|1.1" />
             </meta>
             <identifier>
                <system value="http://fhir.de/sid/arge-ik/iknr" />
@@ -86,7 +86,7 @@
          <MedicationDispense>
             <id value="335784b4-3f89-47cc-b32f-bc386a212e11" />
             <meta>
-               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abgabeinformationen|1.2" />
+               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abgabeinformationen|1.1" />
             </meta>
             <extension url="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Abrechnungszeilen">
                <valueReference>
@@ -135,7 +135,7 @@
          <Invoice>
             <id value="cfd49ec7-fd9c-4ab3-865f-f0aaf010ca19" />
             <meta>
-               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abrechnungszeilen|1.2" />
+               <profile value="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abrechnungszeilen|1.1" />
             </meta>
             <status value="issued" />
             <type>

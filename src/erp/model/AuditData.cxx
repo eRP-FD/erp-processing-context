@@ -47,6 +47,7 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
     {
         case model::AuditEventId::GET_Task:
         case model::AuditEventId::GET_Tasks_by_pharmacy_with_pz:
+        case model::AuditEventId::GET_Tasks_by_pharmacy_without_pz:
         case model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed:
             return "Task";
         case model::AuditEventId::GET_Task_id_insurant:
@@ -90,12 +91,14 @@ namespace
 
 const rapidjson::Pointer agentNamePointer("/an");
 const rapidjson::Pointer agentWhoPointer("/aw");
+const rapidjson::Pointer pnwPzNumberPointer("/pz");
 
 }
 
 
 AuditMetaData::AuditMetaData(const std::optional<std::string_view>& agentName,
-                             const std::optional<std::string_view>& agentWho)
+                             const std::optional<std::string_view>& agentWho,
+                             const std::optional<std::string_view>& pnwPzNumber)
 : Resource<AuditMetaData>(Resource::NoProfile)
 {
     if (agentName.has_value())
@@ -106,6 +109,11 @@ AuditMetaData::AuditMetaData(const std::optional<std::string_view>& agentName,
     if (agentWho.has_value())
     {
         setValue(agentWhoPointer, agentWho.value());
+    }
+
+    if (pnwPzNumber.has_value())
+    {
+        setValue(pnwPzNumberPointer, pnwPzNumber.value());
     }
 }
 
@@ -119,9 +127,14 @@ std::optional<std::string_view> AuditMetaData::agentWho() const
     return getOptionalStringValue(agentWhoPointer);
 }
 
+std::optional<std::string_view> AuditMetaData::pnwPzNumber() const
+{
+    return getOptionalStringValue(pnwPzNumberPointer);
+}
+
 bool AuditMetaData::isEmpty() const
 {
-    return !agentName().has_value() && !agentWho().has_value();
+    return !agentName().has_value() && !agentWho().has_value() && !pnwPzNumber().has_value();
 }
 
 AuditMetaData::AuditMetaData(NumberAsStringParserDocument&& jsonTree)

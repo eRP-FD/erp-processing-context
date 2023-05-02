@@ -99,8 +99,8 @@ Device::Device(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
 {
     setId(std::to_string(Id));
     setStatus(Status::active);
-    setVersion(ErpServerInfo::ReleaseVersion());
-    setSerialNumber(ErpServerInfo::ReleaseVersion());
+    setVersion(ErpServerInfo::ReleaseVersion);
+    setSerialNumber(ErpServerInfo::ReleaseVersion);
     setName(Name);
     setContact(CommunicationSystem::email, Email);
 }

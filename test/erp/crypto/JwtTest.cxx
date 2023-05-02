@@ -493,12 +493,10 @@ TEST_F(JwtTest, ConstructorChecks)//NOLINT(readability-function-cognitive-comple
         rapidjson::Document claim;
         ASSERT_NO_THROW(claim.Parse(claimString));
 
-        const auto now_epoch_secs =
-            std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
-        const auto iat = now_epoch_secs;
-        const auto exp = now_epoch_secs + 30s;
-        claim[std::string{JWT::expClaim}].SetInt64(exp.count());
-        claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
+        const auto now = std::chrono::system_clock::now();
+        const auto exp_iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+        claim[std::string{JWT::expClaim}].SetInt64(exp_iat.count());
+        claim[std::string{JWT::iatClaim}].SetInt64(exp_iat.count());
         claim.RemoveMember(std::string{JWT::nbfClaim});
 
         JwtBuilder builder{mIdpPrivateKey};

@@ -85,7 +85,7 @@ namespace
         {
             const std::string contentType = "application/ocsp-request";
 
-            TVLOG(2) << "OCSP request (base64-encoded) on Url: " << url.url << "\n"
+            VLOG(2) << "OCSP request (base64-encoded) on Url: " << url.url << "\n"
                     << Base64::encode(request) << "\n\n";
 
             const auto response = requestSender.send(
@@ -94,7 +94,7 @@ namespace
                 std::string(reinterpret_cast<const char*>(request.data()), request.size()),
                 contentType);
 
-            TVLOG(2) << "OCSP response, status=" << response.getHeader().status()
+            VLOG(2) << "OCSP response, status=" << response.getHeader().status()
                     << " (base-encoded):\n" << Base64::encode(response.getBody()) << "\n\n";
 
             timer.keyValue("response-code", std::to_string(toNumericalValue(response.getHeader().status())));
@@ -478,7 +478,7 @@ namespace
                 ocspSignerCertificates,
                 validateHashExtension);
 
-        TVLOG(2) << "Returning new OCSP status: " << status.to_string();
+        VLOG(2) << "Returning new OCSP status: " << status.to_string();
         if (status.certificateStatus != OcspService::CertificateStatus::unknown)
         {
             // the returned OCSP response is only cached if the status is not unknown
@@ -508,7 +508,7 @@ namespace
             const OcspCheckDescriptor& ocspCheckDescriptor)
     {
         OcspRequestPtr request = createOcspRequest(certId);
-        TVLOG(2) << "Sending new OCSP request with URL: " << ocspUrl.url;
+        VLOG(2) << "Sending new OCSP request with URL: " << ocspUrl.url;
         const std::string response{
             sendOcspRequest(requestSender, ocspUrl, toBuffer(request))};
         OcspResponsePtr ocspResponse = OcspHelper::stringToOcspResponse(response);
@@ -552,7 +552,7 @@ namespace
             const bool validateHashExtension,
             const OcspCheckDescriptor& ocspCheckDescriptor)
     {
-        TVLOG(2) << "OcspService: getCurrentStatusAndResponse";
+        VLOG(2) << "OcspService: getCurrentStatusAndResponse";
 
         Expect( certificate.hasX509Ptr() && issuer.hasX509Ptr(),
                 "Invalid certificate is provided for OCSP verification.");
@@ -587,7 +587,7 @@ namespace
                             trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
                         if (cachedOcspData.has_value())
                         {
-                            TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
+                            VLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
                             return cachedOcspData->status;
                         }
                     }
@@ -616,7 +616,7 @@ namespace
                         trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
                     if (cachedOcspData.has_value())
                     {
-                        TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
+                        VLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
                         return cachedOcspData->status;
                     }
 

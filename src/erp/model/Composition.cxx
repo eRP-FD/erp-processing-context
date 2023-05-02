@@ -11,7 +11,6 @@
 #include "ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
-#include "erp/util/Uuid.hxx"
 
 
 namespace model

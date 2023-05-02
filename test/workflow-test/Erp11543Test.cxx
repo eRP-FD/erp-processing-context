@@ -16,26 +16,21 @@ class Erp11543Test : public ErpWorkflowTest
 public:
     void SetUp() override
     {
-        if (! Configuration::instance().featurePkvEnabled() ||
-            ! model::ResourceVersion::isProfileSupported(
-                model::ResourceVersion::DeGematikErezeptPatientenrechnungR4::v1_0_0))
-        {
-            GTEST_SKIP();
-        }
-
         ErpWorkflowTest::SetUp();
+        envVars = testutils::getNewFhirProfileEnvironment();
         std::string accessCode{};
+        std::optional<model::KbvBundle> kbvBundle{};
+        std::optional<model::ErxReceipt> closeReceipt{};
 
         mKvnr = generateNewRandomKVNR().id();
         ASSERT_NO_FATAL_FAILURE(
             createClosedTask(mPrescriptionId,
-                             mKbvBundle,
-                             mCloseReceipt,
+                             kbvBundle,
+                             closeReceipt,
                              accessCode,
                              mSecret,
                              model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
                              mKvnr));
-        mCloseReceipt->removeSignature();
 
         std::optional<model::Consent> consent{};
         ASSERT_NO_FATAL_FAILURE(consent = consentPost(mKvnr, model::Timestamp::now()));
@@ -48,27 +43,17 @@ public:
         ErpWorkflowTest::TearDown();
     }
 
-    void createAndGetChargeItem()
+    void postChargeItem()
     {
-        if (!mCreatedChargeItem.has_value())
+        if (!mPostedChargeItem.has_value())
         {
-            ASSERT_NO_FATAL_FAILURE(mCreatedChargeItem = chargeItemPost(
+            ASSERT_NO_FATAL_FAILURE(mPostedChargeItem = chargeItemPost(
                                         *mPrescriptionId,
                                         mKvnr,
                                         jwtApotheke().stringForClaim(JWT::idNumberClaim).value(),
                                         mSecret));
-            ASSERT_TRUE(mCreatedChargeItem);
-
-            const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(mKvnr);
-            std::optional<model::Bundle> chargeItemsBundle;
-            ASSERT_NO_FATAL_FAILURE(
-                chargeItemsBundle = chargeItemGetId(jwtInsurant, ContentMimeType::fhirJsonUtf8,
-                                                    *mPrescriptionId, std::nullopt,
-                                                    mKbvBundle, mCloseReceipt));
-            auto chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
-            EXPECT_EQ(chargeItems.size(), 1);
-            mCreatedChargeItem = model::ChargeItem::fromJsonNoValidation(chargeItems[0].serializeToJsonString());
-            mCreatedChargeItem->deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle);
+            ASSERT_TRUE(mPostedChargeItem);
+            mPostedChargeItem->deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle);
 
             mDispenseBundle = ResourceManager::instance().getStringResource(
                 "test/EndpointHandlerTest/dispense_item.xml");
@@ -76,13 +61,10 @@ public:
     }
 
     std::optional<model::PrescriptionId> mPrescriptionId;
-    std::optional<model::ChargeItem> mCreatedChargeItem;
+    std::optional<model::ChargeItem> mPostedChargeItem;
     std::optional<std::string> mDispenseBundle;
     std::string mKvnr;
     std::string mSecret;
-    std::optional<model::KbvBundle> mKbvBundle;
-    std::optional<model::ErxReceipt> mCloseReceipt;
-
 private:
     std::vector<EnvironmentVariableGuard> envVars;
 };
@@ -149,8 +131,8 @@ TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignature)
 {
     A_22150.test("PUT ChargeItem: bad signature for KBV dispense bundle should be rejected");
 
-    ASSERT_NO_FATAL_FAILURE(createAndGetChargeItem());
-    ASSERT_TRUE(mCreatedChargeItem);
+    postChargeItem();
+    ASSERT_TRUE(mPostedChargeItem);
     ASSERT_TRUE(mDispenseBundle);
 
     const auto signFunction = [](const std::string& data)
@@ -169,13 +151,12 @@ TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignature)
         return Base64::encode(badSignature);
     };
 
-    std::variant<model::ChargeItem, model::OperationOutcome> chargeItem{model::OperationOutcome(model::OperationOutcome::Issue{})};
+    std::variant<model::ChargeItem, model::OperationOutcome> chargeItem{};
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPut(
                                 jwtApotheke(),
                                 ContentMimeType::fhirXmlUtf8,
-                                *mCreatedChargeItem,
+                                *mPostedChargeItem,
                                 *mDispenseBundle,
-                                mCreatedChargeItem->accessCode().value(),
                                 HttpStatus::BadRequest,
                                 model::OperationOutcome::Issue::Type::invalid,
                                 signFunction));
@@ -189,8 +170,8 @@ TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignatureCertificate)
 {
     A_22151.test("PUT ChargeItem: bad certificate of KBV dispense bundle signature should be rejected");
 
-    ASSERT_NO_FATAL_FAILURE(createAndGetChargeItem());
-    ASSERT_TRUE(mCreatedChargeItem);
+    postChargeItem();
+    ASSERT_TRUE(mPostedChargeItem);
     ASSERT_TRUE(mDispenseBundle);
 
     const auto signFunction = [](const std::string& data)
@@ -201,13 +182,12 @@ TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignatureCertificate)
                                  std::nullopt}.getBase64();
     };
 
-    std::variant<model::ChargeItem, model::OperationOutcome> chargeItem{model::OperationOutcome(model::OperationOutcome::Issue{})};
+    std::variant<model::ChargeItem, model::OperationOutcome> chargeItem;
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPut(
                                 jwtApotheke(),
                                 ContentMimeType::fhirXmlUtf8,
-                                *mCreatedChargeItem,
+                                *mPostedChargeItem,
                                 *mDispenseBundle,
-                                mCreatedChargeItem->accessCode().value(),
                                 HttpStatus::BadRequest,
                                 model::OperationOutcome::Issue::Type::invalid,
                                 signFunction));

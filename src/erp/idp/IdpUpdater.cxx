@@ -60,7 +60,7 @@ std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::Url
             TLOG(WARNING) << "Connecting " << url.toString() << " failed, retry count " << index;
         }
     }
-    TVLOG(3) << "GET:" << url.toString() << " status=" << toString(response.getHeader().status()) << " body=" << response.getBody();
+    VLOG(3) << "GET:" << url.toString() << " status=" << toString(response.getHeader().status()) << " body=" << response.getBody();
     Expect(response.getHeader().status() == HttpStatus::OK, "call failed");
 
     return response.getBody();
@@ -306,7 +306,7 @@ void IdpUpdater::reportUpdateStatus (const UpdateStatus status, std::string_view
 {
     if (status == UpdateStatus::Success)
     {
-        JsonLog(LogId::IDP_UPDATE_SUCCESS, JsonLog::makeVLogReceiver(0))
+        JsonLog(LogId::IDP_UPDATE_SUCCESS)
             .message(getMessageText(status))
             .details(details)
             .keyValue("failedRetries", std::to_string(mUpdateFailureCount));

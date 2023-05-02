@@ -9,8 +9,6 @@
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/Database.hxx"
-#include "erp/hsm/VsdmKeyBlobDatabase.hxx"
-#include "erp/hsm/VsdmKeyCache.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/service/DosHandler.hxx"
 #include "erp/validation/JsonValidator.hxx"
@@ -50,7 +48,6 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mBlobCache(factories.blobCacheFactory())
     , mHsmPool(std::make_unique<HsmPool>(factories.hsmFactoryFactory(factories.hsmClientFactory(), mBlobCache),
                                         factories.teeTokenUpdaterFactory, mTimerManager))
-    , mVsdmKeyCache(std::make_unique<VsdmKeyCache>(factories.vsdmKeyBlobDatabaseFactory(), *mHsmPool))
     , mKeyDerivation(*mHsmPool)
     , mJsonValidator(factories.jsonValidatorFactory())
     , mXmlValidator(factories.xmlValidatorFactory())
@@ -60,7 +57,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mTslManager(factories.tslManagerFactory(mXmlValidator))
     , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, *mTslManager, *mHsmPool))
     , mTslRefreshJob(setupTslRefreshJob(*mTslManager, configuration))
-    , mReportPseudonameKeyRefreshJob(PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(*mHsmPool, *getBlobCache(), configuration))
+    , mReportPseudonameKeyRefreshJob(PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(*mHsmPool, getBlobCache(), configuration))
     , mRegistrationInterface(std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(), factories.redisClientFactory()))
     , mTpmFactory(std::move(factories.tpmFactory))
 // GEMREQ-end A_20974-01
@@ -223,22 +220,10 @@ HttpsServer& PcServiceContext::getAdminServer() const
 {
     return *mAdminServer;
 }
-
-std::shared_ptr<BlobCache> PcServiceContext::getBlobCache() const
+BlobCache& PcServiceContext::getBlobCache() const
 {
-    return mBlobCache;
+    return *mBlobCache;
 }
-
-VsdmKeyBlobDatabase& PcServiceContext::getVsdmKeyBlobDatabase() const
-{
-    return mVsdmKeyCache->getVsdmKeyBlobDatabase();
-}
-
-VsdmKeyCache& PcServiceContext::getVsdmKeyCache() const
-{
-    return *mVsdmKeyCache;
-}
-
 std::shared_ptr<Timer> PcServiceContext::getTimerManager()
 {
     return mTimerManager;

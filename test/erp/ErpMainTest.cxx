@@ -101,14 +101,14 @@ public:
 
         // Initialization of the processing context takes some time. Wait until all is setup and the PC is waiting for
         // its termination.
-        TVLOG(1) << "waiting for the processing context to finish its initialization";
+        VLOG(1) << "waiting for the processing context to finish its initialization";
         auto currentState = state.waitForValue(ErpMain::State::WaitingForTermination, std::chrono::seconds(60));
         ASSERT_EQ(currentState, ErpMain::State::WaitingForTermination);
 
         makeRequests();
         terminationAction();
 
-        TVLOG(0) << "requested termination, waiting for that to finish";
+        VLOG(0) << "requested termination, waiting for that to finish";
         currentState = state.waitForValue(ErpMain::State::Terminated, std::chrono::seconds(15));
         ASSERT_EQ(currentState, ErpMain::State::Terminated);
 
@@ -147,7 +147,7 @@ public:
             // Expecting an exception
             FAIL();
         }
-        catch(const boost::system::system_error& e)
+        catch(boost::system::system_error& e)
         {
             ASSERT_EQ(e.code(), boost::asio::error::connection_refused);
         }

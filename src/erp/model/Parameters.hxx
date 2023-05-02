@@ -54,8 +54,8 @@ public:
     model::ChargeItemMarkingFlags getChargeItemMarkingFlags() const;
 
 private:
-    friend class Resource;
-    using Resource::Resource;
+    friend Resource;
+    explicit Parameters (NumberAsStringParserDocument&& document);
 
     void updateMarkingFlagFromPartArray(
         const NumberAsStringParserDocument::ConstArray& partArray,

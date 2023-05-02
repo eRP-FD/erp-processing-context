@@ -82,13 +82,12 @@ private:
     std::string supportingInfoTypeToReference(SupportingInfoType supportingInfoType) const;
 };
 
-// NOLINTNEXTLINE(bugprone-exception-escape)
 struct ChargeInformation {
     ::model::ChargeItem chargeItem;
     ::std::optional<::model::Binary> prescription;
     ::std::optional<::model::Bundle> unsignedPrescription;
-    ::std::optional<::model::Binary> dispenseItem;
-    ::std::optional<::model::AbgabedatenPkvBundle> unsignedDispenseItem;
+    ::model::Binary dispenseItem;
+    ::model::AbgabedatenPkvBundle unsignedDispenseItem;
     ::std::optional<::model::Bundle> receipt;
 };
 

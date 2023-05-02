@@ -87,7 +87,7 @@ void TeeTokenUpdater::update (void)
         mTeeTokenConsumer(mTokenProvider(mHsmFactory));
 
         // Update was successful.
-        JsonLog(LogId::HSM_INFO, JsonLog::makeVLogReceiver(0))
+        JsonLog(LogId::HSM_INFO)
                 .message("tee token update successful")
                 .keyValue("failed-update-count", std::to_string(mUpdateFailureCount));
         mUpdateFailureCount = 0;
@@ -101,7 +101,7 @@ void TeeTokenUpdater::update (void)
 
         ++mUpdateFailureCount;
 
-        JsonLog(LogId::HSM_WARNING, JsonLog::makeWarningLogReceiver())
+        JsonLog(LogId::HSM_WARNING)
             .message("tee token update failed, will try again")
             .details(getExceptionMessage())
             .keyValue("failed-update-count", std::to_string(mUpdateFailureCount));

@@ -48,6 +48,7 @@ private:
 };
 
 bool operator==(const std::string& lhs, const MimeType& rhs);
+bool operator==(const MimeType& lhs, const std::string& rhs);
 
 /// @brief the MimeType used in the AcceptHeader of the HTTP-Request
 class AcceptMimeType : public MimeType

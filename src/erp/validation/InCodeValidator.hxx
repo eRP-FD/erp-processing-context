@@ -32,12 +32,29 @@ class InCodeValidator
 {
 public:
     InCodeValidator();
-    void validate(const model::ResourceBase& resource, SchemaType schemaType, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType, model::ResourceVersion::KbvItaErp version,
+                  const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::DeGematikErezeptWorkflowR4 version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::NotProfiled version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::Fhir version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::DeGematikErezeptPatientenrechnungR4 version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::WorkflowOrPatientenRechnungProfile version, const XmlValidator& xmlValidator) const;
+    void validate(const model::ResourceBase& resource, SchemaType schemaType,
+                  model::ResourceVersion::AbgabedatenPkv version, const XmlValidator& xmlValidator) const;
 
 private:
     std::set<SchemaType> mMandatoryValidation;
 
-    std::map<SchemaType, std::unique_ptr<ResourceValidator>> mValidators;
+    using KeyGem = std::pair<SchemaType, model::ResourceVersion::DeGematikErezeptWorkflowR4>;
+    std::map<KeyGem, std::unique_ptr<ResourceValidator>> mGematikValidators;
+
+    using KeyKbv = std::pair<SchemaType, model::ResourceVersion::KbvItaErp>;
+    std::map<KeyKbv, std::unique_ptr<ResourceValidator>> mKbvValidators;
 };
 
 

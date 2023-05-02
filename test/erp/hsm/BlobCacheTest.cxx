@@ -36,14 +36,6 @@ public:
         Fail("unknwon blob");
     }
 
-    Entry getBlob(BlobType type, const ErpVector& name) const override
-    {
-        for (const auto& entry : mEntries)
-            if (entry.type == type && entry.name == name)
-                return entry;
-        Fail("unknwon blob");
-    }
-
     std::vector<Entry> getAllBlobsSortedById (void) const override
     {
         getAllBlobsCallcount++;

@@ -21,7 +21,8 @@
             "entlassRezeptValidityInWorkDays": "6",
             "holidays": ["01-01", "Karfreitag", "Ostermontag", "05-01", "Himmelfahrt", "Pfingstmontag", "10-03", "12-25", "12-26"],
             "easterCsv": "@ERP_RUNTIME_RESOURCE_DIR@/easter.csv",
-            "kbvValidationOnUnknownExtension": "reject",
+            "kbvValidation": "true",
+            "kbvValidationOnUnknownExtension": "report",
             "kbvValidationNonLiteralAuthorRef": "allow",
             "authoredOnMustEqualSigningDate": "true"
           }
@@ -31,7 +32,8 @@
         },
         "subscription": {
           "signingKey": "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgBwZpm6omGaV11Lev\nmIQtqZCJEGvvXz2ocHzPeNQBmQyhRANCAARBPhwSXbt0WV0HXmEwCmma6ddKPzxx\nmqS1p2Bktj9v17J9yv8lhvjiAdhQ84R/ZGDHfAUw4FA9Mue7GKnnXK5B\n-----END PRIVATE KEY-----\n"
-        }
+        },
+        "genericValidation": "ignore_errors"
       },
       "postgres": {
         "host": "localhost",
@@ -55,21 +57,13 @@
         "@ERP_SCHEMA_DIR@hl7.fhir.r4.core/4.0.1/xml/fhir.xsd",
         "@ERP_SCHEMA_DIR@not-profiled/parameters/ActivateTaskParameters.xsd",
         "@ERP_SCHEMA_DIR@not-profiled/parameters/CreateTaskParameters.xsd",
+        "@ERP_SCHEMA_DIR@not-profiled/MedicationDispenseBundle.xsd",
         "@ERP_SCHEMA_DIR@tsl/BNA_tsl.xsd",
-        "@ERP_SCHEMA_DIR@tsl/Gematik_tsl.xsd",
-        "@ERP_SCHEMA_DIR@vsdm/Pruefungsnachweis.xsd"
+        "@ERP_SCHEMA_DIR@tsl/Gematik_tsl.xsd"
       ],
       "fhir-profile-old": {
         "valid-until" : "2023-07-01T00:00:00+01:00",
         "erp-fhir-version": "2022.01.01",
-        "fhir-validation": {
-          "mode": "disable",
-          "levels":{
-            "unreferenced-bundled-resource": "warning",
-            "unreferenced-contained-resource": "warning",
-            "mandatory-resolvable-reference-failure": "warning"
-          }
-        },
         "kbv.ita.erp": [
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Bundle.xsd",
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Composition.xsd",
@@ -81,7 +75,6 @@
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Prescription.xsd"
         ],
         "de.gematik.erezept-workflow.r4": [
-          "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/bundle/MedicationDispenseBundle.xsd",
           "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationDispReq.xsd",
           "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationInfoReq.xsd",
           "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationChargChangeReq.xsd",
@@ -270,13 +263,6 @@
         "valid-from": "2023-07-01T00:00:00+01:00",
         "render-from": "2023-07-01T00:00:00+01:00",
         "erp-fhir-version": "2023.07.01",
-        "fhir-validation": {
-          "levels":{
-            "unreferenced-bundled-resource": "error",
-            "unreferenced-contained-resource": "error",
-            "mandatory-resolvable-reference-failure": "error"
-          }
-        },
         "kbv.ita.erp": [
         ],
         "de.gematik.erezept-workflow.r4": [
@@ -290,8 +276,8 @@
             "@ERP_FHIR_RESOURCE_DIR@hl7.org/extension-definitions.xml",
             "@ERP_FHIR_RESOURCE_DIR@hl7.org/valuesets.xml",
             "@ERP_FHIR_RESOURCE_DIR@hl7.org/v3-codesystems.xml",
-            "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.3.1",
-            "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.2.0",
+            "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.3.0",
+            "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.1.0",
             "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.3.2/package",
             "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0",
             "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.2.0/package",
@@ -321,6 +307,13 @@
             "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml",
             "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.xml"
           ]
+        }
+      },
+      "fhir-validation": {
+        "levels":{
+          "unreferenced-bundled-resource": "warning",
+          "unreferenced-contained-resource": "warning",
+          "mandatory-resolvable-reference-failure": "warning"
         }
       },
       "redis": {
@@ -361,7 +354,7 @@
         },
         "resource-path": "@ERP_ENROLMENT_PATH@"
       },
-      "c.fd.sig-erp": "-----BEGIN CERTIFICATE-----\nMIIDKjCCAtCgAwIBAgIRAPKsXeT1ZkXlvPdaotCVNxMwCgYIKoZIzj0EAwIwgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBMSBURVNULU9OTFkwHhcNMjIwMjE1MjMwMDAwWhcNMjQwMjE0MjMwMDAwWjBKMRAwDgYDVQQDDAdlcmV6ZXB0MSkwJwYDVQQKDCBJQk0gRGV1dHNjaGxhbmQgR21iSCAtIE5PVC1WQUxJRDELMAkGA1UEBhMCREUwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEfu0bMWi5ntemd8CNHmQ0kNtAusT6Hu9pEOBWj9emcDUdnooLZoJzXGIhs1A4a6s2e+pOvho0hwKP3Efyc9rJPaOCAUQwggFAMB0GA1UdDgQWBBQNDEOa7UGudzG+bFXauo1ARKbVUjAOBgNVHQ8BAf8EBAMCBkAwFwYDVR0RBBAwDoIMRVJQLklCTS5URVNUMAwGA1UdEwEB/wQCMAAwUgYDVR0gBEswSTA7BggqghQATASBIzAvMC0GCCsGAQUFBwIBFiFodHRwOi8vd3d3LmdlbWF0aWsuZGUvZ28vcG9saWNpZXMwCgYIKoIUAEwEghswRgYIKwYBBQUHAQEEOjA4MDYGCCsGAQUFBzABhipodHRwOi8vb2NzcC10ZXN0Lm9jc3AudGVsZW1hdGlrLXRlc3Q6ODA4MC8wHwYDVR0jBBgwFoAUewxVJ07lpi9dHRHXsRv2e7nhRSUwKwYFKyQIAwMEIjAgMB4wHDAaMBgwCgwIRS1SZXplcHQwCgYIKoIUAEwEggMwCgYIKoZIzj0EAwIDSAAwRQIhAJTYRDJ5vrpqovuF04iACjL0tQaCm9+QPPDGOXkH+gP0AiBRA5zc7BkrkhKM7VTtNTwyagh5xTMI4iHKbxjC6BkgVA==\n-----END CERTIFICATE-----",
+      "c.fd.sig-erp": "-----BEGIN CERTIFICATE-----\nMIICxDCCAmugAwIBAgIHAPPxMc6DxzAKBggqhkjOPQQDAjCBhDELMAkGA1UEBhMC\nREUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMjAwBgNVBAsMKUtv\nbXBvbmVudGVuLUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMSAwHgYDVQQD\nDBdHRU0uS09NUC1DQTEwIFRFU1QtT05MWTAeFw0yMDEwMDcwMDAwMDBaFw0yNTA4\nMDcwMDAwMDBaMF4xCzAJBgNVBAYTAkRFMSYwJAYDVQQKDB1nZW1hdGlrIFRFU1Qt\nT05MWSAtIE5PVC1WQUxJRDEnMCUGA1UEAwweRVJQIFJlZmVyZW56ZW50d2lja2x1\nbmcgRkQgU2lnMFowFAYHKoZIzj0CAQYJKyQDAwIIAQEHA0IABEldYn6CK9ft8L8H\nMpJBRLSG852LwqbmFUkhbdsK1G4oBDYhAqB0IMyo+PJ3fUluggoAOHRDTPT0GR0W\nhqTFkFujgeswgegwOAYIKwYBBQUHAQEELDAqMCgGCCsGAQUFBzABhhxodHRwOi8v\nZWhjYS5nZW1hdGlrLmRlL29jc3AvMA4GA1UdDwEB/wQEAwIHgDAhBgNVHSAEGjAY\nMAoGCCqCFABMBIFLMAoGCCqCFABMBIEjMB8GA1UdIwQYMBaAFCjw+OapyHfMQ0Xb\nmq7XOoOsDg+oMB0GA1UdDgQWBBTFOF7jC4He9P41tN2Egygarc9zrzAMBgNVHRMB\nAf8EAjAAMCsGBSskCAMDBCIwIDAeMBwwGjAYMAoMCEUtUmV6ZXB0MAoGCCqCFABM\nBIIDMAoGCCqGSM49BAMCA0cAMEQCIC3GhnWAejWO73WwEKDJXtuMCQNQemw/KljS\neABzn0HdAiB+wSFkBccEME3+QjZEM0SJbQ02n+2KdU4piu2o0T35aA==\n-----END CERTIFICATE-----\n",
       "ecies-certificate--production": "-----BEGIN CERTIFICATE-----\nMIIC2zCCAoKgAwIBAgICG4EwCgYIKoZIzj0EAwIwgYQxCzAJBgNVBAYTAkRFMR8w\nHQYDVQQKDBZnZW1hdGlrIEdtYkggTk9ULVZBTElEMTIwMAYDVQQLDClLb21wb25l\nbnRlbi1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEgMB4GA1UEAwwXR0VN\nLktPTVAtQ0EyOCBURVNULU9OTFkwHhcNMjEwNTA4MTQxNDM2WhcNMjYwNTA3MTQx\nNDM1WjBiMQswCQYDVQQGEwJERTEiMCAGA1UECgwZSUJNIFRFU1QtT05MWSAtIE5P\nVC1WQUxJRDEZMBcGA1UEBRMQMDg3NDctVEVTVEVOQzAwMTEUMBIGA1UEAwwLZXJl\nemVwdC12YXUwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEGYKS7WheFUMO+OGZ\nJsfzgGU9oEimNUhqeWtORT+NorJjhH2Tufpbx2DU9lKuxYDvOpiR2te1jEtxAw0l\nsQi1CKOCAQIwgf8wHQYDVR0OBBYEFMukGrrEFtNOvFCkl+GWvdoWlNcyMB8GA1Ud\nIwQYMBaAFABqOJDzma4hj1La7sGMboCtYSLJME8GCCsGAQUFBwEBBEMwQTA/Bggr\nBgEFBQcwAYYzaHR0cDovL29jc3AyLXRlc3RyZWYua29tcC1jYS50ZWxlbWF0aWst\ndGVzdC9vY3NwL2VjMA4GA1UdDwEB/wQEAwIHgDAhBgNVHSAEGjAYMAoGCCqCFABM\nBIEjMAoGCCqCFABMBIFLMAwGA1UdEwEB/wQCMAAwKwYFKyQIAwMEIjAgMB4wHDAa\nMBgwCgwIRS1SZXplcHQwCgYIKoIUAEwEggMwCgYIKoZIzj0EAwIDRwAwRAIgXkUn\n0WbZKg9LDRlocTiTesxHnfETlBvXGg7lSwl8ipUCIAf7MkIWQtNJ4+XwFdrO/BDv\n3OTJg+2gnP1tbEqf4T6r\n-----END CERTIFICATE-----",
       "idp": {
         "registeredFdUri": "https://gematik.erppre.de/",
@@ -381,6 +374,10 @@
           "checkIntervalSeconds": "86400",
           "failedCheckIntervalSeconds": "300",
           "checkIntervalSeconds": "86400"
+        },
+        "getAllTasksRateLimiter": {
+          "shortTermCalls": "5",
+          "longTermCalls": "1000"
         }
       },
       "admin": {
@@ -393,7 +390,7 @@
       },
       "entropy_fetch_interval_seconds": "60",
       "timingCategories": ["fhir-validation", "ocsp-request"],
-      "vsdmValiditySeconds": "1800"
+      "pnw_allowed_results": "1,2,3,5"
     }
   }
 }

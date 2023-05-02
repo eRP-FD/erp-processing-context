@@ -49,7 +49,7 @@ public:
 private:
     void timerHandler() override
     {
-        TVLOG(0) << "Refreshing Blob-Cache.";
+        TLOG(INFO) << "Refreshing Blob-Cache.";
         try
         {
             mBlobCache.rebuildCache();
@@ -84,18 +84,6 @@ BlobCache::Entry BlobCache::getBlob(const BlobType type, const BlobId id)
                     })
         .front();
 }
-
-BlobCache::Entry BlobCache::getBlob(const BlobType type, const ErpVector& name)
-{
-    return getBlobs(mEntriesByType, type,
-                    [&name](const BlobCache::Entry& entry) {
-                        // blob was already used, also allow blobs going invalid in the meantime
-                        return (entry.name == name);
-                    })
-        .front();
-
-}
-
 
 BlobCache::Entry BlobCache::getBlob(BlobId id)
 {
@@ -162,11 +150,6 @@ void BlobCache::startRefresher(boost::asio::io_context& context, std::chrono::st
     Expect3(mRefresher == nullptr, "refresher already started", std::logic_error);
     mRefresher = std::make_unique<PeriodicTimer<Refresher>>(*this, interval);
     mRefresher->start(context, interval);
-}
-
-BlobDatabase& BlobCache::getBlobDatabase()
-{
-    return *mDatabase;
 }
 
 std::vector<bool> BlobCache::hasValidBlobsOfType(std::vector<BlobType>&& blobTypes) const

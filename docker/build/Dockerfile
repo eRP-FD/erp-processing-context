@@ -11,8 +11,7 @@ FROM ubuntu:jammy AS build
 RUN apt-get update --fix-missing && \
     apt-get install -y software-properties-common wget && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -  && \
-    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main && \
-    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     openjdk-11-jre-headless \
     gcc-11 g++-11 \
@@ -35,9 +34,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     xmlsec1 \
     xsltproc \
     clang-tidy-15 \
-    clang-tidy-16 \
     tzdata \
-    ccache \
     && rm -rf /var/lib/apt/lists/*
 
 # Update certificates and install latest version of cmake

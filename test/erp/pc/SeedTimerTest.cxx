@@ -28,7 +28,7 @@ TEST(SeedTimerTest, distribute)//NOLINT(readability-function-cognitive-complexit
     // There is no HTTPS server whose socket connection would keep the io_context busy and the threads alive.
     // Therefore we have to assign a work object to achieve the same effect.
     boost::asio::io_context::work keepThreadsAlive(pool.ioContext());
-    pool.setUp(threads, "test");
+    pool.setUp(threads);
     ASSERT_NO_FATAL_FAILURE(testutils::waitFor([&]{return pool.getWorkerCount() >= threads; }));
     std::atomic_size_t callCount = 0;
     HsmPool mockHsmPool{

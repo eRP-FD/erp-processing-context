@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="../../../../shared/xml/GenericTypes.xsd"/>
+  <xs:element name="extension" type="PaymentMethod.Extension"/>
+  <xs:complexType name="PaymentMethod.Extension">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="valueCoding" type="PaymentMethod.Coding"/>
+        </xs:sequence>
+        <xs:attribute name="url" type="uri-primitive" use="required" fixed="https://gematik.de/fhir/StructureDefinition/PaymentMethod"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="PaymentMethod.Coding">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="system" type="PaymentMethod.Coding.uri" minOccurs="0"/>
+          <xs:element name="version" type="string" minOccurs="0"/>
+          <xs:element name="code" type="PaymentMethod.Coding.code" minOccurs="0"/>
+          <xs:element name="display" type="string" minOccurs="0"/>
+          <xs:element name="userSelected" type="boolean" minOccurs="0"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="PaymentMethod.Coding.uri">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://terminology.hl7.org/CodeSystem/v2-0570"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="PaymentMethod.Coding.code">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="PaymentMethod.Coding.code-list"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:simpleType name="PaymentMethod.Coding.code-list">
+    <xs:restriction base="code-primitive">
+      <xs:enumeration value="CASH"/>
+      <xs:enumeration value="CCCA"/>
+      <xs:enumeration value="CCHK"/>
+      <xs:enumeration value="CDAC"/>
+      <xs:enumeration value="CHCK"/>
+      <xs:enumeration value="DDPO"/>
+      <xs:enumeration value="DEBC"/>
+      <xs:enumeration value="SWFT"/>
+      <xs:enumeration value="TRAC"/>
+      <xs:enumeration value="VISN"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

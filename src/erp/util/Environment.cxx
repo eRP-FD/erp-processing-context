@@ -5,8 +5,9 @@
 
 #include "Environment.hxx"
 
+#include "erp/util/GLog.hxx"
 #include "erp/util/String.hxx"
-#include "erp/util/TLog.hxx"
+
 
 #include <set>
 
@@ -84,7 +85,7 @@ int Environment::getInt(const char* envConfigName, const int defaultValue)
         {
             // Nothing to do here, the default value will be returned
         }
-        TLOG(WARNING) << "Invalid Value in environment variable '"
+        LOG(WARNING) << "Invalid Value in environment variable '"
                      << *environmentVariable
                      << "': '" << strVal
                      << "' - expected integer. using default: " << defaultValue;
@@ -111,7 +112,7 @@ bool Environment::getBool(const char* envConfigName, const bool defaultValue)
         {
             return false;
         }
-        TLOG(WARNING) << "Invalid Value in environment variable '"
+        LOG(WARNING) << "Invalid Value in environment variable '"
                 << *environmentVariable
                 << "': '" << environmentVariable.value()
                 << "' - expected boolean. using default: "

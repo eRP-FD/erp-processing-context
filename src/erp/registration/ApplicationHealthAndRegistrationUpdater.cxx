@@ -79,12 +79,12 @@ void ApplicationHealthAndRegistrationUpdater::executeJob(void)
         }
         catch (const std::exception& e)
         {
-            TLOG(ERROR) << "Heartbeat failed in attempt # " << tryCount << " with " << e.what();
-            TLOG(ERROR) << "waiting for "
+            LOG(ERROR) << "Heartbeat failed in attempt # " << tryCount << " with " << e.what() << std::endl;
+            LOG(ERROR) << "waiting for "
                        << static_cast<double>(
                               std::chrono::duration_cast<std::chrono::milliseconds>(mRetryInterval).count()) /
                               1000.0
-                       << " seconds before trying again";
+                       << " seconds before trying again" << std::endl;
         }
 
         // Before we retry, wait some time.
@@ -99,15 +99,15 @@ void ApplicationHealthAndRegistrationUpdater::onFinish(void)
     {
         mRegistration->deregistration();
     }
-    catch (const std::exception& e)
+    catch (std::exception& e)
     {
-        TLOG(ERROR) << "heartbeat sender deregistration failed: " << e.what();
+        LOG(ERROR) << "heartbeat sender deregistration failed: " << e.what();
         // Do nothing. Deregistering the heartbeat sender is part of the application shutting down.
         // Therefore there is nothing else we can do about this error.
     }
     catch (...)
     {
-        TLOG(ERROR) << "heartbeat sender deregistration failed";
+        LOG(ERROR) << "heartbeat sender deregistration failed";
         // Do nothing. Deregistering the heartbeat sender is part of the application shutting down.
         // Therefore there is nothing else we can do about this error.
     }

@@ -116,7 +116,6 @@ public:
             if (::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
             {
                 mConnection = std::make_unique<PostgresConnection>(PostgresBackend::defaultConnectString());
-                mConnection->connectIfNeeded();
                 mTransaction = mConnection->createTransaction();
             }
             mTestClient = TestClient::create(nullptr, TestClient::Target::ENROLMENT);
@@ -180,12 +179,12 @@ public:
         // Does not affect the erp-integration-test, where client is not an EndpointTestClient
         if (auto* context = client->getContext())
         {
-            context->getBlobCache()->getBlob(gsl::narrow<BlobId>(getLatestBlobId(BlobType::TaskKeyDerivation).value()));
-            context->getBlobCache()->getBlob(
+            context->getBlobCache().getBlob(gsl::narrow<BlobId>(getLatestBlobId(BlobType::TaskKeyDerivation).value()));
+            context->getBlobCache().getBlob(
                 gsl::narrow<BlobId>(getLatestBlobId(BlobType::AuditLogKeyDerivation).value()));
-            context->getBlobCache()->getBlob(
+            context->getBlobCache().getBlob(
                 gsl::narrow<BlobId>(getLatestBlobId(BlobType::CommunicationKeyDerivation).value()));
-            context->getBlobCache()->getBlob(
+            context->getBlobCache().getBlob(
                 gsl::narrow<BlobId>(getLatestBlobId(::BlobType::ChargeItemKeyDerivation).value()));
         }
     }

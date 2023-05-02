@@ -23,12 +23,14 @@ protected:
                             const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator) const = 0;
 };
 
-class KbvMedicationFreeTextValidator_V1_0_2 : public KbvMedicationFreeTextValidator
+class KbvMedicationFreeTextValidator_V1_0_1 : public KbvMedicationFreeTextValidator
 {
 protected:
     void doValidate(const model::KbvMedicationFreeText& kbvMedicationCompounding, const XmlValidator& xmlValidator,
                     const InCodeValidator& inCodeValidator) const override;
 };
+
+using KbvMedicationFreeTextValidator_V1_0_2 = KbvMedicationFreeTextValidator_V1_0_1;
 
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVMEDICATIONFREETEXTVALIDATOR_HXX

@@ -162,7 +162,7 @@ std::vector<uint8_t> TpmProduction::provideAkKeyPairBlob (
             // between multiple calls that all try to create a new attestation token should not be possible.
 
             // Create a new attestation key pair blob.
-            TLOG(INFO) << "creating a new attestation token";
+            TLOG(WARNING) << "creating a new attestation token";
             ::BlobCache::Entry newEntry;
             newEntry.type = ::BlobType::AttestationKeyPair;
 

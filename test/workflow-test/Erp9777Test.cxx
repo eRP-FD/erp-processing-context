@@ -13,11 +13,6 @@ class Erp9777Test : public ErpWorkflowTestP
 
 TEST_P(Erp9777Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (!Configuration::instance().featurePkvEnabled())
-    {
-        GTEST_SKIP();
-    }
-
     std::string kvnr;
     ASSERT_NO_FATAL_FAILURE(generateNewRandomKVNR(kvnr));
     std::optional<model::Task> task;

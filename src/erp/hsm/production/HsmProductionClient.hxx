@@ -70,8 +70,6 @@ public:
         const HsmRawSession& session,
         DoVAUECIESInput&& input) override;
 
-    shared_EVP_PKEY getEcPublicKey(const HsmRawSession& session, ErpBlob&& ecKeyPair) override;
-
     SafeString getVauSigPrivateKey (
         const HsmRawSession& session,
         GetVauSigPrivateKeyInput&& input) override;
@@ -83,14 +81,6 @@ public:
     ErpArray<Aes256Length> unwrapHashKey(
         const HsmRawSession& session,
         UnwrapHashKeyInput&& input) override;
-
-    ErpBlob wrapRawPayload(
-        const HsmRawSession& session,
-        WrapRawPayloadInput&& input) override;
-
-    ErpVector unwrapRawPayload(
-        const HsmRawSession& session,
-        UnwrapRawPayloadInput&& input) override;
 
     ::ParsedQuote parseQuote(const ::ErpVector& quote) const override;
 

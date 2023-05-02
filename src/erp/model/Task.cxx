@@ -287,7 +287,7 @@ Timestamp Task::lastModifiedDate() const
 
 std::string_view Task::accessCode() const
 {
-    auto nsAccessCode = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+    auto nsAccessCode = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
                             ? resource::naming_system::deprecated::accessCode
                             : resource::naming_system::accessCode;
     auto accessCode = findStringInArray(identifierArrayPointer, systemRelPointer, nsAccessCode, valueRelPointer);
@@ -297,7 +297,7 @@ std::string_view Task::accessCode() const
 
 std::optional<std::string_view> Task::secret() const
 {
-    auto nsSecret = ResourceVersion::deprecatedProfile(value(getSchemaVersion())) ? resource::naming_system::deprecated::secret
+    auto nsSecret = ResourceVersion::deprecatedProfile(getSchemaVersion({})) ? resource::naming_system::deprecated::secret
                                                                            : resource::naming_system::secret;
     return findStringInArray(identifierArrayPointer, systemRelPointer, nsSecret, valueRelPointer);
 }
@@ -325,7 +325,7 @@ std::optional<std::string_view> Task::uuidFromArray(const rapidjson::Pointer& ar
 
 Timestamp Task::expiryDate() const
 {
-    auto url = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
                    ? resource::structure_definition::deprecated::expiryDate
                    : resource::structure_definition::expiryDate;
     return dateFromExtensionArray(url);
@@ -333,7 +333,7 @@ Timestamp Task::expiryDate() const
 
 Timestamp Task::acceptDate() const
 {
-    auto url = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
                    ? resource::structure_definition::deprecated::acceptDate
                    : resource::structure_definition::acceptDate;
     return dateFromExtensionArray(url);
@@ -363,7 +363,7 @@ void Task::setKvnr(const Kvnr& kvnr)
 {
     ModelExpect(!hasValue(kvnrPointer), "KVNR cannot be set multiple times.");
     ModelExpect(kvnr.getType() != model::Kvnr::Type::unspecified, "Unspecified kvnr type not allowed");
-    const bool deprecatedProfile = ResourceVersion::deprecatedProfile(value(getSchemaVersion()));
+    const bool deprecatedProfile = ResourceVersion::deprecatedProfile(getSchemaVersion({}));
     setValue(kvnrPointer, kvnr.id());
     setValue(kvnrSysPointer, kvnr.namingSystem(deprecatedProfile));
 }
@@ -395,7 +395,7 @@ void Task::addUuidToArray(const rapidjson::Pointer& array, std::string_view code
     auto newEntry = copyValue(*PrescriptionReferenceTemplate);
     setKeyValue(newEntry, codePointerRelToInOutArray, code);
     setKeyValue(newEntry, valueStringPointerRelToInOutArray, uuid);
-    if (ResourceVersion::deprecatedProfile(value(getSchemaVersion())))
+    if (ResourceVersion::deprecatedProfile(getSchemaVersion({})))
     {
         setKeyValue(newEntry, systemPointerRelToInOutArray, resource::code_system::deprecated::documentType);
     }
@@ -404,7 +404,7 @@ void Task::addUuidToArray(const rapidjson::Pointer& array, std::string_view code
 
 void Task::setExpiryDate(const Timestamp& expiryDate)
 {
-    auto url = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
                    ? resource::structure_definition::deprecated::expiryDate
                    : resource::structure_definition::expiryDate;
     dateToExtensionArray(url, expiryDate);
@@ -412,7 +412,7 @@ void Task::setExpiryDate(const Timestamp& expiryDate)
 
 void Task::setAcceptDate(const Timestamp& acceptDate)
 {
-    auto url = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+    auto url = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
                    ? resource::structure_definition::deprecated::acceptDate
                    : resource::structure_definition::acceptDate;
     dateToExtensionArray(url, acceptDate);
@@ -490,7 +490,7 @@ void Task::dateToExtensionArray(std::string_view url, const Timestamp& date)
 
 void Task::setSecret(std::string_view secret)
 {
-    auto nsSecret = ResourceVersion::deprecatedProfile(value(getSchemaVersion())) ? resource::naming_system::deprecated::secret
+    auto nsSecret = ResourceVersion::deprecatedProfile(getSchemaVersion({})) ? resource::naming_system::deprecated::secret
                                                                            : resource::naming_system::secret;
     ModelExpect(! findStringInArray(identifierArrayPointer, systemRelPointer, nsSecret, valueRelPointer).has_value(),
                 "Secret cannot be set multiple times.");
@@ -503,7 +503,7 @@ void Task::setSecret(std::string_view secret)
 
 void Task::setAccessCode(std::string_view accessCode)
 {
-    auto nsAccessCode = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+    auto nsAccessCode = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
                             ? resource::naming_system::deprecated::accessCode
                             : resource::naming_system::accessCode;
     ModelExpect(! findStringInArray(identifierArrayPointer, systemRelPointer,
@@ -517,9 +517,14 @@ void Task::setAccessCode(std::string_view accessCode)
     addToArray(identifierArrayPointer, std::move(newValue));
 }
 
+void Task::deleteKvnr()
+{
+    removeElement(forPointer);
+}
+
 void Task::deleteAccessCode()
 {
-    auto nsAccessCode = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+    auto nsAccessCode = ResourceVersion::deprecatedProfile(getSchemaVersion({}))
                             ? resource::naming_system::deprecated::accessCode
                             : resource::naming_system::accessCode;
     const auto accessCodeAndPos =
@@ -532,15 +537,24 @@ void Task::deleteAccessCode()
 
 void Task::deleteSecret()
 {
-    auto nsSecret = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
-                            ? resource::naming_system::deprecated::secret
-                            : resource::naming_system::secret;
+    auto nsSecret = ResourceVersion::deprecatedProfile(getSchemaVersion({})) ? resource::naming_system::deprecated::secret
+                                                                           : resource::naming_system::secret;
     const auto secretAndPos =
         findMemberInArray(identifierArrayPointer, systemRelPointer, nsSecret, valueRelPointer, true);
     if(secretAndPos)
     {
         removeFromArray(identifierArrayPointer, std::get<1>(secretAndPos.value()));
     }
+}
+
+void Task::deleteInput()
+{
+    removeElement(inputArrayPointer);
+}
+
+void Task::deleteOutput()
+{
+    removeElement(outputArrayPointer);
 }
 
 Task::Task(NumberAsStringParserDocument&& jsonTree)

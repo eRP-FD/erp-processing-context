@@ -48,7 +48,7 @@ class EndpointErrorTest : public ServerTestBase
 public:
     void SetUp (void) override
     {
-        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
+        ServerTestBase::SetUp();
         setMockedOperation(Operation::UNKNOWN);
     }
 

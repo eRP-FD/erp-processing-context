@@ -32,24 +32,24 @@ void TslRefreshJob::executeJob()
     // and if it fails, then the related action will fail as well
     try
     {
-        TVLOG(2) << "Executing TSL refresh job";
+        TLOG(WARNING) << "Executing TSL refresh job";
         mTslManager.updateTrustStoresOnDemand();
     }
     catch(const TslError& e)
     {
-        TLOG(ERROR) << "Can not update TslManager, TslError: " << e.what();
+        LOG(ERROR) << "Can not update TslManager, TslError: " << e.what();
     }
     catch(const std::runtime_error& e)
     {
-        TLOG(ERROR) << "Can not update TslManager, unexpected runtime exception: " << e.what();
+        LOG(ERROR) << "Can not update TslManager, unexpected runtime exception: " << e.what();
     }
     catch(const std::logic_error& e)
     {
-        TLOG(ERROR) << "Can not update TslManager, unexpected logic exception: " << e.what();
+        LOG(ERROR) << "Can not update TslManager, unexpected logic exception: " << e.what();
     }
     catch(...)
     {
-        TLOG(ERROR) << "Can not update TslManager, unknown exception";
+        LOG(ERROR) << "Can not update TslManager, unknown exception";
         throw;
     }
 }

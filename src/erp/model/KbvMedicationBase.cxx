@@ -1,64 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2023
- * (C) Copyright IBM Corp. 2023
+ * (C) Copyright IBM Deutschland GmbH 2022
+ * (C) Copyright IBM Corp. 2022
  */
 
 #include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/KbvMedicationCompounding.hxx"
-#include "erp/model/KbvMedicationFreeText.hxx"
-#include "erp/model/KbvMedicationIngredient.hxx"
-#include "erp/model/KbvMedicationPzn.hxx"
-#include "erp/model/ResourceFactory.hxx"
-#include "erp/util/String.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-
-using namespace model;
-template<typename MedicationModelT>
-void KbvMedicationGeneric::validateMedication(NumberAsStringParserDocument&& medicationDoc,
-                                              const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator)
-{
-    auto medicationFactory = ResourceFactory<MedicationModelT>::fromJson(std::move(medicationDoc));
-    (void) std::move(medicationFactory).getValidated(MedicationModelT::schemaType, xmlValidator, inCodeValidator);
-}
-
-void KbvMedicationGeneric::validateMedication(const ErpElement& medicationElement, const XmlValidator& xmlValidator,
-                                              const InCodeValidator& inCodeValidator)
-{
-    using namespace std::string_literals;
-    model::NumberAsStringParserDocument medicationDoc;
-    std::optional<SchemaType> schemaType;
-    const auto& profiles = medicationElement.profiles();
-    for (const auto& profStr : medicationElement.profiles())
-    {
-        const auto* info = model::ResourceVersion::profileInfoFromProfileName(profStr);
-        if (info)
-        {
-            schemaType = info->schemaType;
-            break;
-        }
-    }
-    ErpExpectWithDiagnostics(schemaType.has_value(), HttpStatus::BadRequest,
-                             "Could not determine schema type of medication.",
-                             "Profiles are: " + String::join(profiles));
-
-    medicationDoc.CopyFrom(*medicationElement.erpValue(), medicationDoc.GetAllocator());
-    switch (*schemaType)
-    {
-        case model::KbvMedicationCompounding::schemaType:
-            validateMedication<model::KbvMedicationCompounding>(std::move(medicationDoc), xmlValidator,
-                                                                inCodeValidator);
-            break;
-        case model::KbvMedicationFreeText::schemaType:
-            validateMedication<model::KbvMedicationFreeText>(std::move(medicationDoc), xmlValidator, inCodeValidator);
-            break;
-        case model::KbvMedicationIngredient::schemaType:
-            validateMedication<model::KbvMedicationIngredient>(std::move(medicationDoc), xmlValidator, inCodeValidator);
-            break;
-        case model::KbvMedicationPzn::schemaType:
-            validateMedication<model::KbvMedicationPzn>(std::move(medicationDoc), xmlValidator, inCodeValidator);
-            break;
-        default:
-            ErpFailWithDiagnostics(HttpStatus::BadRequest, "Invalid schema type for medication.",
-                                   "Profiles are: " + String::join(profiles));
-    }
-}

@@ -58,7 +58,6 @@ set(ERP_TEST_LIB_SOURCES
         mock/MockChargeItemTable.cxx
         mock/MockTaskTable.cxx
         mock/MockTerminationHandler.cxx
-        mock/MockVsdmKeyBlobDatabase.cxx
         mock/RegistrationMock.cxx
         mock/TestUrlArguments.cxx
         util/JsonTestUtils.cxx
@@ -81,15 +80,16 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Erp9770Test.cxx
         workflow-test/Erp9777Test.cxx
         workflow-test/Erp10081Test.cxx
+        workflow-test/Erp10101Test.cxx
         workflow-test/Erp10941Test.cxx
         workflow-test/Erp11543Test.cxx
+        workflow-test/Erp11031Test.cxx
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
         workflow-test/ErpWorkflowDirekteZuweisungTest.cxx
         workflow-test/ErpWorkflowPkvTest.cxx
         workflow-test/ErpWorkflowTestFixture.cxx
         workflow-test/Error403IfTaskStateDraft.cxx
-        workflow-test/GetTaskByPharmacyWfTest.cxx
         workflow-test/HttpsTestClient.cxx
         workflow-test/MultipleMedicationDispenses.cxx
         workflow-test/RegressionTest.cxx
@@ -105,6 +105,7 @@ add_library(erp-test-lib OBJECT ${ERP_TEST_LIB_SOURCES})
 target_link_libraries(erp-test-lib
     PUBLIC
         erp-tool-lib
+    PUBLIC
         erp-test-util-lib
         CONAN_PKG::glog
         CONAN_PKG::gtest
@@ -112,9 +113,10 @@ target_link_libraries(erp-test-lib
         CONAN_PKG::rapidjson
     )
 target_include_directories(erp-test-lib
-    PUBLIC
-        ${CMAKE_BINARY_DIR}
+    PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}
+        ${CMAKE_BINARY_DIR}
+    PUBLIC
         ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src
     )
@@ -170,7 +172,6 @@ list(
         erp/database/PostgresDatabaseMedicationDispenseTest.cxx
         erp/database/PostgresDatabaseChargeItemTest.cxx
         erp/database/PostgresDatabaseTaskTest.cxx
-        erp/database/PostgresDatabaseSchemaVersionTest.cxx
         erp/database/PostgresDatabaseTest.cxx
         erp/database/RedisClientTest.cxx
         erp/database/TransactionTest.cxx
@@ -187,7 +188,6 @@ list(
         erp/hsm/ErpTypesTest.cxx
         erp/hsm/HsmIdentityTest.cxx
         erp/hsm/HsmPoolSessionRemoverTest.cxx
-        erp/hsm/VsdmKeyCacheTest.cxx
         erp/hsm/production/ProductionBlobDatabaseTest.cxx
         erp/idp/IdpTest.cxx
         erp/idp/IdpUpdaterTest.cxx
@@ -253,7 +253,7 @@ list(
         erp/service/EndpointHandlerTest/CommunicationPostEndpointTest.cxx
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
-        erp/service/EndpointHandlerTest/GetTaskByPharmacyTest.cxx
+        erp/service/EndpointHandlerTest/FeatureToggleWf200Test.cxx
         erp/service/ErpRequestHandlerTest.cxx
         erp/service/HealthHandlerTest.cxx
         erp/service/MedicationDispenseGetHandlerTest.cxx
@@ -321,13 +321,13 @@ list(
         tools/JwtBuilderTest.cxx
         util/BlobDatabaseHelper.cxx
         util/LogTestBase.cxx
-        util/MockAndProductionTestBase.cxx
         util/ServerTestBase.cxx
         util/ServerTestBaseAutoCleanup.cxx
         workflow-test/EndpointTestClient.cxx
         workflow-test/Erp5822Test.cxx # contains invalid KBV bundle, can only run in erp-test
         workflow-test/Erp5899Test.cxx # contains invalid KBV bundle, can only run in erp-test
         workflow-test/Erp8090Test.cxx # contains environment changes, can only run in erp-test
+        workflow-test/Erp9008Test.cxx # contains environment changes, can only run in erp-test
 )
 
 if(ERP_WITH_HSM_TPM_PRODUCTION)
@@ -357,6 +357,13 @@ list(
 
 
 target_compile_definitions(erp-test PUBLIC WITH_HSM_MOCK=1)
+if (ERP_WITH_HSM_TPM_PRODUCTION)
+    target_compile_definitions(erp-test PUBLIC WITH_HSM_TPM_PRODUCTION=1)
+    target_link_libraries(erp-test
+            PUBLIC
+            erp-mock-enrollmentmanager
+            )
+endif ()
 
 target_include_directories (
     erp-test
@@ -387,11 +394,10 @@ set(ERP_CLOUD_TEST_SOURCES
 )
 
 add_executable(erp-integration-test ${ERP_CLOUD_TEST_SOURCES})
-target_compile_definitions(erp-integration-test
-    PUBLIC
-        WITH_HSM_MOCK=1
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:WITH_HSM_TPM_PRODUCTION=1>
-)
+target_compile_definitions(erp-integration-test PUBLIC WITH_HSM_MOCK=1)
+if(ERP_WITH_HSM_TPM_PRODUCTION)
+    target_compile_definitions(erp-integration-test PUBLIC WITH_HSM_TPM_PRODUCTION=1)
+endif()
 
 target_link_libraries(erp-integration-test
     PRIVATE

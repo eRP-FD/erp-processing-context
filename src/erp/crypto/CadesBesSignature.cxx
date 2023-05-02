@@ -265,7 +265,7 @@ namespace
             }
         }
 
-        TLOG(INFO) << "No OCSP-response is provided in CMS.";
+        TLOG(WARNING) << "No OCSP-response is provided in CMS.";
 
         return {};
     }

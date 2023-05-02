@@ -121,14 +121,11 @@ TEST_F(TelematicPseudonymCmacTest, GracePeriod)
     getTelematicPseudonymManager().LoadCmacs(today);
     EXPECT_FALSE(getTelematicPseudonymManager().withinGracePeriod(today));
 
+    today = date::year_month_day(date::year{1997}, date::month{12}, date::day{30});
+    EXPECT_FALSE(getTelematicPseudonymManager().withinGracePeriod(today));
+
     today = date::year_month_day(date::year{1997}, date::month{12}, date::day{31});
-    EXPECT_FALSE(getTelematicPseudonymManager().withinGracePeriod(today));
-
-    today = date::year_month_day(date::year{1998}, date::month{1}, date::day{1});
     EXPECT_TRUE(getTelematicPseudonymManager().withinGracePeriod(today));
-
-    today = date::year_month_day(date::year{1998}, date::month{1}, date::day{2});
-    EXPECT_FALSE(getTelematicPseudonymManager().withinGracePeriod(today));
 }
 
 TEST_F(TelematicPseudonymCmacTest, LoadCMAC)//NOLINT(readability-function-cognitive-complexity)

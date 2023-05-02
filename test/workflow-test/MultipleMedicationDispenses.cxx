@@ -23,17 +23,6 @@ struct Params {
 class MultipleMedicationDispensesTestP : public ErpWorkflowTestTemplate<::testing::TestWithParam<Params>>
 {
 public:
-protected:
-    void SetUp() override
-    {
-        ErpWorkflowTestTemplate<::testing::TestWithParam<Params>>::SetUp();
-        if (serverUsesOldProfile() && model::IsPkv(GetParam().mPrescriptionType))
-        {
-            GTEST_SKIP_("PKV not testable with old profiles");
-        }
-    }
-
-public:
     model::PrescriptionId createClosedTask(const std::string& kvnr)
     {
         std::optional<model::PrescriptionId> prescriptionId;

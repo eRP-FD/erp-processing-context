@@ -320,43 +320,41 @@ currentProfile;
 }// anonymous namespace
 
 
-MetaData::MetaData(ResourceVersion::FhirProfileBundleVersion profileBundle)
-    : Resource(ResourceBase::NoProfile,
+MetaData::MetaData(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+    : Resource<MetaData>(ResourceBase::NoProfile,
                          []() {
                              std::call_once(onceFlag, initTemplates);
                              return metaDataTemplate;
                          }()
                              .instance())
 {
-    if(model::ResourceVersion::deprecatedBundle(profileBundle))
+    if(model::ResourceVersion::deprecatedProfile(profileVersion))
     {
-        fillResource(deprecatedProfile, profileBundle);
+        fillResource(deprecatedProfile);
     }
     else
     {
         addResourceTemplate(*chargeItemTemplate);
         addResourceTemplate(*consentTemplate);
-        fillResource(currentProfile, profileBundle);
+        fillResource(currentProfile);
     }
-    setVersion(ErpServerInfo::ReleaseVersion());
-    model::Timestamp releaseDate = model::Timestamp::fromXsDateTime(std::string(ErpServerInfo::ReleaseDate()));
+
+    setVersion(ErpServerInfo::ReleaseVersion);
+    model::Timestamp releaseDate = model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
     setDate(releaseDate);
     setReleaseDate(releaseDate);
 }
 
 template<class ProfileDefinition>
-void MetaData::fillResource(const ProfileDefinition& profileDefinition,
-                            ResourceVersion::FhirProfileBundleVersion profileBundle)
+void MetaData::fillResource(const ProfileDefinition& profileDefinition)
 {
     for (size_t index = 0; const auto structDef : profileDefinition.resourceStructDefs)
     {
-        addMemberToArrayEntry(restResourceArrayPointer, index++, "profile",
-                              ResourceVersion::versionizeProfile(structDef, {profileBundle}));
+        addMemberToArrayEntry(restResourceArrayPointer, index++, "profile", ResourceVersion::versionizeProfile(structDef));
     }
     for (const auto structDef : profileDefinition.resourceCommStructDefs)
     {
-        addToArray(restResourceCommSupportedProfileArrayPointer,
-                   ResourceVersion::versionizeProfile(structDef, {profileBundle}));
+        addToArray(restResourceCommSupportedProfileArrayPointer, ResourceVersion::versionizeProfile(structDef));
     }
     for (size_t index = 0; const auto structDef : profileDefinition.taskOpStructDefs)
     {
@@ -372,7 +370,7 @@ void MetaData::addResourceTemplate(const TemplateDocument& templateDocument)
 }
 
 MetaData::MetaData(NumberAsStringParserDocument&& jsonTree)
-    : Resource(std::move(jsonTree))
+    : Resource<MetaData>(std::move(jsonTree))
 {
     std::call_once(onceFlag, initTemplates);
 }
@@ -409,11 +407,10 @@ void MetaData::setReleaseDate(const model::Timestamp& releaseDate)
 
 ResourceVersion::DeGematikErezeptWorkflowR4 MetaData::taskProfileVersion()
 {
-    using namespace std::string_literals;
-    auto profileName = getStringValue(restResourceTaskSupportedProfilePointer);
-    const auto* profInfo = model::ResourceVersion::profileInfoFromProfileName(profileName);
-    ModelExpect(profInfo != nullptr, "Unsupported profile: "s.append(profileName));
-    return std::get<ResourceVersion::DeGematikErezeptWorkflowR4>(profInfo->version);
+    const auto profileVersion =
+        ResourceVersion::profileVersionFromName(getStringValue(restResourceTaskSupportedProfilePointer));
+    return std::get<ResourceVersion::DeGematikErezeptWorkflowR4>(
+        std::get<ResourceVersion::AnyProfileVersion>(profileVersion));
 }
 
 }// namespace model

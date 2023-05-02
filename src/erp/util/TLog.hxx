@@ -21,11 +21,7 @@ private:
     std::optional<std::string> oldLogContext;
 };
 
-#define TLOG(level) LOG(level) << ThreadNames::instance().getCurrentThreadName() << "/" << erp::server::Worker::tlogContext.value_or("") << ": "
-#ifdef ENABLE_DEBUG_LOG
-#define TVLOG(level) VLOG(level) << "v=" << (level) << " " << ThreadNames::instance().getCurrentThreadName() << "/" << erp::server::Worker::tlogContext.value_or("") << ": "
-#else
-#define TVLOG(level) static_cast<void>(level), LOG_IF(INFO, false)
-#endif
+#define TLOG(level) LOG(level) << ThreadNames::instance().getCurrentThreadName() << '/' << erp::server::Worker::finishedTaskCount << "/" << erp::server::Worker::tlogContext.value_or("") << ": "
+#define TVLOG(level) VLOG(level) << ThreadNames::instance().getCurrentThreadName() << '/' << erp::server::Worker::finishedTaskCount << "/" << erp::server::Worker::tlogContext.value_or("") << ": "
 
 #endif

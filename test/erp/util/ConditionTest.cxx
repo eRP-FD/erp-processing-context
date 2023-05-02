@@ -4,11 +4,10 @@
  */
 
 #include "erp/util/Condition.hxx"
-#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
-#include <atomic>
 #include <thread>
+#include <atomic>
 
 
 class ConditionTest : public testing::Test
@@ -31,15 +30,15 @@ TEST_F(ConditionTest, waitForChange)
     });
 
     // Give the test thread time to step over the first `waitForChange` and then verify that it didn't.
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_EQ(state, 0);
 
     // Change `condition` and verify that the test thread moved forward.
     condition = 1;
-
-    testutils::waitFor([&state] {
-        return state == 1;
-    });
+    // Please note that this wait is somewhat unsophisticated and could be replaced with a condition variable etc. but
+    // that would require a small test framework, which seems like overkill for this simple test.
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    EXPECT_EQ(state, 1);
 
     // Clean up.
     test.join();
@@ -65,7 +64,7 @@ TEST_F(ConditionTest, waitForValue)
     });
 
     // Give the test thread time to step over the first `waitForValue` and then verify that it didn't.
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     EXPECT_EQ(state, 0);
 
     // Change `condition` and verify that that did *not* trigger a release of `waitForValue`.
@@ -75,9 +74,8 @@ TEST_F(ConditionTest, waitForValue)
 
     // Change `condition` to the expected value and verify that that *did* trigger the release of `waitForValue`.
     condition = Values::B;
-    testutils::waitFor([&state] {
-        return state == 1;
-    });
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    EXPECT_EQ(state, 1);
 
     // Clean up.
     test.join();

@@ -4,13 +4,10 @@
  */
 
 #include "erp/model/KbvBundle.hxx"
-#include "erp/model/ResourceFactory.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/ResourceTemplates.hxx"
-
-#include "fhirtools/validator/ValidationResult.hxx"
 
 #include <boost/algorithm/string.hpp>
 
@@ -29,18 +26,18 @@ public:
     {
         auto timestamp = model::Timestamp::fromXsDate("2021-06-08");
         auto prescriptionId = model::PrescriptionId::fromStringNoValidation(id);
-        auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp});
+        auto bundleXml = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp});
+        auto kbvBundle = model::KbvBundle::fromXml(
+            bundleXml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
+            model::ResourceVersion::supportedBundles(),
+            {{.allowNonLiteralAuthorReference = true}});
         return toCadesBesSignature(bundleXml, timestamp);
     }
 };
 
 
-TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
+TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (serverUsesOldProfile() && model::IsPkv(GetParam()))
-    {
-        GTEST_SKIP_("PKV not testable with old profiles");
-    }
     using namespace std::string_view_literals;
     const auto correctWorkflow = GetParam();
     std::string kvnr;
@@ -55,6 +52,13 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
         if (wrongWorkflow == correctWorkflow)
         {
             continue;
+        }
+        if (! Configuration ::instance().featureWf200Enabled())
+        {
+            if (wrongWorkflow == model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
+            {
+                continue;
+            }
         }
 
         {

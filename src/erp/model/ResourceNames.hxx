@@ -6,9 +6,14 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_RESOURCENAMES_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_RESOURCENAMES_HXX
 
+#include "erp/model/CommunicationPayload.hxx"
+#include "erp/model/PrescriptionId.hxx"
+#include "erp/model/Timestamp.hxx"
 
+#include <rapidjson/pointer.h>
+#include <memory>
+#include <optional>
 #include <string>
-#include <string_view>
 
 namespace model
 {
@@ -71,21 +76,11 @@ constexpr std::string_view kbcExForLegalBasis = "https://fhir.kbv.de/StructureDe
 constexpr std::string_view kbvExErpStatusCoPayment = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment";
 constexpr std::string_view markingFlag = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag";
 constexpr std::string_view medicationDispense = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense";
-constexpr std::string_view medicationDispenseBundle = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_CloseOperationInputBundle";
 constexpr std::string_view prescriptionID = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PrescriptionId";
+constexpr std::string_view prescriptionItem = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle";
 constexpr std::string_view prescriptionType = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType";
 constexpr std::string_view receipt = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Bundle";
 constexpr std::string_view task = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task";
-
-constexpr std::string_view prescriptionItem = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle";
-constexpr std::string_view kbv_medication_pzn = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN";
-constexpr std::string_view kbv_composition = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition";
-constexpr std::string_view kbv_medication_request = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription";
-constexpr std::string_view kbv_medication_compounding = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding";
-constexpr std::string_view kbv_medication_free_text = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText";
-constexpr std::string_view kbv_medication_ingredient = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Ingredient";
-constexpr std::string_view kbv_practice_supply = "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_PracticeSupply";
-
 namespace deprecated
 {
 constexpr std::string_view acceptDate = "https://gematik.de/fhir/StructureDefinition/AcceptDate";
@@ -105,7 +100,6 @@ constexpr std::string_view medicationDispense = "https://gematik.de/fhir/Structu
 constexpr std::string_view prescriptionType = "https://gematik.de/fhir/StructureDefinition/PrescriptionType";
 constexpr std::string_view receipt = "https://gematik.de/fhir/StructureDefinition/ErxReceipt";
 constexpr std::string_view task = "https://gematik.de/fhir/StructureDefinition/ErxTask";
-
 } // namespace deprecated
 
 } // namespace structure_definition

@@ -309,6 +309,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
 TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr std::string_view agentName{"Max Mustermann"};
+    static constexpr std::string_view pnwPzNumber{"ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY="};
 
     if (!usePostgres())
     {
@@ -332,7 +333,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
     };
     const model::Kvnr kvnr{std::string{InsurantA}};
     model::AuditData auditData{model::AuditEventId::GET_Task,
-                               model::AuditMetaData{agentName, InsurantA},
+                               model::AuditMetaData{agentName, InsurantA, pnwPzNumber},
                                model::AuditEvent::Action::read,
                                model::AuditEvent::AgentType::human,
                                kvnr,
@@ -372,6 +373,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
                         model::AuditMetaData::fromJsonNoValidation(getDBCodec().decode(encryptedMetaData, key)));
     EXPECT_EQ(decryptedMetaData->agentWho(), InsurantA);
     EXPECT_EQ(decryptedMetaData->agentName(), agentName);
+    EXPECT_EQ(decryptedMetaData->pnwPzNumber(), pnwPzNumber);
     //  8: blob_id integer NOT NULL
     //     not encrypted
     A_19688.finish();

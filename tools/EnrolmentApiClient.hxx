@@ -12,7 +12,6 @@
 #include "erp/common/Header.hxx"
 #include "erp/common/HttpMethod.hxx"
 #include "erp/enrolment/EnrolmentModel.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/server/SslStream.hxx"
 #include "erp/util/Base64.hxx"
@@ -49,12 +48,7 @@ public:
     void storeBlob(::BlobType type, ::std::string_view id, const ::ErpBlob& blob, ValidityPeriod validity = {},
                    ::std::optional<::std::string> certificate = {});
 
-    void storeVsdmKey(const ErpBlob& blob);
-    void deleteVsdmKey(char operatorId, char version);
-
 private:
-    EnrolmentModel request(HttpMethod method, std::string_view endpoint, const std::string& body,
-                           HttpStatus expectedResponseStatus = HttpStatus::OK);
     ::EnrolmentModel request(::HttpMethod method, ::std::string_view endpoint,
                              const ::model::NumberAsStringParserDocument& input);
 

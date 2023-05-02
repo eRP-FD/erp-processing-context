@@ -26,7 +26,7 @@ protected:
                             const InCodeValidator& inCodeValidator) const = 0;
 };
 
-class KbvMedicationRequestValidator_V1_0_2 : public KbvMedicationRequestValidator
+class KbvMedicationRequestValidator_V1_0_1 : public KbvMedicationRequestValidator
 {
 protected:
     void doValidate(const model::KbvMedicationRequest& kbvMedicationRequest, const XmlValidator& xmlValidator,
@@ -34,6 +34,8 @@ protected:
 
     void erp_angabeDosierung(const model::Dosage& dosage) const;
 };
+
+using KbvMedicationRequestValidator_V1_0_2 = KbvMedicationRequestValidator_V1_0_1;
 
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVMEDICATIONREQUESTVALIDATOR_HXX

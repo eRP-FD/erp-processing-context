@@ -17,7 +17,7 @@ void KbvPatientValidator::validate(const model::ResourceBase& resource, const Xm
 }
 
 
-void KbvPatientValidator_V1_0_2::doValidate(const model::Patient& patient, const XmlValidator&,
+void KbvPatientValidator_V1_0_1::doValidate(const model::Patient& patient, const XmlValidator&,
                                             const InCodeValidator&) const
 {
     const auto& birthDate = patient.birthDate();
@@ -54,7 +54,7 @@ void KbvPatientValidator_V1_0_2::doValidate(const model::Patient& patient, const
     KbvValidationUtils::add7(patient.address(), line0, line1);
 }
 
-void KbvPatientValidator_V1_0_2::identifierSlicing(const model::Patient& patient) const
+void KbvPatientValidator_V1_0_1::identifierSlicing(const model::Patient& patient) const
 {
     // Note: Closed Slicing.
     if (patient.hasIdentifier())
@@ -90,7 +90,7 @@ void KbvPatientValidator_V1_0_2::identifierSlicing(const model::Patient& patient
     }
 }
 
-void KbvPatientValidator_V1_0_2::pkvAssigner(const std::optional<model::Reference>& assigner) const
+void KbvPatientValidator_V1_0_1::pkvAssigner(const std::optional<model::Reference>& assigner) const
 {
     ErpExpect(assigner, HttpStatus::BadRequest, "missing mandatory identifier.assigner");
     const auto& assignerIdentifierUse = assigner->identifierUse();
@@ -142,7 +142,7 @@ static void checkBothSlicingLine(const std::optional<model::UnspecifiedResource>
         "http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-additionalLocator", *addressLine, false, 40);
 }
 
-void KbvPatientValidator_V1_0_2::addressSlicing(const model::Patient& patient) const
+void KbvPatientValidator_V1_0_1::addressSlicing(const model::Patient& patient) const
 {
     const auto& addressType = patient.addressType();
     const auto& addressLine = patient.address_line(0);
@@ -166,7 +166,7 @@ void KbvPatientValidator_V1_0_2::addressSlicing(const model::Patient& patient) c
     }
 }
 
-void KbvPatientValidator_V1_0_2::identifierSlicingGKV(const std::optional<std::string_view>& identifierUse,
+void KbvPatientValidator_V1_0_1::identifierSlicingGKV(const std::optional<std::string_view>& identifierUse,
                                                       const std::optional<std::string_view>& identifierTypeCodingSystem,
                                                       const std::optional<std::string_view>& identifierSystem,
                                                       const std::optional<std::string_view>& identifierValue) const
@@ -186,7 +186,7 @@ void KbvPatientValidator_V1_0_2::identifierSlicingGKV(const std::optional<std::s
     KbvValidationUtils::checkKvnr(*identifierValue);
 }
 
-void KbvPatientValidator_V1_0_2::identifierSlicingKvk(const std::optional<std::string_view>& identifierUse,
+void KbvPatientValidator_V1_0_1::identifierSlicingKvk(const std::optional<std::string_view>& identifierUse,
                                                       const std::optional<std::string_view>& identifierTypeCodingSystem,
                                                       const std::optional<std::string_view>& identifierSystem) const
 {
@@ -209,7 +209,7 @@ void KbvPatientValidator_V1_0_2::identifierSlicingKvk(const std::optional<std::s
                              std::string(identifierSystem.value_or("")));
 }
 
-void KbvPatientValidator_V1_0_2::identifierSlicingPKV(
+void KbvPatientValidator_V1_0_1::identifierSlicingPKV(
     const std::optional<std::string_view>& identifierUse,
     const std::optional<std::string_view>& identifierTypeCodingSystem) const
 {

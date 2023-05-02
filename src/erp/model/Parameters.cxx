@@ -99,6 +99,11 @@ std::string Parameters::MarkingFlag::toExtensionJson() const
     return result;
 }
 
+Parameters::Parameters(NumberAsStringParserDocument&& document)
+    : Resource(std::move(document))
+{
+}
+
 size_t Parameters::count() const
 {
     return valueSize(parameterArrayPointer);

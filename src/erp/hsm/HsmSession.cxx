@@ -52,7 +52,7 @@ namespace
             catch(const HsmSessionExpiredException& e)
             {
                 // Failure due to an expired HSM connection. Try again.
-                JsonLog(LogId::HSM_WARNING, JsonLog::makeWarningLogReceiver())
+                JsonLog(LogId::HSM_WARNING)
                     .message("HSM connection expired: "s + e.what()
 #if WITH_HSM_TPM_PRODUCTION > 0
                              + " (" + HsmProductionClient::hsmErrorDetails(e.errorCode) + ")"
@@ -74,7 +74,7 @@ namespace
             {
                 // Some other failure (not an expired HSM connection). Try again.
                 // This catch may be removed later.
-                JsonLog(LogId::HSM_WARNING, JsonLog::makeWarningLogReceiver())
+                JsonLog(LogId::HSM_WARNING)
                     .message("HSM error: "s + e.what()
 #if WITH_HSM_TPM_PRODUCTION > 0
                              + " (" + HsmProductionClient::hsmErrorDetails(e.errorCode) + ")"
@@ -88,7 +88,7 @@ namespace
                 lastException = std::current_exception();
             }
         }
-        JsonLog(LogId::HSM_CRITICAL, JsonLog::makeErrorLogReceiver())
+        JsonLog(LogId::HSM_CRITICAL)
             .message("HSM connection expired, all retries failed")
             .keyValue("maxRetryCount", maxRetryCount);
         if (lastException)
@@ -138,29 +138,6 @@ ErpArray<Aes256Length> HsmSession::unwrapPseudonameKey()
         return mClient.unwrapPseudonameKey(
             *mRawSession,
             std::move(input));
-    });
-}
-
-ErpBlob HsmSession::wrapRawPayload(const ErpVector& rawPayload, uint32_t blobGeneration)
-{
-    return guardedRun<ErpBlob>(*this, [&] {
-        WrapRawPayloadInput input;
-        input.teeToken = getTeeToken();
-        input.generation = blobGeneration;
-        input.rawPayload = rawPayload;
-        markHsmCallTime();
-        return mClient.wrapRawPayload(*mRawSession, std::move(input));
-    });
-}
-
-ErpVector HsmSession::unwrapRawPayload(const ErpBlob& wrappedRawPayload)
-{
-    return guardedRun<ErpVector>(*this, [&] {
-        UnwrapRawPayloadInput input;
-        input.teeToken = getTeeToken();
-        input.wrappedRawPayload = wrappedRawPayload;
-        markHsmCallTime();
-        return mClient.unwrapRawPayload(*mRawSession, std::move(input));
     });
 }
 
@@ -300,16 +277,6 @@ ErpArray<Aes128Length> HsmSession::vauEcies128 (const ErpVector& clientPublicKey
     return get(eciesKeys.fallback->blob);
 }
 
-shared_EVP_PKEY HsmSession::getEciesPublicKey()
-{
-    const auto eciesKeyBlob = mBlobCache.getEciesKeys().latest;
-    return guardedRun<shared_EVP_PKEY>(*this, [&] {
-        ErpBlob input = eciesKeyBlob.blob;
-
-        markHsmCallTime();
-        return mClient.getEcPublicKey(*mRawSession, std::move(input));
-    });
-}
 
 std::tuple<shared_EVP_PKEY, ErpBlob> HsmSession::getVauSigPrivateKey (const shared_EVP_PKEY& cachedKey,
                                                                       const ErpBlob& cachedBlob)
@@ -348,7 +315,7 @@ Certificate HsmSession::getVauSigCertificate() const
     if (! cert.has_value() || cert.value().empty())
     {
         cert = Configuration::instance().getOptionalStringValue(ConfigurationKey::C_FD_SIG_ERP);
-        TLOG(INFO) << "using C.FD.SIG VauSig Certificate from configuration file/environment";
+        TLOG(WARNING) << "using C.FD.SIG VauSig Certificate from configuration file/environment";
     }
     Expect(cert.has_value() && ! cert.value().empty(),
            "VauSig Certificate neither in blob cache nor in configuration file/environment");
@@ -446,9 +413,7 @@ DeriveKeyInput HsmSession::makeDeriveKeyInput(
 const ErpBlob& HsmSession::getTeeToken (void) const
 {
     if (mTeeToken.data.size() == 0)
-    {
         TLOG(WARNING) << "tee token is empty";
-    }
     return mTeeToken;
 }
 
@@ -457,7 +422,9 @@ void HsmSession::keepAlive (std::chrono::system_clock::time_point threshold)
 {
     if (mLastHsmCall < threshold)
     {
-        TVLOG(0) << "keeping hsm session alive which was last accessed "
+        // Temporarily log the keep alive update.
+        // Remove latest after June, 20th.
+        TLOG(WARNING) << "keeping hsm session alive which was last accessed "
                  << std::chrono::duration_cast<std::chrono::milliseconds>(
                      std::chrono::system_clock::now() - mLastHsmCall).count()
                  << " milliseconds ago at " << model::Timestamp(mLastHsmCall).toXsDateTime();

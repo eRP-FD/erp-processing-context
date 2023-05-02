@@ -32,13 +32,13 @@ public:
         : FixedIntervalHandler(std::chrono::seconds(1))
         , secondsLeft(countDownSecondsStart)
     {
-        TLOG(INFO) << "shutdown in " << secondsLeft;
+        TLOG(WARNING) << "shutdown in " << secondsLeft;
     }
 
 protected:
     void timerHandler() override
     {
-        TLOG(INFO) << "shutdown in " << --secondsLeft;
+        TLOG(WARNING) << "shutdown in " << --secondsLeft;
     }
 
 private:
@@ -95,7 +95,7 @@ void TerminationHandler::notifyTerminationCallbacks(bool hasError)
         // This is another request for termination. That should not occur. But as throwing an exception in this
         // situation would not help anyone and would probably terminate the application hard (with crash to desktop)
         // we only print an error message.
-        TLOG(INFO) << "second termination request ignored";
+        TLOG(WARNING) << "second termination request ignored";
         return;
     }
     callTerminationCallbacks();
@@ -163,8 +163,8 @@ void TerminationHandler::callTerminationCallbacks (void)
         }
         catch(const std::exception& e)
         {
-            TLOG(WARNING) << "one of the termination callbacks has thrown an exception, which was ignored";
-            TVLOG(1) << "the exception was: " << e.what();
+            TLOG(WARNING) << "one of the termination callbacks has thrown an exception, which was ignored" << std::endl;
+            TVLOG(1) << "the exception was: " << e.what() << std::endl;
         }
         catch(...)
         {
@@ -175,7 +175,7 @@ void TerminationHandler::callTerminationCallbacks (void)
             TLOG(WARNING) << "one of the termination callbacks has thrown an exception, which was ignored";
         }
     }
-    TVLOG(1) << "called all " << callbacks.size() << " termination handlers";
+    TVLOG(1) << "called all " << callbacks.size() << " termination handlers" << std::endl;
 
     setState(State::Terminated);
 }

@@ -121,11 +121,15 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 26,
-          "textTemplate": "{agentName} hat mit Ihrer eGK die Liste der offenen E-Rezepte abgerufen."
+          "textTemplate": "{agentName} hat mit Ihrer Gesundheitskarte alle Ihre einlösbaren E-Rezepte abgerufen (Prüfziffer: {PZ})."
+        },
+        {
+          "eventId": 27,
+          "textTemplate": "{agentName} hat mit Ihrer Gesundheitskarte alle Ihre einlösbaren E-Rezepte abgerufen. (Keine Prüfziffer vorhanden)"
         },
         {
           "eventId": 28,
-          "textTemplate": "{agentName} konnte aufgrund eines Fehlerfalls nicht die Liste der offenen E-Rezepte mit Ihrer eGK abrufen."
+          "textTemplate": "{agentName} konnte aufgrund eines Fehlers Ihre E-Rezepte nicht mit Ihrer Gesundheitskarte abrufen."
         },
         {
           "eventId": 29,
@@ -239,7 +243,11 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         },
         {
           "eventId": 26,
-          "textTemplate": "{agentName} retrieved your dispensable e-prescriptions using your health card."
+          "textTemplate": "{agentName} retrieved your dispensable e-prescriptions using your health card (check number: {PZ})."
+        },
+        {
+          "eventId": 27,
+          "textTemplate": "{agentName} retrieved your dispensable e-prescriptions using your health card. (no check number available)."
         },
         {
           "eventId": 28,
@@ -344,3 +352,4 @@ AuditEventTextTemplates::getId2TextContainer(std::string& inOutLanguage) const
         }
     }
 }
+

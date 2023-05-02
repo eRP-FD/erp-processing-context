@@ -103,7 +103,7 @@ const rapidjson::Document& ResourceManager::getJsonResource(const std::string_vi
             std::ostringstream msg;
             msg << "JSON Parse Error in " << resourceFile << " '"
                 << rapidjson::GetParseError_En(result.Code()) << "' near: " << nearStr;
-            TLOG(ERROR) << msg.str();
+            LOG(ERROR) << msg.str();
             throw std::runtime_error(msg.str());
         }
         iterator->second = std::move(doc);

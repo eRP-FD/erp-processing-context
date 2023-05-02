@@ -46,10 +46,10 @@ std::optional<int> model::KBVMultiplePrescription::denominator() const
 std::optional<model::Timestamp> model::KBVMultiplePrescription::startDate() const
 {
     auto zeitraum = getExtension<Zeitraum>();
-    return zeitraum ? zeitraum->valuePeriodStartGermanDate() : std::nullopt;
+    return zeitraum ? zeitraum->valuePeriodStart() : std::nullopt;
 }
 std::optional<model::Timestamp> model::KBVMultiplePrescription::endDate() const
 {
     auto zeitraum = getExtension<Zeitraum>();
-    return zeitraum ? zeitraum->valuePeriodEndGermanDate() : std::nullopt;
+    return zeitraum ? zeitraum->valuePeriodEnd() : std::nullopt;
 }

@@ -37,15 +37,3 @@ void BlobDatabaseHelper::removeUnreferencedBlobs (void)
         transaction.commit();
     }
 }
-
-
-void BlobDatabaseHelper::removeTestVsdmKeyBlobs(char operatorId)
-{
-    if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
-    {
-        auto connection = pqxx::connection(PostgresBackend::defaultConnectString());
-        pqxx::work transaction(connection);
-        transaction.exec_params("DELETE FROM erp.vsdm_key_blob WHERE operator LIKE $1", std::string{operatorId});
-        transaction.commit();
-    }
-}

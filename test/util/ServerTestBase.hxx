@@ -18,8 +18,6 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/KeyDerivation.hxx"
-#include "erp/model/ChargeItem.hxx"
-#include "erp/model/Consent.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/TelematikId.hxx"
 #include "erp/pc/PcServiceContext.hxx"
@@ -77,7 +75,6 @@ public:
     virtual Header createDeleteHeader(const std::string& path, const std::optional<const JWT>& jwtToken = {}) const;
     virtual ClientRequest encryptRequest (const ClientRequest& innerRequest, const std::optional<const JWT>& jwtToken = {});
     virtual ClientResponse verifyOuterResponse (const ClientResponse& outerResponse);
-    void validateInnerResponse(const ClientResponse& innerResponse) const;
     virtual void verifyGenericInnerResponse (
         const ClientResponse& innerResponse,
         const HttpStatus expectedStatus = HttpStatus::OK,
@@ -94,15 +91,12 @@ public:
         std::string kvnrPatient = InsurantA;
         std::optional<std::string> telematicIdPharmacy = std::nullopt;
         std::string accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32));
-        model::PrescriptionType prescriptionType = model::PrescriptionType::apothekenpflichigeArzneimittel;
     };
 
     virtual std::vector<model::Task> addTasksToDatabase(const std::vector<TaskDescriptor>& descriptors);
     virtual model::Task addTaskToDatabase(const TaskDescriptor& descriptor);
 
-    virtual model::Task createTask(
-        const std::string& accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32)),
-        model::PrescriptionType prescriptionType = model::PrescriptionType::apothekenpflichigeArzneimittel);
+    virtual model::Task createTask(const std::string& accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32)));
     virtual void activateTask(model::Task& task, const std::string& kvnrPatient = InsurantE);
     virtual void acceptTask(model::Task& task, const SafeString secret = SecureRandomGenerator::generate(32));
     virtual std::vector<model::MedicationDispense> closeTask(
@@ -131,16 +125,6 @@ public:
 
     virtual std::vector<Uuid> addCommunicationsToDatabase(const std::vector<CommunicationDescriptor>& descriptors);
     virtual model::Communication addCommunicationToDatabase(const CommunicationDescriptor& descriptor);
-
-    struct ChargeItemDescriptor
-    {
-        model::PrescriptionId prescriptionId;
-        std::string_view kvnrStr;
-        std::string_view accessCode;
-        std::string_view telematikId;
-        std::string_view healthCarePrescriptionUuid;
-    };
-    virtual model::ChargeItem addChargeItemToDatabase(const ChargeItemDescriptor& descriptor);
 
     std::unique_ptr<HttpsServer> mServer;
 

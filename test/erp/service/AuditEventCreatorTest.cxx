@@ -13,6 +13,10 @@
 
 #include <gtest/gtest.h>
 
+namespace
+{
+    constexpr std::string_view pnwPzNumber = "ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY=";
+}
 
 class AuditEventCreatorTest : public testing::Test
 {
@@ -48,7 +52,7 @@ TEST_F(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function
     const std::string auditDataId = "audit_data_id";
     const model::Timestamp recorded = model::Timestamp::now();
 
-    model::AuditData auditData(eventId, model::AuditMetaData(agentName, kvnr), action, agentType, insurantKvnr,
+    model::AuditData auditData(eventId, model::AuditMetaData(agentName, kvnr, std::nullopt), action, agentType, insurantKvnr,
                                deviceId, prescriptionId, std::nullopt);
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
@@ -86,6 +90,71 @@ TEST_F(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function
     EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
 }
 
+TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWrongTypeWithPnwPzNumber) //NOLINT(readability-function-cognitive-complexity)
+{
+    const std::string telematikId{"12345654321"};
+
+    model::AuditData auditData(
+        model::AuditEventId::GET_Tasks_by_pharmacy_with_pz,
+        model::AuditMetaData("Test Name", telematikId, std::nullopt),
+        model::AuditEvent::Action::read,
+        model::AuditEvent::AgentType::human,
+        model::Kvnr{std::string{"X123456789"}, model::Kvnr::Type::pkv},
+        1234,
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4241),
+        std::nullopt);
+
+    auditData.setId("audit_data_id");
+    auditData.setRecorded(model::Timestamp::now());
+
+    AuditEventTextTemplates textResources{};
+    const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
+
+    try
+    {
+        static_cast<void>(AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion));
+        FAIL();
+    }
+    catch (const std::logic_error& ex)
+    {
+        EXPECT_EQ(
+            std::string{ex.what()},
+            "PNW PZ number should be present if and only if event ID is GET_Tasks_by_pharmacy_with_pz");
+    }
+}
+
+TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWrongTypeWithoutPnwPzNumber) //NOLINT(readability-function-cognitive-complexity)
+{
+    const std::string telematikId{"12345654321"};
+
+    model::AuditData auditData(
+        model::AuditEventId::GET_Tasks_by_pharmacy_without_pz,
+        model::AuditMetaData("Test Name", telematikId, pnwPzNumber),
+        model::AuditEvent::Action::read,
+        model::AuditEvent::AgentType::human,
+        model::Kvnr{std::string{"X123456789"}, model::Kvnr::Type::pkv},
+        1234,
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4241),
+        std::nullopt);
+
+    auditData.setId("audit_data_id");
+    auditData.setRecorded(model::Timestamp::now());
+
+    AuditEventTextTemplates textResources{};
+    const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
+
+    try
+    {
+        static_cast<void>(AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion));
+        FAIL();
+    }
+    catch (const std::logic_error& ex)
+    {
+        EXPECT_EQ(
+            std::string{ex.what()},
+            "PNW PZ number should be present if and only if event ID is GET_Tasks_by_pharmacy_with_pz");
+    }
+}
 
 TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPnwPzNumberEn)
 {
@@ -94,7 +163,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPnwPzNumberEn)
 
     model::AuditData auditData(
         model::AuditEventId::GET_Tasks_by_pharmacy_with_pz,
-        model::AuditMetaData(agentName, telematikId),
+        model::AuditMetaData(agentName, telematikId, pnwPzNumber),
         model::AuditEvent::Action::read,
         model::AuditEvent::AgentType::human,
         model::Kvnr{std::string{"X123456789"}, model::Kvnr::Type::pkv},
@@ -110,7 +179,8 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPnwPzNumberEn)
     const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "en", textResources, *jwt, gematikVersion);
 
     const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
-                                " retrieved your dispensable e-prescriptions using your health card.</div>";
+                                " retrieved your dispensable e-prescriptions using your health card"
+                                " (check number: " + pnwPzNumber.data() + ").</div>";
     EXPECT_EQ(auditEvent.textDiv(), textDiv);
 }
 
@@ -121,7 +191,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPnwPzNumberDe)
 
     model::AuditData auditData(
         model::AuditEventId::GET_Tasks_by_pharmacy_with_pz,
-        model::AuditMetaData(agentName, telematikId),
+        model::AuditMetaData(agentName, telematikId, pnwPzNumber),
         model::AuditEvent::Action::read,
         model::AuditEvent::AgentType::human,
         model::Kvnr{std::string{"X123456789"}, model::Kvnr::Type::pkv},
@@ -137,7 +207,64 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPnwPzNumberDe)
     const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
 
     const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
-                                " hat mit Ihrer eGK die Liste der offenen E-Rezepte abgerufen.</div>";
+                                " hat mit Ihrer Gesundheitskarte alle Ihre einlösbaren E-Rezepte abgerufen"
+                                " (Prüfziffer: " + pnwPzNumber.data() + ").</div>";
+    EXPECT_EQ(auditEvent.textDiv(), textDiv);
+}
+
+TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithoutPnwPzNumberEn)
+{
+    const std::string telematikId{"12345654321"};
+    const std::string_view agentName = "Test Name";
+
+    model::AuditData auditData(
+        model::AuditEventId::GET_Tasks_by_pharmacy_without_pz,
+        model::AuditMetaData(agentName, telematikId, std::nullopt),
+        model::AuditEvent::Action::read,
+        model::AuditEvent::AgentType::human,
+        model::Kvnr{std::string{"X123456789"}, model::Kvnr::Type::pkv},
+        1234,
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4241),
+        std::nullopt);
+
+    auditData.setId("audit_data_id");
+    auditData.setRecorded(model::Timestamp::now());
+
+    AuditEventTextTemplates textResources{};
+    const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
+    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "en", textResources, *jwt, gematikVersion);
+
+    const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
+                                " retrieved your dispensable e-prescriptions using your health card."
+                                " (no check number available).</div>";
+    EXPECT_EQ(auditEvent.textDiv(), textDiv);
+}
+
+TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithoutPnwPzNumberDe)
+{
+    const std::string telematikId{"12345654321"};
+    const std::string_view agentName = "Test Name";
+
+    model::AuditData auditData(
+        model::AuditEventId::GET_Tasks_by_pharmacy_without_pz,
+        model::AuditMetaData(agentName, telematikId, std::nullopt),
+        model::AuditEvent::Action::read,
+        model::AuditEvent::AgentType::human,
+        model::Kvnr{std::string{"X123456789"}, model::Kvnr::Type::pkv},
+        1234,
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4241),
+        std::nullopt);
+
+    auditData.setId("audit_data_id");
+    auditData.setRecorded(model::Timestamp::now());
+
+    AuditEventTextTemplates textResources{};
+    const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
+    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
+
+    const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
+                                " hat mit Ihrer Gesundheitskarte alle Ihre einlösbaren E-Rezepte abgerufen."
+                                " (Keine Prüfziffer vorhanden)</div>";
     EXPECT_EQ(auditEvent.textDiv(), textDiv);
 }
 
@@ -148,7 +275,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithInvalidPnw)
 
     model::AuditData auditData(
         model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed,
-        model::AuditMetaData(agentName, telematikId),
+        model::AuditMetaData(agentName, telematikId, std::nullopt),
         model::AuditEvent::Action::read,
         model::AuditEvent::AgentType::human,
         model::Kvnr{std::string{"X123456789"}, model::Kvnr::Type::pkv},
@@ -165,7 +292,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithInvalidPnw)
         const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
         const std::string textDiv =
             "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
-            " konnte aufgrund eines Fehlerfalls nicht die Liste der offenen E-Rezepte mit Ihrer eGK abrufen."
+            " konnte aufgrund eines Fehlers Ihre E-Rezepte nicht mit Ihrer Gesundheitskarte abrufen."
             "</div>";
         EXPECT_EQ(auditEvent.textDiv(), textDiv);
     }
@@ -192,7 +319,7 @@ TEST_F(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognit
     const std::string auditDataId = "audit_data_id";
     const model::Timestamp recorded = model::Timestamp::now();
 
-    model::AuditData auditData(eventId, model::AuditMetaData({}, {}), action, agentType, insurantKvnr, deviceId,
+    model::AuditData auditData(eventId, model::AuditMetaData({}, {}, {}), action, agentType, insurantKvnr, deviceId,
                                prescriptionId, std::nullopt);
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
@@ -243,7 +370,7 @@ TEST_F(AuditEventCreatorTest, createGetMultipleResources)//NOLINT(readability-fu
     const model::Timestamp recorded = model::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({}, {}), action, agentType, insurantKvnr, deviceId, {}, {});
+        eventId, model::AuditMetaData({}, {}, {}), action, agentType, insurantKvnr, deviceId, {}, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -293,7 +420,7 @@ TEST_F(AuditEventCreatorTest, createExpiredTaskDeletion)//NOLINT(readability-fun
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4241);
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({}, {}), action, agentType, insurantKvnr, deviceId, prescriptionId, {});
+        eventId, model::AuditMetaData({}, {}, {}), action, agentType, insurantKvnr, deviceId, prescriptionId, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -338,7 +465,7 @@ TEST_F(AuditEventCreatorTest, createExpiredCommunicationDeletion)
     const std::string auditDataId = "audit_data_id";
     const model::Timestamp recorded = model::Timestamp::now();
 
-    model::AuditData auditData(eventId, model::AuditMetaData({}, {}), action, agentType, insurantKvnr, deviceId, {},
+    model::AuditData auditData(eventId, model::AuditMetaData({}, {}, {}), action, agentType, insurantKvnr, deviceId, {},
                                {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
@@ -387,7 +514,7 @@ TEST_F(AuditEventCreatorTest, createPostChargeItem)//NOLINT(readability-function
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(std::string(telematikId)));
     const auto agentName = jwt->stringForClaim(JWT::organizationNameClaim).value();
 
-    model::AuditData auditData(eventId, model::AuditMetaData(agentName, telematikId), action, agentType, insurantKvnr,
+    model::AuditData auditData(eventId, model::AuditMetaData(agentName, telematikId, std::nullopt), action, agentType, insurantKvnr,
                                deviceId, prescriptionId, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
@@ -441,7 +568,7 @@ TEST_F(AuditEventCreatorTest, createPutChargeItem)//NOLINT(readability-function-
     const model::Timestamp recorded = model::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData(agentName, telematikId), action, agentType, insurantKvnr, deviceId, prescriptionId, {});
+        eventId, model::AuditMetaData(agentName, telematikId, std::nullopt), action, agentType, insurantKvnr, deviceId, prescriptionId, {});
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -489,7 +616,7 @@ TEST_F(AuditEventCreatorTest, createDeleteConsent)//NOLINT(readability-function-
     const model::Timestamp recorded = model::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({ }, { }), action, agentType, insurantKvnr, deviceId, {}, "CHARGCONS-X123456789");
+        eventId, model::AuditMetaData({ }, { }, { }), action, agentType, insurantKvnr, deviceId, {}, "CHARGCONS-X123456789");
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -537,7 +664,7 @@ TEST_F(AuditEventCreatorTest, createPostConsent)//NOLINT(readability-function-co
     const model::Timestamp recorded = model::Timestamp::now();
 
     model::AuditData auditData(
-        eventId, model::AuditMetaData({}, {}), action, agentType, insurantKvnr, deviceId, {}, "CHARGCONS-X123456789");
+        eventId, model::AuditMetaData({}, {}, {}), action, agentType, insurantKvnr, deviceId, {}, "CHARGCONS-X123456789");
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -588,7 +715,7 @@ TEST_F(AuditEventCreatorTest, createWithUnsupportedLanguage)//NOLINT(readability
     const std::string auditDataId = "audit_data_id";
     const model::Timestamp recorded = model::Timestamp::now();
 
-    model::AuditData auditData(eventId, model::AuditMetaData({}, {}), action, agentType, insurantKvnr, deviceId,
+    model::AuditData auditData(eventId, model::AuditMetaData({}, {}, {}), action, agentType, insurantKvnr, deviceId,
                                prescriptionId, std::nullopt);
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);

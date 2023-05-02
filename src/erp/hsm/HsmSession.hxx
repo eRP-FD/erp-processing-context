@@ -58,9 +58,6 @@ public:
     ErpBlob generatePseudonameKey(uint32_t input);
     ErpArray<Aes256Length> unwrapPseudonameKey();
 
-    ErpBlob wrapRawPayload(const ErpVector& rawPayload, uint32_t blobGeneration);
-    ErpVector unwrapRawPayload(const ErpBlob& wrappedRawPayload);
-
     void setTeeToken (const ErpBlob& teeToken);
 
     /**
@@ -132,13 +129,6 @@ public:
      * @throws if there is any error
      */
     ErpArray<Aes128Length> vauEcies128 (const ErpVector& clientPublicKey, bool useFallback = false);
-
-    /**
-     * Get the Ecies Public Key
-     *
-     * @return ErpVector the public key in binary ANSI X9.62/RFC-5480 format
-     */
-    shared_EVP_PKEY getEciesPublicKey();
 
     std::tuple<shared_EVP_PKEY, ErpBlob> getVauSigPrivateKey(const shared_EVP_PKEY& cachedKey,
                                                              const ErpBlob& cachedBlob);

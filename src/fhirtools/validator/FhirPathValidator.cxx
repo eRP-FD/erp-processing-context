@@ -44,7 +44,7 @@ fhirtools::ValidationResults FhirPathValidator::validate(const std::shared_ptr<c
                                                             const fhirtools::ValidatorOptions& options)
 {
     auto validator = create(options, element->getFhirStructureRepository());
-    validator.validateInternal(element, {}, elementFullPath);
+    validator.validateInternal(element, elementFullPath);
     return validator.result;
 }
 
@@ -84,7 +84,11 @@ fhirtools::ValidationResults FhirPathValidator::validateWithProfiles(const std::
     }
     auto validator = create(options, element->getFhirStructureRepository());
     validator.result.merge(std::move(resultList));
-    validator.validateInternal(element, profiles, elementFullPath);
+    const auto* structureDefinition = element->getStructureDefinition();
+    FPExpect(structureDefinition, "missing structure definition");
+    ProfileSetValidator profileSetValidator{element->definitionPointer(), profiles, validator};
+    auto referenceContext = profileSetValidator.buildReferenceContext(*element, elementFullPath);
+    validator.validateElement(element, referenceContext, profileSetValidator, elementFullPath);
     return validator.result;
 }
 
@@ -98,9 +102,9 @@ const fhirtools::ProfiledElementTypeInfo& fhirtools::FhirPathValidator::extensio
 {
     return *mExtensionRootDefPtr;
 }
-void fhirtools::FhirPathValidator::validateInternal(const std::shared_ptr<const Element>& element,
-                                                    std::set<ProfiledElementTypeInfo> extraProfiles,
-                                                    const std::string& elementFullPath)
+
+void FhirPathValidator::validateInternal(const std::shared_ptr<const Element>& element,
+                                         const std::string& elementFullPath)
 {
     using namespace std::string_literals;
     const auto* structureDefinition = element->getStructureDefinition();
@@ -108,24 +112,20 @@ void fhirtools::FhirPathValidator::validateInternal(const std::shared_ptr<const 
     FPExpect(element->definitionPointer().element() != nullptr, "missing element id");
     const auto& elementId = element->definitionPointer().element()->name();
     std::set<ProfiledElementTypeInfo> defPtrs;
-    if (options().validateMetaProfiles)
+    for (const auto* profileDef : profiles(*element, elementFullPath))
     {
-        for (const auto* profileDef : profiles(*element, elementFullPath))
+        auto elementDef = profileDef->findElement(elementId);
+        if (elementDef)
         {
-            auto elementDef = profileDef->findElement(elementId);
-            if (elementDef)
-            {
-                defPtrs.emplace(profileDef, std::move(elementDef));
-            }
-            else
-            {
-                result.add(Severity::error,
-                        profileDef->url() + '|' + profileDef->version() + " no such element: " + elementId,
-                        elementFullPath, profileDef);
-            }
+            defPtrs.emplace(profileDef, std::move(elementDef));
+        }
+        else
+        {
+            result.add(Severity::error,
+                       profileDef->url() + '|' + profileDef->version() + " no such element: " + elementId,
+                       elementFullPath, profileDef);
         }
     }
-    defPtrs.merge(extraProfiles);
     ProfileSetValidator profileSetValidator{element->definitionPointer(), defPtrs, *this};
     auto referenceContext = profileSetValidator.buildReferenceContext(*element, elementFullPath);
     validateElement(element, referenceContext, profileSetValidator, elementFullPath);
@@ -276,10 +276,7 @@ void fhirtools::FhirPathValidator::addProfiles(const Element& element,
         if (resourceType == metaProf->baseType(mRepo))
         {
             metaProfiles.emplace(metaProf);
-            if (options().validateMetaProfiles)
-            {
-                profileSetValidator.addProfile(mRepo, metaProf);
-            }
+            profileSetValidator.addProfile(mRepo, metaProf);
         }
         else
         {

@@ -134,10 +134,6 @@ ErpArray<Aes128Length> HsmMockClient::doVauEcies128(
     return output;
 }
 
-shared_EVP_PKEY HsmMockClient::getEcPublicKey(const HsmRawSession&, ErpBlob&& ecKeyPair)
-{
-    return EllipticCurveUtils::pemToPrivatePublicKeyPair(ecKeyPair.data);
-}
 
 SafeString HsmMockClient::getVauSigPrivateKey (
     const HsmRawSession&,
@@ -233,17 +229,6 @@ void HsmMockClient::verifyTeeToken (const ErpBlob& teeToken) const
     Expect(mTeeToken.generation == teeToken.generation, "invalid tee token generation");
 }
 
-ErpBlob HsmMockClient::wrapRawPayload(const HsmRawSession&, WrapRawPayloadInput&& input)
-{
-    verifyTeeToken(input.teeToken);
-    return ErpBlob{std::move(input.rawPayload), input.generation};
-}
-
-ErpVector HsmMockClient::unwrapRawPayload(const HsmRawSession&, UnwrapRawPayloadInput&& input)
-{
-    verifyTeeToken(input.teeToken);
-    return ErpVector::create(input.wrappedRawPayload.data);
-}
 
 void HsmMockClient::reconnect (HsmRawSession&)
 {

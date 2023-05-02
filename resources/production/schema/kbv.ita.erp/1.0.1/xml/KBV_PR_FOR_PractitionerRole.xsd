@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2021
+  ~ (C) Copyright IBM Corp. 2021
+  -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://hl7.org/fhir" targetNamespace="http://hl7.org/fhir" elementFormDefault="qualified" version="4.0.1">
+  <xs:include schemaLocation="KBV_PR_ERP_Generics.xsd"/>
+  <xs:element name="PractitionerRole" type="KBV_PR_FOR_PractitionerRole"/>
+  <xs:complexType name="KBV_PR_FOR_PractitionerRole">
+    <xs:sequence>
+      <xs:element name="id" type="id"/>
+      <xs:element name="meta" type="KBV_PR_FOR_PractitionerRole.Meta"/>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="modifierExtension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="practitioner" type="KBV_PR_ERP_Generics.SimpleReference"/>
+      <xs:element name="organization" type="KBV_PR_FOR_PractitionerRole.Organization"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_PractitionerRole.Meta">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="profile" type="KBV_PR_FOR_PractitionerRole.Meta.profile"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_PractitionerRole.Meta.profile">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="canonical-primitive" fixed="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_PractitionerRole|1.0.3"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_PractitionerRole.Organization">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:sequence>
+          <xs:element name="identifier" type="KBV_PR_FOR_PractitionerRole.Organization.Identifier"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_PractitionerRole.Organization.Identifier">
+    <xs:sequence>
+      <xs:element name="extension" type="Extension" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="system" type="KBV_PR_FOR_PractitionerRole.Organization.Identifier.system"/>
+      <xs:element name="value" type="string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="KBV_PR_FOR_PractitionerRole.Organization.Identifier.system">
+    <xs:complexContent>
+      <xs:extension base="Element">
+        <xs:attribute name="value" type="uri-primitive" fixed="http://fhir.de/NamingSystem/asv/teamnummer"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

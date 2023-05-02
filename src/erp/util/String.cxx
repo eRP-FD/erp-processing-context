@@ -256,7 +256,7 @@ size_t String::to_size_t (const std::string& value, const size_t defaultValue)
     }
     catch(...)
     {
-        TLOG(ERROR) << "conversion of " << value << " to size_t failed, returning default " << defaultValue;
+        LOG(ERROR) << "conversion of " << value << " to size_t failed, returning default " << defaultValue;
     }
     return defaultValue;
 }

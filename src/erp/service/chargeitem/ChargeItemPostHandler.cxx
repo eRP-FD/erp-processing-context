@@ -54,7 +54,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
-    // GEMREQ-start A_22135-01#getReceipt, A_22134#getReceipt
+    // GEMREQ-start A_22135#getReceipt, A_22134#getReceipt
     A_22130.start("Check existence of 'task' parameter");
     const auto prescriptionId = parseIdFromQuery(session.request, session.accessLog, "task");
     A_22130.finish();
@@ -67,25 +67,25 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 
     A_22131.start("Check existence of referenced task in status 'completed'");
     auto [task, prescription, receipt] = databaseHandle->retrieveTaskAndPrescriptionAndReceipt(prescriptionId);
-    // GEMREQ-end A_22135-01#getReceipt, A_22134#getReceipt
+    // GEMREQ-end A_22135#getReceipt, A_22134#getReceipt
 
     ErpExpect(task.has_value(), HttpStatus::Conflict, "Referenced task not found for provided prescription id");
     ErpExpect(task->status() == model::Task::Status::completed, HttpStatus::Conflict, "Referenced task must be in status 'completed'");
     A_22131.finish();
 
-    A_22132_02.start("Check that secret from URL is equal to secret from referenced task");
+    A_22132.start("Check that secret from URL is equal to secret from referenced task");
     const auto uriSecret = session.request.getQueryParameter("secret");
     A_20703.start("Set VAU-Error-Code header field to brute_force whenever AccessCode or Secret mismatches");
     Expect3(task->secret().has_value(), "Task has no secret", std::logic_error);
     VauExpect(uriSecret.has_value() && uriSecret.value() == task->secret().value(), HttpStatus::Forbidden,
               VauErrorCode::brute_force, "No or invalid secret provided for referenced Task");
     A_20703.finish();
-    A_22132_02.finish();
+    A_22132.finish();
 
     const auto telematikIdClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect3(telematikIdClaim.has_value(), "JWT does not contain TelematikId", std::logic_error); // should not happen because of JWT verification;
 
-    A_22136_01.start("Validate input ChargeItem resource");
+    A_22136.start("Validate input ChargeItem resource");
     std::optional<model::ChargeItem> chargeItemOptional{};
     std::optional<model::ChargeItemMarkingFlags> markingFlags{};
     try
@@ -107,7 +107,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     const auto kvnr = task->kvnr();
     Expect3(kvnr.has_value(), "Referenced task has no KV number", std::logic_error);
     checkChargeItemConsistency(chargeItem, prescriptionId, telematikIdClaim.value(), kvnr.value());
-    A_22136_01.finish();
+    A_22136.finish();
 
     A_22133.start("Check consent");
     const auto consent = databaseHandle->retrieveConsent(kvnr.value());
@@ -128,12 +128,12 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     A_22134.finish();
     // GEMREQ-end A_22134#setReference
 
-    // GEMREQ-start A_22135-01#setReference
-    A_22135_01.start("Receipt");
+    // GEMREQ-start A_22135#setReference
+    A_22135.start("Receipt");
     Expect3(receipt.has_value(), "No receipt found", std::logic_error);
     chargeItem.setSupportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle);
-    A_22135_01.finish();
-    // GEMREQ-end A_22135-01#setReference
+    A_22135.finish();
+    // GEMREQ-end A_22135#setReference
 
     // GEMREQ-start A_22137#remove-binary
     auto rawDispenseItem = getDispenseItemBinary(chargeItem);
@@ -166,23 +166,23 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
 
     chargeItem.setId(prescriptionId);
 
-    // GEMREQ-start A_22614-02#setAccessCode
-    A_22614_02.start("create access code for pharmacy");
+    // GEMREQ-start A_22614#setAccessCode
+    A_22614.start("create access code for pharmacy");
     const auto pharmacyAccessCode = ChargeItemHandlerBase::createPharmacyAccessCode();
     chargeItem.setAccessCode(pharmacyAccessCode);
-    A_22614_02.finish();
-    // GEMREQ-end A_22614-02#setAccessCode
+    A_22614.finish();
+    // GEMREQ-end A_22614#setAccessCode
 
     session.response.setHeader(Header::Location, getLinkBase() + "/ChargeItem/" + prescriptionId.toString());
 
-    // GEMREQ-start A_22137#storeChargeItem, A_22135-01#storeChargeItem, A_22134#storeChargeItem
+    // GEMREQ-start A_22137#storeChargeItem, A_22135#storeChargeItem, A_22134#storeChargeItem
     model::Binary dispenseItemBinary = model::Binary{*rawDispenseItem->id(), dispenseItemWithOcsp};
-    auto chargeInformation = model::ChargeInformation{.chargeItem = std::move(chargeItem),
-                                                      .prescription = std::move(prescription.value()),
-                                                      .unsignedPrescription = std::move(prescriptionBundle),
-                                                      .dispenseItem = std::move(dispenseItemBinary),
-                                                      .unsignedDispenseItem = std::move(dispenseItemBundle),
-                                                      .receipt = std::move(receipt.value())};
+    const auto chargeInformation = model::ChargeInformation{.chargeItem = std::move(chargeItem),
+                                                            .prescription = std::move(prescription.value()),
+                                                            .unsignedPrescription = std::move(prescriptionBundle),
+                                                            .dispenseItem = std::move(dispenseItemBinary),
+                                                            .unsignedDispenseItem = std::move(dispenseItemBundle),
+                                                            .receipt = std::move(receipt.value())};
 
     try
     {
@@ -192,14 +192,9 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     {
         ErpFail(HttpStatus::Conflict, "ChargeItem already exists for this prescription ID");
     }
-    // GEMREQ-end A_22137#storeChargeItem, A_22135-01#storeChargeItem, A_22134#storeChargeItem
-
-    // requirement only phrased for PUT /ChargeItem, but also true for POST:
-    A_23624.start("do not return access code in response");
-    chargeInformation.chargeItem.deleteAccessCode();
-    A_23624.finish();
 
     makeResponse(session, HttpStatus::Created, &chargeInformation.chargeItem);
+    // GEMREQ-end A_22137#storeChargeItem, A_22135#storeChargeItem, A_22134#storeChargeItem
 
     // Collect Audit data
     session.auditDataCollector()

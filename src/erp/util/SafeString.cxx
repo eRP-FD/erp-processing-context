@@ -21,13 +21,6 @@ SafeString::SafeString(const SafeString::NoZeroFillTag&, size_t size)
     mValue[mStringLength] = '\0';
 }
 
-SafeString::SafeString(const SafeString& other)
-    : SafeString(SafeString::no_zero_fill, other.size())
-{
-    auto* otherValuePtr = other.mValue.get();
-    std::copy(otherValuePtr, otherValuePtr + other.size(), mValue.get());
-}
-
 SafeString::SafeString (const size_t size)
     : SafeString(no_zero_fill, size)
 {

@@ -14,7 +14,7 @@ void KbvMedicationCompoundingValidator::validate(const model::ResourceBase& reso
     doValidate(dynamic_cast<const model::KbvMedicationCompounding&>(resource), xmlValidator, inCodeValidator);
 }
 
-void KbvMedicationCompoundingValidator_V1_0_2::doValidate(
+void KbvMedicationCompoundingValidator_V1_0_1::doValidate(
     const model::KbvMedicationCompounding& kbvMedicationCompounding, const XmlValidator&, const InCodeValidator&) const
 {
     KbvValidationUtils::checkKbvExtensionValueCoding(

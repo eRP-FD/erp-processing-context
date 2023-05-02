@@ -29,7 +29,7 @@ public:
     /**
      *  Create a new HsmSession object, connect it to an external HSM server, log on and return it.
      *
-     *  Either returns a valid HsmSession object or throws an exception.
+     *  Either returns a valid HamSession object or throws an exception.
      */
     virtual std::shared_ptr<HsmRawSession> rawConnect (void) = 0;
     virtual std::unique_ptr<HsmSession> connect (void);

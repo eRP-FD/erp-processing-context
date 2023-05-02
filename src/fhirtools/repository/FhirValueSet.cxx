@@ -329,7 +329,7 @@ FhirValueSet::Builder& FhirValueSet::Builder::includeCode(const std::string& cod
     auto [_, inserted] = mFhirValueSet->mIncludes.back().codes.insert(code);
     if (! inserted)
     {
-        TVLOG(2) << "duplicate includeCodeSystem code: " << code;
+        VLOG(2) << "duplicate includeCodeSystem code: " << code;
     }
     return *this;
 }
@@ -348,7 +348,7 @@ FhirValueSet::Builder& FhirValueSet::Builder::excludeCode(const std::string& cod
     auto [_, inserted] = mFhirValueSet->mExcludes.back().codes.insert(code);
     if (! inserted)
     {
-        TLOG(WARNING) << "duplicate excludeCodeSystem code: " << code;
+        LOG(WARNING) << "duplicate excludeCodeSystem code: " << code;
     }
     return *this;
 }

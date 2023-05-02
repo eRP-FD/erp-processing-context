@@ -105,7 +105,7 @@ private:
 
     void addSearchArguments (const std::string& name, const std::string& rawValues, const KeyDerivation& keyDerivation);
     void addDateSearchArguments(const std::string& name, const std::string& rawValues,
-                                const std::string& parameterDbName, SearchParameter::Type parameterType);
+                                 const std::string& parameterDbName);
     void addStringSearchArguments(const std::string& name, const std::string& rawValues,
                                    const std::string& parameterDbName);
     void addIdentitySearchArguments(const std::string& name, const std::string& rawValues,

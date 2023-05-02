@@ -109,20 +109,17 @@ void ExceptionHelper::extractInformationAndRethrow (
     }
     catch (const std::runtime_error& e)
     {
-        const std::string& typeinfo = typeid(e).name();
-        consumer("std::runtime_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
+        consumer("std::runtime_error(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::logic_error& e)
     {
-        const std::string& typeinfo = typeid(e).name();
-        consumer("std::logic_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
+        consumer("std::logic_error(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::exception& e)
     {
-        const std::string& typeinfo = typeid(e).name();
-        consumer("std::exception(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
+        consumer("std::exception()", getLocationString(e));
         throw;
     }
     catch (const boost::exception& e)

@@ -7,7 +7,6 @@
 #define ERP_PROCESSING_CONTEXT_DATABASE_DATABASE_HXX
 
 #include "erp/crypto/RandomSource.hxx"
-#include "erp/database/DatabaseConnectionInfo.hxx"
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 
@@ -53,8 +52,6 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "17";
-
     using Factory = std::function<std::unique_ptr<Database>(HsmPool&, KeyDerivation&)>;
 
     virtual ~Database (void) = default;
@@ -62,13 +59,7 @@ public:
     virtual void commitTransaction() = 0;
     virtual void closeConnection() = 0;
 
-    virtual std::string retrieveSchemaVersion() = 0;
-
     virtual void healthCheck() = 0;
-    virtual std::optional<DatabaseConnectionInfo> getConnectionInfo() const
-    {
-        return std::nullopt;
-    }
 
     virtual model::PrescriptionId storeTask(const model::Task& task) = 0;
     virtual void updateTaskStatusAndSecret(const model::Task& task) = 0;

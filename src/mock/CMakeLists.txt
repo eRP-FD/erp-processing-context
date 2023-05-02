@@ -21,11 +21,7 @@ target_sources(erp-hsm-tpm-mock
         tsl/MockTslManager.cxx
         tsl/UrlRequestSenderMock.cxx
         util/MockConfiguration.cxx
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:enrolment/MockEnrolmentManager.cxx>
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:enrolment/TpmProxyApi.cxx>
-    INTERFACE
-        $<TARGET_OBJECTS:erp-hsm-tpm-mock>
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:$<TARGET_OBJECTS:enrolment-api-client>>
+    INTERFACE $<TARGET_OBJECTS:erp-hsm-tpm-mock>
 )
 
 
@@ -41,22 +37,57 @@ target_link_libraries(erp-hsm-tpm-mock
         CONAN_PKG::openssl
         CONAN_PKG::rapidjson
         CONAN_PKG::libxml2
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
 )
 
 
 target_compile_definitions(erp-hsm-tpm-mock
-    PRIVATE
-        ENABLE_DEBUG_LOG
-    PUBLIC
-        WITH_HSM_MOCK=1
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:WITH_HSM_TPM_PRODUCTION=1>
-)
+        PRIVATE
+            ENABLE_DEBUG_LOG
+        PUBLIC
+            WITH_HSM_MOCK=1
+    )
 
 target_include_directories(
     erp-hsm-tpm-mock
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. # Include the erp prefixes in include statements.
                 ${CMAKE_CURRENT_BINARY_DIR}
-                ${CMAKE_SOURCE_DIR}
+
 )
+
+
+if (ERP_WITH_HSM_MOCK)
+    target_link_libraries(erp-processing-context-files
+            PUBLIC
+            erp-hsm-tpm-mock)
+endif()
+
+if(ERP_WITH_HSM_TPM_PRODUCTION)
+add_library(erp-mock-enrollmentmanager OBJECT)
+target_sources(erp-mock-enrollmentmanager
+        PRIVATE
+        enrolment/MockEnrolmentManager.cxx
+        enrolment/TpmProxyApi.cxx
+        )
+target_link_libraries (
+        erp-mock-enrollmentmanager
+        PUBLIC
+        enrolment-api-client
+        CONAN_PKG::boost
+        CONAN_PKG::date
+        CONAN_PKG::glog
+        CONAN_PKG::gsl-lite
+        CONAN_PKG::libpq
+        CONAN_PKG::libpqxx
+        CONAN_PKG::magic_enum
+        CONAN_PKG::openssl
+        CONAN_PKG::rapidjson
+        CONAN_PKG::hsmclient
+        CONAN_PKG::tpmclient
+)
+target_include_directories(
+        erp-mock-enrollmentmanager
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. # Include the erp prefixes in include statements.
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}
+)
+endif()

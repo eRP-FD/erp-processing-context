@@ -89,7 +89,7 @@ TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cogn
                         bodyRequest, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxCommunicationReply,
                         model::ResourceVersion::supportedBundles(),
-                        false));
+                        std::nullopt));
     auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
@@ -969,7 +969,7 @@ TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
     const auto chargChangeReqComm = Communication::fromJson(
         std::move(body), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
         *StaticData::getInCodeValidator(), SchemaType::fhir,
-        model::ResourceVersion::supportedBundles(), false);
+        model::ResourceVersion::supportedBundles(), std::nullopt);
 
     EXPECT_EQ(chargChangeReqComm.messageType(), Communication::MessageType::ChargChangeReq);
     EXPECT_EQ(chargChangeReqComm.messageTypeAsString(), "ChargChangeReq");

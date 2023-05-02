@@ -13,10 +13,6 @@ class Erp9770Test : public ErpWorkflowTest
 
 TEST_F(Erp9770Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (!Configuration::instance().featurePkvEnabled())
-    {
-        GTEST_SKIP();
-    }
     auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 3954242);
     send(RequestArguments(HttpMethod::DELETE, "/ChargeItem/" + prescriptionId.toString(), "{}").withJwt(jwtApotheke()));

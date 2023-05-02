@@ -15,7 +15,7 @@ void KbvPracticeSupplyValidator::validate(const model::ResourceBase& resource, c
 {
     doValidate(dynamic_cast<const model::KbvPracticeSupply&>(resource), xmlValidator, inCodeValidator);
 }
-void KbvPracticeSupplyValidator_V1_0_2::doValidate(const model::KbvPracticeSupply& kbvPracticeSupply,
+void KbvPracticeSupplyValidator_V1_0_1::doValidate(const model::KbvPracticeSupply& kbvPracticeSupply,
                                                    const XmlValidator&, const InCodeValidator&) const
 {
     const auto& payorExtension = kbvPracticeSupply.getExtension<model::Extension>(

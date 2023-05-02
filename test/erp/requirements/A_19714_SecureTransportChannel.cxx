@@ -34,7 +34,7 @@ class A_19714_Test : public ServerTestBase
         tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
             ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
-        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
+        ServerTestBase::SetUp();
     }
 
     void TearDown() override

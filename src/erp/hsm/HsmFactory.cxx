@@ -23,7 +23,7 @@ HsmFactory::HsmFactory (
 
 std::unique_ptr<HsmSession> HsmFactory::connect (void)
 {
-    TLOG(INFO) << "Initializing new HSM-Session.";
+    TLOG(WARNING) << "Initializing new HSM-Session.";
     return std::make_unique<HsmSession>(
         *mHsmClient,
         *mBlobCache,

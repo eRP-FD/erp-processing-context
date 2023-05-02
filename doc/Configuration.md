@@ -1,6 +1,6 @@
 # Configuration
-Configuration values can be provided as environment variables or in a JSON file. Environment
-variables take precendence.
+Configuration values can be provided as environment variables or in a JSON file. Environment 
+variables take precendence. 
 
 #Values
 Each entry has the form
@@ -9,7 +9,7 @@ Each entry has the form
 
 
 - HSM_WORK_USERNAME ("ERP_HSM_WORK_USERNAME" | "/erp/hsm/work-username" | "ERP_WORK")<br/>
-  Username of the HSM work identity. It is used during regular operation, i.e. by code called
+  Username of the HSM work identity. It is used during regular operation, i.e. by code called 
   by VAU endpoints.
 - HSM_WORK_PASSWORD ("ERP_HSM_WORK_PASSWORD" | "/erp/hsm/work-password")
   Password for the HSM work identity. Only used when no key spec is set.
@@ -30,3 +30,5 @@ Each entry has the form
   For backward compatibility. The old way to configure the password of the HSM work identity.
 - HSM_IDLE_TIMEOUT_SECONDS ("ERP_HSM_IDLE_TIMEOUT_SECONDS" | "/erp/hsm/idle-timeout-seconds")
   Idle time after which the HSM closes a connection, measured in seconds.
+- PNW_ALLOWED_RESULTS ("ERP_SERVICE_PNW_ALLOWED_RESULTS" | "/erp/pnw_allowed_results")
+  Comma-separated list (as string) of values corresponding to the allowed results of the "E" value within PNW data

@@ -115,7 +115,6 @@ void SubscriptionPostHandler::publish(SessionContext& sessionContext, const mode
     }
     catch (const sw::redis::Error& exception)
     {
-        JsonLog(LogId::INFO, JsonLog::makeVLogReceiver(0))
-            .message(std::string{"Redis publish failed: "} + std::string{exception.what()});
+        JsonLog(LogId::INFO).message(std::string{"Redis publish failed: "} + std::string{exception.what()});
     }
 }

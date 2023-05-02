@@ -7,7 +7,6 @@
 #define ERP_PROCESSING_CONTEXT_STATICDATA_HXX
 
 #include "erp/crypto/Certificate.hxx"
-#include "erp/model/ResourceVersion.hxx"
 #include "erp/validation/InCodeValidator.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
@@ -38,8 +37,16 @@ public:
     XmlValidatorStatic()
     {
         configureXmlValidator(mXmlValidator);
-        const auto& additional = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_ADDITIONAL_XML_SCHEMAS);
-        mXmlValidator.loadSchemas(additional, std::nullopt, std::nullopt);
+        const auto& additionalGematik = TestConfiguration::instance().getMap(TestConfigurationKey::TEST_ADDITIONAL_XML_SCHEMAS_GEMATIK);
+        for (const auto& additionalGematikVer: additionalGematik)
+        {
+            mXmlValidator.loadGematikSchemas(additionalGematikVer.first, additionalGematikVer.second, std::nullopt, std::nullopt);
+        }
+        const auto& additionalKbv = TestConfiguration::instance().getMap(TestConfigurationKey::TEST_ADDITIONAL_XML_SCHEMAS_KBV);
+        for (const auto& additionalKbvVer : additionalKbv)
+        {
+            mXmlValidator.loadKbvSchemas(additionalKbvVer.first, additionalKbvVer.second, std::nullopt, std::nullopt);
+        }
     }
     XmlValidator mXmlValidator;
 };
@@ -55,10 +62,8 @@ public:
     }
     static std::shared_ptr<XmlValidator> getXmlValidator()
     {
-        bool oldValid = model::ResourceVersion::supportedBundles()
-            .contains(model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01);
-        auto validator = oldValid?getValidator<XmlValidatorStatic, true>():getValidator<XmlValidatorStatic, false>();
-        return {validator, std::addressof(validator->mXmlValidator)};
+        static auto xmlValidatorStatic = std::make_shared<XmlValidatorStatic>();
+        return {xmlValidatorStatic, &xmlValidatorStatic->mXmlValidator};
     }
     static std::shared_ptr<InCodeValidator> getInCodeValidator()
     {
@@ -71,22 +76,6 @@ public:
     static Factories makeMockFactories();
     static Factories makeMockFactoriesWithServers();
     static PcServiceContext makePcServiceContext(std::optional<decltype(Factories::databaseFactory)> cutomDatabaseFactory = {});
-private:
-    template <typename ValidatorT, bool oldValid>
-    static std::shared_ptr<ValidatorT> getValidator()
-    {
-        bool newValid = model::ResourceVersion::supportedBundles()
-            .contains(model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01);
-        return newValid?getValidator<ValidatorT, oldValid, true>():getValidator<ValidatorT, oldValid,false>();
-    }
-
-    template <typename ValidatorT, bool oldValid, bool newValid>
-    static std::shared_ptr<ValidatorT> getValidator()
-    {
-        static auto validatorStatic = std::make_shared<ValidatorT>();
-        return validatorStatic;
-    }
-
 };
 
 #endif

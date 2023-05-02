@@ -129,7 +129,7 @@ TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function
             ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
             *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::fhir,
             {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01},
-            false));
+            std::nullopt));
     ASSERT_TRUE(sourceChargeItem.has_value());
 
     EXPECT_FALSE(chargeItem.prescriptionId());

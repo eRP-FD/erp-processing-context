@@ -70,17 +70,14 @@ class JsonLog
 public:
     using LogReceiver = std::function<void(std::string&&)>;
 
-    static constexpr bool withDetailsDefault();
+    explicit JsonLog (LogId id);
+             JsonLog (LogId id, LogReceiver&& receiver, bool withDetails);
+             JsonLog (LogId id, std::ostream& os, bool withDetails);
+    ~JsonLog (void);
 
-
-    JsonLog(LogId id, LogReceiver&& receiver, bool withDetails = withDetailsDefault());
-    JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
-    ~JsonLog(void);
-
-    static LogReceiver makeErrorLogReceiver();
-    static LogReceiver makeWarningLogReceiver();
-    static LogReceiver makeInfoLogReceiver();
-    static LogReceiver makeVLogReceiver(const int32_t logLevel);
+    static LogReceiver makeErrorLogReceiver (void);
+    static LogReceiver makeWarningLogReceiver (void);
+    static LogReceiver makeVLogReceiver (const int32_t logLevel);
 
     JsonLog& message (std::string_view text);
     JsonLog& details (std::string_view details);
@@ -116,14 +113,6 @@ private:
     void finish (void);
     static std::string escapeJson (const std::string& text);
 };
-
-constexpr bool JsonLog::withDetailsDefault()
-{
-#ifdef ENABLE_DEBUG_LOG
-    return true;
-#endif
-    return false;
-}
 
 
 #endif

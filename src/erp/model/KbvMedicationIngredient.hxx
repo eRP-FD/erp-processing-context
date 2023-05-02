@@ -7,7 +7,6 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONINGREDIENT_HXX
 
 #include "erp/model/KbvMedicationBase.hxx"
-#include "erp/validation/SchemaType.hxx"
 
 namespace model
 {
@@ -16,8 +15,6 @@ namespace model
 class KbvMedicationIngredient : public KbvMedicationBase<KbvMedicationIngredient, ResourceVersion::KbvItaErp>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_Ingredient;
-
     [[nodiscard]] std::optional<std::string_view> amountNumeratorValueAsString() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorSystem() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorCode() const;

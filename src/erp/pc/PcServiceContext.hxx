@@ -47,8 +47,6 @@ class SeedTimerHandler;
 class Tpm;
 class RequestHandlerManager;
 class RegistrationManager;
-class VsdmKeyBlobDatabase;
-class VsdmKeyCache;
 
 using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 
@@ -66,7 +64,6 @@ struct Factories
     TeeTokenUpdater::TeeTokenUpdaterFactory teeTokenUpdaterFactory;
     TslManager::TslManagerFactory tslManagerFactory;
     std::function<std::unique_ptr<RedisInterface>()> redisClientFactory;
-    std::function<std::unique_ptr<VsdmKeyBlobDatabase>()> vsdmKeyBlobDatabaseFactory;
 
     using HttpsServerFactoryT = std::function<std::unique_ptr<HttpsServer>(
         const std::string_view address, uint16_t port, RequestHandlerManager&& requestHandlers,
@@ -137,9 +134,7 @@ public:
     HttpsServer* getEnrolmentServer() const;
     HttpsServer& getAdminServer() const;
 
-    std::shared_ptr<BlobCache> getBlobCache() const;
-    VsdmKeyBlobDatabase& getVsdmKeyBlobDatabase() const;
-    VsdmKeyCache& getVsdmKeyCache() const;
+    BlobCache& getBlobCache() const;
 
     std::shared_ptr<Timer> getTimerManager();
 
@@ -159,7 +154,6 @@ private:
     std::unique_ptr<DosHandler> mDosHandler;
     std::shared_ptr<BlobCache> mBlobCache;
     std::unique_ptr<HsmPool> mHsmPool;
-    std::unique_ptr<VsdmKeyCache> mVsdmKeyCache;
     KeyDerivation mKeyDerivation;
     const std::shared_ptr<JsonValidator> mJsonValidator;
     const std::shared_ptr<XmlValidator> mXmlValidator;

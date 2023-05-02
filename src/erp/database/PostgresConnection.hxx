@@ -6,12 +6,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_POSTGRESCONNECTION_HXX
 #define ERP_PROCESSING_CONTEXT_POSTGRESCONNECTION_HXX
 
-#include "erp/database/DatabaseConnectionInfo.hxx"
-
 #include <memory>
 #include <pqxx/connection>
 #include <pqxx/transaction>
-
 
 class PostgresConnection
 {
@@ -25,10 +22,8 @@ public:
 
     operator pqxx::connection&() const;// NOLINT(google-explicit-constructor)
 
-    std::optional<DatabaseConnectionInfo> getConnectionInfo() const;
-
 private:
-    std::string mConnectionString;
+    const std::string mConnectionString;
     std::unique_ptr<pqxx::connection> mConnection;
 
     class ErrorHandler : public pqxx::errorhandler
@@ -38,7 +33,6 @@ private:
         bool operator()(const char* msg) noexcept override;
     };
     std::unique_ptr<ErrorHandler> mErrorHandler;
-    std::optional<DatabaseConnectionInfo> mConnectionInfo;
 };
 
 

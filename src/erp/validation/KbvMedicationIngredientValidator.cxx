@@ -45,7 +45,7 @@ void KbvMedicationIngredientValidator::validate(const model::ResourceBase& resou
     doValidate(dynamic_cast<const model::KbvMedicationIngredient&>(resource), xmlValidator, inCodeValidator);
 }
 
-void KbvMedicationIngredientValidator_V1_0_2::doValidate(const model::KbvMedicationIngredient& kbvMedicationCompounding,
+void KbvMedicationIngredientValidator_V1_0_1::doValidate(const model::KbvMedicationIngredient& kbvMedicationCompounding,
                                                          const XmlValidator&, const InCodeValidator&) const
 {
     KbvValidationUtils::checkKbvExtensionValueCoding(
@@ -63,7 +63,7 @@ void KbvMedicationIngredientValidator_V1_0_2::doValidate(const model::KbvMedicat
     ingredientStrengthNumerator_erp_begrenzungValue(kbvMedicationCompounding);
 }
 
-void KbvMedicationIngredientValidator_V1_0_2::erp_PackungOderNormgroesse(
+void KbvMedicationIngredientValidator_V1_0_1::erp_PackungOderNormgroesse(
     const model::KbvMedicationIngredient& kbvMedicationIngredient) const
 {
     // -erp-PackungOderNormgroesse
@@ -85,7 +85,7 @@ void KbvMedicationIngredientValidator_V1_0_2::erp_PackungOderNormgroesse(
     }
 }
 
-void KbvMedicationIngredientValidator_V1_0_2::amountNumerator_erp_begrenzungValue(
+void KbvMedicationIngredientValidator_V1_0_1::amountNumerator_erp_begrenzungValue(
     const model::KbvMedicationIngredient& kbvMedicationIngredient) const
 {
     // -erp-begrenzungValue
@@ -109,7 +109,7 @@ void KbvMedicationIngredientValidator_V1_0_2::amountNumerator_erp_begrenzungValu
     }
 }
 
-void KbvMedicationIngredientValidator_V1_0_2::amountNumerator_erp_codeUndSystem(
+void KbvMedicationIngredientValidator_V1_0_1::amountNumerator_erp_codeUndSystem(
     const model::KbvMedicationIngredient& kbvMedicationIngredient) const
 {
     // -erp-codeUndSystem
@@ -132,7 +132,7 @@ void KbvMedicationIngredientValidator_V1_0_2::amountNumerator_erp_codeUndSystem(
     }
 }
 
-void KbvMedicationIngredientValidator_V1_0_2::ingredientStrengthNumerator_erp_begrenzungValue(
+void KbvMedicationIngredientValidator_V1_0_1::ingredientStrengthNumerator_erp_begrenzungValue(
     const model::KbvMedicationIngredient& kbvMedicationIngredient) const
 {
     // -erp-begrenzungValue

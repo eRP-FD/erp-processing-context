@@ -19,12 +19,12 @@ namespace model
 // Reduced version of Device resource, contains only functionality currently needed;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class MetaData : public Resource<MetaData, ResourceVersion::NotProfiled>
+class MetaData : public Resource<MetaData>
 {
 public:
     static constexpr auto resourceTypeName = "CapabilityStatement";
 
-    explicit MetaData(ResourceVersion::FhirProfileBundleVersion profileBundle);
+    explicit MetaData(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion);
 
     [[nodiscard]] model::Timestamp date() const;
     [[nodiscard]] std::string_view version() const;
@@ -37,12 +37,11 @@ public:
     ResourceVersion::DeGematikErezeptWorkflowR4 taskProfileVersion();
 
 private:
-    friend class Resource;
+    friend Resource<MetaData>;
     explicit MetaData(NumberAsStringParserDocument&& jsonTree);
 
     template<class ProfileDefinition>
-    void fillResource(const ProfileDefinition& profileDefinition,
-                      ResourceVersion::FhirProfileBundleVersion profileBundle);
+    void fillResource(const ProfileDefinition& profileDefinition);
 
     template<class TemplateDocument>
     void addResourceTemplate(const TemplateDocument& templateDocument);

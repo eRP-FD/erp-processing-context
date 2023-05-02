@@ -22,7 +22,7 @@ void ConsentPostHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     A_22351.start("FHIR validation of input Consent resource");
-    auto consent = parseAndValidateRequestBody<model::Consent>(session, SchemaType::fhir, false);
+    auto consent = parseAndValidateRequestBody<model::Consent>(session, SchemaType::fhir, std::nullopt);
     A_22351.finish();
     ErpExpect(consent.isChargingConsent(), HttpStatus::BadRequest, "Invalid consent type");
 
@@ -35,7 +35,7 @@ void ConsentPostHandler::handleRequest (PcSessionContext& session)
         ErpExpect(consent.patientKvnr() == kvnr, HttpStatus::Forbidden,
                   "Kvnr mismatch between access token and Consent resource patient identifier");
     }
-    catch(const model::ModelException& exc)
+    catch(model::ModelException& exc)
     {
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "Missing patient identifier in Consent resource", exc.what());
     }

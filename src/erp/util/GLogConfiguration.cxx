@@ -4,11 +4,9 @@
  */
 
 #include "erp/util/GLogConfiguration.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/Uuid.hxx"
 
-#include <iomanip>
+#include "erp/util/Environment.hxx"
+#include "erp/util/Uuid.hxx"
 
 void GLogConfiguration::init_logging(const std::string_view& appName)
 {
@@ -23,9 +21,13 @@ void GLogConfiguration::init_logging(const std::string_view& appName)
 }
 
 
-void GLogConfiguration::init_logging(const std::string_view& appName, const bool logToStderr,
-                                     const bool stderrThreshold, const int minLogLevel, const std::string& logDir,
-                                     const int vLogMaxValue)
+void GLogConfiguration::init_logging(
+    const std::string_view& appName,
+    const bool logToStderr,
+    const bool stderrThreshold,
+    const int minLogLevel,
+    const std::string& logDir,
+    const int vLogMaxValue)
 {
     FLAGS_logtostderr = logToStderr;
     FLAGS_stderrthreshold = stderrThreshold;
@@ -33,10 +35,13 @@ void GLogConfiguration::init_logging(const std::string_view& appName, const bool
     FLAGS_log_dir = logDir;
     FLAGS_v = vLogMaxValue;
 
-    google::InitGoogleLogging(appName.data(), &GLogConfiguration::erpLogPrefix, nullptr);
+    google::InitGoogleLogging(appName.data());
 
-    TLOG(INFO) << "initialized logging: logtostderr=" << logToStderr << ", stderrthreshold=" << stderrThreshold
-               << ", minLogLevel=" << minLogLevel << ", logDir=" << logDir << ", vLogMaxValue=" << vLogMaxValue;
+    LOG(INFO) << "initialized logging: logtostderr=" << logToStderr
+              << ", stderrthreshold=" << stderrThreshold
+              << ", minLogLevel=" << minLogLevel
+              << ", logDir=" << logDir
+              << ", vLogMaxValue=" << vLogMaxValue;
 }
 
 int GLogConfiguration::getLogLevelInt(const std::string& logLevelString)
@@ -51,32 +56,17 @@ int GLogConfiguration::getLogLevelInt(const std::string& logLevelString)
         return 3;
     else
     {
-        TLOG(WARNING) << "Invalid log level '" << logLevelString << "' defaulting to ERROR";
+        LOG(WARNING) << "Invalid log level '" << logLevelString << "' defaulting to ERROR";
         // An unexpected value is provided. Fall back to "ERROR".
         return 2;
     }
 }
 
-void GLogConfiguration::erpLogPrefix(std::ostream& s, const google::LogMessageInfo& l, void*)
+
+std::string GLogConfiguration::getProcessUuid()
 {
-    using std::setfill;
-    using std::setw;
-    std::ostream oss(s.rdbuf());
-    // clang-format off
-    oss << setw(4) << 1900 + l.time.year() << '-'
-        << setw(2) << setfill('0') << 1 + l.time.month() << '-'
-        << setw(2) << l.time.day()
-        << 'T'
-        << setw(2) << l.time.hour() << ':'
-        << setw(2) << l.time.min() << ':'
-        << setw(2) << l.time.sec() << "."
-        << setw(6) << l.time.usec()
-        << ((l.time.gmtoff() < 0) ? '-' : '+')
-        << setw(2) << l.time.gmtoff() / 3600 << ':'
-        << setw(2) << (l.time.gmtoff() % 3600) / 60
-        << ' '
-        << setw(7) << setfill(' ') << std::left << l.severity
-        << ' '
-        << l.filename << ':' << l.line_number << "]";
-    // clang-format on
+    // it is the most compatible way for different OSs just to generate the own Uuid for the process
+    static ::std::string processUuid = Uuid().toString();
+
+    return processUuid;
 }

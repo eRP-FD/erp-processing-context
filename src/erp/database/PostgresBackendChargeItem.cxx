@@ -101,7 +101,9 @@ PostgresBackendChargeItem::PostgresBackendChargeItem()
     QUERY(retrieveAllChargeItemsForInsurant, R"--(
         SELECT prescription_type,                prescription_id,                   enterer,
                EXTRACT(EPOCH FROM entered_date), EXTRACT(EPOCH FROM last_modified), marking_flag,
-               blob_id,                          salt
+               blob_id,                          salt,                              kvnr,
+               prescription,                     prescription_json,                 receipt_xml,
+               receipt_json,                     billing_data,                      billing_data_json
         FROM erp.charge_item
         WHERE kvnr_hashed = $1
         )--")
@@ -269,7 +271,7 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
 ::db_model::ChargeItem PostgresBackendChargeItem::chargeItemFromQueryResultRow(const ::pqxx::row& row, bool allInsurantChargeItems /* = false */) const
 {
     if (allInsurantChargeItems) {
-        Expect3(row.size() == 8u, "Wrong number of fields in result row", ::std::logic_error);
+        Expect3(row.size() == 15u, "Wrong number of fields in result row", ::std::logic_error);
     } else {
         Expect3(row.size() == 16u, "Wrong number of fields in result row", ::std::logic_error);
     }
@@ -280,12 +282,13 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
         row.at(QueryIndices::prescription_id).as<int64_t>());
 
     auto chargeItem = ::db_model::ChargeItem{prescriptionId};
+    chargeItem.enterer = ::db_model::EncryptedBlob{row.at(QueryIndices::enterer).as<::db_model::postgres_bytea>()};
     chargeItem.enteredDate = ::model::Timestamp{row.at(QueryIndices::entered_date).as<double>()};
     chargeItem.lastModified = ::model::Timestamp{row.at(QueryIndices::last_modified).as<double>()};
     if (! row.at(QueryIndices::marking_flag).is_null())
     {
         chargeItem.markingFlags =
-            ::db_model::Blob{row.at(QueryIndices::marking_flag).as<::db_model::postgres_bytea>()};
+            ::db_model::EncryptedBlob{row.at(QueryIndices::marking_flag).as<::db_model::postgres_bytea>()};
     }
 
     chargeItem.blobId = row.at(QueryIndices::blob_id).as<::BlobId>();
@@ -293,27 +296,23 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
     Expect3(! row.at(QueryIndices::salt).is_null(), "Missing salt data in charge item.", ::std::logic_error);
     chargeItem.salt = ::db_model::Blob{row.at(QueryIndices::salt).as<::db_model::postgres_bytea>()};
 
-	// When requesting all charge items, skip the decoding of almost all properties because they are not required
-	// and thus reduce operating time on the server.
-    if (! allInsurantChargeItems)
-    {
-        chargeItem.enterer = ::db_model::EncryptedBlob{row.at(QueryIndices::enterer).as<::db_model::postgres_bytea>()};
-        chargeItem.accessCode = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::access_code).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.kvnr = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::kvnr).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.prescription = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::prescription).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.prescriptionJson = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::prescription_json).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.receiptXml = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::receipt_xml).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.receiptJson = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::receipt_json).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.billingData = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::billing_data).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.billingDataJson = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::billing_data_json).data()).as<::db_model::postgres_bytea>()};
+    if (!allInsurantChargeItems) {
+        chargeItem.accessCode =
+            ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::access_code).data()).as<::db_model::postgres_bytea>()};
     }
+    chargeItem.kvnr = ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::kvnr).data()).as<::db_model::postgres_bytea>()};
+    chargeItem.prescription =
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::prescription).data()).as<::db_model::postgres_bytea>()};
+    chargeItem.prescriptionJson =
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::prescription_json).data()).as<::db_model::postgres_bytea>()};
+    chargeItem.receiptXml =
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::receipt_xml).data()).as<::db_model::postgres_bytea>()};
+    chargeItem.receiptJson =
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::receipt_json).data()).as<::db_model::postgres_bytea>()};
+    chargeItem.billingData =
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::billing_data).data()).as<::db_model::postgres_bytea>()};
+    chargeItem.billingDataJson =
+        ::db_model::EncryptedBlob{row.at(::magic_enum::enum_name(QueryIndices::billing_data_json).data()).as<::db_model::postgres_bytea>()};
+
     return chargeItem;
 }

@@ -51,8 +51,8 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
         EXPECT_TRUE(erxReceipt.composition().author().has_value());
         EXPECT_EQ(erxReceipt.composition().author().value(), author);
 
-        EXPECT_EQ(erxReceipt.device().serialNumber(), ErpServerInfo::ReleaseVersion());
-        EXPECT_EQ(erxReceipt.device().version(), ErpServerInfo::ReleaseVersion());
+        EXPECT_EQ(erxReceipt.device().serialNumber(), ErpServerInfo::ReleaseVersion);
+        EXPECT_EQ(erxReceipt.device().version(), ErpServerInfo::ReleaseVersion);
 
         const std::string data = "QXVmZ3J1bmQgZGVyIENvcm9uYS1";
         const model::Timestamp when = model::Timestamp::fromXsDateTime("2021-02-10T09:45:11+01:00");
@@ -64,8 +64,8 @@ TEST(ErxReceiptTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
         EXPECT_EQ(signature->when().value(), when);
         EXPECT_TRUE(signature->data().has_value());
         EXPECT_EQ(signature->data().value(), data);
-        EXPECT_TRUE(signature->whoReference().has_value());
-        EXPECT_EQ(signature->whoReference().value(), author);
+        EXPECT_TRUE(signature->who().has_value());
+        EXPECT_EQ(signature->who().value(), author);
         const auto digest = erxReceipt.prescriptionDigest();
 
         EXPECT_EQ(digest.jsonDocument().getOptionalStringValue(rapidjson::Pointer{"/contentType"}),

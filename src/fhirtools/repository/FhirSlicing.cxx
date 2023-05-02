@@ -202,7 +202,7 @@ public:
                 }
                 if (! patternValue.matches(existingPatValue))
                 {
-                    TLOG(ERROR) << "pattern " << existingPatValue << " contradicts " << patternValue;
+                    LOG(ERROR) << "pattern " << existingPatValue << " contradicts " << patternValue;
                     contradiction = true;
                 }
             }
@@ -250,7 +250,7 @@ public:
             {
                 if (*binding != std::make_tuple(elementBinding.valueSetUrl, elementBinding.valueSetVersion))
                 {
-                    TLOG(ERROR) << "binding " << get<0>(*binding) << '|'
+                    LOG(ERROR) << "binding " << get<0>(*binding) << '|'
                                << (get<1>(*binding) ? *get<1>(*binding) : "<no-ver>"s) << " contradicts "
                                << elementBinding.valueSetUrl << '|'
                                << (elementBinding.valueSetVersion
@@ -493,9 +493,9 @@ std::shared_ptr<FhirSlicing::Condition> fhirtools::FhirSliceDiscriminator::value
 
     if (pattern && fixed)
     {
-        TLOG(INFO) << "found both pattern and fixed: " << def->url() << '|' << def->version()
-                   << " - slicing definition might be ambiguous - using "
-                   << (mType == DiscriminatorType::value ? "fixed" : "pattern");
+        TLOG(WARNING) << "found both pattern and fixed: " << def->url() << '|' << def->version()
+                      << " - slicing definition might be ambiguous - using "
+                      << (mType == DiscriminatorType::value ? "fixed" : "pattern");
         pattern = mType == DiscriminatorType::pattern;
         fixed = mType == DiscriminatorType::value;
     }
@@ -512,8 +512,8 @@ std::shared_ptr<FhirSlicing::Condition> fhirtools::FhirSliceDiscriminator::value
     {
         if (mType == DiscriminatorType::value)
         {
-            TLOG(INFO) << "Discriminator Type is 'value' but only pattern is set: " << def->url() << '|'
-                       << def->version() << " - treating as 'pattern'";
+            TLOG(WARNING) << "Discriminator Type is 'value' but only pattern is set: " << def->url() << '|'
+                          << def->version() << " - treating as 'pattern'";
         }
         return std::make_shared<DiscriminatorPatternCondition>(repo, std::move(elementInfos),
                                                                std::move(pathExpression));

@@ -32,8 +32,6 @@ public:
     bool allowNonLiteralAuthorReference = false;
     /// run reference validation pass
     bool validateReferences = true;
-    /// also validate against Profiles in meta.profle of the input document
-    bool validateMetaProfiles = true;
     class SeverityLevels {
     public:
         /// Severity level for bundled resources, that are neither directly nor indirectly referenced from the Composition

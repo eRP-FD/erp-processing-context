@@ -14,10 +14,6 @@ class Erp10941Test : public ErpWorkflowTest
 
 TEST_F(Erp10941Test, PostChargeItemByPharmacyWithMarkingFlagFails)
 {
-    if (!Configuration::instance().featurePkvEnabled())
-    {
-        GTEST_SKIP();
-    }
     auto envGuards = testutils::getNewFhirProfileEnvironment();
     const std::string kvnr = generateNewRandomKVNR().id();
     std::optional<model::PrescriptionId> prescriptionId;

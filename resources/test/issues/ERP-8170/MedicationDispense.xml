@@ -1,0 +1,75 @@
+<!--
+  ~ (C) Copyright IBM Deutschland GmbH 2022
+  ~ (C) Copyright IBM Corp. 2022
+  -->
+
+<MedicationDispense xmlns="http://hl7.org/fhir">
+    <meta>
+        <profile value="https://gematik.de/fhir/StructureDefinition/ErxMedicationDispense" />
+    </meta>
+    <contained>
+        <Medication>
+            <id value="45a0ea5a-f54d-48fc-83ae-7e9f47c90833" />
+            <meta>
+                <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2" />
+            </meta>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
+                <valueCoding>
+                    <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category" />
+                    <code value="00" />
+                </valueCoding>
+            </extension>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine">
+                <valueBoolean value="false" />
+            </extension>
+            <code>
+                <coding>
+                    <system value="http://fhir.de/CodeSystem/ifa/pzn" />
+                    <code value="08839133" />
+                </coding>
+                <text value="Metformin Lich 1000mg" />
+            </code>
+            <form>
+                <coding>
+                    <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM" />
+                    <code value="FTA" />
+                </coding>
+            </form>
+            <amount>
+                <numerator>
+                    <value value="1" />
+                    <unit value="Packung" />
+                    <system value="http://unitsofmeasure.org" />
+                    <code value="Packung" />
+                </numerator>
+                <denominator>
+                    <value value="1" />
+                </denominator>
+            </amount>
+        </Medication>
+    </contained>
+    <identifier>
+        <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID" />
+        <value value="160.000.074.296.321.22" />
+    </identifier>
+    <status value="completed" />
+    <medicationReference>
+        <reference value="#45a0ea5a-f54d-48fc-83ae-7e9f47c90833" />
+        <display value="Metformin Lich 1000mg Zentiva N3 180 St FTA" />
+    </medicationReference>
+    <subject>
+        <identifier>
+            <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
+            <value value="X110455449" />
+        </identifier>
+    </subject>
+    <performer>
+        <actor>
+            <identifier>
+                <system value="https://gematik.de/fhir/NamingSystem/TelematikID" />
+                <value value="3-SMC-B-Testkarte-883110000116298" />
+            </identifier>
+        </actor>
+    </performer>
+    <whenHandedOver value="0001-01-01T00:00:00Z" />
+</MedicationDispense>

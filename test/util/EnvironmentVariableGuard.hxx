@@ -11,7 +11,6 @@
 
 #include <boost/noncopyable.hpp>
 #include <string>
-#include <vector>
 
 class EnvironmentVariableGuard : private boost::noncopyable
 {
@@ -69,12 +68,5 @@ private:
     std::string mVariableName;
     std::optional<std::string> mPreviousValue;
 };
-
-template <std::vector<EnvironmentVariableGuard> EnvFunctionT()>
-class GuardWithEnvFrom : std::vector<EnvironmentVariableGuard> {
-public:
-    GuardWithEnvFrom(): vector{EnvFunctionT()}{}
-};
-
 
 #endif

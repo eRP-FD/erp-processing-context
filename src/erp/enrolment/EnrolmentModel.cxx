@@ -11,7 +11,7 @@
 
 #include <rapidjson/error/en.h>
 #include <rapidjson/pointer.h>
-#include <rapidjson/writer.h>
+#include <rapidjson/prettywriter.h>
 
 
 namespace
@@ -51,12 +51,6 @@ void EnrolmentModel::set (std::string_view key, std::int64_t numberValue)
             mDocument.GetAllocator());
 }
 
-void EnrolmentModel::set(std::string_view key, const rapidjson::Value& value)
-{
-    const auto pointer = rapidjson::Pointer(rapidjson::StringRef(key.data(), key.size()));
-    pointer.Set(mDocument, value, mDocument.GetAllocator());
-}
-
 bool EnrolmentModel::hasValue(std::string_view key) const
 {
     const auto pointer = ::rapidjson::Pointer(::rapidjson::StringRef(key.data(), key.size()));
@@ -84,19 +78,6 @@ std::string EnrolmentModel::getString (std::string_view key) const
     const auto& value = getValue(key);
     ErpExpect(value.IsString(), HttpStatus::BadRequest, "value is not a string");
     return {value.GetString()};
-}
-
-std::optional<std::string> EnrolmentModel::getOptionalString(std::string_view key) const
-{
-    std::optional<std::string> retVal;
-    const auto* value = getOptionalValue(key);
-    if (value)
-    {
-        ErpExpect(value->IsString(), HttpStatus::BadRequest, "value is not a string");
-        retVal = value->GetString();
-    }
-
-    return retVal;
 }
 
 
@@ -193,13 +174,7 @@ EnrolmentModel::EnrolmentModel (void)
 EnrolmentModel::EnrolmentModel (const std::string_view jsonText)
     : mDocument()
 {
-    parse(jsonText);
-}
-
-void EnrolmentModel::parse(const std::string_view jsonText)
-{
-    rapidjson::MemoryStream s(jsonText.data(), jsonText.size());
-    rapidjson::ParseResult result = mDocument.ParseStream(s);
+    rapidjson::ParseResult result = mDocument.Parse(rapidjson::StringRef(jsonText.data(), jsonText.size()));
     if (mDocument.HasParseError())
     {
         TVLOG(1) << "JSON parser error: " << rapidjson::GetParseError_En(mDocument.GetParseError()) << " @ " << result.Offset();
@@ -208,27 +183,19 @@ void EnrolmentModel::parse(const std::string_view jsonText)
     }
 }
 
+
 std::string EnrolmentModel::serializeToString (void) const
 {
-    return serializeToString("");
-}
-
-std::string EnrolmentModel::serializeToString(std::string_view key) const
-{
-    const auto* value = rapidjson::Pointer(rapidjson::StringRef(key.data(), key.size())).Get(mDocument);
-    ErpExpect(value != nullptr, HttpStatus::BadRequest, "missing key " + std::string{key});
-    if (value->IsNull())
+    if (mDocument.IsNull())
         return "";
-    rapidjson::StringBuffer buffer;
-    buffer.Clear();
+    else
+    {
+        rapidjson::StringBuffer buffer;
+        buffer.Clear();
 
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    value->Accept(writer);
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        mDocument.Accept(writer);
 
-    return {buffer.GetString()};
-}
-
-rapidjson::Document& EnrolmentModel::document()
-{
-    return mDocument;
+        return {buffer.GetString()};
+    }
 }

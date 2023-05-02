@@ -10,7 +10,6 @@
 #include "fhirtools/util/Gsl.hxx"
 
 #include <string>
-#include <string_view>
 #include <vector>
 
 
@@ -43,8 +42,7 @@ public:
      * @param data - the data to sign
      * @return Hmac Cash based on SHA 256 algorithm
      */
-    static util::Buffer hmacSha256(const util::Buffer& key, std::string_view data);
-    static util::Buffer hmacSha256(std::string_view key, std::string_view data);
+    static util::Buffer hmacSha256(const util::Buffer& key, const std::string& data);
 };
 
 

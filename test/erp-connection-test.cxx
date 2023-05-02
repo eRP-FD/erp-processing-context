@@ -31,11 +31,11 @@ int main (int argc, char** argv)
 
                     certificates = FileHelper::readFileAsString(path);
                 }
-                TLOG(INFO) << "Using file with certificates:\n" << certificates << "\n\n";
+                LOG(INFO) << "Using file with certificates:\n" << certificates << "\n\n";
             }
             else
             {
-                TLOG(INFO) << "Using no certificates";
+                LOG(INFO) << "Using no certificates";
             }
 
             UrlRequestSender requestSender(SafeString{std::move(certificates)}, 30/*connectionTimeoutSeconds*/);
@@ -48,17 +48,17 @@ int main (int argc, char** argv)
                 "DHE-RSA-AES256-SHA:DHE-RSA-AES128-GCM-SHA256",
                 true);
 
-            TLOG(INFO) << "Response status: " << response.getHeader().status();
-            TLOG(INFO) << "Response body:\n[\n" << response.getBody() << "\n]\n\n";
+            LOG(INFO) << "Response status: " << response.getHeader().status();
+            LOG(INFO) << "Response body:\n[\n" << response.getBody() << "\n]\n\n";
         }
         catch(const std::exception& e)
         {
-            TLOG(ERROR) << "exception by request sending: " << e.what();
+            LOG(ERROR) << "exception by request sending: " << e.what();
         }
     }
     else
     {
-        TLOG(ERROR) << "following parameters are expected:\n"
+        LOG(ERROR) << "following parameters are expected:\n"
                     << "erp-connection-test <url> [<path to pem-file with certificates>]";
     }
 }

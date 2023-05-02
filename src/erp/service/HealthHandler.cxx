@@ -37,7 +37,6 @@ void HealthHandler::handleRequest(SessionContext& session)
     {
         healthResource->setHealthCheckError(errorStream.str());
         healthResource->setOverallStatus(model::Health::down);
-        session.accessLog.error(errorStream.str());
     }
 
     ResponseBuilder(session.response)

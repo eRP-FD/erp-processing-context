@@ -21,7 +21,7 @@ class JsonLogTest : public testing::Test
  */
 TEST_F(JsonLogTest, log)
 {
-    JsonLog log (LogId::IDP_UPDATE_FAILED, JsonLog::makeVLogReceiver(0));
+    JsonLog log (LogId::IDP_UPDATE_FAILED);
     log.message("this is the log message")
         .details("only shown in debug builds");
 
@@ -42,7 +42,7 @@ TEST_F(JsonLogTest, logWithDetails)
     const auto& config = Configuration::instance();
     std::stringstream expected;
     expected << R"({"id":285212673,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
-             << R"(,"info":"this is the log message","details":"only shown in debug builds"})";
+             << R"(,"message":"this is the log message","details":"only shown in debug builds"})";
 
     ASSERT_EQ(result.str(), expected.str());
 }
@@ -61,7 +61,7 @@ TEST_F(JsonLogTest, logWithoutDetails)
     const auto& config = Configuration::instance();
     std::stringstream expected;
     expected << R"({"id":285212673,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
-             << R"(,"info":"this is the log message"})";
+             << R"(,"message":"this is the log message"})";
     ASSERT_EQ(result.str(), expected.str());
 }
 

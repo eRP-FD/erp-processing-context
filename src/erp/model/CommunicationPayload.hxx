@@ -6,22 +6,24 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATIONPAYLOAD_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATIONPAYLOAD_HXX
 
-#include <rapidjson/document.h>
+#include "erp/model/CommunicationPayloadItem.hxx"
 
+#include <memory>
+#include <vector>
 
 namespace model
 {
 class CommunicationPayload
 {
 public:
-    static const std::size_t maxPayloadSize = 10240;
+    static const size_t maxPayloadSize = 10240;
 
     explicit CommunicationPayload(const rapidjson::Value* payloadValue);
 
     void verifyLength() const;
 
 private:
-    std::size_t mLength = 0;
+    std::vector<std::unique_ptr<CommunicationPayloadItem>> mItems;
 };
 
 } // namespace model

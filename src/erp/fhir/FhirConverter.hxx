@@ -33,6 +33,19 @@ class FhirConverter final
 public:
     model::NumberAsStringParserDocument xmlStringToJson(const std::string_view& xmlDocument) const;
 
+    model::NumberAsStringParserDocument xmlStringToJsonWithValidationNoVer(const std::string_view& xmlDocument,
+                                                                           const XmlValidator& validator,
+                                                                           SchemaType schemaType) const;
+
+    model::NumberAsStringParserDocument
+    xmlStringToJsonWithValidation(const std::string_view& xmlDocument, const XmlValidator& validator,
+                                  SchemaType schemaType,
+                                  model::ResourceVersion::DeGematikErezeptWorkflowR4 schemaVersion) const;
+
+    model::NumberAsStringParserDocument
+    xmlStringToJsonWithValidation(const std::string_view& xmlDocument, const XmlValidator& validator,
+                                  SchemaType schemaType, model::ResourceVersion::KbvItaErp schemaVersion) const;
+
     UniqueXmlDocumentPtr jsonToXml(const model::NumberAsStringParserDocument& jsonDOM) const;
 
     std::string jsonToXmlString(const model::NumberAsStringParserDocument& jsonDOM, bool formatted = false) const;

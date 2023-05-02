@@ -8,7 +8,6 @@
 #include "erp/common/MimeType.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/CommunicationPayload.hxx"
-#include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/server/request/ServerRequest.hxx"
@@ -18,10 +17,6 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/TLog.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/parser/FhirPathParser.hxx"
-
-
 
 using namespace model;
 using namespace model::resource;
@@ -47,15 +42,16 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
     try
     {
         // as a first step validate using the FHIR schema, which is good enough for the XML->JSON converter
-        auto communication = parseAndValidateRequestBody<Communication>(session, SchemaType::fhir, false);
+        auto communication = parseAndValidateRequestBody<Communication>(session, SchemaType::fhir, std::nullopt);
 // GEMREQ-end A_19450-01#deserialize
         PrescriptionId prescriptionId = communication.prescriptionId();
+        checkFeatureWf200(prescriptionId.type());
 
         Communication::MessageType messageType = communication.messageType();
 
         const Identity recipient{communication.recipient()};
 
-        A_19448_01.start("set sender and send timestamp");
+        A_19448.start("set sender and send timestamp");
         const std::optional<std::string> senderClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
         ErpExpect(senderClaim.has_value(), HttpStatus::BadRequest, "JWT does not contain a claim for the sender");
         communication.setTimeSent();
@@ -66,14 +62,14 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             "JWT does not contain a claim for the senders profession Oid");
         const Identity sender{validateSender(messageType, senderProfessionOid.value(), senderClaim.value())};
         communication.setSender(sender);
-        A_19448_01.finish();
+        A_19448.finish();
 
         // secondly validate against the communication profile, which can only be determined
         // by looking into the resource, which must therefore already be parsed
-        A_19447_04.start("validate against the fhir profile schema");
+        A_19447.start("validate against the fhir profile schema");
         validateAgainstFhirProfile(messageType, communication, session.serviceContext.getXmlValidator(),
                                    session.serviceContext.getInCodeValidator());
-        A_19447_04.finish();
+        A_19447.finish();
         // ERP-12846: ensure current keys are loaded before starting DB-Transaction
         auto utcToday = date::floor<date::days>(session.sessionTime().toChronoTimePoint());
         session.serviceContext.getTelematicPseudonymManager().ensureKeysUptodateForDay(utcToday);
@@ -89,10 +85,10 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             messageType == Communication::MessageType::Reply ||
             messageType == Communication::MessageType::Representative)
         {
-            A_21371_02.start("check existence of task");
+            A_21371_01.start("check existence of task");
             task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
             ErpExpect(task.has_value(), HttpStatus::BadRequest, "Task for prescription id " + prescriptionId.toString() + " is missing");
-            A_21371_02.finish();
+            A_21371_01.finish();
 
             taskKvnr = task->kvnr();
             ErpExpect(taskKvnr.has_value(), HttpStatus::BadRequest, "Referenced task does not contain a KVNR");
@@ -103,7 +99,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         // Check for valid format of KNVR of recipient or Telematic ID
         validateRecipient(messageType, recipient);
 
-        A_20229_01.start("limit KVNR -> KVNR messages to 10 per task");
+        A_20229.start("limit KVNR -> KVNR messages to 10 per task");
         if (messageType == Communication::MessageType::Representative)
         {
             const auto count = databaseHandle->countRepresentativeCommunications(
@@ -111,23 +107,23 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             ErpExpect(count < mMaxMessageCount, HttpStatus::TooManyRequests,
                       "there are already " + std::to_string(mMaxMessageCount) + " KVNR to KVNR messages");
         }
-        A_20229_01.finish();
+        A_20229.finish();
 
         if (messageType == Communication::MessageType::DispReq ||
             messageType == Communication::MessageType::InfoReq ||
             messageType == Communication::MessageType::Representative)
         {
-            A_20885_03.start("Examination of insured person and eligibility");
+            A_20885_02.start("Examination of insured person and eligibility");
             if (senderProfessionOid == profession_oid::oid_versicherter)
             {
                 std::optional<std::string> headerAccessCode = header.header(Header::XAccessCode);
                 checkEligibilityOfInsurant(messageType, std::get<model::Kvnr>(sender), taskKvnr.value(),
                                            headerAccessCode, std::string(task->accessCode()), communication.accessCode());
             }
-            A_20885_03.finish();
+            A_20885_02.finish();
         }
 
-        A_20230_01.start("restrict transfer for messages following the represantive schema to prescriptions that are ready or in-progress");
+        A_20230.start("restrict transfer for messages following the represantive schema to prescriptions that are ready or in-progress");
         if (messageType == Communication::MessageType::Representative)
         {
             // If there is a prescription id in the communication body there must also be a task for this (see check above).
@@ -136,7 +132,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
                 HttpStatus::BadRequest,
                 "Messages between KVNR's are restricted to prescriptions that are ready or in-progress");
         }
-        A_20230_01.finish();
+        A_20230.finish();
 
         A_20231.start("prevent messages to self");
         ErpExpect(recipient != sender, HttpStatus::BadRequest, "messages to self are not permitted");
@@ -187,20 +183,20 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         makeResponse(session, HttpStatus::Created, &communication);
 
-        A_22367_02.start("Create initial subscription only for specific message types.");
+        A_22367_01.start("Create initial subscription only for specific message types.");
         if (messageType == Communication::MessageType::InfoReq ||
             messageType == Communication::MessageType::ChargChangeReq ||
             messageType == Communication::MessageType::DispReq)
         {
             SubscriptionPostHandler::publish(session, std::get<model::TelematikId>(recipient));
         }
-        A_22367_02.finish();
+        A_22367_01.finish();
     // GEMREQ-start A_19450-01#catchModelException
     }
     catch (const ModelException& e)
     {
         TVLOG(1) << "ModelException: " << e.what();
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Invalid request body", e.what());
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "caught ModelException", e.what());
     }
     // GEMREQ-end A_19450-01#catchModelException
 }
@@ -212,7 +208,6 @@ void CommunicationPostHandler::checkForChargeItemReference(const PrescriptionId&
     if (messageType == Communication::MessageType::ChargChangeReq ||
         messageType == Communication::MessageType::ChargChangeReply)
     {
-        ErpExpect(prescriptionId.isPkv(), HttpStatus::BadRequest, "Reference charge item ID is not of type PKV");
         A_22734.start("check existence of charge item");
         try
         {
@@ -237,58 +232,11 @@ void CommunicationPostHandler::validateAgainstFhirProfile(
     const XmlValidator& xmlValidator,
     const InCodeValidator& inCodeValidator) const
 {
-    switch (messageType)
-    {
-        using enum model::Communication::MessageType;
-        case InfoReq:
-            validateInfoRequest(communication, xmlValidator, inCodeValidator);
-            return;
-        case Reply:
-        case DispReq:
-        case Representative:
-        case ChargChangeReq:
-        case ChargChangeReply:
-            (void) Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
-                                          Communication::messageTypeToSchemaType(messageType),
-                                          model::ResourceVersion::supportedBundles(),
-                                          communication.canValidateGeneric());
-            return;
-    }
-    Fail2("Invalid Communication::MessageType: " + std::to_string(static_cast<uintmax_t>(mMaxMessageCount)),
-          std::logic_error);
-}
-
-void CommunicationPostHandler::validateInfoRequest(const model::Communication& communication,
-                                                   const XmlValidator& xmlValidator,
-                                                   const InCodeValidator& inCodeValidator) const
-{
-    using namespace std::string_literals;
-    static rapidjson::Pointer metaPtr{resource::ElementName::path(elements::meta)};
-    const auto* repo = std::addressof(Fhir::instance().structureRepository());
-    const auto extractMedication = fhirtools::FhirPathParser::parse(repo, "about.resolve()");
-    Expect3(extractMedication, "Failed to parse extractMedication expression.", std::logic_error);
-    model::NumberAsStringParserDocument doc;
-    doc.CopyFrom(communication.jsonDocument(), doc.GetAllocator());
-    auto communicationElement =
-        std::make_shared<ErpElement>(repo, std::weak_ptr<const ErpElement>{}, "Communication", std::addressof(doc));
-    auto medications = extractMedication->eval({communicationElement});
-    for (const auto& medicationElement : medications)
-    {
-        const auto& medicationErpElement = dynamic_cast<const ErpElement*>(medicationElement.get());
-        Expect3(medicationErpElement != nullptr,
-                "unexpected type for medicationElement"s.append(typeid(medicationErpElement).name()), std::logic_error);
-        model::KbvMedicationGeneric::validateMedication(*medicationErpElement, xmlValidator, inCodeValidator);
-        //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-        metaPtr.Erase(*const_cast<rapidjson::Value*>(medicationErpElement->erpValue()));
-    }
-    using CommunicationFactory = model::ResourceFactory<Communication>;
-    CommunicationFactory::Options options;
-    if (! communication.canValidateGeneric())
-    {
-        options.genericValidationMode = Configuration::GenericValidationMode::disable;
-    };
-    (void) model::ResourceFactory<Communication>::fromJson(std::move(doc), options)
-        .getValidated(SchemaType::Gem_erxCommunicationInfoReq, xmlValidator, inCodeValidator);
+    auto options = communication.canValidateGeneric()?std::make_optional(ResourceBase::defaultValidatorOptions()):std::nullopt;
+    (void) Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
+                                  Communication::messageTypeToSchemaType(messageType),
+                                  model::ResourceVersion::supportedBundles(),
+                                  options);
 }
 
 model::Identity CommunicationPostHandler::validateSender(

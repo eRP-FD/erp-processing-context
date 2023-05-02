@@ -28,9 +28,6 @@ private:
         const model::Communication& communication,
         const XmlValidator& xmlValidator,
         const InCodeValidator& inCodeValidator) const;
-    void validateInfoRequest(const model::Communication& communication, const XmlValidator& xmlValidator,
-                             const InCodeValidator& inCodeValidator) const;
-
     model::Identity validateSender(
         model::Communication::MessageType messageType,
         const std::string& professionOid,

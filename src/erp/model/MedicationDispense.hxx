@@ -11,7 +11,6 @@
 #include "erp/model/Resource.hxx"
 #include "erp/model/TelematikId.hxx"
 #include "erp/model/Timestamp.hxx"
-#include "erp/validation/SchemaType.hxx"
 
 #include <rapidjson/document.h>
 #include <optional>
@@ -27,8 +26,6 @@ class MedicationDispenseId;
 class MedicationDispense : public Resource<MedicationDispense>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::Gem_erxMedicationDispense;
-
     [[nodiscard]] model::PrescriptionId prescriptionId() const;
     [[nodiscard]] Kvnr kvnr() const;
     [[nodiscard]] TelematikId telematikId() const;

@@ -66,7 +66,7 @@ void ServerSocketHandler::on_accept (boost::beast::error_code ec, boost::asio::i
    std::ostringstream endpointStrm;
    endpointStrm << socket.remote_endpoint();
    ScopedLogContext scopeLog{endpointStrm.str()};
-   TVLOG(0) << "Accepted connection";
+   TLOG(INFO) << "Accepted connection";
    socket.async_wait(boost::asio::ip::tcp::socket::wait_error,
                      [endpoint = socket.remote_endpoint()](boost::system::error_code ec){
                          if (ec)

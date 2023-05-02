@@ -24,7 +24,7 @@ protected:
                             const InCodeValidator& inCodeValidator) const = 0;
 };
 
-class KbvCompositionValidator_V1_0_2 : public KbvCompositionValidator
+class KbvCompositionValidator_V1_0_1 : public KbvCompositionValidator
 {
 private:
     void doValidate(const model::KbvComposition& kbvComposition, const XmlValidator& xmlValidator,
@@ -37,6 +37,8 @@ private:
     void authorSlicing(const model::KbvComposition& kbvComposition) const;
     void checkAuthor(const model::KbvComposition& kbvComposition, const std::string_view authorType, size_t idx) const;
 };
+
+using KbvCompositionValidator_V1_0_2 = KbvCompositionValidator_V1_0_1;
 
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVCOMPOSITIONVALIDATOR_HXX

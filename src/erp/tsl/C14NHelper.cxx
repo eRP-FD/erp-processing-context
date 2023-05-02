@@ -141,11 +141,11 @@ namespace
         }
         catch(const std::exception& e)
         {
-            TLOG(ERROR) << "Can not generate C14N, exception: " << e.what();
+            LOG(ERROR) << "Can not generate C14N, exception: " << e.what();
         }
         catch(...)
         {
-            TLOG(ERROR) << "Can not generate C14N";
+            LOG(ERROR) << "Can not generate C14N";
         }
 
         // clean the libxml memory
@@ -177,7 +177,7 @@ std::optional<std::string> C14NHelper::generateC14N(
                                 inclusiveNsPrefixes, false);
     }
 
-    TVLOG(3) << "C14N original:\n" << xml
+    VLOG(3) << "C14N original:\n" << xml
                << "\nC14N result:\n" << (result ? *result : "[empty]") << "\n";
 
     return result;
@@ -218,14 +218,14 @@ std::optional<std::string> C14NHelper::canonicalize(
         withComments,
         buffer.get());
 
-    TVLOG(2) << "xmlC14NExecute returns " << executionResult;
+    VLOG(1) << "xmlC14NExecute returns " << executionResult;
 
     // Was canonicalization successful?
     if (executionResult >= 0)
     {
         // Yes.
         const size_t generatedSize = xmlBufUse(buffer->buffer);
-        TVLOG(2) << "    generated size is " << generatedSize;
+        VLOG(2) << "    generated size is " << generatedSize;
         if (generatedSize > 0)
         {
             // get the result from the buffer

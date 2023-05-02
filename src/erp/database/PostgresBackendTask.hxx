@@ -68,6 +68,9 @@ public:
     [[nodiscard]] std::optional<db_model::Task>
     retrieveTaskAndPrescriptionAndReceipt(pqxx::work& transaction, const model::PrescriptionId& taskId);
 
+    [[nodiscard]] uint64_t countAllTasksForPatient(pqxx::work& transaction, const db_model::HashedKvnr& kvnr,
+                                                   const std::optional<UrlArguments>& search) const;
+
     struct TaskQueryIndexes {
         pqxx::row::size_type prescriptionIdIndex = 0;
         pqxx::row::size_type kvnrIndex = 1;
@@ -103,6 +106,7 @@ private:
         QueryDefinition retrieveTaskByIdForUpdatePlusPrescription;
         QueryDefinition retrieveTaskByIdPlusPrescription;
         QueryDefinition retrieveTaskByIdPlusPrescriptionPlusReceipt;
+        QueryDefinition countAllTasksByKvnr;
         QueryDefinition getTaskKeyData;
     };
     Queries mQueries;

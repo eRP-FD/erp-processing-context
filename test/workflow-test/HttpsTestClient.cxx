@@ -21,21 +21,19 @@ std::unique_ptr<TestClient> HttpsTestClient::factory(std::shared_ptr<XmlValidato
     Expect(serverPort > 0, "Environment variable ERP_SERVER_PORT is out of range");
     std::unique_ptr<HttpsTestClient> testClient{
         new HttpsTestClient(serverHost, serverPort, Constants::httpTimeoutInSeconds, false)};
-    TVLOG(1) << "using: https://" << serverHost << ":" << serverPort;
+    VLOG(1) << "using: https://" << serverHost << ":" << serverPort;
     testClient->mRemoteCertificate = testClient->retrieveEciesRemoteCertificate();
     return testClient;
 }
 
 HttpsTestClient::~HttpsTestClient()
+try
 {
-    try
-    {
-        mHttpsClient.close();
-    }
-    catch (const std::exception& ex)
-    {
-        TLOG(WARNING) << "HttpsTestClient shutdown failed: " << ex.what();
-    }
+    mHttpsClient.close();
+}
+catch (const std::exception& ex)
+{
+    TLOG(WARNING) << "HttpsTestClient shutdown failed: " << ex.what();
 }
 
 
@@ -139,3 +137,4 @@ ClientResponse HttpsTestClient::send(const ClientRequest& clientRequest)
 {
     return mHttpsClient.send(clientRequest);
 }
+

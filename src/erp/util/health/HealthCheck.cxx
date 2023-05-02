@@ -4,10 +4,10 @@
  */
 
 #include "erp/util/health/HealthCheck.hxx"
-#include "erp/database/DatabaseConnectionInfo.hxx"
+
 #include "erp/pc/SeedTimer.hxx"
-#include "erp/registration/RegistrationInterface.hxx"
 #include "erp/util/ExceptionHelper.hxx"
+#include "erp/registration/RegistrationInterface.hxx"
 
 
 void HealthCheck::update (PcServiceContext& context)
@@ -58,8 +58,7 @@ void HealthCheck::update (PcServiceContext& context)
     }
     catch (const std::exception& err)
     {
-        const std::string& typeinfo = typeid(err).name();
-        TLOG(WARNING) << "Could not update registration status due to exception (" << typeinfo << "): " << err.what();
+        TLOG(WARNING) << "Could not update registration status due to exception: " << err.what();
     }
 }
 
@@ -89,18 +88,11 @@ void HealthCheck::checkIdp (PcServiceContext& context)
 }
 
 
-void HealthCheck::checkPostgres(PcServiceContext& context)
+void HealthCheck::checkPostgres (PcServiceContext& context)
 {
     auto connection = context.databaseFactory();
     connection->healthCheck();
-    auto connectionInfo = connection->getConnectionInfo();
     connection->commitTransaction();
-    if (connectionInfo)
-    {
-        context.applicationHealth().setServiceDetails(ApplicationHealth::Service::Postgres,
-                                                      ApplicationHealth::ServiceDetail::DBConnectionInfo,
-                                                      toString(*connectionInfo));
-    }
 }
 
 

@@ -7,7 +7,7 @@
 
 #include "erp/util/String.hxx"
 
-#include "erp/util/TLog.hxx"
+#include "erp/util/GLog.hxx"
 
 namespace {
     const std::string emptyParameter;
@@ -35,7 +35,7 @@ ContentType ContentType::fromString (const std::string& contentTypeValue)
                 // Optional secondary parts after one ore more semicolons are attributes in the form key=value.
                 const auto firstEqual = part.find('=');
                 if (firstEqual == std::string::npos)
-                    TLOG(WARNING) << "ignoring attribute of Content-Type with unsupported format: '" << part << "'";
+                    LOG(WARNING) << "ignoring attribute of Content-Type with unsupported format: '" << part << "'";
                 else
                 {
                     std::string key = String::toLower(String::trim(part.substr(0, firstEqual)));

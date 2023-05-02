@@ -16,7 +16,7 @@ void KbvMedicationRequestValidator::validate(const model::ResourceBase& resource
     doValidate(dynamic_cast<const model::KbvMedicationRequest&>(resource), xmlValidator, inCodeValidator);
 }
 
-void KbvMedicationRequestValidator_V1_0_2::doValidate(const model::KbvMedicationRequest& kbvMedicationRequest,
+void KbvMedicationRequestValidator_V1_0_1::doValidate(const model::KbvMedicationRequest& kbvMedicationRequest,
                                                       const XmlValidator&, const InCodeValidator&) const
 {
     KbvValidationUtils::checkKbvExtensionValueCoding(
@@ -55,7 +55,7 @@ void KbvMedicationRequestValidator_V1_0_2::doValidate(const model::KbvMedication
     }
 }
 
-void KbvMedicationRequestValidator_V1_0_2::erp_angabeDosierung(const model::Dosage& dosage) const
+void KbvMedicationRequestValidator_V1_0_1::erp_angabeDosierung(const model::Dosage& dosage) const
 {
     // -erp-angabeDosierung
     // (extension('https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag').empty()

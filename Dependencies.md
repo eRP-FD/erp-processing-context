@@ -9,14 +9,14 @@
 | gtest           | 1.13.0       | BSD-3-Clause | https://github.com/google/googletest/releases/tag/v1.13.0            |
 | hiredis         | 1.1.0        | BSD-3-Clause | https://github.com/redis/hiredis/releases/tag/v1.1.0                 |
 | libpq           | 13.6         | PostgreSQL   | https://github.com/postgres/postgres/tree/REL_13_6/src/backend/libpq |
-| libpqxx         | 7.7.5        | BSD-3-Clause | https://github.com/jtv/libpqxx/tree/7.7.5                            |
-| libxml2         | 2.10.4       | MIT          | https://github.com/GNOME/libxml2/tree/v2.10.4                        |
+| libpqxx         | 7.7.4        | BSD-3-Clause | https://github.com/jtv/libpqxx/tree/7.7.4                            |
+| libxml2         | 2.10.3       | MIT          | https://github.com/GNOME/libxml2/tree/v2.10.3                        |
 | magic_enum      | 0.8.2        | MIT          | https://github.com/build2-packaging/magic_enum/releases/tag/v0.8.2   |
 | openssl*        | 1.1.1t       | OpenSSL      | https://github.com/openssl/openssl/tree/OpenSSL_1_1_1t               |
 | rapidjson       | cci.20220822 | MIT          | https://github.com/Tencent/rapidjson                                 |
-| redis-plus-plus | 1.3.7        | Apache-2.0   | https://github.com/sewenew/redis-plus-plus/releases/tag/1.3.7        |
+| redis-plus-plus | 1.3.3        | Apache-2.0   | https://github.com/sewenew/redis-plus-plus/releases/tag/1.3.3        |
 | zlib            | 1.2.13       | Zlib License | https://github.com/madler/zlib/tree/v1.2.13                          |
-| zstd            | 1.5.5        | BSD-3-Clause | https://github.com/facebook/zstd/tree/v1.5.5                         |
+| zstd            | 1.5.4        | BSD-3-Clause | https://github.com/facebook/zstd/tree/v1.5.4                         |
 
  \* openssl 1.1.1*: The openssl 1.1.1* is based on the version provided by conan-center (https://conan.io/center/)
    additionally a patch has been applied to access the embedded OCSP response.

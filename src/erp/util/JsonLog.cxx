@@ -9,6 +9,25 @@
 #include "erp/util/TLog.hxx"
 #include "erp/util/String.hxx"
 
+
+
+namespace {
+    JsonLog::LogReceiver makeDefaultLogReceiver (void)
+    {
+        if (VLOG_IS_ON(0))
+            return JsonLog::makeVLogReceiver(0);
+        else
+            return JsonLog::makeErrorLogReceiver();
+    }
+}
+
+
+JsonLog::JsonLog (const LogId id)
+    : JsonLog(id, makeDefaultLogReceiver(), VLOG_IS_ON(0))
+{
+}
+
+
 JsonLog::JsonLog (const LogId id, std::ostream& os, bool withDetails)
     : JsonLog(id, [&os](const std::string& message){os<<message;}, withDetails)
 {
@@ -35,7 +54,7 @@ JsonLog::~JsonLog (void)
 }
 
 
-JsonLog::LogReceiver JsonLog::makeErrorLogReceiver()
+JsonLog::LogReceiver JsonLog::makeErrorLogReceiver (void)
 {
     return [](const std::string& message)
     {
@@ -44,20 +63,11 @@ JsonLog::LogReceiver JsonLog::makeErrorLogReceiver()
 }
 
 
-JsonLog::LogReceiver JsonLog::makeWarningLogReceiver()
+JsonLog::LogReceiver JsonLog::makeWarningLogReceiver (void)
 {
     return [](const std::string& message)
     {
         TLOG(WARNING) << message;
-    };
-}
-
-
-JsonLog::LogReceiver JsonLog::makeInfoLogReceiver()
-{
-    return [](const std::string& message)
-    {
-        TLOG(INFO) << message;
     };
 }
 
@@ -90,7 +100,7 @@ void JsonLog::finish (void)
 JsonLog& JsonLog::message (const std::string_view text)
 {
     if (mLogReceiver)
-        mLog << R"(,"info":")" << escapeJson(std::string(text)) << R"(")";
+        mLog << R"(,"message":")" << escapeJson(std::string(text)) << R"(")";
     return *this;
 }
 

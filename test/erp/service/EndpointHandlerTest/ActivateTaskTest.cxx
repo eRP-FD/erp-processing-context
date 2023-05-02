@@ -117,21 +117,6 @@ public:
     }
 };
 
-class ActivateTaskTestPkv : public ActivateTaskTest
-{
-protected:
-    void SetUp() override
-    {
-        ActivateTaskTest::SetUp();
-        auto currentVersion = model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>();
-        if (currentVersion < model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)
-        {
-            GTEST_SKIP_(
-                std::string("PKV not testable with ").append(model::ResourceVersion::v_str(currentVersion)).c_str());
-        }
-    }
-};
-
 TEST_F(ActivateTaskTest, ActivateTask)
 {
     auto signingTime = model::Timestamp::fromXsDate("2021-06-08");
@@ -142,7 +127,7 @@ TEST_F(ActivateTaskTest, ActivateTask)
                                               taskJson, kbvBundleXml, "X234567890", {.signingTime = signingTime}));
 }
 
-TEST_F(ActivateTaskTestPkv, ActivateTaskPkv)
+TEST_F(ActivateTaskTest, ActivateTaskPkv)
 {
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
@@ -158,7 +143,7 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkv)
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {.signingTime = timestamp}));
 }
 
-TEST_F(ActivateTaskTestPkv, ActivateTaskPkv209)
+TEST_F(ActivateTaskTest, ActivateTaskPkv209)
 {
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
@@ -174,9 +159,8 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkv209)
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {.signingTime = timestamp}));
 }
 
-TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage200)
+TEST_F(ActivateTaskTest, ActivateTaskPkvInvalidCoverage)
 {
-    A_22347_01.test("invalid coverage WF 200");
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId =
@@ -186,138 +170,27 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage200)
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = timestamp});
 
-    const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId,
-                                                         .timestamp = timestamp,
-                                                         .kvnr = pkvKvnr,
-                                                         .coverageInsuranceType = "GKV",
-                                                         .forceInsuranceType = "GKV",
-                                                         .forceKvid10Ns = model::resource::naming_system::gkvKvid10});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
-                                              {HttpStatus::BadRequest, timestamp, {}, false, exception}));
-    try
-    {
-        ASSERT_TRUE(exception);
-        std::rethrow_exception(exception);
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(std::string(ex.what()), "Coverage \"PKV\" not set for flowtype 200/209")
-            << ex.diagnostics().value_or("");
-    }
-    catch (...)
-    {
-        ADD_FAILURE() << "Unexpected Exception";
-    }
+    const auto bundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = pkvTaskId, .timestamp = timestamp, .kvnr = pkvKvnr, .coverageInsuranceType = "GKV"});
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {HttpStatus::BadRequest, timestamp}));
 }
 
-TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage209)
+TEST_F(ActivateTaskTest, ActivateTaskPkvInvalidCoverage209)
 {
-    A_22347_01.test("invalid coverage WF 209");
     EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
-    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50011);
+    const auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50011);
     const char* const pkvKvnr = "X500000011";
     const auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = timestamp});
 
-    const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId,
-                                                         .timestamp = timestamp,
-                                                         .kvnr = pkvKvnr,
-                                                         .coverageInsuranceType = "GKV",
-                                                         .forceInsuranceType = "GKV",
-                                                         .forceKvid10Ns = model::resource::naming_system::gkvKvid10});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
-                                              {HttpStatus::BadRequest, timestamp, {}, false, exception}));
-    try
-    {
-        ASSERT_TRUE(exception);
-        std::rethrow_exception(exception);
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(std::string(ex.what()), "Coverage \"PKV\" not set for flowtype 200/209")
-            << ex.diagnostics().value_or("");
-    }
-    catch (...)
-    {
-        ADD_FAILURE() << "Unexpected Exception";
-    }
-}
-
-TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage160)
-{
-    A_23443.test("invalid coverage WF 160");
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
-    const auto prescriptionId =
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 50010);
-    const char* const pkvKvnr = "X500000010";
-    const auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
-    const auto task = ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = timestamp});
-
-    const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId,
-                                                         .timestamp = timestamp,
-                                                         .kvnr = pkvKvnr,
-                                                         .coverageInsuranceType = "PKV",
-                                                         .forceInsuranceType = "PKV",
-                                                         .forceKvid10Ns = model::resource::naming_system::pkvKvid10});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
-                                              {HttpStatus::BadRequest, timestamp, {}, true, exception}));
-    try
-    {
-        ASSERT_TRUE(exception);
-        std::rethrow_exception(exception);
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(std::string(ex.what()), "Coverage \"PKV\" not allowed for flowtype 160/169")
-            << ex.diagnostics().value_or("");
-    }
-    catch (...)
-    {
-        ADD_FAILURE() << "Unexpected Exception";
-    }
-}
-
-TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage169)
-{
-    A_23443.test("invalid coverage WF 169");
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
-    const auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 50010);
-    const char* const pkvKvnr = "X500000010";
-    const auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
-    const auto task = ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = timestamp});
-
-    const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId,
-                                                         .timestamp = timestamp,
-                                                         .kvnr = pkvKvnr,
-                                                         .coverageInsuranceType = "PKV",
-                                                         .forceInsuranceType = "PKV",
-                                                         .forceKvid10Ns = model::resource::naming_system::pkvKvid10});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
-                                              {HttpStatus::BadRequest, timestamp, {}, true, exception}));
-    try
-    {
-        ASSERT_TRUE(exception);
-        std::rethrow_exception(exception);
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(std::string(ex.what()), "Coverage \"PKV\" not allowed for flowtype 160/169")
-            << ex.diagnostics().value_or("");
-    }
-    catch (...)
-    {
-        ADD_FAILURE() << "Unexpected Exception";
-    }
+    const auto bundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = pkvTaskId, .timestamp = timestamp, .kvnr = pkvKvnr, .coverageInsuranceType = "GKV"});
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {HttpStatus::BadRequest, timestamp}));
 }
 
 TEST_F(ActivateTaskTest, ActivateTaskBrokenSignature)
@@ -417,8 +290,7 @@ TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
             "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "report"};
     const auto timestamp = model::Timestamp::fromXsDate("2022-07-25");
     const auto* kvnr = "Y229270213";
-    const auto prescriptionId =
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 429);
+    const auto prescriptionId = model::PrescriptionId::fromString("200.000.000.000.429.45");
     auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
     // intent is only used for medication request and immediately after status, where we want to insert the extension
     auto extraStatusPos = bundle.find(R"(<intent value="order")");
@@ -446,8 +318,6 @@ TEST_P(ActivateTaskValidationModeTest, OnUnexpectedKbvExtension)
         GTEST_SKIP_("Skipping test because the kbv profile has closed slicing");
     }
     EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
-                                                 std::string{magic_enum::enum_name(GetParam())}};
-    EnvironmentVariableGuard validationModeGuardOld{"ERP_SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE",
                                                  std::string{magic_enum::enum_name(GetParam())}};
     A_22927.test("E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
     auto time = model::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
@@ -488,16 +358,9 @@ TEST_P(ActivateTaskValidationModeTest, genericValidation)
 {
     using namespace std::string_literals;
     using enum Configuration::GenericValidationMode;
-    bool usesNewProfile = model::ResourceVersion::currentBundle() ==
-                          model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01;
-    if (usesNewProfile && GetParam() != require_success)
-    {
-        // new profiles are always require_success, therefore we cannot test any other modes
-        GTEST_SKIP();
-    }
     const auto message =
-        usesNewProfile
-            ? "FHIR-Validation error"s
+        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01
+            ? "parsing / validation error"s
             : "missing valueCoding.code in extension https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis"s;
 
     auto time = model::Timestamp::fromXsDateTime("2021-06-08T08:25:05+02:00");
@@ -510,10 +373,11 @@ TEST_P(ActivateTaskValidationModeTest, genericValidation)
             <code value="00"/>
           </valueCoding>
         </extension>)--";
-    EnvironmentVariableGuard onUnknownExtensionGuard{
-        ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, "report"};
-    EnvironmentVariableGuard validationModeGuardOld{
-        ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, std::string{magic_enum::enum_name(GetParam())}};
+
+    EnvironmentVariableGuard onUnknownExtensionGuard{"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION",
+                                                     "report"};
+    EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
+                                                 std::string{magic_enum::enum_name(GetParam())}};
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = time});
     const auto invalidExtensionBundle = ResourceTemplates::kbvBundleXml(
@@ -657,7 +521,6 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
     catch (const ErpException& ex)
     {
         ASSERT_TRUE(ex.diagnostics().has_value());
-        // see ERP-13187:
         EXPECT_EQ(ex.diagnostics().value(), "Unable to determine profile type from name: "
                                             "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0");
     }
@@ -666,49 +529,3 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
         ADD_FAILURE() << "Unexpected Exception";
     }
 }
-
-class ActivateTaskTestPkvP : public ActivateTaskTest, public ::testing::WithParamInterface<model::PrescriptionType>
-{
-};
-
-TEST_P(ActivateTaskTestPkvP, RejectOldFhirForWf20x)
-{
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2022 profiles");
-    }
-    std::string_view kvnr{"X123456789"};
-    auto prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 333);
-    auto kbvBundle = ResourceTemplates::kbvBundlePkvXml(ResourceTemplates::KbvBundlePkvOptions(
-        prescriptionId, model::Kvnr(kvnr), model::ResourceVersion::KbvItaErp::v1_0_2));
-    auto task =
-        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
-                                     .taskType = ResourceTemplates::TaskType::Draft,
-                                     .prescriptionId = prescriptionId,
-                                     .kvnr = kvnr});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
-                                              {.expectedStatus = HttpStatus::BadRequest,
-                                               .signingTime = model::Timestamp::fromXsDate("2021-06-08"),
-                                               .insertTask = true,
-                                               .outExceptionPtr = exception}));
-    try
-    {
-        ASSERT_TRUE(exception);
-        std::rethrow_exception(exception);
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(std::string(ex.what()), "unsupported fhir version for PKV workflow 200/209: "
-                             "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2");
-    }
-    catch (...)
-    {
-        ADD_FAILURE() << "Unexpected Exception";
-    }
-}
-
-INSTANTIATE_TEST_SUITE_P(prefix, ActivateTaskTestPkvP,
-                         ::testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                           model::PrescriptionType::direkteZuweisungPkv));

@@ -66,8 +66,7 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
     const auto nonQesSmcbIssuer = Certificate::fromBinaryDer(
         FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/nonQesSmcbIssuer.der"));
     requestSender->setOcspUrlRequestHandler("http://ocsp-test.ocsp.telematik-test:8080/",
-                                            {{nonQesSmcbCert, nonQesSmcbIssuer, MockOcsp::CertificateOcspTestMode::SUCCESS},
-                                            {cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
+                                            {{nonQesSmcbCert, nonQesSmcbIssuer, MockOcsp::CertificateOcspTestMode::SUCCESS}},
                                             ocspCertificate, ocspPrivateKey);
 
     auto trustStore = std::make_unique<TrustStore>(

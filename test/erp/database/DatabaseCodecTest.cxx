@@ -46,13 +46,13 @@ public:
     class NoopCompression final : public Compression
     {
     public:
-        std::string compress(std::string_view plain, Compression::DictionaryUse dict) const override
+        std::string compress(const std::string_view& plain, Compression::DictionaryUse dict) const override
         {
             (void)dict;
             return std::string{plain};
         }
 
-        std::string decompress(std::string_view compressed) const override
+        std::string decompress(const std::string_view& compressed) const override
         {
             return std::string{compressed};
         }

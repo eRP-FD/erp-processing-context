@@ -33,7 +33,7 @@ RegistrationManager::RegistrationManager(
     : mRedisKey(std::string(teeInstanceKey) + ':' + aTeeHost + ':' + std::to_string(aTeePort))
     , mRedisInterface(std::move(aRedisInterface))
 {
-    TLOG(INFO) << "Initializing Registration Manager: host=" << aTeeHost << ", port=" << aTeePort;
+    TLOG(WARNING) << "Initializing Registration Manager: host=" << aTeeHost << ", port=" << aTeePort;
 }
 
 
@@ -47,39 +47,39 @@ RegistrationManager::RegistrationManager(RegistrationManager&& other) noexcept
 void RegistrationManager::registration()
 {
     std::lock_guard<std::mutex> guard(mMutex);
-    TVLOG(1) << "Registration of TEE instance.";
+    TVLOG(1) << "Registration of TEE instance." << std::endl;
 
     const auto now = time_point_cast<seconds>(system_clock::now());
     mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, startupValue);
     mRedisInterface->setKeyFieldValue(mRedisKey, timestampFieldName, std::to_string(now.time_since_epoch().count()));
 
-    TVLOG(1) << "Registration TEE instance successful.";
+    TVLOG(1) << "Registration TEE instance successful." << std::endl;
 }
 
 
 void RegistrationManager::deregistration()
 {
     std::lock_guard<std::mutex> guard(mMutex);
-    TVLOG(1) << "Deregistration of TEE instance.";
+    TVLOG(1) << "Deregistration of TEE instance." << std::endl;
 
     const auto now = time_point_cast<seconds>(system_clock::now());
     mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, unregisterValue);
     mRedisInterface->setKeyFieldValue(mRedisKey, timestampFieldName, std::to_string(now.time_since_epoch().count()));
 
-    TVLOG(1) << "Deregistration of TEE instance successful.";
+    TVLOG(1) << "Deregistration of TEE instance successful." << std::endl;
 }
 
 
 void RegistrationManager::heartbeat()
 {
     std::lock_guard<std::mutex> guard(mMutex);
-    TVLOG(3) << "Heartbeat from TEE instance.";
+    TVLOG(3) << "Heartbeat from TEE instance." << std::endl;
 
     const auto now = time_point_cast<seconds>(system_clock::now());
     mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, heartbeatValue);
     mRedisInterface->setKeyFieldValue(mRedisKey, timestampFieldName, std::to_string(now.time_since_epoch().count()));
 
-    TVLOG(1) << "Heartbeat from TEE instance successful.";
+    TVLOG(1) << "Heartbeat from TEE instance successful." << std::endl;
 }
 bool RegistrationManager::registered() const
 {

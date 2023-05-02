@@ -69,7 +69,7 @@ model::Timestamp KbvMedicationRequest::authoredOn() const
 {
     static const rapidjson::Pointer authoredOnPointer(resource::ElementName::path("authoredOn"));
     const auto authoredOnStr = getStringValue(authoredOnPointer);
-    return model::Timestamp::fromGermanDate(std::string{authoredOnStr});
+    return model::Timestamp::fromXsDate(std::string{authoredOnStr});
 }
 
 Dosage::Dosage(NumberAsStringParserDocument&& document)

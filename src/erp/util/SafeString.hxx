@@ -28,10 +28,10 @@ public:
     explicit SafeString(std::byte* value, size_t size);
     explicit SafeString (const NoZeroFillTag&, size_t size);
 
-    SafeString (const SafeString& other);
+    SafeString (const SafeString& other) = delete;
     SafeString (SafeString&& other) noexcept;
 
-    SafeString& operator= (const SafeString& other);
+    SafeString& operator= (const SafeString& other) = delete;
     SafeString& operator= (SafeString&& other) noexcept;
 
     /// @brief move construct from anything, that has a data and a size member (string, vector, array)

@@ -137,3 +137,17 @@ TEST_F(BundleTest, searchSetTotal0)
     EXPECT_EQ(totalPointer.Get(document)->GetUint64(), 0);
 }
 
+
+TEST_F(BundleTest, getSchemaVersion)
+{
+    const auto versions = {model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
+                           model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0};
+    for (const auto version : versions)
+    {
+        const auto bundleData = FileHelper::readFileAsString(
+            std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_bundle_template_" +
+            std::string{v_str(version)} + ".xml");
+        const auto bundle = model::Bundle::fromXmlNoValidation(bundleData);
+        ASSERT_EQ(bundle.getSchemaVersion({}), version);
+    }
+}

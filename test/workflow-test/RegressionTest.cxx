@@ -32,14 +32,14 @@ TEST_F(RegressionTest, Erp10674)
 TEST_F(RegressionTest, Erp10669)
 {
     auto timestamp = model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00");
-    auto signingDay = model::Timestamp::fromGermanDate("2022-07-29");
+    auto signingDay = model::Timestamp::fromXsDate("2022-07-29");
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
     ASSERT_TRUE(task.has_value());
-    std::string kbv_bundle_xml = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
-                                                  .timestamp = signingDay,
-                                                  .redeemPeriodStart = timestamp,
-                                                  .redeemPeriodEnd = {}});
+    std::string kbv_bundle_xml = ResourceTemplates::kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                                     .timestamp = signingDay,
+                                                                     .redeemPeriodStart = timestamp,
+                                                                     .redeemPeriodEnd = {}});
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
     ASSERT_NO_FATAL_FAILURE(taskActivateResult = taskActivateWithOutcomeValidation(
@@ -58,10 +58,8 @@ TEST_F(RegressionTest, Erp10669)
 
 TEST_F(RegressionTest, Erp10835)
 {
-    if (!Configuration::instance().featurePkvEnabled())
-    {
-        GTEST_SKIP();
-    }
+    auto profileEnv = testutils::getNewFhirProfileEnvironment();
+    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
     auto task = taskCreate(model::PrescriptionType::direkteZuweisungPkv);
     ASSERT_TRUE(task.has_value());
     auto kvnr = generateNewRandomKVNR().id();
@@ -83,10 +81,17 @@ class RegressionTestErp8170 : public ErpWorkflowTest
 {
 protected:
     std::string medicationDispense(const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense,
-                                   const std::string&, model::ResourceVersion::FhirProfileBundleVersion version) override
+                                   const std::string&, model::ResourceVersion::FhirProfileBundleVersion) override
     {
-        return ErpWorkflowTest::medicationDispense(kvnr, prescriptionIdForMedicationDispense, "0001-01-01T00:00:00Z",
-                                                   version);
+        // TODO: adjust for version 1.1.0
+        auto medicationDispense =
+            ResourceManager::instance().getStringResource("test/issues/ERP-8170/MedicationDispense.xml");
+        medicationDispense =
+            String::replaceAll(medicationDispense, "160.000.074.296.321.22", prescriptionIdForMedicationDispense);
+        medicationDispense = String::replaceAll(medicationDispense, "X110455449", kvnr);
+        medicationDispense = String::replaceAll(medicationDispense, "3-SMC-B-Testkarte-883110000116298",
+                                                jwtApotheke().stringForClaim(JWT::idNumberClaim).value());
+        return medicationDispense;
     }
 };
 
@@ -135,7 +140,8 @@ TEST_F(RegressionTest, Erp11142)
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "unknown or unexpected profile"));
+        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
+        "KBV resources must always define a profile version"));
 
     // additional test with duplicate version, KBV_PR_ERP_Bundle|1.0.3|1.0.3
     kbv_bundle_xml = String::replaceAll(
@@ -146,7 +152,8 @@ TEST_F(RegressionTest, Erp11142)
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "unknown or unexpected profile"));
+        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid,
+        "Invalid meta/profile: more than one | separator found."));
 }
 
 TEST_F(RegressionTest, Erp10892_1)

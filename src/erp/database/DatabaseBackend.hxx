@@ -6,7 +6,6 @@
 #ifndef ERP_PROCESSING_CONTEXT_DATABASEBACKEND_HXX
 #define ERP_PROCESSING_CONTEXT_DATABASEBACKEND_HXX
 
-#include "erp/database/DatabaseConnectionInfo.hxx"
 #include "erp/hsm/ErpTypes.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Task.hxx"
@@ -60,13 +59,7 @@ public:
     virtual void closeConnection() = 0;
     virtual bool isCommitted() const = 0;
 
-    virtual std::string retrieveSchemaVersion() = 0;
-
     virtual void healthCheck() = 0;
-    virtual std::optional<DatabaseConnectionInfo> getConnectionInfo() const
-    {
-        return std::nullopt;
-    }
 
     /// @returns (pescription_id, authored_on)
     /// NOTE: The return value authored_on should be used for key derivation.

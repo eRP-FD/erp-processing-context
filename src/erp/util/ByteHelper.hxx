@@ -7,7 +7,6 @@
 #define ERP_PROCESSING_CONTEXT_UTIL_BYTEHELPER_HXX
 
 #include "fhirtools/util/Gsl.hxx"
-#include "erp/util/Buffer.hxx"
 
 #include <cstdint>
 #include <string>
@@ -18,7 +17,6 @@ class ByteHelper
 {
 public:
     static std::string toHex (gsl::span<const char> buffer);
-    static std::string toHex (const util::Buffer& buffer);
     static std::string fromHex (std::string_view hexString);
 
     static char nibbleToChar (int value);

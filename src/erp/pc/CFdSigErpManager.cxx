@@ -234,6 +234,7 @@ void CFdSigErpManager::executeJob()
 {
     try
     {
+        TLOG(WARNING) << "Running periodic FD.OSIG certificate validation";
         auto cFdSigErp = mHsmPool.acquire().session().getVauSigCertificate();
         std::lock_guard lock(mMutex);
 

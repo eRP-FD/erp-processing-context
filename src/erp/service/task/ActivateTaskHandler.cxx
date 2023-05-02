@@ -45,6 +45,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
+    checkFeatureWf200(prescriptionId.type());
 
     auto* databaseHandle = session.database();
     auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
@@ -58,14 +59,14 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
 
-    A_19024_03.start("check access code");
+    A_19024_01.start("check access code");
     checkAccessCodeMatches(session.request, *task);
-    A_19024_03.finish();
+    A_19024_01.finish();
 
-    A_19024_03.start("check status draft");
+    A_19024_01.start("check status draft");
     ErpExpect(taskStatus == model::Task::Status::draft, HttpStatus::Forbidden,
               "Task not in status draft but in status " + std::string(model::Task::StatusNames.at(taskStatus)));
-    A_19024_03.finish();
+    A_19024_01.finish();
 
     const auto parameterResource = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::ActivateTaskParameters);
     ErpExpect(parameterResource.count() == 1, HttpStatus::BadRequest, "unexpected number of parameters");
@@ -86,8 +87,8 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     const auto& prescription = cadesBesSignature.payload();
 
-    auto [extensionsStatus, prescriptionBundle] =
-        prescriptionBundleFromXml(session.serviceContext, prescription, prescriptionId);
+    auto prescriptionBundle = prescriptionBundleFromXml(session.serviceContext, prescription);
+    HttpStatus extensionsStatus = checkExtensions(prescriptionBundle);
 
     const auto compositions = prescriptionBundle.getResourcesByType<model::Composition>("Composition");
     ErpExpect(compositions.size() == 1, HttpStatus::BadRequest,
@@ -104,7 +105,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     if (! medicationRequests.empty())
     {
         checkMultiplePrescription(medicationRequests[0].getExtension<model::KBVMultiplePrescription>(),
-                                  prescriptionId.type(), legalBasisCode, medicationRequests[0].authoredOn());
+                                  prescriptionId.type(), legalBasisCode);
     }
 
     A_22231.start("check narcotics and Thalidomid");
@@ -157,13 +158,13 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     checkValidCoverage(prescriptionBundle, prescriptionId.type());
 
-    A_19025_02.start("3. reference the PKCS7 file in task");
+    A_19025.start("3. reference the PKCS7 file in task");
     task->setHealthCarePrescriptionUuid();
     task->setPatientConfirmationUuid();
     const model::Binary healthCareProviderPrescriptionBinary(
         *task->healthCarePrescriptionUuid(),
         cadesBesSignature.getBase64());
-    A_19025_02.finish();
+    A_19025.finish();
 
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
     date::year_month_day signingDay{date::floor<date::days>(
@@ -192,8 +193,8 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     }
     A_19999.finish();
 
-    // GEMREQ-start A_19127-01
-    A_19127_01.start("store KVNR from prescription bundle in task");
+
+    A_19127.start("store KVNR from prescription bundle in task");
     const auto patients = prescriptionBundle.getResourcesByType<model::Patient>("Patient");
     ErpExpect(patients.size() == 1, HttpStatus::BadRequest,
               "Expected exactly one Patient in prescription bundle, got: " + std::to_string(patients.size()));
@@ -207,8 +208,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
         ErpFail(HttpStatus::BadRequest, ex.what());
     }
     task->setKvnr(*kvnr);
-    A_19127_01.finish();
-    // GEMREQ-end A_19127-01
+    A_19127.finish();
 
     A_19128.start("status transition draft -> ready");
     task->setStatus(model::Task::Status::ready);
@@ -216,10 +216,10 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     task->updateLastUpdate();
 
-    A_19025_02.start("2. store the PKCS7 file in database");
+    A_19025.start("2. store the PKCS7 file in database");
     databaseHandle = session.database();
     databaseHandle->activateTask(task.value(), healthCareProviderPrescriptionBinary);
-    A_19025_02.finish();
+    A_19025.finish();
 
     makeResponse(session, extensionsStatus, &task.value());
 
@@ -255,11 +255,12 @@ void ActivateTaskHandler::setMvoExpiryAcceptDates(model::Task& task,
     }
 }
 
-fhirtools::ValidatorOptions
-ActivateTaskHandler::validationOptions(model::ResourceVersion::FhirProfileBundleVersion version)
+fhirtools::ValidatorOptions ActivateTaskHandler::validationOptions()
 {
     const auto& config = Configuration::instance();
-    auto valOpts = Configuration::instance().defaultValidatorOptions(version, SchemaType::KBV_PR_ERP_Bundle);
+    auto valOpts = model::ResourceBase::defaultValidatorOptions();
+    valOpts.allowNonLiteralAuthorReference =
+        (config.kbvValidationNonLiteralAuthorRef() == Configuration::NonLiteralAutherRefMode::allow);
     switch (config.kbvValidationOnUnknownExtension())
     {
         using enum Configuration::OnUnknownExtension;
@@ -269,7 +270,7 @@ ActivateTaskHandler::validationOptions(model::ResourceVersion::FhirProfileBundle
             break;
         case report:
         case reject:
-            if (config.genericValidationMode(version) == Configuration::GenericValidationMode::require_success)
+            if (config.genericValidationMode() == Configuration::GenericValidationMode::require_success)
             {
                 // unknown extensions in closed slicing will be reported as error
                 // open slices will be unslicedWarning
@@ -309,8 +310,8 @@ void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvBundl
     const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationRequest>();
     for (const auto& mr : medicationRequests)
     {
-        const date::local_days authoredOn{date::floor<date::days>(
-            date::make_zoned(model::Timestamp::GermanTimezone, mr.authoredOn().toChronoTimePoint()).get_local_time())};
+        const date::local_days authoredOn{
+            date::floor<date::days>(date::make_zoned(mr.authoredOn().toChronoTimePoint()).get_local_time())};
 
         if (signingDay != authoredOn)
         {
@@ -327,59 +328,53 @@ void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvBundl
     A_22487.finish();
 }
 
-std::tuple<HttpStatus, model::KbvBundle>
-ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext, std::string_view prescription,
-                                               const model::PrescriptionId& prescriptionId)
+model::KbvBundle ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
+                                                                std::string_view prescription)
 {
-    using namespace std::string_literals;
-    using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
-    using OnUnknownExtension = Configuration::OnUnknownExtension;
-    using GenericValidationMode = Configuration::GenericValidationMode;
-
-    const auto& config = Configuration::instance();
     const auto& xmlValidator = serviceContext.getXmlValidator();
-    const auto& inCodeValidator = serviceContext.getInCodeValidator();
-    const auto& supportedBundles = model::ResourceVersion::supportedBundles();
-
     try
     {
-        auto factory = KbvBundleFactory::fromXml(prescription, xmlValidator);
-        auto profileName = factory.getProfileName();
-        ErpExpect(profileName.has_value(), HttpStatus::BadRequest, "Missing meta.profile in Bundel.");
-        const auto* profInfo = model::ResourceVersion::profileInfoFromProfileName(*profileName);
-        ErpExpectWithDiagnostics(profInfo != nullptr, HttpStatus::BadRequest, "unknown or unexpected profile",
-                                 "Unable to determine profile type from name: "s.append(*profileName));
-        const auto fhirProfileBundleVersion = profInfo->bundleVersion;
-        ErpExpect(model::ResourceVersion::supportedBundles().contains(fhirProfileBundleVersion), HttpStatus::BadRequest,
-                  "Unsupported profile version");
-        ErpExpect(! prescriptionId.isPkv() ||
-                      fhirProfileBundleVersion > model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01,
-                  HttpStatus::BadRequest,
-                  "unsupported fhir version for PKV workflow 200/209: " + std::string(profileName.value()));
-        const auto& fhirStructureRepo = Fhir::instance().structureRepository(fhirProfileBundleVersion);
-        const auto genericValidationMode = config.genericValidationMode(fhirProfileBundleVersion);
-        const auto onUnknownExtension = config.kbvValidationOnUnknownExtension();
-
-
-        if (onUnknownExtension != OnUnknownExtension::ignore &&
-            genericValidationMode == GenericValidationMode::require_success)
+        auto fhirSchemaValidationContext = xmlValidator.getSchemaValidationContextNoVer(SchemaType::fhir);
+        FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), prescription, *fhirSchemaValidationContext);
+        auto kbvBundle = model::KbvBundle::fromXmlNoValidation(prescription);
+        model::ResourceVersion::KbvItaErp schemaVersion =
+            kbvBundle.getSchemaVersion(model::ResourceVersion::deprecated<model::ResourceVersion::KbvItaErp>());
+        std::optional<std::string_view> profileName = kbvBundle.getProfileName();
+        ErpExpect(profileName.has_value(), HttpStatus::BadRequest, "meta.profile missing");
+        const auto bundleVersion = std::get<model::ResourceVersion::FhirProfileBundleVersion>(
+            model::ResourceVersion::profileVersionFromName(profileName.value()));
+        try
         {
-            // downgrade to detail only as validateGeneric will be called later anyways
-            factory.genericValidationMode(GenericValidationMode::detail_only);
+            if (schemaVersion == model::ResourceVersion::KbvItaErp::v1_0_2)
+            {
+                const auto& inCodeValidator = serviceContext.getInCodeValidator();
+                const auto& schemaValidationContext =
+                    xmlValidator.getSchemaValidationContext(SchemaType::KBV_PR_ERP_Bundle, schemaVersion);
+                FhirSaxHandler::validateXML(Fhir::instance().structureRepository(), prescription,
+                                            *schemaValidationContext);
+                inCodeValidator.validate(kbvBundle, SchemaType::KBV_PR_ERP_Bundle, schemaVersion, xmlValidator);
+            }
+            kbvBundle.additionalValidation();
         }
-        else
+        catch (const ErpException& erpException)
         {
-            factory.genericValidationMode(genericValidationMode);
+            const auto& config = Configuration::instance();
+            using enum Configuration::GenericValidationMode;
+            if (config.genericValidationMode() == disable || erpException.status() != HttpStatus::BadRequest)
+            {
+                throw;
+            }
+            fhirtools::ValidationResults validationResult;
+            if (erpException.diagnostics())
+            {
+                validationResult.add(fhirtools::Severity::error, *erpException.diagnostics(), {}, nullptr);
+            }
+            validationResult.merge(kbvBundle.genericValidate(bundleVersion, validationOptions()));
+            auto details = validationResult.summary(fhirtools::Severity::unslicedWarning);
+            ErpFailWithDiagnostics(HttpStatus::BadRequest, erpException.what(), std::move(details));
         }
-        const auto valOpts = validationOptions(fhirProfileBundleVersion);
-        factory.validatorOptions(valOpts);
-        factory.validate(SchemaType::KBV_PR_ERP_Bundle, xmlValidator, inCodeValidator, supportedBundles);
-        auto status = HttpStatus::OK;
-        if (onUnknownExtension != OnUnknownExtension::ignore)
-        {
-            status = checkExtensions(factory, onUnknownExtension, genericValidationMode, fhirStructureRepo, valOpts);
-        }
-        return {status, std::move(factory).getNoValidation()};
+        // generic validation will be handled in checkExtensions
+        return kbvBundle;
     }
     catch (const model::ModelException& er)
     {
@@ -390,8 +385,7 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
 
 void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::KBVMultiplePrescription>& mPExt,
                                                     const model::PrescriptionType prescriptionType,
-                                                    std::optional<model::KbvStatusKennzeichen> legalBasisCode,
-                                                    const model::Timestamp& authoredOn)
+                                                    std::optional<model::KbvStatusKennzeichen> legalBasisCode)
 {
     if (! mPExt)
     {
@@ -471,11 +465,6 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
         ErpExpect(mPExt->startDate().has_value(), HttpStatus::BadRequest,
                   "Beginn der Einlösefrist für MVO ist erforderlich");
         A_22634.finish();
-
-        A_23537.start("Fehlercode 400 wenn Beginn der Einlösefrist vor Austellungsdatum");
-        ErpExpect(mPExt->startDate().value() >= authoredOn, HttpStatus::BadRequest,
-                  "Einlösefrist liegt zeitlich vor dem Ausstellungsdatum");
-        A_23537.finish();
     }
     else // if (mPExt->isMultiplePrescription())
     {
@@ -489,38 +478,68 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
     }
 }
 
-HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<model::KbvBundle>& factory,
-                                                Configuration::OnUnknownExtension onUnknownExtension,
-                                                Configuration::GenericValidationMode genericValidationMode,
-                                                const fhirtools::FhirStructureRepository& fhirStructureRepo,
-                                                const fhirtools::ValidatorOptions& valOpts)
+HttpStatus ActivateTaskHandler::checkExtensions(const model::KbvBundle& kbvBundle)
 {
-    using OnUnknownExtension = Configuration::OnUnknownExtension;
-    using GenericValidationMode = Configuration::GenericValidationMode;
     A_22927.start(" A_22927: E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
-    auto validationResult = factory.validateGeneric(fhirStructureRepo, valOpts, {});
-    auto highestSeverity = validationResult.highestSeverity();
-    if (highestSeverity >= fhirtools::Severity::error &&
-        genericValidationMode == GenericValidationMode::require_success)
+    const auto& config = Configuration::instance();
+    auto onUnknownExtension = config.kbvValidationOnUnknownExtension();
+    auto genericValidationMode = config.genericValidationMode();
+    if (onUnknownExtension == Configuration::OnUnknownExtension::ignore)
     {
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "FHIR-Validation error", validationResult.summary());
-    }
-    bool haveUnslicedWarn = std::ranges::any_of(validationResult.results(), [](const fhirtools::ValidationError& err) {
-        return err.severity() == fhirtools::Severity::unslicedWarning;
-    });
-    if (haveUnslicedWarn)
-    {
-        if (onUnknownExtension == OnUnknownExtension::reject)
+        switch (genericValidationMode)
         {
-            ErpFailWithDiagnostics(
-                HttpStatus::BadRequest,
+            case Configuration::GenericValidationMode::disable:
+            case Configuration::GenericValidationMode::detail_only:
+                return HttpStatus::OK;
+            case Configuration::GenericValidationMode::ignore_errors:
+            case Configuration::GenericValidationMode::require_success:
+                break;
+        }
+    }
+    model::ResourceVersion::FhirProfileBundleVersion bundleVersion = model::ResourceVersion::currentBundle();
+    try
+    {
+        bundleVersion = std::get<model::ResourceVersion::FhirProfileBundleVersion>(
+            model::ResourceVersion::profileVersionFromName(kbvBundle.getProfileName().value()));
+    }
+    catch (const model::ModelException& ex)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "invalid KBV profile", ex.what());
+    }
+    const auto& validationResult = kbvBundle.genericValidate(bundleVersion, validationOptions());
+    fhirtools::Severity highestSeverity = validationResult.highestSeverity();
+#ifdef ENABLE_DEBUG_LOG
+    if (highestSeverity >= fhirtools::Severity::unslicedWarning)
+    {
+        validationResult.dumpToLog();
+    }
+#endif
+    if (genericValidationMode == Configuration::GenericValidationMode::require_success)
+    {
+        ErpExpectWithDiagnostics(highestSeverity < fhirtools::Severity::error, HttpStatus::BadRequest,
+                                 "parsing / validation error",
+                                 validationResult.summary(fhirtools::Severity::unslicedWarning));
+    }
+    bool haveUnslicedWarning = std::ranges::any_of(validationResult.results(), [](const auto& valErr) {
+        return valErr.severity() == fhirtools::Severity::unslicedWarning;
+    });
+    switch (onUnknownExtension)
+    {
+        using enum Configuration::OnUnknownExtension;
+        case ignore:
+            return HttpStatus::OK;
+        case report:
+            return haveUnslicedWarning ? HttpStatus::Accepted : HttpStatus::OK;
+        case reject:
+            ErpExpectWithDiagnostics(
+                !haveUnslicedWarning, HttpStatus::BadRequest,
                 "unintendierte Verwendung von Extensions an unspezifizierter Stelle im Verordnungsdatensatz",
                 validationResult.summary(fhirtools::Severity::unslicedWarning));
-        }
-        return HttpStatus::Accepted;
+            return HttpStatus::OK;
     }
     A_22927.finish();
-    return HttpStatus::OK;
+    Fail2("Invalid value for Configuration::OnUnknownExtension: " + std::to_string(intmax_t(onUnknownExtension)),
+          std::logic_error);
 }
 
 
@@ -529,13 +548,12 @@ void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, con
     A_22222.start("Check for allowed coverage type");
     const auto& config = Configuration::instance();
     const auto& coverage = bundle.getResourcesByType<model::KbvCoverage>("Coverage");
-    ErpExpect(coverage.size() <= 1, HttpStatus::BadRequest, "Unexpected number of Coverage Resources in KBV Bundle");
-    bool featurePkvEnabled = config.featurePkvEnabled();
+    bool featureWf200enabled = config.featureWf200Enabled();
     bool pkvCovered = false;
     for (const auto& currentCoverage : coverage)
     {
         const auto coverageType = currentCoverage.typeCodingCode();
-        pkvCovered = featurePkvEnabled && (coverageType == "PKV");
+        pkvCovered = featureWf200enabled && (coverageType == "PKV");
         ErpExpect((coverageType == "GKV")
                   || (coverageType == "SEL")
                   || (coverageType == "BG")
@@ -549,18 +567,18 @@ void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, con
 
     // PKV related: check PKV coverage
     A_22347_01.start("Check coverage type for flowtype 200/209 (PKV prescription)");
-    A_23443.start("Check coverage type for flowtype 160/169");
     switch (prescriptionType)
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
-            ErpExpect(!pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not allowed for flowtype 160/169");
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv:
-            ErpExpect(pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not set for flowtype 200/209");
+            if (featureWf200enabled)
+            {
+                ErpExpect(pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not set for flowtype 200/209");
+            }
             break;
     }
-    A_23443.finish();
     A_22347_01.finish();
 }

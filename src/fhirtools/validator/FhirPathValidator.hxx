@@ -32,11 +32,12 @@ class FhirPathValidator
 {
 public:
     [[nodiscard]] static ValidationResults validate(const std::shared_ptr<const Element>& element,
-                                                    const std::string& elementFullPath, const ValidatorOptions& = {});
+                                                       const std::string& elementFullPath,
+                                                       const ValidatorOptions& = {});
     [[nodiscard]] static ValidationResults validateWithProfiles(const std::shared_ptr<const Element>& element,
-                                                                const std::string& elementFullPath,
-                                                                const std::set<std::string>& profileUrls,
-                                                                const ValidatorOptions& = {});
+                                                                   const std::string& elementFullPath,
+                                                                   const std::set<std::string>& profileUrls,
+                                                                   const ValidatorOptions& = {});
 
     // internal use
     const ValidatorOptions& options() const;
@@ -46,8 +47,7 @@ private:
     FhirPathValidator(const ValidatorOptions& options, std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
                       const FhirStructureRepository& repo);
     static FhirPathValidator create(const ValidatorOptions&, const FhirStructureRepository*);
-    void validateInternal(const std::shared_ptr<const Element>& element,
-                          std::set<ProfiledElementTypeInfo> extraProfiles, const std::string& elementFullPath);
+    void validateInternal(const std::shared_ptr<const Element>& element, const std::string& elementFullPath);
 
     void validateAllSubElements(const std::shared_ptr<const Element>& element, ReferenceContext& referenceContext,
                                 ProfileSetValidator& elementInfo, const std::string& elementFullPath);
@@ -57,7 +57,7 @@ private:
     void validateElement(const std::shared_ptr<const Element>& element, ReferenceContext&, ProfileSetValidator&,
                          const std::string& elementFullPath);
     void validateResource(const std::shared_ptr<const Element>& element, ReferenceContext&, ProfileSetValidator&,
-                          const std::string& elementFullPath);
+                         const std::string& elementFullPath);
     std::set<const FhirStructureDefinition*> profiles(const Element& element, std::string_view elementFullPath);
     void addProfiles(const Element& element, fhirtools::ProfileSetValidator& profileSetValidator,
                      fhirtools::ReferenceContext& parentReferenceContext, std::string_view elementFullPath);

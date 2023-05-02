@@ -6,8 +6,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_HSMCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_HSMCLIENT_HXX
 
-#include "erp/crypto/OpenSslHelper.hxx"
 #include "erp/hsm/ErpTypes.hxx"
+
 #include "erp/util/SafeString.hxx"
 
 #include <array>
@@ -66,19 +66,6 @@ struct UnwrapHashKeyInput
     ErpBlob key;
 };
 
-struct UnwrapRawPayloadInput
-{
-    ErpBlob teeToken;
-    ErpBlob wrappedRawPayload;
-};
-
-struct WrapRawPayloadInput
-{
-    ErpBlob teeToken;
-    unsigned int generation = 0;
-    ErpVector rawPayload;
-};
-
 struct ParsedQuote {
     ::ErpVector qualifiedSignerName;
     ::ErpVector qualifyingInformation;
@@ -134,8 +121,6 @@ public:
         const HsmRawSession& session,
         DoVAUECIESInput&& input) = 0;
 
-    virtual shared_EVP_PKEY getEcPublicKey(const HsmRawSession& session, ErpBlob&& ecKeyPair) = 0;
-
     [[nodiscard]] virtual::DeriveKeyOutput deriveChargeItemKey(const::HsmRawSession& session, ::DeriveKeyInput&& input) = 0;
 
     virtual SafeString getVauSigPrivateKey (
@@ -149,14 +134,6 @@ public:
     virtual ErpArray<Aes256Length> unwrapHashKey(
         const HsmRawSession& session,
         UnwrapHashKeyInput&& input) = 0;
-
-    virtual ErpBlob wrapRawPayload(
-        const HsmRawSession& session,
-        WrapRawPayloadInput&& input) = 0;
-
-    virtual ErpVector unwrapRawPayload(
-        const HsmRawSession& session,
-        UnwrapRawPayloadInput&& input) = 0;
 
     virtual ::ParsedQuote parseQuote(const ::ErpVector& quote) const = 0;
 

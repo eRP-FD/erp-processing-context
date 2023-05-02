@@ -33,18 +33,8 @@ readargs()
     done
 }
 
-readargs "$@"
 
-if [ "$skip_build" == "no" ]; then
-    mount | grep ccache
-    ls -l /data/jenkins/.ccache
-    df -h /data/jenkins/.ccache
-    ccache --version
-    ccache -o cache_dir=/data/jenkins/.ccache
-    ccache -M 40000M
-    ccache -p
-    ccache -s
-fi
+readargs "$@"
 
 test -n "${erp_build_version}" || die "missing argument --build_version="
 test -n "${erp_release_version}" || die "missing argument --release_version="
@@ -73,7 +63,6 @@ cmake -GNinja \
       -DERP_WITH_HSM_MOCK=ON \
       -DERP_WARNING_AS_ERROR=ON \
       -DERP_CONAN_ARGS="-o with_sbom=True" \
-      -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
       ..
 
 if [ "$skip_build" == "yes" ]; then

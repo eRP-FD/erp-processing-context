@@ -5,7 +5,6 @@
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
-#include "erp/ErpRequirements.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
 #include "erp/model/KbvBundle.hxx"
@@ -88,7 +87,7 @@ TEST_F(ErpWorkflowTest, ActivateTaskUnsupportedProfile)
         ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
         ASSERT_TRUE(task.has_value());
 
-        auto kbvBundle = kbvBundleXml({.timestamp = signingTime});
+        auto kbvBundle = ResourceTemplates::kbvBundleXml({.timestamp = signingTime});
         auto envVarsNew = testutils::getNewFhirProfileEnvironment();
         ASSERT_NO_FATAL_FAILURE(result =
                                     taskActivate(task->prescriptionId(), task->accessCode(),
@@ -130,10 +129,8 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtInsurant));
     ASSERT_TRUE(communicationsBundle);
     EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, *prescriptionId), communications.size());
-    auto medicationDipenseRenderVersion =
-        model::ResourceVersion::fhirProfileBundleFromSchemaVersion(serverGematikProfileVersion());
     const auto closeBody =
-        medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20", medicationDipenseRenderVersion);
+        medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20", model::ResourceVersion::currentBundle());
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
     const JWT jwt{ jwtApotheke() };
     ClientResponse serverResponse;
@@ -144,7 +141,7 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
             send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
                 .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
                 .withExpectedInnerFlowType(std::to_string(magic_enum::enum_integer(GetParam())))));
-    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK) << serverResponse.getBody();
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     // Test that any further close request is denied.
     ASSERT_NO_FATAL_FAILURE(
@@ -155,7 +152,6 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Forbidden);
 }
 
-// GEMREQ-start A_19169-01#TaskLifecycleNormal
 TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
 {
     if(isUnsupportedFlowtype(GetParam()))
@@ -178,7 +174,6 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
     std::optional<model::Timestamp> lastModifiedDate;
     // invoke /task/<id>/$accept
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
-// GEMREQ-end A_19169-01#TaskLifecycleNormal
 
     // Close task
     ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, *lastModifiedDate, communications));
@@ -285,6 +280,11 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurant) // NOLINT
 
     // Check for correct return code in this case, for bugticket ERP-4972
     taskAccept(*prescriptionId,accessCode, HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing);
+
+    // check no task is returned for GetAllTasks
+    auto tasks = taskGet(kvnr);
+    ASSERT_TRUE(tasks);
+    ASSERT_EQ(tasks->getResourceCount(), 0);
 
     // Check audit events
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
@@ -464,8 +464,9 @@ TEST_P(ErpWorkflowTestP, TaskSearchStatus) // NOLINT
         EXPECT_EQ(bundle.getResourcesByType<model::Task>("Task").size(), 1);
     }
     {
+         // cancelled tasks cannot be retrieved by GET
         const auto bundle = taskGet(kvnr, "status=cancelled").value();
-        EXPECT_EQ(bundle.getResourcesByType<model::Task>("Task").size(), 1);
+        EXPECT_EQ(bundle.getResourceCount(), 0);
     }
 }
 
@@ -757,57 +758,6 @@ TEST_P(ErpWorkflowTestP, TaskGetPagingAndSearch) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
-{
-    if (isUnsupportedFlowtype(GetParam()))
-    {
-        GTEST_SKIP();
-    }
-
-    std::string kvnr;
-    generateNewRandomKVNR(kvnr);
-    EXPECT_FALSE(kvnr.empty());
-
-    const std::size_t taskNum = 4;
-    for(unsigned int i = 0; i < taskNum; ++i)
-    {
-        std::optional<model::PrescriptionId> prescriptionId;
-        std::string accessCode;
-        ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
-        std::string qesBundle;
-        std::vector<model::Communication> communications;
-        ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
-        std::string secret;
-        std::optional<model::Timestamp> lastModifiedDate;
-        ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
-        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, *lastModifiedDate, communications));
-        if(i % 2 == 0)
-        {
-            ASSERT_NO_FATAL_FAILURE(
-                taskAbort(*prescriptionId, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr), accessCode, secret));
-            ASSERT_NO_FATAL_FAILURE(
-                taskGetId(*prescriptionId, kvnr, accessCode,
-                           HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
-        }
-    }
-
-    // Cancelled tasks can also be retrieved since requirement A_19027_03
-    auto bundle = taskGet(kvnr).value();
-    EXPECT_EQ(bundle.getResourcesByType<model::Task>("Task").size(), taskNum);
-    EXPECT_EQ(bundle.getTotalSearchMatches(), taskNum);
-
-    A_19027_03.test("Retrieve list of cancelled tasks");
-    bundle = taskGet(kvnr, "status=cancelled").value();
-    const auto tasks = bundle.getResourcesByType<model::Task>("Task");
-    EXPECT_EQ(tasks.size(), taskNum / 2);
-    EXPECT_EQ(bundle.getTotalSearchMatches(), taskNum / 2);
-    for(const auto& task : tasks)
-    {
-        EXPECT_EQ(task.status(), model::Task::Status::cancelled);
-        EXPECT_TRUE(task.kvnr().has_value());
-    }
-}
-
 TEST_F(ErpWorkflowTest, AuditEventFilterInsurantKvnr) // NOLINT
 {
     std::string kvnr1;
@@ -999,11 +949,11 @@ TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-comp
     ASSERT_TRUE(metaData);
     if (!runsInCloudEnv())
     {
-        const auto releaseDate = model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data());
+        const auto releaseDate = model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate);
         EXPECT_EQ(metaData->date(), releaseDate);
         EXPECT_EQ(metaData->releaseDate(), releaseDate);
     }
-    EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion());
+    EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion);
 
     const auto now = model::Timestamp::now();
     const auto* version = "0.3.1";
@@ -1035,8 +985,8 @@ TEST_F(ErpWorkflowTest, GetDevice)//NOLINT(readability-function-cognitive-comple
 
     EXPECT_EQ(device->id(), "1");
     EXPECT_EQ(device->status(), model::Device::Status::active);
-    EXPECT_EQ(device->serialNumber(), ErpServerInfo::ReleaseVersion());
-    EXPECT_EQ(device->version(), ErpServerInfo::ReleaseVersion());
+    EXPECT_EQ(device->serialNumber(), ErpServerInfo::ReleaseVersion);
+    EXPECT_EQ(device->version(), ErpServerInfo::ReleaseVersion);
     EXPECT_EQ(device->name(), model::Device::Name);
     EXPECT_TRUE(device->contact(model::Device::CommunicationSystem::email).has_value());
     EXPECT_EQ(device->contact(model::Device::CommunicationSystem::email).value(), model::Device::Email);
@@ -1049,8 +999,8 @@ TEST_F(ErpWorkflowTest, GetDevice)//NOLINT(readability-function-cognitive-comple
 
     EXPECT_EQ(device->id(), "1");
     EXPECT_EQ(device->status(), model::Device::Status::active);
-    EXPECT_EQ(device->serialNumber(), ErpServerInfo::ReleaseVersion());
-    EXPECT_EQ(device->version(), ErpServerInfo::ReleaseVersion());
+    EXPECT_EQ(device->serialNumber(), ErpServerInfo::ReleaseVersion);
+    EXPECT_EQ(device->version(), ErpServerInfo::ReleaseVersion);
     EXPECT_EQ(device->name(), model::Device::Name);
     EXPECT_TRUE(device->contact(model::Device::CommunicationSystem::email).has_value());
     EXPECT_EQ(device->contact(model::Device::CommunicationSystem::email).value(), model::Device::Email);
@@ -1131,10 +1081,12 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitiv
 
     auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
     // prepare QES-Bundle for invocation of POST /task/<id>/$activate
-    auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId.value(), .timestamp = timestamp, .kvnr = kvnr});
+    auto bundleXml = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId.value(), .timestamp = timestamp, .kvnr = kvnr});
     auto qesBundle = model::KbvBundle::fromXml(
         bundleXml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
-        model::ResourceVersion::supportedBundles());
+        model::ResourceVersion::supportedBundles(),
+        {{.allowNonLiteralAuthorReference = true}});
     std::string qesBundleSigned = toCadesBesSignature(bundleXml, timestamp);
 
     std::optional<model::Task> task;
@@ -1436,7 +1388,7 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
     ASSERT_NO_FATAL_FAILURE(
         std::tie(outerResponse, innerResponse) =
             send(RequestArguments{HttpMethod::GET, "/Task/", {}}.withJwt(jwt),
-                 [](std::string& request){ request[2]++; }));
+                 [](std::string& request){ request[2] = '-'; }));
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::BadRequest);
     ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
     EXPECT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/json");
@@ -1444,11 +1396,9 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
     outerErrorResponseDocument.Parse(outerResponse.getBody());
 
     checkJsonString(outerErrorResponseDocument, xRequestIdPointer, {});
+    const std::string xRequestId = xRequestIdPointer.Get(outerErrorResponseDocument)->GetString();
     if (!runsInCloudEnv())
     {
-        const auto* requestIdPtr = xRequestIdPointer.Get(outerErrorResponseDocument);
-        ASSERT_NE(requestIdPtr, nullptr);
-        const std::string xRequestId = requestIdPtr->GetString();
         // the proxy modifies this field to something like:
         // "[b75bd220-7db0-4df2-8f17-0e0b9b36fca6, 79f758df-2eb8-4b53-b766-4950e608bdef]"
         EXPECT_TRUE(Uuid(xRequestId).isValidIheUuid()) << xRequestId;
@@ -1463,7 +1413,7 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
     ASSERT_NO_FATAL_FAILURE(
         std::tie(outerResponse, innerResponse) =
             send(RequestArguments{HttpMethod::GET, "/Task/", {}}.withJwt(jwt),
-                [](std::string& request){ request[request.size()/2]++; }));
+                [](std::string& request){ request[request.size()/2] = '-'; }));
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::BadRequest);
     EXPECT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
     EXPECT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/json");
@@ -1473,9 +1423,7 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
     checkJsonString(outerErrorResponseDocument, xRequestIdPointer, {});
     if (!runsInCloudEnv())
     {
-        const auto* requestIdPtr = xRequestIdPointer.Get(outerErrorResponseDocument);
-        ASSERT_NE(requestIdPtr, nullptr);
-        EXPECT_TRUE(Uuid(requestIdPtr->GetString()).isValidIheUuid());
+        EXPECT_TRUE(Uuid(xRequestIdPointer.Get(outerErrorResponseDocument)->GetString()).isValidIheUuid());
     }
     checkJsonInt(outerErrorResponseDocument, statusPointer, 400);
     checkJsonString(outerErrorResponseDocument, errorPointer,
@@ -1491,9 +1439,7 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
     const std::string kvnr{"X987654321"};
-    auto medicationDipenseRenderVersion =
-        model::ResourceVersion::fhirProfileBundleFromSchemaVersion(serverGematikProfileVersion());
-    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20", medicationDipenseRenderVersion);
+    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20");
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=XXXXX" ;
     const JWT jwt{ jwtApotheke() };
     RequestArguments args{HttpMethod::POST, closePath, closeBody, "application/fhir+xml", false};
@@ -1585,15 +1531,6 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
 
 TEST_P(ErpWorkflowTestP, OperationOutcomeIncodeValidation)// NOLINT
 {
-    if (!model::ResourceVersion::supportedBundles()
-            .contains(model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        GTEST_SKIP_("Incode-validation only applicable for 2022-01-01 profiles.");
-    }
-    if (model::IsPkv(GetParam()))
-    {
-        GTEST_SKIP_("PKV not testable with old profiles");
-    }
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
@@ -1609,10 +1546,6 @@ TEST_P(ErpWorkflowTestP, OperationOutcomeIncodeValidation)// NOLINT
 
 TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
 {
-    if (serverUsesOldProfile() && model::IsPkv(GetParam()))
-    {
-        GTEST_SKIP_("PKV not testable with old profiles");
-    }
     using namespace std::chrono_literals;
 
     // invoke POST /task/$create

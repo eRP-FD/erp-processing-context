@@ -15,9 +15,7 @@
 #include "erp/database/RedisClient.hxx"
 #include "erp/enrolment/EnrolmentServer.hxx"
 #include "erp/fhir/Fhir.hxx"
-#include "erp/hsm/VsdmKeyCache.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
@@ -65,26 +63,25 @@ std::unique_ptr<ApplicationHealthAndRegistrationUpdater> ErpMain::setupHeartbeat
     std::unique_ptr<ApplicationHealthAndRegistrationUpdater> sender;
     if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_REGISTRATION, false))
     {
-        TLOG(INFO) << "Initializing Registration Heartbeating.";
+        LOG(WARNING) << "Initializing Registration Heartbeating.";
         sender = ApplicationHealthAndRegistrationUpdater::create(Configuration::instance(), serviceContext,
                                          serviceContext.registrationInterface());
         sender->start();
     }
     else
     {
-        TLOG(INFO) << "Registration Heartbeating is disabled.";
+        LOG(WARNING) << "Registration Heartbeating is disabled.";
     }
     return sender;
 }
 
 
-// GEMREQ-start A_19021-02#setupPrngSeeding
 std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
     ThreadPool& threadpool,
     HsmPool& randomSource)
 {
-    A_19021_02.start("reseed periodically to maintain 120 bit entropy");
-    TLOG(INFO) << "Initializing Periodic Random Seeding.";
+    A_19021.start("reseed periodically to maintain 120 bit entropy");
+    TLOG(WARNING) << "Initializing Periodic Random Seeding.";
 
     std::chrono::seconds entropyFetchInterval{
         Configuration::instance().getOptionalIntValue(ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS, 60)};
@@ -94,11 +91,10 @@ std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
                                                  entropyFetchInterval);
     seedTimer->start(threadpool.ioContext(), std::chrono::seconds(0));
 
-    A_19021_02.finish();
+    A_19021.finish();
 
     return seedTimer;
 }
-// GEMREQ-end A_19021-02#setupPrngSeeding
 
 
 int ErpMain::runApplication (
@@ -106,7 +102,7 @@ int ErpMain::runApplication (
     StateCondition& state,
     const std::function<void(PcServiceContext&)>& postInitializationCallback)
 {
-#define log TLOG(INFO) << "Initialization: "
+#define log LOG(WARNING) << "Initialization: "
 
     const auto& configuration = Configuration::instance();
     configuration.check();
@@ -124,26 +120,12 @@ int ErpMain::runApplication (
     // There is only one service context for the whole runtime of the service
 
     auto serviceContext = std::make_shared<PcServiceContext>(Configuration::instance(), std::move(factories));
-    auto& ioContext = serviceContext->getTeeServer().getThreadPool().ioContext();
 
-    const auto schemaVersion = Version(serviceContext->databaseFactory()->retrieveSchemaVersion());
-    const auto expectedSchemaVersion = Version(Database::expectedSchemaVersion);
-    if(schemaVersion < expectedSchemaVersion)
-    {
-        TLOG(ERROR) << "Warning: Invalid database schema version '" << schemaVersion << "', server expects version '"
-                   <<  Database::expectedSchemaVersion << "'";
-    }
-    else if(schemaVersion > expectedSchemaVersion)
-    {
-        TLOG(ERROR) << "Warning: Current database schema version '" << schemaVersion << "' is higher than expected version '"
-                   <<  Database::expectedSchemaVersion << "'";
-    }
-
-    SignalHandler signalHandler(ioContext);
+    SignalHandler signalHandler(serviceContext->getTeeServer().getThreadPool().ioContext());
     signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
 
     log << "starting admin server";
-    serviceContext->getAdminServer().serve(1, "admin");
+    serviceContext->getAdminServer().serve(1);
 
 
     // Setup the IDP updater. As this triggers a first, synchronous update, the IDP updater has to be started
@@ -168,19 +150,19 @@ int ErpMain::runApplication (
         // Also, the TPM effectively being a singleton without multi-threading support, using a single server
         // thread is now a hard requirement.
         const size_t threadCount = 1;
-        serviceContext->getEnrolmentServer()->serve(threadCount, "enroll");
+        serviceContext->getEnrolmentServer()->serve(threadCount);
     }
 
     log << "starting the TEE server";
     const size_t threadCount =
         static_cast<size_t>(configuration.getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 10));
     Expect(threadCount>0, "thread count is negative or zero");
-    serviceContext->getTeeServer().serve(threadCount, "vau");
+    serviceContext->getTeeServer().serve(threadCount);
 
     const std::chrono::seconds blobCacheRefreshInterval{
             configuration.getIntValue(ConfigurationKey::HSM_CACHE_REFRESH_SECONDS)};
-    serviceContext->getBlobCache()->startRefresher(ioContext, blobCacheRefreshInterval);
-    serviceContext->getVsdmKeyCache().startRefresher(ioContext, blobCacheRefreshInterval);
+    serviceContext->getBlobCache().startRefresher(serviceContext->getTeeServer().getThreadPool().ioContext(),
+                                                  blobCacheRefreshInterval);
 
     // Start periodically seeding and updating seeds in all worker threads.
     // Started after the TEE server because a) it runs asynchronously anyway and b) it will access the thread pool which
@@ -263,10 +245,6 @@ Factories ErpMain::createProductionFactories()
             std::make_unique<ProductionBlobDatabase>());
     };
 
-    factories.vsdmKeyBlobDatabaseFactory = []() {
-        return std::make_unique<ProductionVsdmKeyBlobDatabase>();
-    };
-
     factories.tslManagerFactory = ErpMain::setupTslManager;
 
     if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_HSM_MOCK, false))
@@ -286,7 +264,7 @@ Factories ErpMain::createProductionFactories()
 
         factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
 
-        TLOG(INFO) << "Using MOCK security module.";
+        TLOG(WARNING) << "Using MOCK security module.";
 #else
         Fail(
             "Mock HSM enabled, but it was not compiled in. "
@@ -357,7 +335,7 @@ Factories ErpMain::createProductionFactories()
 
 std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlValidator>& xmlValidator)
 {
-    TLOG(INFO) << "Initializing TSL-Manager";
+    LOG(WARNING) << "Initializing TSL-Manager";
 
     try
     {
@@ -390,15 +368,18 @@ std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlVa
     }
     catch (const TslError& e)
     {
-        TLOG(ERROR) << "Can not create TslManager, TslError: " << e.what();
+        LOG(ERROR) << "Can not create TslManager, TslError: " << e.what();
         throw;
     }
     catch (const std::exception& e)
     {
-        TLOG(ERROR) << "Can not create TslManager, unexpected exception: " << e.what();
+        LOG(ERROR) << "Can not create TslManager, unexpected exception: " << e.what();
         throw;
     }
 }
+
+
+
 
 
 bool ErpMain::waitForHealthUp (PcServiceContext& serviceContext)
@@ -424,14 +405,14 @@ bool ErpMain::waitForHealthUp (PcServiceContext& serviceContext)
 
         ++loopCount;
         if (loopCount % loopMessageInterval == 1)
-            TLOG(WARNING) << "health status is DOWN (" << serviceContext.applicationHealth().downServicesString()
-                          << "), waiting for it to go up";
+            LOG(WARNING) << "health status is DOWN (" << serviceContext.applicationHealth().downServicesString()
+                         << "), waiting for it to go up";
 
         std::this_thread::sleep_for(std::chrono::seconds(loopWaitSeconds));
     }
 
     if (healthCheckIsUp)
-        TLOG(INFO) << "health status is UP";
+        LOG(WARNING) << "health status is UP";
 
     return healthCheckIsUp;
 }

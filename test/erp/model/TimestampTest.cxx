@@ -5,7 +5,6 @@
 
 #include "erp/model/Timestamp.hxx"
 #include "erp/model/ModelException.hxx"
-#include "erp/util/TLog.hxx"
 
 #include <date/date.h>
 #include <gtest/gtest.h>
@@ -209,12 +208,6 @@ TEST_F(TimestampTest, fromXsDate_success)
     EXPECT_EQ(Timestamp::fromXsDate("2022-01-29"), expectedDateTime);
 }
 
-TEST_F(TimestampTest, fromDtmDateTime_success)
-{
-    const auto expectedDateTime = Timestamp(sys_days{August / 6 / 2019} + 5h + 4min + 3s);
-    EXPECT_EQ(Timestamp::fromDtmDateTime("20190806050403"), expectedDateTime);
-}
-
 
 TEST_F(TimestampTest, fromXsDate_failForInvalidDates)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -396,24 +389,4 @@ TEST_F(TimestampTest, fromGermanDate2)
     EXPECT_EQ(ts.toXsDateTime(), "2022-07-11T22:00:00.000+00:00");
     EXPECT_EQ(ts.toXsDate(), "2022-07-11");
     EXPECT_EQ(ts.toGermanDate(), "2022-07-12");
-}
-
-TEST_F(TimestampTest, toDatabaseSUuid)
-{
-    {
-        auto ts = Timestamp::fromXsDateTime("2023-02-15T01:00:00+01:00");
-        const auto suuid = ts.toDatabaseSUuid();
-        ASSERT_EQ(suuid, "01eb9e8f-9c04-bc00-0000-000000000000");
-        ASSERT_EQ(Timestamp::fromDatabaseSUuid(suuid), ts);
-    }
-    {
-        // preserve fractional seconds
-        auto ts2 = Timestamp::fromXsDateTime("2023-02-15T01:00:00.222+01:00");
-        const auto suuid2 = ts2.toDatabaseSUuid();
-        ASSERT_EQ(Timestamp::fromDatabaseSUuid(suuid2), ts2);
-    }
-    EXPECT_THROW(Timestamp::fromDatabaseSUuid("01eb9e8f-9c04-bc00"), ModelException);
-    EXPECT_THROW(Timestamp::fromDatabaseSUuid("g1eb9e8f-9c04-bc00-0000-000000000000"), ModelException);
-    EXPECT_THROW(Timestamp::fromDatabaseSUuid("1eb9e8f-9c04-bc00-0000-000000000000"), ModelException);
-    EXPECT_THROW(Timestamp::fromDatabaseSUuid("00000000-0000-0000-0000-000000000000"), ModelException);
 }

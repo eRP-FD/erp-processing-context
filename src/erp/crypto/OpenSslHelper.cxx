@@ -45,7 +45,7 @@ void showAllOpenSslErrors (void)
             break;
         std::array<char, 1024> buffer{};
         ERR_error_string_n(code, buffer.data(), buffer.size());
-        TLOG(ERROR) << std::string(buffer.begin(), buffer.end());
+        LOG(ERROR) << std::string(buffer.begin(), buffer.end());
     }
 }
 

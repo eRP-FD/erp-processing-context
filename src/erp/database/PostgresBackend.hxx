@@ -28,10 +28,7 @@ public:
     bool isCommitted() const override;
     void closeConnection() override;
 
-    std::string retrieveSchemaVersion() override;
-
     void healthCheck() override;
-    std::optional<DatabaseConnectionInfo> getConnectionInfo() const override;
 
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                    model::Task::Status taskStatus,

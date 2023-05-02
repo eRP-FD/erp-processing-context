@@ -16,27 +16,6 @@
 #include <unordered_set>
 
 
-namespace
-{
-std::string formatTimestamp(SearchParameter::Type type, const model::Timestamp& timestamp)
-{
-    switch (type)
-    {
-        case SearchParameter::Type::Date:
-            return timestamp.toXsDateTimeWithoutFractionalSeconds();
-        case SearchParameter::Type::DateAsUuid:
-            return timestamp.toDatabaseSUuid();
-        case SearchParameter::Type::String:
-        case SearchParameter::Type::TaskStatus:
-        case SearchParameter::Type::HashedIdentity:
-        case SearchParameter::Type::PrescriptionId:
-            break;
-    }
-    ErpFail(HttpStatus::InternalServerError, "Cannot format date");
-}
-
-} // namespace
-
 UrlArguments::UrlArguments (std::vector<SearchParameter>&& searchParameters)
     : mSupportedParameters(std::move(searchParameters)),
       mSearchArguments(),
@@ -118,8 +97,7 @@ void UrlArguments::addSearchArguments (const std::string& name,
     switch (parameterType.value())
     {
         case SearchParameter::Type::Date:
-        case SearchParameter::Type::DateAsUuid:
-            addDateSearchArguments(name, rawValues, *parameterDbName, *parameterType);
+            addDateSearchArguments(name, rawValues, *parameterDbName);
             return;
         case SearchParameter::Type::String:
             addStringSearchArguments(name, rawValues, *parameterDbName);
@@ -138,7 +116,7 @@ void UrlArguments::addSearchArguments (const std::string& name,
 }
 
 void UrlArguments::addDateSearchArguments(const std::string& name, const std::string& rawValues,
-                                          const std::string& parameterDbName, SearchParameter::Type parameterType)
+                                          const std::string& parameterDbName)
 {
     const auto [prefix, values] = SearchArgument::splitPrefixFromValues(rawValues, SearchParameter::Type::Date);
     if (!values.empty())
@@ -156,7 +134,9 @@ void UrlArguments::addDateSearchArguments(const std::string& name, const std::st
                 timePeriods.emplace_back(model::TimePeriod::fromFhirSearchDate(rawValue));
             }
         }
-        mSearchArguments.emplace_back(prefix, parameterDbName, name, parameterType, timePeriods, strlstRawValues);
+        mSearchArguments.emplace_back(
+            prefix, parameterDbName, name,
+            SearchParameter::Type::Date, timePeriods, strlstRawValues);
     }
     // else missing rawValue is ignored.
 }
@@ -554,7 +534,6 @@ void UrlArguments::appendComparison(std::ostream& os, const SearchArgument& argu
     switch (argument.type)
     {
         case SearchParameter::Type::Date:
-        case SearchParameter::Type::DateAsUuid:
             appendDateComparison(os, argument, connection);
             return;
         case SearchParameter::Type::String:
@@ -650,9 +629,9 @@ void UrlArguments::appendDateComparisonEQ(std::ostream& os, const SearchArgument
         else
         {
             os << "(('"
-                << formatTimestamp(argument.type, value->begin()) << "' <= " << argument.name
+                << value->begin().toXsDateTimeWithoutFractionalSeconds() << "' <= " << argument.name
                 << ") AND ("
-                << argument.name << " < '" << formatTimestamp(argument.type, value->end())
+                << argument.name << " < '" << value->end().toXsDateTimeWithoutFractionalSeconds()
                 << "'))";
         }
     }
@@ -678,9 +657,9 @@ void UrlArguments::appendDateComparisonNE(std::ostream& os, const SearchArgument
         else
         {
             os << "(('"
-                << formatTimestamp(argument.type, value->begin()) << "' > " << argument.name
+                << value->begin().toXsDateTimeWithoutFractionalSeconds() << "' > " << argument.name
                 << ") OR ("
-                << argument.name << " >= '" << formatTimestamp(argument.type, value->end())
+                << argument.name << " >= '" << value->end().toXsDateTimeWithoutFractionalSeconds()
                 << "'))";
         }
     }
@@ -703,7 +682,9 @@ void UrlArguments::appendDateComparisonGTSA(std::ostream& os, const SearchArgume
         // T >= E
         // >= instead of > because the upper bound is exclusive
         // When target values are time points then SA becomes equivalent to GT.
-        os << "(" << argument.name << " >= '" << formatTimestamp(argument.type, value->end()) << "')";
+        os << "("
+            << argument.name << " >= '" << value->end().toXsDateTimeWithoutFractionalSeconds()
+            << "')";
     }
 }
 
@@ -722,7 +703,9 @@ void UrlArguments::appendDateComparisonGE(std::ostream& os, const SearchArgument
 
         // The range above the search value intersects (i.e. overlaps) with the range of the target value, or the range of the search value fully contains the range of the target value.
         // T >= B
-        os << "(" << argument.name << " >= '" << formatTimestamp(argument.type, value->begin()) << "')";
+        os << "("
+            << argument.name << " >= '" << value->begin().toXsDateTimeWithoutFractionalSeconds()
+            << "')";
     }
 }
 
@@ -742,7 +725,9 @@ void UrlArguments::appendDateComparisonLTEB(std::ostream& os, const SearchArgume
         // FHIR: The range below the search value intersects (i.e. overlaps) with the range of the target value.
         // T < B
         // When target values are time points then EB becomes equivalent to LT.
-        os << "(" << argument.name << " < '" << formatTimestamp(argument.type, value->begin()) << "')";
+        os << "("
+            << argument.name << " < '" << value->begin().toXsDateTimeWithoutFractionalSeconds()
+            << "')";
     }
 }
 
@@ -762,7 +747,9 @@ void UrlArguments::appendDateComparisonLE(std::ostream& os, const SearchArgument
         // The range below the search value intersects (i.e. overlaps) with the range of the target value or the range of the search value fully contains the range of the target value.
         // T < E
         // < instead of <= because E is exclusive
-        os << "(" << argument.name << " < '" << formatTimestamp(argument.type, value->end()) << "')";
+        os << "("
+            << argument.name << " < '" << value->end().toXsDateTimeWithoutFractionalSeconds()
+            << "')";
     }
 }
 

@@ -74,7 +74,7 @@ ZStd::ZStd(const std::filesystem::path& dictionaryDir)
 ZStd::~ZStd() = default;
 
 
-std::string ZStd::compress(std::string_view plain, Compression::DictionaryUse dictUse) const
+std::string ZStd::compress(const std::string_view& plain, Compression::DictionaryUse dictUse) const
 {
     const auto& dict = mDictRepo.getDictionaryForUse(dictUse);
     std::unique_ptr<ZSTD_CCtx, Free> context{ZSTD_createCCtx()};
@@ -85,7 +85,7 @@ std::string ZStd::compress(std::string_view plain, Compression::DictionaryUse di
     return compressed;
 }
 
-std::string ZStd::decompress(std::string_view compressed) const
+std::string ZStd::decompress(const std::string_view& compressed) const
 {
     using namespace std::string_literals;
     using std::to_string;
@@ -108,3 +108,5 @@ std::string ZStd::decompress(std::string_view compressed) const
             std::logic_error);
     return plainText;
 }
+
+

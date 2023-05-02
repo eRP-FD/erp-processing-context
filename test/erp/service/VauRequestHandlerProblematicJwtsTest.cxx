@@ -31,7 +31,7 @@ public:
 
     void SetUp() override
     {
-        ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
+        ServerTestBase::SetUp();
         mPrivateKey = MockCryptography::getIdpPrivateKey();
         mPublicKey = MockCryptography::getIdpPublicKey();
         mBuilder = std::make_unique<JwtBuilder>(mPrivateKey);

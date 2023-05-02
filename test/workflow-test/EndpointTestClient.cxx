@@ -4,14 +4,11 @@
  */
 
 #include "test/workflow-test/EndpointTestClient.hxx"
-#include "erp/ErpProcessingContext.hxx"
 #include "erp/admin/AdminServer.hxx"
+#include "erp/ErpProcessingContext.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/enrolment/EnrolmentServer.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
 #include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/VsdmKeyBlobDatabase.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
@@ -19,12 +16,13 @@
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
-#include "mock/idp/MockIdpUpdater.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
+#include "mock/idp/MockIdpUpdater.hxx"
 #include "test/mock/MockRedisStore.hxx"
-#include "test/mock/RegistrationMock.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
+#include "test/mock/RegistrationMock.hxx"
+#include "erp/enrolment/EnrolmentServer.hxx"
 
 
 EndpointTestClient::EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidator, Target target)
@@ -54,7 +52,7 @@ void EndpointTestClient::initAdminServer()
     auto factories = StaticData::makeMockFactories();
     factories.adminServerFactory = &EndpointTestClient::httpsServerFactory;
     mContext = std::make_unique<PcServiceContext>(config, std::move(factories));
-    mContext->getAdminServer().serve(1, "admin-test");
+    mContext->getAdminServer().serve(1);
     initClient();
 }
 
@@ -66,7 +64,7 @@ void EndpointTestClient::initEnrolmentServer()
     auto factories = StaticData::makeMockFactories();
     factories.enrolmentServerFactory = &EndpointTestClient::httpsServerFactory;
     mContext = std::make_unique<PcServiceContext>(config, std::move(factories));
-    mContext->getEnrolmentServer()->serve(1, "enroll-test");
+    mContext->getEnrolmentServer()->serve(1);
     initClient();
 }
 
@@ -80,32 +78,6 @@ void EndpointTestClient::initClient()
         TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_CLIENT_PRIVATE_KEY)};
     mHttpsClient = std::make_unique<HttpsClient>(getHostAddress(), getPort(), 30, true, serverCertificate,
                                                  clientCertificate, clientPrivateKey);
-}
-
-void EndpointTestClient::initVsdmKeys()
-{
-    const auto& vsdmKeys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
-    auto& vsdmKeyDb = mContext->getVsdmKeyBlobDatabase();
-    auto hsmPoolSession = mPool->acquire();
-    auto& hsmSession = hsmPoolSession.session();
-    for (const auto& key : vsdmKeys)
-    {
-        VsdmHmacKey keyPackage{key};
-        try
-        {
-            vsdmKeyDb.deleteBlob(keyPackage.operatorId(), keyPackage.version());
-        }
-        catch(std::exception&)
-        {
-        }
-        const ErpVector vsdmKeyData = ErpVector::create(key);
-        VsdmKeyBlobDatabase::Entry vsdmKeyBlobEntry;
-        vsdmKeyBlobEntry.operatorId = keyPackage.operatorId();
-        vsdmKeyBlobEntry.version = keyPackage.version();
-        vsdmKeyBlobEntry.blob = hsmSession.wrapRawPayload(vsdmKeyData, 0);
-        vsdmKeyBlobEntry.createdDateTime = std::chrono::system_clock::now();
-        vsdmKeyDb.storeBlob(std::move(vsdmKeyBlobEntry));
-    }
 }
 
 
@@ -151,10 +123,9 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
         mServer->getThreadPool(), mContext->getHsmPool(), 200ms, [](const SafeString&) {}));
     const_pointer_cast<SeedTimerHandler>(mContext->getPrngSeeder()->handler())->refreshSeeds();
 
-    mServer->serve(2, "vau-test");
+    mServer->serve(2);
 
     initClient();
-    initVsdmKeys();
 }
 
 Database::Factory EndpointTestClient::createDatabaseFactory()

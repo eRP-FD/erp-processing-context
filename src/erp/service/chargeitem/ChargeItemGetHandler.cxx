@@ -157,16 +157,6 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
 
-    Expect3(chargeInformation.prescription.has_value(), "Prescription has no data", ::std::logic_error);
-    Expect3(chargeInformation.prescription->id().has_value(), "Prescription binary has no id", ::std::logic_error);
-    Expect3(chargeInformation.prescription->data().has_value(), "Prescription binary has no data",
-            ::std::logic_error);
-    Expect3(chargeInformation.unsignedDispenseItem.has_value(), "Dispense Item not present", ::std::logic_error);
-    const CadesBesSignature cadesBesSignature(std::string(chargeInformation.prescription.value().data().value()),
-                                              session.serviceContext.getTslManager());
-    auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
-    const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
-
     if (professionOIDClaim == profession_oid::oid_versicherter)
     {
 // GEMREQ-end A_22126#start
@@ -178,22 +168,27 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
 // GEMREQ-end A_22125
 
         A_22127.start("Response for insured");
+        Expect3(chargeInformation.prescription.value().data().has_value(), "Prescription binary has no data",
+                std::logic_error);
         // GEMREQ-end A_22127#buildResponse
-
         // GEMREQ-start A_22127#prescription
+        const CadesBesSignature cadesBesSignature(std::string(chargeInformation.prescription.value().data().value()),
+                                                  session.serviceContext.getTslManager());
+        auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
+
+        const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
         signBundle(kbvBundle, authorIdentifier, session.serviceContext);
         // GEMREQ-end A_22127#prescription
 
         // GEMREQ-start A_22127#receipt
-        Expect3(chargeInformation.receipt.has_value(), "Receipt not present", ::std::logic_error);
         chargeInformation.receipt->removeSignature();
         signBundle(*chargeInformation.receipt, authorIdentifier, session.serviceContext);
         // GEMREQ-end A_22127#receipt
 
         // GEMREQ-start A_22127#dispenseItem
-        chargeInformation.unsignedDispenseItem->removeSignature();
-        counterSignDispenseItem(chargeInformation.dispenseItem.value(),
-                                chargeInformation.unsignedDispenseItem.value(),
+        chargeInformation.unsignedDispenseItem.removeSignature();
+        counterSignDispenseItem(chargeInformation.dispenseItem,
+                                chargeInformation.unsignedDispenseItem,
                                 authorIdentifier,
                                 session.serviceContext);
         // GEMREQ-end A_22127#dispenseItem
@@ -206,7 +201,7 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
         ErpExpect(dispenseItemBundleSupportingReference.has_value(), HttpStatus::InternalServerError,
                   "no supporting reference for dispense bundle present in charge item");
         responseBundle.addResource(std::string{dispenseItemBundleSupportingReference.value()}, {}, {},
-                                   chargeInformation.unsignedDispenseItem->jsonDocument());
+                                   chargeInformation.unsignedDispenseItem.jsonDocument());
 
         const auto kbvBundleSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
             model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
@@ -236,43 +231,40 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
         A_22126.finish();
 // GEMREQ-end A_22126#id-check
 
-        A_22611_02.start("verify pharmacy access code");
+        A_22611.start("verify pharmacy access code");
         ChargeItemHandlerBase::verifyPharmacyAccessCode(session.request, chargeInformation.chargeItem);
-        A_22611_02.finish();
+        A_22611.finish();
 
-        A_22128_01.start("Response for pharmacy. Omit receipt and access code.");
+        A_22128.start("Response for pharmacy. Omit receipt and access code.");
         chargeInformation.chargeItem.deleteAccessCode();
         responseBundle.addResource(getLinkBase() + "/ChargeItem/" + prescriptionId.toString(), {}, {},
                                    chargeInformation.chargeItem.jsonDocument());
 
-        // embed QES bundle into signature of KBV-Bundle which is intentionally data duplication.
-        const model::Signature prescriptionSignature{
-            chargeInformation.prescription.value().data().value(),
-            cadesBesSignature.getSigningTime().value_or(model::Timestamp::now()), std::nullopt, "Arzt"};
-        kbvBundle.setSignature(prescriptionSignature);
+        Expect3(chargeInformation.prescription.has_value(), "Prescription has no data", ::std::logic_error);
+        Expect3(chargeInformation.prescription->id().has_value(), "Prescription binary has no id", ::std::logic_error);
+        Expect3(chargeInformation.prescription->data().has_value(), "Prescription binary has no data",
+                ::std::logic_error);
         const auto kbvBundleSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
             model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
         ErpExpect(kbvBundleSupportingReference.has_value(), HttpStatus::InternalServerError,
                   "no supporting reference for prescription bundle present in charge item");
         responseBundle.addResource(std::string{kbvBundleSupportingReference.value()}, {}, {},
-                                   kbvBundle.jsonDocument());
+                                   chargeInformation.prescription->jsonDocument());
 
-        // embed signed dispense into signature of KBV-Bundle which is intentionally data duplication.
-        Expect3(chargeInformation.dispenseItem.has_value(), "Dispense Item not present", ::std::logic_error);
-        const CadesBesSignature dispenseItemCadesBesSignature{chargeInformation.dispenseItem->data().value().data(),
-                                                              session.serviceContext.getTslManager(), true};
-        const model::Signature dispenseItemSignature{
-            dispenseItemCadesBesSignature.getBase64(),
-            dispenseItemCadesBesSignature.getSigningTime().value_or(model::Timestamp::now()), std::nullopt, "Apotheke"};
-        chargeInformation.unsignedDispenseItem->setSignature(dispenseItemSignature);
+        const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
+        chargeInformation.unsignedDispenseItem.removeSignature();
+        counterSignDispenseItem(chargeInformation.dispenseItem,
+                                chargeInformation.unsignedDispenseItem,
+                                authorIdentifier,
+                                session.serviceContext);
 
         auto dispenseItemBundleSupportingReference = chargeInformation.chargeItem.supportingInfoReference(
             model::ChargeItem::SupportingInfoType::dispenseItemBundle);
         ErpExpect(dispenseItemBundleSupportingReference.has_value(), HttpStatus::InternalServerError,
                   "no supporting reference for dispense bundle present in charge item");
         responseBundle.addResource(std::string{*dispenseItemBundleSupportingReference}, {}, {},
-                                   chargeInformation.unsignedDispenseItem->jsonDocument());
-        A_22128_01.finish();
+                                   chargeInformation.unsignedDispenseItem.jsonDocument());
+        A_22128.finish();
 
         auditEventId = model::AuditEventId::GET_ChargeItem_id_pharmacy;
     }

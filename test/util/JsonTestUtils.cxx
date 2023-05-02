@@ -4,10 +4,8 @@
  */
 
 #include "JsonTestUtils.hxx"
-#include "TestUtils.hxx"
-#include "erp/fhir/Fhir.hxx"
+
 #include "erp/model/ResourceNames.hxx"
-#include "test/util/ResourceTemplates.hxx"
 
 #include <boost/format.hpp>
 #include <gtest/gtest.h>
@@ -91,9 +89,6 @@ CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(Communication::Me
 {
 }
 
-CommunicationJsonStringBuilder::~CommunicationJsonStringBuilder() = default;
-
-
 CommunicationJsonStringBuilder& CommunicationJsonStringBuilder::setPrescriptionId(const std::string& prescriptionId)
 {
     mPrescriptionId = prescriptionId;
@@ -142,20 +137,8 @@ CommunicationJsonStringBuilder& CommunicationJsonStringBuilder::setAbout(const s
     return *this;
 }
 
-CommunicationJsonStringBuilder&
-CommunicationJsonStringBuilder::setMedicationOptions(ResourceTemplates::MedicationOptions medicationOpts)
-{
-    mMedicationOptions = std::make_unique<ResourceTemplates::MedicationOptions>(std::move(medicationOpts));
-    return *this;
-}
-
-
 std::string CommunicationJsonStringBuilder::createJsonString() const
 {
-    const auto fhirBundleVersion = ResourceVersion::fhirProfileBundleFromSchemaVersion(mProfileVersion);
-    const auto profileVersions = ResourceVersion::profileVersionFromBundle(fhirBundleVersion);
-    const SchemaType schemaType = model::Communication::messageTypeToSchemaType(mMessageType);
-
     static constexpr const char* fmtSpecProfile = R"(
             "meta": {"profile": ["%1%"]})";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
@@ -262,8 +245,20 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     const bool isChargeItemRelated =
         mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
 
-    body += boost::str(boost::format(fmtSpecProfile) % ::testutils::profile(schemaType, fhirBundleVersion));
+    std::string urlBase{};
+    if (isChargeItemRelated)
+    {
+        urlBase = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_";
+    }
+    else
+    {
+        urlBase = ResourceVersion::deprecatedProfile(mProfileVersion)
+                      ? structure_definition::deprecated::communication
+                      : "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_";
+    }
 
+    body += boost::str(
+        boost::format(fmtSpecProfile) % ::model::ResourceVersion::versionizeProfile(urlBase + std::string{Communication::messageTypeToString(mMessageType)}));
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += "," + boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
     else if (mPrescriptionId.has_value())
@@ -294,27 +289,148 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     }
     if (mAbout)
     {
-        ResourceTemplates::MedicationOptions medicationOptions;
-        if (mMedicationOptions)
+        std::string id{*mAbout};
+        if (!id.empty() && id[0] == '#')
         {
-            medicationOptions = *mMedicationOptions;
+            id = id.substr(1);
+        }
+        constexpr auto aboutBodyFmtDeprecated = R"(, "contained":  [
+        {
+            "resourceType": "Medication",
+            "id": "%1%",
+            "meta": {
+                "profile":  [
+                    "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2"
+                ]
+            },
+            "extension":  [
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category",
+                    "valueCoding": {
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category",
+                        "code": "00"
+                    }
+                },
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine",
+                    "valueBoolean": false
+                },
+                {
+                    "url": "http://fhir.de/StructureDefinition/normgroesse",
+                    "valueCode": "N1"
+                }
+            ],
+            "code": {
+                "coding":  [
+                    {
+                        "system": "http://fhir.de/CodeSystem/ifa/pzn",
+                        "code": "06313728"
+                    }
+                ],
+                "text": "Sumatriptan-1a Pharma 100 mg Tabletten"
+            },
+            "form": {
+                "coding":  [
+                    {
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
+                        "code": "TAB"
+                    }
+                ]
+            },
+            "amount": {
+                "numerator": {
+                    "value": 12,
+                    "unit": "TAB",
+                    "system": "http://unitsofmeasure.org",
+                    "code": "{tbl}"
+                },
+                "denominator": {
+                    "value": 1
+                }
+            }
+        }
+    ])";
+
+        constexpr auto aboutBodyFmt = R"--(, "contained":  [
+            {
+            "resourceType": "Medication",
+            "id": "%1%",
+            "meta": {
+                "profile":  [
+                    "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.1.0"
+                ]
+            },
+            "extension":  [
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type",
+                    "valueCodeableConcept": {
+                        "coding":  [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "version": "http://snomed.info/sct/900000000000207008/version/20220331",
+                                "code": "763158003",
+                                "display": "Medicinal product (product)"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category",
+                    "valueCoding": {
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category",
+                        "code": "00"
+                    }
+                },
+                {
+                    "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine",
+                    "valueBoolean": false
+                },
+                {
+                    "url": "http://fhir.de/StructureDefinition/normgroesse",
+                    "valueCode": "N1"
+                }
+            ],
+            "code": {
+                "coding":  [
+                    {
+                        "system": "http://fhir.de/CodeSystem/ifa/pzn",
+                        "code": "06313728"
+                    }
+                ],
+                "text": "Sumatriptan-1a Pharma 100 mg Tabletten"
+            },
+            "form": {
+                "coding":  [
+                    {
+                        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
+                        "code": "TAB"
+                    }
+                ]
+            },
+            "amount": {
+                "numerator": {
+                    "unit": "St",
+                    "extension":  [
+                        {
+                            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize",
+                            "valueString": "20 St."
+                        }
+                    ]
+                },
+                "denominator": {
+                    "value": 1
+                }
+            }
+        }])--";
+
+        if (ResourceVersion::deprecatedProfile(mProfileVersion))
+        {
+            body += boost::str(boost::format(aboutBodyFmtDeprecated) % id);
         }
         else
         {
-            std::string id{*mAbout};
-            if (! id.empty() && id[0] == '#')
-            {
-                id = id.substr(1);
-            }
-            medicationOptions.version = get<ResourceVersion::KbvItaErp>(profileVersions);
-            medicationOptions.id = id;
+            body += boost::str(boost::format(aboutBodyFmt) % id);
         }
-        body += R"(, "contained": [)" +
-                Fhir::instance()
-                    .converter()
-                    .xmlStringToJson(ResourceTemplates::medicationXml(medicationOptions))
-                    .serializeToJsonString() +
-                ']';
     }
     body += "}";
     return body;
@@ -322,10 +438,6 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
 
 std::string CommunicationJsonStringBuilder::createXmlString() const
 {
-    const auto fhirBundleVersion = ResourceVersion::fhirProfileBundleFromSchemaVersion(mProfileVersion);
-    const auto profileVersions = ResourceVersion::profileVersionFromBundle(fhirBundleVersion);
-    const SchemaType schemaType = model::Communication::messageTypeToSchemaType(mMessageType);
-
     static constexpr const char* fmtSpecProfile = R"(
             <meta> <profile value="%1%" /></meta>)";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
@@ -410,26 +522,73 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
     const bool isChargeItemRelated =
         mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
 
-    body += boost::str(boost::format(fmtSpecProfile) % ::testutils::profile(schemaType, fhirBundleVersion));
+    std::string urlBase{};
+    if (isChargeItemRelated)
+    {
+        urlBase = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_";
+    }
+    else
+    {
+        urlBase = ResourceVersion::deprecatedProfile(mProfileVersion)
+                      ? structure_definition::deprecated::communication
+                      : "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_";
+    }
 
+    body += boost::str(boost::format(fmtSpecProfile) %
+                       ::model::ResourceVersion::versionizeProfile(
+                           urlBase + std::string{Communication::messageTypeToString(mMessageType)}));
     if (mAbout)
     {
-        ResourceTemplates::MedicationOptions medicationOptions;
-        if (mMedicationOptions)
+        std::string id{*mAbout};
+        if (!id.empty() && id[0] == '#')
         {
-            medicationOptions = *mMedicationOptions;
+            id = id.substr(1);
         }
-        else
-        {
-            std::string id{*mAbout};
-            if (! id.empty() && id[0] == '#')
-            {
-                id = id.substr(1);
-            }
-            medicationOptions.version = get<ResourceVersion::KbvItaErp>(profileVersions);
-            medicationOptions.id = id;
-        }
-        body += "<contained>" + ResourceTemplates::medicationXml(medicationOptions) + "</contained>";
+        body += R"(
+        <contained>
+        <Medication>
+            <id value=")" + id + R"(" />
+            <meta>
+                <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2" />
+            </meta>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
+                <valueCoding>
+                    <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category" />
+                    <code value="00" />
+                </valueCoding>
+            </extension>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine">
+                <valueBoolean value="false" />
+            </extension>
+            <extension url="http://fhir.de/StructureDefinition/normgroesse">
+                <valueCode value="N1" />
+            </extension>
+            <code>
+                <coding>
+                    <system value="http://fhir.de/CodeSystem/ifa/pzn" />
+                    <code value="06313728" />
+                </coding>
+                <text value="Sumatriptan-1a Pharma 100 mg Tabletten" />
+            </code>
+            <form>
+                <coding>
+                    <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM" />
+                    <code value="TAB" />
+                </coding>
+            </form>
+            <amount>
+                <numerator>
+                    <value value="12" />
+                    <unit value="TAB" />
+                    <system value="http://unitsofmeasure.org" />
+                    <code value="{tbl}" />
+                </numerator>
+                <denominator>
+                    <value value="1" />
+                </denominator>
+            </amount>
+        </Medication>
+    </contained>)";
     }
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());

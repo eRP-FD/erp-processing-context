@@ -55,9 +55,8 @@ Timer::JobToken Timer::runAt (std::chrono::system_clock::time_point absoluteTime
             }
             else
             {
-                JsonLog(LogId::INTERNAL_ERROR, JsonLog::makeErrorLogReceiver())
-                    .message("error during Timer::runAt: ")
-                    .keyValue("code", error.to_string());
+                TLOG(ERROR) << "error during Timer::runAt: " << error;
+                JsonLog(LogId::INTERNAL_ERROR).message("error during Timer::runAt: ").keyValue("code", error.to_string());
             }
             removeJob(token);
         });
@@ -117,7 +116,8 @@ Timer::JobToken Timer::runRepeating (
 
 void Timer::shutDown (void)
 {
-    JsonLog(LogId::INTERNAL_WARNING, JsonLog::makeWarningLogReceiver()).message("shutdown timer thread");
+    TLOG(WARNING) << "shutdown timer thread";
+    JsonLog(LogId::INTERNAL_WARNING).message("shutdown timer thread");
     if ( ! mIoContext.stopped())
         mIoContext.stop();
     if (mTimerThread.joinable())

@@ -26,19 +26,6 @@ BlobDatabase::Entry MockBlobDatabase::getBlob (
     Fail("blob not found");
 }
 
-BlobDatabase::Entry MockBlobDatabase::getBlob(BlobType type, const ErpVector& name) const
-{
-    std::lock_guard lock(mMutex);
-
-    for (const auto& entry : mEntries)
-    {
-        if (entry.second.type == type && entry.first == name)
-            return entry.second;
-    }
-
-    Fail("blob not found");
-}
-
 
 std::vector<BlobDatabase::Entry> MockBlobDatabase::getAllBlobsSortedById (void) const
 {
@@ -68,7 +55,7 @@ BlobId MockBlobDatabase::storeBlob (Entry&& entry)
 
     std::lock_guard lock (mMutex);
 
-    ErpExpect(mEntries.find(entry.name) == mEntries.end(), HttpStatus::Conflict, "blob with the same name already exists");
+    ErpExpect(mEntries.find(entry.name) == mEntries.end(), HttpStatus::BadRequest, "blob with the same name already exists");
 
     const auto id = getNextBlobId(lock);
     const auto name = entry.name;
