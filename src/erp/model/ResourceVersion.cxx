@@ -546,19 +546,32 @@ std::map<std::pair<ProfileUri, ProfileVersion>, ProfileInfo> makeVersionMap()
 }// namespace ProfileInfoFromProfileName
 }// anonymous namespace
 
-
+//NOLINTNEXTLINE[misc-no-recursion]
 const ProfileInfo* profileInfoFromProfileName(std::string_view profilename)
 {
     static const auto versionMap = ProfileInfoFromProfileName::makeVersionMap();
     const auto pipe = profilename.rfind('|');
-    if (pipe == std::string_view::npos || pipe >= profilename.size() - 1)
+    if (pipe == std::string_view::npos)
+    {
+        // in the case of an unversioned profile, consider profiles from 2022 FHIR Bundles as a fallback
+        try
+        {
+            const auto versionizedProfile = versionizeProfile(profilename, FhirProfileBundleVersion::v_2022_01_01);
+            return profileInfoFromProfileName(versionizedProfile);
+        }
+        catch (const std::exception& e)
+        {
+            return nullptr;
+        }
+    }
+    if (pipe >= profilename.size() - 1)
     {
         return nullptr;
     }
     const auto profileUri = profilename.substr(0, pipe);
     const auto version = profilename.substr(pipe + 1);
     const auto info = versionMap.find(std::make_pair(profileUri, version));
-    return (info != versionMap.end())?std::addressof(info->second):nullptr;
+    return (info != versionMap.end()) ? std::addressof(info->second) : nullptr;
 }
 
 }// namespace model::ResourceVersion

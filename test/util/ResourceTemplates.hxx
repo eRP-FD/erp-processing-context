@@ -45,8 +45,8 @@ struct KbvBundleMvoOptions
     int denominator = 4;
     std::optional<model::ResourceVersion::KbvItaErp> kbvVersion = std::nullopt;
     //std::string_view multiplePrescriptionExtension = "";
-    std::optional<model::Timestamp> redeemPeriodStart = model::Timestamp::fromXsDate("2021-01-02");
-    std::optional<model::Timestamp> redeemPeriodEnd = model::Timestamp::fromXsDate("2021-01-02");
+    std::optional<std::string> redeemPeriodStart = "2021-01-02";
+    std::optional<std::string> redeemPeriodEnd = "2021-01-02";
 
 };
 std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions = KbvBundleMvoOptions{});

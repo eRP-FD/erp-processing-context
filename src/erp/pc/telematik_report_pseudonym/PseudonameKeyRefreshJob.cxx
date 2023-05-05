@@ -77,6 +77,7 @@ void PseudonameKeyRefreshJob::executeJob()
     // or REPORT_LEIPS_KEY_FAILED_CHECK_INTERVAL_SECONDS, while the check fails.
     try
     {
+        TLOG(INFO) << "Running PseudonameKeyRefreshJob";
         std::vector<bool> results = mBlobCache.hasValidBlobsOfType({BlobType::PseudonameKey});
         if (results.at(0) == false)
         {
@@ -161,4 +162,3 @@ std::string PseudonameKeyRefreshJob::hkdf(const std::string& input)
     A_22698.finish();
     return result;
 }
-

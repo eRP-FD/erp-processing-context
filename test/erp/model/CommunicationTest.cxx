@@ -75,6 +75,86 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-co
     EXPECT_NO_THROW((void)communication.serializeToXmlString());
 }
 
+TEST_F(CommunicationTest, 2022resourcesWithoutVersion)//NOLINT(readability-function-cognitive-complexity)
+{
+    // this test ensures 2022 communication resources will be accepted also without a versioning in meta.profile
+    if (! ResourceVersion::supportedBundles().contains(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
+    {
+        GTEST_SKIP_("Only relevant for 2022 profiles");
+    }
+    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
+    const auto profileVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1;
+    const auto* accessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
+    const auto* prescriptionId = "160.123.456.789.123.58";
+    const auto* payload = "Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.";
+    const auto profilePtr = rapidjson::Pointer{"/meta/profile/0"};
+    {
+        std::string dispReqJson = CommunicationJsonStringBuilder(Communication::MessageType::DispReq, profileVersion)
+                                      .setPrescriptionId(prescriptionId)
+                                      .setAccessCode(accessCode)
+                                      .setRecipient(ActorRole::Pharmacists, "PharmacyA")
+                                      .setPayload(payload)
+                                      .createJsonString();
+
+        auto dispReqModel = Communication::fromJsonNoValidation(dispReqJson).jsonDocument();
+        dispReqModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationDispReq);
+        EXPECT_NO_THROW(Communication::fromJson(dispReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
+                                                *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                                                SchemaType::Gem_erxCommunicationDispReq,
+                                                {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
+    }
+
+    {
+        std::string representativeJson =
+            CommunicationJsonStringBuilder(Communication::MessageType::Representative, profileVersion)
+                .setPrescriptionId(prescriptionId)
+                .setAccessCode(accessCode)
+                .setRecipient(ActorRole::Insurant, InsurantA)
+                .setPayload(payload)
+                .createJsonString();
+
+        auto representativeModel = Communication::fromJsonNoValidation(representativeJson).jsonDocument();
+        representativeModel.setValue(profilePtr,
+                                     model::resource::structure_definition::deprecated::communicationRepresentative);
+        EXPECT_NO_THROW(Communication::fromJson(representativeModel.serializeToJsonString(),
+                                                *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
+                                                *StaticData::getInCodeValidator(),
+                                                SchemaType::Gem_erxCommunicationRepresentative,
+                                                {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
+    }
+
+    {
+        std::string infoReqJson = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq, profileVersion)
+                                      .setPrescriptionId(prescriptionId)
+                                      .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
+                                      .setRecipient(ActorRole::Pharmacists, "PharmacyA")
+                                      .setPayload(payload)
+                                      .createJsonString();
+
+        auto infoReqModel = Communication::fromJsonNoValidation(infoReqJson).jsonDocument();
+        infoReqModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationInfoReq);
+        EXPECT_NO_THROW(Communication::fromJson(infoReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
+                                                *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                                                SchemaType::Gem_erxCommunicationInfoReq,
+                                                {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
+    }
+
+    {
+        std::string replyJson = CommunicationJsonStringBuilder(Communication::MessageType::Reply, profileVersion)
+                                    .setPrescriptionId(prescriptionId)
+                                    .setRecipient(ActorRole::Insurant, InsurantA)
+                                    .setPayload(payload)
+                                    .createJsonString();
+
+        auto replyModel = Communication::fromJsonNoValidation(replyJson).jsonDocument();
+        replyModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationReply);
+        EXPECT_NO_THROW(Communication::fromJson(replyModel.serializeToJsonString(), *StaticData::getJsonValidator(),
+                                               *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                                               SchemaType::Gem_erxCommunicationReply,
+                                               {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
+    }
+}
+
 TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();

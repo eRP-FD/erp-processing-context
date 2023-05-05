@@ -311,8 +311,7 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validateNoAddition
 
     validateEnforcedSchemaVersion();
 
-    if ((! fhirProfBundleVer || fhirProfBundleVer == ResourceVersion::FhirProfileBundleVersion::v_2022_01_01) &&
-        schemaType != SchemaType::fhir)
+    if (fhirProfBundleVer == ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 && schemaType != SchemaType::fhir)
     {
         try
         {

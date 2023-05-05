@@ -135,8 +135,8 @@
                     </extension>
                     <extension url="Zeitraum">
                         <valuePeriod>
-                            <start value="2021-05-30T08:09:58+02:00"></start>
-                            <end value="2021-05-30T08:09:58+02:00"></end>
+                            <start value="2021-05-30"></start>
+                            <end value="2021-05-30"></end>
                         </valuePeriod>
                     </extension>
                 </extension>

@@ -42,8 +42,9 @@ public:
                                            bool mandatoryExtension);
     static void checkKbvExtensionValueRatio(const std::string_view& url, const model::ResourceBase& resource,
                                             bool mandatoryExtension);
-    static void checkKbvExtensionValuePeriod(const std::string_view& url, const model::ResourceBase& resource,
-                                             bool mandatoryExtension, bool valueMandatory);
+    static void checkKbvExtensionValuePeriodGermanDates(const std::string_view& url,
+                                                        const model::ResourceBase& resource, bool mandatoryExtension,
+                                                        bool valueMandatory);
     static void checkKbvExtensionValueIdentifier(const std::string_view& url, const model::ResourceBase& resource,
                                                  bool mandatoryExtension, const std::string_view& system,
                                                  size_t maxValueLength);

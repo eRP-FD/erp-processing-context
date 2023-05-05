@@ -50,6 +50,7 @@ private:
     std::string mSessionIdentifier;
     std::unordered_map<std::string, std::string> mKeyValueMap;
     std::optional<std::chrono::steady_clock::time_point> mStart;
+    const int mUncaughtExceptions{std::uncaught_exceptions()};
 };
 
 

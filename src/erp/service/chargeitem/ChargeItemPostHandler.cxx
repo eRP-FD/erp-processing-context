@@ -90,7 +90,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     std::optional<model::ChargeItemMarkingFlags> markingFlags{};
     try
     {
-        chargeItemOptional = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir);
+        chargeItemOptional = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::Gem_erxChargeItem);
         markingFlags = chargeItemOptional->markingFlags();
     }
     catch (const model::ModelException& exc)

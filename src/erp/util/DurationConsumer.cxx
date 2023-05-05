@@ -27,20 +27,23 @@ DurationTimer::DurationTimer (
 
 DurationTimer::~DurationTimer (void)
 {
-    if (std::uncaught_exceptions() > 0)
+    const auto end = std::chrono::steady_clock::now();
+    std::string description = mDescription;
+    std::optional<JsonLog::LogReceiver> logReceiver;
+    if (std::uncaught_exceptions() > mUncaughtExceptions)
     {
         // Sadly, we can not use the ExceptionHelper to get detailed information about the exception because we can
         // not rethrow it.
-        notifyFailure("uncaught exception");
+        description.append(" failed due to uncaught exception");
+        logReceiver.emplace(JsonLog::makeWarningLogReceiver());
     }
     else
     {
-        const auto end = std::chrono::steady_clock::now();
-        if (mStart.has_value() && mReceiver)
-        {
-            mReceiver(end - mStart.value(), mCategory, mDescription + " was successful", mSessionIdentifier,
-                      mKeyValueMap, std::nullopt);
-        }
+        description.append(" was successful");
+    }
+    if (mStart.has_value() && mReceiver)
+    {
+        mReceiver(end - mStart.value(), mCategory, description, mSessionIdentifier, mKeyValueMap, logReceiver);
     }
 }
 

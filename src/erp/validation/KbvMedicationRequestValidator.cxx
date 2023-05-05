@@ -42,7 +42,8 @@ void KbvMedicationRequestValidator_V1_0_2::doValidate(const model::KbvMedication
     {
         KbvValidationUtils::checkKbvExtensionValueBoolean("Kennzeichen", *multiplePrescriptionExtension, true);
         KbvValidationUtils::checkKbvExtensionValueRatio("Nummerierung", *multiplePrescriptionExtension, false);
-        KbvValidationUtils::checkKbvExtensionValuePeriod("Zeitraum", *multiplePrescriptionExtension, false, true);
+        KbvValidationUtils::checkKbvExtensionValuePeriodGermanDates("Zeitraum", *multiplePrescriptionExtension, false,
+                                                                    true);
     }
 
     const auto& dosageInstruction = kbvMedicationRequest.dosageInstruction();

@@ -83,14 +83,14 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
     std::string redeemPeriodStart;
     if (bundleOptions.redeemPeriodStart.has_value())
     {
-        redeemPeriodStart = "<start value=\"" + bundleOptions.redeemPeriodStart->toGermanDate() + "\" />";
+        redeemPeriodStart = "<start value=\"" + bundleOptions.redeemPeriodStart.value() + "\" />";
     }
     boost::replace_all(bundle, "###REDEEM_START###", redeemPeriodStart);
 
     std::string redeemPeriodEnd;
     if (bundleOptions.redeemPeriodEnd.has_value())
     {
-        redeemPeriodEnd = "<end value=\"" + bundleOptions.redeemPeriodEnd->toGermanDate() + "\" />";
+        redeemPeriodEnd = "<end value=\"" + bundleOptions.redeemPeriodEnd.value() + "\" />";
     }
     boost::replace_all(bundle, "###REDEEM_END###", redeemPeriodEnd);
     return bundle;

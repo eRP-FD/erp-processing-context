@@ -10,6 +10,7 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/util/Condition.hxx"
+#include "erp/util/CrashHandler.hxx"
 #include "erp/util/SignalHandler.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"
@@ -29,55 +30,18 @@ namespace
         // to stderr, and that would bypass our GLog settings in production.
         xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {});
     }
-
-#ifndef __APPLE__
-    std::map<int, sighandler_t> old_handler;
-
-    void erp_signal_handler(int sig)
-    {
-        std::string message = "\nreceived signal " + std::to_string(sig) + "\n";
-        const auto res = write(STDERR_FILENO, message.data(), message.size());
-        (void) res;
-        if (old_handler.count(sig) > 0)
-        {
-            (void)signal(sig, old_handler[sig]);
-        }
-        else
-        {
-            (void)signal(sig, SIG_DFL);
-        }
-        (void)raise(sig);
-    }
-
-    void register_signals(std::initializer_list<int> signals)
-    {
-        for (const auto& sig : signals)
-        {
-            old_handler[sig] = signal(sig, &erp_signal_handler);
-        }
-    }
-#endif
 }
 
 
 int main (const int, const char* argv[], char** /*environment*/)
 {
-#ifndef __APPLE__
-    register_signals({SIGILL, SIGABRT, SIGSEGV, SIGFPE, SIGINT, SIGTERM
-#ifdef SIGSYS
-                      ,SIGSYS
-#endif
-    }
-    );
-#endif
-
     int exitCode = EXIT_FAILURE;
-
 
     try
     {
         GLogConfiguration::init_logging(argv[0]);
         ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
+        CrashHandler::registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGSYS, SIGFPE});
 
         TLOG(INFO) << "Starting erp-processing-context " << ErpServerInfo::ReleaseVersion()
                     << " (build: " << ErpServerInfo::BuildVersion() << "; " << ErpServerInfo::ReleaseDate() << ")";

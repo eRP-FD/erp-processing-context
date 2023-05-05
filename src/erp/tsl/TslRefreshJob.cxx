@@ -32,7 +32,7 @@ void TslRefreshJob::executeJob()
     // and if it fails, then the related action will fail as well
     try
     {
-        TVLOG(2) << "Executing TSL refresh job";
+        TLOG(INFO) << "Executing TSL refresh job";
         mTslManager.updateTrustStoresOnDemand();
     }
     catch(const TslError& e)

@@ -59,11 +59,10 @@ std::pair<model::AbgabedatenPkvBundle, std::string> ChargeItemBodyHandlerBase::v
         const CadesBesSignature cadesBesSignature{containedBinary.data().value().data(),
                                                   serviceContext.getTslManager(),
                                                   true};
-        return std::make_pair(model::AbgabedatenPkvBundle::fromXml(cadesBesSignature.payload(),
-                                                     serviceContext.getXmlValidator(),
-                                                     serviceContext.getInCodeValidator(),
-                                                     SchemaType::fhir),
-                              cadesBesSignature.getBase64());
+        return std::make_pair(
+            model::AbgabedatenPkvBundle::fromXml(cadesBesSignature.payload(), serviceContext.getXmlValidator(),
+                                                 serviceContext.getInCodeValidator(), SchemaType::DAV_DispenseItem),
+            cadesBesSignature.getBase64());
     }
     catch (const TslError& ex)
     {

@@ -114,8 +114,6 @@ std::optional<model::Timestamp> model::Extension::valuePeriodStartGermanDate() c
     const auto strVal = getOptionalStringValue(valuePeriodStartPointer);
     if (strVal)
     {
-        ModelExpect(strVal->size() == 10,
-                    "valuePeriodStartGermanDate can only be called for Date with format yyyy-mm-dd");
         return model::Timestamp::fromGermanDate(std::string(*strVal));
     }
     return std::nullopt;
@@ -125,8 +123,6 @@ std::optional<model::Timestamp> model::Extension::valuePeriodEndGermanDate() con
     const auto strVal = getOptionalStringValue(valuePeriodEndPointer);
     if (strVal)
     {
-        ModelExpect(strVal->size() == 10,
-                    "valuePeriodEndGermanDate can only be called for Date with format yyyy-mm-dd");
         return model::Timestamp::fromGermanDate(std::string(*strVal));
     }
     return std::nullopt;

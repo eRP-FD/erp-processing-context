@@ -667,6 +667,112 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
     }
 }
 
+TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd_2022)
+{
+    if (! model::ResourceVersion::supportedBundles().contains(
+            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
+    {
+        GTEST_SKIP_("This test is only relevant for 2022 profiles");
+    }
+    std::string_view kvnr{"X123456789"};
+    auto task =
+        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
+                                     .taskType = ResourceTemplates::TaskType::Draft,
+                                     .kvnr = kvnr});
+    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml(
+        {.kbvVersion = model::ResourceVersion::KbvItaErp::v1_0_2, .redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(std::rethrow_exception(exception), HttpStatus::BadRequest,
+                                      "date does not match YYYY-MM-DD in extension Zeitraum");
+}
+
+TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd_2023)
+{
+    if (! model::ResourceVersion::supportedBundles().contains(
+            model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        GTEST_SKIP_("This test is only relevant for 2023 profiles");
+    }
+    std::string_view kvnr{"X123456789"};
+    auto task =
+        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0,
+                                     .taskType = ResourceTemplates::TaskType::Draft,
+                                     .kvnr = kvnr});
+    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml(
+        {.kbvVersion = model::ResourceVersion::KbvItaErp::v1_1_0, .redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
+        std::rethrow_exception(exception), HttpStatus::BadRequest, "FHIR-Validation error",
+        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+        "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+        "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
+        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+        "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+        "https://fhir.kbv.de/StructureDefinition/"
+        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); ");
+}
+
+TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2022)
+{
+    if (! model::ResourceVersion::supportedBundles().contains(
+            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
+    {
+        GTEST_SKIP_("This test is only relevant for 2022 profiles");
+    }
+    std::string_view kvnr{"X123456789"};
+    auto task =
+        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
+                                     .taskType = ResourceTemplates::TaskType::Draft,
+                                     .kvnr = kvnr});
+    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = model::ResourceVersion::KbvItaErp::v1_0_2,
+                                                         .redeemPeriodStart = "2021-01-02T23:59:59.999+01:00"});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(std::rethrow_exception(exception), HttpStatus::BadRequest,
+                                      "date does not match YYYY-MM-DD in extension Zeitraum");
+}
+
+TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2023)
+{
+    if (! model::ResourceVersion::supportedBundles().contains(
+            model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        GTEST_SKIP_("This test is only relevant for 2023 profiles");
+    }
+    std::string_view kvnr{"X123456789"};
+    auto task =
+        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0,
+                                     .taskType = ResourceTemplates::TaskType::Draft,
+                                     .kvnr = kvnr});
+    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = model::ResourceVersion::KbvItaErp::v1_1_0,
+                                                         .redeemPeriodStart = "2021-01-02T23:59:59.999+01:00"});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
+        std::rethrow_exception(exception), HttpStatus::BadRequest, "FHIR-Validation error",
+        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+        "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+        "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
+        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+        "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+        "https://fhir.kbv.de/StructureDefinition/"
+        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); ");
+}
+
 class ActivateTaskTestPkvP : public ActivateTaskTest, public ::testing::WithParamInterface<model::PrescriptionType>
 {
 };

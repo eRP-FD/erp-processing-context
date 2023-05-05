@@ -94,7 +94,7 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
     const auto prescriptionId = parseIdFromPath(session.request, session.accessLog);
 
     A_22152.start("Validate input ChargeItem");
-    const auto newChargeItem = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::fhir);
+    const auto newChargeItem = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::Gem_erxChargeItem);
     A_22152.finish();
 
     auto* databaseHandle = session.database();

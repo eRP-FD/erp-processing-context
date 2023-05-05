@@ -115,8 +115,6 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
             case SchemaType::Gem_erxOrganizationElement:
             case SchemaType::Gem_erxReceiptBundle:
             case SchemaType::Gem_erxTask:
-            case SchemaType::Gem_erxChargeItem:
-            case SchemaType::Gem_erxConsent:
                 ASSERT_TRUE( getXmlValidator()->getSchemaValidationContext(type) != nullptr);
                 break;
             case SchemaType::KBV_PR_ERP_Bundle:
@@ -143,6 +141,8 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
             case SchemaType::PatchChargeItemParameters:
             case SchemaType::DAV_DispenseItem:
             case SchemaType::Pruefungsnachweis:
+            case SchemaType::Gem_erxChargeItem:
+            case SchemaType::Gem_erxConsent:
                 // not validated with XSD
                 break;
             default:

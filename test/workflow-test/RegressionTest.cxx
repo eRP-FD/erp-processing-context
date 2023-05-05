@@ -38,7 +38,7 @@ TEST_F(RegressionTest, Erp10669)
     ASSERT_TRUE(task.has_value());
     std::string kbv_bundle_xml = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = signingDay,
-                                                  .redeemPeriodStart = timestamp,
+                                                  .redeemPeriodStart = timestamp.toGermanDate(),
                                                   .redeemPeriodEnd = {}});
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;

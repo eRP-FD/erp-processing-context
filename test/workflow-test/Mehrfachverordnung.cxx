@@ -421,7 +421,7 @@ TEST_F(MVO_A_22635Test, Step_01_FutureStartDate)
     const auto tomorrow = model::Timestamp(std::chrono::system_clock::now() + 24h);
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = timestamp,
-                                                  .redeemPeriodStart = tomorrow,
+                                                  .redeemPeriodStart = tomorrow.toGermanDate(),
                                                   .redeemPeriodEnd = {}});
     std::string tomorrowStr = tomorrow.toGermanDateFormat();
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
@@ -443,7 +443,7 @@ TEST_F(MVO_A_19445Test, ExpiryAcceptDate365)
     auto timestamp = model::Timestamp::fromXsDate("2020-02-03");
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = timestamp,
-                                                  .redeemPeriodStart = timestamp,
+                                                  .redeemPeriodStart = timestamp.toGermanDate(),
                                                   .redeemPeriodEnd = {}});
     auto expectedDate =
         date::make_zoned(model::Timestamp::GermanTimezone, floor<date::days>(date::local_days{2021_y / 02 / 02}))
@@ -466,8 +466,8 @@ TEST_F(MVO_A_19445Test, ExpiryAcceptDateEndDate)
     auto endDate = model::Timestamp::fromXsDate("2021-03-01");
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = signingTime,
-                                                  .redeemPeriodStart = startDate,
-                                                  .redeemPeriodEnd = endDate});
+                                                  .redeemPeriodStart = startDate.toGermanDate(),
+                                                  .redeemPeriodEnd = endDate.toGermanDate()});
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<model::Task> activatedTask;
     ASSERT_NO_FATAL_FAILURE(activatedTask =
@@ -504,8 +504,8 @@ TEST_F(MVO_A_23164, Step_01_EndDateBeforeStartDateNoValidation_BadRequest)
 
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = timestamp,
-                                                  .redeemPeriodStart = model::Timestamp::fromGermanDate("2021-03-15"),
-                                                  .redeemPeriodEnd = model::Timestamp::fromGermanDate("2021-03-10")});
+                                                  .redeemPeriodStart = "2021-03-15",
+                                                  .redeemPeriodEnd = "2021-03-10"});
 
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
@@ -530,8 +530,8 @@ TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
     auto endDate = model::Timestamp::fromXsDate("2023-04-07");
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = authoredOn,
-                                                  .redeemPeriodStart = startDate,
-                                                  .redeemPeriodEnd = endDate});
+                                                  .redeemPeriodStart = startDate.toGermanDate(),
+                                                  .redeemPeriodEnd = endDate.toGermanDate()});
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
     ASSERT_NO_FATAL_FAILURE(result =
@@ -551,8 +551,8 @@ TEST_F(MVO_A_23537, Step_02_StartDateEqualsAuthoredOn)
     auto endDate = model::Timestamp::fromXsDate("2023-04-07");
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = authoredOn,
-                                                  .redeemPeriodStart = startDate,
-                                                  .redeemPeriodEnd = endDate});
+                                                  .redeemPeriodStart = startDate.toGermanDate(),
+                                                  .redeemPeriodEnd = endDate.toGermanDate()});
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<model::Task> activatedTask;
     ASSERT_NO_FATAL_FAILURE(activatedTask =
@@ -569,8 +569,8 @@ TEST_F(MVO_A_23537, Step_03_StartDateAfterAuthoredOn)
     auto endDate = model::Timestamp::fromXsDate("2023-04-07");
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = authoredOn,
-                                                  .redeemPeriodStart = startDate,
-                                                  .redeemPeriodEnd = endDate});
+                                                  .redeemPeriodStart = startDate.toGermanDate(),
+                                                  .redeemPeriodEnd = endDate.toGermanDate()});
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<model::Task> activatedTask;
     ASSERT_NO_FATAL_FAILURE(activatedTask =
@@ -589,7 +589,7 @@ TEST_F(MVO_A_23539Test, Step_01_PastEndDate)
     using namespace std::chrono_literals;
     const auto yesterday = model::Timestamp(std::chrono::system_clock::now() - 24h);
     const auto mvoPrescription = kbvBundleMvoXml(
-        {.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .redeemPeriodEnd = yesterday});
+        {.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .redeemPeriodEnd = yesterday.toGermanDate()});
     std::string yesterdayStr = yesterday.toGermanDateFormat();
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     ASSERT_NO_FATAL_FAILURE(
@@ -606,7 +606,7 @@ TEST_F(MVO_A_23539Test, Step_02_TodayEndDate)
     const auto today = model::Timestamp(std::chrono::system_clock::now());
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = timestamp,
-                                                  .redeemPeriodEnd = today});
+                                                  .redeemPeriodEnd = today.toGermanDate()});
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     ASSERT_NO_FATAL_FAILURE(
         taskActivate(task->prescriptionId(), task->accessCode(), toCadesBesSignature(mvoPrescription, timestamp)));

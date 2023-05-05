@@ -199,19 +199,27 @@ void KbvValidationUtils::checkKbvExtensionValueRatio(const std::string_view& url
     }
 }
 
-void KbvValidationUtils::checkKbvExtensionValuePeriod(const std::string_view& url, const model::ResourceBase& resource,
-                                                      bool mandatoryExtension, bool valueMandatory)
+void KbvValidationUtils::checkKbvExtensionValuePeriodGermanDates(const std::string_view& url,
+                                                                 const model::ResourceBase& resource,
+                                                                 bool mandatoryExtension, bool valueMandatory)
 {
     const auto& extension = checkGetExtension(url, resource, mandatoryExtension);
     if (extension.has_value())
     {
-        const auto& start = extension->valuePeriodStart();
-        const auto& end = extension->valuePeriodEnd();
-        if (valueMandatory)
+        try
         {
-            // startOrEnd:Es ist mindestens ein Start- oder ein Enddatum anzugeben
-            ErpExpect(start.has_value() || end.has_value(), HttpStatus::BadRequest,
-                      "missing valuePeriod.start or valuePeriod.end in extension " + std::string(url));
+            const auto& start = extension->valuePeriodStartGermanDate();
+            const auto& end = extension->valuePeriodEndGermanDate();
+            if (valueMandatory)
+            {
+                // startOrEnd:Es ist mindestens ein Start- oder ein Enddatum anzugeben
+                ErpExpect(start.has_value() || end.has_value(), HttpStatus::BadRequest,
+                          "missing valuePeriod.start or valuePeriod.end in extension " + std::string(url));
+            }
+        }
+        catch (const model::ModelException& modelException)
+        {
+            ErpFail(HttpStatus::BadRequest, std::string(modelException.what()).append(" in extension ").append(url));
         }
     }
 }

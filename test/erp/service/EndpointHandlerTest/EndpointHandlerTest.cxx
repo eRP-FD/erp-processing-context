@@ -1937,6 +1937,7 @@ TEST_F(EndpointHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readability-fun
     {
         GTEST_SKIP();
     }
+    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000000";
@@ -1966,6 +1967,43 @@ TEST_F(EndpointHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readability-fun
                                                        HttpStatus::BadRequest, "FHIR-Validation error"));
 }
 
+TEST_F(EndpointHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+    const auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
+    const char* const pkvKvnr = "X500000000";
+    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
+
+    auto& resourceManager = ResourceManager::instance();
+    const auto dispenseBundleXml = resourceManager.getStringResource(
+        std::string{TEST_DATA_DIR} + "/validation/xml/v_2023_07_01/dav/AbgabedatenBundle/"
+                                     "Bundle_invalid_AbgabedatenBundle-1.1.xml");
+    CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(), dispenseBundleXml,
+                                        std::nullopt};
+    const auto chargeItemTemplateXml = resourceManager.getStringResource(dataPath + "/charge_item_POST_template.xml");
+    const auto chargeItemXml =
+        String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId.toString()), pkvKvnr),
+                           "##DISPENSE_BUNDLE##", cadesBesSignature.getBase64());
+    const auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+
+    const auto referencedTask = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}));
+
+    const auto jwtPharmacy =
+        JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
+
+    // expect failure with invalid bundle
+    std::optional<model::ChargeItem> resultChargeItem;
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml,
+                                                       inputChargeItem.prescriptionId(), referencedTask.secret(),
+                                                       HttpStatus::BadRequest, "parsing / validation error"));
+}
+
 TEST_F(EndpointHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
     if (model::ResourceVersion::deprecatedProfile(
@@ -1973,6 +2011,7 @@ TEST_F(EndpointHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(readability
     {
         GTEST_SKIP();
     }
+    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000000";
@@ -1994,6 +2033,38 @@ TEST_F(EndpointHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(readability
     ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
         resultChargeItem, mServiceContext, jwtPharmacy, inputChargeItem.serializeToXmlString(),
         inputChargeItem.prescriptionId(), referencedTask.secret(), HttpStatus::BadRequest, "FHIR-Validation error"));
+}
+
+TEST_F(EndpointHandlerTest, PostChargeItemInvalidChargeItemVersion)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
+    const auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
+    const char* const pkvKvnr = "X500000000";
+
+    auto& resourceManager = ResourceManager::instance();
+    const auto chargeItemXml = resourceManager.getStringResource(
+        std::string{TEST_DATA_DIR} + "/validation/xml/pkv/chargeItem/ChargeItem_invalid_wrongVersion.xml");
+    auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+    inputChargeItem.setPrescriptionId(pkvTaskId);
+
+    const auto referencedTask = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}));
+
+    const auto jwtPharmacy =
+        JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
+
+    // successful retrieval:
+    std::optional<model::ChargeItem> resultChargeItem;
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy,
+                                                       inputChargeItem.serializeToXmlString(),
+                                                       inputChargeItem.prescriptionId(), referencedTask.secret(),
+                                                       HttpStatus::BadRequest, "parsing / validation error"));
 }
 
 
@@ -2279,6 +2350,7 @@ TEST_F(EndpointHandlerTest, PutChargeItemInvalidChargeItem)//NOLINT(readability-
     {
         GTEST_SKIP();
     }
+    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000000";
 
@@ -2300,6 +2372,34 @@ TEST_F(EndpointHandlerTest, PutChargeItemInvalidChargeItem)//NOLINT(readability-
     ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
                                                       inputChargeItem, pkvTaskId, HttpStatus::BadRequest,
                                                       "FHIR-Validation error"));
+}
+
+TEST_F(EndpointHandlerTest, PutChargeItemInvalidChargeItemVersion)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
+    const auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
+
+    auto &resourceManager = ResourceManager::instance();
+    const auto chargeItemXml = resourceManager.getStringResource(
+        std::string{TEST_DATA_DIR} + "/validation/xml/pkv/chargeItem/ChargeItem_invalid_wrongVersion.xml");
+
+    auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+    inputChargeItem.setAccessCode(MockDatabase::mockAccessCode);
+    const auto jwtPharmacy =
+        JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
+
+    const ContentMimeType contentType = ContentMimeType::fhirXmlUtf8;
+    std::optional<model::ChargeItem> resultChargeItem;
+    // expected reject
+    ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
+                                                      inputChargeItem, pkvTaskId, HttpStatus::BadRequest,
+                                                      "parsing / validation error"));
 }
 
 // GEMREQ-start A_22877

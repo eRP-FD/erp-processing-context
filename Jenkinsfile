@@ -83,7 +83,7 @@ pipeline {
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
-                    args '-u root:sudo -v $HOME/tools:$HOME/tools -v jenkins-build-ccache:${HOME}/.ccache' // -v $HOME/workspace/myproject:/myproject'
+                    args '-u root:sudo -v jenkins-build-ccache:${HOME}/.ccache' + " -v ${env.WORKSPACE}:/media/erp"
                 }
             }
             stages {
@@ -97,7 +97,7 @@ pipeline {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
                                     def erp_release_version = "1.10.0"
-                                    sh "scripts/ci-build.sh " +
+                                    sh "cd /media/erp && scripts/ci-build.sh " +
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'"
                                 }
@@ -118,6 +118,7 @@ pipeline {
                                 script {
                                     sh """#!/bin/bash
                                         declare -a public_packages=(
+                                                antlr4-cppruntime
                                                 boost
                                                 date
                                                 glog
@@ -400,7 +401,7 @@ pipeline {
                  }
              }
             steps {
-                build wait: false, job: '/eRp/Integration/erp_processing_context_dev2', parameters: [string(name: 'BRANCH_NAME_COPY_ARTIFACTS_BUILD_NUMBER', value: env.BUILD_NUMBER), string(name: 'ERP_BUILD_ROOT', value: env.WORKSPACE)]
+                build wait: false, job: '/eRp/Integration/erp_processing_context_dev2', parameters: [string(name: 'BRANCH_NAME_COPY_ARTIFACTS_BUILD_NUMBER', value: env.BUILD_NUMBER), string(name: 'ERP_BUILD_ROOT', value: '/media/erp')]
             }
         }
     }

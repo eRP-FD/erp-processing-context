@@ -7,6 +7,7 @@
 #include "erp/crypto/Sha256.hxx"
 #include "erp/erp-serverinfo.hxx"
 #include "erp/ErpRequirements.hxx"
+#include "erp/model/ResourceVersion.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/ByteHelper.hxx"
@@ -316,6 +317,26 @@ TEST_F(CloseTaskTest, noNewMedicationBefore20230701_bundle)
     ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
         .medicationDispenses = {dispenseOptions, dispenseOptions}};
     ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
+}
+
+TEST_F(CloseTaskTest, MedicationDispenseWithoutVersion_2022)
+{
+    namespace rv = model::ResourceVersion;
+    if (rv::supportedBundles() != std::set<rv::FhirProfileBundleVersion>{rv::FhirProfileBundleVersion::v_2022_01_01})
+    {
+        GTEST_SKIP_("Only relevant for 2022 profiles");
+    }
+    const auto profilePtr = rapidjson::Pointer{"/meta/profile/0"};
+    ResourceTemplates::MedicationDispenseOptions dispenseOptions{
+        .prescriptionId = prescriptionId,
+        .telematikId = telematikId,
+        .gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1};
+    const auto dispenseXml = medicationDispenseXml(dispenseOptions);
+    auto dispenseModel =
+        model::MedicationDispense::fromXml(dispenseXml, *StaticData::getXmlValidator(),
+                                           *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense).jsonDocument();
+    dispenseModel.setValue(profilePtr, model::resource::structure_definition::deprecated::medicationDispense);
+    ASSERT_NO_FATAL_FAILURE(test(Fhir::instance().converter().jsonToXmlString(dispenseModel)));
 }
 
 

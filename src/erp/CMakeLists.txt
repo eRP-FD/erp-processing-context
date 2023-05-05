@@ -256,6 +256,7 @@ list(
         util/ByteHelper.cxx
         util/Condition.cxx
         util/Configuration.cxx
+        util/CrashHandler.cxx
         util/Demangle.cxx
         util/DurationConsumer.cxx
         util/Environment.cxx
@@ -366,6 +367,8 @@ target_link_libraries (
 )
 
 add_executable(erp-processing-context erp-main.cxx)
+# Add -rdynamic to enrich the symbol table so that stack traces become more readable.
+set_property(TARGET erp-processing-context PROPERTY ENABLE_EXPORTS ON)
 
 target_include_directories (
     erp-processing-context
