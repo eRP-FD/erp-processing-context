@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/TimePeriod.hxx"
@@ -9,6 +11,7 @@
 #include <stdexcept>
 #include <chrono>
 #include <ctime>
+#include <date/tz.h>
 #if !defined __APPLE__ && !defined _WIN32
 #include <features.h>
 #endif
@@ -16,24 +19,6 @@
 namespace model {
 
     namespace {
-
-        /**
-         * The ::localtime function uses a tm struct that is shared between threads and is reused by subsequent calls
-         * to ::localtime. This allows for race conditions. Therefore use localtime_r when available and when not
-         * create copy the returned tm struct to minimize the time of access of the shared tm struct to minimize the
-         * probability for a race condition.
-         */
-        struct tm erpGmtime (const std::time_t& time_t_value)
-        {
-#if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || _POSIX_SOURCE
-            struct tm tm_value {};
-            gmtime_r(&time_t_value, &tm_value);
-            return tm_value;
-#else
-            struct tm* tm_value = gmtime(&time_t_value);
-            return *tm_value;
-#endif
-        }
 
         /**
          * The following addOne(Day|Month|Year) functions don't parameterize the number of days, months and years because
@@ -63,26 +48,29 @@ namespace model {
 
         model::Timestamp addOneMonth (const model::Timestamp t)
         {
-            // To tm.
-            const std::time_t timeT = std::chrono::system_clock::to_time_t(t.toChronoTimePoint());
-            auto tm = erpGmtime(timeT);
-
-            // Add a single month.
-            tm.tm_mon += 1;
-
-            return model::Timestamp::fromTmInUtc(tm);
+            using zoned_ms = date::zoned_time<std::chrono::milliseconds>;
+            auto zt = zoned_ms{Timestamp::GermanTimezone, t.toChronoTimePoint()};
+            auto localDay = date::floor<date::days>(zt.get_local_time());
+            auto timeOfDay = zt.get_local_time() - localDay;
+            auto ymd = date::year_month_day{localDay} + date::months{1};
+            if (! ymd.ok())
+                ymd = ymd.year() / ymd.month() / date::last;
+            zt = date::local_days{ymd} + timeOfDay;
+            return Timestamp{zt.get_sys_time()};
         }
 
         model::Timestamp addOneYear (const model::Timestamp t)
         {
-            // To tm.
-            const std::time_t timeT = std::chrono::system_clock::to_time_t(t.toChronoTimePoint());
-            auto tm = erpGmtime(timeT);
 
-            // Add a single year.
-            tm.tm_year += 1;
-
-            return model::Timestamp::fromTmInUtc(tm);
+            using zoned_ms = date::zoned_time<std::chrono::milliseconds>;
+            auto zt = zoned_ms{Timestamp::GermanTimezone, t.toChronoTimePoint()};
+            auto localDay = date::floor<date::days>(zt.get_local_time());
+            auto timeOfDay = zt.get_local_time() - localDay;
+            auto ymd = date::year_month_day{localDay} + date::years{1};
+            if (! ymd.ok())
+                ymd = ymd.year() / ymd.month() / date::last;
+            zt = date::local_days{ymd} + timeOfDay;
+            return Timestamp{zt.get_sys_time()};
         }
     }
 

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
@@ -380,8 +382,8 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FilterByDate) // NOLINT(readab
     using namespace std::chrono_literals;
 
     {
-        auto lastUpdatedTime = (model::Timestamp::now() - 5s).toXsDateTime();
-        lastUpdatedTime = lastUpdatedTime.substr(0, lastUpdatedTime.rfind('.'));
+        auto lastUpdatedTime = (model::Timestamp::now() - 5s).toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone);
+        lastUpdatedTime = lastUpdatedTime.substr(0, 19);
 
         std::vector<std::string> filters = { "_lastUpdated=ge" + lastUpdatedTime };
         std::vector<model::ChargeItem> chargeItems;
@@ -393,10 +395,10 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FilterByDate) // NOLINT(readab
     std::this_thread::sleep_for(1s);
 
     {
-        auto lastUpdatedTime = model::Timestamp::now().toXsDateTime();
+        auto lastUpdatedTime = model::Timestamp::now().toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone);
         insertChargeItem({{InsurantA, pharmacyB, model::Timestamp::fromXsDateTime("2021-06-06T17:13:00+01:00")}},
                          prescriptionIDs, MockDatabase::mockAccessCode);
-        lastUpdatedTime = lastUpdatedTime.substr(0, lastUpdatedTime.rfind('.'));
+        lastUpdatedTime = lastUpdatedTime.substr(0, 19);
 
         std::vector<std::string> filters = {"_lastUpdated=ge" + lastUpdatedTime};
         std::vector<model::ChargeItem> chargeItems;

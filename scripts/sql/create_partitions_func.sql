@@ -1,3 +1,10 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
+ */
+
 CREATE OR REPLACE PROCEDURE pg_temp.create_task_partitions(table_name regclass)
     LANGUAGE plpgsql AS $$
     DECLARE part integer;
@@ -27,4 +34,3 @@ CREATE OR REPLACE PROCEDURE pg_temp.set_task_partitions_permissions(table_name r
         END LOOP;
     END
 $$;
-

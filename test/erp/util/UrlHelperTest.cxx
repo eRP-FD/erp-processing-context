@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/UrlHelper.hxx"
@@ -255,4 +257,3 @@ TEST(UrlHelperTest, parse_ERP6501_2)
     EXPECT_EQ(urlParts.mRest, "");
     EXPECT_EQ(urlParts.mPort, 80);
 }
-

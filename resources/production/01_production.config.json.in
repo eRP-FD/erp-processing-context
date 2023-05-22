@@ -73,6 +73,7 @@
         "kbv.ita.erp": [
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Bundle.xsd",
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Composition.xsd",
+          "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_BundleDummy.xsd",
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_Compounding.xsd",
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_FreeText.xsd",
           "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_Ingredient.xsd",
@@ -296,7 +297,7 @@
             "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0",
             "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.2.0/package",
             "@ERP_FHIR_RESOURCE_DIR@profiles/KBV.Basis-1.3.0/package",
-            "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.0/package",
+            "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.1",
             "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package",
             "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_BAR2_ARZTNRFACHGRUPPE_V1.03.xml",
             "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_BAR2_WBO_V1.16.xml",

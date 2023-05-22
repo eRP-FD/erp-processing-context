@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/JsonLog.hxx"
@@ -113,5 +115,3 @@ TEST_F(JsonLogTest, keyValueDouble_12345_6789)
              << R"(,"key":12345.6789})";
     ASSERT_EQ(result.str(), expected.str());
 }
-
-

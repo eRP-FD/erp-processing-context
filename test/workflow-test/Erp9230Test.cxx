@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Communication.hxx"
@@ -33,7 +35,7 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
     builder.setRecipient(ActorRole::Pharmacists, *telematikId);
     builder.setSender(ActorRole::Insurant, kvnr);
     builder.setTimeSent(model::Timestamp::now().toXsDateTime());
-    auto someReceivedTime = model::Timestamp::fromXsDate("2020-02-02");
+    auto someReceivedTime = model::Timestamp::fromXsDate("2020-02-02", model::Timestamp::UTCTimezone);
     builder.setTimeReceived(someReceivedTime.toXsDateTime());
 
     RequestArguments requestArguments(HttpMethod::POST, "/Communication", builder.createJsonString(),

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/Configuration.hxx"
@@ -206,5 +208,3 @@ TEST_F(ConfigurationTest, levels)//NOLINT(readability-function-cognitive-complex
         EXPECT_EQ(configuration->getStringValue(key), "value1-common");
     }
 }
-
-

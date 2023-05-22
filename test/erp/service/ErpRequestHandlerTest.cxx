@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/ErpRequestHandler.hxx"
@@ -100,6 +102,7 @@ public:
             case SchemaType::BNA_tsl:
             case SchemaType::Gematik_tsl:
             case SchemaType::KBV_PR_ERP_Composition:
+            case SchemaType::KBV_PR_ERP_Medication_BundleDummy:
             case SchemaType::KBV_PR_ERP_Medication_Compounding:
             case SchemaType::KBV_PR_ERP_Medication_FreeText:
             case SchemaType::KBV_PR_ERP_Medication_Ingredient:

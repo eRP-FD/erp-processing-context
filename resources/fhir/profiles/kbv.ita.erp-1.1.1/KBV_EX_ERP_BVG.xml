@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <StructureDefinition xmlns="http://hl7.org/fhir">
-  <id value="KBV-EX-ERP-Medication-CompoundingInstruction"/>
-  <url value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_CompoundingInstruction"/>
+  <id value="KBV-EX-ERP-BVG"/>
+  <url value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG"/>
   <version value="1.1.0"/>
-  <name value="KBV_EX_ERP_Medication_CompoundingInstruction"/>
+  <name value="KBV_EX_ERP_BVG"/>
   <status value="active"/>
   <date value="2022-09-30"/>
   <publisher value="Kassenärztliche Bundesvereinigung"/>
@@ -17,7 +17,7 @@
   <abstract value="false"/>
   <context>
     <type value="element"/>
-    <expression value="Medication"/>
+    <expression value="MedicationRequest"/>
   </context>
   <type value="Extension"/>
   <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Extension"/>
@@ -31,8 +31,8 @@
         <valueCode value="4.0.0"/>
       </extension>
       <path value="Extension"/>
-      <short value="Herstellungsanweisung einer Rezeptur"/>
-      <definition value="Anweisung bzgl. der Herstellung eine Rezeptur (Subscriptio)"/>
+      <short value="Kennzeichen BVG"/>
+      <definition value="Kennzeichnung, ob diese Verordnung mit Bezug zum Bundesentschädigungsgesetz oder Bundesversorgungsgesetz erfolgt"/>
       <min value="0"/>
       <max value="*"/>
       <base>
@@ -55,7 +55,7 @@
         <human value="Must have either extensions or value[x], not both"/>
         <expression value="extension.exists() != value.exists()"/>
         <xpath value="exists(f:extension)!=exists(f:*[starts-with(local-name(.), 'value')])"/>
-        <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Extension"/>
       </constraint>
       <mapping>
         <identity value="rim"/>
@@ -135,7 +135,7 @@
         <human value="Must have either extensions or value[x], not both"/>
         <expression value="extension.exists() != value.exists()"/>
         <xpath value="exists(f:extension)!=exists(f:*[starts-with(local-name(.), 'value')])"/>
-        <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Extension"/>
       </constraint>
       <mapping>
         <identity value="rim"/>
@@ -165,7 +165,7 @@
         </extension>
         <code value="http://hl7.org/fhirpath/System.String"/>
       </type>
-      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_CompoundingInstruction"/>
+      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG"/>
       <mapping>
         <identity value="rim"/>
         <map value="N/A"/>
@@ -196,7 +196,7 @@
         <max value="1"/>
       </base>
       <type>
-        <code value="string"/>
+        <code value="boolean"/>
       </type>
       <condition value="ele-1"/>
       <constraint>
@@ -216,7 +216,7 @@
         <map value="N/A"/>
       </mapping>
     </element>
-    <element id="Extension.value[x]:valueString">
+    <element id="Extension.value[x]:valueBoolean">
       <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
         <valueCode value="normative"/>
       </extension>
@@ -224,9 +224,9 @@
         <valueCode value="4.0.0"/>
       </extension>
       <path value="Extension.value[x]"/>
-      <sliceName value="valueString"/>
-      <short value="Herstellungsanweisung"/>
-      <definition value="Anweisungen bzgl. der Herstellung der Rezeptur (Subscriptio)"/>
+      <sliceName value="valueBoolean"/>
+      <short value="BVG"/>
+      <definition value="Kennzeichnung, ob diese Verordnung für Anspruchsberechtigte nach dem Bundesentschädigungsgesetz (BEG) oder für Anspruchsberechtigte nach dem Bundesversorgungsgesetz (BVG) erfolgt  &#13;&#10;&#13;&#10;false - kein BVG (Standardwert)&#13;&#10;true - BVG"/>
       <min value="1"/>
       <max value="1"/>
       <base>
@@ -235,9 +235,8 @@
         <max value="1"/>
       </base>
       <type>
-        <code value="string"/>
+        <code value="boolean"/>
       </type>
-      <maxLength value="500"/>
       <condition value="ele-1"/>
       <constraint>
         <key value="ele-1"/>
@@ -266,12 +265,12 @@
         <valueCode value="4.0.0"/>
       </extension>
       <path value="Extension"/>
-      <short value="Herstellungsanweisung einer Rezeptur"/>
-      <definition value="Anweisung bzgl. der Herstellung eine Rezeptur (Subscriptio)"/>
+      <short value="Kennzeichen BVG"/>
+      <definition value="Kennzeichnung, ob diese Verordnung mit Bezug zum Bundesentschädigungsgesetz oder Bundesversorgungsgesetz erfolgt"/>
     </element>
     <element id="Extension.url">
       <path value="Extension.url"/>
-      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_CompoundingInstruction"/>
+      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_BVG"/>
     </element>
     <element id="Extension.value[x]">
       <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
@@ -290,10 +289,10 @@
       </slicing>
       <min value="1"/>
       <type>
-        <code value="string"/>
+        <code value="boolean"/>
       </type>
     </element>
-    <element id="Extension.value[x]:valueString">
+    <element id="Extension.value[x]:valueBoolean">
       <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
         <valueCode value="normative"/>
       </extension>
@@ -301,14 +300,13 @@
         <valueCode value="4.0.0"/>
       </extension>
       <path value="Extension.value[x]"/>
-      <sliceName value="valueString"/>
-      <short value="Herstellungsanweisung"/>
-      <definition value="Anweisungen bzgl. der Herstellung der Rezeptur (Subscriptio)"/>
+      <sliceName value="valueBoolean"/>
+      <short value="BVG"/>
+      <definition value="Kennzeichnung, ob diese Verordnung für Anspruchsberechtigte nach dem Bundesentschädigungsgesetz (BEG) oder für Anspruchsberechtigte nach dem Bundesversorgungsgesetz (BVG) erfolgt  &#13;&#10;&#13;&#10;false - kein BVG (Standardwert)&#13;&#10;true - BVG"/>
       <min value="1"/>
       <type>
-        <code value="string"/>
+        <code value="boolean"/>
       </type>
-      <maxLength value="500"/>
     </element>
   </differential>
 </StructureDefinition>

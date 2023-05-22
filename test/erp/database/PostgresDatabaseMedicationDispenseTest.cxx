@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/erp/database/PostgresDatabaseMedicationDispenseTest.hxx"
@@ -410,7 +412,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -422,7 +424,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -433,7 +435,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -445,7 +447,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "lt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -456,7 +458,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -468,7 +470,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -479,7 +481,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -491,7 +493,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "lt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
@@ -521,9 +523,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{
             {"performer", pharmacy.id()},
             {"whenhandedover", "gt" + whenHandedOver},
@@ -638,7 +640,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 3 * GetParam().numMedications;
@@ -652,7 +654,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenhandedover", "gt" + whenHandedOver} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 0;
@@ -665,7 +667,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = GetParam().numMedications;
@@ -679,7 +681,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{ {"whenprepared", "gt" + whenPrepared} };
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         size_t expectedCount = 0;
@@ -731,9 +733,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         model::Kvnr kvnrPatient{InsurantA};
         std::string pharmacy = pharmacyA.id();
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{
             {"performer", pharmacy},
             {"whenhandedover", "gt" + whenHandedOver},
@@ -751,9 +753,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         model::Kvnr kvnrPatient{InsurantA};
         std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         ServerRequest::QueryParametersType queryParameters{
             {"performer", pharmacy},
             {"whenhandedover", "gt" + whenHandedOver},
@@ -869,9 +871,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         while (receivedCount < expectedCountAll)
         {
             Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
             Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+            std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
             ServerRequest::QueryParametersType queryParameters{
                 {"performer", pharmacy},
                 {"whenhandedover", "gt" + whenHandedOver},
@@ -906,9 +908,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         // whenhandedover is in the future
         std::string pharmacy = pharmacyA.id();
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         size_t expectedCount = 0;
         ServerRequest::QueryParametersType queryParameters{
             {"performer", pharmacy},
@@ -926,9 +928,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         model::Kvnr kvnrPatient{kvnrPatientId};
         std::string pharmacy = pharmacyA.id();
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         size_t expectedCount = 0;
         ServerRequest::QueryParametersType queryParameters{
             {"performer", pharmacy},
@@ -945,9 +947,9 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         model::Kvnr kvnrPatient{kvnrPatientId};
         std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         size_t expectedCount = 0;
         ServerRequest::QueryParametersType queryParameters{
             {"performer", pharmacy},

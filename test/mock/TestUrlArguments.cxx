@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/mock/TestUrlArguments.hxx"
@@ -289,8 +291,8 @@ template<>
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterName, const std::optional<model::Timestamp>& value) const
 {
-    // Default result is true, because if parameter is not mentioned by the search arguments 
-    // => the value does not take part in the search 
+    // Default result is true, because if parameter is not mentioned by the search arguments
+    // => the value does not take part in the search
     bool result = true;
     for (const auto& argument : mUrlArguments.mSearchArguments)
     {

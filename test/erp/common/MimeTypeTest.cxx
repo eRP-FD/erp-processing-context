@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/common/MimeType.hxx"
@@ -78,4 +80,3 @@ TEST(MimeTypeTest, invalid)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_ANY_THROW(AcceptMimeType("x/y;q=-1.0"));
     ASSERT_ANY_THROW(AcceptMimeType("/y"));
 }
-

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/task/CloseTaskHandler.hxx"
@@ -228,6 +230,7 @@ void CloseTaskHandler::validateMedications(const std::vector<model::MedicationDi
                                            const PcServiceContext& service)
 {
     using namespace std::string_literals;
+    namespace rv = model::ResourceVersion;
     const auto* repo = std::addressof(Fhir::instance().structureRepository());
     auto extractMedication = fhirtools::FhirPathParser::parse(repo, "medicationReference.resolve()");
     Expect3(extractMedication, "Failed parsing extractMedication", std::logic_error);
@@ -246,7 +249,7 @@ void CloseTaskHandler::validateMedications(const std::vector<model::MedicationDi
             Fail2("Expression returned non-ErpElement: "s.append(typeid(medication0).name()), std::logic_error);
         }
         model::KbvMedicationGeneric::validateMedication(*medicationElement, service.getXmlValidator(),
-                                                        service.getInCodeValidator());
+                                                        service.getInCodeValidator(), true);
     }
 }
 
@@ -260,21 +263,30 @@ void CloseTaskHandler::validateWithoutMedicationProfiles(
     namespace elements = resource::elements;
     namespace rv = model::ResourceVersion;
     using Factory = model::ResourceFactory<ModelT>;
-    static rapidjson::Pointer metaPtr{resource::ElementName::path(elements::meta)};
+    static rapidjson::Pointer idPtr{resource::ElementName::path(elements::id)};
+    static rapidjson::Pointer resourceTypePtr{resource::ElementName::path(elements::resourceType)};
     const auto* repo = std::addressof(Fhir::instance().structureRepository());
     auto extractMedications = fhirtools::FhirPathParser::parse(repo, medicationsPath);
     Expect3(extractMedications != nullptr, "Failed parsing: "s.append(medicationsPath), std::logic_error);
-
     auto rootElement = std::make_shared<ErpElement>(repo, std::weak_ptr<const ErpElement>{}, ModelT::resourceTypeName,
                                             std::addressof(medicationDispenseOrBundleDoc));
     auto medications = extractMedications->eval(fhirtools::Collection{rootElement});
     validateSameMedicationVersion(medications);
     TVLOG(3) << "patching " << medications.size()  << " medications";
-    for (const auto& medicationElement: medications)
+    for (const auto& medicationElement : medications)
     {
-        const auto& mutableMedicationElement = dynamic_cast<const ErpElement&>(*medicationElement);
+        // for each medication, clear the medication except the reference and the resourceType
+        // so the MedicationDispense(Bundle) can still validate, and  the generic validator
+        // wont try to validate anything (e.g. invalid values for value sets)
+
+        const auto& medicationErpElement = dynamic_cast<const ErpElement&>(*medicationElement);
         //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-        metaPtr.Erase(*const_cast<rapidjson::Value*>(mutableMedicationElement.erpValue()));
+        auto* medicationValue = const_cast<rapidjson::Value*>(medicationErpElement.erpValue());
+        const std::string idValue = idPtr.Get(*medicationValue)->GetString();
+        const std::string resourceTypeValue = resourceTypePtr.Get(*medicationValue)->GetString();
+        medicationValue->SetObject();
+        idPtr.Set(*medicationValue, idValue, medicationDispenseOrBundleDoc.GetAllocator());
+        resourceTypePtr.Set(*medicationValue, resourceTypeValue, medicationDispenseOrBundleDoc.GetAllocator());
     }
     typename Factory::Options factoryOptions{};
     if (rv::supportedBundles().contains(rv::FhirProfileBundleVersion::v_2023_07_01))

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef FHIR_TOOLS_TIMESTAMP_HXX
@@ -36,6 +38,7 @@ public:
     using duration_t = timepoint_t::duration;
 
     static constexpr const char* GermanTimezone = "Europe/Berlin";
+    static constexpr const char* UTCTimezone = "UTC";
 
     static Timestamp now ();
 
@@ -54,11 +57,14 @@ public:
     /**
      * The FHIR dateTime data type is based on XML types xs:dateTime, xs:date, xs:gYearMonth, xs:gYear with
      * additional restrictions. See https://www.hl7.org/fhir/datatypes.html#dateTime. Also see the class comment for details.
+     *
      */
-    static Timestamp fromFhirDateTime (const std::string& dateAndTime);
+    static Timestamp fromFhirDateTime(const std::string& dateAndTime,
+                                      const std::string& fallbackTimezone = GermanTimezone);
 
     // For search the rules are a little bit different (time zone optional)
-    static Timestamp fromFhirSearchDateTime (const std::string& dateAndTime);
+    static Timestamp fromFhirSearchDateTime(const std::string& dateAndTime,
+                                            const std::string& fallbackTimezone = GermanTimezone);
 
     /**
      * Read a date time value in the XML xs:dateTime format.
@@ -68,7 +74,7 @@ public:
      * in https://www.hl7.org/fhir/datatypes.html#dateTimeAs and because hours and minutes are mandatory for xs:dataTime.
      * Negative year values are rejected according to the regex also in https://www.hl7.org/fhir/datatypes.html#dateTime.
      */
-    static Timestamp fromXsDateTime (const std::string& dateAndTime);
+    static Timestamp fromXsDateTime(const std::string& dateAndTime);
 
     /**
      * Read a date value in the XML xs:date format.
@@ -78,7 +84,7 @@ public:
      *   - timezone is not supported
      *   - negative year values are not supported
      */
-    static Timestamp fromXsDate (const std::string& date);
+    static Timestamp fromXsDate(const std::string& date, const std::string& timezone);
 
     // Read a date value in the XML xs:date format, but interpret it as German TZ
     // behaviour:
@@ -96,7 +102,7 @@ public:
      *   - timezone is not supported
      *   - negative year values are not supported
      */
-    static Timestamp fromXsGYearMonth (const std::string& dateAndTime);
+    static Timestamp fromXsGYearMonth(const std::string& dateAndTime, const std::string& timezone);
 
     /**
      * Read a date value in the XML xs:date format.
@@ -106,7 +112,7 @@ public:
      *   - timezone is not supported
      *   - negative year values are not supported
      */
-    static Timestamp fromXsGYear (const std::string& dateAndTime);
+    static Timestamp fromXsGYear(const std::string& dateAndTime, const std::string& timezone);
 
     /**
      * Read date time value from format YYYYMMDDHHMMSS and assume
@@ -146,12 +152,12 @@ public:
      */
     std::string toXsDateTime () const;
 
-    std::string toXsDateTimeWithoutFractionalSeconds () const;
+    std::string toXsDateTimeWithoutFractionalSeconds(const std::string& timezone = UTCTimezone) const;
 
     /**
      * Convert to an XML xs:date format (YYYY-MM-DD).
      */
-    std::string toXsDate () const;
+    std::string toXsDate(const std::string& timezone) const;
 
     /// see fromGermanDate
     std::string toGermanDate() const;
@@ -162,12 +168,12 @@ public:
     /**
      * Convert to xs:gYearMonth format (YYYY-MM).
      */
-    std::string toXsGYearMonth (void) const;
+    std::string toXsGYearMonth(const std::string& timezone) const;
 
     /**
      * Convert to xs:gYear format (YYYY).
      */
-    std::string toXsGYear (void) const;
+    std::string toXsGYear(const std::string& timezone) const;
 
     /**
      * Convert to xs:time format (hh:mm:ss[(+|-)hh:mm]).
@@ -194,6 +200,7 @@ public:
     std::strong_ordering operator<=>(const Timestamp& other) const = default;
     Timestamp operator+ (const duration_t& duration) const;
     Timestamp operator- (const duration_t& duration) const;
+    duration_t operator- (const Timestamp& timestamp) const;
 
 private:
     timepoint_t mDateAndTime;

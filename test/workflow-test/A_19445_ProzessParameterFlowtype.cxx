@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/ErpRequirements.hxx"
@@ -48,7 +50,7 @@ TEST_P(ProzessParameterFlowtype, samples)
     using namespace std::string_view_literals;
     using namespace model::resource;
     const auto& [params, prescriptionType] = GetParam();
-    auto signingTime = model::Timestamp::fromXsDate(std::string{params.signingTime});
+    auto signingTime = model::Timestamp::fromXsDate(std::string{params.signingTime}, model::Timestamp::UTCTimezone);
     auto acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDate});
     auto expiryDate = model::Timestamp::fromGermanDate(std::string{params.expiryDate});
 

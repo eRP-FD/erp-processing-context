@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/MedicationDispenseHandler.hxx"
@@ -345,7 +347,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -355,7 +357,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -364,7 +366,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenhandedover=lt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -374,7 +376,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenhandedover=lt" + whenHandedOver };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -390,7 +392,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -400,7 +402,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -409,7 +411,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenprepared=lt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -419,7 +421,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenprepared=lt" + whenPrepared };
         std::vector<MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses, std::move(filters));
@@ -443,9 +445,9 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllSeveralFilters)//NOLINT(re
 
     {
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = {
             "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
@@ -545,7 +547,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
         size_t expectedCount = 3 * GetParam();
         std::vector<MedicationDispense> medicationDispenses;
@@ -558,7 +560,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenhandedover=gt" + whenHandedOver };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
@@ -569,7 +571,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
         size_t expectedCount = GetParam();
         std::vector<MedicationDispense> medicationDispenses;
@@ -581,7 +583,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
     {
         model::Kvnr kvnrPatient{InsurantA};
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = { "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
@@ -625,9 +627,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
         model::Kvnr kvnrPatient{InsurantA};
         const auto& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = {
             "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
@@ -643,9 +645,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllSeveralFilters)//NOLI
         model::Kvnr kvnrPatient{InsurantA};
         std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenprepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenprepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = {
             "performer=" + pharmacy,
             "whenhandedover=gt" + whenHandedOver,
@@ -736,9 +738,9 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
         while (receivedCount < expectedCountAll)
         {
             Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
             Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+            std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
             std::vector<std::string> filters = {
                 "performer=" + pharmacy,
                 "whenhandedover=gt" + whenHandedOver,
@@ -773,9 +775,9 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
         // whenhandedover is in the future
         const model::TelematikId& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = {
             "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
@@ -791,9 +793,9 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
         // whenprepared is in the future
         const model::TelematikId& pharmacy = pharmacyA;
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = {
             "performer=" + pharmacy.id(),
             "whenhandedover=gt" + whenHandedOver,
@@ -808,9 +810,9 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
     {
         std::string pharmacy = "3-SMC-B-Ungueltig-123455678909876";
         Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate();
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
         Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-        std::string whenPrepared = timeWhenPreparedFilter.toXsDate();
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
         std::vector<std::string> filters = {
             "performer=" + pharmacy,
             "whenhandedover=gt" + whenHandedOver,

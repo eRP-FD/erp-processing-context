@@ -1,3 +1,10 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
+ */
+
 -- to run as postgres
 
 -- related to: migrate_0-1_db_schema_versioning.sql
@@ -34,5 +41,3 @@ grant ALL ON SEQUENCE erp.task_169_taskid_seq TO role_proc_user;
 
 
 end;
-
-

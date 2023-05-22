@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include <gtest/gtest.h>
@@ -121,5 +123,3 @@ TEST(FhirStructureDefinitionTest, VersionTest)
     Version v2("2018-08-11");
     EXPECT_TRUE(v1 > v2);
 }
-
-

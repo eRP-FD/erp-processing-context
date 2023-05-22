@@ -17,7 +17,7 @@ sonarqube {
         property "sonar.scm.provider", "git"
         property "sonar.cfamily.threads", "6"
         property "sonar.cfamily.cache.enabled", "false"
-        property "sonar.projectBaseDir", "${System.getProperty("user.dir")}"
+        property "sonar.projectBaseDir", "/media/erp"
         property "sonar.sources", "src/,tools/"
         property "sonar.tests", "test/"
         property "sonar.cxx.clangtidy.reportPaths", "clang-tidy.txt"

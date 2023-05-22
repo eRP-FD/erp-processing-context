@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/compression/ZStd.hxx"
@@ -132,4 +134,3 @@ INSTANTIATE_TEST_SUITE_P(dataSet, ZStdSampleTest , ::testing::Values(
     TestSample{Compression::DictionaryUse::Default_json, "With Null\0 and One\1"sv, "KLUv/SUCE5kAAFdpdGggTnVsbAAgYW5kIE9uZQHO8oKv"sv},
     TestSample{Compression::DictionaryUse::Default_xml , "With Null\0 and One\1"sv, "KLUv/SUBE5kAAFdpdGggTnVsbAAgYW5kIE9uZQHO8oKv"sv}
 ));
-

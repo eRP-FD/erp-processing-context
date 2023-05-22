@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2023
- * (C) Copyright IBM Corp. 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 
@@ -28,7 +30,7 @@ namespace
 
     backtrace_symbols_fd(stackInfo, size, STDERR_FILENO);
 
-    exit(1);
+    exit(1); //NOLINT(concurrency-mt-unsafe)
 }
 }// namespace
 

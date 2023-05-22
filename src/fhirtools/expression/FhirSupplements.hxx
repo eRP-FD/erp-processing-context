@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 // Contains implementation for FHIR-Resource specific FHIRPath supplements specified here:
 // https://hl7.org/fhir/fhirpath.html

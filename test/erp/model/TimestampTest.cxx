@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Timestamp.hxx"
@@ -176,19 +178,23 @@ TEST_F(TimestampTest, toXsDateTime)
 
 TEST_F(TimestampTest, toXsDate)
 {
-    EXPECT_EQ(Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms).toXsDate(), "2022-01-29");
+    EXPECT_EQ(Timestamp(sys_days{January / 29 / 2022} + 12h + 34min + 56s + 123ms).toXsDate(Timestamp::UTCTimezone),
+              "2022-01-29");
 }
 
 
 TEST_F(TimestampTest, toXsGYearMonth)
 {
-    EXPECT_EQ(Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms).toXsGYearMonth(), "2022-01");
+    EXPECT_EQ(
+        Timestamp(sys_days{January / 29 / 2022} + 12h + 34min + 56s + 123ms).toXsGYearMonth(Timestamp::UTCTimezone),
+        "2022-01");
 }
 
 
 TEST_F(TimestampTest, toXsGYear)
 {
-    EXPECT_EQ(Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms).toXsGYear(), "2022");
+    EXPECT_EQ(Timestamp(sys_days{January / 29 / 2022} + 12h + 34min + 56s + 123ms).toXsGYear(Timestamp::UTCTimezone),
+              "2022");
 }
 
 
@@ -206,7 +212,7 @@ TEST_F(TimestampTest, fromXsDate_success)
     const auto expectedDateTime = Timestamp(sys_days{January/29/2022});
 
     // Without timezone.
-    EXPECT_EQ(Timestamp::fromXsDate("2022-01-29"), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsDate("2022-01-29", Timestamp::UTCTimezone), expectedDateTime);
 }
 
 TEST_F(TimestampTest, fromDtmDateTime_success)
@@ -219,29 +225,33 @@ TEST_F(TimestampTest, fromDtmDateTime_success)
 TEST_F(TimestampTest, fromXsDate_failForInvalidDates)//NOLINT(readability-function-cognitive-complexity)
 {
     // Year must not be negative. While this is allowed by strict xs:date, FHRE does not support it.
-    EXPECT_THROW(Timestamp::fromXsDate("-2022-01-29"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("-2022-01-29", Timestamp::UTCTimezone), ModelException);
 
     // Year must consist of four digits.
-    EXPECT_THROW(Timestamp::fromXsDate("22-01-29"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsDate("022-01-29"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsDate("20022-01-29"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("22-01-29", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("022-01-29", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("20022-01-29", Timestamp::UTCTimezone), ModelException);
 
     // Month must consist of two digits in the range of 01 to 12.
-    EXPECT_THROW(Timestamp::fromXsDate("2022-1-29"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsDate("2022-00-29"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsDate("2022-13-29"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("2022-1-29", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("2022-00-29", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("2022-13-29", Timestamp::UTCTimezone), ModelException);
 
     // Day must consist of two digits in the range of 00 to 31.
-    EXPECT_THROW(Timestamp::fromXsDate("2022-01-1"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsDate("2022-01-00"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsDate("2022-01-32"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("2022-01-1", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("2022-01-00", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("2022-01-32", Timestamp::UTCTimezone), ModelException);
 }
 
 
 TEST_F(TimestampTest, fromXsDate_failForTimezones)
 {
-    expectErrorForValidTimezones("2022-01-29", [](auto s){Timestamp::fromXsDate(s);});
-    expectErrorForInvalidTimezones("2022-01-29", [](auto s){Timestamp::fromXsDate(s);});
+    expectErrorForValidTimezones("2022-01-29", [](auto s) {
+        Timestamp::fromXsDate(s, Timestamp::UTCTimezone);
+    });
+    expectErrorForInvalidTimezones("2022-01-29", [](auto s) {
+        Timestamp::fromXsDate(s, Timestamp::UTCTimezone);
+    });
 }
 
 
@@ -250,31 +260,31 @@ TEST_F(TimestampTest, fromXsGYearMonth_success)
     auto expectedDateTime = Timestamp(sys_days{January/01/2022});
 
     // Without timezone.
-    EXPECT_EQ(Timestamp::fromXsGYearMonth("2022-01"), expectedDateTime);
+    EXPECT_EQ(Timestamp::fromXsGYearMonth("2022-01", Timestamp::UTCTimezone), expectedDateTime);
 }
 
 
 TEST_F(TimestampTest, fromXsGYearMonth_failForInvalidDates)//NOLINT(readability-function-cognitive-complexity)
 {
     // Year must not be negative. While this is allowed by strict xs:date, FHRE does not support it.
-    EXPECT_THROW(Timestamp::fromXsGYearMonth("-2022-01"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYearMonth("-2022-01", Timestamp::UTCTimezone), ModelException);
 
     // Year must consist of four digits.
-    EXPECT_THROW(Timestamp::fromXsGYearMonth("22-01"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsGYearMonth("022-01"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsGYearMonth("20022-01"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYearMonth("22-01", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYearMonth("022-01", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYearMonth("20022-01", Timestamp::UTCTimezone), ModelException);
 
     // Month must consist of two digits in the range of 01 to 12.
-    EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-1"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-00"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-13"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-1", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-00", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-13", Timestamp::UTCTimezone), ModelException);
 }
 
 
 TEST_F(TimestampTest, fromGYearMonth_failForTimezones)
 {
-    expectErrorForValidTimezones("2022-01", [](auto s){Timestamp::fromXsGYearMonth(s);});
-    expectErrorForInvalidTimezones("2022-01", [](auto s){Timestamp::fromXsGYearMonth(s);});
+    expectErrorForValidTimezones("2022-01", [](auto s){Timestamp::fromXsGYearMonth(s, Timestamp::UTCTimezone);});
+    expectErrorForInvalidTimezones("2022-01", [](auto s){Timestamp::fromXsGYearMonth(s, Timestamp::UTCTimezone);});
 }
 
 
@@ -283,32 +293,32 @@ TEST_F(TimestampTest, fromXsGYear_success)
     auto expectedDateTime = sys_days{January / 01 / 2022};
 
     // Without timezone.
-    EXPECT_EQ(Timestamp::fromXsGYear("2022"), Timestamp(expectedDateTime));
+    EXPECT_EQ(Timestamp::fromXsGYear("2022", Timestamp::UTCTimezone), Timestamp(expectedDateTime));
 
     // Note that the range of the dates, covered by time_point is not specified.
     // These value have been determined experimentally.
     // Adjusting these values (that make the intervall smaller) is OK as long as a sensible range is maintained.
-    EXPECT_EQ(Timestamp::fromXsGYear("1678"), Timestamp(sys_days{January / 01 / 1678}));
-    EXPECT_EQ(Timestamp::fromXsGYear("2262"), Timestamp(sys_days{January / 01 / 2262}));
+    EXPECT_EQ(Timestamp::fromXsGYear("1678", Timestamp::UTCTimezone), Timestamp(sys_days{January / 01 / 1678}));
+    EXPECT_EQ(Timestamp::fromXsGYear("2262", Timestamp::UTCTimezone), Timestamp(sys_days{January / 01 / 2262}));
 }
 
 
 TEST_F(TimestampTest, fromXsGYear_failForInvalidDates)//NOLINT(readability-function-cognitive-complexity)
 {
     // Year must not be negative. While this is allowed by strict xs:date, FHIR does not support it.
-    EXPECT_THROW(Timestamp::fromXsGYear("-2022"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYear("-2022", Timestamp::UTCTimezone), ModelException);
 
     // Year must consist of four digits.
-    EXPECT_THROW(Timestamp::fromXsGYear("22"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsGYear("022"), ModelException);
-    EXPECT_THROW(Timestamp::fromXsGYear("20022"), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYear("22", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYear("022", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsGYear("20022", Timestamp::UTCTimezone), ModelException);
 }
 
 
 TEST_F(TimestampTest, fromGYear_failForTimezones)
 {
-    expectErrorForValidTimezones("2022", [](auto s){Timestamp::fromXsGYear(s);});
-    expectErrorForInvalidTimezones("2022", [](auto s){Timestamp::fromXsGYear(s);});
+    expectErrorForValidTimezones("2022", [](auto s){Timestamp::fromXsGYear(s, Timestamp::UTCTimezone);});
+    expectErrorForInvalidTimezones("2022", [](auto s){Timestamp::fromXsGYear(s, Timestamp::UTCTimezone);});
 }
 
 
@@ -320,7 +330,8 @@ TEST_F(TimestampTest, fromFhir_success)//NOLINT(readability-function-cognitive-c
         EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T12:34:56Z"), expectedDateTime);
         EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T11:34:56-01:00"), expectedDateTime);
         // search without time zone:
-        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-01-29T12:34:56"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-01-29T12:34:56", Timestamp::UTCTimezone), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-01-29T12:34:56", Timestamp::GermanTimezone), expectedDateTime - 1h);
     }
     {
         // search without seconds.
@@ -328,31 +339,36 @@ TEST_F(TimestampTest, fromFhir_success)//NOLINT(readability-function-cognitive-c
         EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54Z"), expectedDateTime);
         EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T11:54-07:00"), expectedDateTime);
         // combined with missing time zone:
-        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54", Timestamp::UTCTimezone), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirSearchDateTime("2022-06-28T18:54", Timestamp::GermanTimezone),
+                  expectedDateTime - 2h);
     }
 
     {
         // xs:dateTime with sub-second precision
         const auto expectedDateTime = Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms);
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T12:34:56.123Z"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29T12:34:56.123Z", Timestamp::UTCTimezone), expectedDateTime);
     }
 
     {
         // xs:date
         const auto expectedDateTime = Timestamp(sys_days{January/29/2022});
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29", Timestamp::UTCTimezone), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-01-29", Timestamp::GermanTimezone), expectedDateTime - 1h);
     }
 
     {
         // xs:gYearMonth
         const auto expectedDateTime = Timestamp(sys_days{February/01/2022});
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-02"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-02", Timestamp::UTCTimezone), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022-02", Timestamp::GermanTimezone), expectedDateTime - 1h);
     }
 
     {
         // xs:gYear
         const auto expectedDateTime = Timestamp(sys_days{January/01/2022});
-        EXPECT_EQ(Timestamp::fromFhirDateTime("2022"), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022", Timestamp::UTCTimezone), expectedDateTime);
+        EXPECT_EQ(Timestamp::fromFhirDateTime("2022", Timestamp::GermanTimezone), expectedDateTime - 1h);
     }
 }
 
@@ -386,7 +402,8 @@ TEST_F(TimestampTest, fromGermanDate)
 {
     auto ts = Timestamp::fromGermanDate("2022-07-12");
     EXPECT_EQ(ts.toXsDateTime(), "2022-07-11T22:00:00.000+00:00");
-    EXPECT_EQ(ts.toXsDate(), "2022-07-11");
+    EXPECT_EQ(ts.toXsDate(Timestamp::UTCTimezone), "2022-07-11");
+    EXPECT_EQ(ts.toXsDate(Timestamp::GermanTimezone), "2022-07-12");
     EXPECT_EQ(ts.toGermanDate(), "2022-07-12");
 }
 
@@ -394,7 +411,7 @@ TEST_F(TimestampTest, fromGermanDate2)
 {
     auto ts = Timestamp::fromXsDateTime("2022-07-11T22:00:00.000+00:00");
     EXPECT_EQ(ts.toXsDateTime(), "2022-07-11T22:00:00.000+00:00");
-    EXPECT_EQ(ts.toXsDate(), "2022-07-11");
+    EXPECT_EQ(ts.toXsDate(Timestamp::UTCTimezone), "2022-07-11");
     EXPECT_EQ(ts.toGermanDate(), "2022-07-12");
 }
 

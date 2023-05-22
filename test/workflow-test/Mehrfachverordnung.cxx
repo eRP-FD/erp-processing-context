@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/ErpRequirements.hxx"
@@ -432,6 +434,32 @@ TEST_F(MVO_A_22635Test, Step_01_FutureStartDate)
                                        "Teilverordnung ab " + tomorrowStr + " einlösbar."));
 }
 
+TEST_F(MVO_A_22635Test, Step_01_Zeitraum_InvalidDate)
+{
+    auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                            .timestamp = timestamp,
+                                            .redeemPeriodStart = "2021-01-01",
+                                            .redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
+
+    std::string issueText = "FHIR-Validation error";
+    std::optional<std::string> issueDiagnostics =
+        "Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT";
+    if (serverUsesOldProfile())
+    {
+        issueText = "date does not match YYYY-MM-DD in extension Zeitraum";
+        issueDiagnostics = {};
+    }
+    RecordProperty("Prescription", Base64::encode(mvoPrescription));
+    std::optional<std::variant<model::Task, model::OperationOutcome>> result;
+    ASSERT_NO_FATAL_FAILURE(result =
+                                taskActivate(task->prescriptionId(), task->accessCode(),
+                                             toCadesBesSignature(mvoPrescription, timestamp), HttpStatus::BadRequest));
+    ASSERT_TRUE(std::holds_alternative<model::OperationOutcome>(*result));
+    const auto& outcome = std::get<model::OperationOutcome>(*result);
+    ASSERT_NO_FATAL_FAILURE(
+        validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid, issueText, issueDiagnostics));
+}
+
 class MVO_A_19445Test : public Mehrfachverordnung
 {
 };
@@ -440,7 +468,7 @@ TEST_F(MVO_A_19445Test, ExpiryAcceptDate365)
 {
     using namespace date::literals;
     TestStep(A_19445_08, "ERP-A_19445-08.01 signing date + 365 days");
-    auto timestamp = model::Timestamp::fromXsDate("2020-02-03");
+    auto timestamp = model::Timestamp::fromXsDate("2020-02-03", model::Timestamp::UTCTimezone);
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = timestamp,
                                                   .redeemPeriodStart = timestamp.toGermanDate(),
@@ -461,9 +489,9 @@ TEST_F(MVO_A_19445Test, ExpiryAcceptDate365)
 TEST_F(MVO_A_19445Test, ExpiryAcceptDateEndDate)
 {
     TestStep(A_19445_08, "ERP-A_19445-08.02 signing date given");
-    auto signingTime = model::Timestamp::fromXsDate("2020-02-03");
-    auto startDate = model::Timestamp::fromXsDate("2021-01-02");
-    auto endDate = model::Timestamp::fromXsDate("2021-03-01");
+    auto signingTime = model::Timestamp::fromXsDate("2020-02-03", model::Timestamp::UTCTimezone);
+    auto startDate = model::Timestamp::fromXsDate("2021-01-02", model::Timestamp::UTCTimezone);
+    auto endDate = model::Timestamp::fromXsDate("2021-03-01", model::Timestamp::UTCTimezone);
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = signingTime,
                                                   .redeemPeriodStart = startDate.toGermanDate(),
@@ -525,9 +553,9 @@ class MVO_A_23537 : public Mehrfachverordnung
 TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
 {
     TestStep(A_23537, "ERP-A_23537.01: Task aktivieren - Mehrfachverordnung - Startdatum vor Ausstellungsdatum");
-    auto authoredOn = model::Timestamp::fromXsDate("2023-03-07");
-    auto startDate = model::Timestamp::fromXsDate("2023-03-06");
-    auto endDate = model::Timestamp::fromXsDate("2023-04-07");
+    auto authoredOn = model::Timestamp::fromXsDate("2023-03-07", model::Timestamp::UTCTimezone);
+    auto startDate = model::Timestamp::fromXsDate("2023-03-06", model::Timestamp::UTCTimezone);
+    auto endDate = model::Timestamp::fromXsDate("2023-04-07", model::Timestamp::UTCTimezone);
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = authoredOn,
                                                   .redeemPeriodStart = startDate.toGermanDate(),
@@ -546,9 +574,9 @@ TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
 TEST_F(MVO_A_23537, Step_02_StartDateEqualsAuthoredOn)
 {
     TestStep(A_23537, "ERP-A_23537.02: Task aktivieren - Mehrfachverordnung - Startdatum gleich Ausstellungsdatum");
-    auto authoredOn = model::Timestamp::fromXsDate("2023-03-07");
-    auto startDate = model::Timestamp::fromXsDate("2023-03-07");
-    auto endDate = model::Timestamp::fromXsDate("2023-04-07");
+    auto authoredOn = model::Timestamp::fromXsDate("2023-03-07", model::Timestamp::UTCTimezone);
+    auto startDate = model::Timestamp::fromXsDate("2023-03-07", model::Timestamp::UTCTimezone);
+    auto endDate = model::Timestamp::fromXsDate("2023-04-07", model::Timestamp::UTCTimezone);
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = authoredOn,
                                                   .redeemPeriodStart = startDate.toGermanDate(),
@@ -564,9 +592,9 @@ TEST_F(MVO_A_23537, Step_02_StartDateEqualsAuthoredOn)
 TEST_F(MVO_A_23537, Step_03_StartDateAfterAuthoredOn)
 {
     TestStep(A_23537, "ERP-A_23537.03: Task aktivieren - Mehrfachverordnung - Startdatum nach Ausstellungsdatum");
-    auto authoredOn = model::Timestamp::fromXsDate("2023-03-07");
-    auto startDate = model::Timestamp::fromXsDate("2023-03-08");
-    auto endDate = model::Timestamp::fromXsDate("2023-04-07");
+    auto authoredOn = model::Timestamp::fromXsDate("2023-03-07", model::Timestamp::UTCTimezone);
+    auto startDate = model::Timestamp::fromXsDate("2023-03-08", model::Timestamp::UTCTimezone);
+    auto endDate = model::Timestamp::fromXsDate("2023-04-07", model::Timestamp::UTCTimezone);
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .timestamp = authoredOn,
                                                   .redeemPeriodStart = startDate.toGermanDate(),

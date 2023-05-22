@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include <gtest/gtest.h>
@@ -124,4 +126,3 @@ TEST_F(EnvironmentTest, getBool)//NOLINT(readability-function-cognitive-complexi
     EXPECT_EQ(Environment::getBool(envVar1, true), true);
     EXPECT_EQ(Environment::getBool(envVar1, false), false);
 }
-

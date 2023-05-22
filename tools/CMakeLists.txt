@@ -1,6 +1,8 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021
-# (C) Copyright IBM Corp. 2021
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
 #
 
 set(VAU_ENC_SOURCES vau_encrypt/vau_encrypt_main.cxx)

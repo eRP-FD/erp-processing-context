@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/erp/database/PostgresDatabaseCommunicationTest.hxx"
@@ -1240,7 +1242,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
     Task task2 = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId2 = insertTask(task2);
     const auto kvnrInsurant = task1.kvnr().value();
-    
+
     // Insert communication object into database which shall *not* be deleted:
     {
         jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
@@ -1272,7 +1274,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
     comm1.setTimeSent(Timestamp::fromXsDateTime("2021-02-17T13:34:45.940+00:00"));
     const auto idComm1 = insertCommunication(comm1);
     ASSERT_TRUE(idComm1.has_value());
-    
+
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(prescriptionId2.toString())
             .setAccessCode(std::string(task2.accessCode()))
@@ -1296,10 +1298,10 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
         idComm2.value(),
         model::getIdentityString(comm1.sender().value()));
     ASSERT_FALSE(comm2Retrieved.has_value());
-    
+
     // Count currently available communication objects.
     uint64_t communicationsCountCurr = countCommunications();
-    ASSERT_EQ(communicationsCountCurr, communicationsCountPrev);    
+    ASSERT_EQ(communicationsCountCurr, communicationsCountPrev);
 }
 // GEMREQ-end A_19027-03
 

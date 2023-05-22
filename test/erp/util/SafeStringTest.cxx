@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/SafeString.hxx"
@@ -206,7 +208,3 @@ TEST(SafeStringTest, comparisonSelf)//NOLINT(readability-function-cognitive-comp
     ASSERT_FALSE(a > a);
     ASSERT_TRUE(a >= a);
 }
-
-
-
-

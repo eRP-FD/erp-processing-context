@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
@@ -30,4 +32,3 @@ ErpBlob TeeTokenProductionUpdater::provideTeeToken (HsmFactory& hsmFactory)
     TVLOG(1) << "got new tee token of size " << teeToken.data.size() << " with generation " << teeToken.generation;
     return teeToken;
 }
-

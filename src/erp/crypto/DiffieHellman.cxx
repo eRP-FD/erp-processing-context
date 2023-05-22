@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "DiffieHellman.hxx"
@@ -90,7 +92,7 @@ std::string DiffieHellman::hkdf (const SafeString& sharedKey, const std::string_
 
     status = EVP_PKEY_CTX_set1_hkdf_key(context, static_cast<const char*>(sharedKey), static_cast<int>(sharedKey.size()));
     Expect(status==1, "can not set HKDF shared key");
-    
+
     status = EVP_PKEY_CTX_add1_hkdf_info(context, derivationKey.data(), static_cast<int>(derivationKey.size()));
     Expect(status==1, "can not set HKDF info");
 

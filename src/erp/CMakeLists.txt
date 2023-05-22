@@ -1,6 +1,8 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021
-# (C) Copyright IBM Corp. 2021
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
 #
 
 cmake_minimum_required(VERSION 3.16)
@@ -135,6 +137,7 @@ list(
         model/KbvCoverage.cxx
         model/KbvMedicationBase.cxx
         model/KbvMedicationCompounding.cxx
+        model/KbvMedicationDummy.cxx
         model/KbvMedicationFreeText.cxx
         model/KbvMedicationIngredient.cxx
         model/KbvMedicationPzn.cxx

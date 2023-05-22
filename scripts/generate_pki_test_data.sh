@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
+
 # This script generates a test PKI -- root CA, sub CA ( TSL signer ) and uses them to sign TSL templates.
 # Input data can be found in resources/test/generated_pki_input/, the generated data are put
 # into resources/test/generated_pki/. For each created CA a subdirectory is created, which contains, besides some

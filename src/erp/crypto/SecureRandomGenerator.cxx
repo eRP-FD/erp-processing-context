@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/crypto/SecureRandomGenerator.hxx"
@@ -68,4 +70,3 @@ SafeString SecureRandomGenerator::randomBytes(size_t count)
 {
     return generate(count);
 }
-

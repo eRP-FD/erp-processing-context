@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/database/DatabaseFrontend.hxx"
@@ -625,10 +627,9 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
 
     ::std::vector<::model::ChargeItem> result;
     ::std::transform(::std::begin(dbChargeItems), ::std::end(dbChargeItems), ::std::back_inserter(result),
-                     [this, &kvnr](const auto& item) {
-                                 const auto encryptionData = chargeItemKey(item.prescriptionId, item.blobId, item.salt);
-                                 ::model::ChargeItem chargeItem = item.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec).chargeItem;
-                                 if (!chargeItem.subjectKvnr().has_value())
+                     [&kvnr](const auto& item) {
+                                 model::ChargeItem chargeItem = item.toChargeInformation(std::nullopt).chargeItem;
+                                 if (! chargeItem.subjectKvnr().has_value())
                                  {
                                      chargeItem.setSubjectKvnr(kvnr);
                                  }
@@ -642,18 +643,22 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
 ::model::ChargeInformation DatabaseFrontend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
     const auto chargeItem = mBackend->retrieveChargeInformation(id);
-    const auto encryptionData = chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt);
+    const auto codecWithKey = DatabaseCodecWithKey{
+        .codec = mCodec,
+        .key = std::get<SafeString>(chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt))};
 
-    return chargeItem.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec);
+    return chargeItem.toChargeInformation(codecWithKey);
 }
 
 std::tuple<::model::ChargeInformation, BlobId, db_model::Blob> DatabaseFrontend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
 {
     auto chargeItem = mBackend->retrieveChargeInformationForUpdate(id);
-    const auto encryptionData = chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt);
+    const auto codecWithKey = DatabaseCodecWithKey{
+        .codec = mCodec,
+        .key = std::get<SafeString>(chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt))};
 
     return std::make_tuple(
-        chargeItem.toChargeInformation(::std::get<::SafeString>(encryptionData), mCodec),
+        chargeItem.toChargeInformation(codecWithKey),
         chargeItem.blobId,
         std::move(chargeItem.salt));
 }

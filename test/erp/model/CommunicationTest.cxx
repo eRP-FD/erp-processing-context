@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/erp/model/CommunicationTest.hxx"
@@ -98,7 +100,7 @@ TEST_F(CommunicationTest, 2022resourcesWithoutVersion)//NOLINT(readability-funct
 
         auto dispReqModel = Communication::fromJsonNoValidation(dispReqJson).jsonDocument();
         dispReqModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationDispReq);
-        EXPECT_NO_THROW(Communication::fromJson(dispReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
+        EXPECT_NO_THROW((void)Communication::fromJson(dispReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
                                                 *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
                                                 SchemaType::Gem_erxCommunicationDispReq,
                                                 {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
@@ -116,7 +118,7 @@ TEST_F(CommunicationTest, 2022resourcesWithoutVersion)//NOLINT(readability-funct
         auto representativeModel = Communication::fromJsonNoValidation(representativeJson).jsonDocument();
         representativeModel.setValue(profilePtr,
                                      model::resource::structure_definition::deprecated::communicationRepresentative);
-        EXPECT_NO_THROW(Communication::fromJson(representativeModel.serializeToJsonString(),
+        EXPECT_NO_THROW((void)Communication::fromJson(representativeModel.serializeToJsonString(),
                                                 *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
                                                 *StaticData::getInCodeValidator(),
                                                 SchemaType::Gem_erxCommunicationRepresentative,
@@ -133,7 +135,7 @@ TEST_F(CommunicationTest, 2022resourcesWithoutVersion)//NOLINT(readability-funct
 
         auto infoReqModel = Communication::fromJsonNoValidation(infoReqJson).jsonDocument();
         infoReqModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationInfoReq);
-        EXPECT_NO_THROW(Communication::fromJson(infoReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
+        EXPECT_NO_THROW((void)Communication::fromJson(infoReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
                                                 *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
                                                 SchemaType::Gem_erxCommunicationInfoReq,
                                                 {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
@@ -148,7 +150,7 @@ TEST_F(CommunicationTest, 2022resourcesWithoutVersion)//NOLINT(readability-funct
 
         auto replyModel = Communication::fromJsonNoValidation(replyJson).jsonDocument();
         replyModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationReply);
-        EXPECT_NO_THROW(Communication::fromJson(replyModel.serializeToJsonString(), *StaticData::getJsonValidator(),
+        EXPECT_NO_THROW((void)Communication::fromJson(replyModel.serializeToJsonString(), *StaticData::getJsonValidator(),
                                                *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
                                                SchemaType::Gem_erxCommunicationReply,
                                                {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));

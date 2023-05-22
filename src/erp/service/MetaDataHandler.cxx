@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/MetaDataHandler.hxx"
@@ -21,4 +23,3 @@ void MetaDataHandler::handleRequest (PcSessionContext& session)
     const model::MetaData metaData(model::ResourceVersion::currentBundle());
     makeResponse(session, HttpStatus::OK, &metaData);
 }
-

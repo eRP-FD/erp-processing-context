@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <StructureDefinition xmlns="http://hl7.org/fhir">
-  <id value="KBV-EX-ERP-Medication-Ingredient-Form"/>
-  <url value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Ingredient_Form"/>
+  <id value="KBV-EX-ERP-Medication-PackagingSize"/>
+  <url value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize"/>
   <version value="1.1.0"/>
-  <name value="KBV_EX_ERP_Medication_Ingredient_Form"/>
+  <name value="KBV_EX_ERP_Medication_PackagingSize"/>
   <status value="active"/>
   <date value="2022-09-30"/>
   <publisher value="Kassenärztliche Bundesvereinigung"/>
@@ -17,7 +17,7 @@
   <abstract value="false"/>
   <context>
     <type value="element"/>
-    <expression value="Medication.ingredient"/>
+    <expression value="Medication.amount.numerator"/>
   </context>
   <type value="Extension"/>
   <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Extension"/>
@@ -31,8 +31,8 @@
         <valueCode value="4.0.0"/>
       </extension>
       <path value="Extension"/>
-      <short value="Darreichungsform eines Bestandteils einer Rezeptur"/>
-      <definition value="Darreichungsform eines Bestandteils einer Rezeptur"/>
+      <short value="Packungsgröße nach abgeteilter Menge"/>
+      <definition value="Angabe zur Packungsgröße nach abgeteilter Menge (z.B. 100, 2x25), tritt nur in Verbindung mit „Einheit“ auf (z.B. 100 Stück)."/>
       <min value="0"/>
       <max value="*"/>
       <base>
@@ -55,7 +55,7 @@
         <human value="Must have either extensions or value[x], not both"/>
         <expression value="extension.exists() != value.exists()"/>
         <xpath value="exists(f:extension)!=exists(f:*[starts-with(local-name(.), 'value')])"/>
-        <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Extension"/>
       </constraint>
       <mapping>
         <identity value="rim"/>
@@ -135,7 +135,7 @@
         <human value="Must have either extensions or value[x], not both"/>
         <expression value="extension.exists() != value.exists()"/>
         <xpath value="exists(f:extension)!=exists(f:*[starts-with(local-name(.), 'value')])"/>
-        <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Extension"/>
       </constraint>
       <mapping>
         <identity value="rim"/>
@@ -165,7 +165,7 @@
         </extension>
         <code value="http://hl7.org/fhirpath/System.String"/>
       </type>
-      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Ingredient_Form"/>
+      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize"/>
       <mapping>
         <identity value="rim"/>
         <map value="N/A"/>
@@ -225,8 +225,8 @@
       </extension>
       <path value="Extension.value[x]"/>
       <sliceName value="valueString"/>
-      <short value="Darreichungsform des Bestandteils Freitext"/>
-      <definition value="Die Darreichnungsform als Freitext kann verwendet werden, wenn es sich bei dem Bestandteil der Rezeptur nicht um ein Fertigarzneimittel handelt."/>
+      <short value="Packungsgröße nach abgeteilter Menge"/>
+      <definition value="Angabe zur Packungsgröße nach abgeteilter Menge (z.B. 100, 2x25), tritt nur in Verbindung mit „Einheit“ auf (z.B. 100 Stück)."/>
       <min value="1"/>
       <max value="1"/>
       <base>
@@ -237,7 +237,7 @@
       <type>
         <code value="string"/>
       </type>
-      <maxLength value="30"/>
+      <maxLength value="7"/>
       <condition value="ele-1"/>
       <constraint>
         <key value="ele-1"/>
@@ -259,27 +259,15 @@
   </snapshot>
   <differential>
     <element id="Extension">
-      <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
-        <valueCode value="normative"/>
-      </extension>
-      <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version">
-        <valueCode value="4.0.0"/>
-      </extension>
       <path value="Extension"/>
-      <short value="Darreichungsform eines Bestandteils einer Rezeptur"/>
-      <definition value="Darreichungsform eines Bestandteils einer Rezeptur"/>
+      <short value="Packungsgröße nach abgeteilter Menge"/>
+      <definition value="Angabe zur Packungsgröße nach abgeteilter Menge (z.B. 100, 2x25), tritt nur in Verbindung mit „Einheit“ auf (z.B. 100 Stück)."/>
     </element>
     <element id="Extension.url">
       <path value="Extension.url"/>
-      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Ingredient_Form"/>
+      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize"/>
     </element>
     <element id="Extension.value[x]">
-      <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
-        <valueCode value="normative"/>
-      </extension>
-      <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version">
-        <valueCode value="4.0.0"/>
-      </extension>
       <path value="Extension.value[x]"/>
       <slicing>
         <discriminator>
@@ -294,21 +282,15 @@
       </type>
     </element>
     <element id="Extension.value[x]:valueString">
-      <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
-        <valueCode value="normative"/>
-      </extension>
-      <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-normative-version">
-        <valueCode value="4.0.0"/>
-      </extension>
       <path value="Extension.value[x]"/>
       <sliceName value="valueString"/>
-      <short value="Darreichungsform des Bestandteils Freitext"/>
-      <definition value="Die Darreichnungsform als Freitext kann verwendet werden, wenn es sich bei dem Bestandteil der Rezeptur nicht um ein Fertigarzneimittel handelt."/>
+      <short value="Packungsgröße nach abgeteilter Menge"/>
+      <definition value="Angabe zur Packungsgröße nach abgeteilter Menge (z.B. 100, 2x25), tritt nur in Verbindung mit „Einheit“ auf (z.B. 100 Stück)."/>
       <min value="1"/>
       <type>
         <code value="string"/>
       </type>
-      <maxLength value="30"/>
+      <maxLength value="7"/>
     </element>
   </differential>
 </StructureDefinition>

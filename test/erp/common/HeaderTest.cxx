@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/common/Header.hxx"
@@ -231,7 +233,3 @@ TEST_F(HeaderTest, keepAlive1_1)//NOLINT(readability-function-cognitive-complexi
         EXPECT_EQ(connectionHeader.value_or(""), Header::KeepAlive);
     }
 }
-
-
-
-

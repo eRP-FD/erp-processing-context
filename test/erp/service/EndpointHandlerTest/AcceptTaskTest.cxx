@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/ErpRequirements.hxx"
@@ -119,6 +121,38 @@ TEST_F(AcceptTaskTest, AcceptTaskSuccessNoQesCheck)
         resultBundle, serviceContext,
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId}),
         kbvBundle, 2 /*numOfExpectedResources*/));
+}
+
+TEST_F(AcceptTaskTest, AcceptTaskInvalidMvoDate)
+{
+    // this tests is required for the case when we accepted MVOs with invalid
+    // dates, i.e. dates that where parsable by Timestamp::fromFhirDateTime().
+    // Even though we dont allow these prescriptions at accept task anymore,
+    // they are already persisted and in order to allow compatibility with
+    // older prescriptions, we must allow these dates at the accept operation
+    // Create Task in database
+    auto db = mServiceContext.databaseFactory();
+    auto task = model::Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready}));
+    const auto taskId = db->storeTask(task);
+    task.setPrescriptionId(taskId);
+    task.setHealthCarePrescriptionUuid();
+    using namespace std::chrono_literals;
+    const auto tomorrow = model::Timestamp(std::chrono::system_clock::now() + 24h);
+    auto kbvBundle =
+        ResourceTemplates::kbvBundleMvoXml({.prescriptionId = taskId, .redeemPeriodEnd = tomorrow.toXsDateTime()});
+
+    const auto healthCarePrescriptionUuid = task.healthCarePrescriptionUuid().value();
+    const auto healthCarePrescriptionBundle =
+        model::Binary(healthCarePrescriptionUuid, CryptoHelper::toCadesBesSignature(kbvBundle));
+
+    db->activateTask(task, healthCarePrescriptionBundle);
+    db->commitTransaction();
+    db.reset();
+
+    std::optional<model::Bundle> resultBundle;
+    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(resultBundle, mServiceContext, task.serializeToJsonString(),
+                                                         kbvBundle, 2 /*numOfExpectedResources*/));
 }
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-cognitive-complexity)

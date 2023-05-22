@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2023
- * (C) Copyright IBM Corp. 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 
@@ -163,10 +165,10 @@ void validateProof(const SessionContext& context, const ProofContent& proofConte
         "Timestamp could not be read");
     const auto& configuration = Configuration::instance();
     std::chrono::seconds proofValidity{configuration.getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS)};
-    const auto proofExpirationTime = *proofContent.timestamp + proofValidity;
     const auto now = context.sessionTime();
+    const auto timeDifference = std::chrono::abs(*proofContent.timestamp - now);
 
-    ErpExpect(proofExpirationTime >= now, HttpStatus::Forbidden,
+    ErpExpect(timeDifference <= proofValidity, HttpStatus::Forbidden,
               "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche Gültigkeit des "
               "Anwesenheitsnachweis überschritten).");
     A_23451.finish();

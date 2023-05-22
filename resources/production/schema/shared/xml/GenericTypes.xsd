@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ /*
-  ~  * (C) Copyright IBM Deutschland GmbH 2021
-  ~  * (C) Copyright IBM Corp. 2021
+  ~  * (C) Copyright IBM Deutschland GmbH 2021, 2023
+  ~  * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
   ~  */
   -->
 
@@ -39,7 +41,7 @@
         <xs:attribute name="value" type="uri-primitive"/>
       </xs:extension>
     </xs:complexContent>
-  </xs:complexType>  
+  </xs:complexType>
   <xs:complexType name="uri-fixed-kvid-10">
     <xs:complexContent>
       <xs:extension base="Element">

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_KBVMULTIPLEPRESCRIPTION_H
@@ -26,6 +28,9 @@ public:
     [[nodiscard]] std::optional<int> denominator() const;
     [[nodiscard]] std::optional<model::Timestamp> startDate() const;
     [[nodiscard]] std::optional<model::Timestamp> endDate() const;
+
+    [[nodiscard]] std::optional<model::Timestamp> startDateTime() const;
+    [[nodiscard]] std::optional<model::Timestamp> endDateTime() const;
 
     friend std::optional<KBVMultiplePrescription> ResourceBase::getExtension<KBVMultiplePrescription>(const std::string_view&) const;
 };

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_DATABASECODEC_HXX
@@ -50,6 +52,12 @@ private:
 
     std::shared_ptr<Compression> mCompression;
     std::function<SafeString(size_t)> const mRandomGenerator;
+};
+
+struct DatabaseCodecWithKey
+{
+    const DataBaseCodec& codec;
+    SafeString key;
 };
 
 

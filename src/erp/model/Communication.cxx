@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Communication.hxx"
@@ -247,6 +249,7 @@ Communication::MessageType Communication::schemaTypeToMessageType(SchemaType sch
         case SchemaType::Gem_erxDevice:
         case SchemaType::KBV_PR_ERP_Bundle:
         case SchemaType::KBV_PR_ERP_Composition:
+        case SchemaType::KBV_PR_ERP_Medication_BundleDummy:
         case SchemaType::KBV_PR_ERP_Medication_Compounding:
         case SchemaType::KBV_PR_ERP_Medication_FreeText:
         case SchemaType::KBV_PR_ERP_Medication_Ingredient:

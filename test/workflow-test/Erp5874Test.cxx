@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -42,4 +44,3 @@ TEST_F(Erp5874Test, run)
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
 
 }
-

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "fhirtools/util/SaxHandler.hxx"
@@ -193,4 +195,3 @@ TEST_F(SaxParserTest, Attribute) // NOLINT
     EXPECT_TRUE(hadNoNamespace);
     EXPECT_TRUE(hadWithNamespace);
 }
-

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "HttpsTestClient.hxx"
@@ -127,7 +129,7 @@ HttpsTestClient::HttpsTestClient(
     const SafeString& caCertificates,
     const SafeString& clientCertificate,
     const SafeString& clientPrivateKey)
-    : mHttpsClient(host, port, connectionTimeoutSeconds, enforceServerAuthentication, 
+    : mHttpsClient(host, port, connectionTimeoutSeconds, enforceServerAuthentication,
                    caCertificates, clientCertificate, clientPrivateKey)
     , mServerAddress(host)
     , mPort(port)

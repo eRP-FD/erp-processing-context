@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ (C) Copyright IBM Deutschland GmbH 2022
-  ~ (C) Copyright IBM Corp. 2022
+  ~ (C) Copyright IBM Deutschland GmbH 2021, 2023
+  ~ (C) Copyright IBM Corp. 2021, 2023
+  ~
+  ~ non-exclusively licensed to gematik GmbH
   -->
 <xsl:stylesheet
         version="1.0"

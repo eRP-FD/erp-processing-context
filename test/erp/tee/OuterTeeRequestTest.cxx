@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/tee/OuterTeeRequest.hxx"
@@ -48,4 +50,3 @@ TEST_F(OuterTeeRequestTest, disassemble)//NOLINT(readability-function-cognitive-
     ASSERT_EQ(message.ciphertext, "this is the original request, usually encrypted");
     ASSERT_EQ(uint8ArrayToString(message.authenticationTag, 16), "here the authtag");
 }
-

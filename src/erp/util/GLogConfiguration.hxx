@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_UTIL_GLOGCONFIGURATION_HXX
@@ -12,7 +14,7 @@ class GLogConfiguration {
 public:
     /**
      * Initialized the glog with specified app name, the configuration is read from environment variables
-     * The enfironment variables used to configure the logging
+     * The environment variables used to configure the logging
      * ERP_LOG_TO_STDERR - ignore log files, log to stderr
      * ERP_STDERR_THRESHOLD - duplicate log at and above level to stderr
      * ERP_MIN_LOG_LEVEL - minimal log level: INFO, WARNING, ERROR, FATAL
@@ -47,7 +49,7 @@ public:
 
 private:
     static int getLogLevelInt(const std::string& logLevelString);
-    static void erpLogPrefix(std::ostream& s, const google::LogMessageInfo& l, void*);
+    static void erpLogPrefix(std::ostream& s, const google::LogMessageInfo& lmi, void*);
 };
 
 #endif

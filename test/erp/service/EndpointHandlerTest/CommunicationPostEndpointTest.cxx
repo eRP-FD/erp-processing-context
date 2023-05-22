@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2023
- * (C) Copyright IBM Corp. 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 // clang-format off
 // include of gtest must not be ordered after TelematicPseudonymManager
@@ -200,4 +202,3 @@ INSTANTIATE_TEST_SUITE_P(combinations, CommunicationPostMixedProfileTest,
 }), &CommunicationPostMixedProfileTest::name);
 
 // clang-format on
-

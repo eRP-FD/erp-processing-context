@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-#  (C) Copyright IBM Deutschland GmbH 2021
-#  (C) Copyright IBM Corp. 2021
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
 
 from conans import CMake
 from conans import ConanFile
@@ -59,9 +61,9 @@ class ErpProcessingContext(ConanFile):
 
     def requirements(self):
         if self.options.with_tpmclient:
-            self.requires('tpmclient/0.14.0')
+            self.requires('tpmclient/0.15.0-B28')
         if self.options.with_hsmclient:
-            self.requires('hsmclient/2.6.0-B70')
+            self.requires('hsmclient/2.7.0-B75')
 
     def build_requirements(self):
         if self.options.with_sbom:

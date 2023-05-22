@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/tsl/TslParser.hxx"
@@ -383,9 +385,7 @@ namespace
         TslParser::AcceptanceHistoryMap& mapToExtend,
         const bool expectToBeTheLatest)
     {
-        // TODO: replace with implementation supporting xs:dateTime format
-        //       for https://dth01.ibmgcloud.net/jira/browse/ERP-4816
-        auto statusStartingTime = model::Timestamp::fromFhirDateTime(
+        auto statusStartingTime = model::Timestamp::fromXsDateTime(
             String::trim(getChildTagText(child, "StatusStartingTime", true))).toChronoTimePoint();
         Expect(
             ! expectToBeTheLatest

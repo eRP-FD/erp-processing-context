@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "CommunicationPostHandler.hxx"
@@ -263,7 +265,8 @@ void CommunicationPostHandler::validateInfoRequest(const model::Communication& c
                                                    const InCodeValidator& inCodeValidator) const
 {
     using namespace std::string_literals;
-    static rapidjson::Pointer metaPtr{resource::ElementName::path(elements::meta)};
+    static rapidjson::Pointer idPtr{resource::ElementName::path(elements::id)};
+    static rapidjson::Pointer resourceTypePtr{resource::ElementName::path(elements::resourceType)};
     const auto* repo = std::addressof(Fhir::instance().structureRepository());
     const auto extractMedication = fhirtools::FhirPathParser::parse(repo, "about.resolve()");
     Expect3(extractMedication, "Failed to parse extractMedication expression.", std::logic_error);
@@ -277,9 +280,15 @@ void CommunicationPostHandler::validateInfoRequest(const model::Communication& c
         const auto& medicationErpElement = dynamic_cast<const ErpElement*>(medicationElement.get());
         Expect3(medicationErpElement != nullptr,
                 "unexpected type for medicationElement"s.append(typeid(medicationErpElement).name()), std::logic_error);
-        model::KbvMedicationGeneric::validateMedication(*medicationErpElement, xmlValidator, inCodeValidator);
         //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-        metaPtr.Erase(*const_cast<rapidjson::Value*>(medicationErpElement->erpValue()));
+        auto* medicationValue = const_cast<rapidjson::Value*>(medicationErpElement->erpValue());
+        model::KbvMedicationGeneric::validateMedication(*medicationErpElement, xmlValidator, inCodeValidator,
+                                                        false);
+        const std::string idValue = idPtr.Get(*medicationValue)->GetString();
+        const std::string resourceTypeValue = resourceTypePtr.Get(*medicationValue)->GetString();
+        medicationValue->SetObject();
+        idPtr.Set(*medicationValue, idValue, doc.GetAllocator());
+        resourceTypePtr.Set(*medicationValue, resourceTypeValue, doc.GetAllocator());
     }
     using CommunicationFactory = model::ResourceFactory<Communication>;
     CommunicationFactory::Options options;

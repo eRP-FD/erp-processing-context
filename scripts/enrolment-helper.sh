@@ -1,27 +1,34 @@
 #!/bin/bash
 
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
 #
-# (C) Copyright IBM Deutschland GmbH 2021
-# (C) Copyright IBM Corp. 2021
+# non-exclusively licensed to gematik GmbH
+
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
 #
 
 usage() {
   echo -e "\nUsage: $0 version|pc1|pc2|health1|health2 [<blob_type>]\n       <blob_type> only required for pc1/pc2"
 }
 
-if [  $# -lt 1 ] 
-then 
+if [  $# -lt 1 ]
+then
   usage
   exit 1
 fi
 
 if [[ ( $1 == "--help") ||  $1 == "-h" ]]
-then 
+then
   usage
   exit 0
-fi 
+fi
 
-PC=$1 
+PC=$1
 shift
 
 # extract namespace from host variable
@@ -67,11 +74,11 @@ case $PC in
   version)
       ./blob-db-initialization --version
       ;;
-  
+
   *)
     echo "ERROR: unknown command" >&2
     exit 1
     ;;
 esac
 
-exit 0 
+exit 0

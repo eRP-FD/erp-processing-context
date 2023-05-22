@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/client/UrlRequestSender.hxx"
@@ -153,4 +155,3 @@ TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttp)  // NOLINT
     std::chrono::duration<double> elapsedSeconds = end - start;
     EXPECT_LE(elapsedSeconds.count(), timeoutSeconds + 1.0);
 }
-

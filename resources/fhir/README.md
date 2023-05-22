@@ -4,7 +4,7 @@
 | Package                                        | Version    | Download-Link                                                                 |
 |------------------------------------------------|------------|-------------------------------------------------------------------------------|
 | kbv.ita.erp                                    | 1.0.2      | https://simplifier.net/packages/kbv.ita.erp/1.0.2                             |
-| kbv.ita.erp                                    | 1.1.0      | https://simplifier.net/packages/kbv.ita.erp/1.1.0                              |
+| kbv.ita.erp                                    | 1.1.1      | https://simplifier.net/packages/kbv.ita.erp/1.1.1                              |
 | kbv.ita.for                                    | 1.0.3      | https://simplifier.net/packages/kbv.ita.for/1.0.3                             |
 | kbv.ita.for                                    | 1.1.0      | https://simplifier.net/packages/kbv.ita.for/1.1.0                              |
 | de.basisprofil.r4                              | 0.9.13     | https://simplifier.net/packages/de.basisprofil.r4/0.9.13                      |

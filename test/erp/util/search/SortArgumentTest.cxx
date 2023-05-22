@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/search/UrlArguments.hxx"
@@ -62,4 +64,3 @@ TEST_F(SortArgumentTest, syntax_ascendingDescending)
 {
     testSyntax({"sender,-ignored,-sent"}, "?_sort=sender,-sent", "ORDER BY sender ASC, sent DESC");
 }
-

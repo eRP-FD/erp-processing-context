@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -16,6 +18,7 @@
 #include "test/util/TestUtils.hxx"
 
 #include <thread>
+#include <date/tz.h>
 
 
 TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
@@ -81,7 +84,7 @@ TEST_F(ErpWorkflowTest, ActivateTaskUnsupportedProfile)
     }
     std::optional<model::Task> task;
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
-    const auto signingTime = model::Timestamp::fromXsDate("2021-06-08");
+    const auto signingTime = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
     // create a task with the deprecated profile and send them to a server with the new profile set
     {
         auto envVars = testutils::getOldFhirProfileEnvironment();
@@ -585,8 +588,12 @@ TEST_P(ErpWorkflowTestP, TaskSearchAuthoredOn ) // NOLINT
 
     const auto dateTime1 = task1.authoredOn().toXsDateTimeWithoutFractionalSeconds(); // returns UTC;
     const auto dateTime2 = task2.authoredOn().toXsDateTimeWithoutFractionalSeconds();
-    const auto dateTimeWithoutTz1 = dateTime1.substr(0, 19); // will be interpreted as UTC;
-    const auto dateTimeWithoutTz2 = dateTime2.substr(0, 19);
+
+    // without a given timezone, the times will be interpreted as German TZ
+    const auto dateTimeWithoutTz1 =
+        task1.authoredOn().toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone).substr(0, 19);
+    const auto dateTimeWithoutTz2 =
+        task2.authoredOn().toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone).substr(0, 19);
 
     {
         auto bundle = taskGet(kvnr, UrlHelper::escapeUrl("authored-on=ge" + dateTime1));
@@ -1602,7 +1609,7 @@ TEST_P(ErpWorkflowTestP, OperationOutcomeIncodeValidation)// NOLINT
     auto bundle =
         ResourceManager::instance().getStringResource("test/validation/xml/kbv/bundle/Bundle_invalid_erp_8431.xml");
     bundle = String::replaceAll(bundle, "REPLACE_ME_taskId", prescriptionId->toString());
-    const auto& qes = toCadesBesSignature(bundle, model::Timestamp::fromXsDate("2021-06-08"));
+    const auto& qes = toCadesBesSignature(bundle, model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone));
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(*prescriptionId, accessCode, qes, HttpStatus::BadRequest,
                                          model::OperationOutcome::Issue::Type::invalid, "mandatory identifier.value not set"));
 }
@@ -1650,7 +1657,9 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     std::this_thread::sleep_for(2s);
 
     ASSERT_TRUE(communicationResponseA->timeSent().has_value());
-    auto args = "sent=ge" + communicationResponseA->timeSent()->toXsDateTimeWithoutFractionalSeconds().substr(0, 19);
+    auto args = "sent=ge" + communicationResponseA->timeSent()
+                                ->toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone)
+                                .substr(0, 19);
     std::optional<model::Bundle> communicationsBundle;
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args)); // sets "received" timstamp
     EXPECT_EQ(communicationsBundle->getResourceCount(), 2);
@@ -1672,7 +1681,9 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     std::this_thread::sleep_for(1s);
 
     ASSERT_TRUE(communicationResponseC->timeSent().has_value());
-    args = "sent=ge" + communicationResponseC->timeSent()->toXsDateTimeWithoutFractionalSeconds().substr(0, 19);
+    args = "sent=ge" + communicationResponseC->timeSent()
+                           ->toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone)
+                           .substr(0, 19);
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args)); // sets "received" timstamp
 
     communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");
@@ -1683,8 +1694,9 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     EXPECT_EQ(communicationsBundle->getResourceCount(), 2);
 
     const auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
-    args = "received=gt" + start.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "&received=lt" +
-                      end.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "&_sort=sent";
+    args = "received=gt" + start.toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone).substr(0, 19) +
+           "&received=lt" + end.toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone).substr(0, 19) +
+           "&_sort=sent";
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args));
     ASSERT_EQ(communicationsBundle->getResourceCount(), 2);
     communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/OperationOutcome.hxx"
@@ -16,7 +18,7 @@ class Erp8090Test : public ErpWorkflowTest
 TEST_F(Erp8090Test, validCoverage1)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::Task> task;
-    const auto timestamp = model::Timestamp::fromXsDate("2021-06-08");
+    const auto timestamp = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
 
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
@@ -65,7 +67,7 @@ TEST_F(Erp8090Test, validCoverage1)//NOLINT(readability-function-cognitive-compl
 
 TEST_F(Erp8090Test, validCoverage2)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto timestamp = model::Timestamp::fromXsDate("2021-06-08");
+    const auto timestamp = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
@@ -94,7 +96,8 @@ TEST_F(Erp8090Test, validCoverage2)//NOLINT(readability-function-cognitive-compl
                            .coveragePayorExtension = extensionCoverage});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), std::string{task->accessCode()},
-        toCadesBesSignature(bundle, model::Timestamp::fromXsDate("2021-06-08")), HttpStatus::OK));
+        toCadesBesSignature(bundle, model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone)),
+        HttpStatus::OK));
 }
 
 TEST_F(Erp8090Test, invalidCoverage)//NOLINT(readability-function-cognitive-complexity)
@@ -106,7 +109,7 @@ TEST_F(Erp8090Test, invalidCoverage)//NOLINT(readability-function-cognitive-comp
         GTEST_SKIP_("Disable for new profiles, unable to test for particular failures");
     }
 
-    const auto timestamp = model::Timestamp::fromXsDate("2021-06-08");
+    const auto timestamp = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
@@ -52,4 +54,16 @@ std::optional<model::Timestamp> model::KBVMultiplePrescription::endDate() const
 {
     auto zeitraum = getExtension<Zeitraum>();
     return zeitraum ? zeitraum->valuePeriodEndGermanDate() : std::nullopt;
+}
+
+std::optional<model::Timestamp> model::KBVMultiplePrescription::startDateTime() const
+{
+    auto zeitraum = getExtension<Zeitraum>();
+    return zeitraum ? zeitraum->valuePeriodStart(Timestamp::GermanTimezone) : std::nullopt;
+}
+
+std::optional<model::Timestamp> model::KBVMultiplePrescription::endDateTime() const
+{
+    auto zeitraum = getExtension<Zeitraum>();
+    return zeitraum ? zeitraum->valuePeriodEnd(Timestamp::GermanTimezone) : std::nullopt;
 }

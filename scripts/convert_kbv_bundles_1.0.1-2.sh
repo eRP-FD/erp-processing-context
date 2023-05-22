@@ -1,5 +1,10 @@
 #!/bin/bash -e
 
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
+
 #########################################################
 #
 #  Replace Version Numbers in KBV-Bundles
@@ -56,4 +61,3 @@ find "${FILEDIR}" -iname '*.xml' -type f -print0 |
 while IFS='' read -d '' bundle_file; do
     "${COMMAND[@]}" "$bundle_file"
 done
-

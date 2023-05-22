@@ -1,6 +1,8 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021
-# (C) Copyright IBM Corp. 2021
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
 #
 
 set(ERP_HL7_ORG_DEFINITIONS_FILES
@@ -445,7 +447,7 @@ set(FHIR_PROFILES_DIRS
         "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0"
         "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0"
         "fhir/profiles/KBV.Basis-1.3.0"
-        "fhir/profiles/kbv.ita.erp-1.1.0/package/"
+        "fhir/profiles/kbv.ita.erp-1.1.1"
         "fhir/profiles/kbv.ita.for-1.1.0/package/"
         "fhir/profiles/fhir.kbv.de"
         )

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/fhir/Fhir.hxx"
@@ -31,7 +33,7 @@ public:
 protected:
     std::string mKbvBundleXml;
     std::optional<model::Task> task;
-    model::Timestamp timestamp = model::Timestamp::fromXsDate("2021-04-02");
+    model::Timestamp timestamp = model::Timestamp::fromXsDate("2021-04-02", model::Timestamp::UTCTimezone);
     std::size_t patientIdentifierBeginPos = 0;
     std::size_t patientIdentifierEndPos = 0;
 };

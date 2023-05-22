@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_DATABASEMODEL_HXX
@@ -157,8 +159,8 @@ struct ChargeItem {
     ChargeItem(const ::model::ChargeInformation& chargeInformation, const ::BlobId& newBlobId, const Blob& newSalt,
                const ::SafeString& key, const ::DataBaseCodec& codec);
 
-    [[nodiscard]] ::model::ChargeInformation toChargeInformation(const ::SafeString& key,
-                                                                 const ::DataBaseCodec& codec) const;
+    [[nodiscard]] ::model::ChargeInformation
+    toChargeInformation(const std::optional<DatabaseCodecWithKey>& codecAndKey) const;
 
     ::model::PrescriptionId prescriptionId;
     EncryptedBlob enterer = {};

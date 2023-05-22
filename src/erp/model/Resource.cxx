@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Resource.hxx"
@@ -24,6 +26,7 @@
 #include "erp/model/KbvCoverage.hxx"
 #include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationCompounding.hxx"
+#include "erp/model/KbvMedicationDummy.hxx"
 #include "erp/model/KbvMedicationFreeText.hxx"
 #include "erp/model/KbvMedicationIngredient.hxx"
 #include "erp/model/KbvMedicationPzn.hxx"
@@ -919,6 +922,7 @@ template class Resource<KbvComposition, ResourceVersion::KbvItaErp>;
 template class Resource<KbvCoverage, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationGeneric, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationCompounding, ResourceVersion::KbvItaErp>;
+template class Resource<KbvMedicationDummy, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationFreeText, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationIngredient, ResourceVersion::KbvItaErp>;
 template class Resource<KbvMedicationPzn, ResourceVersion::KbvItaErp>;

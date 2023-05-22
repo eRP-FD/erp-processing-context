@@ -1,10 +1,13 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2023
- * (C) Copyright IBM Corp. 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationCompounding.hxx"
+#include "erp/model/KbvMedicationDummy.hxx"
 #include "erp/model/KbvMedicationFreeText.hxx"
 #include "erp/model/KbvMedicationIngredient.hxx"
 #include "erp/model/KbvMedicationPzn.hxx"
@@ -22,7 +25,7 @@ void KbvMedicationGeneric::validateMedication(NumberAsStringParserDocument&& med
 }
 
 void KbvMedicationGeneric::validateMedication(const ErpElement& medicationElement, const XmlValidator& xmlValidator,
-                                              const InCodeValidator& inCodeValidator)
+                                              const InCodeValidator& inCodeValidator, bool allowDummyValidation)
 {
     using namespace std::string_literals;
     model::NumberAsStringParserDocument medicationDoc;
@@ -33,7 +36,15 @@ void KbvMedicationGeneric::validateMedication(const ErpElement& medicationElemen
         const auto* info = model::ResourceVersion::profileInfoFromProfileName(profStr);
         if (info)
         {
-            schemaType = info->schemaType;
+            if (info->bundleVersion == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 &&
+                allowDummyValidation)
+            {
+                schemaType = model::KbvMedicationDummy::schemaType;
+            }
+            else
+            {
+                schemaType = info->schemaType;
+            }
             break;
         }
     }
@@ -47,6 +58,9 @@ void KbvMedicationGeneric::validateMedication(const ErpElement& medicationElemen
         case model::KbvMedicationCompounding::schemaType:
             validateMedication<model::KbvMedicationCompounding>(std::move(medicationDoc), xmlValidator,
                                                                 inCodeValidator);
+            break;
+        case model::KbvMedicationDummy::schemaType:
+            validateMedication<model::KbvMedicationDummy>(std::move(medicationDoc), xmlValidator, inCodeValidator);
             break;
         case model::KbvMedicationFreeText::schemaType:
             validateMedication<model::KbvMedicationFreeText>(std::move(medicationDoc), xmlValidator, inCodeValidator);

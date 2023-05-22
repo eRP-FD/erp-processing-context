@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 #include "test/util/ResourceManager.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -25,7 +27,7 @@ TEST_F(RegressionTest, Erp10674)
     std::string accessCode{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(
         taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
-                     toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDate("2022-07-29")),
+                     toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDate("2022-07-29", model::Timestamp::UTCTimezone)),
                      HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
 

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/KbvBundle.hxx"
@@ -27,7 +29,7 @@ public:
 
     std::string getBundleWithId(const std::string& id)
     {
-        auto timestamp = model::Timestamp::fromXsDate("2021-06-08");
+        auto timestamp = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
         auto prescriptionId = model::PrescriptionId::fromStringNoValidation(id);
         auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp});
         return toCadesBesSignature(bundleXml, timestamp);

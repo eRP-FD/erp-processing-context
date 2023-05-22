@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 #
-#  (C) Copyright IBM Deutschland GmbH 2021
-#  (C) Copyright IBM Corp. 2021
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
 #
 # This script recreates the file src/erp/client/RootCertificates.hxx.
 #

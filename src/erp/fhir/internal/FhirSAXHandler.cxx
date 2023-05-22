@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "FhirSAXHandler.hxx"
@@ -682,4 +684,3 @@ void FhirSaxHandler::endXHTMLElement(const xmlChar* localname, const xmlChar* pr
     mCurrentXHTMLDoc.reset();
     mCurrentXHTMLNode = nullptr;
 }
-

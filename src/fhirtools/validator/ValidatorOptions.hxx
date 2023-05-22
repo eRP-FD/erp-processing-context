@@ -1,5 +1,7 @@
-// (C) Copyright IBM Deutschland GmbH 2022
-// (C) Copyright IBM Corp. 2022
+// (C) Copyright IBM Deutschland GmbH 2021, 2023
+// (C) Copyright IBM Corp. 2021, 2023
+//
+// non-exclusively licensed to gematik GmbH
 
 #ifndef FHIRTOOLS_VALIDATOROPTIONS_H
 #define FHIRTOOLS_VALIDATOROPTIONS_H

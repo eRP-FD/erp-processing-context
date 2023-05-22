@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
@@ -322,4 +324,3 @@ TEST_F(ErpMainTest, getEnrolementServerPort_inactiveEnrolment)
     // Expect that the default was not used and that the enrolment server is not active.
     ASSERT_FALSE(enrolmentPort.has_value());
 }
-

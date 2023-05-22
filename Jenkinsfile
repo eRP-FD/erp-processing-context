@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 pipeline {
@@ -240,7 +242,7 @@ pipeline {
                                 }
                             }
                             steps {
-                                sh "scripts/ci-static-analysis.sh " +
+                                sh "cd /media/erp && scripts/ci-static-analysis.sh " +
                                         "--build-path=jenkins-build-debug " +
                                         "--source-path=. " +
                                         "--clang-tidy-bin=clang-tidy-15 " +

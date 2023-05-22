@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/task/AcceptTaskHandler.hxx"
@@ -20,6 +22,8 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/TLog.hxx"
+
+#include <date/tz.h>
 
 
 AcceptTaskHandler::AcceptTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -164,26 +168,29 @@ void AcceptTaskHandler::checkMultiplePrescription(const model::KbvBundle& prescr
         auto mPExt = medicationRequests[0].getExtension<model::KBVMultiplePrescription>();
         if (mPExt && mPExt->isMultiplePrescription())
         {
-            const auto startDate = mPExt->startDate();
+            const auto startDate = mPExt->startDateTime();
             ErpExpect(startDate.has_value(), HttpStatus::InternalServerError,
                       "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.start "
                       "not present");
-            const auto validFrom = startDate->toChronoTimePoint();
-            if (now < validFrom)
+            auto validFrom =
+                    date::make_zoned(model::Timestamp::GermanTimezone, startDate->toChronoTimePoint());
+            validFrom = floor<date::days>(validFrom.get_local_time());
+            if (now < validFrom.get_sys_time())
             {
                 std::string germanFmtTs = model::Timestamp(startDate->toChronoTimePoint()).toGermanDateFormat();
-
                 std::ostringstream ss;
                 ss << "Teilverordnung ab " << germanFmtTs << " einlösbar.";
                 ErpFail(HttpStatus::Forbidden, ss.str());
             }
 
-            const auto endDate = mPExt->endDate();
+            const auto endDate = mPExt->endDateTime();
             if (endDate.has_value())
             {
                 using namespace std::chrono_literals;
-                const auto validUntil = endDate->toChronoTimePoint() + 24h;
-                if (validUntil < now)
+                auto validUntil =
+                    date::make_zoned(model::Timestamp::GermanTimezone, endDate->toChronoTimePoint() + 24h);
+                validUntil = floor<date::days>(validUntil.get_local_time());
+                if (validUntil.get_sys_time() < now)
                 {
                     std::string germanFmtTs = model::Timestamp(endDate->toChronoTimePoint()).toGermanDateFormat();
                     std::ostringstream ss;

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/compression/ZStdDictionary.hxx"
@@ -107,5 +109,3 @@ std::string to_string(ZStdDictionary::IdType id)
     out << id;
     return out.str();
 }
-
-

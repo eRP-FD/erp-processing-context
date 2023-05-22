@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/database/PostgresBackend.hxx"
@@ -1085,7 +1087,7 @@ void PostgresBackend::deleteCommunicationsForChargeItem(const model::Prescriptio
         static_cast<int>(magic_enum::enum_integer(taskId.type())),
         static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReq)),
         static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReply)));
-    
+
     TVLOG(2) << "deleted " << result.size() << " results";
 }
 // GEMREQ-end A_22117-01#query-call-deleteCommunicationsForChargeItem

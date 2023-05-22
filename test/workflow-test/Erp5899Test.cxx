@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -39,7 +41,7 @@ public:
                                    model::ResourceVersion::FhirProfileBundleVersion) override
     {
         return ResourceTemplates::medicationDispenseXml(
-            {.prescriptionId = model::PrescriptionId::fromString(prescriptionIdForMedicationDispense), .kvnr = kvnr, 
+            {.prescriptionId = model::PrescriptionId::fromString(prescriptionIdForMedicationDispense), .kvnr = kvnr,
              .telematikId = "3-SMC-B-Testkarte-883110000129068",
              .whenHandedOver = model::Timestamp::fromXsDateTime("2021-05-30T07:58:37+02:00")});
     }

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2023
- * (C) Copyright IBM Corp. 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/ErpRequirements.hxx"
@@ -169,6 +171,21 @@ TEST_F(GetTasksByPharmacyTest, outdatedData)
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche "
                                       "Gültigkeit des Anwesenheitsnachweis überschritten).");
 }
+
+TEST_F(GetTasksByPharmacyTest, dateTooNew)
+{
+    A_23451.test("PNW with timestamp too new minutes causes error message with code 403");
+    using namespace std::chrono_literals;
+    EnvironmentVariableGuard guardTimestamp(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS, "60");
+    auto pz = makePz(kvnr, model::Timestamp::now() + 2min, 'U', keyPackage);
+    auto pnw = createEncodedPnw(pz);
+    ServerResponse serverResponse;
+
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+                                      "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche "
+                                      "Gültigkeit des Anwesenheitsnachweis überschritten).");
+}
+
 
 // GEMREQ-start A_23456#test
 TEST_F(GetTasksByPharmacyTest, unknownKey)

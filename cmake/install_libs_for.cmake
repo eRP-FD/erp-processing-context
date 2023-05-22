@@ -1,6 +1,8 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021
-# (C) Copyright IBM Corp. 2021
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
 #
 
 macro(install_libs_for target install_component)
@@ -47,6 +49,3 @@ macro(install_libs_for target install_component)
     file(RELATIVE_PATH RELATIVE_LIB_DIR ${CMAKE_INSTALL_FULL_BINDIR} ${CMAKE_INSTALL_FULL_LIBDIR})
     set_property(TARGET "${target}" APPEND PROPERTY INSTALL_RPATH "\${ORIGIN}/${RELATIVE_LIB_DIR}")
 endmacro()
-
-
-

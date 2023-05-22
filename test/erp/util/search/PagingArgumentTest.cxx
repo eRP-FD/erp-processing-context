@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/common/HttpStatus.hxx"
@@ -127,5 +129,3 @@ TEST_F(PagingArgumentTest, count_cappedAt50)
     //                                                                   ^ one more than the maximum value.
     EXPECT_EQ(argument.getCount(), PagingArgument::getDefaultCount());
 }
-
-

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Patient.hxx"
@@ -79,4 +81,3 @@ TEST(PatientTest, getKvnr)
 
     ASSERT_EQ(patient.kvnr(), "X234567890");
 }
-

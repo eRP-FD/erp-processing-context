@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Extension.hxx"
@@ -89,22 +91,22 @@ std::optional<double> model::Extension::valueRatioDenominator() const
     return getOptionalDoubleValue(valuePointer);
 }
 
-std::optional<model::Timestamp> model::Extension::valuePeriodStart() const
+std::optional<model::Timestamp> model::Extension::valuePeriodStart(const std::string& fallbackTimezone) const
 {
     const auto strVal = getOptionalStringValue(valuePeriodStartPointer);
     if (strVal)
     {
-        return model::Timestamp::fromFhirDateTime(std::string(*strVal));
+        return model::Timestamp::fromFhirDateTime(std::string(*strVal), fallbackTimezone);
     }
     return std::nullopt;
 }
 
-std::optional<model::Timestamp> model::Extension::valuePeriodEnd() const
+std::optional<model::Timestamp> model::Extension::valuePeriodEnd(const std::string& fallbackTimezone) const
 {
     const auto strVal = getOptionalStringValue(valuePeriodEndPointer);
     if (strVal)
     {
-        return model::Timestamp::fromFhirDateTime(std::string(*strVal));
+        return model::Timestamp::fromFhirDateTime(std::string(*strVal), fallbackTimezone);
     }
     return std::nullopt;
 }

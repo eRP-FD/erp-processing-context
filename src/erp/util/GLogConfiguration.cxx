@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/GLogConfiguration.hxx"
@@ -57,26 +59,26 @@ int GLogConfiguration::getLogLevelInt(const std::string& logLevelString)
     }
 }
 
-void GLogConfiguration::erpLogPrefix(std::ostream& s, const google::LogMessageInfo& l, void*)
+void GLogConfiguration::erpLogPrefix(std::ostream& s, const google::LogMessageInfo& lmi, void*)
 {
     using std::setfill;
     using std::setw;
     std::ostream oss(s.rdbuf());
     // clang-format off
-    oss << setw(4) << 1900 + l.time.year() << '-'
-        << setw(2) << setfill('0') << 1 + l.time.month() << '-'
-        << setw(2) << l.time.day()
+    oss << setw(4) << 1900 + lmi.time.year() << '-'
+        << setw(2) << setfill('0') << 1 + lmi.time.month() << '-'
+        << setw(2) << lmi.time.day()
         << 'T'
-        << setw(2) << l.time.hour() << ':'
-        << setw(2) << l.time.min() << ':'
-        << setw(2) << l.time.sec() << "."
-        << setw(6) << l.time.usec()
-        << ((l.time.gmtoff() < 0) ? '-' : '+')
-        << setw(2) << l.time.gmtoff() / 3600 << ':'
-        << setw(2) << (l.time.gmtoff() % 3600) / 60
+        << setw(2) << lmi.time.hour() << ':'
+        << setw(2) << lmi.time.min() << ':'
+        << setw(2) << lmi.time.sec() << "."
+        << setw(6) << lmi.time.usec()
+        << ((lmi.time.gmtoff() < 0) ? '-' : '+')
+        << setw(2) << lmi.time.gmtoff() / 3600 << ':'
+        << setw(2) << (lmi.time.gmtoff() % 3600) / 60
         << ' '
-        << setw(7) << setfill(' ') << std::left << l.severity
+        << setw(7) << setfill(' ') << std::left << lmi.severity
         << ' '
-        << l.filename << ':' << l.line_number << "]";
+        << lmi.filename << ':' << lmi.line_number << "]";
     // clang-format on
 }

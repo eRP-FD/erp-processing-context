@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <StructureDefinition xmlns="http://hl7.org/fhir">
-  <id value="KBV-EX-ERP-DosageFlag"/>
-  <url value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag"/>
+  <id value="KBV-EX-ERP-EmergencyServicesFee"/>
+  <url value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee"/>
   <version value="1.1.0"/>
-  <name value="KBV_EX_ERP_DosageFlag"/>
+  <name value="KBV_EX_ERP_EmergencyServicesFee"/>
   <status value="active"/>
   <date value="2022-09-30"/>
   <publisher value="Kassenärztliche Bundesvereinigung"/>
@@ -17,7 +17,7 @@
   <abstract value="false"/>
   <context>
     <type value="element"/>
-    <expression value="MedicationRequest.dosageInstruction"/>
+    <expression value="MedicationRequest"/>
   </context>
   <type value="Extension"/>
   <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Extension"/>
@@ -31,8 +31,8 @@
         <valueCode value="4.0.0"/>
       </extension>
       <path value="Extension"/>
-      <short value="Kennzeichen Dosierung"/>
-      <definition value="Kennzeichnung, ob eine Dosierung in der Verordnung angegeben ist."/>
+      <short value="Kennzeichen Noctu"/>
+      <definition value="Ärztliche Kennzeichnung, ob diese Verordnung auch während der allgemeinen Ladenschlusszeiten beliefert werden soll, verbunden mit der Erhebung der Noctu-Gebühr zu Lasten der Krankenkasse gemäß Arzneimittelpreisverordnung."/>
       <min value="0"/>
       <max value="*"/>
       <base>
@@ -55,7 +55,7 @@
         <human value="Must have either extensions or value[x], not both"/>
         <expression value="extension.exists() != value.exists()"/>
         <xpath value="exists(f:extension)!=exists(f:*[starts-with(local-name(.), 'value')])"/>
-        <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Extension"/>
       </constraint>
       <mapping>
         <identity value="rim"/>
@@ -135,7 +135,7 @@
         <human value="Must have either extensions or value[x], not both"/>
         <expression value="extension.exists() != value.exists()"/>
         <xpath value="exists(f:extension)!=exists(f:*[starts-with(local-name(.), 'value')])"/>
-        <source value="http://hl7.org/fhir/StructureDefinition/Element"/>
+        <source value="http://hl7.org/fhir/StructureDefinition/Extension"/>
       </constraint>
       <mapping>
         <identity value="rim"/>
@@ -165,7 +165,7 @@
         </extension>
         <code value="http://hl7.org/fhirpath/System.String"/>
       </type>
-      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag"/>
+      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee"/>
       <mapping>
         <identity value="rim"/>
         <map value="N/A"/>
@@ -225,8 +225,8 @@
       </extension>
       <path value="Extension.value[x]"/>
       <sliceName value="valueBoolean"/>
-      <short value="Kennzeichen Dosierung"/>
-      <definition value="Abbildung, ob eine Dosieranweisung in der Verordung angegeben ist &#13;&#10;&#13;&#10;true - Dosierung gemäß Angaben in dieser Verordnung (MedicationRequest.dosageInstruction.text)&#13;&#10;false - Dosieranweisung/Medikationsplan mitgegeben"/>
+      <short value="Noctu"/>
+      <definition value="Ärztliche Kennzeichnung, ob diese Verordnung auch während der allgemeinen Ladenschlusszeitetruen beliefert werden soll, verbunden mit der Erhebung der Noctu-Gebühr zu Lasten der Krankenkasse gemäß Arzneimittelpreisverordnung.&#13;&#10;&#13;&#10;false - Noctu Gebühr ist vom Versicherten zu zahlen (Standardwert)&#13;&#10;true - Noctu Gebühr ist nicht vom Versicherten sondern vom Kostenträger zu zahlen"/>
       <min value="1"/>
       <max value="1"/>
       <base>
@@ -265,12 +265,12 @@
         <valueCode value="4.0.0"/>
       </extension>
       <path value="Extension"/>
-      <short value="Kennzeichen Dosierung"/>
-      <definition value="Kennzeichnung, ob eine Dosierung in der Verordnung angegeben ist."/>
+      <short value="Kennzeichen Noctu"/>
+      <definition value="Ärztliche Kennzeichnung, ob diese Verordnung auch während der allgemeinen Ladenschlusszeiten beliefert werden soll, verbunden mit der Erhebung der Noctu-Gebühr zu Lasten der Krankenkasse gemäß Arzneimittelpreisverordnung."/>
     </element>
     <element id="Extension.url">
       <path value="Extension.url"/>
-      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag"/>
+      <fixedUri value="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee"/>
     </element>
     <element id="Extension.value[x]">
       <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-standards-status">
@@ -301,8 +301,8 @@
       </extension>
       <path value="Extension.value[x]"/>
       <sliceName value="valueBoolean"/>
-      <short value="Kennzeichen Dosierung"/>
-      <definition value="Abbildung, ob eine Dosieranweisung in der Verordung angegeben ist &#13;&#10;&#13;&#10;true - Dosierung gemäß Angaben in dieser Verordnung (MedicationRequest.dosageInstruction.text)&#13;&#10;false - Dosieranweisung/Medikationsplan mitgegeben"/>
+      <short value="Noctu"/>
+      <definition value="Ärztliche Kennzeichnung, ob diese Verordnung auch während der allgemeinen Ladenschlusszeitetruen beliefert werden soll, verbunden mit der Erhebung der Noctu-Gebühr zu Lasten der Krankenkasse gemäß Arzneimittelpreisverordnung.&#13;&#10;&#13;&#10;false - Noctu Gebühr ist vom Versicherten zu zahlen (Standardwert)&#13;&#10;true - Noctu Gebühr ist nicht vom Versicherten sondern vom Kostenträger zu zahlen"/>
       <min value="1"/>
       <type>
         <code value="boolean"/>

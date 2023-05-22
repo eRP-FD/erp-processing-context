@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_HSM_HSMSESSION_HXX
@@ -17,15 +19,6 @@
 #include <memory>
 #include <optional>
 
-
-
-template<class B, typename T>
-B& set (std::optional<T>& l, T&& r, B& b)
-{
-    Expect( ! l.has_value(), "value already present");
-    l.emplace(std::forward(r));
-    return b;
-}
 
 class BlobCache;
 class HsmRawSession;

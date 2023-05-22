@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/server/ThreadPool.hxx"
@@ -99,4 +101,3 @@ size_t ThreadPool::getWorkerCount() const
     std::shared_lock lock{mWorkerListMutex};
     return mWorkerList.size();
 }
-

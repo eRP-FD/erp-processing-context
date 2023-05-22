@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_EXTENSION_H
@@ -36,8 +38,8 @@ public:
     [[nodiscard]] std::optional<double> valueRatioNumerator() const;
     [[nodiscard]] std::optional<double> valueRatioDenominator() const;
 
-    [[nodiscard]] std::optional<model::Timestamp> valuePeriodStart() const;
-    [[nodiscard]] std::optional<model::Timestamp> valuePeriodEnd() const;
+    [[nodiscard]] std::optional<model::Timestamp> valuePeriodStart(const std::string& fallbackTimezone) const;
+    [[nodiscard]] std::optional<model::Timestamp> valuePeriodEnd(const std::string& fallbackTimezone) const;
     [[nodiscard]] std::optional<model::Timestamp> valuePeriodStartGermanDate() const;
     [[nodiscard]] std::optional<model::Timestamp> valuePeriodEndGermanDate() const;
 

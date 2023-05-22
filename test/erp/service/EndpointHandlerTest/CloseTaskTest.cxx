@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/crypto/CadesBesSignature.hxx"
@@ -275,8 +277,8 @@ TEST_F(CloseTaskTest, CloseTaskPartialDateTimeErp6513)//NOLINT(readability-funct
     ResourceTemplates::MedicationDispenseOptions dispenseOptions{
         .prescriptionId = prescriptionId,
         .telematikId = telematikId,
-        .whenHandedOver = model::Timestamp::fromXsDate("1970-01-01"),
-        .whenPrepared = model::Timestamp::fromXsDate("1970-01-02")};
+        .whenHandedOver = model::Timestamp::fromXsDate("1970-01-01", model::Timestamp::UTCTimezone),
+        .whenPrepared = model::Timestamp::fromXsDate("1970-01-02", model::Timestamp::UTCTimezone)};
     auto medicationDispenseXml =
         ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {dispenseOptions, dispenseOptions}});
     medicationDispenseXml = String::replaceAll(medicationDispenseXml, "1970-01-02T00:00:00.000+00:00", "2020-12");
@@ -337,6 +339,50 @@ TEST_F(CloseTaskTest, MedicationDispenseWithoutVersion_2022)
                                            *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense).jsonDocument();
     dispenseModel.setValue(profilePtr, model::resource::structure_definition::deprecated::medicationDispense);
     ASSERT_NO_FATAL_FAILURE(test(Fhir::instance().converter().jsonToXmlString(dispenseModel)));
+}
+
+
+TEST_F(CloseTaskTest, MedicationDispenseAcceptInvalid2022)
+{
+    // for 2022 profiles we have validated the medications only very loosely
+    // make sure we still do that for the time before switching to the 2023 profiles
+    EnvironmentVariableGuard environmentVariableGuardOld{ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
+                                                         "disable"};
+    namespace rv = model::ResourceVersion;
+    if (! rv::supportedBundles().contains(rv::FhirProfileBundleVersion::v_2022_01_01))
+    {
+        GTEST_SKIP_("Only relevant for 2022 profiles");
+    }
+    ResourceTemplates::MedicationDispenseOptions dispenseOptions{
+        .prescriptionId = prescriptionId,
+        .telematikId = telematikId,
+        .medication = {.version = rv::KbvItaErp::v1_0_2,
+                       .templatePrefix = "test/EndpointHandlerTest/invalid_medication_wrong_code_template_"}};
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::success));
+}
+
+
+TEST_F(CloseTaskTest, MedicationDispenseBundleAcceptInvalid2022)
+{
+    // for 2022 profiles we have validated the medications only very loosely
+    // make sure we still do that for the time before switching to the 2023 profiles
+    EnvironmentVariableGuard environmentVariableGuardOld{ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
+                                                         "disable"};
+    namespace rv = model::ResourceVersion;
+    if (! rv::supportedBundles().contains(rv::FhirProfileBundleVersion::v_2022_01_01))
+    {
+        GTEST_SKIP_("Only relevant for 2022 profiles");
+    }
+    ResourceTemplates::MedicationDispenseOptions dispenseOptions{
+        .prescriptionId = prescriptionId,
+        .telematikId = telematikId,
+        .medication = {.version = rv::KbvItaErp::v1_0_2,
+                       .templatePrefix = "test/EndpointHandlerTest/invalid_medication_wrong_code_template_"}};
+
+    ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
+        .medicationDispenses = {dispenseOptions, dispenseOptions}
+    };
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
 }
 
 

@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/Timer.hxx"
@@ -245,5 +247,3 @@ TEST_F(TimerTest, cancel_repeatingJobAfterFirstTrigger)
     ASSERT_EQ(value.updateCount(), 1);
     ASSERT_EQ(value.get(), "test");
 }
-
-

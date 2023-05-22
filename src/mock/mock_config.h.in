@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #pragma once
@@ -8,4 +10,3 @@
 // @GENERATED_NOTE@
 
 static constexpr std::string_view MOCK_DATA_DIR = "@TEST_DATA_DIR@";
-

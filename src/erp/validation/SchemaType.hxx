@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_SCHEMATYPE_HXX
@@ -24,6 +26,7 @@ enum class SchemaType
     Gem_erxDevice,
     KBV_PR_ERP_Bundle,
     KBV_PR_ERP_Composition,
+    KBV_PR_ERP_Medication_BundleDummy,
     KBV_PR_ERP_Medication_Compounding,
     KBV_PR_ERP_Medication_FreeText,
     KBV_PR_ERP_Medication_Ingredient,

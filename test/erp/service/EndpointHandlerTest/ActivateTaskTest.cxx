@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/ErpRequirements.hxx"
@@ -134,7 +136,7 @@ protected:
 
 TEST_F(ActivateTaskTest, ActivateTask)
 {
-    auto signingTime = model::Timestamp::fromXsDate("2021-06-08");
+    auto signingTime = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
     const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
     const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.prescriptionId = taskId, .timestamp = signingTime});
     const auto taskJson = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
@@ -344,15 +346,15 @@ TEST_F(ActivateTaskTest, AuthoredOnSignatureDateEquality)
         HttpStatus expectedStatus;
     };
     const auto signingTime1 = model::Timestamp::fromXsDateTime("2022-06-25T22:33:00+00:00");
-    const auto authoredTime1 = model::Timestamp::fromXsDate("2022-06-26");
+    const auto authoredTime1 = model::Timestamp::fromXsDate("2022-06-26", model::Timestamp::UTCTimezone);
     const auto signingTime2 = model::Timestamp::fromXsDateTime("2022-06-25T00:33:00+00:00");
-    const auto authoredTime2 = model::Timestamp::fromXsDate("2022-06-25");
+    const auto authoredTime2 = model::Timestamp::fromXsDate("2022-06-25", model::Timestamp::UTCTimezone);
     const auto signingTime3 = model::Timestamp::fromXsDateTime("2022-06-26T12:33:00+00:00");
-    const auto authoredTime3 = model::Timestamp::fromXsDate("2022-06-26");
+    const auto authoredTime3 = model::Timestamp::fromXsDate("2022-06-26", model::Timestamp::UTCTimezone);
     const auto signingTime4 = model::Timestamp::fromXsDateTime("2022-01-25T23:33:00+00:00");
-    const auto authoredTime4 = model::Timestamp::fromXsDate("2022-01-26");
+    const auto authoredTime4 = model::Timestamp::fromXsDate("2022-01-26", model::Timestamp::UTCTimezone);
     const auto signingTime5 = model::Timestamp::fromXsDateTime("2022-01-25T22:33:00+00:00");
-    const auto authoredTime5 = model::Timestamp::fromXsDate("2022-01-25");
+    const auto authoredTime5 = model::Timestamp::fromXsDate("2022-01-25", model::Timestamp::UTCTimezone);
     std::vector<TestData> testSet {
         {signingTime1, authoredTime1, HttpStatus::OK},
         {signingTime2, authoredTime1, HttpStatus::BadRequest},
@@ -415,7 +417,7 @@ TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
 {
     EnvironmentVariableGuard onUnknownExtensionGuard{
             "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "report"};
-    const auto timestamp = model::Timestamp::fromXsDate("2022-07-25");
+    const auto timestamp = model::Timestamp::fromXsDate("2022-07-25", model::Timestamp::UTCTimezone);
     const auto* kvnr = "Y229270213";
     const auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 429);
@@ -794,11 +796,12 @@ TEST_P(ActivateTaskTestPkvP, RejectOldFhirForWf20x)
                                      .prescriptionId = prescriptionId,
                                      .kvnr = kvnr});
     std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
-                                              {.expectedStatus = HttpStatus::BadRequest,
-                                               .signingTime = model::Timestamp::fromXsDate("2021-06-08"),
-                                               .insertTask = true,
-                                               .outExceptionPtr = exception}));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::BadRequest,
+                           .signingTime = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone),
+                           .insertTask = true,
+                           .outExceptionPtr = exception}));
     try
     {
         ASSERT_TRUE(exception);

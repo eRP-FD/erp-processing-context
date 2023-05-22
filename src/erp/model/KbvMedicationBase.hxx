@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONBASE_HXX
@@ -8,6 +10,8 @@
 
 #include "erp/model/Resource.hxx"
 #include "erp/model/extensions/KBVMedicationCategory.hxx"
+
+#include <optional>
 
 class ErpElement;
 class XmlValidator;
@@ -50,7 +54,7 @@ public:
     }
 
     static void validateMedication(const ErpElement& medicationElement, const XmlValidator& xmlValidator,
-                                   const InCodeValidator& inCodeValidator);
+                                   const InCodeValidator& inCodeValidator, bool allowDummyValidation);
 
 private:
     template<typename MedicationModelT>

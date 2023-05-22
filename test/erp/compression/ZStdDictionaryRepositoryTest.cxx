@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/compression/ZStdDictionaryRepository.hxx"
@@ -106,4 +108,3 @@ TEST(ZStdDictionaryRepositoryTest, undefined)
     }
     EXPECT_ANY_THROW(repo.getDictionaryForUse(Compression::DictionaryUse::Undefined));
 }
-

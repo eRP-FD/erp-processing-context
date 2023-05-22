@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 #ifndef FHIR_TOOLS_SRC_FHIR_PATH_MODEL_ERP_ERPELEMENT_HXX
 #define FHIR_TOOLS_SRC_FHIR_PATH_MODEL_ERP_ERPELEMENT_HXX

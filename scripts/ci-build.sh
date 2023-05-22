@@ -1,7 +1,12 @@
 #!/bin/bash -ex
+
+# (C) Copyright IBM Deutschland GmbH 2021, 2023
+# (C) Copyright IBM Corp. 2021, 2023
+#
+# non-exclusively licensed to gematik GmbH
+
 # Do not stop on address sanitizer errors.
 export halt_on_error=0
-
 
 die()
 {

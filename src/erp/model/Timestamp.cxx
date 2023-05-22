@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2022
- * (C) Copyright IBM Corp. 2022
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Timestamp.hxx"
@@ -29,8 +31,6 @@ namespace
 constexpr const char* xsDateTimeZ = "%Y-%m-%dT%H:%M:%SZ";
 constexpr const char* xsDateTimeTz = "%Y-%m-%dT%H:%M:%S%Ez";
 constexpr const char* xsDate = "%Y-%m-%d";
-constexpr const char* xsGYearMonth = "%Y-%m-%d";
-constexpr const char* xsGYear = "%Y-%m-%d";
 
 constexpr const char* xsDateTimeWithoutSecondsZ = "%Y-%m-%dT%H:%MZ";
 constexpr const char* xsDateTimeWithoutSecondsTz = "%Y-%m-%dT%H:%M%Ez";
@@ -119,7 +119,8 @@ void validate(const ::std::string& dateAndTime, bool timeZoneIsOptional, bool mi
     }
 }
 
-Timestamp fromXsDateTime(const std::string& dateAndTime, bool timeZoneIsOptional, bool missingSeconds)
+Timestamp fromXsDateTime(const std::string& dateAndTime, bool timeZoneIsOptional, bool missingSeconds,
+                         const std::string& fallbackTimezone)
 {
     using namespace std::string_literals;
 
@@ -134,7 +135,15 @@ Timestamp fromXsDateTime(const std::string& dateAndTime, bool timeZoneIsOptional
     std::istringstream stream(hasTimeZone ? dateAndTime : dateAndTime + 'Z');// assume UTC if no time zone provided;
     stream.imbue(std::locale::classic());
 
-    if (timeZoneIsZulu)
+    if (! hasTimeZone)
+    {
+        date::local_time<Timestamp::duration_t> localTime;
+        date::from_stream(stream, missingSeconds ? xsDateTimeWithoutSecondsZ : xsDateTimeZ, localTime);
+        ModelExpect(! stream.fail(), "date time has invalid format");
+        auto zonedTime = date::make_zoned(fallbackTimezone, localTime);
+        return Timestamp(zonedTime.get_sys_time());
+    }
+    else if (timeZoneIsZulu)
     {
         date::from_stream(stream, missingSeconds ? xsDateTimeWithoutSecondsZ : xsDateTimeZ, result);
         ModelExpect(! stream.fail(), "date time has invalid format");
@@ -149,31 +158,32 @@ Timestamp fromXsDateTime(const std::string& dateAndTime, bool timeZoneIsOptional
 }
 
 
-Timestamp fromFhirDateTime(const std::string& dateAndTime, bool isSearch)
+Timestamp fromFhirDateTime(const std::string& dateAndTime, bool isSearch, const std::string& fallbackTimezone)
 {
     switch (Timestamp::detectType(dateAndTime))
     {
         case Timestamp::Type::Year:
-            return Timestamp::fromXsGYear(dateAndTime);
+            return Timestamp::fromXsGYear(dateAndTime, fallbackTimezone);
 
         case Timestamp::Type::YearMonth:
-            return Timestamp::fromXsGYearMonth(dateAndTime);
+            return Timestamp::fromXsGYearMonth(dateAndTime, fallbackTimezone);
 
         case Timestamp::Type::Date:
-            return Timestamp::fromXsDate(dateAndTime);
+            return Timestamp::fromXsDate(dateAndTime, fallbackTimezone);
 
         case Timestamp::Type::DateTime:
-            return fromXsDateTime(dateAndTime, isSearch /*if true => optional time zone*/, false /*=>seconds exist*/);
+            return fromXsDateTime(dateAndTime, isSearch /*if true => optional time zone*/, false /*=>seconds exist*/,
+                                  fallbackTimezone);
 
         case Timestamp::Type::DateTimeWithFractionalSeconds:
             if (isSearch)
                 ErpFail(HttpStatus::BadRequest, "fractional seconds not supported by FHIR date search");
-            return fromXsDateTime(dateAndTime, false, false);// time zone and seconds must exist;
+            return fromXsDateTime(dateAndTime, false, false, fallbackTimezone);// time zone and seconds must exist;
 
         case Timestamp::Type::DateTimeWithoutSeconds:
             if (! isSearch)
                 ErpFail(HttpStatus::BadRequest, "missing seconds not supported by regular FHIR date");
-            return fromXsDateTime(dateAndTime, isSearch, true);// seconds missing
+            return fromXsDateTime(dateAndTime, isSearch, true, fallbackTimezone);// seconds missing
     }
     Fail2("unsupported Timestamp::Type enum value", std::logic_error);
 }
@@ -188,7 +198,8 @@ Timestamp Timestamp::now()
 
 Timestamp Timestamp::fromXsDateTime(const std::string& dateAndTime)
 {
-    return model::fromXsDateTime(dateAndTime, false /*time zone NOT optional*/, false /*seconds must exist*/);
+    return model::fromXsDateTime(dateAndTime, false /*time zone NOT optional*/, false /*seconds must exist*/,
+                                 UTCTimezone);
 }
 
 namespace {
@@ -204,22 +215,7 @@ void checkDate(const std::string& date)
 }
 
 
-Timestamp Timestamp::fromXsDate(const std::string& date)
-{
-    checkDate(date);
-
-    std::istringstream stream(date);
-    stream.imbue(std::locale::classic());
-
-    Timestamp::timepoint_t result;
-    date::from_stream(stream, xsDate, result);
-    ModelExpect(! stream.fail(), "invalid date format");
-    ModelExpect(stream.tellg() == 10, "did not read the whole date");
-
-    return Timestamp(result);
-}
-
-Timestamp Timestamp::fromGermanDate(const std::string& date)
+Timestamp Timestamp::fromXsDate(const std::string& date, const std::string& timezone)
 {
     checkDate(date);
 
@@ -231,12 +227,17 @@ Timestamp Timestamp::fromGermanDate(const std::string& date)
     ModelExpect(!stream.fail(), "invalid date format");
     ModelExpect(stream.tellg() == 10, "did not read the whole date");
 
-    auto inGermanTime = date::make_zoned(GermanTimezone, localDays);
+    auto localTime = date::make_zoned(timezone, localDays);
 
-    return Timestamp(inGermanTime.get_sys_time());
+    return Timestamp(localTime.get_sys_time());
 }
 
-Timestamp Timestamp::fromXsGYearMonth(const std::string& date)
+Timestamp Timestamp::fromGermanDate(const std::string& date)
+{
+    return Timestamp::fromXsDate(date, GermanTimezone);
+}
+
+Timestamp Timestamp::fromXsGYearMonth(const std::string& date, const std::string& timezone)
 {
     // Check the first 7 characters (YYYY-MM) to sort out cases that are allowed by xs:date but not by FHIR.
     // This concerns width of fields and the leading '-'.
@@ -249,15 +250,8 @@ Timestamp Timestamp::fromXsGYearMonth(const std::string& date)
     // and parse that.
     std::string fullDate = date;
     fullDate.insert(7, "-01");
-    std::istringstream stream(fullDate);
-    stream.imbue(std::locale::classic());
 
-    Timestamp::timepoint_t result;
-    date::from_stream(stream, xsGYearMonth, result);
-    ModelExpect(! stream.fail(), "invalid date format");
-    ModelExpect(stream.tellg() == 10, "did not read the whole date");
-
-    return Timestamp(result);
+    return Timestamp::fromXsDate(fullDate, timezone);
 }
 
 Timestamp Timestamp::fromDtmDateTime(const std::string& dateAndTime)
@@ -274,7 +268,7 @@ Timestamp Timestamp::fromDtmDateTime(const std::string& dateAndTime)
 }
 
 
-Timestamp Timestamp::fromXsGYear(const std::string& date)
+Timestamp Timestamp::fromXsGYear(const std::string& date, const std::string& timezone)
 {
     // Check the first 4 characters (YYYY) to sort out cases that are allowed by xs:date but not by FHIR.
     // This concerns width of fields and the leading '-'.
@@ -286,20 +280,12 @@ Timestamp Timestamp::fromXsGYear(const std::string& date)
     // and parse that.
     std::string fullDate = date;
     fullDate.insert(4, "-01-01");
-    std::istringstream stream(fullDate);
-    stream.imbue(std::locale::classic());
-
-    Timestamp::timepoint_t result;
-    date::from_stream(stream, xsGYear, result);
-    ModelExpect(! stream.fail(), "invalid date format");
-    ModelExpect(stream.tellg() == 10, "did not read the whole date");
-
-    return Timestamp(result);
+    return Timestamp::fromXsDate(fullDate, timezone);
 }
 
 Timestamp Timestamp::fromXsTime(const std::string& time)
 {
-    return model::fromXsDateTime("1970-01-01T" + time, true, false);
+    return model::fromXsDateTime("1970-01-01T" + time, true, false, UTCTimezone);
 }
 
 Timestamp Timestamp::fromDatabaseSUuid(const std::string& suuid)
@@ -348,15 +334,15 @@ Timestamp::Type Timestamp::detectType(const std::string& dateAndTime)
 }
 
 
-Timestamp Timestamp::fromFhirSearchDateTime(const std::string& dateAndTime)
+Timestamp Timestamp::fromFhirSearchDateTime(const std::string& dateAndTime, const std::string& fallbackTimezone)
 {
-    return model::fromFhirDateTime(dateAndTime, true /*isSearch*/);
+    return model::fromFhirDateTime(dateAndTime, true /*isSearch*/, fallbackTimezone);
 }
 
 
-Timestamp Timestamp::fromFhirDateTime(const std::string& dateAndTime)
+Timestamp Timestamp::fromFhirDateTime(const std::string& dateAndTime, const std::string& fallbackTimezone)
 {
-    return model::fromFhirDateTime(dateAndTime, false /*isSearch*/);
+    return model::fromFhirDateTime(dateAndTime, false /*isSearch*/, fallbackTimezone);
 }
 
 Timestamp::Timestamp(Timestamp::timepoint_t dateAndTime)
@@ -383,28 +369,28 @@ std::string Timestamp::toXsDateTime() const
 }
 
 
-std::string Timestamp::toXsDateTimeWithoutFractionalSeconds() const
+std::string Timestamp::toXsDateTimeWithoutFractionalSeconds(const std::string& timezone) const
 {
     std::ostringstream s;
-    s << date::format("%FT%T%Ez", std::chrono::time_point_cast<std::chrono::seconds>(mDateAndTime));
+    s << date::format("%FT%T%Ez",
+                      date::make_zoned(timezone, std::chrono::time_point_cast<std::chrono::seconds>(mDateAndTime)));
     return s.str();
 }
 
 
-std::string Timestamp::toXsDate() const
+std::string Timestamp::toXsDate(const std::string& timezone) const
 {
     std::ostringstream s;
-    s << date::format("%Y-%m-%d", mDateAndTime);
+    s << date::format("%Y-%m-%d", date::make_zoned(timezone, mDateAndTime));
     return s.str();
 }
 
 
 std::string Timestamp::toGermanDate() const
 {
-    std::ostringstream s;
-    s << date::format("%Y-%m-%d", date::make_zoned(model::Timestamp::GermanTimezone, mDateAndTime));
-    return s.str();
+    return toXsDate(model::Timestamp::GermanTimezone);
 }
+
 
 std::string Timestamp::toGermanDateFormat() const
 {
@@ -414,18 +400,18 @@ std::string Timestamp::toGermanDateFormat() const
 }
 
 
-std::string Timestamp::toXsGYearMonth() const
+std::string Timestamp::toXsGYearMonth(const std::string& timezone) const
 {
     std::ostringstream s;
-    s << date::format("%Y-%m", mDateAndTime);
+    s << date::format("%Y-%m", date::make_zoned(timezone, mDateAndTime));
     return s.str();
 }
 
 
-std::string Timestamp::toXsGYear() const
+std::string Timestamp::toXsGYear(const std::string& timezone) const
 {
     std::ostringstream s;
-    s << date::format("%Y", mDateAndTime);
+    s << date::format("%Y", date::make_zoned(timezone, mDateAndTime));
     return s.str();
 }
 
@@ -478,6 +464,11 @@ Timestamp Timestamp::operator+(const duration_t& duration) const
 Timestamp Timestamp::operator-(const duration_t& duration) const
 {
     return Timestamp(mDateAndTime - duration);
+}
+
+Timestamp::duration_t Timestamp::operator-(const Timestamp& timestamp) const
+{
+    return mDateAndTime - timestamp.mDateAndTime;
 }
 
 }// end of namespace model

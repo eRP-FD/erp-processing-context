@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/util/search/SearchArgument.hxx"
@@ -214,11 +216,11 @@ std::string SearchArgument::dateValueAsString(size_t idx) const
             default:
                 return timestamp->begin().toXsDateTimeWithoutFractionalSeconds();
             case model::Timestamp::Type::Date:
-                return timestamp->begin().toXsDate();
+                return timestamp->begin().toGermanDate();
             case model::Timestamp::Type::YearMonth:
-                return timestamp->begin().toXsGYearMonth();
+                return timestamp->begin().toXsGYearMonth(model::Timestamp::GermanTimezone);
             case model::Timestamp::Type::Year:
-                return timestamp->begin().toXsGYear();
+                return timestamp->begin().toXsGYear(model::Timestamp::GermanTimezone);
         }
     }
     else

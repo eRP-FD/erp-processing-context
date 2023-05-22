@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/database/DatabaseModel.hxx"
@@ -191,42 +193,37 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     // GEMREQ-end A_22135-01#receipt
 }
 
-::model::ChargeInformation ChargeItem::toChargeInformation(const ::SafeString& key, const ::DataBaseCodec& codec) const
+::model::ChargeInformation ChargeItem::toChargeInformation(const std::optional<DatabaseCodecWithKey>& codecAndKey) const
 {
+    model::ChargeInformation ref = model::ChargeInformation{.chargeItem = model::ChargeItem{},
+                                                            .prescription = std::nullopt,
+                                                            .unsignedPrescription = std::nullopt,
+                                                            .dispenseItem = std::nullopt,
+                                                            .unsignedDispenseItem = std::nullopt,
+                                                            .receipt = std::nullopt};
     try
     {
-        ::model::ChargeInformation ref;
-
-        if (prescriptionJson.has_value() && !billingDataJson.empty())
+        if (codecAndKey.has_value())
         {
+            const auto& codec = codecAndKey->codec;
+            const auto& key = codecAndKey->key;
             auto prescriptionBundle =
                 ::model::Bundle::fromJsonNoValidation(codec.decode(prescriptionJson.value(), key));
             auto billingBundle =
                 ::model::AbgabedatenPkvBundle::fromJsonNoValidation(codec.decode(billingDataJson, key));
             auto receiptBundle = ::model::Bundle::fromJsonNoValidation(codec.decode(receiptJson.value(), key));
+            ref.prescription = model::Binary{prescriptionBundle.getId().toString(), codec.decode(prescription.value(), key)};
+            ref.unsignedPrescription = std::move(prescriptionBundle);
+            ref.dispenseItem = model::Binary{billingBundle.getId().toString(), codec.decode(billingData, key)};
+            ref.unsignedDispenseItem = std::move(billingBundle);
+            ref.receipt = std::move(receiptBundle);
 
-            auto chargeInformation = ::model::ChargeInformation{
-                ::model::ChargeItem{},
-                ::model::Binary{prescriptionBundle.getId().toString(), codec.decode(prescription.value(), key)},
-                ::std::move(prescriptionBundle),
-                ::model::Binary{billingBundle.getId().toString(), codec.decode(billingData, key)},
-                ::std::move(billingBundle),
-                ::std::move(receiptBundle)};
-
-            chargeInformation.chargeItem.setSubjectKvnr(codec.decode(kvnr, key));
-            chargeInformation.chargeItem.setEntererTelematikId(codec.decode(enterer, key));
-            if (!accessCode.empty())
+            ref.chargeItem.setSubjectKvnr(codec.decode(kvnr, key));
+            ref.chargeItem.setEntererTelematikId(codec.decode(enterer, key));
+            if (! accessCode.empty())
             {
-                chargeInformation.chargeItem.setAccessCode(codec.decode(accessCode, key));
+                ref.chargeItem.setAccessCode(codec.decode(accessCode, key));
             }
-            ref = std::move(chargeInformation);
-        }
-        else
-        {
-            // Create an empty charge info structure due to not absent charge item properties. This is the case
-            // when asking for all charge items.
-            auto chargeInformation = ::model::ChargeInformation{ ::model::ChargeItem{}, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt };
-            ref = std::move(chargeInformation);
         }
 
         ref.chargeItem.setId(prescriptionId);

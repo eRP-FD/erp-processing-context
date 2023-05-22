@@ -1,6 +1,8 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021
- * (C) Copyright IBM Corp. 2021
+ * (C) Copyright IBM Deutschland GmbH 2021, 2023
+ * (C) Copyright IBM Corp. 2021, 2023
+ *
+ * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Bundle.hxx"
@@ -136,4 +138,3 @@ TEST_F(BundleTest, searchSetTotal0)
     ASSERT_FALSE(totalPointer.Get(document)->IsNull());
     EXPECT_EQ(totalPointer.Get(document)->GetUint64(), 0);
 }
-
