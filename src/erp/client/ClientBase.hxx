@@ -48,6 +48,11 @@ protected:
         const SafeString& clientPrivateKey,
         const std::optional<std::string>& forcedCiphers);
 
+    ClientBase(const boost::asio::ip::tcp::endpoint& ep, const std::string& host,
+               const uint16_t connectionTimeoutSeconds, bool enforceServerAuthentication,
+               const SafeString& caCertificates, const SafeString& clientCertificate,
+               const SafeString& clientPrivateKey, const std::optional<std::string>& forcedCiphers);
+
 private:
     std::unique_ptr<ClientImpl<StreamClass>> mImplementation;
 };

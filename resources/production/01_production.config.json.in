@@ -45,7 +45,8 @@
         "tcpUserTimeoutMs": "1000",
         "keepalivesIdleSec": "75",
         "keepalivesIntervalSec": "75",
-        "keepalivesCount": "9"
+        "keepalivesCount": "9",
+        "targetSessionAttrs": "read-write"
       },
       "json-meta-schema": "@ERP_SCHEMA_DIR@shared/json/draft-4-meta-schema.json",
       "json-schema": [
@@ -60,7 +61,7 @@
         "@ERP_SCHEMA_DIR@vsdm/Pruefungsnachweis.xsd"
       ],
       "fhir-profile-old": {
-        "valid-until" : "2023-07-01T00:00:00+01:00",
+        "valid-until" : "2024-01-01T00:00:00+01:00",
         "erp-fhir-version": "2022.01.01",
         "fhir-validation": {
           "mode": "disable",

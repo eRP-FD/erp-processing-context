@@ -14,6 +14,7 @@
 
 #include <chrono>
 #include <map>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -67,7 +68,7 @@ public:
 
     using ServiceInformationMap = std::unordered_map<CertificateId, ServiceInformation>;
 
-    const std::string& getId() const;
+    const std::optional<std::string>& getId() const;
 
     const std::string& getSequenceNumber() const;
 
@@ -102,7 +103,7 @@ private:
     void performExtractions(const std::string& xml, const XmlValidator& xmlValidator);
 
     const TslMode mTslMode;
-    std::string mId;
+    std::optional<std::string> mId;
     std::string mSequenceNumber;
     std::chrono::system_clock::time_point mNextUpdate;
     X509Certificate mSignerCertificate;

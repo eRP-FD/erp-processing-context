@@ -134,7 +134,7 @@ ErpArray<Aes256Length> HsmSession::unwrapPseudonameKey()
 {
     return guardedRun<ErpArray<Aes256Length>>(*this, [&]{
         UnwrapHashKeyInput input;
-        input.teeToken = getTeeToken();
+        input.teeToken = getCachedTeeToken();
         input.key = mBlobCache.getBlob(BlobType::PseudonameKey).blob;
         markHsmCallTime();
         return mClient.unwrapPseudonameKey(
@@ -147,7 +147,7 @@ ErpBlob HsmSession::wrapRawPayload(const ErpVector& rawPayload, uint32_t blobGen
 {
     return guardedRun<ErpBlob>(*this, [&] {
         WrapRawPayloadInput input;
-        input.teeToken = getTeeToken();
+        input.teeToken = getCachedTeeToken();
         input.generation = blobGeneration;
         input.rawPayload = rawPayload;
         markHsmCallTime();
@@ -155,11 +155,31 @@ ErpBlob HsmSession::wrapRawPayload(const ErpVector& rawPayload, uint32_t blobGen
     });
 }
 
+ErpBlob HsmSession::getTeeToken(const ErpBlob& nonce, const ErpVector& quoteData, const ErpVector& quoteSignature,
+                                const std::optional<ErpBlob>& knownQuote)
+{
+    auto ak = mBlobCache.getBlob(BlobType::AttestationPublicKey);
+    // we want to do lazy evaluation, therefore we dont use value_or()
+    auto quote = knownQuote.has_value() ? *knownQuote : mBlobCache.getBlob(BlobType::Quote).blob;
+    auto teeToken = guardedRun<ErpBlob>(*this, [&] {
+        TeeTokenRequestInput input;
+        input.akName = ak.getAkName();
+        input.knownAkBlob = ak.blob;
+        input.nonceBlob = nonce;
+        input.knownQuoteBlob = quote;
+        input.quoteData = quoteData;
+        input.quoteSignature = quoteSignature;
+        markHsmCallTime();
+        return mClient.getTeeToken(*mRawSession, std::move(input));
+    });
+    return teeToken;
+}
+
 ErpVector HsmSession::unwrapRawPayload(const ErpBlob& wrappedRawPayload)
 {
     return guardedRun<ErpVector>(*this, [&] {
         UnwrapRawPayloadInput input;
-        input.teeToken = getTeeToken();
+        input.teeToken = getCachedTeeToken();
         input.wrappedRawPayload = wrappedRawPayload;
         markHsmCallTime();
         return mClient.unwrapRawPayload(*mRawSession, std::move(input));
@@ -273,7 +293,7 @@ ErpArray<Aes128Length> HsmSession::vauEcies128 (const ErpVector& clientPublicKey
     const auto get = [this, clientPublicKey](const ::ErpBlob &eciesKey) {
         return guardedRun<::ErpArray<::Aes128Length>>(*this, [&]{
             ::DoVAUECIESInput input;
-            input.teeToken = getTeeToken();
+            input.teeToken = getCachedTeeToken();
             input.eciesKeyPair = eciesKey;
             input.clientPublicKey = clientPublicKey;
 
@@ -323,7 +343,7 @@ std::tuple<shared_EVP_PKEY, ErpBlob> HsmSession::getVauSigPrivateKey (const shar
     }
     return guardedRun<std::tuple<shared_EVP_PKEY, ErpBlob>>(*this, [&]{
         GetVauSigPrivateKeyInput input;
-        input.teeToken = getTeeToken();
+        input.teeToken = getCachedTeeToken();
         input.vauSigPrivateKey = blob;
 
         markHsmCallTime();
@@ -362,7 +382,7 @@ ErpArray<Aes256Length> HsmSession::getKvnrHmacKey (void)
 {
     return guardedRun<ErpArray<Aes256Length>>(*this, [&]{
         UnwrapHashKeyInput input;
-        input.teeToken = getTeeToken();
+        input.teeToken = getCachedTeeToken();
         input.key = mBlobCache.getBlob(BlobType::KvnrHashKey).blob;
 
         markHsmCallTime();
@@ -377,7 +397,7 @@ ErpArray<Aes256Length> HsmSession::getTelematikIdHmacKey (void)
 {
     return guardedRun<ErpArray<Aes256Length>>(*this, [&]{
         UnwrapHashKeyInput input;
-        input.teeToken = getTeeToken();
+        input.teeToken = getCachedTeeToken();
         input.key = mBlobCache.getBlob(BlobType::TelematikIdHashKey).blob;
 
         markHsmCallTime();
@@ -400,7 +420,7 @@ DeriveKeyInput HsmSession::makeDeriveKeyInput(
     Expect(derivationData.size() <= MaxBuffer, "invalid derivation data");
 
     DeriveKeyInput input;
-    input.teeToken = getTeeToken();
+    input.teeToken = getCachedTeeToken();
     input.blobType = blobType;
     auto ak = mBlobCache.getBlob(BlobType::AttestationPublicKey);
     Expect(ak.name.size() == TpmObjectNameLength, "ak name has the wrong size");
@@ -445,7 +465,7 @@ DeriveKeyInput HsmSession::makeDeriveKeyInput(
 }
 
 
-const ErpBlob& HsmSession::getTeeToken (void) const
+const ErpBlob& HsmSession::getCachedTeeToken (void) const
 {
     if (mTeeToken.data.size() == 0)
     {

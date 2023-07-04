@@ -57,7 +57,8 @@ protected:
         const std::string& body,
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false) const override
+        const bool trustCn = false,
+        const boost::asio::ip::tcp::endpoint* /*ep*/ = nullptr) const override
     {
         increaseCounter(url);
         return UrlRequestSenderMock::doSend(url, method, body, contentType, forcedCiphers, trustCn);
@@ -70,7 +71,8 @@ protected:
         const std::string& body,
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false) const override
+        const bool trustCn = false,
+        const boost::asio::ip::tcp::endpoint* /*ep*/ = nullptr) const override
     {
         increaseCounter(url.toString());
         return UrlRequestSenderMock::doSend(url, method, body, contentType, forcedCiphers, trustCn);

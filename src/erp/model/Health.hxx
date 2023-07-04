@@ -40,8 +40,12 @@ public:
     void setHsmStatus(const std::string_view& status, const std::string_view& device,
                       std::optional<std::string_view> message = std::nullopt);
     void setRedisStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
-    void setTslStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
-    void setBnaStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setTslStatus(std::string_view status, std::string_view expiry, std::string_view sequenceNumber,
+                      std::string_view id, std::string_view hashValue,
+                      std::optional<std::string_view> message = std::nullopt);
+    void setBnaStatus(std::string_view status, std::string_view expiry, std::string_view sequenceNumber,
+                      std::string_view id, std::string_view hashValue,
+                      std::optional<std::string_view> message = std::nullopt);
     void setCFdSigErpStatus(const std::string_view& status, const std::string_view& timestamp,
                             const std::string_view& policy, const std::string_view& expiry,
                             std::optional<std::string_view> message = std::nullopt);

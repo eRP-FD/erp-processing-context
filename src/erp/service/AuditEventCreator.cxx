@@ -40,11 +40,9 @@ std::tuple<std::string, std::string, std::string> evalAgentData(
         // if we dont know if it is PKV or GKV, use GKV, cf. ERP-11991
         whoIdentifierSystem = auditData.insurantKvnr().namingSystem(isDeprecatedVersion);
         whoIdentifierValue = auditData.insurantKvnr().id();
-        const auto givenNameClaim = accessToken.stringForClaim(JWT::givenNameClaim);
-        Expect3(givenNameClaim.has_value(), "Missing givenNameClaim", std::logic_error);
-        const auto familyNameClaim = accessToken.stringForClaim(JWT::familyNameClaim);
-        Expect3(familyNameClaim.has_value(), "Missing familyNameClaim", std::logic_error);
-        agentName = givenNameClaim.value() + (givenNameClaim.value().empty() ? "" : " ") + familyNameClaim.value();
+        auto displayName = accessToken.displayName();
+        Expect3(displayName.has_value(), "Could not determine display name", std::logic_error);
+        agentName = std::move(displayName.value());
     }
     else
     {

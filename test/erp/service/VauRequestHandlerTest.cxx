@@ -158,7 +158,7 @@ TEST_F(VauRequestHandlerTest, MissingRequiredClaim)//NOLINT(readability-function
     claim[std::string{JWT::expClaim}].SetInt64(exp.count());
     claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
 
-    claim.RemoveMember(std::string{JWT::familyNameClaim});
+    claim.RemoveMember(std::string{JWT::displayNameClaim});
 
     JwtBuilder builder{privateKey};
     JWT jwtTst;  // Changed from jwt to jwtTest to avoid compiler warning: Declaration of "jwt" hides class members
@@ -189,7 +189,7 @@ TEST_F(VauRequestHandlerTest, ClaimTypeCheckFailure)//NOLINT(readability-functio
     claim[std::string{JWT::expClaim}].SetInt64(exp.count());
     claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
     A_20370.test("Unit test for valid claims data types.");
-    claim[std::string{JWT::familyNameClaim}] = 0xAA55;
+    claim[std::string{JWT::displayNameClaim}] = 0xAA55;
 
     JwtBuilder builder{privateKey};
     JWT jwt;

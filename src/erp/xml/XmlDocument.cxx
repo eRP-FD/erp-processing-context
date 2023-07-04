@@ -221,15 +221,22 @@ xmlNodeSetPtr XmlDocument::getNodes (
 }
 
 
-std::string XmlDocument::getAttributeValue(
-    const std::string& xPathExpression) const
+std::string XmlDocument::getAttributeValue(const std::string& xPathExpression) const
+{
+    auto value = getOptionalAttributeValue(xPathExpression);
+    Expect(value.has_value(), "empty result");
+    return *value;
+}
+
+
+std::optional<std::string> XmlDocument::getOptionalAttributeValue(const std::string& xPathExpression) const
 {
     auto xpathObject = getXpathObject(xPathExpression);
 
     xmlNodePtr node = xpathObject->nodesetval->nodeTab[0];
-    if (node==nullptr || node->children==nullptr || node->children->content==nullptr)
+    if (node == nullptr || node->children == nullptr || node->children->content == nullptr)
     {
-        Fail2("empty result", std::runtime_error);
+        return std::nullopt;
     }
 
     return std::string(reinterpret_cast<const char*>(node->children->content));

@@ -9,6 +9,8 @@
 
 #include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/HsmIdentity.hxx"
+#include "erp/hsm/HsmSession.hxx"
+#include "erp/hsm/production/HsmProductionClient.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/TLog.hxx"
@@ -54,8 +56,11 @@ TEST_F(MockEnrolmentManagerTest, successfulSetupAndTeeToken)
     // Use TPM and HSM (simulators) to setup the necessary blobs for TEE token negotiation.
     TpmProxyDirect tpm (*blobCache);
     MockEnrolmentManager::createAndStoreAkEkAndQuoteBlob(tpm, *blobCache);
-
-    const auto teeToken = EnrolmentHelper(HsmIdentity::getWorkIdentity()).createTeeToken(*blobCache);
+    HsmProductionClient hsmClient;
+    auto hsmSession =
+        HsmSession(hsmClient, *blobCache,
+                   std::make_shared<HsmRawSession>(HsmProductionClient::connect(HsmIdentity::getWorkIdentity())));
+    const auto teeToken = EnrolmentHelper::getTeeToken(hsmSession, *blobCache);
     TVLOG(1) << "got tee token : " << Base64::encode(teeToken.data);
     ASSERT_NE(teeToken.data.size(), 0);
 }
@@ -65,11 +70,13 @@ TEST_F(MockEnrolmentManagerTest, failForMissingBlobs)
 {
     // Create blob cache without adding any blobs.
     auto blobCache = std::make_shared<BlobCache>(std::make_unique<MockBlobDatabase>());
-
+    HsmProductionClient hsmClient;
+    auto hsmSession =
+        HsmSession(hsmClient, *blobCache,
+                   std::make_shared<HsmRawSession>(HsmProductionClient::connect(HsmIdentity::getWorkIdentity())));
     // Do NOT set up the necessary blobs.
 
-    ASSERT_ANY_THROW(
-        EnrolmentHelper(HsmIdentity::getWorkIdentity()).createTeeToken(*blobCache));
+    ASSERT_ANY_THROW(EnrolmentHelper::getTeeToken(hsmSession, *blobCache));
 }
 
 class TestEnrolmentHelper : public EnrolmentHelper

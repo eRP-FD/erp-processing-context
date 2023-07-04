@@ -15,6 +15,7 @@ enum class HttpStatus
 {
 #define STATUS(boostBeastValue, value, code) value = (code),
 #include "HttpStatus.inc.hxx"
+#include "HttpStatusNonStandard.inc.hxx"
 #undef STATUS
 };
 

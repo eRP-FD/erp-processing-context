@@ -105,3 +105,33 @@ TEST_F(AdminRequestHandlerTest, FailedShutdownParameterRange)
     EXPECT_NO_THROW(restartHandler.handleRequest(session));
     EXPECT_EQ(session.response.getHeader().status(), HttpStatus::BadRequest);
 }
+
+TEST_F(AdminRequestHandlerTest, ConfigurationHandler)
+{
+    ServerRequest request{Header(header)};
+    SessionContext session{serviceContext, request, response, accessLog};
+    GetConfigurationHandler handler;
+    EXPECT_NO_THROW(handler.handleRequest(session));
+    EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
+    EXPECT_EQ(session.response.getHeader().header(Header::ContentType), MimeType::json);
+
+    rapidjson::Document configDocument;
+    configDocument.Parse(session.response.getBody());
+
+    OpsConfigKeyNames confNames;
+
+    // credential should be redacted
+    {
+        const auto credKey = confNames.strings(ConfigurationKey::ADMIN_CREDENTIALS);
+        rapidjson::Pointer credKeyPointer{std::string{"/"}.append(credKey.environmentVariable)};
+        EXPECT_EQ(std::string(credKeyPointer.Get(configDocument)->GetString()), "<redacted>");
+    }
+
+    // line breaks should be preserved
+    {
+        const auto lineBreakKey = confNames.strings(ConfigurationKey::C_FD_SIG_ERP);
+        rapidjson::Pointer lineBreakKeyPointer{std::string{"/"}.append(lineBreakKey.environmentVariable)};
+        EXPECT_EQ(std::string(lineBreakKeyPointer.Get(configDocument)->GetString()),
+                  Configuration::instance().getStringValue(ConfigurationKey::C_FD_SIG_ERP));
+    }
+}

@@ -39,16 +39,19 @@ if((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
     add_compile_options(-DENABLE_DEBUG_LOG)
 endif()
 
+SET(ERP_BUILD_VERSION "" CACHE STRING "Erp Build version")
+SET(ERP_RELEASE_VERSION "" CACHE STRING "Erp Release version")
+
 if(NOT ERP_BUILD_VERSION)
     message(WARNING "ERP_BUILD_VERSION not set.")
-    set(ERP_BUILD_VERSION "LOCAL VERSION")
+    set(ERP_BUILD_VERSION "LOCAL VERSION" CACHE STRING "Erp Build version" FORCE)
 else()
     message(NOTICE "ERP_BUILD_VERSION: ${ERP_BUILD_VERSION}")
 endif()
 
 if(NOT ERP_RELEASE_VERSION)
     message(WARNING "ERP_RELEASE_VERSION not set.")
-    set(ERP_RELEASE_VERSION "UNRELEASED VERSION")
+    set(ERP_RELEASE_VERSION "UNRELEASED VERSION" CACHE STRING "Erp Release version" FORCE)
 else()
     message(NOTICE "ERP_RELEASE_VERSION: ${ERP_RELEASE_VERSION}")
 endif()
@@ -117,7 +120,7 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
     execute_process(
         COMMAND env CONAN_CMAKE_GENERATOR=${CMAKE_GENERATOR}
                 "${CONAN}" install
-                --build missing
+                --build outdated
                 --install-folder "${CMAKE_BINARY_DIR}"
                 -s compiler.cppstd=${CMAKE_CXX_STANDARD}
                 -s compiler.libcxx=${COMPILER_LIBCXX_SETTING}

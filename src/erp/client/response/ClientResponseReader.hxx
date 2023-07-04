@@ -82,6 +82,7 @@ Header ClientResponseReader::readHeader (stream_type& stream)
                  << std::string(reinterpret_cast<const char*>(mBuffer.data().data()), mBuffer.data().size()) << "'";
         ErrorHandler(ec).reportServerError("clientResponseReader::readHeader");
         closeConnection(stream, false);
+        Fail2("read_header() failed", std::runtime_error);
     }
 
     return convertHeader();

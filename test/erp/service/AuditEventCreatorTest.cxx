@@ -202,8 +202,7 @@ TEST_F(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognit
     AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr.id()));
     const auto* language = "en";
-    const auto agentName = jwt->stringForClaim(JWT::givenNameClaim).value() + " " +
-                           jwt->stringForClaim(JWT::familyNameClaim).value();
+    const auto agentName = jwt->displayName().value();
     model::AuditEvent auditEvent =
         AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
 
@@ -252,8 +251,7 @@ TEST_F(AuditEventCreatorTest, createGetMultipleResources)//NOLINT(readability-fu
     AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
-    const auto agentName = jwt->stringForClaim(JWT::givenNameClaim).value() + " " +
-                           jwt->stringForClaim(JWT::familyNameClaim).value();
+    const auto agentName = jwt->displayName().value();
     model::AuditEvent auditEvent =
         AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
 
@@ -498,8 +496,7 @@ TEST_F(AuditEventCreatorTest, createDeleteConsent)//NOLINT(readability-function-
     AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
-    const auto agentName = jwt->stringForClaim(JWT::givenNameClaim).value() + " " +
-                           jwt->stringForClaim(JWT::familyNameClaim).value();
+    const auto agentName = jwt->displayName().value();
     model::AuditEvent auditEvent =
         AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
 
@@ -546,8 +543,7 @@ TEST_F(AuditEventCreatorTest, createPostConsent)//NOLINT(readability-function-co
     AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
-    const auto agentName = jwt->stringForClaim(JWT::givenNameClaim).value() + " " +
-                           jwt->stringForClaim(JWT::familyNameClaim).value();
+    const auto agentName = jwt->displayName().value();
     model::AuditEvent auditEvent =
         AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
 
@@ -598,8 +594,7 @@ TEST_F(AuditEventCreatorTest, createWithUnsupportedLanguage)//NOLINT(readability
     AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "fr";  // not supported, will use default language "en";
-    const auto agentName = jwt->stringForClaim(JWT::givenNameClaim).value() + " " +
-                           jwt->stringForClaim(JWT::familyNameClaim).value();
+    const auto agentName = jwt->displayName().value();
     model::AuditEvent auditEvent =
         AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
 

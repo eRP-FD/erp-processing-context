@@ -13,6 +13,7 @@
 #include "erp/util/SafeString.hxx"
 #include "erp/util/UrlHelper.hxx"
 
+#include <boost/asio/ip/tcp.hpp>
 
 class HttpClient;
 class HttpsClient;
@@ -45,6 +46,12 @@ public:
         const std::optional<std::string>& forcedCiphers = std::nullopt,
         const bool trustCn = false) const;
 
+    ClientResponse send(const boost::asio::ip::tcp::endpoint& ep, const UrlHelper::UrlParts& url,
+                        const HttpMethod method, const std::string& body,
+                        const std::string& contentType = std::string(),
+                        const std::optional<std::string>& forcedCiphers = std::nullopt,
+                        const bool trustCn = false) const;
+
     void setDurationConsumer (DurationConsumer&& durationConsumer);
 
 protected:
@@ -54,14 +61,16 @@ protected:
         const std::string& body,
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false) const;
+        const bool trustCn = false,
+        const boost::asio::ip::tcp::endpoint* ep = nullptr) const;
     virtual ClientResponse doSend (
         const UrlHelper::UrlParts& url,
         const HttpMethod method,
         const std::string& body,
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false) const;
+        const bool trustCn = false,
+        const boost::asio::ip::tcp::endpoint* ep = nullptr) const;
 
 private:
     const SafeString mTslRootCertificates;

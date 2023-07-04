@@ -108,6 +108,14 @@ TimePeriod TimePeriod::fromFhirSearchDate (const std::string& date)
 }
 
 
+TimePeriod TimePeriod::fromDatabaseUuid(const std::string& uuid)
+{
+    const auto timestamp = model::Timestamp::fromDatabaseSUuid(uuid);
+    // the database suuid is always a dateTime timstamp
+    return TimePeriod(timestamp, addOneSecond(timestamp));
+}
+
+
 model::Timestamp TimePeriod::begin (void) const
 {
     return mBegin;

@@ -33,7 +33,7 @@ public:
         expectContains(connectionString, "port='%%'", configuration.getStringValue(ConfigurationKey::POSTGRES_PORT));
         expectContains(connectionString, "dbname='%%'", configuration.getStringValue(ConfigurationKey::POSTGRES_DATABASE));
         expectContains(connectionString, "user='%%'", configuration.getStringValue(ConfigurationKey::POSTGRES_USER));
-        expectContains(connectionString, "target_session_attrs=read-write", "");
+        expectContains(connectionString, "target_session_attrs=%%", configuration.getStringValue(ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS));
         expectContains(connectionString, "connect_timeout=%%", configuration.getStringValue(ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS));
         expectContains(connectionString, "tcp_user_timeout=%%", configuration.getStringValue(ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS));
         expectContains(connectionString, "keepalives=1", "");

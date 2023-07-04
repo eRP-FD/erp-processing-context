@@ -38,11 +38,27 @@ TcpStream::TcpStream (
         TLOG(ERROR)  << "resolving hostname failed '" << hostname << ":" << port << "', try again";
         resolverResults = resolver.resolve(hostname, port);
     }
+    establish(std::chrono::seconds(connectionTimeoutSeconds), resolverResults);
 
-    mTcpStream->expires_after(std::chrono::seconds(connectionTimeoutSeconds));
+}
+
+TcpStream::TcpStream(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
+                     const uint16_t connectionTimeoutSeconds)
+    : mIoContext(std::make_unique<boost::asio::io_context>())
+    , mTcpStream(std::make_unique<boost::beast::tcp_stream>(*mIoContext))
+{
+    auto resolverResults =
+        boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>::create(ep, hostname, std::to_string(ep.port()));
+    establish(std::chrono::seconds(connectionTimeoutSeconds), resolverResults);
+}
+
+void TcpStream::establish(std::chrono::seconds connectionTimeout,
+                          const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>& resolverResults)
+{
+    mTcpStream->expires_after(connectionTimeout);
 
     boost::system::error_code errorCode = AsyncStreamHelper::connect(*mTcpStream, *mIoContext, resolverResults);
-    if(errorCode)
+    if (errorCode)
     {
         throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, errorCode);
     }

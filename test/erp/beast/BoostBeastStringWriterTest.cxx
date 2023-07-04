@@ -65,3 +65,20 @@ TEST_F(BoostBeastStringWriterTest, serializeResponse)
         "\r\n"
         "this is the body");
 }
+
+
+TEST_F(BoostBeastStringWriterTest, serializeResponseNonStandardHttpStatus)
+{
+    // Given.
+    const std::string body = "";
+    Header header;
+    header.setStatus(HttpStatus::BackendCallFailed);
+
+    // When header and body are serialized to a string.
+    const std::string serializedRequest = BoostBeastStringWriter::serializeResponse(header, body);
+
+    // Then the result has this expected form.
+    EXPECT_EQ(serializedRequest,
+        "HTTP/1.1 512 <unknown-status>\r\n"
+        "\r\n");
+}

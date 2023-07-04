@@ -7,8 +7,10 @@
 
 #include "MockAndProductionTestBase.hxx"
 #include "erp/hsm/production/HsmProductionFactory.hxx"
+#if WITH_HSM_TPM_PRODUCTION > 0
 #include "erp/hsm/production/HsmProductionClient.hxx"
 #include "erp/enrolment/EnrolmentHelper.hxx"
+#endif
 
 void MockAndProductionTestBase::SetUp()
 {
@@ -19,6 +21,7 @@ void MockAndProductionTestBase::SetUp()
     switch (GetParam())
     {
         case MockBlobCache::MockTarget::SimulatedHsm: {
+#if WITH_HSM_TPM_PRODUCTION > 0
             tpmFactory = TpmTestHelper::createProductionTpmFactory();
             factories.teeTokenUpdaterFactory = TeeTokenUpdater::createProductionTeeTokenUpdaterFactory();
             factories.tpmFactory = tpmFactory;
@@ -40,14 +43,12 @@ void MockAndProductionTestBase::SetUp()
                 return;
             }
             TLOG(INFO) << "initialized simulated context";
-            auto hsmFactory =
-                std::make_unique<HsmProductionFactory>(std::make_unique<HsmProductionClient>(), mSimulatedContext->getBlobCache());
             // Run the tee token updater once, now, so that we have a valid Tee token.
-            auto teeToken =
-                EnrolmentHelper(HsmIdentity::getWorkIdentity()).createTeeToken(*mSimulatedContext->getBlobCache());
-            auto pool = mSimulatedContext->getHsmPool().acquire();
-            pool.session().setTeeToken(teeToken);
-
+            EnrolmentHelper::refreshTeeToken(mSimulatedContext->getHsmPool());
+#else
+            tpmFactory = [](BlobCache&){ return nullptr; };
+            GTEST_SKIP_("Simulated HSM is disabled");
+#endif
             break;
         }
         case MockBlobCache::MockTarget::MockedHsm: {

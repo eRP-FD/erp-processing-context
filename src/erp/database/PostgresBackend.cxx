@@ -122,10 +122,6 @@ namespace
               kvnr_hashed = $1
               AND ($2::uuid IS NULL OR id = $2::uuid)
               AND ($3::bigint IS NULL OR (prescription_id = $3::bigint AND prescription_type = $4::smallint)))--")
-    QUERY(countAuditEventDataStatement, R"--(
-          SELECT COUNT(*)
-          FROM erp.auditevent
-          WHERE kvnr_hashed = $1)--")
 
     QUERY(insertOrReturnAccountSalt, R"--(
           SELECT erp.insert_or_return_account_salt($1::bytea, $2::smallint, $3::integer, $4::bytea))--")
@@ -221,6 +217,7 @@ std::string PostgresBackend::defaultConnectString (void)
     const std::string keepalivesIdleSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC);
     const std::string keepalivesIntervalSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC);
     const std::string keepalivesCountSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_COUNT);
+    const std::string targetSessionAttrs = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS, "");
 
     std::string sslmode = connectStringSslMode();
 
@@ -230,7 +227,7 @@ std::string PostgresBackend::defaultConnectString (void)
                                             + "' user='" + user + "'"
                                             + (password.empty() ? "" : " password='" + password + "'")
                                             + sslmode
-                                            + " target_session_attrs=read-write"
+                                            + (targetSessionAttrs.empty() ? "" : (" target_session_attrs=" + targetSessionAttrs))
                                             + " connect_timeout=" + connectTimeout
                                             + " tcp_user_timeout=" + tcpUserTimeoutMs
                                             + " keepalives=1"
@@ -608,16 +605,6 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
 
     return resultSet;
 }
-
-uint64_t PostgresBackend::countAuditEventData(
-    const db_model::HashedKvnr& kvnr,
-    const std::optional<UrlArguments>& search)
-{
-    const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:countAuditEventData");
-    return PostgresBackendHelper::executeCountQuery(*mTransaction, countAuditEventDataStatement.query, kvnr, search, "audit events");
-}
-
 
 std::optional<db_model::Task> PostgresBackend::retrieveTaskForUpdate(const model::PrescriptionId& taskId)
 {

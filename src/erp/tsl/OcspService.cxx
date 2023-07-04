@@ -76,6 +76,7 @@ namespace
     }
 
 
+    // GEMREQ-start A_20159-03#sendOcspRequest
     std::string sendOcspRequest (const UrlRequestSender& requestSender,
                                  const OcspUrl& url,
                                  const util::Buffer& request)
@@ -115,10 +116,11 @@ namespace
             timer.notifyFailure(e.what());
             TslFailWithStatus(e.what() + std::string(", ocsp url: ") + url.url,
                               TslErrorCode::OCSP_NOT_AVAILABLE,
-                              url.isRequestData ? HttpStatus::BadRequest : HttpStatus::InternalServerError,
+                              url.isRequestData ? HttpStatus::BadRequest : HttpStatus::BackendCallFailed,
                               trustStore.getTslMode());
         }
     }
+    // GEMREQ-end A_20159-03#sendOcspRequest
 
 
     X509* checkSignatureAndGetSigner (OCSP_BASICRESP& basicResponse)
@@ -527,7 +529,7 @@ namespace
     }
 
 
-// GEMREQ-start A_20765-02#ocspCheckModes, A_20159-02#getCurrentStatusAndResponse
+// GEMREQ-start A_20765-02#ocspCheckModes, A_20159-03#getCurrentStatusAndResponse
     /**
      * Gets the OCSP status of a certificate.
      *
@@ -640,7 +642,7 @@ namespace
         // it should not be reachable
         throw std::logic_error("OcspCheckDescriptor was extended but this code was not adjusted.");
     }
-// GEMREQ-end A_20765-02#ocspCheckModes, A_20159-02#getCurrentStatusAndResponse
+// GEMREQ-end A_20765-02#ocspCheckModes, A_20159-03#getCurrentStatusAndResponse
 
 
     OcspCheckDescriptor getTslSignerOcspCheckDescriptor()
@@ -657,7 +659,7 @@ namespace
 }   // anonymous namespace
 
 
-// GEMREQ-start A_20159-02#getCurrentStatus
+// GEMREQ-start A_20159-03#getCurrentStatus
 OcspService::Status
 OcspService::getCurrentStatus (const X509Certificate& certificate,
                                const UrlRequestSender& requestSender,
@@ -674,7 +676,7 @@ OcspService::getCurrentStatus (const X509Certificate& certificate,
                                          validateHashExtension,
                                          ocspCheckDescriptor);
 }
-// GEMREQ-end A_20159-02#getCurrentStatus
+// GEMREQ-end A_20159-03#getCurrentStatus
 
 
 OcspService::Status

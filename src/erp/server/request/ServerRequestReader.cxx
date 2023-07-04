@@ -131,9 +131,18 @@ void ServerRequestReader::markStreamAsClosed (void)
 void ServerRequestReader::closeConnection (const bool expectError)
 {
     markStreamAsClosed();
+    auto& socket = mStream.getLowestLayer().socket();
+    if (! socket.is_open())
+        return;
 
     try
     {
+        boost::system::error_code ec;
+        socket.cancel(ec);
+        if (ec)
+        {
+            TLOG(WARNING) << "error while canceling socket operations: " << ec.message();
+        }
         mStream.shutdown();
     }
     catch(const boost::system::system_error& e)
@@ -149,7 +158,7 @@ void ServerRequestReader::closeConnection (const bool expectError)
             // the stream and proper shutdown protocol may impossible to perform.
             //
             // As a result we expect an exception being thrown. And ignore it.
-            TLOG(ERROR) << e.what();
+            TLOG(INFO) << e.what();
         }
         else
         {

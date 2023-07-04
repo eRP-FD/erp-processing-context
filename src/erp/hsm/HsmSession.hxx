@@ -150,6 +150,9 @@ public:
 
     ::ParsedQuote parseQuote(const ::ErpVector& quote) const;
 
+    ErpBlob getTeeToken(const ErpBlob& nonce, const ErpVector& quoteData, const ErpVector& quoteSignature,
+                        const std::optional<ErpBlob>& knownQuote = {});
+
     /**
      * Make a call to the HSM to keep the connection to the HSM alive.
      * Make this call only if there was no other call after the given `threshold`.
@@ -170,7 +173,7 @@ private:
         const ErpVector& derivationData,
         const std::optional<OptionalDeriveKeyData>& secondCallData);
 
-    const ErpBlob& getTeeToken (void) const;
+    const ErpBlob& getCachedTeeToken() const;
     void markHsmCallTime (void);
 };
 

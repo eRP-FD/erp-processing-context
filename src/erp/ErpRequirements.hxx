@@ -37,7 +37,7 @@ static Requirement A_19170_01 ("E-Rezept-Fachdienst - Rollenprüfung Abgebender 
 static Requirement A_19230    ("E-Rezept-Fachdienst - Rollenpruefung Abgebender vollzieht Abgabe des Rezepts");
 static Requirement A_19389    ("E-Rezept-Fachdienst - Authentifizierung erforderlich Vers-Endpunkt");
 static Requirement A_19390    ("E-Rezept-Fachdienst - Authentifizierung Nutzerrolle");
-static Requirement A_19391    ("E-Rezept-Fachdienst - Authentifizierung Nutzername");
+static Requirement A_19391_01 ("E-Rezept-Fachdienst - Authentifizierung Nutzername");
 static Requirement A_19392    ("E-Rezept-Fachdienst - Authentifizierung Nutzerkennung");
 static Requirement A_19439    ("E-Rezept-Fachdienst - Authentifizierung Authentifizierungsstärke");
 static Requirement A_19395    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest AuditEvent");
@@ -208,7 +208,7 @@ static Requirement A_22136_01("E-Rezept-Fachdienst – Abrechnungsinformation be
 static Requirement A_22137   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Abgabedatensatz übernehmen");
 static Requirement A_22138   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Validierung PKV-Abgabedatensatz");
 static Requirement A_22139   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturprüfung PKV-Abgabedatensatz");
-static Requirement A_22140   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
+static Requirement A_22140_01("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
 static Requirement A_22141   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturzertifikat SMC-B prüfen");
 static Requirement A_22143   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – ChargeItem befüllen");
 static Requirement A_22614_02("E-Rezept-Fachdienst - Abrechnungsinformation bereitstellen - Generierung AccessCode");
@@ -218,7 +218,7 @@ static Requirement A_22146   ("E-Rezept-Fachdienst – Abrechnungsinformationen 
 static Requirement A_22148   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – PKV-Abgabedatensatz übernehmen");
 static Requirement A_22149   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – FHIR-Validierung PKV-Abgabedatensatz");
 static Requirement A_22150   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern - Apotheke – Signaturprüfung PKV-Abgabedatensatz");
-static Requirement A_22151   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
+static Requirement A_22151_01("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Apotheke – Prüfung Signaturzertifikat PKV-Abgabedatensatz");
 static Requirement A_22152   ("E-Rezept-Fachdienst - Abrechnungsinformation ändern – FHIR-Validierung ChargeItem");
 static Requirement A_22615_02("E-Rezept-Fachdienst - Abrechnungsinformation ändern - Apotheke - Generierung AccessCode");
 static Requirement A_22616_03("E-Rezept-Fachdienst - Abrechnungsinformation ändern - Apotheke - Prüfung AccessCode");

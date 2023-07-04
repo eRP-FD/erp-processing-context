@@ -39,11 +39,23 @@ constexpr std::string_view health_template = R"--(
     },
     {
       "name": "TSL.xml",
-      "status": "DOWN"
+      "status": "DOWN",
+      "data": {
+        "expiryDate": "",
+        "sequenceNumber": "",
+        "id": "",
+        "hash": ""
+      }
     },
     {
       "name": "BNetzA.xml",
-      "status": "DOWN"
+      "status": "DOWN",
+      "data": {
+        "expiryDate": "",
+        "sequenceNumber": "",
+        "id": "",
+        "hash": ""
+      }
     },
     {
       "name": "IdpUpdater",
@@ -87,8 +99,14 @@ const rapidjson::Pointer buildTypePointer("/version/buildType");
 const rapidjson::Pointer releasePointer("/version/release");
 const rapidjson::Pointer releasedatePointer("/version/releasedate");
 const rapidjson::Pointer startupPointer("/startup");
+const rapidjson::Pointer currentTimestampPointer("/timestamp");
 const rapidjson::Pointer healthCheckErrorPointer("/healthCheckError");
 const rapidjson::Pointer connectionInfoPointer("/data/connection_info");
+const rapidjson::Pointer tslExpiryPointer("/data/expiryDate");
+const rapidjson::Pointer tslSequenceNumberPointer("/data/sequenceNumber");
+const rapidjson::Pointer tslIdPointer("/data/id");
+const rapidjson::Pointer tslHashPointer("/data/hash");
+
 const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 }
 
@@ -104,6 +122,7 @@ Health::Health()
                        .instance())
 {
     setValue(startupPointer, startupTimestamp);
+    setValue(currentTimestampPointer, model::Timestamp::now().toXsDateTime());
     setValue(buildPointer, ErpServerInfo::BuildVersion());
     setValue(buildTypePointer, ErpServerInfo::BuildType());
     setValue(releasePointer, ErpServerInfo::ReleaseVersion());
@@ -142,14 +161,32 @@ void Health::setRedisStatus(const std::string_view& status, std::optional<std::s
     setStatusInChecksArray(redis, status, rootCausePointer, message);
 }
 
-void Health::setTslStatus(const std::string_view& status, std::optional<std::string_view> message)
+void Health::setTslStatus(std::string_view status, std::string_view expiry, std::string_view sequenceNumber,
+                          std::string_view id, std::string_view hashValue, std::optional<std::string_view> message)
 {
-    setStatusInChecksArray(tsl, status, rootCausePointer, message);
+    std::map<rapidjson::Pointer, std::string_view> data{{tslExpiryPointer, expiry},
+                                                        {tslSequenceNumberPointer, sequenceNumber},
+                                                        {tslIdPointer, id},
+                                                        {tslHashPointer, hashValue}};
+    if (message)
+    {
+        data.emplace(rootCausePointer, *message);
+    }
+    setStatusInChecksArray(tsl, status, data);
 }
 
-void Health::setBnaStatus(const std::string_view& status, std::optional<std::string_view> message)
+void Health::setBnaStatus(std::string_view status, std::string_view expiry, std::string_view sequenceNumber,
+                          std::string_view id, std::string_view hashValue, std::optional<std::string_view> message)
 {
-    setStatusInChecksArray(bna, status, rootCausePointer, message);
+    std::map<rapidjson::Pointer, std::string_view> data{{tslExpiryPointer, expiry},
+                                                        {tslSequenceNumberPointer, sequenceNumber},
+                                                        {tslIdPointer, id},
+                                                        {tslHashPointer, hashValue}};
+    if (message)
+    {
+        data.emplace(rootCausePointer, *message);
+    }
+    setStatusInChecksArray(bna, status, data);
 }
 
 void Health::setCFdSigErpStatus(const std::string_view& status, const std::string_view& timestamp,

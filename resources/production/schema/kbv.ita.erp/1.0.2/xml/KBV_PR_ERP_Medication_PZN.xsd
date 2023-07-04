@@ -179,6 +179,7 @@
       <xs:enumeration value="IIE"/>
       <xs:enumeration value="IIL"/>
       <xs:enumeration value="IIM"/>
+      <xs:enumeration value="IJD"/>
       <xs:enumeration value="IKA"/>
       <xs:enumeration value="ILO"/>
       <xs:enumeration value="IMP"/>
@@ -257,6 +258,7 @@
       <xs:enumeration value="PIS"/>
       <xs:enumeration value="PIV"/>
       <xs:enumeration value="PKI"/>
+      <xs:enumeration value="PLD"/>
       <xs:enumeration value="PLE"/>
       <xs:enumeration value="PLF"/>
       <xs:enumeration value="PLG"/>
@@ -304,6 +306,7 @@
       <xs:enumeration value="STR"/>
       <xs:enumeration value="SUB"/>
       <xs:enumeration value="SUE"/>
+      <xs:enumeration value="SUI"/>
       <xs:enumeration value="SUL"/>
       <xs:enumeration value="SUP"/>
       <xs:enumeration value="SUS"/>

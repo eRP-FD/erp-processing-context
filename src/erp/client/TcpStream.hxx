@@ -48,6 +48,8 @@ class TcpStream
 {
 public:
     TcpStream(const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds);
+    TcpStream(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
+              const uint16_t connectionTimeoutSeconds);
 
     void shutdown (void);
 
@@ -70,6 +72,9 @@ public:
 private:
     std::unique_ptr<boost::asio::io_context> mIoContext;
     std::unique_ptr<boost::beast::tcp_stream> mTcpStream;
+
+    void establish(std::chrono::seconds connectionTimeout,
+                   const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>& resolverResults);
 
     template<class ConstBufferSequence>
     void logBuffers (const char* prefix, const ConstBufferSequence& buffers)

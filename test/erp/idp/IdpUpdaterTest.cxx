@@ -461,6 +461,11 @@ TEST_F(IdpUpdaterTest, DISABLED_IdpUpdateAfterTslUpdate)
  */
 TEST_F(IdpUpdaterTest, initializeWithForcedRetries) // NOLINT(readability-function-cognitive-complexity)
 {
+    // instead of the LU configuration use the prod config which has the advantage that
+    // it returns more than one DNS entry which are tried one after another then
+    EnvironmentVariableGuard idpEndpoint(
+        ConfigurationKey::IDP_UPDATE_ENDPOINT,
+        "https://idp.zentral.idp.splitdns.ti-dienste.de/.well-known/openid-configuration");
     Idp idp;
     auto tslManager = createAndSetupTslManager();
 
@@ -474,7 +479,7 @@ TEST_F(IdpUpdaterTest, initializeWithForcedRetries) // NOLINT(readability-functi
         std::unordered_map<std::string, std::string>{
             {"https://idp.lu.erezepttest.net:443/certs/puk_idp_sig.json", mIdpResponseJson}});
 
-    idpRequestSender->setUrlHandler("https://idp.lu.erezepttest.net:443/.well-known/openid-configuration",
+    idpRequestSender->setUrlHandler("https://idp.zentral.idp.splitdns.ti-dienste.de:443/.well-known/openid-configuration",
                                     [&idpResponseJwk](const std::string&) -> ClientResponse
                                     {
                                         static int count=0;

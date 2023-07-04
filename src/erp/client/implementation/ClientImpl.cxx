@@ -35,6 +35,18 @@ ClientImpl<SslStream>::ClientImpl (
 {
 }
 
+template<>
+ClientImpl<SslStream>::ClientImpl(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
+                                  const uint16_t connectionTimeoutSeconds, bool enforceServerAuthentication,
+                                  const SafeString& caCertificates, const SafeString& clientCertificate,
+                                  const SafeString& clientPrivateKey, const std::optional<std::string>& forcedCiphers)
+    : mConnectionTimeoutSeconds(connectionTimeoutSeconds)
+    , mHostName(hostname)
+    , mSessionContainer(ep, hostname, connectionTimeoutSeconds, enforceServerAuthentication, caCertificates,
+                        clientCertificate, clientPrivateKey, forcedCiphers)
+{
+}
+
 
 template<>
 ClientImpl<TcpStream>::ClientImpl (
@@ -52,6 +64,15 @@ ClientImpl<TcpStream>::ClientImpl (
 {
 }
 
+template<>
+ClientImpl<TcpStream>::ClientImpl(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
+                                  const uint16_t connectionTimeoutSeconds, bool, const SafeString&, const SafeString&,
+                                  const SafeString&, const std::optional<std::string>&)
+    : mConnectionTimeoutSeconds(connectionTimeoutSeconds)
+    , mHostName(hostname)
+    , mSessionContainer{ep, hostname, connectionTimeoutSeconds}
+{
+}
 
 template<class StreamClass>
 ClientImpl<StreamClass>::~ClientImpl (void) = default;

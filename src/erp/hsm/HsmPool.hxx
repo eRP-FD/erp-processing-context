@@ -69,6 +69,7 @@ public:
      */
     void release (std::unique_ptr<HsmSession>&& session);
 
+    void setTeeToken (ErpBlob&& teeToken);
 
     size_t activeSessionCount (void) const;
     size_t inactiveSessionCount (void) const;
@@ -77,8 +78,11 @@ public:
     void resetMaxUsedSessionCount (void);
 
     const TeeTokenUpdater& getTokenUpdater() const;
+    TeeTokenUpdater& getTokenUpdater();
 
     bool isKeepAliveJobRunning (void) const;
+
+    HsmFactory& getHsmFactory();
 
 protected: // protected so that we can override some functionality in tests.
     mutable std::mutex mMutex;
@@ -108,7 +112,6 @@ private:
     std::shared_ptr<Timer> mTimerManager;
 
     HsmPoolSession activateSession (void);
-    void setTeeToken (ErpBlob&& teeToken);
 
     /**
      * For all sessions in mAvailableHsmSession run a command against the HSM to prevent the HSM session from timing out.

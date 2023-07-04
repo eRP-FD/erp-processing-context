@@ -726,16 +726,19 @@ void ErpWorkflowTestBase::checkAuditEventPaging(
 
     const unsigned int numCalls = gsl::narrow_cast<unsigned int>(numEvents / pageSize);
     const unsigned int rest = gsl::narrow_cast<unsigned int>(numEvents % pageSize);
-    for(unsigned int i = 0; i <= numCalls; ++i)
+    std::string searchArgs =
+        "_count=" + std::to_string(pageSize) + "&_sort=-date" + (addSearch.empty() ? "" : "&") + addSearch;
+    for (unsigned int i = 0; i <= numCalls; ++i)
     {
-        ASSERT_NO_FATAL_FAILURE(auditEventBundle = auditEventGet(
-                kvnr, "de", "_count=" + std::to_string(pageSize) + "&__offset=" + std::to_string(i * pageSize) + "&_sort=-date" +
-                (addSearch.empty() ? "" : "&") + addSearch));
+        ASSERT_NO_FATAL_FAILURE(auditEventBundle = auditEventGet(kvnr, "de", searchArgs));
         ASSERT_TRUE(auditEventBundle);
         EXPECT_EQ(auditEventBundle->getResourceCount(), i < numCalls ? pageSize : rest);
-        EXPECT_EQ(auditEventBundle->getTotalSearchMatches(), numEventsExpected);
         if(i < numCalls)
+        {
             ASSERT_TRUE(auditEventBundle->getLink(model::Link::Type::Next).has_value());
+            // obtain new next link, we only want the query parameters
+            searchArgs = String::split(auditEventBundle->getLink(model::Link::Type::Next).value(), '?').at(1);
+        }
         else
             ASSERT_FALSE(auditEventBundle->getLink(model::Link::Type::Next).has_value());
     }
@@ -2231,6 +2234,7 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
         // and against an erp-processing-context directly
         if (!runsInCloudEnv())
         {
+            ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::BackendDurationMs));
             EXPECT_EQ(outerResponse.getHeader().header(Header::InnerResponseCode).value_or("XXX"),
                       std::to_string(static_cast<int>(innerResponse.getHeader().status())));
 

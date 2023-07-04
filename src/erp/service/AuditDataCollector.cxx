@@ -27,30 +27,22 @@ const T& assertHasValue(const std::optional<T>& var)
 
 AuditDataCollector& AuditDataCollector::fillFromAccessToken(const JWT& accessToken)
 {
-    A_19391.start("Use name of caller for audit logging");
+    A_19391_01.start("Use name of caller for audit logging");
     A_19392.start("Use id of caller for audit logging");
 
     auto idNumberClaim = accessToken.stringForClaim(JWT::idNumberClaim);
     Expect3(idNumberClaim.has_value(), "Missing idNumberClaim", std::logic_error);
     mAgentWho = std::move(idNumberClaim);
+    mAgentName = accessToken.displayName();
 
     const auto professionOIDClaim = accessToken.stringForClaim(JWT::professionOIDClaim);
     Expect3(professionOIDClaim.has_value(), "Missing professionOIDClaim", std::logic_error);
-
     if (professionOIDClaim.value() == profession_oid::oid_versicherter)
     {
-        const auto givenNameClaim = accessToken.stringForClaim(JWT::givenNameClaim);
-        Expect3(givenNameClaim.has_value(), "Missing givenNameClaim", std::logic_error);
-        const auto familyNameClaim = accessToken.stringForClaim(JWT::familyNameClaim);
-        Expect3(familyNameClaim.has_value(), "Missing familyNameClaim", std::logic_error);
-        mAgentName = givenNameClaim.value() + (givenNameClaim.value().empty() ? "" : " ") + familyNameClaim.value();
-    }
-    else
-    {
-        mAgentName = accessToken.stringForClaim(JWT::organizationNameClaim);
+        Expect3(mAgentName.has_value(), "Unable to determine display name", std::logic_error);
     }
 
-    A_19391.finish();
+    A_19391_01.finish();
     A_19392.finish();
 
     return *this;

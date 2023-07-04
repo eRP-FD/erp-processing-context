@@ -16,6 +16,7 @@ HttpStatus fromBoostBeastStatus (uint32_t status)
     {
 #define STATUS(boostBeastValue, value, code) case code: return HttpStatus::value;
 #include "HttpStatus.inc.hxx"
+#include "HttpStatusNonStandard.inc.hxx"
 #undef STATUS
         default: Fail2("unsupported status code " + std::to_string(status), std::runtime_error);
     }
@@ -28,6 +29,7 @@ const char* toString (const HttpStatus status)
     switch(status)
     {
 #include "HttpStatus.inc.hxx"
+#include "HttpStatusNonStandard.inc.hxx"
         default: Fail2("unsupported HttpStatus value", std::logic_error);
     }
 #undef STATUS
@@ -40,6 +42,7 @@ size_t toNumericalValue (const HttpStatus status)
     switch(status)
     {
 #include "HttpStatus.inc.hxx"
+#include "HttpStatusNonStandard.inc.hxx"
         default: Fail2("unsupported HttpStatus value", std::logic_error);
     }
 #undef STATUS

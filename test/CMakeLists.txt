@@ -145,7 +145,6 @@ list(
         erp/client/request/ClientRequestTest.cxx
         erp/client/request/ClientRequestWriterTest.cxx
         erp/client/UrlRequestSenderTest.cxx
-        erp/common/BoostBeastHttpStatusTest.cxx
         erp/common/BoostBeastMethodTest.cxx
         erp/common/HeaderTest.cxx
         erp/common/MimeTypeTest.cxx

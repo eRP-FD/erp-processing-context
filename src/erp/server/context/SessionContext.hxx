@@ -40,6 +40,7 @@ public:
     ServerResponse& response;
     AccessLog& accessLog;
     bool callerWantsJson;
+    std::chrono::microseconds backendDuration{0};
 
     AuditDataCollector& auditDataCollector();
     Database* database();

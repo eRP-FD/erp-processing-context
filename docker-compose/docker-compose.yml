@@ -98,7 +98,9 @@ services:
       docker-entrypoint.sh
       -c ssl=on
       -c ssl_cert_file=/erp/secrets/server.crt
-      -c ssl_key_file=/erp/secrets/server.key"
+      -c ssl_key_file=/erp/secrets/server.key
+      -c log_statement=none"
+    # set log_statement=all to get detailed output
 
   # --------------------------------------------------------------------------------
   # Postgres database schema import

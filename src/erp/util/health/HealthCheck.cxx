@@ -9,7 +9,24 @@
 #include "erp/database/DatabaseConnectionInfo.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
+#include "erp/util/Demangle.hxx"
 #include "erp/util/ExceptionHelper.hxx"
+
+namespace
+{
+
+void setTslDetails(ApplicationHealth::Service service, const TrustStore::HealthData& healthData,
+                   ApplicationHealth& applicationHealth)
+{
+    applicationHealth.setServiceDetails(service, ApplicationHealth::ServiceDetail::TSLExpiry,
+                                        model::Timestamp(healthData.nextUpdate).toXsDateTime());
+    applicationHealth.setServiceDetails(service, ApplicationHealth::ServiceDetail::TSLSequenceNumber,
+                                        healthData.sequenceNumber);
+    applicationHealth.setServiceDetails(service, ApplicationHealth::ServiceDetail::TSLId, healthData.id.value_or(""));
+    applicationHealth.setServiceDetails(service, ApplicationHealth::ServiceDetail::TslHash, String::toHexString(healthData.hash.value_or("")));
+}
+
+}// namespace
 
 
 void HealthCheck::update (PcServiceContext& context)
@@ -29,10 +46,14 @@ void HealthCheck::update (PcServiceContext& context)
             "DEBUG_DISABLE_DOS_CHECK=true");
     else
         check(ApplicationHealth::Service::Redis, context, &checkRedis);
-
     context.applicationHealth().setServiceDetails(
         ApplicationHealth::Service::Hsm, ApplicationHealth::ServiceDetail::HsmDevice,
         Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
+
+    const auto healthDataTsl = context.getTslManager().healthCheckTsl();
+    setTslDetails(ApplicationHealth::Service::Tsl, healthDataTsl, context.applicationHealth());
+    const auto healthDataBna = context.getTslManager().healthCheckBna();
+    setTslDetails(ApplicationHealth::Service::Bna, healthDataBna, context.applicationHealth());
 
     try
     {
@@ -60,7 +81,7 @@ void HealthCheck::update (PcServiceContext& context)
     }
     catch (const std::exception& err)
     {
-        const std::string& typeinfo = typeid(err).name();
+        std::string typeinfo = util::demangle(typeid(err).name());
         TLOG(WARNING) << "Could not update registration status due to exception (" << typeinfo << "): " << err.what();
     }
 }
@@ -68,7 +89,9 @@ void HealthCheck::update (PcServiceContext& context)
 
 void HealthCheck::checkBna (PcServiceContext& context)
 {
-    context.getTslManager().healthCheckBna();
+    const auto healthData = context.getTslManager().healthCheckBna();
+    Expect3(healthData.hasTsl, "No BNetzA loaded", std::runtime_error);
+    Expect3(! healthData.outdated, "Loaded BNetzA is too old", std::runtime_error);
 }
 
 
@@ -126,7 +149,9 @@ void HealthCheck::checkTeeTokenUpdater (PcServiceContext& context)
 
 void HealthCheck::checkTsl (PcServiceContext& context)
 {
-    context.getTslManager().healthCheckTsl();
+    const auto healthData = context.getTslManager().healthCheckTsl();
+    Expect3(healthData.hasTsl, "No TSL loaded", std::runtime_error);
+    Expect3(! healthData.outdated, "Loaded TSL is too old", std::runtime_error);
 }
 
 

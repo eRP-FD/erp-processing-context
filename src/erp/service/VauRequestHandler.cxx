@@ -26,6 +26,7 @@
 #include "erp/tee/ErpTeeProtocol.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
 #include "erp/tsl/error/TslError.hxx"
+#include "erp/util/Demangle.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/JwtException.hxx"
 #include "erp/util/TLog.hxx"
@@ -41,10 +42,10 @@ namespace
 
 void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
 {
-    A_19391.start("Use name of caller for audit logging");
+    A_19391_01.start("Use name of caller for audit logging");
     A_19392.start("Use id of caller for audit logging");
     sessionContext.auditDataCollector().fillFromAccessToken(accessToken);
-    A_19391.finish();
+    A_19391_01.finish();
     A_19392.finish();
 
     sessionContext.auditDataCollector().setDeviceId(model::Device::Id);
@@ -65,7 +66,7 @@ void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
     catch(const std::exception& exc)
     {
         TLOG(WARNING) << "Error while storing Audit data";
-        const auto& typeinfo = typeid(exc).name();
+        const auto typeinfo = util::demangle(typeid(exc).name());
         TVLOG(1) << "Error reason:  " << exc.what() << " (" << typeinfo << ")";
         sessionContext.accessLog.locationFromException(exc);
         sessionContext.accessLog.error(std::string("Error while storing Audit data (") + typeinfo + ")");
@@ -161,6 +162,7 @@ void runErpExceptionHandler(const ErpException& exception,
     switch (exception.status())
     {
         case HttpStatus::BadRequest:
+        case HttpStatus::BackendCallFailed:
             outerSession.accessLog.error("ErpException: " + detailsText);
             break;
         case HttpStatus::InternalServerError: // fixed text and no diagnostics for internal errors to avoid leaking of personal information;
@@ -244,7 +246,7 @@ template<typename PqxxException>
 void runPqxxExceptionHandler(const PqxxException& e, const std::unique_ptr<ServerRequest>& innerRequest,
                              ServerResponse& innerResponse, AccessLog& accessLog)
 {
-    const std::string& typeinfo = typeid(e).name();
+    const std::string typeinfo = util::demangle(typeid(e).name());
     TVLOG(1) << "caught pqxx exception (" << typeinfo << ") " << e.what();
     ResponseBuilder(innerResponse).status(HttpStatus::InternalServerError).clearBody().keepAlive(false);
     accessLog.locationFromException(e);
@@ -264,13 +266,15 @@ VauRequestHandler::VauRequestHandler(RequestHandlerManager&& handlers)
 void VauRequestHandler::handleRequest(PcSessionContext& session)
 {
     const auto sessionIdentifier = session.request.header().header(Header::XRequestId).value_or("unknown X-Request-Id");
+
     // Set up the duration consumer that will output times spent on calls to external services without the need
     // of explicitly passing an object to the downloading code.
     DurationConsumerGuard durationConsumerGuard(
-        sessionIdentifier, [](const std::chrono::steady_clock::duration duration, const std::string& category,
-                              const std::string& description, const std::string& sessionIdentifier,
-                              const std::unordered_map<std::string, std::string>& keyValueMap,
-                              const std::optional<JsonLog::LogReceiver>& logReceiverOverride) {
+        sessionIdentifier,
+        [&session](const std::chrono::steady_clock::duration duration, const std::string& category,
+                           const std::string& description, const std::string& sessionIdentifier,
+                           const std::unordered_map<std::string, std::string>& keyValueMap,
+                           const std::optional<JsonLog::LogReceiver>& logReceiverOverride) {
             const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
             auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
                 if (logReceiverOverride)
@@ -279,6 +283,11 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
                 }
                 return timingLoggingEnabled ? JsonLog::makeInfoLogReceiver() : JsonLog::makeVLogReceiver(0);
             };
+            const auto durationMusecs = std::chrono::duration_cast<std::chrono::microseconds>(duration);
+            if (category == DurationConsumer::categoryOcspRequest)
+            {
+                session.backendDuration += durationMusecs;
+            }
             JsonLog log(LogId::INFO, getLogReceiver());
             log.keyValue("log-type", "timing")
                 .keyValue("x-request-id", sessionIdentifier)
@@ -288,8 +297,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
             {
                 log.keyValue(item.first, item.second);
             }
-            log.keyValue("duration-us",
-                         gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(duration).count()));
+            log.keyValue("duration-us", gsl::narrow<size_t>(durationMusecs.count()));
         });
 
     session.accessLog.keyValue("health", session.serviceContext.applicationHealth().isUp() ? "UP" : "DOWN");
@@ -336,7 +344,7 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
     {
         session.accessLog.locationFromException(e);
         errorStatus = HttpStatus::InternalServerError;
-        const auto& typeinfo = typeid(e).name();
+        const auto typeinfo = util::demangle(typeid(e).name());
         errorText = std::string("vau decryption failed: std::exception (") + typeinfo + ")";
         TVLOG(1) << errorText << ": " << e.what();
     }
@@ -516,7 +524,10 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
                                    std::to_string(magic_enum::enum_integer(innerServerResponse.getHeader().status())));
 
         outerSession.response.setHeader(Header::InnerRequestOperation, std::string(toString(innerOperation)));
-
+        outerSession.response.setHeader(
+            Header::BackendDurationMs,
+            std::to_string(
+                std::chrono::duration_cast<std::chrono::milliseconds>(outerSession.backendDuration).count()));
         if (innerServerRequest != nullptr && innerServerRequest->header().method() == HttpMethod::POST)
         {
             const auto prescriptionIdValue = innerServerRequest->getPathParameter("id");
@@ -725,7 +736,7 @@ void VauRequestHandler::processException(const std::exception_ptr& exception,
     }
     catch (const std::exception &e)
     {
-        const auto& typeinfo = typeid(e).name();
+        const auto typeinfo = util::demangle(typeid(e).name());
         TVLOG(1) << "caught std::exception (" << typeinfo << ") " << e.what();
         ResponseBuilder(innerResponse)
             .status(HttpStatus::InternalServerError)

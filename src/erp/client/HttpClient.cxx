@@ -12,3 +12,9 @@ HttpClient::HttpClient (const std::string& host, const uint16_t port, const uint
     : ClientBase<TcpStream>(host, port, connectionTimeoutSeconds, false, {}, {}, {}, std::nullopt)
 {
 }
+
+HttpClient::HttpClient(const boost::asio::ip::tcp::endpoint& ep, const std::string& host,
+                       const uint16_t connectionTimeoutSeconds)
+    : ClientBase<TcpStream>(ep, host, connectionTimeoutSeconds, false, {}, {}, {}, std::nullopt)
+{
+}

@@ -45,6 +45,7 @@ public:
     xmlNodePtr getNode (const std::string& xPathExpression) const;
     xmlNodeSetPtr getNodes (const std::string& xPathExpression) const;
     std::string getAttributeValue (const std::string& xPathExpression) const;
+    std::optional<std::string> getOptionalAttributeValue(const std::string& xPathExpression) const;
 
     xmlDoc& getDocument (void);
 

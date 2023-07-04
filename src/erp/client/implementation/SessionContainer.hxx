@@ -37,6 +37,20 @@ public:
           mIsEstablished(false)
     {}
 
+    SessionContainer(
+        const boost::asio::ip::tcp::endpoint& ep,
+        const std::string& hostname,
+        const uint16_t connectionTimeoutSeconds,
+        bool enforceServerAuthentication,
+        const SafeString& caCertificates,
+        const SafeString& clientCertificate,
+        const SafeString& clientPrivateKey,
+        const std::optional<std::string>& forcedCiphers)
+        : mTlsSession(ep, hostname, connectionTimeoutSeconds, enforceServerAuthentication,
+                      caCertificates, clientCertificate, clientPrivateKey, forcedCiphers),
+          mIsEstablished(false)
+    {}
+
     SslStream& getStream() { return mTlsSession.getSslStream(); }
 
     void establish(const bool trustCn)
@@ -78,6 +92,10 @@ class SessionContainer<TcpStream>
 public:
     SessionContainer(const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds)
         : mTcpStream(hostname, port, connectionTimeoutSeconds)
+    {}
+
+    SessionContainer(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname, const uint16_t connectionTimeoutSeconds)
+        : mTcpStream(ep, hostname, connectionTimeoutSeconds)
     {}
 
     TcpStream& getStream() { return mTcpStream; };

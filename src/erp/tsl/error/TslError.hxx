@@ -46,7 +46,7 @@ public:
         std::string message,
         TslErrorCode errorCode,
         const TslMode tslMode,
-        std::string tslId,
+        std::optional<std::string> tslId,
         std::string tslSequenceNumber);
 
     TslError(

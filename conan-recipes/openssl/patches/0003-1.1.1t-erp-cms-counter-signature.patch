@@ -1,5 +1,5 @@
-From 79d65c18809f0d3fee07f2cfb4df9631fa9ccf65 Mon Sep 17 00:00:00 2001
-From: <redacted>
+From d1f5ad3aeb8342c6aa2cdc598b979f69232b63c0 Mon Sep 17 00:00:00 2001
+From: redacted <redacted>
 Date: Thu, 9 Feb 2023 10:09:07 +0100
 Subject: [PATCH 3/3] 1.1.1t-erp-cms-counter-signature.patch
 
@@ -340,10 +340,10 @@ index b22299348b..e4083b81e3 100644
 +
 +}
 diff --git a/crypto/err/openssl.txt b/crypto/err/openssl.txt
-index 1cdf8c1567..3b213e5d8b 100644
+index 75cf7a2d0c..daefaf33c6 100644
 --- a/crypto/err/openssl.txt
 +++ b/crypto/err/openssl.txt
-@@ -240,6 +240,7 @@ CMS_F_CHECK_CONTENT:99:check_content
+@@ -239,6 +239,7 @@ CMS_F_CHECK_CONTENT:99:check_content
  CMS_F_CMS_ADD0_CERT:164:CMS_add0_cert
  CMS_F_CMS_ADD0_RECIPIENT_KEY:100:CMS_add0_recipient_key
  CMS_F_CMS_ADD0_RECIPIENT_PASSWORD:165:CMS_add0_recipient_password
@@ -351,7 +351,7 @@ index 1cdf8c1567..3b213e5d8b 100644
  CMS_F_CMS_ADD1_RECEIPTREQUEST:158:CMS_add1_ReceiptRequest
  CMS_F_CMS_ADD1_RECIPIENT_CERT:101:CMS_add1_recipient_cert
  CMS_F_CMS_ADD1_SIGNER:102:CMS_add1_signer
-@@ -249,6 +250,7 @@ CMS_F_CMS_COMPRESSEDDATA_CREATE:105:cms_CompressedData_create
+@@ -248,6 +249,7 @@ CMS_F_CMS_COMPRESSEDDATA_CREATE:105:cms_CompressedData_create
  CMS_F_CMS_COMPRESSEDDATA_INIT_BIO:106:cms_CompressedData_init_bio
  CMS_F_CMS_COPY_CONTENT:107:cms_copy_content
  CMS_F_CMS_COPY_MESSAGEDIGEST:108:cms_copy_messageDigest
@@ -359,7 +359,7 @@ index 1cdf8c1567..3b213e5d8b 100644
  CMS_F_CMS_DATA:109:CMS_data
  CMS_F_CMS_DATAFINAL:110:CMS_dataFinal
  CMS_F_CMS_DATAINIT:111:CMS_dataInit
-@@ -310,7 +312,9 @@ CMS_F_CMS_SET1_SIGNERIDENTIFIER:146:cms_set1_SignerIdentifier
+@@ -309,7 +311,9 @@ CMS_F_CMS_SET1_SIGNERIDENTIFIER:146:cms_set1_SignerIdentifier
  CMS_F_CMS_SET_DETACHED:147:CMS_set_detached
  CMS_F_CMS_SIGN:148:CMS_sign
  CMS_F_CMS_SIGNED_DATA_INIT:149:cms_signed_data_init
@@ -423,5 +423,5 @@ index a3e9d92251..057c5be485 100644
  #  define CMS_F_CMS_SIGNERINFO_VERIFY                      152
  #  define CMS_F_CMS_SIGNERINFO_VERIFY_CERT                 153
 -- 
-2.37.2
+2.34.1
 

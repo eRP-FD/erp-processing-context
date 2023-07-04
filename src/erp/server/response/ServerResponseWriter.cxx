@@ -12,8 +12,6 @@
 #include "erp/server/response/ValidatedServerResponse.hxx"
 #include "erp/server/SslStream.hxx"
 
-#include "erp/common/BoostBeastHttpStatus.hxx"
-
 #include <boost/beast/http/write.hpp>
 
 namespace {
@@ -22,7 +20,7 @@ namespace {
         auto response = std::make_shared<boost::beast::http::response<boost::beast::http::string_body>>();
 
         response->body() = input.getBody();
-        response->result(toBoostBeastStatus(input.getHeader().status()));
+        response->result(static_cast<unsigned int>(input.getHeader().status()));
         if (input.getHeader().hasHeader(Header::ContentLength))
         {
             auto contentLength = input.getHeader().contentLength();

@@ -228,6 +228,10 @@ DeriveKeyOutput HsmProductionClient::deriveAuditKey(
     const HsmRawSession& session,
     DeriveKeyInput&& input)
 {
+    // We should have used hsmclient::ERP_DeriveAuditKey instead of hsmclient::ERP_DeriveTaskKey,
+    // however changing this would require a key change for all audit keys, and security
+    // is not compromised by sharing the same prefix name, as audit key and task keys
+    // already use independent derivation keys (cf AuditLogKeyDerivation, TaskKeyDerivation).
     return derivePersistenceKey (
         session,
         std::move(input),
@@ -477,6 +481,7 @@ void HsmProductionClient::disconnect (HsmRawSession& session)
 {
     if (session.rawSession.status == hsmclient::HSMSessionStatus::HSMLoggedIn)
     {
+        TVLOG(1) << "disconnecting from HSM cluster";
         auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "Hsm:ERP_Disconnect");
         session.rawSession = ERP_Disconnect(session.rawSession);
     }

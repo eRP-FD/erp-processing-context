@@ -147,7 +147,7 @@ X509Store TslManager::getTslTrustedCertificateStore(
 }
 
 
-// GEMREQ-start A_22141#verifyCertificate, A_20159-02#verifyCertificate
+// GEMREQ-start A_22141#verifyCertificate, A_20159-03#verifyCertificate
 void TslManager::verifyCertificate(const TslMode tslMode,
                                    X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
@@ -167,12 +167,19 @@ void TslManager::verifyCertificate(const TslMode tslMode,
             getTrustStore(tslMode),
             ocspCheckDescriptor);
     }
+    catch(const TslError& e)
+    {
+        // simply rethrow in case the verification itself failed
+        // to avoid logging in case of (expected) errors
+        TLOG(INFO) << "certificate verification failed: " << e.what();
+        throw;
+    }
     catch(...)
     {
         HANDLE_EXCEPTION("certificate verification failed");
     }
 }
-// GEMREQ-end A_22141#verifyCertificate, A_20159-02#verifyCertificate
+// GEMREQ-end A_22141#verifyCertificate, A_20159-03#verifyCertificate
 
 
 // GEMREQ-start A_20765-02#ocspResponse
@@ -267,29 +274,15 @@ void TslManager::disablePostUpdateHook(const size_t hookId)
 }
 
 
-void TslManager::healthCheckTsl() const
+TrustStore::HealthData TslManager::healthCheckTsl() const
 {
-    if (! mTslTrustStore->hasTsl())
-    {
-        Fail2("No TSL loaded", std::runtime_error);
-    }
-    if (mTslTrustStore->isTslTooOld())
-    {
-        Fail2("Loaded TSL is too old", std::runtime_error);
-    }
+    return mTslTrustStore->getHealthData();
 }
 
 
-void TslManager::healthCheckBna() const
+TrustStore::HealthData TslManager::healthCheckBna() const
 {
-    if (! mBnaTrustStore->hasTsl())
-    {
-        Fail2("No BNetzA loaded", std::runtime_error);
-    }
-    if (mBnaTrustStore->isTslTooOld())
-    {
-        Fail2("Loaded BNetzA is too old", std::runtime_error);
-    }
+    return mBnaTrustStore->getHealthData();
 }
 
 

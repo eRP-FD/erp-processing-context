@@ -1,5 +1,5 @@
-From 62002bf22e924f86d57af3fa20909b5b6e97a666 Mon Sep 17 00:00:00 2001
-From: <redacted>
+From 2603fe2f4f5d2f2ce78e569eea76c81e8dfcc65d Mon Sep 17 00:00:00 2001
+From: redacted <redacted>
 Date: Thu, 9 Feb 2023 10:04:11 +0100
 Subject: [PATCH 1/3] 1.1.1t-erp-cms.patch
 
@@ -144,5 +144,5 @@ index c7627968c7..9571bc9e2f 100644
  CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
                                  X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
 -- 
-2.37.2
+2.34.1
 

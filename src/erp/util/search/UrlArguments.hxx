@@ -44,12 +44,18 @@ public:
     void parse(const ServerRequest& request, const KeyDerivation& keyDerivation);
     void parse(const std::vector<std::pair<std::string, std::string>>& queryParameters, const KeyDerivation& keyDerivation);
 
+    enum class LinkMode
+    {
+        offset,
+        id,
+    };
+
     /**
      * Return a string that can be appended to a link prefix that ends in "&".
      * Note that order is maintained from the original URL between arguments of the same type (sorting vs searching vs paging) but not
      * between these groups.
      */
-    std::string getLinkPathArguments (const model::Link::Type linkType) const;
+    std::string getLinkPathArguments(const model::Link::Type linkType, LinkMode linkMode = LinkMode::offset) const;
 
     std::unordered_map<model::Link::Type, std::string> getBundleLinks (
         const std::string& linkBase,
@@ -57,7 +63,10 @@ public:
         const std::size_t& totalSearchMatches) const;
 
     std::unordered_map<model::Link::Type, std::string> getBundleLinks(bool hasNextPage, const std::string& linkBase,
-                                                                      const std::string& pathHead) const;
+                                                                      const std::string& pathHead,
+                                                                      LinkMode linkMode = LinkMode::offset) const;
+
+    void setResultDateRange(const model::Timestamp& firstEntry, const model::Timestamp& lastEntry);
 
     /**
      * Return a string that can be appended to a query that ends in a WHERE clause.
@@ -91,9 +100,16 @@ public:
     const PagingArgument& pagingArgument() const;
     [[nodiscard]] std::optional<SearchArgument> getSearchArgument(const std::string_view& name) const;
 
+    /**
+     * Add a search argument that is used to limit the result, but
+     * not passed back when requesting links via `getBundleLinks()`
+     */
+    void addHiddenSearchArgument(SearchArgument arg);
+
 private:
     std::vector<SearchParameter> mSupportedParameters;
     std::vector<SearchArgument> mSearchArguments;
+    std::vector<SearchArgument> mHiddenSearchArguments;
     std::vector<SortArgument> mSortArguments;
     PagingArgument mPagingArgument;
     bool mReverseIncludeAuditEventArgument = false;
@@ -139,7 +155,9 @@ private:
 
     void appendLinkSearchArguments (std::ostream& os) const;
     void appendLinkSortArguments (std::ostream& os) const;
-    void appendLinkPagingArguments (std::ostream& os, const model::Link::Type type) const;
+    void appendLinkPagingArguments (std::ostream& os, const model::Link::Type type, LinkMode linkMode) const;
+    void appendLinkPagingArgumentsWithId(std::ostream& os, const model::Link::Type type) const;
+    void appendLinkPagingArgumentsWithOffset(std::ostream& os, const model::Link::Type type) const;
     void appendLinkSeparator (std::ostream& os) const;
 
     std::optional<SearchParameter::Type> getParameterType (const std::string& argumentName) const;

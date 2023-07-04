@@ -6,11 +6,7 @@
  */
 
 #include "erp/beast/BoostBeastHeader.hxx"
-
 #include "erp/ErpConstants.hxx"
-
-#include "erp/common/BoostBeastHttpStatus.hxx"
-
 
 
 Header::keyValueMap_t BoostBeastHeader::convertHeaderFields (const boost::beast::http::fields& inputFields)

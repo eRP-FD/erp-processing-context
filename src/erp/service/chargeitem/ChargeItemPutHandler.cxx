@@ -143,12 +143,12 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
 
     // GEMREQ-start A_22141#chargeItemCadesBes, A_22150, A_22151
     A_22149.start("Pharmacy: validate PKV dispense item");
-    A_22151.start("Pharmacy: check signature certificate of PKV dispense bundle");
+    A_22151_01.start("Pharmacy: check signature certificate of PKV dispense bundle");
     auto [dispenseItemBundle, containedBinaryWithOcsp] = validatedBundleFromSigned(
         *rawContainedBinary,
         session.serviceContext,
         ::VauErrorCode::invalid_dispense);
-    A_22151.finish();
+    A_22151_01.finish();
     A_22149.finish();
     // GEMREQ-end A_22141#chargeItemCadesBes, A_22150, A_22151
 

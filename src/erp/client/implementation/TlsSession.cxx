@@ -218,6 +218,16 @@ TlsSession::TlsSession(
     configureContext(enforceServerAuthentication, caCertificates, clientCertificate, clientPrivateKey, forcedCiphers);
 }
 
+TlsSession::TlsSession(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
+                       const uint16_t connectionTimeoutSeconds, bool enforceServerAuthentication,
+                       const SafeString& caCertificates, const SafeString& clientCertificate,
+                       const SafeString& clientPrivateKey, const std::optional<std::string>& forcedCiphers)
+    : TlsSession(hostname, std::to_string(ep.port()), connectionTimeoutSeconds, enforceServerAuthentication,
+                 caCertificates, clientCertificate, clientPrivateKey, forcedCiphers)
+{
+    mForcedEndpoint.emplace(ep);
+}
+
 
 /* pImpl via std::unique_ptr forces us to move the destructor past Impl's full definition */
 TlsSession::~TlsSession () = default;
@@ -225,6 +235,17 @@ TlsSession::~TlsSession () = default;
 
 void TlsSession::establish (const bool trustCn)
 {
+    boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp> resolverResults;
+    /* Look up the domain name. */
+    if (! mForcedEndpoint.has_value())
+    {
+        resolverResults = boost::asio::ip::tcp::resolver{mIoContext}.resolve(mHostName.c_str(), mPort.c_str());
+    }
+    else
+    {
+        resolverResults =
+            boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>::create(*mForcedEndpoint, mHostName, mPort);
+    }
     // In some cases it seems to be necessary to retry a handshake.
     constexpr size_t tryCount = 2;
     for (size_t index=0; index<tryCount; ++index)
@@ -234,7 +255,7 @@ void TlsSession::establish (const bool trustCn)
             mSslStream = SslStream::create(mIoContext, mSslContext);
             mTicket = std::make_unique<TlsSessionTicketImpl>(mSslStream);
 
-            configureSession(trustCn);
+            configureSession(trustCn, resolverResults);
 
             mTicket->use();
 
@@ -390,7 +411,8 @@ void TlsSession::configureContext(
 }
 
 
-void TlsSession::configureSession (const bool trustCn)
+void TlsSession::configureSession(const bool trustCn,
+                                  const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>& resolverResults)
 {
     /* Clear session - this allows us to reuse the same `mSslStream` for the same peer. */
     if (!SSL_clear(mSslStream.getNativeHandle()))
@@ -420,15 +442,11 @@ void TlsSession::configureSession (const bool trustCn)
         SSL_set_hostflags(mSslStream.getNativeHandle(), X509_CHECK_FLAG_NEVER_CHECK_SUBJECT);
     }
 
-    /* Look up the domain name. */
-    auto const dnsLookupResults = boost::asio::ip::tcp::resolver{mIoContext}.
-                                            resolve(mHostName.c_str(), mPort.c_str());
-
     mSslStream.getLowestLayer().expires_after(std::chrono::seconds(mConnectionTimeoutSeconds));
 
     /* Make the connection on the IP address we get from a lookup. */
     boost::system::error_code errorCode =
-        AsyncStreamHelper::connect(mSslStream.getLowestLayer(), mIoContext, dnsLookupResults);
+        AsyncStreamHelper::connect(mSslStream.getLowestLayer(), mIoContext, resolverResults);
     if (errorCode)
     {
         throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, errorCode);

@@ -55,6 +55,8 @@ void UrlArguments::parse(const ServerRequest& request, const KeyDerivation& keyD
 void UrlArguments::parse(const std::vector<std::pair<std::string, std::string>>& queryParameters,
                          const KeyDerivation& keyDerivation)
 {
+    bool hasOffset{false};
+    bool hasId{false};
     for (const auto& entry : queryParameters)
     {
         ErpExpect( ! entry.first.empty(), HttpStatus::BadRequest, "empty arguments are not permitted");
@@ -69,6 +71,20 @@ void UrlArguments::parse(const std::vector<std::pair<std::string, std::string>>&
         else if (entry.first == PagingArgument::offsetKey) // "__offset"
         {
             mPagingArgument.setOffset(entry.second);
+            hasOffset = true;
+        }
+        else if (entry.first == PagingArgument::idKey) // "_id"
+        {
+            // paging via ids requires us to add hidden search arguments, so they
+            // do not end up in the bundle links again. Instead, we will add the
+            // paging ids later depending on the link mode (offset or id)
+            auto [prefix, uuid] =
+                SearchArgument::splitPrefixFromValues(entry.second, SearchParameter::Type::Date);
+            std::vector<std::optional<model::TimePeriod>> timePeriods;
+            timePeriods.emplace_back(model::TimePeriod::fromDatabaseUuid(uuid));
+            addHiddenSearchArgument(
+                SearchArgument{prefix, "id", "date", SearchParameter::Type::DateAsUuid, std::move(timePeriods), {""}});
+            hasId = true;
         }
         else if (entry.first == ReverseIncludeArgument::revIncludeKey && // "_revinclude=AuditEvent:entity.what"
                  entry.second == ReverseIncludeArgument::revIncludeAuditEventKey)
@@ -89,6 +105,7 @@ void UrlArguments::parse(const std::vector<std::pair<std::string, std::string>>&
             }
         }
     }
+    ErpExpect(! (hasOffset && hasId), HttpStatus::BadRequest, "Cannot combine _id and __offset paging arguments");
 }
 
 
@@ -335,13 +352,13 @@ void UrlArguments::addSortArguments (const std::string& argumentsString)
 }
 
 
-std::string UrlArguments::getLinkPathArguments (const model::Link::Type linkType) const
+std::string UrlArguments::getLinkPathArguments(const model::Link::Type linkType, LinkMode linkMode) const
 {
     std::ostringstream s;
 
     appendLinkSearchArguments(s);
     appendLinkSortArguments(s);
-    appendLinkPagingArguments(s, linkType);
+    appendLinkPagingArguments(s, linkType, linkMode);
 
     return s.str();
 }
@@ -376,43 +393,90 @@ void UrlArguments::appendLinkSortArguments (std::ostream& os) const
 }
 
 
-void UrlArguments::appendLinkPagingArguments (
-    std::ostream& os,
-    const model::Link::Type type) const
+void UrlArguments::appendLinkPagingArguments(std::ostream& os, const model::Link::Type type, LinkMode linkMode) const
 {
-    switch(type)
+    switch (linkMode)
+    {
+        case LinkMode::offset:
+            appendLinkPagingArgumentsWithOffset(os, type);
+            break;
+        case LinkMode::id:
+            appendLinkPagingArgumentsWithId(os, type);
+            break;
+    }
+}
+
+void UrlArguments::appendLinkPagingArgumentsWithOffset(std::ostream& os, const model::Link::Type type) const
+{
+    switch (type)
     {
         case model::Link::Self:
             if (mPagingArgument.isSet())
             {
                 appendLinkSeparator(os);
-                os << PagingArgument::countKey << "=" << mPagingArgument.getCount()
-                   << '&'
-                   << PagingArgument::offsetKey << '=' << mPagingArgument.getOffset();
+                os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::offsetKey
+                   << '=' << mPagingArgument.getOffset();
             }
             break;
 
-        case model::Link::Prev:
+        case model::Link::Prev: {
+            appendLinkSeparator(os);
+            // Note that the following may produce a page that overlaps with the current one.
+            // The reason for that is that the page size, which originally may have been provided
+            // by the client, is to be preserved. And in order to avoid negative offsets, the offset is
+            // capped at the lower end to 0.
+            os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::offsetKey
+               << '=' << std::max(size_t(0), mPagingArgument.getOffset() - mPagingArgument.getCount());
+            break;
+        }
+
+        case model::Link::Next: {
+            appendLinkSeparator(os);
+            os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::offsetKey
+               << '=' << mPagingArgument.getOffset() + mPagingArgument.getCount();
+        }
+        break;
+    }
+}
+
+void UrlArguments::appendLinkPagingArgumentsWithId(std::ostream& os, const model::Link::Type type) const
+{
+    ErpExpect(mPagingArgument.getEntryTimestampRange().has_value(), HttpStatus::InternalServerError,
+              "Cannot generate links without timestamp range");
+    bool reverse = mPagingArgument.getEntryTimestampRange()->first < mPagingArgument.getEntryTimestampRange()->second;
+    switch (type)
+    {
+        case model::Link::Self:
+            if (mPagingArgument.isSet())
             {
                 appendLinkSeparator(os);
-                // Note that the following may produce a page that overlaps with the current one.
-                // The reason for that is that the page size, which originally may have been provided
-                // by the client, is to be preserved. And in order to avoid negative offsets, the offset is
-                // capped at the lower end to 0.
-                os << PagingArgument::countKey << "=" << mPagingArgument.getCount()
-                   << '&'
-                   << PagingArgument::offsetKey << '=' << std::max(size_t(0), mPagingArgument.getOffset() - mPagingArgument.getCount());
+                os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::idKey
+                   << '='
+                   << SearchArgument::prefixAsString(reverse ? SearchArgument::Prefix::GE : SearchArgument::Prefix::LE)
+                   << formatTimestamp(SearchParameter::Type::DateAsUuid,
+                                      mPagingArgument.getEntryTimestampRange()->first)
+                   << "&" << PagingArgument::idKey << '='
+                   << SearchArgument::prefixAsString(reverse ? SearchArgument::Prefix::LE : SearchArgument::Prefix::GE)
+                   << formatTimestamp(SearchParameter::Type::DateAsUuid,
+                                      mPagingArgument.getEntryTimestampRange()->second);
             }
             break;
 
-        case model::Link::Next:
-            {
-                appendLinkSeparator(os);
-                os << PagingArgument::countKey << "=" << mPagingArgument.getCount()
-                   << '&'
-                   << PagingArgument::offsetKey << '=' << mPagingArgument.getOffset() + mPagingArgument.getCount();
-            }
-            break;
+        case model::Link::Prev: {
+            appendLinkSeparator(os);
+            os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::idKey << '='
+               << SearchArgument::prefixAsString(reverse ? SearchArgument::Prefix::LT : SearchArgument::Prefix::GT)
+               << formatTimestamp(SearchParameter::Type::DateAsUuid, mPagingArgument.getEntryTimestampRange()->first);
+        }
+        break;
+
+        case model::Link::Next: {
+            appendLinkSeparator(os);
+            os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::idKey << '='
+               << SearchArgument::prefixAsString(reverse ? SearchArgument::Prefix::GT : SearchArgument::Prefix::LT)
+               << formatTimestamp(SearchParameter::Type::DateAsUuid, mPagingArgument.getEntryTimestampRange()->second);
+        }
+        break;
     }
 }
 
@@ -426,20 +490,23 @@ std::unordered_map<model::Link::Type, std::string> UrlArguments::getBundleLinks 
 }
 
 std::unordered_map<model::Link::Type, std::string>
-UrlArguments::getBundleLinks(bool hasNextPage, const std::string& linkBase, const std::string& pathHead) const
+UrlArguments::getBundleLinks(bool hasNextPage, const std::string& linkBase, const std::string& pathHead, LinkMode linkMode) const
 {
     std::unordered_map<model::Link::Type, std::string> links;
 
-    links.emplace(model::Link::Type::Self, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Self));
+    links.emplace(model::Link::Type::Self,
+                  linkBase + pathHead + getLinkPathArguments(model::Link::Type::Self, linkMode));
 
     if (mPagingArgument.hasPreviousPage())
     {
-        links.emplace(model::Link::Type::Prev, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Prev));
+        links.emplace(model::Link::Type::Prev,
+                      linkBase + pathHead + getLinkPathArguments(model::Link::Type::Prev, linkMode));
     }
 
     if (hasNextPage)
     {
-        links.emplace(model::Link::Type::Next, linkBase + pathHead + getLinkPathArguments(model::Link::Type::Next));
+        links.emplace(model::Link::Type::Next,
+                      linkBase + pathHead + getLinkPathArguments(model::Link::Type::Next, linkMode));
     }
 
     return links;
@@ -495,25 +562,28 @@ std::string UrlArguments::getSqlWhereExpression (const pqxx::connection& connect
 {
     std::ostringstream s;
 
-    for (const auto& argument : mSearchArguments)
+    for (const auto& argumentList : {std::cref(mSearchArguments), std::cref(mHiddenSearchArguments)})
     {
-        if (s.tellp() > 0)
+        for (const auto& argument : argumentList.get())
         {
-            if (indentation.empty())
-                s << " AND ";
-            else
-                s << '\n' << indentation << "AND ";
-        }
-        if (argument.valuesCount() > 1)
-        {
-            s << "(";
-        }
+            if (s.tellp() > 0)
+            {
+                if (indentation.empty())
+                    s << " AND ";
+                else
+                    s << '\n' << indentation << "AND ";
+            }
+            if (argument.valuesCount() > 1)
+            {
+                s << "(";
+            }
 
-        appendComparison(s, argument, connection);
+            appendComparison(s, argument, connection);
 
-        if (argument.valuesCount() > 1)
-        {
-            s << ")";
+            if (argument.valuesCount() > 1)
+            {
+                s << ")";
+            }
         }
     }
 
@@ -546,8 +616,11 @@ std::string UrlArguments::getSqlSortExpression (void) const
 
 std::string UrlArguments::getSqlPagingExpression (bool oneAdditionalItem) const
 {
-    return "LIMIT " + std::to_string(oneAdditionalItem? 1 + mPagingArgument.getCount() : mPagingArgument.getCount())
-        + " OFFSET " + std::to_string(mPagingArgument.getOffset());
+    std::string expr = "LIMIT " + std::to_string(oneAdditionalItem? 1 + mPagingArgument.getCount() : mPagingArgument.getCount());
+
+    if (mPagingArgument.getOffset() > 0)
+            expr.append(" OFFSET ").append(std::to_string(mPagingArgument.getOffset()));
+    return expr;
 }
 
 
@@ -869,4 +942,14 @@ std::optional<SearchArgument> UrlArguments::getSearchArgument(const std::string_
         }
     }
     return {};
+}
+
+void UrlArguments::addHiddenSearchArgument(SearchArgument arg)
+{
+    mHiddenSearchArguments.emplace_back(std::move(arg));
+}
+
+void UrlArguments::setResultDateRange(const model::Timestamp& firstEntry, const model::Timestamp& lastEntry)
+{
+    mPagingArgument.setEntryTimestampRange(firstEntry, lastEntry);
 }

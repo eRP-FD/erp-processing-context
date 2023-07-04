@@ -17,6 +17,7 @@
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/service/SubscriptionPostHandler.hxx"
 #include "erp/util/Configuration.hxx"
+#include "erp/util/Demangle.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/TLog.hxx"
@@ -92,10 +93,11 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             messageType == Communication::MessageType::Representative)
         {
             A_21371_02.start("check existence of task");
-            task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
-            ErpExpect(task.has_value(), HttpStatus::BadRequest, "Task for prescription id " + prescriptionId.toString() + " is missing");
+            auto taskAndKey = databaseHandle->retrieveTaskForUpdate(prescriptionId);
+            ErpExpect(taskAndKey.has_value(), HttpStatus::BadRequest, "Task for prescription id " + prescriptionId.toString() + " is missing");
             A_21371_02.finish();
 
+            task = std::move(taskAndKey->task);
             taskKvnr = task->kvnr();
             ErpExpect(taskKvnr.has_value(), HttpStatus::BadRequest, "Referenced task does not contain a KVNR");
         }
@@ -279,7 +281,8 @@ void CommunicationPostHandler::validateInfoRequest(const model::Communication& c
     {
         const auto& medicationErpElement = dynamic_cast<const ErpElement*>(medicationElement.get());
         Expect3(medicationErpElement != nullptr,
-                "unexpected type for medicationElement"s.append(typeid(medicationErpElement).name()), std::logic_error);
+                "unexpected type for medicationElement: "s.append(util::demangle(typeid(medicationErpElement).name())),
+                std::logic_error);
         //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
         auto* medicationValue = const_cast<rapidjson::Value*>(medicationErpElement->erpValue());
         model::KbvMedicationGeneric::validateMedication(*medicationErpElement, xmlValidator, inCodeValidator,

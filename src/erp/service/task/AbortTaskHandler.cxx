@@ -117,18 +117,19 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     Expect3(professionOIDClaim.has_value(), "Missing professionOIDClaim", std::logic_error);  // should not happen because of professionOID check;
 
     auto* databaseHandle = session.database();
-    auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
+    auto taskAndKey = databaseHandle->retrieveTaskForUpdate(prescriptionId);
 
-    ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
+    ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
 
-    const auto taskStatus = task->status();
+    auto& task = taskAndKey->task;
+    const auto taskStatus = task.status();
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
     ErpExpect(taskStatus != model::Task::Status::draft, HttpStatus::Forbidden, "Abort not expected for newly created Task");
 
     A_22102_01.start("insurant not allowed to delete incomplete tasks for workflow types 169 and 209.");
     if(professionOIDClaim.value() == profession_oid::oid_versicherter)
     {
-        switch (task->type())
+        switch (task.type())
         {
             case model::PrescriptionType::apothekenpflichigeArzneimittel:
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
@@ -142,23 +143,23 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     }
     A_22102_01.finish();
 
-    checkAccessValidity(session.auditDataCollector(), *professionOIDClaim, *task, session.request);
+    checkAccessValidity(session.auditDataCollector(), *professionOIDClaim, task, session.request);
 
-    const auto kvnr = task->kvnr();
+    const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
     A_19121.start("Set Task status to cancelled");
-    task->setStatus(model::Task::Status::cancelled);
+    task.setStatus(model::Task::Status::cancelled);
     A_19121.finish();
-    task->updateLastUpdate();
+    task.updateLastUpdate();
 
     // GEMREQ-start A_19027-03
     A_19027_03.start("Delete personal data");
     // Delete Task related Communications
-    databaseHandle->deleteCommunicationsForTask(task->prescriptionId());
+    databaseHandle->deleteCommunicationsForTask(task.prescriptionId());
     // Update task in database and delete related HealthCareProviderPrescription, PatientConfirmation,
     // Receipt, MedicationDispense, etc.:
-    databaseHandle->updateTaskClearPersonalData(*task);
+    databaseHandle->updateTaskClearPersonalData(task);
     A_19027_03.finish();
     // GEMREQ-end A_19027-03
 

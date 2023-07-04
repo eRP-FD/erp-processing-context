@@ -49,7 +49,7 @@ RegistrationManager::RegistrationManager(RegistrationManager&& other) noexcept
 void RegistrationManager::registration()
 {
     std::lock_guard<std::mutex> guard(mMutex);
-    TVLOG(1) << "Registration of TEE instance.";
+    TLOG(INFO) << "Registration of TEE instance.";
 
     const auto now = time_point_cast<seconds>(system_clock::now());
     mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, startupValue);
@@ -62,7 +62,7 @@ void RegistrationManager::registration()
 void RegistrationManager::deregistration()
 {
     std::lock_guard<std::mutex> guard(mMutex);
-    TVLOG(1) << "Deregistration of TEE instance.";
+    TLOG(WARNING) << "Deregistration of TEE instance.";
 
     const auto now = time_point_cast<seconds>(system_clock::now());
     mRedisInterface->setKeyFieldValue(mRedisKey, eventFieldName, unregisterValue);
@@ -83,6 +83,7 @@ void RegistrationManager::heartbeat()
 
     TVLOG(1) << "Heartbeat from TEE instance successful.";
 }
+
 bool RegistrationManager::registered() const
 {
     std::lock_guard<std::mutex> guard(mMutex);

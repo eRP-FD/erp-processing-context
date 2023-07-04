@@ -343,7 +343,7 @@ TslError::TslError(
     std::string message,
     TslErrorCode errorCode,
     const TslMode tslMode,
-    std::string tslId,
+    std::optional<std::string> tslId,
     std::string tslSequenceNumber)
         : std::runtime_error(generateMessage(message, errorCode, {}, tslMode, tslId, tslSequenceNumber))
         , mErrorData({{std::move(message), errorCode}})

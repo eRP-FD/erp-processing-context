@@ -91,7 +91,7 @@ private:
 
 TEST_F(Erp11543Test, PostChargeItemWithBadKbvBundleSignature)
 {
-    A_22140.test("POST ChargeItem: bad signature for KBV dispense bundle should be rejected");
+    A_22140_01.test("POST ChargeItem: bad signature for KBV dispense bundle should be rejected");
 
     const auto signFunction = [](const std::string& data)
     {
@@ -189,7 +189,7 @@ TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignature)
 
 TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignatureCertificate)
 {
-    A_22151.test("PUT ChargeItem: bad certificate of KBV dispense bundle signature should be rejected");
+    A_22151_01.test("PUT ChargeItem: bad certificate of KBV dispense bundle signature should be rejected");
 
     ASSERT_NO_FATAL_FAILURE(createAndGetChargeItem());
     ASSERT_TRUE(mCreatedChargeItem);

@@ -342,7 +342,7 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     for (auto& task : tasks)
     {
         const auto [taskWithAccessCode, data] = database->retrieveTaskAndPrescription(task.prescriptionId());
-        task.setAccessCode(taskWithAccessCode->accessCode());
+        task.setAccessCode(taskWithAccessCode->task.accessCode());
     }
 
     model::Bundle responseBundle{model::BundleType::searchset, model::ResourceBase::NoProfile};
@@ -394,8 +394,13 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
 {
     auto* databaseHandle = session.database();
     A_21532_02.start("Suppress secret for insurant (retrieveTaskAndPrescription does not read it from DB)");
-    auto [task, healthcareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
+    auto [taskAndKey, healthcareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
     A_21532_02.finish();
+    std::optional<model::Task> task;
+    if (taskAndKey.has_value())
+    {
+        task = std::move(taskAndKey->task);
+    }
 
     checkTaskState(task, true);
 

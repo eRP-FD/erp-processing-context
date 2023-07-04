@@ -32,7 +32,7 @@ namespace model
 enum class PrescriptionType : uint8_t;
 }
 
-/// @brief Handles encryption and separtes the fields for the DatabaseBackend implementation
+/// @brief Handles encryption and separates the fields for the DatabaseBackend implementation
 /// all accesses to the actual Database are performed through the Backend
 class DatabaseFrontend : public Database
 {
@@ -50,8 +50,14 @@ public:
 
     [[nodiscard]] model::PrescriptionId storeTask(const model::Task& task) override;
     void updateTaskStatusAndSecret(const model::Task& task) override;
+    void updateTaskStatusAndSecret(const model::Task& task, const SafeString& key) override;
     void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) override;
+    void activateTask(const model::Task& task, const SafeString& key,
+                      const model::Binary& healthCareProviderPrescription) override;
     void updateTaskMedicationDispenseReceipt(const model::Task& task,
+                                             const std::vector<model::MedicationDispense>& medicationDispenses,
+                                             const model::ErxReceipt& receipt) override;
+    void updateTaskMedicationDispenseReceipt(const model::Task& task, const SafeString& key,
                                              const std::vector<model::MedicationDispense>& medicationDispenses,
                                              const model::ErxReceipt& receipt) override;
     void updateTaskClearPersonalData(const model::Task& task) override;
@@ -61,16 +67,14 @@ public:
     retrieveAuditEventData(const model::Kvnr& kvnr, const std::optional<Uuid>& id,
                            const std::optional<model::PrescriptionId>& prescriptionId,
                            const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] uint64_t countAuditEventData(const model::Kvnr& kvnr,
-                                               const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] std::optional<model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) override;
-    [[nodiscard]] ::std::tuple<::std::optional<::model::Task>, ::std::optional<::model::Binary>>
-    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
+    [[nodiscard]] std::optional<TaskAndKey> retrieveTaskForUpdate(const model::PrescriptionId& taskId) override;
+    [[nodiscard]] std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>>
+    retrieveTaskForUpdateAndPrescription(const model::PrescriptionId& taskId) override;
 
     [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Bundle>>
     retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
-    [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Binary>>
+    [[nodiscard]] std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>>
     retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
     retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;

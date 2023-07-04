@@ -142,6 +142,7 @@ public:
     static const std::string InnerRequestClientId;
     static const std::string InnerRequestLeips;
     static const std::string InnerResponseCode;
+    static const std::string BackendDurationMs;
 
     // Values for selected header fiels.
     static const std::string ConnectionClose;

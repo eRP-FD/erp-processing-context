@@ -796,11 +796,11 @@ namespace
     }
 
 
-    std::string extractId(XmlDocument& xmlDocument, const TslMode mode)
+    std::optional<std::string> extractId(XmlDocument& xmlDocument, const TslMode mode)
     {
         try
         {
-            return xmlDocument.getAttributeValue(xpathLiteral_tslId);
+            return xmlDocument.getOptionalAttributeValue(xpathLiteral_tslId);
         }
         catch(const std::runtime_error& e)
         {
@@ -1015,7 +1015,7 @@ TslParser::TslParser(const std::string& tslXml, const TslMode tslMode, const Xml
 }
 
 
-const std::string& TslParser::getId() const
+const std::optional<std::string>& TslParser::getId() const
 {
     return mId;
 }

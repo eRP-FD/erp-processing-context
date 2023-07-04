@@ -40,6 +40,22 @@ ClientBase<StreamClass>::ClientBase (
 {
 }
 
+template<class StreamClass>
+ClientBase<StreamClass>::ClientBase (
+    const boost::asio::ip::tcp::endpoint& ep,
+    const std::string& host,
+    const uint16_t connectionTimeoutSeconds,
+    bool enforceServerAuthentication,
+    const SafeString& caCertificates,
+    const SafeString& clientCertificate,
+    const SafeString& clientPrivateKey,
+    const std::optional<std::string>& forcedCiphers)
+    : mImplementation(std::make_unique<ClientImpl<StreamClass>>(
+        ep, host, connectionTimeoutSeconds, enforceServerAuthentication,
+        caCertificates, clientCertificate, clientPrivateKey, forcedCiphers))
+{
+}
+
 
 template<class StreamClass>
 ClientResponse ClientBase<StreamClass>::send (const ClientRequest& clientRequest, const bool trustCn)

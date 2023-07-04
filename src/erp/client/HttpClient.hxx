@@ -9,9 +9,9 @@
 #define ERP_PROCESSING_CONTEXT_CLIENT_HTTPCLIENT_HXX
 
 #include "erp/client/ClientBase.hxx"
-
 #include "erp/client/TcpStream.hxx"
 
+#include <boost/asio/ip/tcp.hpp>
 #include <string>
 #include <memory>
 #include <cstddef>
@@ -23,6 +23,7 @@ class HttpClient
 public:
     /// Creates a Http client using the given host name and port number.
     explicit HttpClient(const std::string& host, std::uint16_t port, const uint16_t connectionTimeoutSeconds);
+    explicit HttpClient(const boost::asio::ip::tcp::endpoint& ep, const std::string& host, const uint16_t connectionTimeoutSeconds);
 };
 
 

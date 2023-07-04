@@ -474,10 +474,15 @@ namespace
             true);
 
         TslExpect6(ocspStatus.certificateStatus == OcspService::CertificateStatus::good,
-                   "OCSP check for TSL signer certificate has failed",
-                   TslErrorCode::OCSP_STATUS_ERROR,
-                   trustStore.getTslMode(),
-                   trustStore.getIdOfTslInUse(),
+                   std::string{"OCSP check for TSL signer certificate has failed, oscp certificate status: "}
+                       .append(magic_enum::enum_name(ocspStatus.certificateStatus))
+                       .append(", certificate subject: ")
+                       .append(issuerCertificate.getSubject())
+                       .append(", serial: ")
+                       .append(issuerCertificate.getSerialNumber())
+                       .append(", ocspUrl: ")
+                       .append(ocspUrl->url),
+                   TslErrorCode::OCSP_STATUS_ERROR, trustStore.getTslMode(), trustStore.getIdOfTslInUse(),
                    trustStore.getSequenceNumberOfTslInUse());
     }
 
@@ -663,7 +668,7 @@ namespace
     }
 
 
-    // GEMREQ-start A_22141#checkOcspStatusOfCertificate, A_20159-02#checkOcspStatusOfCertificate
+    // GEMREQ-start A_22141#checkOcspStatusOfCertificate, A_20159-03#checkOcspStatusOfCertificate
     void checkOcspStatusOfCertificate(const X509Certificate& certificate,
                                       const CertificateType certificateType,
                                       const X509Certificate& issueCertificate,
@@ -686,7 +691,7 @@ namespace
             ocspCheckDescriptor.timeSettings.referenceTimePoint,
             trustStore);
     }
-    // GEMREQ-end A_22141#checkOcspStatusOfCertificate, A_20159-02#checkOcspStatusOfCertificate
+    // GEMREQ-end A_22141#checkOcspStatusOfCertificate, A_20159-03#checkOcspStatusOfCertificate
 
     void checkCertificateChain(X509Certificate& certificate,
                                TrustStore& trustStore)
@@ -963,24 +968,33 @@ TslService::attemptTslParsing (const std::string& tslXml,
                            trustStore,
                            expectedSignerCertificates);
 
-    // 5. Select ID and TSLSequenceNumber, both for the new TSL and for the
+    // 5. Select TSLSequenceNumber, both for the new TSL and for the
     // TSL used by the system
-    const auto& newId = tslParser.getId();
-    const auto& systemId = trustStore.getIdOfTslInUse();
     const auto newTslSequenceNumber = std::stoll(tslParser.getSequenceNumber());
     const auto systemTslSequenceNumber = !trustStore.getSequenceNumberOfTslInUse().empty()
                                                    ? std::stoll(trustStore.
                                                                   getSequenceNumberOfTslInUse())
                                                    : 0;
+    if (trustStore.getTslMode() == TslMode::TSL)
+    {
+        // in the case for Gematik-TSL obtain and validate the id
+        const auto& newId = tslParser.getId();
+        const auto& systemId = trustStore.getIdOfTslInUse();
+        if (newId.has_value() && systemId != newId && systemTslSequenceNumber < newTslSequenceNumber)
+        {
+            return tslParser;
+        }
 
-    if (systemId != newId && systemTslSequenceNumber < newTslSequenceNumber)
+        TslExpect6(newId.has_value() && systemId == newId && systemTslSequenceNumber == newTslSequenceNumber,
+                   "Unexpected TrustServiceStatusList ID, new Id: " + newId.value_or("<unset>") +
+                       ", newSequenceNumber: " + tslParser.getSequenceNumber(),
+                   TslErrorCode::TSL_ID_INCORRECT, trustStore.getTslMode(), trustStore.getIdOfTslInUse(),
+                   trustStore.getSequenceNumberOfTslInUse());
+    }
+    else if (systemTslSequenceNumber < newTslSequenceNumber)
     {
         return tslParser;
     }
-
-    TslExpect(systemId == newId && systemTslSequenceNumber == newTslSequenceNumber,
-              "Unexpected TrustServiceStatusList ID",
-              TslErrorCode::TSL_ID_INCORRECT);
 
     return std::nullopt;
 }
@@ -1078,7 +1092,7 @@ CertificateType TslService::getCertificateType(const X509Certificate& certificat
     TslFail("Unexpected certificate type", TslErrorCode::CERT_TYPE_MISMATCH);
 }
 
-// GEMREQ-start A_22141#checkCertificateWithoutOcspCheck, A_20159-02#checkCertificateWithoutOcspCheck
+// GEMREQ-start A_22141#checkCertificateWithoutOcspCheck, A_20159-03#checkCertificateWithoutOcspCheck
 std::tuple<CertificateType, X509Certificate>
 TslService::checkCertificateWithoutOcspCheck(
     X509Certificate& certificate,
@@ -1148,10 +1162,10 @@ TslService::checkCertificateWithoutOcspCheck(
 
     return {certificateType, caInfo->certificate};
 }
-// GEMREQ-end A_22141#checkCertificateWithoutOcspCheck, A_20159-02#checkCertificateWithoutOcspCheck
+// GEMREQ-end A_22141#checkCertificateWithoutOcspCheck, A_20159-03#checkCertificateWithoutOcspCheck
 
 
-// GEMREQ-start A_22141#checkCertificate, A_20159-02#checkCertificate
+// GEMREQ-start A_22141#checkCertificate, A_20159-03#checkCertificate
 void
 TslService::checkCertificate(
     X509Certificate& certificate,
@@ -1182,4 +1196,4 @@ TslService::checkCertificate(
         trustStore,
         ocspCheckDescriptor);
 }
-// GEMREQ-end A_22141#checkCertificate, A_20159-02#checkCertificate
+// GEMREQ-end A_22141#checkCertificate, A_20159-03#checkCertificate

@@ -49,19 +49,18 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto prescriptionId = parseId(session.request, session.accessLog);
 
     auto* databaseHandle = session.database();
-    auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
+    auto taskAndKey = databaseHandle->retrieveTaskForUpdate(prescriptionId);
 
-    ErpExpect(task.has_value(), HttpStatus::NotFound, "Requested Task not found in DB");
-
+    ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "Requested Task not found in DB");
+    auto& task = taskAndKey->task;
     // the prescription ID is not persisted in $create in order to avoid a second DB access there.
-    task->setPrescriptionId(prescriptionId);
+    task.setPrescriptionId(prescriptionId);
 
-    const auto taskStatus = task->status();
-
+    const auto taskStatus = task.status();
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
 
     A_19024_03.start("check access code");
-    checkAccessCodeMatches(session.request, *task);
+    checkAccessCodeMatches(session.request, task);
     A_19024_03.finish();
 
     A_19024_03.start("check status draft");
@@ -126,14 +125,14 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
               "Failed to extract prescriptionId from QES-Bundle");
 
     A_21370.start("compare the task flowtype against the prefix of the prescription-id");
-    ErpExpect(bundlePrescriptionId->type() == task->type(), HttpStatus::BadRequest,
+    ErpExpect(bundlePrescriptionId->type() == task.type(), HttpStatus::BadRequest,
               "Flowtype mismatch between Task and QES-Bundle");
     A_21370.finish();
 
     if (! config.getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
     {
         A_21370.start("compare the prescription id of the QES bundle with the task");
-        ErpExpect(*bundlePrescriptionId == task->prescriptionId(), HttpStatus::BadRequest,
+        ErpExpect(*bundlePrescriptionId == task.prescriptionId(), HttpStatus::BadRequest,
                     "PrescriptionId mismatch between Task and QES-Bundle");
         A_21370.finish();
     }
@@ -160,10 +159,10 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     checkValidCoverage(prescriptionBundle, prescriptionId.type());
 
     A_19025_02.start("3. reference the PKCS7 file in task");
-    task->setHealthCarePrescriptionUuid();
-    task->setPatientConfirmationUuid();
+    task.setHealthCarePrescriptionUuid();
+    task.setPatientConfirmationUuid();
     const model::Binary healthCareProviderPrescriptionBinary(
-        *task->healthCarePrescriptionUuid(),
+        *task.healthCarePrescriptionUuid(),
         cadesBesSignature.getBase64());
     A_19025_02.finish();
 
@@ -172,7 +171,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
         date::make_zoned(model::Timestamp::GermanTimezone, signingTime->toChronoTimePoint()).get_local_time())};
     if (isMvo)
     {
-        setMvoExpiryAcceptDates(*task, mvoEndDate, signingDay);
+        setMvoExpiryAcceptDates(task, mvoEndDate, signingDay);
     }
     else
     {
@@ -183,11 +182,11 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
         {
             expiryDate = expiryDate.year() / expiryDate.month() / date::last;
         }
-        task->setExpiryDate(model::Timestamp{date::sys_days{expiryDate}});
+        task.setExpiryDate(model::Timestamp{date::sys_days{expiryDate}});
         A_19445_08.finish();
         A_19445_08.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
         A_19517_02.start("different validity duration (accept date) for different types");
-        task->setAcceptDate(*signingTime, legalBasisCode,
+        task.setAcceptDate(*signingTime, legalBasisCode,
                             config.getIntValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD));
         A_19517_02.finish();
         A_19445_08.finish();
@@ -208,22 +207,23 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     {
         ErpFail(HttpStatus::BadRequest, ex.what());
     }
-    task->setKvnr(*kvnr);
+    task.setKvnr(*kvnr);
     A_19127_01.finish();
     // GEMREQ-end A_19127-01
 
     A_19128.start("status transition draft -> ready");
-    task->setStatus(model::Task::Status::ready);
+    task.setStatus(model::Task::Status::ready);
     A_19128.finish();
 
-    task->updateLastUpdate();
+    task.updateLastUpdate();
 
     A_19025_02.start("2. store the PKCS7 file in database");
     databaseHandle = session.database();
-    databaseHandle->activateTask(task.value(), healthCareProviderPrescriptionBinary);
+    ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing task key.");
+    databaseHandle->activateTask(taskAndKey->task, *taskAndKey->key, healthCareProviderPrescriptionBinary);
     A_19025_02.finish();
 
-    makeResponse(session, extensionsStatus, &task.value());
+    makeResponse(session, extensionsStatus, &task);
 
     // Collect audit data:
     session.auditDataCollector()

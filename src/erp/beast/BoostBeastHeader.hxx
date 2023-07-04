@@ -55,7 +55,7 @@ Header BoostBeastHeader::fromBeastResponseParser (const Parser& parser)
         "", // no target for reponse
         parser.get().version(),
         convertHeaderFields(parser.get().base()),
-        fromBoostBeastStatus(static_cast<uint32_t>(parser.get().result())));
+        fromBoostBeastStatus(static_cast<uint32_t>(parser.get().result_int())));
     result.setKeepAlive(parser.keep_alive());
     return result;
 }

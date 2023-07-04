@@ -187,7 +187,10 @@ model::Health ApplicationHealth::model (void) const
 
     model::Health health;
 
-    health.setBnaStatus(getUpDownStatus(Service::Bna), getDetails(Service::Bna));
+    health.setBnaStatus(getUpDownStatus(Service::Bna), getServiceDetail(Service::Bna, ServiceDetail::TSLExpiry),
+                        getServiceDetail(Service::Bna, ServiceDetail::TSLSequenceNumber),
+                        getServiceDetail(Service::Bna, ServiceDetail::TSLId),
+                        getServiceDetail(Service::Bna, ServiceDetail::TslHash), getDetails(Service::Bna));
     health.setHsmStatus(getUpDownStatus(Service::Hsm), getServiceDetail(Service::Hsm, ServiceDetail::HsmDevice),
                         getDetails(Service::Hsm));
     health.setIdpStatus(getUpDownStatus(Service::Idp), getDetails(Service::Idp));
@@ -197,7 +200,10 @@ model::Health ApplicationHealth::model (void) const
     health.setRedisStatus(getUpDownStatus(Service::Redis), getDetails(Service::Redis));
     health.setSeedTimerStatus(getUpDownStatus(Service::PrngSeed), getDetails(Service::PrngSeed));
     health.setTeeTokenUpdaterStatus(getUpDownStatus(Service::TeeToken), getDetails(Service::TeeToken));
-    health.setTslStatus(getUpDownStatus(Service::Tsl), getDetails(Service::Tsl));
+    health.setTslStatus(getUpDownStatus(Service::Tsl), getServiceDetail(Service::Tsl, ServiceDetail::TSLExpiry),
+                        getServiceDetail(Service::Tsl, ServiceDetail::TSLSequenceNumber),
+                        getServiceDetail(Service::Tsl, ServiceDetail::TSLId),
+                        getServiceDetail(Service::Tsl, ServiceDetail::TslHash), getDetails(Service::Tsl));
     health.setCFdSigErpStatus(
         getUpDownStatus(Service::CFdSigErp), getServiceDetail(Service::CFdSigErp, ServiceDetail::CFdSigErpTimestamp),
         getServiceDetail(Service::CFdSigErp, ServiceDetail::CFdSigErpPolicy),

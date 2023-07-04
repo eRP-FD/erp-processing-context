@@ -8,6 +8,7 @@
 #include "test/util/HsmTestBase.hxx"
 
 #include "erp/hsm/BlobCache.hxx"
+#include "erp/hsm/HsmPool.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/TLog.hxx"
@@ -21,10 +22,21 @@
     #include "erp/hsm/production/HsmProductionClient.hxx"
 #endif
 
+class TestTeeTokenUpdater : public TeeTokenUpdater
+{
+public:
+    TestTeeTokenUpdater(HsmPool& hsmPool, TokenRefresher&& tokenRefresher,
+                        std::chrono::system_clock::duration updateInterval,
+                        std::chrono::system_clock::duration retryInterval)
+        : TeeTokenUpdater(hsmPool, std::move(tokenRefresher), std::make_shared<Timer>(), updateInterval, retryInterval)
+    {
+    }
+};
+
 
 bool HsmTestBase::isHsmSimulatorSupportedAndConfigured (void)
 {
-    static const bool isSimulatorSupportedAndConfigured =
+    static const bool isSimulatorSupportedAndConfigured = mAllowProductionHsm &&
 #if defined(__APPLE__) || defined(_WIN32)
         false;
 #else
@@ -34,17 +46,24 @@ bool HsmTestBase::isHsmSimulatorSupportedAndConfigured (void)
 }
 
 
-void HsmTestBase::setupHsmTest (void)
+void HsmTestBase::setupHsmTest(bool allowProductionUpdater, std::chrono::system_clock::duration updateInterval,
+                               std::chrono::system_clock::duration retryInterval)
 {
+    mAllowProductionHsm = allowProductionUpdater;
     mBlobCache = MockBlobDatabase::createBlobCache(
         isHsmSimulatorSupportedAndConfigured()
             ? MockBlobCache::MockTarget::SimulatedHsm
             : MockBlobCache::MockTarget::MockedHsm
         );
-    mHsmFactory = createFactory(
+    auto factory = createFactory(
         createHsmClient(),
         mBlobCache);
-    mHsmSession = mHsmFactory->connect();
+    mHsmPool = std::make_unique<HsmPool>(
+        std::move(factory),
+        [&, this](auto& hsmPool, std::shared_ptr<Timer>) {
+            return createTeeTokenUpdater(hsmPool, updateInterval, retryInterval);
+        },
+        std::make_shared<Timer>());
 }
 
 
@@ -71,34 +90,27 @@ std::unique_ptr<HsmFactory> HsmTestBase::createFactory (
         return std::make_unique<HsmMockFactory>(std::move(client), std::move(blobCache));
 }
 
-class TestTeeTokenUpdater : public TeeTokenUpdater
-{
-public:
-    TestTeeTokenUpdater (
-        TokenConsumer&& teeTokenConsumer,
-        HsmFactory& hsmFactory,
-        TokenProvider&& tokenProvider,
-        std::chrono::system_clock::duration updateInterval,
-        std::chrono::system_clock::duration retryInterval)
-        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), std::make_shared<Timer>(),
-                          updateInterval, retryInterval)
-    {
-    }
-};
 
-std::unique_ptr<TeeTokenUpdater> HsmTestBase::createTeeTokenUpdater (
-    TeeTokenUpdater::TokenConsumer&& consumer,
-    HsmFactory& hsmFactory,
-    const bool allowProductionUpdater,
-    std::chrono::system_clock::duration updateInterval,
-    std::chrono::system_clock::duration retryInterval)
+std::unique_ptr<TeeTokenUpdater> HsmTestBase::createTeeTokenUpdater(HsmPool& hsmPool,
+                                                                    std::chrono::system_clock::duration updateInterval,
+                                                                    std::chrono::system_clock::duration retryInterval)
 {
-    TeeTokenUpdater::TokenProvider tokenProvider;
-    if (allowProductionUpdater && isHsmSimulatorSupportedAndConfigured())
-        tokenProvider = [](HsmFactory& factory){ return TeeTokenProductionUpdater::provideTeeToken(factory);};
+    TeeTokenUpdater::TokenRefresher tokenRefresher;
+    if (isHsmSimulatorSupportedAndConfigured())
+        tokenRefresher = [this](HsmPool& hsmPool) {
+            TeeTokenProductionUpdater::refreshTeeToken(hsmPool);
+            if (mUpdateCallback)
+                mUpdateCallback();
+        };
     else
-        tokenProvider = [](HsmFactory&){ return ErpBlob();};
-    return std::make_unique<TestTeeTokenUpdater>(std::move(consumer), hsmFactory, std::move(tokenProvider), updateInterval, retryInterval);
+        tokenRefresher = [this](HsmPool& hsmPool) {
+            auto hsmPoolSession = hsmPool.acquire();
+            auto& hsmSession = hsmPoolSession.session();
+            hsmPool.setTeeToken(hsmSession.getTeeToken(ErpBlob(), ErpVector(), ErpVector()));
+            if (mUpdateCallback)
+                mUpdateCallback();
+        };
+    return std::make_unique<TestTeeTokenUpdater>(hsmPool, std::move(tokenRefresher), updateInterval, retryInterval);
 }
 
 

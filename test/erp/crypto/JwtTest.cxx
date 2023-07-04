@@ -197,7 +197,7 @@ TEST_F(JwtTest, MissingRequiredClaim)//NOLINT(readability-function-cognitive-com
     rapidjson::Document claim;
     ASSERT_NO_THROW(claim.Parse(claimString));
 
-    claim.RemoveMember(std::string{JWT::familyNameClaim});
+    claim.RemoveMember(std::string{JWT::displayNameClaim});
 
     JwtBuilder builder{mIdpPrivateKey};
     JWT jwt;
@@ -215,6 +215,7 @@ TEST_F(JwtTest, MissingOptionalClaims)//NOLINT(readability-function-cognitive-co
     rapidjson::Document claim;
     ASSERT_NO_THROW(claim.Parse(claimString));
 
+    claim.RemoveMember(std::string{JWT::displayNameClaim});
     claim.RemoveMember(std::string{JWT::familyNameClaim});
     claim.RemoveMember(std::string{JWT::givenNameClaim});
     claim.RemoveMember(std::string{JWT::organizationNameClaim});
@@ -265,9 +266,10 @@ TEST_F(JwtTest, NotExpired)//NOLINT(readability-function-cognitive-complexity)
     claim.RemoveMember(std::string{JWT::nbfClaim});
 
     const auto now = std::chrono::system_clock::now();
-    const auto exp_iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
-    claim[std::string{JWT::expClaim}].SetInt64(exp_iat.count());
-    claim[std::string{JWT::iatClaim}].SetInt64(exp_iat.count());
+    const auto iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
+    const auto exp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch() + 5s);
+    claim[std::string{JWT::expClaim}].SetInt64(exp.count());
+    claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
     claim.RemoveMember(std::string{JWT::nbfClaim});
 
     JwtBuilder builder{mIdpPrivateKey};
@@ -378,7 +380,7 @@ TEST_F(JwtTest, InvalidClaimsTypes)//NOLINT(readability-function-cognitive-compl
     claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
 
     A_20370.test("Unit test for valid claims data types.");
-    claim[std::string{JWT::familyNameClaim}] = 0xAA55;
+    claim[std::string{JWT::displayNameClaim}] = 0xAA55;
 
     JwtBuilder builder{mIdpPrivateKey};
     JWT jwt;
@@ -567,4 +569,76 @@ TEST_F(JwtTest, OptionalClaimsForNonInsurant)//NOLINT(readability-function-cogni
     professionOid.Set(claim, std::string{profession_oid::oid_arzt});
     EXPECT_NO_THROW(arztJwt = builder.getJWT(claim));
     EXPECT_NO_THROW(arztJwt.verify(idpPublicKey));
+}
+
+TEST_F(JwtTest, displayNamePatient)
+{
+    A_19391_01.test("extract the display name for insurants");
+    JwtBuilder builder{mIdpPrivateKey};
+    const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
+    rapidjson::Pointer givenName{"/" + std::string{JWT::givenNameClaim}};
+    rapidjson::Pointer lastName{"/" + std::string{JWT::familyNameClaim}};
+
+    // old variant without display name claim
+    {
+        rapidjson::Document claim;
+        ASSERT_NO_THROW(claim.Parse(claimString));
+        claim.RemoveMember(std::string{JWT::displayNameClaim});
+        givenName.Set(claim, "Max");
+        lastName.Set(claim, "Mustermann");
+
+        const auto jwt = builder.getJWT(claim);
+        ASSERT_NO_THROW(jwt.checkRequiredClaims());
+        EXPECT_EQ(jwt.displayName(), "Max Mustermann");
+    }
+
+    // only display name claim
+    {
+        rapidjson::Document claim;
+        ASSERT_NO_THROW(claim.Parse(claimString));
+        claim[std::string{JWT::displayNameClaim}].SetString("Herr Mustermann");
+
+        const auto jwt = builder.getJWT(claim);
+        ASSERT_NO_THROW(jwt.checkRequiredClaims());
+        EXPECT_EQ(jwt.displayName(), "Herr Mustermann");
+    }
+
+    // both claim variants, preferring the new one
+    {
+        rapidjson::Document claim;
+        ASSERT_NO_THROW(claim.Parse(claimString));
+        claim[std::string{JWT::displayNameClaim}].SetString("Herr Mustermann");
+        givenName.Set(claim, "Max");
+        lastName.Set(claim, "Mustermann");
+
+        const auto jwt = builder.getJWT(claim);
+        ASSERT_NO_THROW(jwt.checkRequiredClaims());
+        EXPECT_EQ(jwt.displayName(), "Herr Mustermann");
+    }
+
+    // missing both
+    {
+        rapidjson::Document claim;
+        ASSERT_NO_THROW(claim.Parse(claimString));
+        claim.RemoveMember(std::string{JWT::displayNameClaim});
+        const auto jwt = builder.getJWT(claim);
+        ASSERT_ANY_THROW(jwt.checkRequiredClaims());
+        ASSERT_FALSE(jwt.displayName().has_value());
+    }
+}
+
+TEST_F(JwtTest, displayNameOrganization)
+{
+    A_19391_01.test("extract the display name for organizations");
+    JwtBuilder builder{mIdpPrivateKey};
+    const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_apotheke.json");
+    rapidjson::Document claim;
+
+    ASSERT_NO_THROW(claim.Parse(claimString));
+    rapidjson::Pointer displayName{"/" + std::string{JWT::displayNameClaim}};
+    displayName.Set(claim, "Herr Mustermann");
+    claim[std::string{JWT::organizationNameClaim}].SetString("Arzt");
+
+    const auto jwt = builder.getJWT(claim);
+    EXPECT_EQ(jwt.displayName(), "Arzt");
 }

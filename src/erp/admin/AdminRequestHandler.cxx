@@ -15,6 +15,9 @@
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/UrlHelper.hxx"
 
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+
 void AdminRequestHandlerBase::handleRequest(SessionContext& session)
 {
     try
@@ -87,4 +90,43 @@ void PostRestartHandler::doHandleRequest(SessionContext& session)
 Operation PostRestartHandler::getOperation(void) const
 {
     return Operation::POST_Admin_restart;
+}
+
+void GetConfigurationHandler::doHandleRequest(SessionContext& session)
+{
+    TVLOG(1) << "configuration requested by: " << session.request.header().serializeFields();
+    const auto& config = Configuration::instance();
+    OpsConfigKeyNames confNames;
+    rapidjson::Document document;
+    document.SetObject();
+    for (const auto& confKey : confNames.allKeys())
+    {
+        const auto confOption = confNames.strings(confKey);
+        std::string value;
+        if (confOption.flags & KeyNames::credential)
+        {
+            value = "<redacted>";
+        }
+        else if (confOption.flags & KeyNames::array)
+        {
+            value = String::join(config.getOptionalArray(confKey), ";");
+        }
+        else
+        {
+            value = config.getOptionalStringValue(confKey, "<unset>");
+        }
+        const std::string key = std::string{"/"}.append(confOption.environmentVariable);
+        auto p = rapidjson::Pointer(rapidjson::StringRef(key.data(), key.size()));
+        p.Set(document, rapidjson::Value(value, document.GetAllocator()), document.GetAllocator());
+    }
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer writer(buffer);
+    document.Accept(writer);
+    session.response.setBody(buffer.GetString());
+    session.response.setHeader(Header::ContentType, MimeType::json);
+}
+
+Operation GetConfigurationHandler::getOperation() const
+{
+    return Operation::GET_Admin_configuration;
 }

@@ -192,6 +192,12 @@ TEST_F(X509CertificateTests, SubjectHasExpectedValue)
     EXPECT_EQ(certificate.getSubject(), subject);
 }
 
+TEST_F(X509CertificateTests, SerialNumberExpectedValue)
+{
+    const std::string serial{"02"};
+    EXPECT_EQ(certificate.getSerialNumber(), serial);
+}
+
 
 TEST_F(X509CertificateTests, CertificateValidity)//NOLINT(readability-function-cognitive-complexity)
 {

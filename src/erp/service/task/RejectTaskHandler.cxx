@@ -30,11 +30,12 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << "Working on Task for prescription id " << prescriptionId.toString();
 
     auto* databaseHandle = session.database();
-    auto task = databaseHandle->retrieveTaskForUpdate(prescriptionId);
+    auto taskAndKey = databaseHandle->retrieveTaskForUpdate(prescriptionId);
 
-    ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
+    ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
 
-    const auto taskStatus = task->status();
+    auto& task = taskAndKey->task;
+    const auto taskStatus = task.status();
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
 
     A_19171_03.start("Check that Task is in progress");
@@ -45,29 +46,30 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     A_19171_03.start("Check secret");
     const auto uriSecret = session.request.getQueryParameter("secret");
     A_20703.start("Set VAU-Error-Code header field to brute_force whenever AccessCode or Secret mismatches");
-    VauExpect(uriSecret.has_value() && uriSecret.value() == task->secret(), HttpStatus::Forbidden,
+    VauExpect(uriSecret.has_value() && uriSecret.value() == task.secret(), HttpStatus::Forbidden,
               VauErrorCode::brute_force, "No or invalid secret");
     A_20703.finish();
     A_19171_03.finish();
 
     A_19172_01.start("Delete secret from Task");
-    task->deleteSecret();
+    task.deleteSecret();
     A_19172_01.finish();
 
     A_19172_01.start("Set Task status to ready");
-    task->setStatus(model::Task::Status::ready);
+    task.setStatus(model::Task::Status::ready);
     A_19172_01.finish();
 
-    task->updateLastUpdate();
+    task.updateLastUpdate();
     // Update task in database
-    databaseHandle->updateTaskStatusAndSecret(*task);
+    ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing key for task");
+    databaseHandle->updateTaskStatusAndSecret(task, *taskAndKey->key);
 
     A_19514.start("HttpStatus 204 for successful POST");
     makeResponse(session, HttpStatus::NoContent, nullptr/*body*/);
     A_19514.finish();
 
     // Collect Audit data
-    const auto kvnr = task->kvnr();
+    const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
     session.auditDataCollector()
         .setEventId(model::AuditEventId::POST_Task_reject)

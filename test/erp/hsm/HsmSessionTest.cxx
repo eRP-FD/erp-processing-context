@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/HsmSession.hxx"
-
 #include "erp/crypto/EllipticCurve.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
+#include "erp/enrolment/EnrolmentHelper.hxx"
 #include "erp/hsm/BlobCache.hxx"
+#include "erp/hsm/HsmSession.hxx"
 #include "erp/service/VauRequestHandler.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/TLog.hxx"
@@ -20,10 +20,10 @@
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmTestData.hxx"
 
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/HsmTestBase.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
 
 #if ! defined(__APPLE__) && ! defined(_WINNT_)
     #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
@@ -71,7 +71,7 @@ namespace
     {
         ParameterSet parameters;
 
-        if (HsmTestBase::isHsmSimulatorSupportedAndConfigured())
+        if (HsmTestBase().isHsmSimulatorSupportedAndConfigured())
         {
             return []
             {
@@ -86,17 +86,8 @@ namespace
                 parameters.session = parameters.factory->connect();
                 parameters.enabled = true;
                 parameters.target = MockBlobCache::MockTarget::SimulatedHsm;
-
-                // Run the tee token updater once, now, so that we have a valid Tee token.
-                TeeTokenUpdater::createProductionTeeTokenUpdaterFactory()
-                    (
-                        [&](ErpBlob&& blob)
-                        {
-                          parameters.session->setTeeToken(blob);
-                        },
-                        *parameters.factory,
-                        std::make_shared<Timer>()
-                    )->update();
+                // ensure we have a valid TEE token.
+                parameters.session->setTeeToken(EnrolmentHelper::getTeeToken(*parameters.session, *parameters.blobCache));
 
                 return parameters;
             };

@@ -279,7 +279,7 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
 
     if (mContext->errNo != 0 && mContext->lastError.level > XML_ERR_WARNING)
     {
-        TLOG(ERROR) << "libxml2 ctxt->errNo: " << mContext->errNo;
+        TVLOG(1) << "libxml2 ctxt->errNo: " << mContext->errNo;
         failMaybeWithDiagnostics("Error from xmlParseDocument", mContext->lastError);
     }
     if (parseResult != 0)

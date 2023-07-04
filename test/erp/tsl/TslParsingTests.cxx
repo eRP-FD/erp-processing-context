@@ -126,15 +126,12 @@ TEST_F(TslParsingTests, WansimTslXmlIsParsedCorrectly)
 {
     // Just use an outdated TSL.xml to test parsing
     TslParser tslParser{
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_parserWansimTest.xml"),
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_outdated.xml"),
         TslMode::TSL,
         *StaticData::getXmlValidator()};
 
-    EXPECT_EQ(tslParser.getId(), "ID31008220220413120005Z");
-    EXPECT_EQ(tslParser.getSequenceNumber(), "10082");
-    EXPECT_EQ(tslParser.getNextUpdate(),
-              std::chrono::system_clock::time_point{
-                  model::Timestamp::fromFhirDateTime("2022-05-13T00:00:05Z").toChronoTimePoint()});
+    EXPECT_EQ(tslParser.getId(), "ID31028220210914152510Z");
+    EXPECT_EQ(tslParser.getSequenceNumber(), "10281");
 }
 
 
@@ -142,13 +139,10 @@ TEST_F(TslParsingTests, WansimBnaXmlIsParsedCorrectly)
 {
     // Just use an outdated TSL.xml to test parsing
     TslParser tslParser{
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_parserWansimTest.xml"),
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml"),
         TslMode::BNA,
         *StaticData::getXmlValidator()};
 
-    EXPECT_EQ(tslParser.getId(), "ID52920210525044050Z");
-    EXPECT_EQ(tslParser.getSequenceNumber(), "29");
-    EXPECT_EQ(tslParser.getNextUpdate(),
-              std::chrono::system_clock::time_point{
-                  model::Timestamp::fromFhirDateTime("2022-05-25T16:40:50Z").toChronoTimePoint()});
+    EXPECT_EQ(tslParser.getId(), "ID31028220210914152511Z");
+    EXPECT_EQ(tslParser.getSequenceNumber(), "10282");
 }

@@ -7,6 +7,7 @@
 
 #include "erp/hsm/TeeTokenUpdater.hxx"
 #include "erp/hsm/ErpTypes.hxx"
+#include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/JsonLog.hxx"
@@ -35,14 +36,12 @@ namespace
 
 
 TeeTokenUpdater::TeeTokenUpdater (
-    std::function<void(ErpBlob&&)>&& teeTokenConsumer,
-    HsmFactory& hsmFactory,
-    TokenProvider&& tokenProvider,
+    HsmPool& hsmPool,
+    TokenRefresher&& tokenRefresher,
     std::shared_ptr<Timer> timerManager)
     : TeeTokenUpdater(
-          std::move(teeTokenConsumer),
-          hsmFactory,
-          std::move(tokenProvider),
+          hsmPool,
+          std::move(tokenRefresher),
           std::move(timerManager),
           std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS, 1200)),
           std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_RETRY_SECONDS, 60)))
@@ -51,15 +50,13 @@ TeeTokenUpdater::TeeTokenUpdater (
 
 
 TeeTokenUpdater::TeeTokenUpdater (
-    std::function<void(ErpBlob&&)>&& teeTokenConsumer,
-    HsmFactory& hsmFactory,
-    TokenProvider&& tokenProvider,
+    HsmPool& hsmPool,
+    TokenRefresher&& tokenRefresher,
     std::shared_ptr<Timer> timerManager,
     std::chrono::system_clock::duration updateInterval,
     std::chrono::system_clock::duration retryInterval)
-    : mTeeTokenConsumer(std::move(teeTokenConsumer)),
-      mHsmFactory(hsmFactory),
-      mTokenProvider(std::move(tokenProvider)),
+    : mHsmPool(hsmPool),
+      mTokenRefresher(std::move(tokenRefresher)),
       mUpdateJobToken(),
       mUpdateFailureCount(0),
       mUpdateInterval(updateInterval),
@@ -67,7 +64,7 @@ TeeTokenUpdater::TeeTokenUpdater (
       mLastUpdate(decltype(mLastUpdate)::value_type()),
       mTimerManager(std::move(timerManager))
 {
-    Expect(mTokenProvider!=nullptr, "can not create TeeTokenUpdater without token provider");
+    Expect(mTokenRefresher!=nullptr, "can not create TeeTokenUpdater without token refresher");
     Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);
     TVLOG(0) << "TeeTokenUpdater will update every " << std::chrono::duration_cast<std::chrono::seconds>(mUpdateInterval).count() << " seconds";
     TVLOG(0) << "TeeTokenUpdater will retry  every " << std::chrono::duration_cast<std::chrono::seconds>(mRetryInterval).count() << " seconds";
@@ -86,7 +83,7 @@ void TeeTokenUpdater::update (void)
     {
         mUpdateJobToken = Timer::NotAJob;
 
-        mTeeTokenConsumer(mTokenProvider(mHsmFactory));
+        mTokenRefresher(mHsmPool);
 
         // Update was successful.
         JsonLog(LogId::HSM_INFO, JsonLog::makeVLogReceiver(0))
@@ -144,14 +141,13 @@ void TeeTokenUpdater::healthCheck() const
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeTokenUpdaterFactory (void)
 {
 #if WITH_HSM_TPM_PRODUCTION > 0
-    return [](auto&& tokenConsumer, auto& hsmFactory, std::shared_ptr<Timer> timerManager)
+    return [](auto& hsmPool, std::shared_ptr<Timer> timerManager)
     {
         return std::make_unique<TeeTokenUpdater>(
-            std::forward<decltype(tokenConsumer)>(tokenConsumer),
-            hsmFactory,
-            [](HsmFactory& factory)
+            hsmPool,
+            [](HsmPool& hsmPool)
             {
-                return TeeTokenProductionUpdater::provideTeeToken(factory);
+                TeeTokenProductionUpdater::refreshTeeToken(hsmPool);
             },
             timerManager);
     };
@@ -162,15 +158,14 @@ TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeToke
 
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createMockTeeTokenUpdaterFactory (void)
 {
-    return [](auto&& tokenConsumer, auto& hsmFactory, std::shared_ptr<Timer> timerManager)
+    return [](auto& hsmPool, std::shared_ptr<Timer> timerManager)
     {
         return std::make_unique<TeeTokenUpdater>(
-            std::forward<decltype(tokenConsumer)>(tokenConsumer),
-            hsmFactory,
-            [](HsmFactory&)
+            hsmPool,
+            [](HsmPool& hsmPool)
             {
-                // Tests that use a mock HSM don't need a TEE token. An empty blob is enough.
-                return ErpBlob();
+                // Tests that use a mock HSM don't need correct TPM acquired information
+                hsmPool.setTeeToken(hsmPool.acquire().session().getTeeToken(ErpBlob(), ErpVector(), ErpVector()));
             },
             timerManager);
     };

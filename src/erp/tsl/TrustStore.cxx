@@ -151,6 +151,17 @@ TslMode TrustStore::getTslMode() const
     return mMode;
 }
 
+TrustStore::HealthData TrustStore::getHealthData() const
+{
+    std::lock_guard guard(mMutex);
+    return {.hasTsl = mTslStored,
+            .outdated = std::chrono::system_clock::now() >= mNextUpdate,
+            .hash = mTslHashValue,
+            .nextUpdate = mNextUpdate,
+            .id = mId,
+            .sequenceNumber = mSequenceNumber};
+}
+
 
 std::vector<X509Certificate> TrustStore::getTslSignerCas() const
 {
@@ -288,7 +299,7 @@ void TrustStore::setTslHashValue (const std::optional<std::string>& tslHashValue
 }
 
 
-std::string TrustStore::getIdOfTslInUse() const
+std::optional<std::string> TrustStore::getIdOfTslInUse() const
 {
     std::lock_guard guard(mMutex);
     return mId;
