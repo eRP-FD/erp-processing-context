@@ -199,12 +199,8 @@ PrescriptionId DatabaseFrontend::storeTask(const Task& task)
 
 void DatabaseFrontend::updateTaskStatusAndSecret(const Task& task)
 {
-    updateTaskStatusAndSecret(task, taskKey(task.prescriptionId()));
-}
-
-void DatabaseFrontend::updateTaskStatusAndSecret(const Task& task, const SafeString& key)
-{
     A_19688.start("encrypt secret");
+    auto key = taskKey(task.prescriptionId());
     std::optional<db_model::EncryptedBlob> secret;
     if (task.secret().has_value())
     {
@@ -216,15 +212,10 @@ void DatabaseFrontend::updateTaskStatusAndSecret(const Task& task, const SafeStr
     mBackend->updateTaskStatusAndSecret(task.prescriptionId(), task.status(), task.lastModifiedDate(), secret);
 }
 
-void DatabaseFrontend::activateTask(const model::Task& task, const Binary& healthCareProviderPrescription)
+void DatabaseFrontend::activateTask(const Task& task, const Binary& healthCareProviderPrescription)
 {
-    activateTask(task, taskKey(task.prescriptionId()), healthCareProviderPrescription);
-}
-
-void DatabaseFrontend::activateTask(const model::Task& task, const SafeString& key,
-                                    const Binary& healthCareProviderPrescription)
-{
-    A_19688.start("encrypt kvnr and prescription.");
+    A_19688.start("encrypt kvnr and presciption.");
+    auto key = taskKey(task.prescriptionId());
     const auto encryptedPrescription = mCodec.encode(healthCareProviderPrescription.serializeToJsonString(), key,
                                                      Compression::DictionaryUse::Default_json);
     const auto& kvnr = task.kvnr();
@@ -242,15 +233,9 @@ void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
     const model::Task& task, const std::vector<model::MedicationDispense>& medicationDispenses,
     const model::ErxReceipt& receipt)
 {
-    updateTaskMedicationDispenseReceipt(task, taskKey(task.prescriptionId()), medicationDispenses, receipt);
-}
-
-void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
-    const model::Task& task, const SafeString& key, const std::vector<model::MedicationDispense>& medicationDispenses,
-    const model::ErxReceipt& receipt)
-{
     A_19688.start("encrypt medication dispense and receipt");
-    auto encryptReceipt = mCodec.encode(receipt.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
+    auto keyForTask = taskKey(task.prescriptionId());
+    auto encryptReceipt = mCodec.encode(receipt.serializeToJsonString(), keyForTask, Compression::DictionaryUse::Default_json);
     A_19688.finish();
     ErpExpect(! medicationDispenses.empty(), HttpStatus::InternalServerError,
               "medication dispense bundle cannot be empty at this place");
@@ -363,8 +348,13 @@ DatabaseFrontend::retrieveAuditEventData(const model::Kvnr& kvnr, const std::opt
     return ret;
 }
 
+uint64_t DatabaseFrontend::countAuditEventData(const model::Kvnr& kvnr,
+                                               const std::optional<UrlArguments>& search)
+{
+    return mBackend->countAuditEventData(mDerivation.hashKvnr(kvnr), search);
+}
 
-std::optional<DatabaseFrontend::TaskAndKey> DatabaseFrontend::retrieveTaskForUpdate(const PrescriptionId& taskId)
+std::optional<model::Task> DatabaseFrontend::retrieveTaskForUpdate(const PrescriptionId& taskId)
 {
     const auto& dbTask = mBackend->retrieveTaskForUpdate(taskId);
     if (! dbTask)
@@ -372,27 +362,20 @@ std::optional<DatabaseFrontend::TaskAndKey> DatabaseFrontend::retrieveTaskForUpd
         return std::nullopt;
     }
     auto key = taskKey(*dbTask);
-    auto task = getModelTask(*dbTask, key);
-    return TaskAndKey{.task = std::move(task), .key = std::move(key)};
+    return getModelTask(*dbTask, key);
 }
 
-std::tuple<std::optional<Database::TaskAndKey>, std::optional<model::Binary>>
-DatabaseFrontend::retrieveTaskForUpdateAndPrescription(const model::PrescriptionId& taskId)
+::std::tuple<::std::optional<::model::Task>, ::std::optional<::model::Binary>>
+DatabaseFrontend::retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId)
 {
     const auto& dbTask = mBackend->retrieveTaskForUpdateAndPrescription(taskId);
     if (! dbTask)
     {
         return {};
     }
-    auto keyForTask = taskKey(*dbTask);
-    auto task = getModelTask(*dbTask, keyForTask);
-    auto taskAndKey = TaskAndKey{.task = std::move(task), .key = std::move(keyForTask)};
-    std::optional<model::Binary> prescription;
-    if (taskAndKey.key)
-    {
-        prescription = getHealthcareProviderPrescription(*dbTask, *taskAndKey.key);
-    }
-    return std::make_tuple(std::move(taskAndKey), std::move(prescription));
+    const auto keyForTask = taskKey(*dbTask);
+    return ::std::make_tuple(getModelTask(*dbTask, keyForTask),
+                             keyForTask ? getHealthcareProviderPrescription(*dbTask, *keyForTask) : ::std::nullopt);
 }
 
 std::tuple<std::optional<Task>, std::optional<Bundle>>
@@ -408,7 +391,7 @@ DatabaseFrontend::retrieveTaskAndReceipt(const PrescriptionId& taskId)
                            keyForTask ? getReceipt(*dbTask, *keyForTask) : std::nullopt);
 }
 
-std::tuple<std::optional<Database::TaskAndKey>, std::optional<Binary>>
+std::tuple<std::optional<Task>, std::optional<Binary>>
 DatabaseFrontend::retrieveTaskAndPrescription(const PrescriptionId& taskId)
 {
     const auto& dbTask = mBackend->retrieveTaskAndPrescription(taskId);
@@ -417,14 +400,8 @@ DatabaseFrontend::retrieveTaskAndPrescription(const PrescriptionId& taskId)
         return {};
     }
     auto keyForTask = taskKey(*dbTask);
-    auto task = getModelTask(*dbTask, keyForTask);
-    auto taskAndKey = TaskAndKey{.task = std::move(task), .key = std::move(keyForTask)};
-    std::optional<model::Binary> prescription;
-    if (taskAndKey.key)
-    {
-        prescription = getHealthcareProviderPrescription(*dbTask, *taskAndKey.key);
-    }
-    return std::make_tuple(std::move(taskAndKey), std::move(prescription));
+    return std::make_tuple(getModelTask(*dbTask, keyForTask),
+                           keyForTask ? getHealthcareProviderPrescription(*dbTask, *keyForTask) : std::nullopt);
 }
 
 std::tuple<std::optional<Task>, std::optional<Binary>, std::optional<Bundle>>

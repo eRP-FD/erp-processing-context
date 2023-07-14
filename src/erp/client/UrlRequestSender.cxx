@@ -78,29 +78,6 @@ ClientResponse UrlRequestSender::send(
     }
 }
 
-ClientResponse UrlRequestSender::send(const boost::asio::ip::tcp::endpoint& ep, const UrlHelper::UrlParts& url,
-                                      const HttpMethod method, const std::string& body, const std::string& contentType,
-                                      const std::optional<std::string>& forcedCiphers, const bool trustCn) const
-{
-    auto timer =
-        mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, std::string{"sending request to host "}
-                                                                                   .append(url.mHost)
-                                                                                   .append(std::to_string(ep.port()))
-                                                                                   .append(" (")
-                                                                                   .append(ep.address().to_string())
-                                                                                   .append(")"));
-
-    try
-    {
-        return doSend(url, method, body, contentType, forcedCiphers, trustCn, &ep);
-    }
-    catch (...)
-    {
-        ExceptionHelper::extractInformationAndRethrow([&timer](std::string&& details, std::string&& location) {
-            timer.notifyFailure(details + " at " + location);
-        });
-    }
-}
 
 ClientResponse UrlRequestSender::doSend(
     const std::string& url,
@@ -108,11 +85,10 @@ ClientResponse UrlRequestSender::doSend(
     const std::string& body,
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
-    const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep) const
+    const bool trustCn) const
 {
     const UrlHelper::UrlParts parts = UrlHelper::parseUrl(url);
-    return doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep);
+    return doSend(parts, method, body, contentType, forcedCiphers, trustCn);
 }
 
 
@@ -122,8 +98,7 @@ ClientResponse UrlRequestSender::doSend(
     const std::string& body,
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
-    const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep) const
+    const bool trustCn) const
 {
     TVLOG(1) << "request to Host [" << url.mHost << "], URL: " << url.toString();
 
@@ -149,12 +124,6 @@ ClientResponse UrlRequestSender::doSend(
     const std::string lowerProtocol = String::toLower(url.mProtocol);
     if (lowerProtocol == "https://")
     {
-        if (ep != nullptr)
-        {
-            return HttpsClient(*ep, url.mHost, mConnectionTimeoutSeconds, mEnforceServerAuthentication,
-                               mTslRootCertificates, SafeString(), SafeString(), forcedCiphers)
-                .send(request, trustCn);
-        }
         return HttpsClient(
                    url.mHost,
                    gsl::narrow_cast<uint16_t>(url.mPort),
@@ -167,10 +136,6 @@ ClientResponse UrlRequestSender::doSend(
     }
     else if (lowerProtocol == "http://")
     {
-        if (ep != nullptr)
-        {
-            return HttpClient(*ep, url.mHost, mConnectionTimeoutSeconds).send(request);
-        }
         return HttpClient(url.mHost, gsl::narrow_cast<uint16_t>(url.mPort), mConnectionTimeoutSeconds).send(request);
     }
     else

@@ -48,7 +48,7 @@ void TaskAbortHandlerTest::checkCreatedData(
 {
     auto database = createDatabase();
 
-    std::optional<Database::TaskAndKey> taskWithAccessCode;
+    std::optional<model::Task> taskWithAccessCode;
     std::optional<model::Binary> healthcareProviderPrescription;
 
     // The query "retrieveTaskAndPrescription" doesn't include the secret column in the result set.
@@ -56,11 +56,11 @@ void TaskAbortHandlerTest::checkCreatedData(
         database->retrieveTaskAndPrescription(prescriptionId);
 
     ASSERT_TRUE(taskWithAccessCode.has_value());
-    EXPECT_TRUE(taskWithAccessCode->task.kvnr().has_value());
-    ASSERT_NO_THROW((void)taskWithAccessCode->task.accessCode());
+    EXPECT_TRUE(taskWithAccessCode->kvnr().has_value());
+    ASSERT_NO_THROW((void)taskWithAccessCode->accessCode());
     EXPECT_TRUE(healthcareProviderPrescription.has_value());
 
-    model::Task::Status taskStatus = taskWithAccessCode->task.status();
+    model::Task::Status taskStatus = taskWithAccessCode->status();
 
     if (taskStatus == model::Task::Status::inprogress || taskStatus == model::Task::Status::completed)
     {
@@ -71,7 +71,7 @@ void TaskAbortHandlerTest::checkCreatedData(
         std::tie(taskWithSecret, receipt) = database->retrieveTaskAndReceipt(prescriptionId);
 
         ASSERT_TRUE(taskWithSecret.has_value());
-        ASSERT_EQ(taskWithAccessCode->task.prescriptionId(), taskWithSecret->prescriptionId());
+        ASSERT_EQ(taskWithAccessCode->prescriptionId(), taskWithSecret->prescriptionId());
 
         if (taskStatus == model::Task::Status::completed)
         {
@@ -96,28 +96,28 @@ void TaskAbortHandlerTest::checkResultingData(
     auto database = createDatabase();
 
     std::string taskAccessCode;
-    std::optional<Database::TaskAndKey> taskAndKey1;
+    std::optional<model::Task> task1;
     std::optional<model::Binary> healthcareProviderPrescription;
     std::optional<model::Task> task2;
     std::optional<model::Bundle> receipt;
 
-    std::tie(taskAndKey1, healthcareProviderPrescription) = database->retrieveTaskAndPrescription(prescriptionId);
+    std::tie(task1, healthcareProviderPrescription) = database->retrieveTaskAndPrescription(prescriptionId);
     std::tie(task2, receipt) = database->retrieveTaskAndReceipt(prescriptionId);
 
-    ASSERT_TRUE(taskAndKey1.has_value());
+    ASSERT_TRUE(task1.has_value());
     ASSERT_TRUE(task2.has_value());
 
     EXPECT_FALSE(healthcareProviderPrescription.has_value());
     EXPECT_FALSE(receipt.has_value());
 
-    ASSERT_EQ(taskAndKey1->task.prescriptionId(), task2->prescriptionId());
+    ASSERT_EQ(task1->prescriptionId(), task2->prescriptionId());
 
-    EXPECT_FALSE(taskAndKey1->task.kvnr().has_value());
-    EXPECT_FALSE(taskAndKey1->task.secret().has_value());
-    ASSERT_ANY_THROW((void)taskAndKey1->task.accessCode());
-    EXPECT_FALSE(taskAndKey1->task.healthCarePrescriptionUuid().has_value());
-    EXPECT_FALSE(taskAndKey1->task.patientConfirmationUuid().has_value());
-    EXPECT_FALSE(taskAndKey1->task.receiptUuid().has_value());
+    EXPECT_FALSE(task1->kvnr().has_value());
+    EXPECT_FALSE(task1->secret().has_value());
+    ASSERT_ANY_THROW((void)task1->accessCode());
+    EXPECT_FALSE(task1->healthCarePrescriptionUuid().has_value());
+    EXPECT_FALSE(task1->patientConfirmationUuid().has_value());
+    EXPECT_FALSE(task1->receiptUuid().has_value());
 
     const auto ids = database->retrieveCommunicationIds(communicationRecipient);
     const auto num = std::count_if(
@@ -265,8 +265,10 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)//NOLINT(re
     const JWT jwtRepresentative = mJwtBuilder.makeJwtVersicherter("X987654321");
     const auto idNumberClaim = jwtRepresentative.stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(idNumberClaim.has_value());
-    const auto displayName = jwtRepresentative.stringForClaim(JWT::displayNameClaim);
-    ASSERT_TRUE(displayName.has_value());
+    const auto givenNameClaim = jwtRepresentative.stringForClaim(JWT::givenNameClaim);
+    ASSERT_TRUE(givenNameClaim.has_value());
+    const auto familyNameClaim = jwtRepresentative.stringForClaim(JWT::familyNameClaim);
+    ASSERT_TRUE(familyNameClaim.has_value());
 
     auto header = createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort", jwtRepresentative);
     header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
@@ -281,7 +283,7 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)//NOLINT(re
     const auto auditEvents = database->retrieveAuditEventData(kvnr, {}, {}, {});
     const auto& auditData = getAuditDataForTask(auditEvents, prescriptionId);
     EXPECT_EQ(auditData.metaData().agentWho(), idNumberClaim.value());
-    EXPECT_EQ(auditData.metaData().agentName(), displayName.value());
+    EXPECT_EQ(auditData.metaData().agentName(), givenNameClaim.value() + " " + familyNameClaim.value());
 }
 
 

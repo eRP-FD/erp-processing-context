@@ -49,21 +49,10 @@ public:
         std::string response;
     };
 
-    struct HealthData {
-        bool hasTsl{false};
-        bool outdated{true};
-        std::optional<std::string> hash;
-        std::chrono::system_clock::time_point nextUpdate;
-        std::optional<std::string> id;
-        std::string sequenceNumber;
-    };
-
     explicit TrustStore(const TslMode mode, std::vector<std::string> initialTslUrls = {});
     virtual ~TrustStore() = default;
 
     TslMode getTslMode() const;
-
-    HealthData getHealthData() const;
 
     /**
       * Returns all signer certificates (trust anchors) that are currently accepted.

@@ -42,11 +42,10 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     // GEMREQ-start A_19169-01#readFromDB
     auto* databaseHandle = session.database();
 
-    auto [taskAndKey, healthCareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
-    ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
-    auto& task = taskAndKey->task;
+    auto [task, healthCareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
+    ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
 
-    checkTaskPreconditions(session, task);
+    checkTaskPreconditions(session, *task);
 
     ErpExpect(healthCareProviderPrescription.has_value() && healthCareProviderPrescription->data().has_value(),
               HttpStatus::NotFound, "Healthcare provider prescription not found for prescription id");
@@ -59,20 +58,20 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 
     // GEMREQ-start A_19169-01
     A_19169_01.start("Set status to in-progress, create and set secret");
-    task.setStatus(model::Task::Status::inprogress);
+    task->setStatus(model::Task::Status::inprogress);
     const auto secret = SecureRandomGenerator::generate(32);
-    task.setSecret(ByteHelper::toHex(secret));
-    task.updateLastUpdate();
+    task->setSecret(ByteHelper::toHex(secret));
+    task->updateLastUpdate();
     A_19169_01.finish();
 
-    task.setHealthCarePrescriptionUuid();
-    databaseHandle->updateTaskStatusAndSecret(task, *taskAndKey->key);
+    task->setHealthCarePrescriptionUuid();
+    databaseHandle->updateTaskStatusAndSecret(*task);
 
     // Create response:
     const auto linkBase = makeFullUrl("/Task/" + prescriptionId.toString());
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, linkBase + "/$accept/");
-    responseBundle.addResource(linkBase, {}, {}, task.jsonDocument());
+    responseBundle.addResource(linkBase, {}, {}, task->jsonDocument());
     std::string uuid{};
     if (healthCareProviderPrescription->id().has_value())
     {
@@ -81,7 +80,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     responseBundle.addResource(uuid, {}, {}, healthCareProviderPrescription->jsonDocument());
     // GEMREQ-end A_19169-01
 
-    const auto kvnr = task.kvnr();
+    const auto kvnr = task->kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
     if (Configuration::instance().featurePkvEnabled())

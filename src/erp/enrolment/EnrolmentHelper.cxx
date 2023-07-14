@@ -10,7 +10,6 @@
 #include "erp/common/Constants.hxx"
 #include "erp/hsm/production/HsmProductionClient.hxx"
 #include "erp/hsm/production/HsmRawSession.hxx"
-#include "erp/hsm/HsmPool.hxx"
 #if !defined __APPLE__ && !defined _WIN32
 #include "erp/hsm/HsmIdentity.hxx"
 #include "erp/tpm/TpmProduction.hxx"
@@ -30,12 +29,12 @@ namespace
     #define catchLogAndRethrow(message)                                                       \
         catch(const std::exception& e)                                                        \
         {                                                                                     \
-            TVLOG(1) << "caught exception " << e.what() << " while " << (message);     \
+            TVLOG(logLevel) << "caught exception " << e.what() << " while " << (message);     \
             throw;                                                                            \
         }                                                                                     \
         catch(...)                                                                            \
         {                                                                                     \
-            TVLOG(1) << "caught exception while " << (message);                        \
+            TVLOG(logLevel) << "caught exception while " << (message);                        \
             throw;                                                                            \
         }
 
@@ -230,29 +229,27 @@ EnrolmentHelper::Blobs EnrolmentHelper::createBlobs (
     return blobs;
 }
 
-void EnrolmentHelper::refreshTeeToken(HsmPool& hsmPool)
-{
-    auto hsmPoolSession = hsmPool.acquire();
-    auto& hsmSession = hsmPoolSession.session();
-    BlobCache& blobCache = hsmPool.getHsmFactory().getBlobCache();
-    auto teeToken = getTeeToken(hsmSession, blobCache);
-    hsmPool.setTeeToken(std::move(teeToken));
-}
 
-ErpBlob EnrolmentHelper::getTeeToken(HsmSession& hsmSession, BlobCache& blobCache,
-                                     const std::optional<ErpBlob>& knownQuote)
+ErpBlob EnrolmentHelper::createTeeToken(BlobCache& blobCache, ::std::optional<::BlobCache::Entry> trustedQuote)
 {
     const uint32_t teeGeneration = 0;
 
-    TpmProxyDirect tpm(blobCache);
-    const auto nonce = hsmSession.getNonce(teeGeneration);
-    const auto teeQuote =
-        getQuote(tpm, nonce.nonce, getConfiguredOrDefaultPcrSet().toPcrList(), "ERP_ATTESTATION");
+    TpmProxyDirect tpm (blobCache);
 
-    const auto quote = ErpVector{Base64::decode(teeQuote.quotedDataBase64)};
-    blobCache.setPcrHash(hsmSession.parseQuote(quote).pcrHash);
-    return hsmSession.getTeeToken(nonce.blob, ErpVector::create(Base64::decodeToString(teeQuote.quotedDataBase64)),
-                                  ErpVector::create(Base64::decodeToString(teeQuote.quoteSignatureBase64)), knownQuote);
+    const auto [teeTokenNonceVector, teeTokenNonceBlob] = getNonce(teeGeneration);
+
+    const auto teeQuote =
+        getQuote(tpm, teeTokenNonceVector, getConfiguredOrDefaultPcrSet().toPcrList(), "ERP_ATTESTATION");
+
+    const auto quote = ::ErpVector{::Base64::decode(teeQuote.quotedDataBase64)};
+    blobCache.setPcrHash(::HsmProductionClient{}.parseQuote(quote).pcrHash);
+    if (! trustedQuote)
+    {
+        trustedQuote = blobCache.getBlob(::BlobType::Quote);
+    }
+
+    const auto trustedAk = blobCache.getBlob(BlobType::AttestationPublicKey);
+    return getTeeToken(trustedAk.getAkName(), teeQuote, trustedAk.blob, teeTokenNonceBlob, trustedQuote->blob);
 }
 
 
@@ -431,7 +428,7 @@ Tpm::QuoteOutput EnrolmentHelper::getQuote (
 
         auto quote = tpm.getQuote(std::move(input), message);
 
-        TVLOG(1) << "successfully called TPM getQuote";
+        TVLOG(logLevel) << "successfully called TPM getQuote";
 
         return quote;
     }

@@ -277,21 +277,17 @@ void JWT::checkRequiredClaims() const
     A_20370.start("Check data type for each claim.");
     if (professionOid == profession_oid::oid_versicherter)
     {
-        checkClaimsPresence({JWT::iatClaim, JWT::expClaim, JWT::issClaim, JWT::subClaim, JWT::acrClaim, JWT::audClaim,
-                             JWT::organizationNameClaim, JWT::idNumberClaim, JWT::jtiClaim});
-        // if display_name is not present, check givenName & familyName
-        if (mClaims.HasMember(std::string{JWT::displayNameClaim}))
-        {
-            Expect3(mClaims[std::string{JWT::displayNameClaim}].IsString(),
-                    "Pre-verification failed - invalid data type for display_name", JwtInvalidFormatException);
-        }
-        else
-        {
-            checkClaimsPresence({JWT::givenNameClaim, JWT::familyNameClaim});
-            Expect3(mClaims[std::string{JWT::givenNameClaim}].IsString() &&
-                        mClaims[std::string{JWT::familyNameClaim}].IsString(),
-                    "Pre-verification failed - invalid data type for given/family name", JwtInvalidFormatException);
-        }
+        checkClaimsPresence( { JWT::iatClaim,
+                JWT::expClaim,
+                JWT::issClaim,
+                JWT::subClaim,
+                JWT::acrClaim,
+                JWT::audClaim,
+                JWT::givenNameClaim,
+                JWT::familyNameClaim,
+                JWT::organizationNameClaim,
+                JWT::idNumberClaim,
+                JWT::jtiClaim } );
 
         if (! (mClaims[std::string{JWT::iatClaim}].IsInt64() &&
                mClaims[std::string{JWT::expClaim}].IsInt64() &&
@@ -299,6 +295,8 @@ void JWT::checkRequiredClaims() const
                mClaims[std::string{JWT::subClaim}].IsString() &&
                mClaims[std::string{JWT::acrClaim}].IsString() &&
                mClaims[std::string{JWT::audClaim}].IsString() &&
+               mClaims[std::string{JWT::givenNameClaim}].IsString() &&
+               mClaims[std::string{JWT::familyNameClaim}].IsString() &&
                mClaims[std::string{JWT::organizationNameClaim}].IsString() &&
                mClaims[std::string{JWT::idNumberClaim}].IsString() &&
                mClaims[std::string{JWT::jtiClaim}].IsString()))
@@ -404,33 +402,4 @@ void JWT::checkIfExpired() const
     A_20373.finish();
     A_20374.finish();
     A_19902.finish();
-}
-
-
-std::optional<std::string> JWT::displayName() const
-{
-    A_19391_01.start("Return display name dependent on role and available claims");
-
-    const auto professionOIDClaim = stringForClaim(JWT::professionOIDClaim);
-    Expect3(professionOIDClaim.has_value(), "Missing professionOIDClaim", std::logic_error);
-    if (profession_oid::oid_versicherter == professionOIDClaim.value())
-    {
-        auto displayName = stringForClaim(displayNameClaim);
-        if (! displayName.has_value())
-        {
-            const auto givenNameClaim = stringForClaim(JWT::givenNameClaim);
-            const auto familyNameClaim = stringForClaim(JWT::familyNameClaim);
-            if (givenNameClaim.has_value() && familyNameClaim.has_value())
-            {
-                return givenNameClaim.value() + (givenNameClaim.value().empty() ? "" : " ") + familyNameClaim.value();
-            }
-        }
-        return displayName;
-    }
-    else
-    {
-
-        return stringForClaim(JWT::organizationNameClaim);
-    }
-    A_19391_01.finish();
 }

@@ -58,6 +58,5 @@ while read line || [ -n "$line" ]; do
 done < <(cat $INSTALL_MANIFEST)
 
 # Replace the placeholders in the manifest file with the given values.
-sed -i -f - $TARGET << EOF
-s#__ADDITIONAL_TRUST_FILES__#$BUF#
-EOF
+
+sed -i "s#__ADDITIONAL_TRUST_FILES__#$BUF#" $TARGET

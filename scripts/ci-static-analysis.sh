@@ -73,14 +73,14 @@ ninja_build_file() {
 }
 
 allFiles() {
-  check_files=$(cd "$source_path" && git ls-files | grep '\.cxx')
+  check_files=$(git ls-files | grep '.cxx')
 }
 
 changedFiles() {
   local target_commit
-  target_commit=$(cd "$source_path" && git merge-base "remotes/origin/${change_target}" ${git_commit})
+  target_commit=$(git merge-base "remotes/origin/${change_target}" ${git_commit})
   echo "change_target=${change_target} git_commit=${git_commit} target_commit=${target_commit}"
-  check_files=$(cd "$source_path" && git diff --name-only --diff-filter=d ${target_commit} ${git_commit} | grep '\.[ch]xx' | grep -v '\.inc\.hxx' ) || true
+  check_files=$(git diff --name-only --diff-filter=d ${target_commit} ${git_commit} | grep '.[ch]xx' ) || true
   echo "check_files=${check_files}"
 }
 

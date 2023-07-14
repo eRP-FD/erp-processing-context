@@ -130,7 +130,7 @@ void TaskHandlerBase::checkAccessCodeMatches(const ServerRequest& request, const
 }
 // GEMREQ-end checkAccessCodeMatches
 
-// GEMREQ-start A_20159-03#doUnpackCadesBesSignature
+// GEMREQ-start A_20159-02#doUnpackCadesBesSignature
 CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile,
                                                              TslManager* tslManager)
 {
@@ -156,18 +156,7 @@ CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& 
     }
     catch (const TslError& ex)
     {
-        std::string description;
-        // Use the first error data as the description, if available. Otherwise fall back
-        // to the full exception description
-        if (! ex.getErrorData().empty())
-        {
-            description = ex.getErrorData()[0].message;
-        }
-        else
-        {
-            description = ex.what();
-        }
-        VauFail(ex.getHttpStatus(), VauErrorCode::invalid_prescription, description);
+        VauFail(ex.getHttpStatus(), VauErrorCode::invalid_prescription, ex.what());
     }
     catch (const CadesBesSignature::UnexpectedProfessionOidException& ex)
     {
@@ -200,7 +189,7 @@ CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& 
                 "unexpected throwable");
     }
 }
-// GEMREQ-end A_20159-03#doUnpackCadesBesSignature
+// GEMREQ-end A_20159-02#doUnpackCadesBesSignature
 
 CadesBesSignature TaskHandlerBase::unpackCadesBesSignature(const std::string& cadesBesSignatureFile,
                                                            TslManager& tslManager)

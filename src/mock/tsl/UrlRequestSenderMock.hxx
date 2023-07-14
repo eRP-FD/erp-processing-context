@@ -39,16 +39,14 @@ protected:
         const std::string& body,
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr) const override;
+        const bool trustCn = false) const override;
     ClientResponse doSend (
         const UrlHelper::UrlParts& url,
         const HttpMethod method,
         const std::string& body,
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr) const override;
+        const bool trustCn = false) const override;
 
 private:
     mutable std::mutex mMutex;

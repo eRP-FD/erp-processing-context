@@ -22,8 +22,7 @@ ClientResponse UrlRequestSenderMock::doSend(
     const std::string& body,
     const std::string&,
     const std::optional<std::string>&,
-    const bool,
-    const boost::asio::ip::tcp::endpoint*) const
+    const bool) const
 {
     std::lock_guard lock(mMutex);
 
@@ -52,8 +51,7 @@ ClientResponse UrlRequestSenderMock::doSend(
     const std::string& body,
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
-    const bool trustCn,
-    const boost::asio::ip::tcp::endpoint*) const
+    const bool trustCn) const
 {
     return doSend(url.toString(), method, body, contentType, forcedCiphers, trustCn);
 }

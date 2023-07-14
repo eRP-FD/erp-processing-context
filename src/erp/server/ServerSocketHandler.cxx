@@ -71,7 +71,7 @@ void ServerSocketHandler::on_accept (boost::beast::error_code ec, boost::asio::i
    TVLOG(0) << "Accepted connection";
    socket.async_wait(boost::asio::ip::tcp::socket::wait_error,
                      [endpoint = socket.remote_endpoint()](boost::system::error_code ec){
-                         if (ec && ec != boost::asio::error::operation_aborted)
+                         if (ec)
                          {
                              TLOG(WARNING) << "connection " << endpoint << ": " << ec.message();
                          }

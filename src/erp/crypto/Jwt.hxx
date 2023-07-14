@@ -71,15 +71,6 @@ public:
     void checkAudClaim() const;
     void checkIfExpired() const;
 
-    /**
-     * For tokens issued for insurants, the display name is extracted from the token
-     * via the "display_name" claim. If not present, will return given_name + " " + family_name.
-     * For institutions, organizationName is returned.
-     *
-     * @return std::optional<std::string> display name, if present
-     */
-    std::optional<std::string> displayName() const;
-
     constexpr static std::string_view iatClaim = "iat";
     constexpr static std::string_view expClaim = "exp";
     constexpr static std::string_view nbfClaim = "nbf";
@@ -90,7 +81,6 @@ public:
     constexpr static std::string_view audClaim = "aud";
     constexpr static std::string_view professionOIDClaim = "professionOID";
     constexpr static std::string_view givenNameClaim = "given_name";
-    constexpr static std::string_view displayNameClaim = "display_name";
     constexpr static std::string_view familyNameClaim = "family_name";
     constexpr static std::string_view organizationNameClaim = "organizationName";
     constexpr static std::string_view idNumberClaim = "idNummer";

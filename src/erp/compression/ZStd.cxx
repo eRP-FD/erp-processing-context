@@ -94,7 +94,7 @@ std::string ZStd::decompress(std::string_view compressed) const
     auto dictId = ZStdDictionary::IdType::fromFrame(compressed);
     Expect3(dictId.isValid(), "Got invalid dictionary ID from compressed data.", std::logic_error);
     const auto& dict = mDictRepo.getDictionary(dictId);
-    TVLOG(3) << "Extracting with dictionary: " << dictId;
+    TVLOG(1) << "Extracting with dictionary: " << dictId;
     std::unique_ptr<ZSTD_DCtx, Free> context{ZSTD_createDCtx()};
     size_t plainSize = ZSTD_getFrameContentSize(compressed.data(), compressed.size());
     Expect3(plainSize !=  ZSTD_CONTENTSIZE_UNKNOWN, "Uncompressed size is unknown.", std::logic_error);

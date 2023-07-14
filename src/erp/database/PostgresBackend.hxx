@@ -81,6 +81,9 @@ public:
         const std::optional<Uuid>& id,
         const std::optional<model::PrescriptionId>& prescriptionId,
         const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] uint64_t countAuditEventData(
+        const db_model::HashedKvnr& kvnr,
+        const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]
     std::optional<db_model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) override;

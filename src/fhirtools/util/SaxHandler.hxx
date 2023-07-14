@@ -102,7 +102,7 @@ protected:
 
     virtual void endElement(const xmlChar* localname, const xmlChar* prefix, const xmlChar* uri);
 
-    virtual void error(const char* msg, std::va_list args);
+    virtual void error(const std::string& msg);
 
 
 private:
@@ -111,6 +111,7 @@ private:
                               int nbNamespaces, const xmlChar** namespaces, int nbAttributes,
                               int nbDefaulted, const xmlChar** attributes);
     static void cErrorCallback(void* self, const char* msg, ...);
+    static void structuredErrorCallback(void* self, xmlErrorPtr err);
     xmlSAXHandler mHandler{};
 };
 }

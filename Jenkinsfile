@@ -41,25 +41,20 @@ pipeline {
 
                 stage('Verify that reqmd docs are up-to-date') {
                     agent {
-                        kubernetes {
-                            cloud 'toolchain-cluster'
-                            yaml needTools(["OS": "fedora:36"])
-                        }
+                        label 'ios' // ios nodes have ~/.netrc set up to be able to download reqmd
                     }
                     steps {
                         cleanWs()
                         commonCheckout()
-                        loadNexusConfiguration {
-                            sh """
-                                #!/bin/bash -l
-                                set -e
-                                export LC_ALL=en_US.UTF-8
-                                export LANG=en_US.UTF-8
-                                doc/requirements/reqmd.sh
-                                git diff --quiet -- . || (set +v; echo "ERROR: Changes done by reqmd. Please run this tool before committing. Update files:"; git status --short; exit 1)
-                            """
-                        }
 
+                        sh """
+                            #!/bin/bash -l
+                            set -e
+                            export LC_ALL=en_US.UTF-8
+                            export LANG=en_US.UTF-8
+                            doc/requirements/reqmd.sh
+                            git diff --quiet -- . || (set +v; echo "ERROR: Changes done by reqmd. Please run this tool before committing. Update files:"; git status --short; exit 1)
+                        """
                     }
                     post {
                         cleanup {
@@ -103,7 +98,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.11.0"
+                                    def erp_release_version = "1.10.0"
                                     sh "cd /media/erp && scripts/ci-build.sh " +
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'"
@@ -283,7 +278,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.11.0"
+                                def release_version = "1.10.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -319,7 +314,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.11.0"
+                                def release_version = "1.10.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +

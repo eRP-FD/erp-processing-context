@@ -6,7 +6,8 @@
  */
 
 #include "erp/hsm/HsmSession.hxx"
-#include "erp/hsm/HsmPool.hxx"
+
+#include "erp/hsm/HsmIdentity.hxx"
 #include "erp/hsm/production/HsmRawSession.hxx"
 #include "erp/hsm/HsmSessionExpiredException.hxx"
 #include "erp/hsm/production/HsmProductionClient.hxx"
@@ -15,7 +16,9 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/HsmTestBase.hxx"
 
+
 #include <gtest/gtest.h>
+
 
 class HsmSessionReconnectTest : public testing::Test
 {
@@ -99,7 +102,7 @@ TEST_F(HsmSessionReconnectTest, triggerReconnect_successAfterReconnect)//NOLINT(
  */
 TEST_F(HsmSessionReconnectTest, reconnect)
 {
-    if ( ! HsmTestBase().isHsmSimulatorSupportedAndConfigured())
+    if ( ! HsmTestBase::isHsmSimulatorSupportedAndConfigured())
         GTEST_SKIP();
 
     HsmProductionClient client;

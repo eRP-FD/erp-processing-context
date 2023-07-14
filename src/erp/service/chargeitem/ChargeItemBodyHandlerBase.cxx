@@ -45,7 +45,7 @@ std::optional<model::Binary> ChargeItemBodyHandlerBase::getDispenseItemBinary(co
 }
 // GEMREQ-end A_22137#get-dispense-item
 
-// GEMREQ-start A_22141#chargeItemCadesBes, A_22140, A_22150, A_22151, A_20159-03#validatedBundleFromSigned
+// GEMREQ-start A_22141#chargeItemCadesBes, A_22140, A_22150, A_22151, A_20159-02#validatedBundleFromSigned
 /**
  * Returns the validated payload from the signed binary as a model::Bundle,
  * as well as the signed binary itself (in base64 format) after possibly having
@@ -107,4 +107,4 @@ std::pair<model::AbgabedatenPkvBundle, std::string> ChargeItemBodyHandlerBase::v
         VauFail(HttpStatus::InternalServerError, onError, "unexpected throwable");
     }
 }
-// GEMREQ-end A_22141#chargeItemCadesBes, A_22140, A_22150, A_22151, A_20159-03#validatedBundleFromSigned
+// GEMREQ-end A_22141#chargeItemCadesBes, A_22140, A_22150, A_22151, A_20159-02#validatedBundleFromSigned

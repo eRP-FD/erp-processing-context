@@ -14,7 +14,7 @@
 class TeeTokenProductionUpdater
 {
 public:
-    static void refreshTeeToken(HsmPool& hsmPool);
+    static ErpBlob provideTeeToken (HsmFactory& hsmFactory);
 };
 
 

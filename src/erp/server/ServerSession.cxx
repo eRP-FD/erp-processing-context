@@ -403,7 +403,7 @@ void ServerSession::do_close (SessionDataPointer&& data)
     if (!mSslStream.getLowestLayer().socket().is_open())
     {
         TVLOG(3) << "Socket is already closed.";
-        data.reset();
+        on_shutdown({}, std::move(data));
         return;
     }
 

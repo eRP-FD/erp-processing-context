@@ -24,7 +24,7 @@ class TlsSession
 public:
     /**
      * Created TLS session with provided hostname and port. If the optional certificates are provided
-     * they are loaded, otherwise the default root certificates are loaded.
+     * they are loaded, otherwise the default root certificates are loded.
      * @param hostname
      * @param port
      * @param caCertificates
@@ -37,18 +37,6 @@ public:
                 const SafeString& clientCertificate,
                 const SafeString& clientPrivateKey,
                 const std::optional<std::string>& forcedCiphers);
-
-    /**
-     * Created TLS session with provided endpoint. If the optional certificates are provided
-     * they are loaded, otherwise the default root certificates are loaded.
-     * @param ep
-     * @param hostname
-     * @param caCertificates
-     */
-    TlsSession(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
-               const uint16_t connectionTimeoutSeconds, bool enforceServerAuthentication,
-               const SafeString& caCertificates, const SafeString& clientCertificate,
-               const SafeString& clientPrivateKey, const std::optional<std::string>& forcedCiphers);
 
     ~TlsSession();
 
@@ -104,8 +92,6 @@ private:
     std::string mHostName;
     std::string mPort;
 
-    std::optional<boost::asio::ip::tcp::endpoint> mForcedEndpoint;
-
     const uint16_t mConnectionTimeoutSeconds;
 
     /* Boost.ASIO I/O context. A reference to this is required by most Beast/ASIO classes. */
@@ -129,8 +115,7 @@ private:
         const SafeString& clientPrivateKey,
         const std::optional<std::string>& forcedCiphers);
 
-    void configureSession(const bool trustCn,
-                          const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>& resolverResults);
+    void configureSession(const bool trustCn);
 };
 
 #endif

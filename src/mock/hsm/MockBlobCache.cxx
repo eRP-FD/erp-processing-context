@@ -223,7 +223,6 @@ void MockBlobCache::setupBlobCacheForMockedHsm (BlobCache& blobCache)
         entry.type = BlobType::AttestationPublicKey;
         entry.name = ErpVector::create(Base64::decodeToString(tpm::attestationKeyName_base64));
         entry.blob = ErpBlob::fromCDump(tpm::TrustedAk_blob_base64);
-        entry.metaAkName = ErpArray<TpmObjectNameLength>::create(Base64::decodeToString(tpm::attestationKeyName_base64));
         blobCache.storeBlob(std::move(entry));
     }
     if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::Quote))

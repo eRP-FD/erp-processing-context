@@ -49,19 +49,17 @@ namespace
 std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::UrlParts& url)
 {
     ClientResponse response;
-    boost::asio::io_context io;
-    const auto port = std::to_string(url.mPort);
-    auto resolverResults = boost::asio::ip::tcp::resolver{io}.resolve(url.mHost.c_str(), port.c_str());
-    for (const auto& resolverEntry : resolverResults)
+    constexpr size_t tryCount = 3;
+    for (size_t index=1; index<=tryCount; ++index)
     {
-        response = requestSender.send(resolverEntry.endpoint(), url, HttpMethod::GET, "");
+        response = requestSender.send(url, HttpMethod::GET, "");
         if (response.getHeader().status() == HttpStatus::OK)
         {
             break;
         }
         else
         {
-            TLOG(WARNING) << "Connecting " << url.toString() << " (" << resolverEntry.endpoint().address() << ") failed";
+            TLOG(WARNING) << "Connecting " << url.toString() << " failed, retry count " << index;
         }
     }
     TVLOG(3) << "GET:" << url.toString() << " status=" << toString(response.getHeader().status()) << " body=" << response.getBody();

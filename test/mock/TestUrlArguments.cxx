@@ -14,6 +14,14 @@
 #include <unordered_set>
 
 namespace {
+    model::Timestamp timestampFromSuuid(const Uuid& uuid)
+    {
+        std::istringstream stream (uuid.toString().substr(0, 16));
+        stream.imbue(std::locale::classic());
+        std::chrono::system_clock::time_point result;
+        date::from_stream(stream, "%Y%m%d-%H%M-%S", result);
+        return model::Timestamp{result};
+    }
 
     template<class T>
     int compareValues (const std::optional<T>& a, const std::optional<T>& b, const SortArgument::Order order)
@@ -56,8 +64,8 @@ namespace {
             else if (sortArgument.nameUrl == "recipient")
                 comparisonResult = compareValues(a.recipient, b.recipient, sortArgument.order);
             else if (sortArgument.nameUrl == "sent")
-                comparisonResult = compareValues(std::make_optional(model::Timestamp::fromDatabaseSUuid(a.id)),
-                                                 std::make_optional(model::Timestamp::fromDatabaseSUuid(b.id)),
+                comparisonResult = compareValues(std::make_optional(timestampFromSuuid(a.id)),
+                                                 std::make_optional(timestampFromSuuid(b.id)),
                                                  sortArgument.order);
             else if (sortArgument.nameUrl == "received")
                 comparisonResult = compareValues(a.received, b.received, sortArgument.order);
@@ -243,37 +251,33 @@ bool TestUrlArguments::matches(const std::string& parameterName, const std::opti
         }
     } equals;
 
-    for (const auto& argumentList :
-         {std::cref(mUrlArguments.mSearchArguments), std::cref(mUrlArguments.mHiddenSearchArguments)})
+    for (const auto& argument : mUrlArguments.mSearchArguments)
     {
-        for (const auto& argument : argumentList.get())
+        if (argument.originalName == parameterName)
         {
-            if (argument.originalName == parameterName)
+            Expect3(argument.type == SearchParameter::Type::HashedIdentity ||
+                        argument.type == SearchParameter::Type::String ||
+                        argument.type == SearchParameter::Type::TaskStatus ||
+                        argument.type == SearchParameter::Type::PrescriptionId,
+                    "Invalid parameter type.", std::logic_error);
+            if (!value.has_value())
             {
-                Expect3(argument.type == SearchParameter::Type::HashedIdentity ||
-                            argument.type == SearchParameter::Type::String ||
-                            argument.type == SearchParameter::Type::TaskStatus ||
-                            argument.type == SearchParameter::Type::PrescriptionId,
-                        "Invalid parameter type.", std::logic_error);
-                if (! value.has_value())
-                {
-                    // The search applies to this parameter but there is no value that the search argument could be
-                    // matched against => element will be filtered out => return false
-                    return false;
-                }
-                else if (argument.prefix == SearchArgument::Prefix::EQ)
-                {
-                    return equals(argument, value.value());
-                }
-                else if (argument.prefix == SearchArgument::Prefix::NE)
-                {
-                    return not equals(argument, value.value());
-                }
-                else
-                {
-                    // Invalid prefix for this argument type => throw to cause error response BadRequest
-                    ErpFail(HttpStatus::BadRequest, "invalid prefix for string argument");
-                }
+                // The search applies to this parameter but there is no value that the search argument could be
+                // matched against => element will be filtered out => return false
+                return false;
+            }
+            else if (argument.prefix == SearchArgument::Prefix::EQ)
+            {
+                return equals(argument, value.value());
+            }
+            else if (argument.prefix == SearchArgument::Prefix::NE)
+            {
+                return not equals(argument, value.value());
+            }
+            else
+            {
+                // Invalid prefix for this argument type => throw to cause error response BadRequest
+                ErpFail(HttpStatus::BadRequest, "invalid prefix for string argument");
             }
         }
     }
@@ -290,143 +294,141 @@ bool TestUrlArguments::matches<model::Timestamp> (const std::string& parameterNa
     // Default result is true, because if parameter is not mentioned by the search arguments
     // => the value does not take part in the search
     bool result = true;
-    for (const auto& argumentList :
-         {std::cref(mUrlArguments.mSearchArguments), std::cref(mUrlArguments.mHiddenSearchArguments)})
+    for (const auto& argument : mUrlArguments.mSearchArguments)
     {
-        for (const auto& argument : argumentList.get())
+        if (argument.originalName == parameterName)
         {
-            if (argument.originalName == parameterName)
+            switch(argument.prefix)
             {
-                switch (argument.prefix)
+                case SearchArgument::Prefix::EQ:
                 {
-                    case SearchArgument::Prefix::EQ: {
-                        bool eq = false;
-                        for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
-                        {
-                            const auto& searchValue = argument.valueAsTimePeriod(idx);
-                            if (! value.has_value() && ! searchValue.has_value())
-                                eq = true;// Match if both value and argument is NULL
-                            else if (value.has_value() && searchValue.has_value())
-                                // FHIR: The range of the search value fully contains the range of the target value.
-                                // B <= T < E
-                                eq = searchValue->begin() <= value.value() && value.value() < searchValue->end();
-                            // Multiple values of a single parameter are or'd. Search result is true if one value matches.
-                            if (eq)
-                                break;
-                        }
-                        result = result && eq;
-                        break;
+                    bool eq = false;
+                    for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
+                    {
+                        const auto& searchValue = argument.valueAsTimePeriod(idx);
+                        if (!value.has_value() && !searchValue.has_value())
+                            eq = true; // Match if both value and argument is NULL
+                        else if (value.has_value() && searchValue.has_value())
+                            // FHIR: The range of the search value fully contains the range of the target value.
+                            // B <= T < E
+                            eq = searchValue->begin() <= value.value() && value.value() < searchValue->end();
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
+                        if(eq)
+                            break;
                     }
-                    case SearchArgument::Prefix::NE: {
-                        bool eq = true;
-                        for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
-                        {
-                            const auto& searchValue = argument.valueAsTimePeriod(idx);
-                            if (value.has_value() != searchValue.has_value())
-                            {
-                                eq = false;
-                            }
-                            else if (value.has_value() && searchValue.has_value())
-                            {
-                                // FHIR: The range of the search value does not fully contain the range of the target value.
-                                // T < B || E <= T
-                                eq = searchValue->begin() <= value.value() && value.value() < searchValue->end();
-                            }
-                            // Multiple values of a single parameter are or'd. Search result is true if one value does not match.
-                            if (! eq)
-                                break;
-                        }
-                        result = result && ! eq;
-                        break;
-                    }
-                    case SearchArgument::Prefix::GT:
-                    case SearchArgument::Prefix::SA: {
-                        bool gt = false;
-                        for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
-                        {
-                            const auto& searchValue = argument.valueAsTimePeriod(idx);
-                            ErpExpect(searchValue.has_value(), HttpStatus::BadRequest,
-                                      "unsupported SearchArgument::Prefix");
-                            // If there is no value that the search argument could be matched against => no match
-                            if (value.has_value())
-                                // FHIR: The range above the search value intersects (i.e. overlaps) with the range of the target value.
-                                // T >= E
-                                // >= instead of > because the upper bound is exclusive
-                                // When target values are time points then SA becomes equivalent to GT.
-                                gt = value.value() >= searchValue->end();
-                            // Multiple values of a single parameter are or'd. Search result is true if one value matches.
-                            if (gt)
-                                break;
-                        }
-                        result = result && gt;
-                        break;
-                    }
-                    case SearchArgument::Prefix::LT:
-                    case SearchArgument::Prefix::EB: {
-                        bool lt = false;
-                        for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
-                        {
-                            const auto& searchValue = argument.valueAsTimePeriod(idx);
-                            ErpExpect(searchValue.has_value(), HttpStatus::BadRequest,
-                                      "unsupported SearchArgument::Prefix");
-                            // If there is no value that the search argument could be matched against => no match
-                            if (value.has_value())
-                                // FHIR: The range below the search value intersects (i.e. overlaps) with the range of the target value.
-                                // T < B
-                                // When target values are time points then EB becomes equivalent to LT.
-                                lt = value.value() < searchValue->begin();
-                            // Multiple values of a single parameter are or'd. Search result is true if one value matches.
-                            if (lt)
-                                break;
-                        }
-                        result = result && lt;
-                        break;
-                    }
-                    case SearchArgument::Prefix::GE: {
-                        bool ge = false;
-                        for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
-                        {
-                            const auto& searchValue = argument.valueAsTimePeriod(idx);
-                            ErpExpect(searchValue.has_value(), HttpStatus::BadRequest,
-                                      "unsupported SearchArgument::Prefix");
-                            // If there is no value that the search argument could be matched against => no match
-                            if (value.has_value())
-                                // The range above the search value intersects (i.e. overlaps) with the range of the target value, or the range of the search value fully contains the range of the target value.
-                                // T >= B
-                                ge = value.value() >= searchValue->begin();
-                            // Multiple values of a single parameter are or'd. Search result is true if one value matches.
-                            if (ge)
-                                break;
-                        }
-                        result = result && ge;
-                        break;
-                    }
-                    case SearchArgument::Prefix::LE: {
-                        bool le = false;
-                        for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
-                        {
-                            const auto& searchValue = argument.valueAsTimePeriod(idx);
-                            ErpExpect(searchValue.has_value(), HttpStatus::BadRequest,
-                                      "unsupported SearchArgument::Prefix");
-                            // If there is no value that the search argument could be matched against => no match
-                            if (value.has_value())
-                                // The range below the search value intersects (i.e. overlaps) with the range of the target value or the range of the search value fully contains the range of the target value.
-                                // T < E
-                                // < instead of <= because E is exclusive
-                                le = value.value() < searchValue->end();
-                            // Multiple values of a single parameter are or'd. Search result is true if one value matches.
-                            if (le)
-                                break;
-                        }
-                        result = result && le;
-                        break;
-                    }
-                    default:
-                        ErpFail(HttpStatus::InternalServerError, "unsupported SearchArgument::Prefix");
+                    result = result && eq;
+                    break;
                 }
-                if (! result)
-                    return result;// short cut evaluation
+                case SearchArgument::Prefix::NE:
+                {
+                    bool eq = true;
+                    for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
+                    {
+                        const auto& searchValue = argument.valueAsTimePeriod(idx);
+                        if (value.has_value() != searchValue.has_value())
+                        {
+                            eq = false;
+                        }
+                        else if (value.has_value() && searchValue.has_value())
+                        {
+                            // FHIR: The range of the search value does not fully contain the range of the target value.
+                            // T < B || E <= T
+                            eq = searchValue->begin() <= value.value() && value.value() < searchValue->end();
+                        }
+                        // Multiple values of a single parameter are or'd. Search result is true if one value does not match.
+                        if (!eq)
+                            break;
+                    }
+                    result = result && !eq;
+                    break;
+                }
+                case SearchArgument::Prefix::GT:
+                case SearchArgument::Prefix::SA:
+                {
+                    bool gt = false;
+                    for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
+                    {
+                        const auto& searchValue = argument.valueAsTimePeriod(idx);
+                        ErpExpect(searchValue.has_value(), HttpStatus::BadRequest, "unsupported SearchArgument::Prefix");
+                        // If there is no value that the search argument could be matched against => no match
+                        if (value.has_value())
+                            // FHIR: The range above the search value intersects (i.e. overlaps) with the range of the target value.
+                            // T >= E
+                            // >= instead of > because the upper bound is exclusive
+                            // When target values are time points then SA becomes equivalent to GT.
+                            gt = value.value() >= searchValue->end();
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
+                        if (gt)
+                            break;
+                    }
+                    result = result && gt;
+                    break;
+                }
+                case SearchArgument::Prefix::LT:
+                case SearchArgument::Prefix::EB:
+                {
+                    bool lt = false;
+                    for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
+                    {
+                        const auto& searchValue = argument.valueAsTimePeriod(idx);
+                        ErpExpect(searchValue.has_value(), HttpStatus::BadRequest, "unsupported SearchArgument::Prefix");
+                        // If there is no value that the search argument could be matched against => no match
+                        if (value.has_value())
+                            // FHIR: The range below the search value intersects (i.e. overlaps) with the range of the target value.
+                            // T < B
+                            // When target values are time points then EB becomes equivalent to LT.
+                            lt = value.value() < searchValue->begin();
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
+                        if (lt)
+                            break;
+                    }
+                    result = result && lt;
+                    break;
+                }
+                case SearchArgument::Prefix::GE:
+                {
+                    bool ge = false;
+                    for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
+                    {
+                        const auto& searchValue = argument.valueAsTimePeriod(idx);
+                        ErpExpect(searchValue.has_value(), HttpStatus::BadRequest, "unsupported SearchArgument::Prefix");
+                        // If there is no value that the search argument could be matched against => no match
+                        if (value.has_value())
+                            // The range above the search value intersects (i.e. overlaps) with the range of the target value, or the range of the search value fully contains the range of the target value.
+                            // T >= B
+                            ge = value.value() >= searchValue->begin();
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
+                        if (ge)
+                            break;
+                    }
+                    result = result && ge;
+                    break;
+                }
+                case SearchArgument::Prefix::LE:
+                {
+                    bool le = false;
+                    for (size_t idx = 0; idx < argument.valuesCount(); ++idx)
+                    {
+                        const auto& searchValue = argument.valueAsTimePeriod(idx);
+                        ErpExpect(searchValue.has_value(), HttpStatus::BadRequest, "unsupported SearchArgument::Prefix");
+                        // If there is no value that the search argument could be matched against => no match
+                        if (value.has_value())
+                            // The range below the search value intersects (i.e. overlaps) with the range of the target value or the range of the search value fully contains the range of the target value.
+                            // T < E
+                            // < instead of <= because E is exclusive
+                            le = value.value() < searchValue->end();
+                        // Multiple values of a single parameter are or'd. Search result is true if one value matches.
+                        if (le)
+                            break;
+                    }
+                    result = result && le;
+                    break;
+                }
+                default:
+                    ErpFail(HttpStatus::InternalServerError, "unsupported SearchArgument::Prefix");
             }
+            if(!result)
+                return result; // short cut evaluation
         }
     }
 
@@ -463,7 +465,7 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::apply(MedicationDispense
 TestUrlArguments::Communications TestUrlArguments::applySearch (Communications&& initialCommunications) const
 {
     // Apply search arguments.
-    if (! mUrlArguments.mSearchArguments.empty() || ! mUrlArguments.mHiddenSearchArguments.empty())
+    if ( ! mUrlArguments.mSearchArguments.empty())
     {
         Communications communications;
 
@@ -471,7 +473,7 @@ TestUrlArguments::Communications TestUrlArguments::applySearch (Communications&&
         {
             if (matches("sender", communication.sender)
                 && matches("recipient", communication.recipient)
-                && matches("sent", std::make_optional(model::Timestamp::fromDatabaseSUuid(communication.id)))
+                && matches("sent", std::make_optional(timestampFromSuuid(communication.id)))
                 && matches("received", communication.received))
             {
                 communications.emplace_back(std::move(communication));
@@ -544,7 +546,7 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::apply(TestUrlArguments::A
 
 TestUrlArguments::Tasks TestUrlArguments::applySearch (TestUrlArguments::Tasks&& initialTasks) const
 {
-    if (! mUrlArguments.mSearchArguments.empty() || ! mUrlArguments.mHiddenSearchArguments.empty())
+    if ( ! mUrlArguments.mSearchArguments.empty())
     {
         Tasks tasks;
 
@@ -616,7 +618,7 @@ TestUrlArguments::Tasks TestUrlArguments::applyPaging (TestUrlArguments::Tasks&&
 
 TestUrlArguments::AuditDataContainer TestUrlArguments::applySearch (TestUrlArguments::AuditDataContainer&& auditEvents) const
 {
-    if (! mUrlArguments.mSearchArguments.empty() || ! mUrlArguments.mHiddenSearchArguments.empty())
+    if (!mUrlArguments.mSearchArguments.empty())
     {
         AuditDataContainer resultAuditEvents;
 
@@ -689,7 +691,7 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::applyPaging (TestUrlArgum
 TestUrlArguments::MedicationDispenses TestUrlArguments::applySearch(MedicationDispenses&& initialMedicationDispenses) const
 {
     // Apply search arguments.
-    if (! mUrlArguments.mSearchArguments.empty() || ! mUrlArguments.mHiddenSearchArguments.empty())
+    if (!mUrlArguments.mSearchArguments.empty())
     {
         MedicationDispenses medicationDispenses;
 

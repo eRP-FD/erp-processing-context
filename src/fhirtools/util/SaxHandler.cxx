@@ -6,6 +6,7 @@
  */
 
 #include "fhirtools/util/SaxHandler.hxx"
+#include "erp/util/String.hxx"
 #include "erp/xml/XmlMemory.hxx"
 
 #include <libxml/parserInternals.h>
@@ -80,6 +81,10 @@ void failMaybeWithDiagnostics(const std::string& message, const xmlError& error)
         ErpFailWithDiagnostics(HttpStatus::BadRequest, message, errorMessage);
     }
     ErpFail(HttpStatus::BadRequest, message);
+}
+
+void genericSuppressingErrorCallback(void*, const char*, ...)
+{
 }
 
 }// anonymous namespace
@@ -255,6 +260,9 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
     xmlSetExternalEntityLoader([](const char* /*URL*/, const char* /*ID*/, xmlParserCtxtPtr /*ctxt*/) -> xmlParserInputPtr {
         return nullptr;
     });
+    // structuredErrorFunc may take priority, so reset it and install our own error callback
+    xmlSetStructuredErrorFunc(this, structuredErrorCallback);
+    xmlSetGenericErrorFunc(nullptr, genericSuppressingErrorCallback);
 
     int parseResult = 0;
     try
@@ -279,7 +287,7 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
 
     if (mContext->errNo != 0 && mContext->lastError.level > XML_ERR_WARNING)
     {
-        TVLOG(1) << "libxml2 ctxt->errNo: " << mContext->errNo;
+        TLOG(ERROR) << "libxml2 ctxt->errNo: " << mContext->errNo;
         failMaybeWithDiagnostics("Error from xmlParseDocument", mContext->lastError);
     }
     if (parseResult != 0)
@@ -310,8 +318,9 @@ void SaxHandler::cErrorCallback(void* self, const char* msg, ...)
     {
         std::va_list args{}; //NOLINT(cppcoreguidelines-pro-type-vararg)
         va_start(args, msg);
-        static_cast<SaxHandler*>(self)->error(msg, args);
+        const auto errStr = fhirtools::VaListHelper::vaListToString(msg, args);
         va_end(args);
+        static_cast<SaxHandler*>(self)->error(errStr);
     }
     catch (...)
     {
@@ -319,6 +328,20 @@ void SaxHandler::cErrorCallback(void* self, const char* msg, ...)
     }
 }
 
+void SaxHandler::structuredErrorCallback(void* self, xmlErrorPtr err)
+{
+    try
+    {
+        std::ostringstream s;
+        s << "error parsing xml, message: " << String::trim(err->message) << ", code: " << err->code
+          << ", line: " << err->line;
+        static_cast<SaxHandler*>(self)->error(s.str());
+    }
+    catch (...)
+    {
+        static_cast<SaxHandler*>(self)->mExceptionPtr = std::current_exception();
+    }
+}
 
 void SaxHandler::characters(const xmlChar* ch, int len)
 {
@@ -353,7 +376,7 @@ void SaxHandler::endElement(const xmlChar* localname, const xmlChar* prefix, con
     (void) uri;
 }
 
-void SaxHandler::error(const char* msg, va_list args)
+void SaxHandler::error(const std::string& msg)
 {
-    Fail(fhirtools::VaListHelper::vaListToString(msg, args));
+    TVLOG(1) << msg;
 }

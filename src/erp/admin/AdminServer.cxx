@@ -15,7 +15,6 @@ namespace AdminServer
 void addEndpoints(RequestHandlerManager& manager)
 {
     manager.onPostDo("/admin/shutdown", std::make_unique<PostRestartHandler>());
-    manager.onGetDo("/admin/configuration", std::make_unique<GetConfigurationHandler>());
     manager.onGetDo("/health", std::make_unique<HealthHandler>());
 }
 }

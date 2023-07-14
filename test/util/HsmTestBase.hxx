@@ -18,40 +18,41 @@ class HsmClient;
 class HsmFactory;
 class HsmSession;
 class TeeTokenUpdater;
-class HsmPool;
 
 
 /**
  * Provide methods to set up tests that use the HSM so that either a mock or a remote simulator of the HSM is used,
  * depending on the configuration.
  */
-class HsmTestBase
+class  HsmTestBase
 {
 public:
     const ErpVector attestationKeyName = ErpVector::create("<attestation key is 34 bytes long>");
 
     /**
-     * (re) create pool and blob cache
+     * (re) create client, blob cache and session.
      */
-    void setupHsmTest(bool allowProductionUpdater, std::chrono::system_clock::duration updateInterval,
-                      std::chrono::system_clock::duration retryInterval);
-    bool isHsmSimulatorSupportedAndConfigured();
+    void setupHsmTest (void);
+    static bool isHsmSimulatorSupportedAndConfigured (void);
 
-    std::unique_ptr<TeeTokenUpdater> createTeeTokenUpdater(HsmPool& hsmPool,
-                                                           std::chrono::system_clock::duration updateInterval,
-                                                           std::chrono::system_clock::duration retryInterval);
+    static std::unique_ptr<HsmClient> createHsmClient (void);
 
-    std::unique_ptr<HsmClient> createHsmClient();
+    static std::unique_ptr<HsmFactory> createFactory (
+        std::unique_ptr<HsmClient>&& client,
+        std::shared_ptr<BlobCache> blobCache);
 
-    std::unique_ptr<HsmFactory> createFactory(std::unique_ptr<HsmClient>&& client,
-                                                     std::shared_ptr<BlobCache> blobCache);
+    static std::unique_ptr<TeeTokenUpdater> createTeeTokenUpdater (
+        std::function<void(ErpBlob&&)>&& consumer,
+        HsmFactory& hsmFactory,
+        bool allowProductionUpdater,
+        std::chrono::system_clock::duration updateInterval,
+        std::chrono::system_clock::duration retryInterval);
 
-    static ErpVector base64ToErpVector(const std::string_view base64data);
+    static ErpVector base64ToErpVector (const std::string_view base64data);
 
     std::shared_ptr<BlobCache> mBlobCache;
-    std::unique_ptr<HsmPool> mHsmPool;
-    std::function<void()> mUpdateCallback;
-    bool mAllowProductionHsm{true};
+    std::unique_ptr<HsmFactory> mHsmFactory;
+    std::unique_ptr<HsmSession> mHsmSession;
 };
 
 

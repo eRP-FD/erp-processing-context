@@ -20,8 +20,6 @@ namespace hsmclient {
 }
 
 class HsmIdentity;
-class HsmPool;
-class HsmSession;
 
 
 /**
@@ -81,9 +79,7 @@ public:
 
 
     EnrolmentHelper::Blobs createBlobs (TpmProxy& tpm);
-    static void refreshTeeToken(HsmPool& hsmPool);
-    static ErpBlob getTeeToken(HsmSession& hsmSession, BlobCache& blobCache,
-                               const std::optional<ErpBlob>& knownQuote = {});
+    ErpBlob createTeeToken(BlobCache& blobCache, ::std::optional<::BlobCache::Entry> trustedQuote = {});
 
     static ErpVector getBlobName (const ErpBlob& blob);
 
@@ -113,7 +109,7 @@ protected:
     std::tuple<
         std::vector<uint8_t>,
         ErpBlob> getNonce (const uint32_t generation);
-    static Tpm::QuoteOutput getQuote (
+    Tpm::QuoteOutput getQuote (
         TpmProxy& tpm,
         const std::vector<uint8_t>& nonce,
         const Tpm::PcrRegisterList& pcrSet,

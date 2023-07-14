@@ -121,8 +121,8 @@ public:
      */
     void disablePostUpdateHook(const size_t hookId);
 
-    virtual TrustStore::HealthData healthCheckTsl() const;
-    virtual TrustStore::HealthData healthCheckBna() const;
+    virtual void healthCheckTsl() const;
+    virtual void healthCheckBna() const;
 
 protected:
     /**

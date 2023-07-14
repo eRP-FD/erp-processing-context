@@ -23,18 +23,11 @@ namespace hsmclient {
 class HsmPoolTest : public testing::Test
 {
 public:
-    HsmPoolTest(void)
+    HsmPoolTest (void)
         : hsmPool(
               std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
                                                MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-              [](auto& hsmPool, std::shared_ptr<Timer> timerManager) {
-                  return std::make_unique<TeeTokenUpdater>(
-                      hsmPool,
-                      [](HsmPool&) {
-                      },
-                      timerManager);
-              },
-              std::make_shared<Timer>())
+              TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>())
     {
     }
 

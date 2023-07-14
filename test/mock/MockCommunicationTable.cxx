@@ -49,7 +49,7 @@ std::optional<Uuid> MockCommunicationTable::insertCommunication(
     std::lock_guard lock(mutex);
 
     // generate a "uuid" sorted by sent time, to emulate the behavior on the postgres DB
-    auto dateEnc = timeSent.toDatabaseSUuid();
+    auto dateEnc = date::format("%Y%m%d-%H%M-%S", timeSent.toChronoTimePoint());
     auto uuid = Uuid().toString();
     Uuid communicationId(uuid.replace(0, 16, dateEnc.substr(0, 16)));
     auto [newRow, inserted] = mCommunications.try_emplace(communicationId, sender, recipient, messageType, senderBlobId,

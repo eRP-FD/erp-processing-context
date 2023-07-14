@@ -298,7 +298,7 @@ namespace
     // GEMREQ-end A_22141#SMC-B
 
 
-    // GEMREQ-start A_22141#verifySignerCertificates, A_20159-03#verifySignerCertificates
+    // GEMREQ-start A_22141#verifySignerCertificates, A_20159-02#verifySignerCertificates
     /**
      * Verifies signer certificates ( it must be only one certificate ) of the provided CAdES-BES,
      * and embeds the missing in the package OCSP response for QES related packages.
@@ -351,10 +351,10 @@ namespace
             addOcspToSignerInfo(cmsContentInfo, *requestedOcspResponse);
         }
     }
-    // GEMREQ-end A_22141#verifySignerCertificates, A_20159-03#verifySignerCertificates
+    // GEMREQ-end A_22141#verifySignerCertificates, A_20159-02#verifySignerCertificates
 
 
-    // GEMREQ-start A_22141#cmsVerify, A_20159-03#cmsVerify
+    // GEMREQ-start A_22141#cmsVerify, A_20159-02#cmsVerify
     int cmsVerify(
         TslManager* tslManager,
         CMS_ContentInfo& cmsContentInfo,
@@ -378,7 +378,7 @@ namespace
                           &out,
                           CMS_NO_SIGNER_CERT_VERIFY | CMS_BINARY);
     }
-    // GEMREQ-end A_22141#cmsVerify, A_20159-03#cmsVerify
+    // GEMREQ-end A_22141#cmsVerify, A_20159-02#cmsVerify
 
 
     void handleExceptionByVerification(
@@ -454,7 +454,7 @@ void CadesBesSignature::internalInitialization(const std::string& base64Data,
 }
 // GEMREQ-end A_22141#internalInitialization
 
-// GEMREQ-start A_22141#CadesBesSignature, A_20159-03#CadesBesSignature
+// GEMREQ-start A_22141#CadesBesSignature, A_20159-02#CadesBesSignature
 CadesBesSignature::CadesBesSignature(const std::string& base64Data,
                                      TslManager& tslManager,
                                      bool allowNonQESCertificate,
@@ -476,7 +476,7 @@ CadesBesSignature::CadesBesSignature(const std::string& base64Data,
         HANDLE_EXCEPTION_BY_VERIFICATION;
     }
 }
-// GEMREQ-end A_22141#CadesBesSignature, A_20159-03#CadesBesSignature
+// GEMREQ-end A_22141#CadesBesSignature, A_20159-02#CadesBesSignature
 
 CadesBesSignature::CadesBesSignature(const std::string& base64Data)
 : mPayload{},

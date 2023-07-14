@@ -59,7 +59,7 @@ pipeline {
                         loadGithubSSHConfiguration {
                             env.BRANCH_NAME = "${BRANCH_NAME}"
                             def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                            def erp_release_version = "1.11.0"
+                            def erp_release_version = "1.10.0"
                             sh "cd /media/erp && scripts/ci-build.sh " +
                                 "--build_version='${erp_build_version}' " +
                                 "--release_version='${erp_release_version}' " +

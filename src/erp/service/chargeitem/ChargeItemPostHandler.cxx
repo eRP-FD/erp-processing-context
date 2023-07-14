@@ -145,7 +145,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     // GEMREQ-start A_22141#chargeItemCadesBes, A_22140
     A_22138.start("Validate PKV dispense item");
     A_22139.start("Check signature of PKV dispense bundle");
-    A_22140_01.start("Check signature certificate of PKV dispense bundle");
+    A_22140.start("Check signature certificate of PKV dispense bundle");
     A_22141.start("Check signature certificate SMC-B");
     auto [dispenseItemBundle, dispenseItemWithOcsp] = validatedBundleFromSigned(
         *rawDispenseItem,
@@ -153,7 +153,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
         ::VauErrorCode::invalid_dispense);
 
     A_22141.finish();
-    A_22140_01.finish();
+    A_22140.finish();
     A_22139.finish();
     A_22138.finish();
     // GEMREQ-end A_22141#chargeItemCadesBes, A_22140

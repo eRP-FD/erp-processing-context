@@ -30,7 +30,6 @@ const std::string Header::InnerRequestFlowtype = "Inner-Request-Flowtype";
 const std::string Header::InnerRequestClientId = "Inner-Request-Client-Id";
 const std::string Header::InnerRequestLeips = "Inner-Request-Leips";
 const std::string Header::InnerResponseCode = "Inner-Response-Code";
-const std::string Header::BackendDurationMs = "Backend-Duration-Ms";
 const std::string Header::Location = "Location";
 const std::string Header::Server = "Server";
 const std::string Header::Session = "Session";

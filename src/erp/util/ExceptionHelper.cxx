@@ -8,7 +8,6 @@
 #include "erp/util/ExceptionHelper.hxx"
 #include "erp/common/HttpStatus.hxx"
 #include "erp/hsm/HsmException.hxx"
-#include "erp/util/Demangle.hxx"
 #include "erp/util/ErpException.hxx"
 #include "erp/util/JwtException.hxx"
 
@@ -112,19 +111,19 @@ void ExceptionHelper::extractInformationAndRethrow (
     }
     catch (const std::runtime_error& e)
     {
-        const std::string typeinfo = util::demangle(typeid(e).name());
+        const std::string& typeinfo = typeid(e).name();
         consumer("std::runtime_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::logic_error& e)
     {
-        const std::string typeinfo = util::demangle(typeid(e).name());
+        const std::string& typeinfo = typeid(e).name();
         consumer("std::logic_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::exception& e)
     {
-        const std::string typeinfo = util::demangle(typeid(e).name());
+        const std::string& typeinfo = typeid(e).name();
         consumer("std::exception(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }

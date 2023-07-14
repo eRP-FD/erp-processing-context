@@ -38,10 +38,6 @@ public:
         const SafeString& clientCertificate,
         const SafeString& clientPrivateKey,
         const std::optional<std::string>& forcedCiphers);
-    ClientImpl(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
-               const uint16_t connectionTimeoutSeconds, bool enforceServerAuthentication,
-               const SafeString& caCertificates, const SafeString& clientCertificate,
-               const SafeString& clientPrivateKey, const std::optional<std::string>& forcedCiphers);
     ~ClientImpl (void);
 
     ClientResponse send (const ClientRequest& clientRequest, const bool trustCn);

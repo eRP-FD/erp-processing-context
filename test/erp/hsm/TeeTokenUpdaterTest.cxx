@@ -10,11 +10,9 @@
 #include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/HsmClient.hxx"
 #include "erp/hsm/HsmFactory.hxx"
-#include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/HsmSession.hxx"
 
 #include "erp/util/TLog.hxx"
-#include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/HsmTestBase.hxx"
 #include "test/util/TestUtils.hxx"
 
@@ -27,28 +25,25 @@ class TeeTokenUpdaterTest : public testing::Test,
 public:
     void SetUp (void) override
     {
-        BlobDatabaseHelper::removeUnreferencedBlobs();
-    }
-
-    void TearDown() override
-    {
-        BlobDatabaseHelper::removeUnreferencedBlobs();
+        setupHsmTest();
     }
 };
 
 
 TEST_F(TeeTokenUpdaterTest, doUpdateCalled)
 {
-    setupHsmTest(true, std::chrono::minutes(20), std::chrono::minutes(1));
+    ErpBlob teeToken;
     bool doUpdateCalled = false;
 
-    mUpdateCallback = [&]() {
-        doUpdateCalled = true;
-    };
-    mHsmPool->getTokenUpdater().update();
+    auto updater = createTeeTokenUpdater(
+        [&](auto&&blob){teeToken = blob; doUpdateCalled=true;},
+        *mHsmFactory,
+        true,
+        std::chrono::minutes(20),
+        std::chrono::minutes(1));
+    updater->update();
 
     ASSERT_TRUE(doUpdateCalled);
-    mUpdateCallback = nullptr;
 }
 
 
@@ -58,18 +53,21 @@ TEST_F(TeeTokenUpdaterTest, successfulRenewal)
     GTEST_SKIP();
     #endif
 
-    // Do not allow production updater to keep the update cost minimal
-    setupHsmTest(false, std::chrono::milliseconds(10), std::chrono::minutes(1));
-
+    ErpBlob teeToken;
     std::atomic_size_t updateCount = 0;
 
-    mUpdateCallback = [&]() {
-        ++updateCount;
-    };
-
-    mHsmPool->getTokenUpdater().requestUpdate();
+    auto updater = createTeeTokenUpdater(
+        [&](ErpBlob&& teeToken1)
+        {
+            teeToken = std::move(teeToken1);
+            ++updateCount;
+        },
+        *mHsmFactory,
+        false, // Do not allow production updater to keep the update cost minimal
+        std::chrono::milliseconds(10),
+        std::chrono::minutes(1));
+    updater->requestUpdate();
 
     TVLOG(1) << "waiting for updates";
     testutils::waitFor([&updateCount]{return updateCount >= 2;});
-    mUpdateCallback = nullptr;
 }

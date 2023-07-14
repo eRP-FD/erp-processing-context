@@ -105,15 +105,3 @@ bool PagingArgument::hasNextPage (const std::size_t& totalSearchMatches) const
 {
         return totalSearchMatches > mOffset + mCount;
 }
-
-
-void PagingArgument::setEntryTimestampRange(const model::Timestamp& firstEntry, const model::Timestamp& lastEntry)
-{
-    mEntryTimestampRange.emplace(firstEntry, lastEntry);
-}
-
-
-std::optional<std::pair<model::Timestamp, model::Timestamp>> PagingArgument::getEntryTimestampRange() const
-{
-    return mEntryTimestampRange;
-}

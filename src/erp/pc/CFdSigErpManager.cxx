@@ -165,7 +165,7 @@ CFdSigErpManager::internalGetOcspResponseData(const Certificate& certificate, co
     catch(const TslError& tslError)
     {
         // in this context TslError always means service unavailable error
-        throw ExceptionWrapper<TslError>::create({__FILE__, __LINE__}, tslError, HttpStatus::ServiceUnavailable);
+        throw ExceptionWrapper<TslError>::create({__FILE__, __LINE__},tslError, HttpStatus::ServiceUnavailable);
     }
 }
 // GEMREQ-end A_20765-02#validation

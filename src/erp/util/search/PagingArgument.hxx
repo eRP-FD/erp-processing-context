@@ -8,11 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_PAGINGARGUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_PAGINGARGUMENT_HXX
 
-#include "erp/model/Timestamp.hxx"
-
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 
@@ -29,7 +26,6 @@ class PagingArgument
 public:
     static constexpr std::string_view countKey = "_count";
     static constexpr std::string_view offsetKey = "__offset";
-    static constexpr std::string_view idKey = "_id";
 
     explicit PagingArgument (void);
 
@@ -41,9 +37,6 @@ public:
     bool hasDefaultCount (void) const;
     size_t getCount (void) const;
     static size_t getDefaultCount (void);
-
-    void setEntryTimestampRange(const model::Timestamp& firstEntry, const model::Timestamp& lastEntry);
-    std::optional<std::pair<model::Timestamp, model::Timestamp>> getEntryTimestampRange() const;
 
     /**
      * Value is accepted as string so that input validation is offloaded from the caller to this method.
@@ -69,7 +62,6 @@ public:
 private:
     size_t mCount;
     size_t mOffset;
-    std::optional<std::pair<model::Timestamp, model::Timestamp>> mEntryTimestampRange;
 };
 
 

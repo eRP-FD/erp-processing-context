@@ -672,11 +672,9 @@ void MockDatabase::updateTaskClearPersonalData(const model::PrescriptionId& task
 
 std::string MockDatabase::storeAuditEventData(db_model::AuditData& auditData)
 {
-    auditData.recorded = model::Timestamp::now();
-    auto dateEnc = auditData.recorded.toDatabaseSUuid();
-    auto uuid = Uuid().toString();
-    auto id = uuid.replace(0, 16, dateEnc.substr(0, 16));
+    auto id = Uuid().toString();
     auditData.id = id;
+    auditData.recorded = model::Timestamp::now();
     mAuditEventData.emplace_back(auditData);
     return id;
 }
@@ -702,6 +700,17 @@ std::vector<db_model::AuditData> MockDatabase::retrieveAuditEventData(
         return TestUrlArguments(search.value()).apply(std::move(allAuditData));
     else
         return allAuditData;
+}
+
+uint64_t MockDatabase::countAuditEventData(
+    const db_model::HashedKvnr& kvnr,
+    const std::optional<UrlArguments>& search)
+{
+    auto result = retrieveAuditEventData(kvnr, {}, {}, {});  // get all data for kvnr;
+    if (search.has_value())
+        return TestUrlArguments(search.value()).applySearch(std::move(result)).size();
+    else
+        return result.size();
 }
 
 std::optional<db_model::Task> MockDatabase::retrieveTaskAndReceipt(const model::PrescriptionId& taskId)

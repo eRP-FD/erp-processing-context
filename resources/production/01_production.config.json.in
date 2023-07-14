@@ -45,8 +45,7 @@
         "tcpUserTimeoutMs": "1000",
         "keepalivesIdleSec": "75",
         "keepalivesIntervalSec": "75",
-        "keepalivesCount": "9",
-        "targetSessionAttrs": "read-write"
+        "keepalivesCount": "9"
       },
       "json-meta-schema": "@ERP_SCHEMA_DIR@shared/json/draft-4-meta-schema.json",
       "json-schema": [

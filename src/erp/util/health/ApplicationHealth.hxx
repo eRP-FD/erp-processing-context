@@ -48,11 +48,7 @@ public:
         CFdSigErpTimestamp,
         CFdSigErpPolicy,
         CFdSigErpExpiry,
-        DBConnectionInfo,
-        TSLExpiry,
-        TSLSequenceNumber,
-        TSLId,
-        TslHash,
+        DBConnectionInfo
     };
 
     struct State

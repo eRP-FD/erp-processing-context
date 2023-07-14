@@ -6,7 +6,7 @@ libraries is also possible, but requires additional dependencies, that are not i
 Make sure to use the patched openssl, provided in this repository.
 Export the recipe, that will apply the patch, from within the folder `conan-recipes/openssl`:
 ```
-conan export . openssl/1.1.1u@erp/stable-1
+conan export . openssl/1.1.1q@erp/stable-2
 ```
 
 Afterwards enter the erp-processing-context folder, and roughly follow these steps:
@@ -17,7 +17,7 @@ cmake -DERP_WITH_HSM_MOCK=ON -DERP_WITH_HSM_TPM_PRODUCTION=OFF ..
 make
 ```
 
-To use a conan profile other than the default, add `-DERP_CONAN_PROFILE=<profile-name>` to the CMake step.
+To use a conan profile other than the default, add `-DERP_CONAN_PROFILE=<profile-name>` to the CMake step. 
 
 The following output should be generated:
 - `bin/erp-processing-context`: The ERP server process.

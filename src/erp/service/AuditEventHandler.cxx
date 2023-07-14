@@ -91,11 +91,6 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
             { "subtype", "action", SearchParameter::Type::String, std::move(searchToDbValue) }
         });
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
-    // add a hidden argument to limit the query up to today
-    std::vector<std::optional<model::TimePeriod>> timePeriods;
-    timePeriods.emplace_back(model::TimePeriod::fromFhirSearchDate(session.sessionTime().toGermanDate()));
-    arguments->addHiddenSearchArgument(
-        SearchArgument{SearchArgument::Prefix::LE, "id", "date", SearchParameter::Type::DateAsUuid, timePeriods, {""}});
     A_19399.finish();
 
     const auto kvnr = getKvnrFromAccessToken(session.request.getAccessToken());
@@ -108,19 +103,14 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
         arguments);
     A_19396.finish();
 
+    std::size_t totalSearchMatches =
+        responseIsPartOfMultiplePages(arguments->pagingArgument(), auditEvents.size()) ?
+        database->countAuditEventData(kvnr, arguments) : auditEvents.size();
+
     A_19397.start("Return audit events as bundle");
     auto bundle = createBundle(session.serviceContext, session.request, auditEvents);
-    // do not be exact if we there is a next page, just assume there is, if the
-    // returned number of events is the page size
-    bool hasNextPage = false;
-    auto linkMode{UrlArguments::LinkMode::offset};
-    if (! auditEvents.empty())
-    {
-        arguments->setResultDateRange(auditEvents.front().recorded(), auditEvents.back().recorded());
-        hasNextPage = auditEvents.size() >= arguments->pagingArgument().getCount();
-        linkMode = UrlArguments::LinkMode::id;
-    }
-    const auto links = arguments->getBundleLinks(hasNextPage, getLinkBase(), "/AuditEvent", linkMode);
+    bundle.setTotalSearchMatches(totalSearchMatches);
+    const auto links = arguments->getBundleLinks(getLinkBase(), "/AuditEvent", totalSearchMatches);
     for (const auto& link : links)
     {
         bundle.setLink(link.first, link.second);

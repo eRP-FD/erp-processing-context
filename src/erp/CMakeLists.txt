@@ -47,6 +47,7 @@ list(
         client/request/ValidatedClientRequest.cxx
         client/response/ClientResponse.cxx
         client/response/ClientResponseReader.cxx
+        common/BoostBeastHttpStatus.cxx
         common/BoostBeastMethod.cxx
         common/Header.cxx
         common/HttpMethod.cxx

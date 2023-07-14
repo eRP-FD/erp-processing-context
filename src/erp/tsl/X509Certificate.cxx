@@ -365,19 +365,6 @@ std::string X509Certificate::getSha1FingerprintHex (void) const
     return getFingerprint(EVP_sha1, 20);
 }
 
-std::string X509Certificate::getSerialNumber() const
-{
-    if (!pCert)
-    {
-        return {};
-    }
-
-    const ASN1_INTEGER* serial = X509_get_serialNumber(pCert.get());
-    Expect(serial != nullptr, "cannot get serial number");
-    shared_BIO mem = shared_BIO::make();
-    Expect(i2a_ASN1_INTEGER(mem, serial) > 0, "Conversion from serial to string failed");
-    return bioToString(mem.get());
-}
 
 bool X509Certificate::isCaCert (void) const
 {

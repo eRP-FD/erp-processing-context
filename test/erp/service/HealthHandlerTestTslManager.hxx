@@ -47,17 +47,17 @@ public:
             ocspCheckDescriptor);
     }
 
-    TrustStore::HealthData healthCheckTsl() const override
+    void healthCheckTsl() const override
     {
         if (failTsl)
-            return TrustStore::HealthData{};
-        return TslManager::healthCheckTsl();
+            throw std::runtime_error("TSL FAILURE");
+        TslManager::healthCheckTsl();
     }
-    TrustStore::HealthData healthCheckBna() const override
+    void healthCheckBna() const override
     {
         if (failBna)
-            return TrustStore::HealthData{};
-        return TslManager::healthCheckBna();
+            throw std::runtime_error("BNA FAILURE");
+        TslManager::healthCheckBna();
     }
 
     static bool failTsl;

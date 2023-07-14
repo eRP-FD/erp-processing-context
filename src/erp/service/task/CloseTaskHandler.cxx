@@ -28,7 +28,6 @@
 #include "erp/model/Task.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/util/Base64.hxx"
-#include "erp/util/Demangle.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/Uuid.hxx"
@@ -57,10 +56,9 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
 
     auto* databaseHandle = session.database();
 
-    auto [taskAndKey, prescription] = databaseHandle->retrieveTaskForUpdateAndPrescription(prescriptionId);
-    ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
-    auto& task = taskAndKey->task;
-    const auto taskStatus = task.status();
+    auto [task, prescription] = databaseHandle->retrieveTaskForUpdateAndPrescription(prescriptionId);
+    ErpExpect(task.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
+    const auto taskStatus = task->status();
 
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
 
@@ -71,19 +69,19 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19231_02.start("Check that secret from URL is equal to secret from task");
     const auto uriSecret = session.request.getQueryParameter("secret");
     A_20703.start("Set VAU-Error-Code header field to brute_force whenever AccessCode or Secret mismatches");
-    VauExpect(uriSecret.has_value() && uriSecret.value() == task.secret(), HttpStatus::Forbidden,
+    VauExpect(uriSecret.has_value() && uriSecret.value() == task->secret(), HttpStatus::Forbidden,
               VauErrorCode::brute_force, "No or invalid secret provided for Task");
     A_20703.finish();
     A_19231_02.finish();
 
     A_19232.start("Set Task status to completed");
-    task.setStatus(model::Task::Status::completed);
+    task->setStatus(model::Task::Status::completed);
     A_19232.finish();
 
     const auto& accessToken = session.request.getAccessToken();
     const auto telematikIdFromAccessToken = accessToken.stringForClaim(JWT::idNumberClaim);
     ErpExpect(telematikIdFromAccessToken.has_value(), HttpStatus::BadRequest, "Telematik-ID not contained in JWT");
-    const auto kvnr = task.kvnr();
+    const auto kvnr = task->kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
     auto medicationDispenses = medicationDispensesFromBody(session);
@@ -120,7 +118,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
 
     A_19233_05.start(
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
-    const auto inProgressDate = task.lastModifiedDate();
+    const auto inProgressDate = task->lastModifiedDate();
     const auto completedTimestamp = model::Timestamp::now();
     const auto linkBase = getLinkBase();
     const auto authorIdentifier = model::Device::createReferenceString(linkBase);
@@ -130,7 +128,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     const model::Device deviceResource;
 
     A_19233_05.start("Save bundle reference in task.output");
-    task.setReceiptUuid();
+    task->setReceiptUuid();
     A_19233_05.finish();
 
     A_19233_05.start("Add the prescription signature digest");
@@ -144,7 +142,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
 
     const auto taskUrl = linkBase + "/Task/" + prescriptionId.toString();
     const auto prescriptionDigestUrl = linkBase + "/Binary/" + prescriptionDigestIdentifier;
-    model::ErxReceipt responseReceipt(Uuid(*task.receiptUuid()), taskUrl + "/$close/", prescriptionId,
+    model::ErxReceipt responseReceipt(Uuid(*task->receiptUuid()), taskUrl + "/$close/", prescriptionId,
                                       compositionResource, authorIdentifier, deviceResource,
                                       prescriptionDigestUrl, prescriptionDigestResource);
     A_19233_05.finish();
@@ -172,9 +170,8 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
 
     // store in DB:
     A_19248_02.start("Save modified Task and MedicationDispense / Receipt objects");
-    task.updateLastUpdate();
-    ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing key for task");
-    databaseHandle->updateTaskMedicationDispenseReceipt(task, *taskAndKey->key, medicationDispenses, responseReceipt);
+    task->updateLastUpdate();
+    databaseHandle->updateTaskMedicationDispenseReceipt(*task, medicationDispenses, responseReceipt);
     A_19248_02.finish();
 
     A_19514.start("HttpStatus 200 for successful POST");
@@ -249,8 +246,7 @@ void CloseTaskHandler::validateMedications(const std::vector<model::MedicationDi
         if (medicationElement == nullptr)
         {
             const auto& medication0 = *medication[0];
-            Fail2("Expression returned non-ErpElement: "s.append(util::demangle(typeid(medication0).name())),
-                  std::logic_error);
+            Fail2("Expression returned non-ErpElement: "s.append(typeid(medication0).name()), std::logic_error);
         }
         model::KbvMedicationGeneric::validateMedication(*medicationElement, service.getXmlValidator(),
                                                         service.getInCodeValidator(), true);

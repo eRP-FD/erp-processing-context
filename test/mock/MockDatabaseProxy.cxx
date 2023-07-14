@@ -144,6 +144,13 @@ MockDatabaseProxy::retrieveAuditEventData(const db_model::HashedKvnr& kvnr, cons
     return mDatabase.retrieveAuditEventData(kvnr, id, prescriptionId, search);
 }
 
+uint64_t MockDatabaseProxy::countAuditEventData(const db_model::HashedKvnr& kvnr,
+                                                const std::optional<UrlArguments>& search)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase.countAuditEventData(kvnr, search);
+}
+
 std::vector<Uuid> MockDatabaseProxy::retrieveCommunicationIds(const db_model::HashedId& recipient)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);

@@ -35,14 +35,5 @@ private:
     static constexpr const char* delay_parameter_name = "delay-seconds";
 };
 
-class GetConfigurationHandler : public AdminRequestHandlerBase
-{
-public:
-    Operation getOperation() const override;
-
-private:
-    void doHandleRequest(SessionContext& session) override;
-};
-
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_ADMINREQUESTHANDLER_HXX

@@ -894,7 +894,7 @@ TEST_P(EnrolmentServerTest, DeleteKnownAttestationKey_failForUnknownKey)
 }
 
 
-TEST_P(EnrolmentServerTest, PutKnownQuote_successWithoutPcrSet)//NOLINT(readability-function-cognitive-complexity)
+TEST_P(EnrolmentServerTest, PostKnownQuote_successWithoutPcrSet)//NOLINT(readability-function-cognitive-complexity)
 {
 #if WITH_HSM_TPM_PRODUCTION > 0
     if (GetParam() == MockBlobCache::MockTarget::MockedHsm)
@@ -903,7 +903,6 @@ TEST_P(EnrolmentServerTest, PutKnownQuote_successWithoutPcrSet)//NOLINT(readabil
     }
 #endif
     const auto quoteBlob = blobCache->getBlob(BlobType::Quote);
-    blobCache->deleteBlob(BlobType::Quote, quoteBlob.name);
 
     auto response = createClient().send(ClientRequest(createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
                                                       createPutBody("random-quote", quoteBlob.blob.data, 11, {}, {}, {}, {}, {})));
@@ -920,7 +919,7 @@ TEST_P(EnrolmentServerTest, PutKnownQuote_successWithoutPcrSet)//NOLINT(readabil
 }
 
 
-TEST_P(EnrolmentServerTest, PutKnownQuote_successWithPcrSet)//NOLINT(readability-function-cognitive-complexity)
+TEST_P(EnrolmentServerTest, PostKnownQuote_successWithPcrSet)//NOLINT(readability-function-cognitive-complexity)
 {
 #if WITH_HSM_TPM_PRODUCTION > 0
     if (GetParam() == MockBlobCache::MockTarget::MockedHsm)
@@ -931,7 +930,6 @@ TEST_P(EnrolmentServerTest, PutKnownQuote_successWithPcrSet)//NOLINT(readability
     const auto pcrSet = PcrSet::fromString("0,3,4");
 
     const auto quoteBlob = blobCache->getBlob(BlobType::Quote);
-    blobCache->deleteBlob(BlobType::Quote, quoteBlob.name);
 
     auto response = createClient().send(
         ClientRequest(createHeader(HttpMethod::PUT, "/Enrolment/KnownQuote"),
@@ -948,7 +946,7 @@ TEST_P(EnrolmentServerTest, PutKnownQuote_successWithPcrSet)//NOLINT(readability
 }
 
 
-TEST_P(EnrolmentServerTest, PutKnownQuote_failForOverwrite)
+TEST_P(EnrolmentServerTest, PostKnownQuote_failForOverwrite)
 {
 #if WITH_HSM_TPM_PRODUCTION > 0
     if (GetParam() == MockBlobCache::MockTarget::MockedHsm)
@@ -972,7 +970,7 @@ TEST_P(EnrolmentServerTest, PutKnownQuote_failForOverwrite)
                 createPutBody("random-quote123", "black box blob data", 11, {},{},{}, {},{})));
 
         // The second request with identical id is expected to fail.
-        ASSERT_EQ(response.getHeader().status(), HttpStatus::Conflict);
+        ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);
     }
 }
 

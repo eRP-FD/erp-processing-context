@@ -57,13 +57,6 @@ class Database
 public:
     static constexpr const char* expectedSchemaVersion = "17";
 
-    // NOLINTNEXTLINE(bugprone-exception-escape)
-    struct TaskAndKey
-    {
-        model::Task task;
-        std::optional<SafeString> key;
-    };
-
     using Factory = std::function<std::unique_ptr<Database>(HsmPool&, KeyDerivation&)>;
 
     virtual ~Database (void) = default;
@@ -81,15 +74,11 @@ public:
 
     virtual model::PrescriptionId storeTask(const model::Task& task) = 0;
     virtual void updateTaskStatusAndSecret(const model::Task& task) = 0;
-    virtual void updateTaskStatusAndSecret(const model::Task& task, const SafeString& key) = 0;
     virtual void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) = 0;
-    virtual void activateTask(const model::Task& task, const SafeString& key, const model::Binary& healthCareProviderPrescription) = 0;
-    virtual void updateTaskMedicationDispenseReceipt(const model::Task& task,
-                                                     const std::vector<model::MedicationDispense>& medicationDispenses,
-                                                     const model::ErxReceipt& receipt) = 0;
-    virtual void updateTaskMedicationDispenseReceipt(const model::Task& task, const SafeString& key,
-                                                     const std::vector<model::MedicationDispense>& medicationDispenses,
-                                                     const model::ErxReceipt& receipt) = 0;
+    virtual void
+    updateTaskMedicationDispenseReceipt(const model::Task& task,
+                                        const std::vector<model::MedicationDispense>& medicationDispenses,
+                                        const model::ErxReceipt& receipt) = 0;
     virtual void updateTaskClearPersonalData(const model::Task& task) = 0;
 
     virtual std::string storeAuditEventData(model::AuditData& auditData) = 0;
@@ -98,13 +87,16 @@ public:
         const std::optional<Uuid>& id,
         const std::optional<model::PrescriptionId>& prescriptionId,
         const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countAuditEventData(
+        const model::Kvnr& kvnr,
+        const std::optional<UrlArguments>& search) = 0;
 
-    virtual std::optional<TaskAndKey> retrieveTaskForUpdate (const model::PrescriptionId& taskId) = 0;
-    [[nodiscard]] virtual std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>>
-    retrieveTaskForUpdateAndPrescription(const model::PrescriptionId& taskId) = 0;
+    virtual std::optional<model::Task> retrieveTaskForUpdate (const model::PrescriptionId& taskId) = 0;
+    [[nodiscard]] virtual ::std::tuple<::std::optional<::model::Task>, ::std::optional<::model::Binary>>
+    retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) = 0;
 
     virtual std::tuple<std::optional<model::Task>, std::optional<model::Bundle>> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) = 0;
-    virtual std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
+    virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
     [[nodiscard]] virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
     retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) = 0;
 

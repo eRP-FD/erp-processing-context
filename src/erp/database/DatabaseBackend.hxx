@@ -111,6 +111,8 @@ public:
     retrieveAuditEventData(const db_model::HashedKvnr& kvnr, const std::optional<Uuid>& id,
                            const std::optional<model::PrescriptionId>& prescriptionId,
                            const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countAuditEventData(const db_model::HashedKvnr& kvnr,
+                                         const std::optional<UrlArguments>& search) = 0;
 
     virtual std::optional<db_model::Task> retrieveTaskForUpdate(const model::PrescriptionId& taskId) = 0;
     [[nodiscard]] virtual ::std::optional<::db_model::Task>

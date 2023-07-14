@@ -1221,9 +1221,11 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
     const auto& claimTemplate = resourceManager.getJsonResource(templateResource);
     rapidjson::Document claims;
     claims.CopyFrom(claimTemplate, claims.GetAllocator());
-    rapidjson::Pointer displayName{"/" + std::string{JWT::displayNameClaim}};
+    rapidjson::Pointer givenName{"/" + std::string{JWT::givenNameClaim}};
+    rapidjson::Pointer lastName{"/" + std::string{JWT::familyNameClaim}};
     rapidjson::Pointer organizationName{"/" + std::string{JWT::organizationNameClaim}};
-    displayName.Set(claims, rapidjson::Value());
+    givenName.Set(claims, rapidjson::Value());
+    lastName.Set(claims, rapidjson::Value());
     organizationName.Set(claims, rapidjson::Value());
     JWT jwt = JwtBuilder::testBuilder().makeValidJwt(std::move(claims));
 

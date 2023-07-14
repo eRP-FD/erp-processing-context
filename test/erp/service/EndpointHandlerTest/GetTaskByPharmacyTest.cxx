@@ -239,3 +239,15 @@ TEST_F(GetTasksByPharmacyTest, pzTooLong)
     EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
                                           "Failed parsing PNW XML.", "Invalid size of Prüfziffer");
 }
+
+TEST_F(GetTasksByPharmacyTest, invalidXml)
+{
+    std::string_view pnwData = "abc12345";
+    const auto gzippedPnw = Deflate().compress(pnwData, Compression::DictionaryUse::Undefined);
+    auto pnw = Base64::encode(gzippedPnw);
+    ServerResponse serverResponse;
+
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
+        callHandler(pnw, serverResponse), HttpStatus::Forbidden, "Failed parsing PNW XML.",
+        "xml could not be parsed, error 4, at line 1, message: Start tag expected, '<' not found");
+}

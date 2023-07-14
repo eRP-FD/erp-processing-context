@@ -143,11 +143,6 @@ public:
 
     std::string getSha256FingerprintHex (void) const;
 
-    /**
-     * Get the hex encoded serial number of the certificate
-     */
-    std::string getSerialNumber() const;
-
     bool isCaCert (void) const;
 
     std::string getSubjectKeyIdentifier () const;

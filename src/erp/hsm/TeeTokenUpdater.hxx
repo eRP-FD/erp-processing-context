@@ -16,7 +16,6 @@
 
 
 class HsmFactory;
-class HsmPool;
 
 
 /**
@@ -28,11 +27,13 @@ class HsmPool;
 class TeeTokenUpdater
 {
 public:
-    using TokenRefresher = std::function<void(HsmPool&)>;
+    using TokenConsumer = std::function<void(ErpBlob&&)>;
+    using TokenProvider = std::function<ErpBlob(HsmFactory&)>;
 
     explicit TeeTokenUpdater (
-        HsmPool& hsmPool,
-        TokenRefresher&& tokenRefresher,
+        TokenConsumer&& teeTokenConsumer,
+        HsmFactory& hsmFactory,
+        TokenProvider&& tokenProvider,
         std::shared_ptr<Timer> timerManager);
     ~TeeTokenUpdater (void);
 
@@ -43,8 +44,8 @@ public:
     void healthCheck() const;
 
     // This factory is defined by the HsmPool.
-    using TeeTokenUpdaterFactory =
-        std::function<std::unique_ptr<TeeTokenUpdater>(HsmPool&, std::shared_ptr<Timer> timerManager)>;
+    using TeeTokenUpdaterFactory = std::function<std::unique_ptr<TeeTokenUpdater>(
+        std::function<void(ErpBlob&&)>, HsmFactory&, std::shared_ptr<Timer> timerManager)>;
 
     // Convenience function to create a token updater that can be used in production.
     static TeeTokenUpdaterFactory createProductionTeeTokenUpdaterFactory (void);
@@ -59,15 +60,17 @@ protected:
      * Custom constructor for tests that allows sub-second update intervals.
      */
     TeeTokenUpdater (
-        HsmPool& hsmPool,
-        TokenRefresher&& tokenRefresher,
+        TokenConsumer&& teeTokenConsumer,
+        HsmFactory& hsmFactory,
+        TokenProvider&& tokenProvider,
         std::shared_ptr<Timer> timerManager,
         std::chrono::system_clock::duration updateInterval,
         std::chrono::system_clock::duration retryInterval);
 
 private:
-    HsmPool& mHsmPool;
-    TokenRefresher mTokenRefresher;
+    const TokenConsumer mTeeTokenConsumer;
+    HsmFactory& mHsmFactory;
+    TokenProvider mTokenProvider;
     Timer::JobToken mUpdateJobToken;
     size_t mUpdateFailureCount;
     std::chrono::system_clock::duration mUpdateInterval;

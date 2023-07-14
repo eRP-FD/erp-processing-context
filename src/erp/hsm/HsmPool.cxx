@@ -27,6 +27,10 @@ HsmPool::HsmPool (
       mHsmFactory(std::move(hsmFactory)),
       mSessionRemover(std::make_shared<HsmPoolSessionRemover>([this](std::unique_ptr<HsmSession>&& session){release(std::move(session));})),
       mTeeToken(),
+      mTokenUpdater(
+          teeTokenUpdaterFactory(
+              [this](ErpBlob&& token){setTeeToken(std::move(token));},
+              *mHsmFactory, timerManager)),
       mKeepAliveUpdateToken(Timer::NotAJob),
       mHsmIdleTimeout(std::chrono::seconds(
           Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS, 15 * 60))),
@@ -54,7 +58,7 @@ HsmPool::HsmPool (
                 Expect(mActiveSessionCount==0, "there are still active HSM sessions");
             }
         });
-    mTokenUpdater = teeTokenUpdaterFactory(*this, mTimerManager);
+
     mTokenUpdater->update();
 
     // Use the half of the configured HSM keep alive interval (Shannon) to handle aliasing effects.
@@ -76,13 +80,13 @@ HsmPool::~HsmPool()
 
 void HsmPool::releasePool (void) noexcept
 {
-    mSessionRemover->notifyPoolRelease(); // needs to be called outside lock
-
     std::lock_guard lock (mMutex);
+
     mTimerManager->cancel(mKeepAliveUpdateToken);
     mKeepAliveUpdateToken = Timer::NotAJob;
 
     mIsPoolReleased = true;
+    mSessionRemover->notifyPoolRelease();
 
     // Release all inactive sessions.
     // To do this we just have to destroy them.
@@ -200,8 +204,6 @@ void HsmPool::setTeeToken (ErpBlob&& teeToken)
 {
     std::lock_guard lock (mMutex);
     mTeeToken = std::move(teeToken);
-    TVLOG(1) << "HsmPool::setTeeToken, finished getting TEE token";
-    TVLOG(1) << "got new tee token of size " << mTeeToken.data.size() << " with generation " << mTeeToken.generation;
 }
 
 
@@ -210,10 +212,6 @@ const TeeTokenUpdater& HsmPool::getTokenUpdater() const
     return *mTokenUpdater;
 }
 
-TeeTokenUpdater& HsmPool::getTokenUpdater()
-{
-    return *mTokenUpdater;
-}
 
 bool HsmPool::isKeepAliveJobRunning (void) const
 {
@@ -264,10 +262,4 @@ void HsmPool::keepHsmSessionAlive (HsmSession& session)
      */
     const auto threshold = std::chrono::system_clock::now() - mHsmIdleTimeout / 2;
     session.keepAlive(threshold);
-}
-
-
-HsmFactory& HsmPool::getHsmFactory()
-{
-    return *mHsmFactory;
 }

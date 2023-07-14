@@ -52,8 +52,7 @@ enum class Operation
 
     POST_Subscription,
 
-    POST_Admin_restart,
-    GET_Admin_configuration,
+    POST_Admin_restart
 };
 
 const std::string_view& toString (Operation operation);

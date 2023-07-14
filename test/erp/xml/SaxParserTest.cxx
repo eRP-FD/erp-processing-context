@@ -37,11 +37,11 @@ public:
         }
     }
 
-    void error(const char* msg, std::va_list args) override
+    void error(const std::string& msg) override
     {
         if (onError)
         {
-            onError(msg, args);
+            onError(msg);
         }
     }
 
@@ -54,7 +54,7 @@ public:
                               int nbNamespaces, const xmlChar** namespaces, int nbDefaulted,
                               const AttributeList& attributes)> onStartElement;
     std::function<void(const xmlChar* localname, const xmlChar* prefix, const xmlChar* uri)> onEndElement;
-    std::function<void(const char* msg, std::va_list args)> onError;
+    std::function<void(const std::string& msg)> onError;
 
 };
 
@@ -102,7 +102,7 @@ TEST_F(SaxParserTest, regularCallbacks) // NOLINT
 TEST_F(SaxParserTest, errorCallback) // NOLINT
 {
     bool errorCalled = false;
-    onError = [&](const char*, std::va_list) { errorCalled = true; };
+    onError = [&](const std::string&) { errorCalled = true; };
     parseStringView("<root/>");
     EXPECT_FALSE(errorCalled);
     EXPECT_ANY_THROW(parseStringView("<root>"));

@@ -35,7 +35,6 @@ public:
     TimePeriod (model::Timestamp start, model::Timestamp end);
 
     static TimePeriod fromFhirSearchDate (const std::string& date);
-    static TimePeriod fromDatabaseUuid(const std::string& uuid);
 
     model::Timestamp begin (void) const;
     model::Timestamp end (void) const;

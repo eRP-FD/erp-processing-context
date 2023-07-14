@@ -6,7 +6,6 @@
  */
 
 #include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/ErpTypes.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.hxx"
 #include "erp/util/Configuration.hxx"
@@ -19,51 +18,40 @@
 #include "test/util/TestConfiguration.hxx"
 
 #include <gtest/gtest.h>
-#include <functional>
 #include <memory>
-
-class FailingMockClient : public HsmMockClient
-{
-public:
-    ErpArray<Aes256Length> unwrapPseudonameKey(const HsmRawSession& session, UnwrapHashKeyInput&& input) override
-    {
-        if (unwrapPseudonameKeyCallback)
-            unwrapPseudonameKeyCallback();
-        return HsmMockClient::unwrapPseudonameKey(session, std::move(input));
-    }
-
-    void setUnwrapPseudonameKeyCallback(const std::function<void()>& callback)
-    {
-        unwrapPseudonameKeyCallback = callback;
-    }
-
-private:
-    std::function<void()> unwrapPseudonameKeyCallback;
-};
 
 class PseudonameKeyRefreshJobTest : public testing::Test
 {
 public:
-
-    std::unique_ptr<HsmClient> createHsmClient()
+    class LocalHsmMockFactory : public ::HsmMockFactory
     {
-        auto hsmMock = std::make_unique<FailingMockClient>();
-        hsmMock->setUnwrapPseudonameKeyCallback([this]() {
+    public:
+        explicit LocalHsmMockFactory(std::unique_ptr<HsmClient>&& hsmClient, std::shared_ptr<BlobCache> blobCache,
+                                     volatile const bool& forceFailFlag)
+            : ::HsmMockFactory{std::move(hsmClient), std::move(blobCache)}
+            , mForceFailFlag{forceFailFlag}
+        {
+        }
+
+        std::shared_ptr<HsmRawSession> rawConnect() override
+        {
             if (mForceFailFlag)
             {
                 throw std::runtime_error("hsm connect failure forced for test.");
             }
-        });
-        return hsmMock;
-    }
+            return std::shared_ptr<HsmRawSession>();
+        }
+
+        volatile const bool& mForceFailFlag;
+    };
 
 
     void SetUp() override
     {
         mBlobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
-        mHsmPool =
-            std::make_unique<HsmPool>(std::make_unique<HsmMockFactory>(createHsmClient(), mBlobCache),
-                                      TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
+        mHsmPool = std::make_unique<HsmPool>(
+            std::make_unique<LocalHsmMockFactory>(std::make_unique<HsmMockClient>(), mBlobCache, mForceFailFlag),
+            TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
         mConfiguration = &Configuration::instance();
     }
 

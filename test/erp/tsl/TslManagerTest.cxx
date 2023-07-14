@@ -829,9 +829,9 @@ TEST_F(TslManagerTest, validateQesCertificateOcspNotAvailable_Fail)//NOLINT(read
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
 
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES},
-                                                      TslTestHelper::getDefaultTestOcspCheckDescriptor()),
-                           {TslErrorCode::OCSP_NOT_AVAILABLE}, HttpStatus::BackendCallFailed);
+    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
+                           {TslErrorCode::OCSP_NOT_AVAILABLE},
+                           HttpStatus::InternalServerError);
 }
 
 

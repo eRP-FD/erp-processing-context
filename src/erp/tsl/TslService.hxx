@@ -45,7 +45,7 @@ enum class CertificateType
     C_CH_QES,
 
     /**
-     * The following certificate type is introduced to comply with updated requirement A_20159-*
+     * The following certificate type is introduced to comply with updated requirement A_20159-01
      */
     C_HP_ENC
 };

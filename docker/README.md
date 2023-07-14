@@ -36,6 +36,6 @@ The files/ folder contains the downloaded keyring for the gramine package. The k
 
 #### Build instructions:
 ```shell
-docker build -t de.icr.io/erp_dev/rt-gramine-direct:0.0.7 -f gramine-runtime/Dockerfile .
+docker build -t de.icr.io/erp_dev/rt-gramine-direct:0.0.6 -f gramine-runtime/Dockerfile .
 ```
 The name of the image (in this case: erp-pc:rt-gramine-direct) must be adopted in the main Dockerfile.

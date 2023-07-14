@@ -74,22 +74,3 @@ TEST_F(ServerResponseWriterTest, toString)//NOLINT(readability-function-cognitiv
         }
     }
 }
-
-
-TEST_F(ServerResponseWriterTest, nonStandardHttpCode)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string request =
-        "HTTP/1.1 512 BackendCallFailed\r\n"
-        "Content-Length: 16\r\n"
-        "\r\n"
-        "this is the body";
-    ClientResponseReader reader;
-    auto clientResponse = reader.read(request);
-    ServerResponse serverResponse{
-        clientResponse.getHeader(),
-        clientResponse.getBody()};
-    const std::string serializedResponse = ServerResponseWriter().toString(ValidatedServerResponse(std::move(serverResponse)));
-    EXPECT_EQ(serializedResponse, "HTTP/1.1 512 <unknown-status>\r\n"
-                                  "Content-Length: 16\r\n\r\n"
-                                  "this is the body");
-}

@@ -263,9 +263,9 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
 
     {
         const auto taskFromDb = std::get<0>(database().retrieveTaskAndPrescription(task1.prescriptionId()));
-        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::draft);
+        ASSERT_EQ(taskFromDb->status(), model::Task::Status::draft);
         const auto task2FromDb = database().retrieveTaskForUpdate(task1.prescriptionId());
-        ASSERT_EQ(task2FromDb->task.status(), model::Task::Status::draft);
+        ASSERT_EQ(task2FromDb->status(), model::Task::Status::draft);
     }
 
     task1.setStatus(model::Task::Status::ready);

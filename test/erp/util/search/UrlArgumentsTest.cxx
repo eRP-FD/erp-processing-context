@@ -96,6 +96,7 @@ TEST_F(UrlArgumentsTest, parseWithSelfLink_WithOffsetAndCount)
 }
 
 
+
 TEST_F(UrlArgumentsTest, parseWithBundleLinks)//NOLINT(readability-function-cognitive-complexity)
 {
     UrlArguments arguments (
@@ -113,12 +114,6 @@ TEST_F(UrlArgumentsTest, parseWithBundleLinks)//NOLINT(readability-function-cogn
         });
     arguments.parse(request, mKeyDerivation);
 
-    // add a hidden argument, which we do not expect to end up in the links
-    std::vector<std::optional<model::TimePeriod>> timePeriods;
-    timePeriods.emplace_back(model::TimePeriod::fromFhirSearchDate(model::Timestamp::now().toGermanDate()));
-    arguments.addHiddenSearchArgument(
-        SearchArgument{SearchArgument::Prefix::LE, "id", "date", SearchParameter::Type::DateAsUuid, timePeriods, {""}});
-
     const auto links = arguments.getBundleLinks("base", "/Resource", 50);
 
     EXPECT_EQ(links.size(), 3);
@@ -132,84 +127,6 @@ TEST_F(UrlArgumentsTest, parseWithBundleLinks)//NOLINT(readability-function-cogn
     EXPECT_EQ(links.find(model::Link::Next)->second, "base/Resource?date=eq2013&name=somebody&_count=3&__offset=16");
 }
 
-
-TEST_F(UrlArgumentsTest, parseWithIdBundleLinks)//NOLINT(readability-function-cognitive-complexity)
-{
-    UrlArguments arguments (
-        {
-            {"date", SearchParameter::Type::Date},
-            {"name", SearchParameter::Type::String},
-        });
-
-    auto request = ServerRequest(Header());
-    request.setQueryParameters({
-        {"_count",   "3"},
-        {"date",     "2013"},
-        {"name",     "somebody"},
-        {"__offset", "13"}
-        });
-    arguments.parse(request, mKeyDerivation);
-
-    // add a hidden argument, which we do not expect to end up in the links
-    std::vector<std::optional<model::TimePeriod>> timePeriods;
-    timePeriods.emplace_back(model::TimePeriod::fromFhirSearchDate(model::Timestamp::now().toGermanDate()));
-    arguments.addHiddenSearchArgument(
-        SearchArgument{SearchArgument::Prefix::LE, "id", "date", SearchParameter::Type::DateAsUuid, timePeriods, {""}});
-
-    const auto earlierTimestamp = model::Timestamp::fromXsDateTime("2023-02-15T01:00:00+01:00");
-    const auto laterTimestamp = model::Timestamp::fromXsDateTime("2023-02-16T01:00:00+01:00");
-
-    {
-        arguments.setResultDateRange(earlierTimestamp, laterTimestamp);
-        const auto links = arguments.getBundleLinks(true, "base", "/Resource", UrlArguments::LinkMode::id);
-
-        EXPECT_EQ(links.size(), 3);
-        ASSERT_EQ(links.count(model::Link::Self), 1);
-        ASSERT_EQ(links.count(model::Link::Prev), 1);
-        ASSERT_EQ(links.count(model::Link::Next), 1);
-
-        // self link returns the span of dates we found
-        EXPECT_EQ(links.find(model::Link::Self)->second, "base/Resource?date=eq2013&name=somebody&_count=3&_id=ge" +
-                                                             earlierTimestamp.toDatabaseSUuid() + "&_id=le" +
-                                                             laterTimestamp.toDatabaseSUuid());
-        // previous page expects older dates
-        EXPECT_EQ(links.find(model::Link::Prev)->second,
-                  "base/Resource?date=eq2013&name=somebody&_count=3&_id=lt" + earlierTimestamp.toDatabaseSUuid());
-        // next page expects newer dates
-        EXPECT_EQ(links.find(model::Link::Next)->second,
-                  "base/Resource?date=eq2013&name=somebody&_count=3&_id=gt" + laterTimestamp.toDatabaseSUuid());
-    }
-
-    // reverse the result list
-    {
-        arguments.setResultDateRange(laterTimestamp, earlierTimestamp);
-        const auto links = arguments.getBundleLinks(true, "base", "/Resource", UrlArguments::LinkMode::id);
-        EXPECT_EQ(links.find(model::Link::Self)->second, "base/Resource?date=eq2013&name=somebody&_count=3&_id=le" +
-                                                             laterTimestamp.toDatabaseSUuid() + "&_id=ge" +
-                                                             earlierTimestamp.toDatabaseSUuid());
-        EXPECT_EQ(links.find(model::Link::Prev)->second,
-                  "base/Resource?date=eq2013&name=somebody&_count=3&_id=gt" + laterTimestamp.toDatabaseSUuid());
-        EXPECT_EQ(links.find(model::Link::Next)->second,
-                  "base/Resource?date=eq2013&name=somebody&_count=3&_id=lt" + earlierTimestamp.toDatabaseSUuid());
-    }
-}
-
-
-TEST_F(UrlArgumentsTest, parseDisallowOffsetAndIdPaging)
-{
-    UrlArguments arguments({
-        {"date", SearchParameter::Type::Date},
-        {"name", SearchParameter::Type::String},
-    });
-
-    auto request = ServerRequest(Header());
-    request.setQueryParameters({{"_count", "3"},
-                                {"date", "2013"},
-                                {"name", "somebody"},
-                                {"__offset", "13"},
-                                {"_id", "lt01eba808-de93-7ea8-0000-000000000000"}});
-    ASSERT_ANY_THROW(arguments.parse(request, mKeyDerivation));
-}
 
 
 TEST_F(UrlArgumentsTest, parseWithBundleLinks_withOrder_failForNegativeOffset)

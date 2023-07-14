@@ -58,7 +58,7 @@ std::unique_ptr<pqxx::work> PostgresConnection::createTransaction()
         TVLOG(1) << "caught pqxx::broken_connection: " << brokenConnection.what();
         if (mConnectionInfo)
         {
-            TLOG(INFO) << "lost connection to " << toString(*mConnectionInfo);
+            TLOG(WARNING) << "lost connection to " << toString(*mConnectionInfo);
         }
         close();
         connectIfNeeded();

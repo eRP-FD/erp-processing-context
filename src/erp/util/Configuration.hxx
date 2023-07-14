@@ -85,7 +85,6 @@ enum class ConfigurationKey
     POSTGRES_KEEPALIVES_IDLE_SEC,
     POSTGRES_KEEPALIVES_INTERVAL_SEC,
     POSTGRES_KEEPALIVES_COUNT,
-    POSTGRES_TARGET_SESSION_ATTRS,
     PUBLIC_E_PRESCRIPTION_SERVICE_URL,
     REGISTRATION_HEARTBEAT_INTERVAL_SEC,
     TSL_TI_OCSP_PROXY_URL,
@@ -179,15 +178,8 @@ enum class ConfigurationKey
  */
 struct KeyNames
 {
-    std::string_view environmentVariable;
-    std::string_view jsonPath;
-    enum ConfigurationKeyFlags
-    {
-        none        = 0,
-        credential  = 1 << 0,
-        array       = 1 << 1,
-    };
-    ConfigurationKeyFlags flags = none;
+    const std::string_view environmentVariable;
+    const std::string_view jsonPath;
 };
 
 /**
@@ -400,17 +392,6 @@ public:
     bool contains(KeyType key) const
     {
         return mNamesByKey.count(key) > 0;
-    }
-
-    std::vector<KeyType> allKeys() const
-    {
-        std::vector<KeyType> keys;
-        keys.reserve(mNamesByKey.size());
-        for (const auto& key : mNamesByKey)
-        {
-            keys.push_back(key.first);
-        }
-        return keys;
     }
 
     virtual ~ConfigurationKeyNamesBase() = default;

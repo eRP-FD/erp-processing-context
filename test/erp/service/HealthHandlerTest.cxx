@@ -16,7 +16,6 @@
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/tsl/error/TslError.hxx"
-#include "erp/util/ByteHelper.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Hash.hxx"
@@ -108,9 +107,9 @@ bool HealthHandlerTestSeedTimerMock::fail = false;
 class HealthHandlerTestTeeTokenUpdater : public TeeTokenUpdater
 {
 public:
-    explicit HealthHandlerTestTeeTokenUpdater(HsmPool& hsmPool, TokenRefresher&& tokenRefresher,
-                                              std::shared_ptr<Timer> timerManager)
-        : TeeTokenUpdater(hsmPool, std::move(tokenRefresher), std::move(timerManager), 100ms, 100ms)
+    explicit HealthHandlerTestTeeTokenUpdater(TokenConsumer&& teeTokenConsumer, HsmFactory& hsmFactory,
+                                              TokenProvider&& tokenProvider, std::shared_ptr<Timer> timerManager)
+        : TeeTokenUpdater(std::move(teeTokenConsumer), hsmFactory, std::move(tokenProvider), std::move(timerManager), 100ms, 100ms)
     {
     }
 };
@@ -121,14 +120,15 @@ class HealthHandlerTestTeeTokenUpdaterFactory
 public:
     static TeeTokenUpdater::TeeTokenUpdaterFactory createHealthHandlerTestMockTeeTokenUpdaterFactory()
     {
-        return [](auto& hsmPool, std::shared_ptr<Timer> timerManager) {
+        return [](auto&& tokenConsumer, auto& hsmFactory, std::shared_ptr<Timer> timerManager) {
             return std::make_unique<HealthHandlerTestTeeTokenUpdater>(
-                hsmPool,
-                [](HsmPool&) {
+                std::forward<decltype(tokenConsumer)>(tokenConsumer), hsmFactory, [](HsmFactory&) {
                     if (HealthHandlerTestTeeTokenUpdaterFactory::fail)
                     {
                         throw std::runtime_error("TEE TOKEN UPDATER FAILURE");
                     }
+                    // Tests that use a mock HSM don't need a TEE token. An empty blob is enough.
+                    return ErpBlob();
                 },
                 timerManager);
         };
@@ -149,7 +149,6 @@ public:
         , response()
         , mContext()
         , statusPointer("/status")
-        , currentTimestampPointer("/timestamp")
         , postgresStatusPointer("/checks/0/status")
         , postgresRootCausePointer("/checks/0/data/rootCause")
         , hsmStatusPointer("/checks/2/status")
@@ -159,16 +158,8 @@ public:
         , redisRootCausePointer("/checks/1/data/rootCause")
         , tslStatusPointer("/checks/3/status")
         , tslRootCausePointer("/checks/3/data/rootCause")
-        , tslExpiryDatePointer("/checks/3/data/expiryDate")
-        , tslSequenceNumberPointer("/checks/3/data/sequenceNumber")
-        , tslIdPointer("/checks/3/data/id")
-        , tslHashPointer("/checks/3/data/hash")
         , bnaStatusPointer("/checks/4/status")
         , bnaRootCausePointer("/checks/4/data/rootCause")
-        , bnaExpiryDatePointer("/checks/4/data/expiryDate")
-        , bnaSequenceNumberPointer("/checks/4/data/sequenceNumber")
-        , bnaIdPointer("/checks/4/data/id")
-        , bnaHashPointer("/checks/4/data/hash")
         , idpStatusPointer("/checks/5/status")
         , idpRootCausePointer("/checks/5/data/rootCause")
         , seedTimerStatusPointer("/checks/6/status")
@@ -255,7 +246,6 @@ protected:
     ThreadPool mPool;
     HealthHandler mHandler;
     rapidjson::Pointer statusPointer;
-    rapidjson::Pointer currentTimestampPointer;
     rapidjson::Pointer postgresStatusPointer;
     rapidjson::Pointer postgresRootCausePointer;
     rapidjson::Pointer hsmStatusPointer;
@@ -265,16 +255,8 @@ protected:
     rapidjson::Pointer redisRootCausePointer;
     rapidjson::Pointer tslStatusPointer;
     rapidjson::Pointer tslRootCausePointer;
-    rapidjson::Pointer tslExpiryDatePointer;
-    rapidjson::Pointer tslSequenceNumberPointer;
-    rapidjson::Pointer tslIdPointer;
-    rapidjson::Pointer tslHashPointer;
     rapidjson::Pointer bnaStatusPointer;
     rapidjson::Pointer bnaRootCausePointer;
-    rapidjson::Pointer bnaExpiryDatePointer;
-    rapidjson::Pointer bnaSequenceNumberPointer;
-    rapidjson::Pointer bnaIdPointer;
-    rapidjson::Pointer bnaHashPointer;
     rapidjson::Pointer idpStatusPointer;
     rapidjson::Pointer idpRootCausePointer;
     rapidjson::Pointer seedTimerStatusPointer;
@@ -296,7 +278,7 @@ protected:
 
 TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto beforeRequest = model::Timestamp::now();
+
     ASSERT_NO_THROW(handleRequest());
 
     ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);
@@ -314,17 +296,7 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
               Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
     EXPECT_EQ(std::string(redisStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(tslStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_NO_THROW(
-        model::Timestamp::fromXsDateTime(std::string(tslExpiryDatePointer.Get(healthDocument)->GetString())));
-    EXPECT_FALSE(std::string(tslSequenceNumberPointer.Get(healthDocument)->GetString()).empty());
-    EXPECT_FALSE(std::string(tslIdPointer.Get(healthDocument)->GetString()).empty());
-    EXPECT_NO_THROW(ByteHelper::fromHex(std::string(tslHashPointer.Get(healthDocument)->GetString())));
     EXPECT_EQ(std::string(bnaStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
-    EXPECT_FALSE(std::string(bnaSequenceNumberPointer.Get(healthDocument)->GetString()).empty());
-    EXPECT_NO_THROW(
-        model::Timestamp::fromXsDateTime(std::string(bnaExpiryDatePointer.Get(healthDocument)->GetString())));
-    EXPECT_FALSE(std::string(bnaIdPointer.Get(healthDocument)->GetString()).empty());
-    EXPECT_NO_THROW(ByteHelper::fromHex(std::string(bnaHashPointer.Get(healthDocument)->GetString())));
     EXPECT_EQ(std::string(idpStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(cFdSigErpPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
@@ -338,12 +310,7 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion()), std::string(releasePointer.Get(healthDocument)->GetString()));
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate()), std::string(releasedatePointer.Get(healthDocument)->GetString()));
 
-    std::optional<model::Timestamp> requestTimestamp;
-    auto afterRequest = model::Timestamp::now();
-    EXPECT_NO_THROW(requestTimestamp = model::Timestamp::fromXsDateTime(
-                        std::string(currentTimestampPointer.Get(healthDocument)->GetString())));
-    EXPECT_LE(beforeRequest, requestTimestamp);
-    EXPECT_GE(afterRequest, requestTimestamp);
+    EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }
 
 
@@ -420,7 +387,7 @@ TEST_F(HealthHandlerTest, TslDown)//NOLINT(readability-function-cognitive-comple
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(tslStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    verifyRootCause(healthDocument, tslRootCausePointer, "No TSL loaded");
+    verifyRootCause(healthDocument, tslRootCausePointer, "TSL FAILURE");
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
@@ -439,7 +406,7 @@ TEST_F(HealthHandlerTest, BnaDown)//NOLINT(readability-function-cognitive-comple
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(bnaStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
-    verifyRootCause(healthDocument, bnaRootCausePointer, "No BNetzA loaded");
+    verifyRootCause(healthDocument, bnaRootCausePointer, "BNA FAILURE");
     EXPECT_FALSE(mContext->serviceContext.registrationInterface()->registered());
 }
 
@@ -539,7 +506,7 @@ TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognit
     EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "");
     verifyRootCause(
         healthDocument, cFdSigErpRootCausePointer,
-        "std::runtime_error(ExceptionWrapper<std::runtime_error>)(no successful validation available) at ");
+        "std::runtime_error(16ExceptionWrapperISt13runtime_errorE)(no successful validation available) at ");
 
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }

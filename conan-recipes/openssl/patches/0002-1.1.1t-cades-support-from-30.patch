@@ -1,5 +1,5 @@
-From 34d9dcf7c20bed2345d166e2718df01ff90653ee Mon Sep 17 00:00:00 2001
-From: redacted <redacted>
+From f6b24ddc3dffa36a988eee44920818a97ec936bd Mon Sep 17 00:00:00 2001
+From: <redacted>
 Date: Thu, 9 Feb 2023 10:05:59 +0100
 Subject: [PATCH 2/3] 1.1.1t-cades-support-from-30.patch
 
@@ -40,7 +40,7 @@ Subject: [PATCH 2/3] 1.1.1t-cades-support-from-30.patch
  create mode 100644 include/openssl/esserr.h
 
 diff --git a/Configure b/Configure
-index 78cc15d184..5f7406c3bc 100755
+index 6cb1a84f4b..734ea72ba1 100755
 --- a/Configure
 +++ b/Configure
 @@ -327,7 +327,7 @@ $config{sdirs} = [
@@ -237,10 +237,10 @@ index 5976d1501f..4b8c566ee9 100644
  # additional header files to be scanned for function names
  L NONE          include/openssl/x509_vfy.h      NONE
 diff --git a/crypto/err/openssl.txt b/crypto/err/openssl.txt
-index 9f91a4a811..75cf7a2d0c 100644
+index ba3a46d5b9..1cdf8c1567 100644
 --- a/crypto/err/openssl.txt
 +++ b/crypto/err/openssl.txt
-@@ -714,6 +714,12 @@ ENGINE_F_INT_CTRL_HELPER:172:int_ctrl_helper
+@@ -715,6 +715,12 @@ ENGINE_F_INT_CTRL_HELPER:172:int_ctrl_helper
  ENGINE_F_INT_ENGINE_CONFIGURE:188:int_engine_configure
  ENGINE_F_INT_ENGINE_MODULE_INIT:187:int_engine_module_init
  ENGINE_F_OSSL_HMAC_INIT:200:ossl_hmac_init
@@ -253,7 +253,7 @@ index 9f91a4a811..75cf7a2d0c 100644
  EVP_F_AESNI_INIT_KEY:165:aesni_init_key
  EVP_F_AESNI_XTS_INIT_KEY:207:aesni_xts_init_key
  EVP_F_AES_GCM_CTRL:196:aes_gcm_ctrl
-@@ -1562,12 +1568,6 @@ SSL_F_WPACKET_START_SUB_PACKET_LEN__:634:WPACKET_start_sub_packet_len__
+@@ -1563,12 +1569,6 @@ SSL_F_WPACKET_START_SUB_PACKET_LEN__:634:WPACKET_start_sub_packet_len__
  SSL_F_WRITE_STATE_MACHINE:586:write_state_machine
  TS_F_DEF_SERIAL_CB:110:def_serial_cb
  TS_F_DEF_TIME_CB:111:def_time_cb
@@ -266,7 +266,7 @@ index 9f91a4a811..75cf7a2d0c 100644
  TS_F_INT_TS_RESP_VERIFY_TOKEN:149:int_ts_RESP_verify_token
  TS_F_PKCS7_TO_TS_TST_INFO:148:PKCS7_to_TS_TST_INFO
  TS_F_TS_ACCURACY_SET_MICROS:115:TS_ACCURACY_set_micros
-@@ -2237,6 +2237,9 @@ ENGINE_R_UNIMPLEMENTED_CIPHER:146:unimplemented cipher
+@@ -2238,6 +2238,9 @@ ENGINE_R_UNIMPLEMENTED_CIPHER:146:unimplemented cipher
  ENGINE_R_UNIMPLEMENTED_DIGEST:147:unimplemented digest
  ENGINE_R_UNIMPLEMENTED_PUBLIC_KEY_METHOD:101:unimplemented public key method
  ENGINE_R_VERSION_INCOMPATIBILITY:145:version incompatibility
@@ -1795,5 +1795,5 @@ index 436f799bca..0b59893695 100644
 +ESS_SIGNING_CERT_V2_new_init            4551	1_1_1q	EXIST::FUNCTION:
 +ERR_load_ESS_strings                    4552	1_1_1q	EXIST::FUNCTION:
 -- 
-2.34.1
+2.37.2
 

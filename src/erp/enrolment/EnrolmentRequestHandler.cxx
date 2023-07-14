@@ -416,7 +416,7 @@ EnrolmentModel PutKnownQuote::doHandleRequest (EnrolmentSession& session)
 #if WITH_HSM_TPM_PRODUCTION > 0
     try
     {
-        session.serviceContext.getHsmPool().setTeeToken(EnrolmentHelper::getTeeToken(hsmPoolSession.session(), blobCache, entry.blob));
+        ::EnrolmentHelper{HsmIdentity::getWorkIdentity()}.createTeeToken(blobCache, entry);
     }
     catch (...)
     {

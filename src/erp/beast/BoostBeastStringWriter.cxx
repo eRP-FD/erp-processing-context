@@ -6,6 +6,7 @@
  */
 
 #include "erp/beast/BoostBeastStringWriter.hxx"
+#include "erp/common/BoostBeastHttpStatus.hxx"
 #include "erp/common/BoostBeastMethod.hxx"
 #include "erp/common/Header.hxx"
 #include "erp/util/Expect.hxx"
@@ -28,7 +29,7 @@ namespace {
         }
         else
         {
-            message.result(static_cast<unsigned int>(header.status()));
+            message.result(toBoostBeastStatus(header.status()));
         }
 
         // Convert header values that are the same for request and response.
