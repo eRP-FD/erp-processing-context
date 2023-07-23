@@ -101,14 +101,14 @@ TEST_P(VauRequestHandlerProblematicJwtsTest, acrUnsupportedContent)//NOLINT(read
     const auto iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
     claims[std::string{JWT::iatClaim}].SetInt64(iat.count());
 
-    A_19439.test("Unit test for unsupported acr value.");
+    A_19439_02.test("Unit test for unsupported acr value.");
     claims[std::string{JWT::acrClaim}].SetString("Something");
     JWT jwt;
     ASSERT_NO_THROW(jwt = mBuilder->getJWT(claims));
     auto response = sendRequest(jwt);
     const ClientResponse innerResponse = teeProtocol.parseResponse(response);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
-    A_19439.finish();
+    A_19439_02.finish();
 }
 
 TEST_P(VauRequestHandlerProblematicJwtsTest, acrValidContent)//NOLINT(readability-function-cognitive-complexity)
@@ -126,7 +126,7 @@ TEST_P(VauRequestHandlerProblematicJwtsTest, acrValidContent)//NOLINT(readabilit
     claims[std::string{JWT::iatClaim}].SetInt64(iat.count());
     claims.RemoveMember(std::string{JWT::nbfClaim});
 
-    A_19439.test("Unit test for supported acr value.");
+    A_19439_02.test("Unit test for supported acr value.");
     claims[std::string{JWT::acrClaim}].SetString(std::string{JWT::acrContent}.c_str(),
                                                  gsl::narrow_cast<rapidjson::SizeType>(JWT::acrContent.size()),
                                                  claims.GetAllocator());
@@ -135,7 +135,7 @@ TEST_P(VauRequestHandlerProblematicJwtsTest, acrValidContent)//NOLINT(readabilit
     auto response = sendRequest(jwt);
     const ClientResponse innerResponse = teeProtocol.parseResponse(response);
     ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
-    A_19439.finish();
+    A_19439_02.finish();
 }
 
 TEST_P(VauRequestHandlerProblematicJwtsTest, UnsupportedSignatureAlgorithm)

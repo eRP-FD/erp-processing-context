@@ -38,6 +38,7 @@ class ErpProcessingContext(ConanFile):
                        'with_hsmclient': True,
                        'with_sbom': False,
                        'zlib:shared': True,
+                       'openssl:shared': True,
                        'date:use_system_tz_db': True}
     generators = "cmake"
     exports_sources = "."

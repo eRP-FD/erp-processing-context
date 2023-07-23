@@ -88,7 +88,9 @@ public:
     constexpr static std::string_view nonceClaim = "nonce";
     constexpr static std::string_view acrClaim = "acr";
     constexpr static std::string_view audClaim = "aud";
+    // GEMREQ-start A_19390
     constexpr static std::string_view professionOIDClaim = "professionOID";
+    // GEMREQ-end A_19390
     constexpr static std::string_view givenNameClaim = "given_name";
     constexpr static std::string_view displayNameClaim = "display_name";
     constexpr static std::string_view familyNameClaim = "family_name";

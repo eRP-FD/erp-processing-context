@@ -7,6 +7,7 @@
 
 #include "erp/xml/XmlDocument.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/String.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/util/SaxHandler.hxx"
 
@@ -14,17 +15,32 @@
 #include <libxml/xpathInternals.h>
 #include <sstream>
 
+
+namespace
+{
+
+void genericSuppressingErrorCallback(void*, const char*, ...)
+{
+}
+
+} // namespace
+
 XmlDocument::XmlDocument (const std::string_view xml)
     : mDocument(),
       mXPathContext(),
       mPathHead()
 {
-    auto parserContext = std::shared_ptr<xmlParserCtxt>(xmlNewParserCtxt(), xmlFreeParserCtxt);
+    xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {
+        // suppress any output, we'll get the last error below, anyways
+    });
+    xmlSetGenericErrorFunc(nullptr, genericSuppressingErrorCallback);
     auto oldEntityLoader = xmlGetExternalEntityLoader();
     xmlSetExternalEntityLoader([](const char* URL, const char* /*ID*/, xmlParserCtxtPtr /*ctxt*/) -> xmlParserInputPtr {
         TLOG(INFO) << "Suppressing external entity loading from " << URL;
         return nullptr;
     });
+
+    auto parserContext = std::shared_ptr<xmlParserCtxt>(xmlNewParserCtxt(), xmlFreeParserCtxt);
     mDocument = std::shared_ptr<xmlDoc>(
         xmlCtxtReadMemory(
             parserContext.get(),
@@ -34,16 +50,17 @@ XmlDocument::XmlDocument (const std::string_view xml)
             nullptr,
             XML_PARSE_DTDATTR),
         xmlFreeDoc);
+    // restore the entity loader so it can be used by the xsd schema validator
     xmlSetExternalEntityLoader(oldEntityLoader);
 
-    if (mDocument==nullptr)
+    if (mDocument == nullptr)
     {
         std::ostringstream s;
         s << "xml could not be parsed, error " << std::to_string(parserContext->errNo);
         const auto* xmlError = xmlCtxtGetLastError(parserContext.get());
         if (xmlError != nullptr)
-            s << ", at line " << xmlError->line;
-        Expect(mDocument!=nullptr, s.str());
+            s << ", at line " << xmlError->line << ", message: " << String::trim(xmlError->message);
+        Expect(mDocument != nullptr, s.str());
     }
 
     mXPathContext = std::shared_ptr<xmlXPathContext>(xmlXPathNewContext(mDocument.get()), xmlXPathFreeContext);
@@ -248,7 +265,6 @@ xmlDoc& XmlDocument::getDocument (void)
     Expects(mDocument != nullptr);
     return *mDocument;
 }
-
 
 
 void XmlDocument::registerNamespace (const char* prefix, const char* href)

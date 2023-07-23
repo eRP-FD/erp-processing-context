@@ -414,13 +414,13 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         innerOperation = (handler != nullptr) ? handler->getOperation() : Operation::UNKNOWN;
         outerSession.accessLog.setInnerRequestOperation(toString(innerOperation));
 
-        // GEMREQ-start A_19439
+        // GEMREQ-start A_19439, A_20373, A_20365
         A_20163.start("4 - verify JWT");
-        A_20365.start("Pass the IDP pubkey to the verification method.");
+        A_20365_01.start("Pass the IDP pubkey to the verification method.");
         innerServerRequest->getAccessToken().verify(getIdpPublicKey(outerSession.serviceContext));
-        A_20365.finish();
+        A_20365_01.finish();
         A_20163.finish();
-        // GEMREQ-end A_19439
+        // GEMREQ-end A_19439, A_20373, A_20365
 
         A_20163.start(
             R"(7. Die E-Rezept-VAU MUSS aus dem "sub"-Feld-Wert mittels des CMAC-Schlüssels den 128 Bit langen CMAC-Wert
@@ -607,6 +607,7 @@ bool VauRequestHandler::checkProfessionOID(
     ServerResponse& response,
     AccessLog& log)
 {
+    // GEMREQ-start A_19390
     // get professionOID from JWT claim
     A_19390.start("Determine professionOID from ACCESS_TOKEN");
     // we don't require the professionOID claim here, because it is not needed for all endpoints.
@@ -649,6 +650,7 @@ bool VauRequestHandler::checkProfessionOID(
         log.error("endpoint is forbidden for professionOID");
         return false;
     }
+    // GEMREQ-end A_19390
     return true;
 }
 // GEMREQ-end checkProfessionOID
@@ -668,22 +670,21 @@ void VauRequestHandler::processException(const std::exception_ptr& exception,
     {
         exception_handlers::runErpExceptionHandler(e, innerRequest, innerResponse, outerSession);
     }
-    // GEMREQ-start A_19439#catchJwtError
+    // GEMREQ-start A_19439#catchJwtError, A_20373#catchExpiredException
     catch (const JwtExpiredException& exception)
     {
-        A_19902.start("Handle authentication expired");
         exception_handlers::runJwtExceptionHandler(
             exception, innerRequest, innerResponse, outerSession, "JWT expired",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
-        A_19902.finish();
     }
+    // GEMREQ-end A_20373#catchExpiredException
     catch (const JwtRequiredClaimException& exception)
     {
-        A_20368.start("Handle missing required claims.");
+        A_20369_01.start("Handle missing required claims.");
         exception_handlers::runJwtExceptionHandler(
             exception, innerRequest, innerResponse, outerSession, "JWT misses required claims",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
-        A_20368.finish();
+        A_20369_01.finish();
     }
     catch (const JwtInvalidSignatureException& exception)
     {
@@ -832,9 +833,11 @@ void VauRequestHandler::handleDosCheck(PcSessionContext& session, const std::opt
 }
 
 
+// GEMREQ-start A_20365#getIdpPublicKey
 shared_EVP_PKEY VauRequestHandler::getIdpPublicKey (const PcServiceContext& serviceContext)
 {
-    A_20365.start("Get access to the IDP pubkey.");
+    A_20365_01.start("Get access to the IDP pubkey.");
     return serviceContext.idp.getCertificate().getPublicKey();
-    A_20365.finish();
+    A_20365_01.finish();
 }
+// GEMREQ-end A_20365#getIdpPublicKey

@@ -117,12 +117,12 @@ TEST_F(JwtTest, TamperedPayloadVerification)//NOLINT(readability-function-cognit
 
 TEST_F(JwtTest, DefaultConstructor)
 {
-    A_19993.test("Check for the two periods in a JWT.");
+    A_19993_01.test("Check for the two periods in a JWT.");
     std::unique_ptr<JWT> jwt = nullptr;
     ASSERT_NO_THROW(jwt = std::make_unique<JWT>());
     ASSERT_NE(jwt, nullptr);
     ASSERT_EQ(jwt->serialize(), "..");
-    A_19993.finish();
+    A_19993_01.finish();
 }
 
 TEST_F(JwtTest, HeaderChecks)//NOLINT(readability-function-cognitive-complexity)
@@ -185,9 +185,9 @@ TEST_F(JwtTest, RequiredClaimsAvailable)//NOLINT(readability-function-cognitive-
     JWT jwt;
     ASSERT_NO_THROW(jwt = builder.getJWT(claim));
 
-    A_20368.test("Unit test for required claims availability.");
+    A_20369_01.test("Unit test for required claims availability.");
     ASSERT_NO_THROW(jwt.checkRequiredClaims());
-    A_20368.finish();
+    A_20369_01.finish();
 }
 
 TEST_F(JwtTest, MissingRequiredClaim)//NOLINT(readability-function-cognitive-complexity)
@@ -203,9 +203,9 @@ TEST_F(JwtTest, MissingRequiredClaim)//NOLINT(readability-function-cognitive-com
     JWT jwt;
     ASSERT_NO_THROW(jwt = builder.getJWT(claim));
 
-    A_20368.test("Unit test for required claims availability.");
+    A_20369_01.test("Unit test for required claims availability.");
     ASSERT_THROW(jwt.checkRequiredClaims(), JwtRequiredClaimException);
-    A_20368.finish();
+    A_20369_01.finish();
 }
 
 TEST_F(JwtTest, MissingOptionalClaims)//NOLINT(readability-function-cognitive-complexity)
@@ -224,14 +224,35 @@ TEST_F(JwtTest, MissingOptionalClaims)//NOLINT(readability-function-cognitive-co
     JWT jwt;
     ASSERT_NO_THROW(jwt = builder.getJWT(claim));
 
-    A_20368.test("Unit test for required claims availability.");
+    A_20369_01.test("Unit test for required claims availability.");
     ASSERT_NO_THROW(jwt.checkRequiredClaims());
-    A_20368.finish();
+    A_20369_01.finish();
 }
 
 TEST_F(JwtTest, InvalidJsonPayload)
 {
     ASSERT_THROW(JWT (mHeader + "." + Base64::encode(" a : b }") + "." + mSignature), JwtInvalidFormatException);
+}
+
+TEST_F(JwtTest, Expired)
+{
+    A_20373.test("Expect token validation fail with exp in the past");
+    const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
+
+    rapidjson::Document claim;
+    ASSERT_NO_THROW(claim.Parse(claimString));
+
+    const auto now = std::chrono::system_clock::now();
+    const auto exp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch() - 5s);
+    const auto iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch() - 10s);
+    claim[std::string{JWT::expClaim}].SetInt64(exp.count());
+    claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
+    claim.RemoveMember(std::string{JWT::nbfClaim});
+
+    JwtBuilder builder{mIdpPrivateKey};
+    JWT jwt;
+    ASSERT_NO_THROW(jwt = builder.getJWT(claim));
+    ASSERT_THROW(jwt.verify(mIdpPublicKey), JwtExpiredException);
 }
 
 TEST_F(JwtTest, ExpiredChecksIat)//NOLINT(readability-function-cognitive-complexity)
@@ -259,6 +280,7 @@ TEST_F(JwtTest, ExpiredChecksIat)//NOLINT(readability-function-cognitive-complex
 
 TEST_F(JwtTest, NotExpired)//NOLINT(readability-function-cognitive-complexity)
 {
+    A_20373.test("Test token with validity between now and now + 5s");
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
     rapidjson::Document claim;
@@ -280,6 +302,7 @@ TEST_F(JwtTest, NotExpired)//NOLINT(readability-function-cognitive-complexity)
 
 TEST_F(JwtTest, IssuedAtInFuture)//NOLINT(readability-function-cognitive-complexity)
 {
+    A_20373.test("Expect token validation fail with iat in future");
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
     rapidjson::Document claim;
@@ -297,27 +320,6 @@ TEST_F(JwtTest, IssuedAtInFuture)//NOLINT(readability-function-cognitive-complex
     JWT jwt;
     ASSERT_NO_THROW(jwt = builder.getJWT(claim));
     ASSERT_THROW(jwt.verify(mIdpPublicKey), JwtExpiredException);
-}
-
-TEST_F(JwtTest, IssuedAtMaxAge)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
-
-    rapidjson::Document claim;
-    ASSERT_NO_THROW(claim.Parse(claimString));
-
-    // An iat is supposed to be at most 5 minutes old in order to be considered young enough.
-    const auto now = std::chrono::system_clock::now();
-    const auto exp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
-    const auto iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch() - 5min);
-    claim[std::string{JWT::expClaim}].SetInt64(exp.count());
-    claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
-    claim.RemoveMember(std::string{JWT::nbfClaim});
-
-    JwtBuilder builder{mIdpPrivateKey};
-    JWT jwt;
-    ASSERT_NO_THROW(jwt = builder.getJWT(claim));
-    ASSERT_NO_THROW(jwt.verify(mIdpPublicKey));
 }
 
 TEST_F(JwtTest, IssuedAtToleranceExceed)//NOLINT(readability-function-cognitive-complexity)
@@ -341,7 +343,7 @@ TEST_F(JwtTest, IssuedAtToleranceExceed)//NOLINT(readability-function-cognitive-
     ASSERT_THROW(jwt.verify(mIdpPublicKey), JwtExpiredException);
 }
 
-TEST_F(JwtTest, MaxAgeExceedWithNbf)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(JwtTest, MaxAgeExceedWithNbf)
 {
     const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -415,8 +417,7 @@ TEST_F(JwtTest, ForceMissingRequiredTimingClaim_exp)//NOLINT(readability-functio
     const auto now = std::chrono::system_clock::now();
     const auto iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
     claim[std::string{JWT::iatClaim}].SetInt64(iat.count());
-    A_19902.test("Forcefully remove expected claim 'exp'");
-    // A token according to A_20368 must provide exp and iat. The JWT class handles this explicitly. Nevertheless, it is
+    // A token according to A_20369-01 must provide exp and iat. The JWT class handles this explicitly. Nevertheless, it is
     // good to test the case when a token with an absent exp/iat is passed. This is tested here, by removing the exp/iat key:
     claim.RemoveMember(std::string{JWT::expClaim});
     // Also remove the optional nbf claim to be really sure that no other timestamp might interfere.
@@ -427,7 +428,6 @@ TEST_F(JwtTest, ForceMissingRequiredTimingClaim_exp)//NOLINT(readability-functio
     ASSERT_NO_THROW(jwt = builder.getJWT(claim));
     // Missing exp must lead to an expired exception:
     ASSERT_THROW(jwt.checkIfExpired(), JwtExpiredException);
-    A_19902.finish();
     // Double check that the iat claim was really removed:
     ASSERT_THROW(jwt.checkRequiredClaims(), JwtRequiredClaimException);
 }
@@ -443,8 +443,8 @@ TEST_F(JwtTest, ForceMissingRequiredTimingClaim_iat)//NOLINT(readability-functio
     const auto exp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch() + 5min);
     claim[std::string{JWT::expClaim}].SetInt64(exp.count());
 
-    A_19902.test("Forcefully remove expected claim 'iat'");
-    // A token according to A_20368 must provide exp and iat. The JWT class handles this explicitly. Nevertheless, it is
+    // A token according to A_20369-01 must provide technically required claims (such as exp and iat).
+    // The JWT class handles this explicitly. Nevertheless, it is
     // good to test the case when a token with an absent exp/iat is passed. This is tested here, by removing the exp/iat key:
     claim.RemoveMember(std::string{JWT::iatClaim});
     // Also remove the optional nbf claim to be really sure that no other timestamp might interfere.
@@ -457,7 +457,6 @@ TEST_F(JwtTest, ForceMissingRequiredTimingClaim_iat)//NOLINT(readability-functio
     // check which caused an exception when not provided. The problem is catched later, due to
     // absent required claim.
     ASSERT_NO_THROW(jwt.checkIfExpired());
-    A_19902.finish();
     // Double check that the iat claim was really removed:
     ASSERT_THROW(jwt.checkRequiredClaims(), JwtRequiredClaimException);
 }

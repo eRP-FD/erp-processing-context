@@ -39,7 +39,7 @@ static Requirement A_19389    ("E-Rezept-Fachdienst - Authentifizierung erforder
 static Requirement A_19390    ("E-Rezept-Fachdienst - Authentifizierung Nutzerrolle");
 static Requirement A_19391_01 ("E-Rezept-Fachdienst - Authentifizierung Nutzername");
 static Requirement A_19392    ("E-Rezept-Fachdienst - Authentifizierung Nutzerkennung");
-static Requirement A_19439    ("E-Rezept-Fachdienst - Authentifizierung Authentifizierungsstärke");
+static Requirement A_19439_02 ("E-Rezept-Fachdienst - Authentifizierung Authentifizierungsstärke");
 static Requirement A_19395    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest AuditEvent");
 static Requirement A_19405    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest MedicationDispense");
 static Requirement A_19446_01 ("E-Rezept-Fachdienst - Rollenpruefung Versicherter oder Apotheker liest Rezept");
@@ -78,9 +78,8 @@ static Requirement A_19130    ("E-Rezept-Fachdienst - Authentifizierung erforder
 static Requirement A_19131    ("E-Rezept-Fachdienst - Authentifizierung ungültig");
 static Requirement A_19132    ("E-Rezept-Fachdienst - Authentifizierung Signaturprüfung");
 static Requirement A_19189    ("E-Rezept-Fachdienst - Authentifizierung erforderlich Vers-Endpunkt");
-static Requirement A_19902    ("E-Rezept-Fachdienst - Authentifizierung abgelaufen");
-static Requirement A_19992    ("E-Rezept-Fachdienst - Blacklisting zu haeufig verwendeter ACCESS_TOKEN");
-static Requirement A_19993    ("E-Rezept-Fachdienst - Prüfung eingehender ACCESS_TOKEN");
+static Requirement A_19992    ("E-Rezept-Fachdienst - Blocklisting zu häufig verwendeter ACCESS_TOKEN");
+static Requirement A_19993_01 ("E-Rezept-Fachdienst - Prüfung eingehender ACCESS_TOKEN");
 
 // Requirements for TEE (VAU) protocol.
 static Requirement A_20160    ("E-Rezept-VAU, Schlüsselpaar und Zertifikat");
@@ -260,10 +259,9 @@ static Requirement A_22874_01("E-Rezept-Fachdienst - Consent löschen - Prüfung
 
 // Requirements for ACCESS_TOKEN checks
 static Requirement A_20362    ("E-Rezept-Fachdienst - 'ACCESS_TOKEN' generelle Struktur");
-static Requirement A_20365    ("E-Rezept-Fachdienst - Die Signatur des ACCESS_TOKEN ist zu prüfen");
-static Requirement A_20368    ("E-Rezept-Fachdienst - Auswertung der Claims");
+static Requirement A_20365_01 ("E-Rezept-Fachdienst - Die Signatur des ACCESS_TOKEN ist zu prüfen");
+static Requirement A_20369_01 ("E-Rezept-Fachdienst - Abbruch bei unerwarteten Inhalten");
 static Requirement A_20370    ("E-Rezept-Fachdienst - Abbruch bei falschen Datentypen der Attribute");
-static Requirement A_20372    ("E-Rezept-Fachdienst - Prüfung der zeitlichen Gültigkeit des ACCESS_TOKEN");
 static Requirement A_20373    ("E-Rezept-Fachdienst - Prüfung der Gültigkeit des ACCESS_TOKEN für den Zugriff auf Fachdienste ohne nbf");
 static Requirement A_20374    ("E-Rezept-Fachdienst - Prüfung der Gültigkeit des ACCESS_TOKEN für den Zugriff auf Fachdienste mit nbf");
 static Requirement A_20504    ("E-Rezept-Fachdienst - Reaktion bei ungültiger oder fehlender Signatur des ACCESS_TOKEN");

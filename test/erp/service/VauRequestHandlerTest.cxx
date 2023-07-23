@@ -136,7 +136,6 @@ TEST_F(VauRequestHandlerTest, failForExpiredJwt)//NOLINT(readability-function-co
     auto response = client.send(encryptedRequest);
 
     const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
-    A_19902.test("Unit test for JwtExpiredException");
     // Verify the outer response
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::WWWAuthenticate));

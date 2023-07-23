@@ -35,7 +35,8 @@ JWT::JWT(const JWT& other)
 JWT::JWT(std::string jwt)
     : mJwt(std::move(jwt))
 {
-    A_19993.start("Check JWT structure according to gemSpec_IDP_FD chapter 6.");
+    // GEMREQ-start A_20362#header
+    A_19993_01.start("Check JWT structure according to gemSpec_IDP_FD chapter 6.");
     A_20362.start("RFC 7519 7.2.1, 7.2.2, 7.2.10 - Check that exactly two periods exist, first part is the header, second part is the claims document.");
 
     int64_t periods = boost::count(mJwt, '.');
@@ -49,6 +50,7 @@ JWT::JWT(std::string jwt)
     mHeader = parts[0];
     mPayload = parts[1];
     A_20362.finish();
+    // GEMREQ-end A_20362#header
     mSignature = parts[2];
 
     const rapidjson::ParseResult result = mClaims.Parse(Base64::decodeToString(mPayload));
@@ -56,7 +58,7 @@ JWT::JWT(std::string jwt)
     {
         Fail2("Pre-verification failed - erroneous claims document.", JwtInvalidFormatException);
     }
-    A_19993.finish();
+    A_19993_01.finish();
 }
 
 bool JWT::operator==(const JWT& jwt) const
@@ -86,8 +88,8 @@ void JWT::verify(const shared_EVP_PKEY& publicKey) const
 
 void JWT::checkJwtFormat() const
 {
-    A_19993.start("Check JWT structure according to gemSpec_IDP_FD chapter 6.");
-
+    A_19993_01.start("Check JWT structure according to gemSpec_IDP_FD chapter 6.");
+    // GEMREQ-start A_20362#decodeformat
     A_20362.start("RFC 7519 7.2.2, 7.2.3, 7.2.4, 7.2.5 - Decode b64encoded header, valid UTF-8 verification is handled in rapidjsons Parse call, verify required header fields.");
 
     // 7.2.2
@@ -122,6 +124,7 @@ void JWT::checkJwtFormat() const
         Fail2("Pre-verification failed - unsupported signature algorithm requested.", JwtInvalidSignatureException);
     }
     A_20362.finish();
+    // GEMREQ-end A_20362#decodeformat
 
     A_20504.start("Check for empty signature.");
     if (mSignature.empty())
@@ -130,15 +133,16 @@ void JWT::checkJwtFormat() const
     }
     A_20504.finish();
 
-    A_19993.finish();
+    A_19993_01.finish();
 }
 
+// GEMREQ-start A_20365#verifySignatureStart
 void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
 {
     Expect(publicKey != nullptr, "Missing public key");
     Expect(EVP_PKEY_id(publicKey) == EVP_PKEY_EC, "Wrong pubkey information");
     Expect(EVP_PKEY_bits(publicKey) == 256, "Wrong pubkey bit length");
-
+// GEMREQ-end A_20365#verifySignatureStart
     // Create digest and fill with data.
     auto ctx = shared_EVP_MD_CTX::make();
     Expect(ctx != nullptr, "Can't create context");
@@ -185,7 +189,8 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     unsigned char* rawptr = sig_der_bytes.data();
     Expect(i2d_ECDSA_SIG(sig, &rawptr) != 0, "Failed call to i2d_ECDSA_SIG");
 
-    A_20365.start("Verify token signature with the given public key.");
+    // GEMREQ-start A_20365#verifySignatureFinal
+    A_20365_01.start("Verify token signature with the given public key.");
     A_20504.start("Check for valid signature.");
     // Verification
     if (EVP_DigestVerifyFinal(ctx, sig_der_bytes.data(), gsl::narrow<size_t>(siglen)) != 1)
@@ -193,7 +198,8 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
         Fail2("Verification failed - invalid signature or payload.", JwtInvalidSignatureException);
     }
     A_20504.finish();
-    A_20365.finish();
+    A_20365_01.finish();
+    // GEMREQ-end A_20365#verifySignatureFinal
 }
 
 std::optional<std::string> JWT::stringForKey(const rapidjson::Document& doc,
@@ -253,7 +259,7 @@ std::optional<std::string> JWT::stringForClaim(const std::string_view& claimName
 void JWT::checkRequiredClaims() const
 {
     auto checkClaimsPresence = [this] (const std::vector<std::string_view>& RequiredClaims) {
-        A_20368.start("Check that required claims are provided.");
+        A_20369_01.start("Check that required claims are provided.");
         for (const auto& claim : RequiredClaims)
         {
             if (mClaims.HasMember(std::string{claim}) == false)
@@ -261,7 +267,7 @@ void JWT::checkRequiredClaims() const
                 Fail2("Pre-verification failed - Missing required claims.", JwtRequiredClaimException);
             }
         }
-        A_20368.finish();
+        A_20369_01.finish();
     };
 
     if (mClaims.HasParseError())
@@ -273,7 +279,7 @@ void JWT::checkRequiredClaims() const
 
     Expect3(mClaims[std::string{JWT::professionOIDClaim}].IsString(), "Pre-verification failed - invalid data type for professionOID claim.", JwtInvalidFormatException);
     auto professionOid = stringForClaim(std::string{JWT::professionOIDClaim});
-
+    // GEMREQ-start A_20370
     A_20370.start("Check data type for each claim.");
     if (professionOid == profession_oid::oid_versicherter)
     {
@@ -330,16 +336,17 @@ void JWT::checkRequiredClaims() const
         }
     }
     A_20370.finish();
+    // GEMREQ-end A_20370
 
     // GEMREQ-start A_19439#claims
-    A_19439.start("Check for a specific authentication strength claim.");
+    A_19439_02.start("Check for a specific authentication strength claim.");
     auto acr = stringForClaim(JWT::acrClaim);
     Expect(acr.has_value(), "Missing required acr claim.");
     if (acr != acrContent)
     {
         Fail2("The provided acr claim is not supported.", JwtInvalidFormatException);
     }
-    A_19439.finish();
+    A_19439_02.finish();
     // GEMREQ-end A_19439#claims
 }
 
@@ -356,34 +363,23 @@ void JWT::checkIfExpired() const
 {
     /**
      *    ----+--------------+------+---------+--------+-------------->
-     *      [iat            nbf*   tNow    iat+300)   exp)      t [s]
+     *      [iat            nbf*   tNow    iat+2)   exp)      t [s]
      *
      *    where:
      *           iat        <= tNow + 2s
      *           when nbf* > 0: tNow in [nbf ; exp)
      *                nbf* = 0: tNow in [iat ; exp)
      */
+    // GEMREQ-start A_20373, A_20374
     const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch());
-
     // In any case and for whatever reason, if no iat or exp is passed,
     // we consider the given token as expired.
     const auto iat = std::chrono::seconds(intForKey(mClaims, iatClaim).value_or(0));
     const auto exp = std::chrono::seconds(intForKey(mClaims, expClaim).value_or(0));
     const auto nbf = std::chrono::seconds(intForKey(mClaims, nbfClaim).value_or(0));
 
-    if (nbf.count() > 0)
-    {
-        A_20374.start("Use nbf instead of iat when provided.");
-        A_20374.finish();
-    } else {
-        A_20373.start("When no nbf is provided, continue with A_20372 and A_19902.");
-        A_20373.finish();
-    }
-
-    A_20374.start("Use nbf instead of iat when provided.");
-    A_20373.start("Allow 2 second tolerance when checking iat claim.");
-    A_20372.start("Check if the JWT is not expired (time is between iat and exp).");
-    A_19902.start("Check if the issued JWT is expired.");
+    A_20373.start("Check if the JWT is not expired (time is between iat and exp). Allow 2 second tolerance when checking iat claim. ");
+    A_20374.start("Use nbf when provided.");
     if (now > exp)
     {
         // Expired
@@ -395,15 +391,16 @@ void JWT::checkIfExpired() const
         // Issued for a later time than current time.
         Fail2("Verification failed - Token expired (issued for a later time).", JwtExpiredException);
     }
+    // GEMREQ-end A_20373
     else if (now < nbf)
     {
+
         // Access time violates not-before timestamp.
         Fail2("Verification failed - Token nbf violated.", JwtExpiredException);
     }
-    A_20372.finish();
+    // GEMREQ-end A_20374
     A_20373.finish();
     A_20374.finish();
-    A_19902.finish();
 }
 
 
