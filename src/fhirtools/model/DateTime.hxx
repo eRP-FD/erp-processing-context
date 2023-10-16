@@ -25,10 +25,18 @@ public:
     using Second = uint8_t;
     using Fractions = uint16_t;
     using timepoint_t = std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>;
+    enum class Precision
+    {
+        hour = 0,
+        hourMinute,
+        hourMinuteSecond,
+        hourMinuteSecondFraction
+    };
 
     // from http://hl7.org/fhirpath/#time, without "@T"
     // opposing to xs:time, the literal also supports incomplete timestamps such as 12:00 or 12
     explicit Time(const std::string& timeStr);
+    explicit Time(const date::hh_mm_ss<std::chrono::milliseconds>& time, Precision precision);
 
     [[nodiscard]] std::string toString(bool full = false) const;
     friend std::ostream& operator<<(std::ostream& os, const Time& time1);
@@ -41,19 +49,12 @@ public:
 
     [[nodiscard]] std::optional<std::strong_ordering> compareTo(const Time& other) const;
     [[nodiscard]] bool samePrecision(const Time& other) const;
+    Precision precision() const;
 
 private:
     void parseHour(const std::string_view& hourStr, const std::string_view& timeStr);
     void parseMinute(const std::string_view& minuteStr, const std::string_view& timeStr);
     void parseSecond(const std::string_view& secondStr, const std::string_view& timeStr);
-
-    enum class Precision
-    {
-        hour = 0,
-        hourMinute,
-        hourMinuteSecond,
-        hourMinuteSecondFraction
-    };
 
     Hour mHour{0};
     Minute mMinute{0};
@@ -65,7 +66,13 @@ private:
 class Date
 {
 public:
+    enum class Precision {
+        year = 0,
+        month,
+        day
+    };
     explicit Date(const std::string& dateStr);
+    explicit Date(const date::year_month_day& ymd, Precision precision);
 
     [[nodiscard]] std::string toString(bool full = false) const;
     friend std::ostream& operator<<(std::ostream& os, const Date& date1);
@@ -78,11 +85,13 @@ public:
 
     [[nodiscard]] std::optional<std::strong_ordering> compareTo(const Date& other) const;
     [[nodiscard]] bool samePrecision(const Date& other) const;
+    Precision precision() const;
 
 private:
-    using ValueType = std::variant<date::year, date::year_month, date::year_month_day>;
-
-    ValueType mDate;
+    date::year mYear{};
+    date::month mMonth{};
+    date::day mDay{};
+    Precision mPrecision{Precision::year};
 };
 
 class DateTime
@@ -113,7 +122,9 @@ private:
     void setTimePoint();
 
     Date mDate{};
+    Date mLocalDate{};
     std::optional<Time> mTime{};
+    std::optional<Time> mLocalTime{};
     std::optional<std::string> mTimezone{};
     timestamp_t mTimePoint;
 };

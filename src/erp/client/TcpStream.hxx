@@ -47,7 +47,8 @@ namespace boost::asio
 class TcpStream
 {
 public:
-    TcpStream(const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds);
+    TcpStream(const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds,
+              std::chrono::milliseconds resolveTimeout);
     TcpStream(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
               const uint16_t connectionTimeoutSeconds);
 

@@ -7,6 +7,7 @@
 
 #include "erp/client/TcpStream.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/Resolver.hxx"
 #include "erp/util/TLog.hxx"
 
 #include <boost/asio/buffer.hpp>
@@ -20,23 +21,22 @@
 #endif
 
 TcpStream::TcpStream (
-    const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds)
+    const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds, std::chrono::milliseconds resolveTimeout)
     : mIoContext(std::make_unique<boost::asio::io_context>())
     , mTcpStream(std::make_unique<boost::beast::tcp_stream>(*mIoContext))
 {
     Expect(connectionTimeoutSeconds > 0, "Connection timeout must be greater than 0.");
-    boost::asio::ip::tcp::resolver resolver(*mIoContext);
     boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp> resolverResults;
     try
     {
-        resolverResults = resolver.resolve(hostname, port);
+        resolverResults = Resolver::resolve(hostname, port, resolveTimeout);
     }
     catch (const boost::system::system_error& e)
     {
         // We observed some instability when we try to resolve especially OCSP hosts which should
         // not happen normally. We catch the observed boost exception and try it again at least once.
         TLOG(ERROR)  << "resolving hostname failed '" << hostname << ":" << port << "', try again";
-        resolverResults = resolver.resolve(hostname, port);
+        resolverResults = Resolver::resolve(hostname, port, resolveTimeout);
     }
     establish(std::chrono::seconds(connectionTimeoutSeconds), resolverResults);
 

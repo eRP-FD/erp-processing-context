@@ -155,12 +155,12 @@ int ErpMain::runApplication (
     auto idpUpdater = IdpUpdater::create<MockIdpUpdater>(
         serviceContext->idp,
         serviceContext->getTslManager(),
-        serviceContext->getTimerManager());
+        ioContext);
 #else
     auto idpUpdater = IdpUpdater::create(
         serviceContext->idp,
         serviceContext->getTslManager(),
-        serviceContext->getTimerManager());
+        ioContext);
 #endif
 
     if (serviceContext->getEnrolmentServer())
@@ -387,7 +387,9 @@ std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlVa
         auto requestSender = std::make_shared<UrlRequestSender>(
             SafeString(std::move(tslSslRootCa)),
             static_cast<uint16_t>(Configuration::instance().getOptionalIntValue(
-                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds)));
+                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds)),
+            std::chrono::milliseconds{
+                Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
         return std::make_shared<TslManager>(std::move(requestSender), xmlValidator);
     }
     catch (const TslError& e)

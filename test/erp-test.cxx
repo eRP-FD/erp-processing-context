@@ -29,11 +29,11 @@ int main(int argc, char** argv)
     static constexpr auto erp_instance = "--erp_instance="sv;
     static constexpr size_t instance_offset = 2;
 
-    GLogConfiguration::init_logging(argv[0]);
     if (!Environment::get("ERP_VLOG_MAX_VALUE"))
     {
         Environment::set("ERP_VLOG_MAX_VALUE", "1");
     }
+    GLogConfiguration::init_logging(argv[0]);
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
 
     std::string_view supportedProfiles = old_profiles;

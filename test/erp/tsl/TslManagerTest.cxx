@@ -275,7 +275,8 @@ namespace
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA51 TEST-ONLY",
         // The following certificate is inserted in TSL and is used as TSL-Signer-CA of the Test-TSLs
         "/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=Example Inc. Sub CA EC 1",
-        "/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=BNA signer"
+        "/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=BNA signer",
+        "/CN=Pseudo German Trusted List Signer 9/O=Pseudo Federal Network Agency/C=DE"
     };
 }
 
@@ -375,8 +376,8 @@ public:
         // the long life test BNetzA-VL contains more certificates,
         // but there are withdrawn certificates
         // and the test version contains some duplicate certificates,
-        // so there are only 185 unique not withdrawn certificates
-        ASSERT_EQ(186, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
+        // so there are only 195 unique not withdrawn certificates
+        ASSERT_EQ(196, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
     }
 };
 
@@ -525,7 +526,7 @@ TEST_F(TslManagerTest, validateQesCertificate_Success)
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
@@ -666,7 +667,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspRevoked_Fail)//NOLINT(readabili
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -690,7 +691,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMissing_Fail)//NOLINT(r
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::CERTHASH_MISSING}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -714,7 +715,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMismatch_Fail)//NOLINT(
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::CERTHASH_MISMATCH}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -738,7 +739,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongCertId_Fail)//NOLINT(reada
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_CERTID}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -762,7 +763,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongProducedAt_Fail)//NOLINT(r
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_PRODUCED_AT}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -786,7 +787,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspWrongThisUpdate_Fail)//NOLINT(r
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_THIS_UPDATE}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -807,7 +808,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspUnknown_Fail)//NOLINT(readabili
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
              {}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -850,7 +851,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateUnknown_Fail)//NOLIN
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     std::weak_ptr<TslManager> mgrWeakPtr{manager};
@@ -892,7 +893,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateSignedByBnaCa_Succes
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}},
         wansimOcspSigner);
 
@@ -923,7 +924,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoHistoryIgnoreTimestamp_Success)
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
     // set CA StatusStartingTime to the "valid from" timestamp of the certificate
     std::weak_ptr<TslManager> mgrWeakPtr{manager};
@@ -961,7 +962,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)//NOLINT(readabi
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
 
-    const std::string ocspUrl = "http://ehca-testref.sig-test.telematik-test:8080/status/qocsp";
+    const std::string ocspUrl = "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp";
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         requestSender,
         {},
@@ -1010,7 +1011,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)//NOLINT(readab
         requestSender,
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));

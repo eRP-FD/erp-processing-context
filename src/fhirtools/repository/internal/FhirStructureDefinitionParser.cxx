@@ -12,6 +12,7 @@
 #include <array>
 #include <charconv>
 #include <map>
+#include <unordered_set>
 
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/ValueElement.hxx"
@@ -325,9 +326,9 @@ void FhirStructureDefinitionParser::handleStructureDefinitionSubTree(const xmlCh
         }
         else if (localname == "url"_xs)
         {
-            const auto& url = valueAttributeFrom(attributes);
-            mStructureBuilder.url(url);
-            TVLOG(4) << "loading FHIR Structure Definition for: " << url;
+            mStructureUrl = valueAttributeFrom(attributes);
+            mStructureBuilder.url(mStructureUrl);
+            TVLOG(4) << "loading FHIR Structure Definition for: " << mStructureUrl;
         }
         else if (localname == "version"_xs)
         {
@@ -528,6 +529,28 @@ void FhirStructureDefinitionParser::leaveElement()
         mSlicingBuilder.reset();
     }
     auto element = mElementBuilder.getAndReset();
+
+    if (element->hasBinding())
+    {
+        // eld-11: Binding can only be present for coded elements, string, and uri
+        // binding.empty() or type.code.empty() or type.select((code = 'code') or (code = 'Coding') or (code='CodeableConcept') or (code = 'Quantity') or (code = 'string') or (code = 'uri')).exists()
+        static std::unordered_set<std::string_view> validBindingTypeIds{"code",     "Coding", "CodeableConcept",
+                                                                        "Quantity", "string", "uri"};
+        bool hasValidBindingType{false};
+        for (const auto& elementType : mElementTypes)
+        {
+            if (validBindingTypeIds.contains(elementType))
+            {
+                hasValidBindingType = true;
+                break;
+            }
+        }
+        if (! hasValidBindingType)
+        {
+            TLOG(WARNING) << "Element " << element->originalName() << " of " << mStructureUrl
+                          << " has defined a binding but does not contain a valid binding type";
+        }
+    }
     Expect3(element != nullptr, "element must not be null.", std::logic_error);
     std::list<std::string> elementTypes;
     elementTypes.swap(mElementTypes);

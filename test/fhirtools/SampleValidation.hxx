@@ -91,6 +91,14 @@ protected:
 
         for (const auto& expected : GetParam().expect)
         {
+            #ifdef NDEBUG
+            // as in release builds severities below warning are log stored,
+            // we have to ignore them
+            if (expected.severity() < fhirtools::Severity::warning)
+            {
+                continue;
+            }
+            #endif // NDEBUG
             auto isExpected = [&](ValidationError ve) {
                 ve.profile = nullptr;
                 return ve == expected;
@@ -141,4 +149,3 @@ private:
 }
 
 #endif // ERP_TEST_FHIR_TOOLS_SAMPLEVALIDATION_HXX
-

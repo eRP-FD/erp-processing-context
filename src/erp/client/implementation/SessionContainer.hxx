@@ -27,12 +27,13 @@ public:
         const std::string& hostname,
         const std::string& port,
         const uint16_t connectionTimeoutSeconds,
+        std::chrono::milliseconds resolveTimeout,
         bool enforceServerAuthentication,
         const SafeString& caCertificates,
         const SafeString& clientCertificate,
         const SafeString& clientPrivateKey,
         const std::optional<std::string>& forcedCiphers)
-        : mTlsSession(hostname, port, connectionTimeoutSeconds, enforceServerAuthentication,
+        : mTlsSession(hostname, port, connectionTimeoutSeconds, resolveTimeout, enforceServerAuthentication,
                       caCertificates, clientCertificate, clientPrivateKey, forcedCiphers),
           mIsEstablished(false)
     {}
@@ -90,8 +91,8 @@ template <>
 class SessionContainer<TcpStream>
 {
 public:
-    SessionContainer(const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds)
-        : mTcpStream(hostname, port, connectionTimeoutSeconds)
+    SessionContainer(const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds, std::chrono::milliseconds resolveTimeout)
+        : mTcpStream(hostname, port, connectionTimeoutSeconds, resolveTimeout)
     {}
 
     SessionContainer(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname, const uint16_t connectionTimeoutSeconds)

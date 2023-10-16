@@ -22,7 +22,7 @@ std::unique_ptr<TestClient> HttpsTestClient::factory(std::shared_ptr<XmlValidato
     uint16_t serverPort = getTargetPort(target);
     Expect(serverPort > 0, "Environment variable ERP_SERVER_PORT is out of range");
     std::unique_ptr<HttpsTestClient> testClient{
-        new HttpsTestClient(serverHost, serverPort, Constants::httpTimeoutInSeconds, false)};
+        new HttpsTestClient(serverHost, serverPort, Constants::httpTimeoutInSeconds, Constants::resolveTimeout, false)};
     TVLOG(1) << "using: https://" << serverHost << ":" << serverPort;
     testClient->mRemoteCertificate = testClient->retrieveEciesRemoteCertificate();
     return testClient;
@@ -121,16 +121,12 @@ Certificate HttpsTestClient::getEciesCertificate (void)
 }
 
 
-HttpsTestClient::HttpsTestClient(
-    const std::string& host,
-    uint16_t port,
-    const uint16_t connectionTimeoutSeconds,
-    bool enforceServerAuthentication,
-    const SafeString& caCertificates,
-    const SafeString& clientCertificate,
-    const SafeString& clientPrivateKey)
-    : mHttpsClient(host, port, connectionTimeoutSeconds, enforceServerAuthentication,
-                   caCertificates, clientCertificate, clientPrivateKey)
+HttpsTestClient::HttpsTestClient(const std::string& host, uint16_t port, const uint16_t connectionTimeoutSeconds,
+                                 std::chrono::milliseconds resolveTimeout, bool enforceServerAuthentication,
+                                 const SafeString& caCertificates, const SafeString& clientCertificate,
+                                 const SafeString& clientPrivateKey)
+    : mHttpsClient(host, port, connectionTimeoutSeconds, resolveTimeout, enforceServerAuthentication, caCertificates,
+                   clientCertificate, clientPrivateKey)
     , mServerAddress(host)
     , mPort(port)
 {

@@ -213,10 +213,25 @@ void fhirtools::ProfileValidator::checkConstraints(const fhirtools::Element& ele
         {
             auto contextElementTag = std::make_shared<Element::IsContextElementTag>();
             element.setIsContextElement(contextElementTag);
-            const auto evalResult = ExistenceAllTrue{element.getFhirStructureRepository()}.eval(
-                expression->eval({element.shared_from_this()}));
-            const auto evalResultBoolean = evalResult.boolean();
-            if (evalResultBoolean && ! evalResultBoolean->asBool())
+            const auto evalResult = expression->eval({element.shared_from_this()});
+
+            // the evaluation of the result of the expression is not so well-defined,
+            // therefore follow the way the HAPI validator is doing it:
+            // * empty collection evaluates to false
+            // * a collection with a single boolean element evaluated to the boolean element
+            // * all other cases evaluate to true
+            // cf. FHIRPathEngine::evaluateToBoolean() in HAPI
+            bool expressionResult{true};
+            if (evalResult.empty())
+            {
+                expressionResult = false;
+            }
+            else if (evalResult.size() == 1 && evalResult[0]->type() == Element::Type::Boolean)
+            {
+                expressionResult = evalResult.single()->asBool();
+            }
+
+            if (! expressionResult)
             {
                 TVLOG(3) << elementFullPath << ": " << magic_enum::enum_name(constraint.getSeverity()) << ": "
                          << constraint.getKey() << "{" << constraint.getExpression() << "} ==> " << evalResult;
@@ -445,10 +460,6 @@ void fhirtools::ProfileValidator::validateBinding(const fhirtools::Element& elem
             else if (mDefPtr.element()->typeId() == "Coding")
             {
                 checkCodingBinding(element, bindingValueSet, elementFullPath, severity);
-            }
-            else
-            {
-                FPFail("Unsupported Structured type for Binding: " + mDefPtr.element()->typeId());
             }
         }
     }

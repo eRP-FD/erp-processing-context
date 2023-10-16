@@ -276,6 +276,7 @@ list(
         util/PeriodicTimer.cxx
         util/Random.cxx
         util/RapidjsonDocument.cxx
+        util/Resolver.cxx
         util/SafeString.cxx
         util/ServerException.cxx
         util/SignalHandler.cxx

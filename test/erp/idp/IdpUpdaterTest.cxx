@@ -54,6 +54,23 @@ public:
         return tslManager;
     }
 
+    IdpUpdaterTest()
+        : mIoThread{[this]() {
+            auto workGuard = boost::asio::make_work_guard(io);
+            io.run();
+        }}
+    {
+    }
+
+    ~IdpUpdaterTest() override
+    {
+        io.stop();
+        if (mIoThread.joinable())
+        {
+            mIoThread.join();
+        }
+    }
+
     void SetUp() override
     {
         auto& resMgr = ResourceManager::instance();
@@ -76,6 +93,8 @@ public:
 
     std::optional<Certificate> mIdpCertificate;
     std::string mIdpResponseJson;
+    boost::asio::io_context io;
+    std::thread mIoThread;
 };
 
 namespace
@@ -88,8 +107,8 @@ namespace
 class IdpTestUpdater : public IdpUpdater
 {
 public:
-    IdpTestUpdater (Idp& certificateHolder, TslManager& tslManager)
-        : IdpUpdater(certificateHolder, tslManager, {}, std::make_shared<Timer>())
+    IdpTestUpdater (Idp& certificateHolder, TslManager& tslManager, boost::asio::io_context& io)
+        : IdpUpdater(certificateHolder, tslManager, {}, io)
     {
     }
 
@@ -122,9 +141,10 @@ protected:
 class IdpErrorUpdater : public IdpUpdater
 {
 public:
-    IdpErrorUpdater (Idp& certificateHolder, TslManager& tslManager, const UpdateStatus mockStatus)
-        : IdpUpdater(certificateHolder, tslManager, {}, std::make_shared<Timer>()),
-          mMockStatus(mockStatus)
+    IdpErrorUpdater(Idp& certificateHolder, TslManager& tslManager, const UpdateStatus mockStatus,
+                    boost::asio::io_context& io)
+        : IdpUpdater(certificateHolder, tslManager, {}, io)
+        , mMockStatus(mockStatus)
     {
     }
 
@@ -178,12 +198,11 @@ private:
 class IdpBrokenCertificateUpdater : public IdpUpdater
 {
 public:
-    IdpBrokenCertificateUpdater(
-        Idp& certificateHolder,
-        TslManager& tslManager,
-        const std::shared_ptr<UrlRequestSender>& urlRequestSender,
-        std::shared_ptr<Timer> timerManager)
-        : IdpUpdater(certificateHolder, tslManager, urlRequestSender, timerManager) // NOLINT(performance-unnecessary-value-param) - have to check if it would have side-effets in the upper layer.
+    IdpBrokenCertificateUpdater(Idp& certificateHolder, TslManager& tslManager,
+                                const std::shared_ptr<UrlRequestSender>& urlRequestSender, boost::asio::io_context& io)
+        : IdpUpdater(
+              certificateHolder, tslManager, urlRequestSender,
+              io)// NOLINT(performance-unnecessary-value-param) - have to check if it would have side-effets in the upper layer.
     {
     }
 
@@ -231,7 +250,7 @@ TEST_F(IdpUpdaterTest, update) // NOLINT(readability-function-cognitive-complexi
     auto updater = IdpUpdater::create(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         true,
         idpRequestSender);
 
@@ -264,7 +283,7 @@ TEST_F(IdpUpdaterTest, updateWithBrokenResponse) // NOLINT(readability-function-
     auto updater = IdpUpdater::create<IdpBrokenCertificateUpdater>(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         false,
         idpRequestSender);
 
@@ -293,7 +312,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge) // NOLINT(readability-fun
     // A missing successful update, i.e. directly after the application starts, is treated like it was
     // on the start of the epoch. That means it is more than 24 hours in the past and as a result the IDP
     // certificate is reset.
-    IdpErrorUpdater updater (idp, *tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed);
+    IdpErrorUpdater updater (idp, *tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed, io);
     updater.update();
 
     // The failed update is expected to trigger the 24 hours maximum age of the certificate.
@@ -314,7 +333,7 @@ TEST_F(IdpUpdaterTest, update_noResetForMaxAge) // NOLINT(readability-function-c
     ASSERT_NO_THROW(idp.getCertificate());
 
     // One successful update to set the lastSuccessfulUpdateTime to "now".
-    IdpErrorUpdater updater (idp, *tslManager, IdpErrorUpdater::UpdateStatus::Success);
+    IdpErrorUpdater updater (idp, *tslManager, IdpErrorUpdater::UpdateStatus::Success, io);
     updater.update();
 
     // Now a failed one. As the last successful update is not 2h hours in the past the IDP certificate is not reset...
@@ -348,7 +367,7 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate) // NOLINT(readability-function-c
     auto updater = IdpUpdater::create(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         true,
         idpRequestSender);
 
@@ -395,7 +414,7 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate2) // NOLINT(readability-function-
     auto updater = IdpUpdater::create(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         true,
         idpRequestSender);
 
@@ -410,7 +429,7 @@ TEST_F(IdpUpdaterTest, update_failForWellknownConfigurationFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed)
+    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::WellknownDownloadFailed, io)
         .update();
 }
 
@@ -419,7 +438,7 @@ TEST_F(IdpUpdaterTest, update_failForDiscoveryDownloadFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::DiscoveryDownloadFailed)
+    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::DiscoveryDownloadFailed, io)
         .update();
 }
 
@@ -429,7 +448,7 @@ TEST_F(IdpUpdaterTest, DISABLED_update_failForVerificationFailed)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
-    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::VerificationFailed)
+    IdpErrorUpdater(idp, *tslManager, IdpErrorUpdater::UpdateStatus::VerificationFailed, io)
         .update();
 }
 
@@ -444,7 +463,7 @@ TEST_F(IdpUpdaterTest, DISABLED_IdpUpdateAfterTslUpdate)
     Idp idp;
     auto tslManager = createAndSetupTslManager();
 
-    IdpTestUpdater updater (idp, *tslManager);
+    IdpTestUpdater updater (idp, *tslManager, io);
 
     // The IdpTestUpdater does not update in its constructor.
     ASSERT_EQ(updater.updateCount, 0);
@@ -501,7 +520,7 @@ TEST_F(IdpUpdaterTest, initializeWithForcedRetries) // NOLINT(readability-functi
     auto updater = IdpUpdater::create(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         true,
         idpRequestSender);
 
@@ -542,7 +561,7 @@ TEST_F(IdpUpdaterTest, initializeFailedWithForcedRetries) // NOLINT(readability-
     auto updater = IdpUpdater::create(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         true,
         idpRequestSender);
 
@@ -586,7 +605,7 @@ TEST_F(IdpUpdaterTest, secondaryTimerTest) // NOLINT(readability-function-cognit
     auto updater = IdpUpdater::create(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         true,
         idpRequestSender);
 

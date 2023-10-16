@@ -33,6 +33,7 @@ public:
         const std::string& hostname,
         uint16_t port,
         const uint16_t connectionTimeoutSeconds,
+        std::chrono::milliseconds resolveTimeout,
         bool enforceServerAuthentication,
         const SafeString& caCertificates,
         const SafeString& clientCertificate,

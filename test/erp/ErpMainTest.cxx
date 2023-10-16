@@ -10,6 +10,7 @@
 #include "erp/ErpMain.hxx"
 
 #include "erp/client/HttpsClient.hxx"
+#include "erp/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
@@ -139,7 +140,8 @@ public:
 
     void makeRequestToUnknownPort (void)
     {
-        HttpsClient client ("127.0.0.1", 7090, 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+        HttpsClient client("127.0.0.1", 7090, 30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout,
+                           false /*enforceServerAuthentication*/);
         try
         {
             client.send(
@@ -162,7 +164,8 @@ public:
     void makeRequestToProcessingContext (void)
     {
         const auto& config = Configuration::instance();
-        HttpsClient client ("127.0.0.1", config.serverPort(), 30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+        HttpsClient client("127.0.0.1", config.serverPort(), 30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout,
+                           false /*enforceServerAuthentication*/);
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown),
@@ -175,9 +178,9 @@ public:
     void makeRequestToEnrolmentService (void)
     {
         const auto& config = Configuration::instance();
-        HttpsClient client("127.0.0.1",
-                           gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
-                           30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+        HttpsClient client(
+            "127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
+            30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout, false /*enforceServerAuthentication*/);
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/", 11, {}, HttpStatus::Unknown),
@@ -217,17 +220,15 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
         []
         {
             const auto& config = Configuration::instance();
-        HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
-                           gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
-        const auto response = client.send(
-                ClientRequest(
-                    Header(HttpMethod::POST, "/admin/shutdown", 11,
-                           {
-                               {Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
-                               {Header::Authorization, "Basic cred"}
-                           },
-                           HttpStatus::Unknown),
-                    "delay-seconds=1"));
+            HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                               gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30,
+                               Constants::resolveTimeout, false);
+            const auto response =
+                client.send(ClientRequest(Header(HttpMethod::POST, "/admin/shutdown", 11,
+                                                 {{Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
+                                                  {Header::Authorization, "Basic cred"}},
+                                                 HttpStatus::Unknown),
+                                          "delay-seconds=1"));
 
             ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
         });
@@ -242,7 +243,8 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
         {
             const auto& config = Configuration::instance();
             HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
-                               gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30, false);
+                               gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30,
+                               Constants::resolveTimeout, false);
             const auto response = client.send(
                 ClientRequest(
                     Header(HttpMethod::POST, "/admin/shutdown", 11,

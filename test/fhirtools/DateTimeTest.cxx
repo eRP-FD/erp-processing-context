@@ -45,6 +45,11 @@ TEST(Time, Timezones)
     EXPECT_EQ(DateTime("2022-01-01TZ").compareTo(DateTime("2022-01-01T+00:00")), std::strong_ordering::equal);
     EXPECT_EQ(DateTime("2022-01-01T00:00:00Z").compareTo(DateTime("2022-01-01T02:00:00+02:00")),
               std::strong_ordering::equal);
+    EXPECT_EQ(DateTime("2022-01-31T23:00:00+00:00").compareTo(DateTime("2022-02-01T01:00:00+02:00")),
+              std::strong_ordering::equal);
+    EXPECT_EQ(DateTime("2022-01-31T23:00:00+00:00").compareTo(DateTime("2022-02-01T00:00:00+02:00")),
+              std::strong_ordering::greater);
+    EXPECT_EQ(DateTime("2022-01-31T23:30:00+00:00").compareTo(DateTime("2022-01-31")), std::strong_ordering::greater);
 }
 
 TEST(Time, SpecificationSamples)
@@ -88,12 +93,16 @@ TEST(DateTime, SpecificationSamples)
     EXPECT_NO_THROW(DateTime("2014T"));                   // A partial DateTime with only the year
 }
 
-TEST(DateTime, Equals)
+TEST(DateTime, compareTo)
 {
     EXPECT_EQ(Date("2012").compareTo(Date("2012")), std::make_optional(std::strong_ordering::equal));
     EXPECT_EQ(Date("2012").compareTo(Date("2013")), std::make_optional(std::strong_ordering::less));
+    EXPECT_EQ(Date("2012-01").compareTo(Date("2013")), std::make_optional(std::strong_ordering::less));
+    EXPECT_EQ(Date("2013-01").compareTo(Date("2012")), std::make_optional(std::strong_ordering::greater));
+    EXPECT_EQ(Date("2013-02-01").compareTo(Date("2013-01")), std::make_optional(std::strong_ordering::greater));
     EXPECT_EQ(Date("2012-01").compareTo(Date("2012")), std::nullopt);
     EXPECT_EQ(DateTime("2012").compareTo(DateTime("2012")), std::make_optional(std::strong_ordering::equal));
     EXPECT_EQ(DateTime("2014").compareTo(DateTime("2013")), std::make_optional(std::strong_ordering::greater));
     EXPECT_EQ(DateTime("2012-01").compareTo(DateTime("2012")), std::nullopt);
+    EXPECT_EQ(DateTime("2014-01-25T14:30:14.559").compareTo(DateTime("2014-01-25T14:30:14.559")), std::make_optional(std::strong_ordering::equal));
 }

@@ -711,15 +711,18 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd_2023)
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
                           {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
-    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
-        std::rethrow_exception(exception), HttpStatus::BadRequest, "FHIR-Validation error",
+    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+        std::rethrow_exception(exception),
         "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
         "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
         "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
         "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
         "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
         "https://fhir.kbv.de/StructureDefinition/"
-        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); ");
+        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); "
+        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: per-1: If present, "
+        "start SHALL have a lower value than end (from profile: "
+        "http://hl7.org/fhir/StructureDefinition/Period|4.0.1); ");
 }
 
 TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2022)
@@ -764,15 +767,18 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2023)
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
                           {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
-    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
-        std::rethrow_exception(exception), HttpStatus::BadRequest, "FHIR-Validation error",
+    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+        std::rethrow_exception(exception),
         "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
         "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
         "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
         "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
         "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
         "https://fhir.kbv.de/StructureDefinition/"
-        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); ");
+        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); "
+        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: per-1: If present, "
+        "start SHALL have a lower value than end (from profile: "
+        "http://hl7.org/fhir/StructureDefinition/Period|4.0.1); ");
 }
 
 class ActivateTaskTestPkvP : public ActivateTaskTest, public ::testing::WithParamInterface<model::PrescriptionType>

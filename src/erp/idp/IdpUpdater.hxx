@@ -10,8 +10,8 @@
 
 #include "erp/client/UrlRequestSender.hxx"
 #include "erp/crypto/Certificate.hxx"
+#include "erp/util/PeriodicTimer.hxx"
 #include "erp/util/UrlHelper.hxx"
-#include "erp/util/Timer.hxx"
 #include "erp/ErpRequirements.hxx"
 
 class Idp;
@@ -47,13 +47,13 @@ public:
     template<class IdpUpdaterType = IdpUpdater>
     static std::unique_ptr<IdpUpdaterType> create (Idp& certificateHolder,
                TslManager& tslManager,
-               std::shared_ptr<Timer> timerManager,
+               boost::asio::io_context& context,
                bool runFirstUpdateSynchronously = true,
                const std::shared_ptr<UrlRequestSender>& urlRequestSender = {});
     IdpUpdater (Idp& certificateHolder,
                TslManager& tslManager,
                const std::shared_ptr<UrlRequestSender>& urlRequestSender,
-               std::shared_ptr<Timer> timerManager);
+               boost::asio::io_context& context);
     virtual ~IdpUpdater (void);
 
     void update (void);
@@ -80,21 +80,25 @@ protected:
 
 private:
     void startUpdateTimer();
+    std::chrono::system_clock::duration updateInterval() const;
 
     size_t mUpdateFailureCount;
     Idp& mCertificateHolder;
     TslManager& mTslManager;
     std::shared_ptr<UrlRequestSender> mRequestSender;
     std::unique_ptr<UrlHelper::UrlParts> mUpdateUrl;
-    Timer::JobToken mTimerJobToken;
     std::atomic_bool mIsUpdateActive;
     std::optional<size_t> mUpdateHookId;
     std::chrono::system_clock::duration mCertificateMaxAge;
     std::chrono::system_clock::time_point mLastSuccessfulUpdate;
-    std::shared_ptr<Timer> mTimerManager;
     int updateIntervalMinutes;
     int noCertificateUpdateIntervalSeconds;
+    std::chrono::milliseconds mResolveTimeout;
 
+    class RefreshTimer;
+    friend class RefreshTimer;
+    std::unique_ptr<PeriodicTimerBase> mUpdater;
+    boost::asio::io_context& mIo;
 
     Certificate getUpToDateCertificate (void);
     UrlHelper::UrlParts downloadAndParseWellknown (void);
@@ -109,11 +113,11 @@ template<class IdpUpdaterType>
 std::unique_ptr<IdpUpdaterType> IdpUpdater::create (
     Idp& certificateHolder,
     TslManager& tslManager,
-    std::shared_ptr<Timer> timerManager,
+    boost::asio::io_context& ioContext,
     bool runFirstUpdateSynchronously,
     const std::shared_ptr<UrlRequestSender>& urlRequestSender)
 {
-    auto idpUpdater = std::make_unique<IdpUpdaterType>(certificateHolder, tslManager, urlRequestSender, timerManager);
+    auto idpUpdater = std::make_unique<IdpUpdaterType>(certificateHolder, tslManager, urlRequestSender, ioContext);
 
     A_20974.start("start first update and verify of the IDP synchronously on application start");
     if (runFirstUpdateSynchronously)

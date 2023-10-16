@@ -92,7 +92,10 @@ EnrolmentApiClient::EnrolmentApiClient()
     : ::HttpsClient{
           ::Configuration::instance().serverHost(),
           ::gsl::narrow<uint16_t>(::Configuration::instance().getIntValue(::ConfigurationKey::ENROLMENT_SERVER_PORT)),
-          ::Constants::httpTimeoutInSeconds, false}
+          ::Constants::httpTimeoutInSeconds,
+          std::chrono::milliseconds{
+              Configuration::instance().getIntValue(::ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
+          false}
 {
 }
 

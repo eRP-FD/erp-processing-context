@@ -67,6 +67,15 @@ Time::Time(const std::string& timeStr)
     }
 }
 
+Time::Time(const date::hh_mm_ss<std::chrono::milliseconds>& time, Precision precision)
+    : mHour{static_cast<Hour>(time.hours().count())}
+    , mMinute{static_cast<Minute>(time.minutes().count())}
+    , mSecond{static_cast<Second>(time.seconds().count())}
+    , mFractions{static_cast<Fractions>(time.subseconds().count())}
+    , mPrecision(precision)
+{
+}
+
 std::string Time::toString(bool full) const
 {
     std::ostringstream oss;
@@ -124,6 +133,11 @@ bool Time::samePrecision(const Time& other) const
     return mPrecision == other.mPrecision;
 }
 
+Time::Precision Time::precision() const
+{
+    return mPrecision;
+}
+
 std::optional<std::strong_ordering> Time::compareTo(const Time& other) const
 {
     // see http://hl7.org/fhirpath/#datetime-equality
@@ -156,43 +170,56 @@ Date::Date(const std::string& dateStr)
     std::istringstream iss(dateStr);
     if (separators == 0)
     {
-        mDate = date::year();
-        date::from_stream(iss, fmtYear, std::get<date::year>(mDate));
+        date::from_stream(iss, fmtYear, mYear);
+        mPrecision = Precision::year;
     }
     else if (separators == 1)
     {
-        mDate = date::year_month();
-        date::from_stream(iss, fmtYearMonth, std::get<date::year_month>(mDate));
+        date::year_month ym{};
+        date::from_stream(iss, fmtYearMonth, ym);
+        mYear = ym.year();
+        mMonth = ym.month();
+        mPrecision = Precision::month;
     }
     else if (separators == 2)
     {
-        mDate = date::year_month_day();
-        date::from_stream(iss, fmtYearMonthDay, std::get<date::year_month_day>(mDate));
+        date::year_month_day ymd{};
+        date::from_stream(iss, fmtYearMonthDay, ymd);
+        mYear = ymd.year();
+        mMonth = ymd.month();
+        mDay = ymd.day();
+        mPrecision = Precision::day;
+
     }
     FPExpect(! iss.fail(), "invalid date string: " + dateStr);
     FPExpect(iss.tellg() == static_cast<int64_t>(dateStr.size()), "invalid date string: " + dateStr);
 }
 
+Date::Date(const date::year_month_day& ymd, Precision precision)
+    : mYear{ymd.year()}
+    , mMonth{ymd.month()}
+    , mDay{ymd.day()}
+    , mPrecision{precision}
+{
+}
+
 std::string Date::toString(bool full) const
 {
-    struct Stringifier {
-        std::string operator()(const date::year& year)
-        {
-            auto s = date::format("%Y", year);
+    switch (mPrecision)
+    {
+        case Precision::year: {
+            auto s = date::format("%Y", mYear);
             return full ? s + "-01-01" : s;
         }
-        std::string operator()(const date::year_month& yearMonth)
-        {
-            auto s = date::format("%Y-%m", yearMonth);
+        case Precision::month: {
+            auto s = date::format("%Y-%m", date::year_month(mYear, mMonth));
             return full ? s + "-01" : s;
         }
-        std::string operator()(const date::year_month_day& yearMonthDay)
-        {
-            return date::format("%F", yearMonthDay);
+        case Precision::day: {
+            return date::format("%F", date::year_month_day(mYear, mMonth, mDay));
         }
-        bool full = false;
-    };
-    return std::visit(Stringifier{.full = full}, mDate);
+    }
+    Fail("Unexpected precision");
 }
 std::ostream& operator<<(std::ostream& os, const Date& date1)
 {
@@ -202,15 +229,45 @@ std::ostream& operator<<(std::ostream& os, const Date& date1)
 
 std::optional<std::strong_ordering> Date::compareTo(const Date& other) const
 {
-    if (! samePrecision(other))
-    {
-        return std::nullopt;
-    }
-    if (mDate < other.mDate)
+    if (mYear < other.mYear)
     {
         return std::strong_ordering::less;
     }
-    if (mDate > other.mDate)
+    else if (mYear > other.mYear)
+    {
+        return std::strong_ordering::greater;
+    }
+    else if (mPrecision == Precision::year && other.mPrecision == Precision::year)
+    {
+        return std::strong_ordering::equal;
+    }
+    else if (mPrecision == Precision::year || other.mPrecision == Precision::year)
+    {
+        return std::nullopt;
+    }
+
+    if (mMonth < other.mMonth)
+    {
+        return std::strong_ordering::less;
+    }
+    else if (mMonth > other.mMonth)
+    {
+        return std::strong_ordering::greater;
+    }
+    else if (mPrecision == Precision::month && other.mPrecision == Precision::month)
+    {
+        return std::strong_ordering::equal;
+    }
+    else if (mPrecision == Precision::month || other.mPrecision == Precision::month)
+    {
+        return std::nullopt;
+    }
+
+    if (mDay < other.mDay)
+    {
+        return std::strong_ordering::less;
+    }
+    else if (mDay > other.mDay)
     {
         return std::strong_ordering::greater;
     }
@@ -219,7 +276,12 @@ std::optional<std::strong_ordering> Date::compareTo(const Date& other) const
 
 bool Date::samePrecision(const Date& other) const
 {
-    return mDate.index() == other.mDate.index();
+    return mPrecision == other.mPrecision;
+}
+
+Date::Precision Date::precision() const
+{
+    return mPrecision;
 }
 
 DateTime::DateTime(const std::string& dateTimeStr)
@@ -229,7 +291,7 @@ DateTime::DateTime(const std::string& dateTimeStr)
     mDate = Date(dateTimeParts[0]);
     if (dateTimeParts.size() == 2 && ! dateTimeParts[1].empty())
     {
-               const auto timezoneItr = std::ranges::find_first_of(dateTimeParts[1], "Z+-");
+        const auto timezoneItr = std::ranges::find_first_of(dateTimeParts[1], "Z+-");
         const bool hasTimezone = timezoneItr != dateTimeParts[1].end();
         std::string beforeTimezone{dateTimeParts[1].begin(), timezoneItr};
         if (! beforeTimezone.empty())
@@ -285,12 +347,20 @@ const std::optional<Time>& DateTime::time() const
 
 std::optional<std::strong_ordering> DateTime::compareTo(const DateTime& other) const
 {
-    if (! mDate.samePrecision(other.mDate) || mTime.has_value() != other.mTime.has_value() ||
-        (mTime.has_value() && ! mTime->samePrecision(*other.mTime)))
+    const auto dateOrdering = mLocalDate.compareTo(other.mLocalDate);
+    if (dateOrdering == std::strong_ordering::equal)
     {
+        if (mLocalTime.has_value() && other.mLocalTime.has_value())
+        {
+            return mLocalTime->compareTo(*other.mLocalTime);
+        }
+        else if (! mLocalTime.has_value() && ! other.mLocalTime.has_value())
+        {
+            return std::strong_ordering::equal;
+        }
         return std::nullopt;
     }
-    return mTimePoint <=> other.mTimePoint;
+    return dateOrdering;
 }
 
 void DateTime::setTimePoint()
@@ -309,6 +379,14 @@ void DateTime::setTimePoint()
         date::from_stream(iss, fmtDateTime, localTime);
         FPExpect(! iss.fail() && localTime != decltype(localTime){}, "failed to parse DateTime " + fullStr);
         mTimePoint = date::make_zoned(germanTimezone, localTime).get_sys_time();
+    }
+    using zoned_ms = date::zoned_time<std::chrono::milliseconds>;
+    auto zt = zoned_ms{germanTimezone, mTimePoint};
+    auto localDay = date::floor<date::days>(zt.get_local_time());
+    mLocalDate = Date{date::year_month_day{localDay}, mDate.precision()};
+    if (mTime) {
+        auto timeOfDay = date::hh_mm_ss<std::chrono::milliseconds>{zt.get_local_time() - localDay};
+        mLocalTime = Time{timeOfDay, mTime->precision()};
     }
 }
 }

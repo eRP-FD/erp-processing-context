@@ -114,9 +114,9 @@ public:
     HttpsClient createClient (void)
     {
         const auto& config = Configuration::instance();
-        return HttpsClient("127.0.0.1",
-                           gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
-                           30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+        return HttpsClient(
+            "127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
+            30 /*connectionTimeoutSeconds*/, std::chrono::milliseconds{1000} /*resolveTimeout*/, false /*enforceServerAuthentication*/);
     }
 
     Header createHeader(const HttpMethod method, std::string&& target)

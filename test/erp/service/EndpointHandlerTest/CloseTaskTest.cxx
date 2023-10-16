@@ -56,6 +56,7 @@ protected:
         AccessLog accessLog;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         serverRequest.setBody(std::move(body));
+        ASSERT_NO_FATAL_FAILURE(resetTask(sessionContext));
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
         switch (expectedResult)
         {
@@ -76,6 +77,16 @@ protected:
     static const inline model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
 
+    void resetTask(SessionContext& sessionContext)
+    {
+        auto* database = sessionContext.database();
+        auto taskAndKey = database->retrieveTaskForUpdate(prescriptionId);
+        ASSERT_TRUE(taskAndKey.has_value());
+        auto& task = taskAndKey->task;
+        task.setStatus(model::Task::Status::inprogress);
+        database->updateTaskStatusAndSecret(task);
+        database->commitTransaction();
+    }
 };
 
 TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexity)
@@ -274,16 +285,17 @@ TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readabili
 // Regression Test for Bugticket ERP-6513 (CloseTaskHandler does not accept MedicationDispense::whenPrepared and whenHandedOver with only date)
 TEST_F(CloseTaskTest, CloseTaskPartialDateTimeErp6513)//NOLINT(readability-function-cognitive-complexity)
 {
-    ResourceTemplates::MedicationDispenseOptions dispenseOptions{
-        .prescriptionId = prescriptionId,
-        .telematikId = telematikId,
-        .whenHandedOver = model::Timestamp::fromXsDate("1970-01-01", model::Timestamp::UTCTimezone),
-        .whenPrepared = model::Timestamp::fromXsDate("1970-01-02", model::Timestamp::UTCTimezone)};
-    auto medicationDispenseXml =
-        ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {dispenseOptions, dispenseOptions}});
-    medicationDispenseXml = String::replaceAll(medicationDispenseXml, "1970-01-02T00:00:00.000+00:00", "2020-12");
-    medicationDispenseXml = String::replaceAll(medicationDispenseXml, "1970-01-01T00:00:00.000+00:00", "2020");
-    ASSERT_NO_FATAL_FAILURE(test(std::move(medicationDispenseXml)));
+    for (const auto& date : {"2020-12-01", "2020-12", "2020"})
+    {
+        ResourceTemplates::MedicationDispenseOptions dispenseOptions{
+            .prescriptionId = prescriptionId,
+            .telematikId = telematikId,
+            .whenPrepared = model::Timestamp::fromXsDate("1970-01-01", model::Timestamp::UTCTimezone)};
+        auto medicationDispenseXml =
+            ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {dispenseOptions, dispenseOptions}});
+        medicationDispenseXml = String::replaceAll(medicationDispenseXml, "1970-01-01T00:00:00.000+00:00", date);
+        ASSERT_NO_FATAL_FAILURE(test(std::move(medicationDispenseXml)));
+    }
 }
 
 TEST_F(CloseTaskTest, ERP_13560_noMedicationDispenseGracePeriod)

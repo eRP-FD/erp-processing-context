@@ -209,3 +209,21 @@ TEST_F(RegressionTest, Erp11050)
             toCadesBesSignature(kbv_bundle_500_xml, model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
+
+TEST_F(RegressionTest, Erp16393)
+{
+    EnvironmentVariableGuard envGuard(ConfigurationKey::FHIR_PROFILE_VALID_FROM, "2023-09-29T00:00:00.000+02:00");
+    auto kbvBundleXml = ResourceManager::instance().getStringResource(
+        "test/validation/xml/v_2023_07_01/kbv/bundle/Bundle_invalid_ERP-16393_ABC.xml");
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
+    ASSERT_TRUE(task.has_value());
+    kbvBundleXml = String::replaceAll(kbvBundleXml, "160.000.006.388.698.96", task->prescriptionId().toString());
+    std::string accessCode{task->accessCode()};
+    std::optional<model::Task> taskActivateResult;
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivateResult = taskActivateWithOutcomeValidation(
+            task->prescriptionId(), accessCode,
+            toCadesBesSignature(kbvBundleXml, model::Timestamp::fromXsDateTime("2023-09-29T08:44:35.864+02:00")),
+            HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+}

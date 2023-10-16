@@ -6,6 +6,7 @@
  */
 
 #include "erp/client/UrlRequestSender.hxx"
+#include "erp/common/Constants.hxx"
 #include "erp/server/HttpsServer.hxx"
 #include "erp/server/handler/RequestHandlerInterface.hxx"
 #include "erp/server/response/ServerResponse.hxx"
@@ -114,7 +115,7 @@ TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)//NOLINT(readability-function-
     ASSERT_NE(server, nullptr) << "Server must be created";
     server->serve(1, "test");
 
-    UrlRequestSender urlRequestSender({}, 1, false);
+    UrlRequestSender urlRequestSender({}, 1, Constants::resolveTimeout, false);
     std::stringstream url;
     url << "https://127.0.0.1:" << port << "/test_path";
     EXPECT_ANY_THROW(urlRequestSender.send(url.str(), HttpMethod::POST, EXPECTED_BODY));
@@ -132,7 +133,7 @@ TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)//NOLINT(readability-function-
 TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttps)  // NOLINT
 {
     const uint16_t timeoutSeconds = 2;
-    UrlRequestSender requestSender({}, timeoutSeconds);
+    UrlRequestSender requestSender({}, timeoutSeconds, Constants::resolveTimeout);
 
     const auto start = std::chrono::steady_clock::now();
     // simulate unresponsive server by using a non-routable IP address
@@ -146,7 +147,7 @@ TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttps)  // NOLINT
 TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttp)  // NOLINT
 {
     const uint16_t timeoutSeconds = 5;
-    UrlRequestSender requestSender({}, timeoutSeconds);
+    UrlRequestSender requestSender({}, timeoutSeconds, Constants::resolveTimeout);
 
     const auto start = std::chrono::steady_clock::now();
     // simulate unresponsive server by using a non-routable IP address

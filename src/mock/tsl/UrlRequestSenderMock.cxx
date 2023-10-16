@@ -11,7 +11,7 @@
 
 
 UrlRequestSenderMock::UrlRequestSenderMock(std::unordered_map<std::string, std::string> responses)
-    : UrlRequestSender({}, 30/*httpClientConnectTimeoutSeconds*/)
+    : UrlRequestSender({}, 30/*httpClientConnectTimeoutSeconds*/, std::chrono::milliseconds{2000})
     , mResponses(std::move(responses))
 {
 }

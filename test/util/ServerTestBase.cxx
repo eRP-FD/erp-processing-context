@@ -8,6 +8,7 @@
 #include "test/util/ServerTestBase.hxx"
 #include "TestUtils.hxx"
 #include "erp/ErpProcessingContext.hxx"
+#include "erp/common/Constants.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
@@ -179,7 +180,7 @@ HttpsClient ServerTestBase::createClient (void)
 {
     const auto& config = Configuration::instance();
     return HttpsClient("127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)),
-                       30 /*connectionTimeoutSeconds*/, false /*enforceServerAuthentication*/);
+                       30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout, false /*enforceServerAuthentication*/);
 }
 
 

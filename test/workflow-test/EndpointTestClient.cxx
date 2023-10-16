@@ -8,6 +8,7 @@
 #include "test/workflow-test/EndpointTestClient.hxx"
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/admin/AdminServer.hxx"
+#include "erp/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/enrolment/EnrolmentServer.hxx"
@@ -80,8 +81,8 @@ void EndpointTestClient::initClient()
         TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_CLIENT_CERTIFICATE)};
     const SafeString clientPrivateKey{
         TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_CLIENT_PRIVATE_KEY)};
-    mHttpsClient = std::make_unique<HttpsClient>(getHostAddress(), getPort(), 30, true, serverCertificate,
-                                                 clientCertificate, clientPrivateKey);
+    mHttpsClient = std::make_unique<HttpsClient>(getHostAddress(), getPort(), 30, Constants::resolveTimeout, true,
+                                                 serverCertificate, clientCertificate, clientPrivateKey);
 }
 
 void EndpointTestClient::initVsdmKeys()
@@ -132,11 +133,6 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
 
     mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
 
-    if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_IDP_UPDATER_MOCK, false))
-        IdpUpdater::create<MockIdpUpdater>(mContext->idp, mContext->getTslManager(), mContext->getTimerManager());
-    else
-        IdpUpdater::create(mContext->idp, mContext->getTslManager(), mContext->getTimerManager());
-
 
     // Test of client authentication:
     const bool enableClientAuthentication =
@@ -147,6 +143,13 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
     mServer = std::make_unique<HttpsServer>(getHostAddress(), getPort(), std::move(handlers),
                                             *mContext, enableClientAuthentication,
                                             clientCertificate);
+
+    auto& ioContext = mServer->getThreadPool().ioContext();
+
+    if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_IDP_UPDATER_MOCK, false))
+        IdpUpdater::create<MockIdpUpdater>(mContext->idp, mContext->getTslManager(), ioContext);
+    else
+        IdpUpdater::create(mContext->idp, mContext->getTslManager(), ioContext);
 
     using namespace std::chrono_literals;
     mServer->serviceContext().setPrngSeeder(std::make_unique<SeedTimer>(

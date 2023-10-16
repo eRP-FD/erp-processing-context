@@ -21,6 +21,7 @@
 #include "fhirtools/expression/StringManipulation.hxx"
 #include "fhirtools/model/Element.hxx"
 #include "fhirtools/parser/ErrorListener.hxx"
+#include "fhirtools/parser/FhirPathFixer.hxx"
 #include "fhirtools/util/Utf8Helper.hxx"
 
 #include <antlr4-runtime/antlr4-runtime.h>
@@ -693,6 +694,7 @@ std::any FhirPathParser::Impl::visitIdentifier(fhirtools::fhirpathParser::Identi
 fhirtools::ExpressionPtr FhirPathParser::parse(const FhirStructureRepository* repository, std::string_view fhirPath)
 {
     using namespace std::string_literals;
+    fhirPath = FhirPathFixer::fixFhirPath(fhirPath);
     ErrorListener errorListener;
     antlr4::ANTLRInputStream input{fhirPath};
     fhirtools::fhirpathLexer lexer{&input};

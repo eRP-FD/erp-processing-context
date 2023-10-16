@@ -54,10 +54,19 @@ struct FhirSlice::Impl {
     std::string mName;
     std::shared_ptr<FhirStructureDefinition> mProfile;
     mutable std::shared_ptr<FhirSlicing::Condition> mCondition;
+    Impl(const std::string& name, const std::shared_ptr<FhirStructureDefinition>& profile,
+         const std::shared_ptr<FhirSlicing::Condition>& condition)
+        : mName{name}
+        , mProfile{profile}
+        , mCondition{condition}
+    {
+    }
+    Impl() = default;
 };
 
 FhirSlice::FhirSlice(const FhirSlice& other)
-    : mImpl{std::make_unique<Impl>(*other.mImpl)}
+    : mImpl{
+          std::make_unique<Impl>(other.mImpl->mName, other.mImpl->mProfile, std::atomic_load(&other.mImpl->mCondition))}
 {
 }
 
@@ -81,9 +90,10 @@ public:
 std::shared_ptr<FhirSlicing::Condition>
 FhirSlice::condition(const FhirStructureRepository& repo, const std::list<FhirSliceDiscriminator>& discriminators) const
 {
-    if (mImpl->mCondition)
+    auto implCondition = std::atomic_load(&mImpl->mCondition);
+    if (implCondition)
     {
-        return mImpl->mCondition;
+        return implCondition;
     }
     auto cond = std::make_shared<SliceCondition>();
     cond->mConditions.reserve(discriminators.size());
@@ -91,7 +101,7 @@ FhirSlice::condition(const FhirStructureRepository& repo, const std::list<FhirSl
                            [&](const FhirSliceDiscriminator& disc) {
                                return disc.condition(repo, &*mImpl->mProfile);
                            });
-    mImpl->mCondition = cond;
+    std::atomic_store(&mImpl->mCondition, std::shared_ptr<FhirSlicing::Condition>{cond});
     return cond;
 }
 

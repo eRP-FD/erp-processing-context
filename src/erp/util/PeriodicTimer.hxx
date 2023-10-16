@@ -56,6 +56,7 @@ public:
     virtual ~PeriodicTimerBase();
 
     void start(boost::asio::io_context& context, std::chrono::steady_clock::duration initialInterval);
+    void cancel();
 
     PeriodicTimerBase(const PeriodicTimerBase&) = delete;
     PeriodicTimerBase(PeriodicTimerBase&&) = delete;
@@ -63,10 +64,11 @@ public:
     PeriodicTimerBase& operator=(PeriodicTimerBase&&) = delete;
 
 private:
-    using TimerSharedPtr = std::shared_ptr<boost::asio::steady_timer>;
-    static void timerHandlerInternal(const HandlerSharedPtr& handler, TimerSharedPtr timer,
+    using TimerSharedPtr = std::unique_ptr<boost::asio::steady_timer>;
+    void timerHandlerInternal(const HandlerSharedPtr& handler,
                                      const boost::system::error_code& errorCode);
-    static auto timerCallback(const HandlerSharedPtr& handler, TimerSharedPtr timer);
+    auto timerCallback(const HandlerSharedPtr& handler);
+    TimerSharedPtr mTimer;
 
 protected:
     std::shared_ptr<TimerHandler> mTimerHandler;

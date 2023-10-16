@@ -84,6 +84,8 @@ private:
                 static_cast<uint16_t>(configuration.getIntValue(::ConfigurationKey::ENROLMENT_SERVER_PORT)),
                 static_cast<uint16_t>(
                     configuration.getIntValue(::ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
+                std::chrono::milliseconds{
+                    configuration.getIntValue(::ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
                 false);
         }
     }

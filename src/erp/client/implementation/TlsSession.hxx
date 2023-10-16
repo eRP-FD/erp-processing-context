@@ -15,6 +15,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
 
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
@@ -32,6 +33,7 @@ public:
     TlsSession (const std::string& hostname,
                 const std::string& port,
                 const uint16_t connectionTimeoutSeconds,
+                std::chrono::milliseconds resolveTimeout,
                 bool enforceServerAuthentication,
                 const SafeString& caCertificates,
                 const SafeString& clientCertificate,
@@ -107,6 +109,7 @@ private:
     std::optional<boost::asio::ip::tcp::endpoint> mForcedEndpoint;
 
     const uint16_t mConnectionTimeoutSeconds;
+    std::chrono::milliseconds mResolveTimeout;
 
     /* Boost.ASIO I/O context. A reference to this is required by most Beast/ASIO classes. */
     boost::asio::io_context mIoContext;

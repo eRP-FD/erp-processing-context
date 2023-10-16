@@ -18,9 +18,11 @@
 UrlRequestSender::UrlRequestSender(
     SafeString rootCertificates,
     const uint16_t connectionTimeoutSeconds,
+    std::chrono::milliseconds resolveTimeout,
     const bool enforceServerAuthentication)
     : mTslRootCertificates(std::move(rootCertificates))
     , mConnectionTimeoutSeconds(connectionTimeoutSeconds)
+    , mResolveTimeout{resolveTimeout}
     , mEnforceServerAuthentication(enforceServerAuthentication)
     , mDurationConsumer()
 {
@@ -159,6 +161,7 @@ ClientResponse UrlRequestSender::doSend(
                    url.mHost,
                    gsl::narrow_cast<uint16_t>(url.mPort),
                    mConnectionTimeoutSeconds,
+                   mResolveTimeout,
                    mEnforceServerAuthentication,
                    mTslRootCertificates,
                    SafeString(),
@@ -171,7 +174,8 @@ ClientResponse UrlRequestSender::doSend(
         {
             return HttpClient(*ep, url.mHost, mConnectionTimeoutSeconds).send(request);
         }
-        return HttpClient(url.mHost, gsl::narrow_cast<uint16_t>(url.mPort), mConnectionTimeoutSeconds).send(request);
+        return HttpClient(url.mHost, gsl::narrow_cast<uint16_t>(url.mPort), mConnectionTimeoutSeconds, mResolveTimeout)
+            .send(request);
     }
     else
     {

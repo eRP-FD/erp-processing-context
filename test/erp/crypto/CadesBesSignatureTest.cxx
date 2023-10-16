@@ -234,7 +234,7 @@ TEST_F(CadesBesSignatureTest, validateWithBna)
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
              {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     std::string signedText;
@@ -556,7 +556,7 @@ TEST_F(CadesBesSignatureTest, noProvidedOcspResponseInCms)
         {},
         {},
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
              {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     std::string signedText;
@@ -688,7 +688,7 @@ TEST_F(CadesBesSignatureTest, ocspRequestFailure)
     auto certCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
-    const std::string ocspUrl{"http://ehca-testref.sig-test.telematik-test:8080/status/qocsp"};
+    const std::string ocspUrl{"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp"};
     std::shared_ptr<UrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<UrlRequestSenderMock>();
 

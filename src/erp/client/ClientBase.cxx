@@ -29,13 +29,14 @@ ClientBase<StreamClass>::ClientBase (
     const std::string& host,
     const std::uint16_t port,
     const uint16_t connectionTimeoutSeconds,
+    std::chrono::milliseconds resolveTimeout,
     bool enforceServerAuthentication,
     const SafeString& caCertificates,
     const SafeString& clientCertificate,
     const SafeString& clientPrivateKey,
     const std::optional<std::string>& forcedCiphers)
     : mImplementation(std::make_unique<ClientImpl<StreamClass>>(
-        host, port, connectionTimeoutSeconds, enforceServerAuthentication,
+        host, port, connectionTimeoutSeconds, resolveTimeout, enforceServerAuthentication,
         caCertificates, clientCertificate, clientPrivateKey, forcedCiphers))
 {
 }

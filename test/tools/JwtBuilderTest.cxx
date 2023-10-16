@@ -62,10 +62,11 @@ TEST(JwtBuilderTest, testBuilder)//NOLINT(readability-function-cognitive-complex
             {"https://idp.lu.erezepttest.net:443/certs/puk_idp_sig.json", idpResponseJson},
             {"https://idp.lu.erezepttest.net:443/.well-known/openid-configuration", idpResponseJwk}});
 
+    boost::asio::io_context io;
     auto updater = IdpUpdater::create(
         idp,
         *tslManager,
-        std::make_shared<Timer>(),
+        io,
         true,
         idpRequestSender);
 

@@ -22,7 +22,8 @@ class HttpClient
 {
 public:
     /// Creates a Http client using the given host name and port number.
-    explicit HttpClient(const std::string& host, std::uint16_t port, const uint16_t connectionTimeoutSeconds);
+    explicit HttpClient(const std::string& host, std::uint16_t port, const uint16_t connectionTimeoutSeconds,
+                        std::chrono::milliseconds resolveTimeout);
     explicit HttpClient(const boost::asio::ip::tcp::endpoint& ep, const std::string& host, const uint16_t connectionTimeoutSeconds);
 };
 

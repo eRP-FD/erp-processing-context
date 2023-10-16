@@ -44,6 +44,7 @@ target_sources(fhirtools
         model/erp/ErpElement.cxx
         model/ValueElement.cxx
         parser/ErrorListener.cxx
+        parser/FhirPathFixer.cxx
         parser/FhirPathParser.cxx
         repository/FhirCodeSystem.cxx
         repository/FhirConstraint.cxx

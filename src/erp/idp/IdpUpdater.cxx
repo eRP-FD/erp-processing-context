@@ -15,6 +15,7 @@
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/JsonLog.hxx"
 #include "erp/util/TLog.hxx"
+#include "erp/util/Resolver.hxx"
 
 
 namespace
@@ -42,19 +43,45 @@ namespace
     }
 }
 
+class IdpUpdater::RefreshTimer : public TimerHandler
+{
+public:
+    explicit RefreshTimer(IdpUpdater& idpUpdater)
+        : mIdpUpdater{idpUpdater} {};
+
+    std::optional<std::chrono::steady_clock::duration> nextInterval() const override
+    {
+        return mIdpUpdater.updateInterval();
+    }
+
+private:
+    void timerHandler() override
+    {
+        mIdpUpdater.update();
+    }
+
+    IdpUpdater& mIdpUpdater;
+};
 
 /**
  * Make a GET request to the given `host` with the given URL `path` and return the returned body.
  */
-std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::UrlParts& url)
+std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::UrlParts& url, std::chrono::milliseconds resolveTimeout)
 {
     ClientResponse response;
     boost::asio::io_context io;
     const auto port = std::to_string(url.mPort);
-    auto resolverResults = boost::asio::ip::tcp::resolver{io}.resolve(url.mHost.c_str(), port.c_str());
+    const auto& resolverResults = Resolver::resolve(url.mHost, port, resolveTimeout);
     for (const auto& resolverEntry : resolverResults)
     {
-        response = requestSender.send(resolverEntry.endpoint(), url, HttpMethod::GET, "");
+        try
+        {
+            response = requestSender.send(resolverEntry.endpoint(), url, HttpMethod::GET, "");
+        }
+        catch (const std::exception&)
+        {
+            // retry with next endpoint
+        }
         if (response.getHeader().status() == HttpStatus::OK)
         {
             break;
@@ -75,22 +102,22 @@ IdpUpdater::IdpUpdater (
     Idp& certificateHolder,
     TslManager& tslManager,
     const std::shared_ptr<UrlRequestSender>& urlRequestSender, // NOLINT(modernize-pass-by-value)
-    std::shared_ptr<Timer> timerManager)
+    boost::asio::io_context& ioContext)
     : mUpdateFailureCount()
     , mCertificateHolder(certificateHolder)
     , mTslManager(tslManager)
     , mRequestSender(urlRequestSender)
-    , mTimerJobToken(Timer::NotAJob)
     , mIsUpdateActive(false)
     , mUpdateHookId()
     , mCertificateMaxAge(getMaxCertificateAge())
     , mLastSuccessfulUpdate()
-    , mTimerManager(std::move(timerManager))
     , updateIntervalMinutes(Configuration::instance().getIntValue(ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES))
     , noCertificateUpdateIntervalSeconds(
           Configuration::instance().getIntValue(ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS))
+    , mResolveTimeout{Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)}
+    , mUpdater{std::make_unique<PeriodicTimer<RefreshTimer>>(*this)}
+    , mIo{ioContext}
 {
-    Expect3(mTimerManager!=nullptr, "TimerManager missing", std::logic_error);
     SafeString idpSslRootCa;
     const std::string idpRootCaFile =
         Configuration::instance().getOptionalStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH, "");
@@ -107,7 +134,8 @@ IdpUpdater::IdpUpdater (
         mRequestSender = std::make_shared<UrlRequestSender>(
             std::move(idpSslRootCa),
             static_cast<uint16_t>(Configuration::instance().getOptionalIntValue(
-                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds)));
+                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds)),
+            mResolveTimeout);
     }
 
     // Extract hostname and path from the update URL.
@@ -126,7 +154,6 @@ IdpUpdater::IdpUpdater (
 
 IdpUpdater::~IdpUpdater (void)
 {
-    mTimerManager->cancel(mTimerJobToken);
     if (mUpdateHookId.has_value())
     {
         mTslManager.disablePostUpdateHook(*mUpdateHookId);
@@ -197,7 +224,7 @@ UrlHelper::UrlParts IdpUpdater::downloadAndParseWellknown (void)
 
 std::string IdpUpdater::doDownloadWellknown (void)
 {
-    return getBody(*mRequestSender, *mUpdateUrl);//"idp.lu.erezepttest.net", "/.well-known/openid-configuration");
+    return getBody(*mRequestSender, *mUpdateUrl, mResolveTimeout);//"idp.lu.erezepttest.net", "/.well-known/openid-configuration");
 }
 
 
@@ -239,7 +266,7 @@ std::vector<Certificate> IdpUpdater::downloadAndParseDiscovery (const UrlHelper:
 std::string IdpUpdater::doDownloadDiscovery (const UrlHelper::UrlParts& url)
 {
     // Download the JWK set.
-    return getBody(*mRequestSender, url);
+    return getBody(*mRequestSender, url, mResolveTimeout);
 }
 
 
@@ -346,17 +373,17 @@ void IdpUpdater::setCertificateMaxAge (std::chrono::system_clock::duration maxAg
 
 void IdpUpdater::startUpdateTimer()
 {
-    const bool healthy = mCertificateHolder.isHealthy();
-    mTimerManager->cancel(mTimerJobToken);
+    mUpdater->cancel();
     A_20974.start("update and verify the IDP signer certificate every hour");
-    mTimerJobToken = mTimerManager->runIn(healthy ? std::chrono::minutes(updateIntervalMinutes)
-                                                  : std::chrono::seconds(noCertificateUpdateIntervalSeconds),
-                                          [this] {
-                                              update();
-                                              startUpdateTimer();
-                                          });
+    mUpdater->start(mIo, updateInterval());
     A_20974.finish();
+}
 
+std::chrono::system_clock::duration IdpUpdater::updateInterval() const
+{
+    const bool healthy = mCertificateHolder.isHealthy();
+    return healthy ? std::chrono::minutes(updateIntervalMinutes)
+                   : std::chrono::seconds(noCertificateUpdateIntervalSeconds);
 }
 
 

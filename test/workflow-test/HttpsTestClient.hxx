@@ -33,7 +33,8 @@ protected:
     HttpsTestClient(
         const std::string& host,
         std::uint16_t port,
-        const uint16_t connectionTimeoutSeconds ,
+        const uint16_t connectionTimeoutSeconds,
+        std::chrono::milliseconds resolveTimeout,
         bool enforceServerAuthentication = true,
         const SafeString& caCertificates = SafeString(),
         const SafeString& clientCertificate = SafeString(),

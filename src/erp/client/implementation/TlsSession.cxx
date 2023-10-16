@@ -12,6 +12,7 @@
 #include "erp/server/TlsSettings.hxx"
 #include "erp/util/AsyncStreamHelper.hxx"
 #include "erp/util/OpenSsl.hxx"
+#include "erp/util/Resolver.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/Expect.hxx"
 
@@ -193,6 +194,7 @@ TlsSession::TlsSession(
     const std::string& hostname,
     const std::string& port,
     const uint16_t connectionTimeoutSeconds,
+    std::chrono::milliseconds resolveTimeout,
     bool enforceServerAuthentication,
     const SafeString& caCertificates,
     const SafeString& clientCertificate,
@@ -201,6 +203,7 @@ TlsSession::TlsSession(
     : mHostName{hostname},
       mPort{port},
       mConnectionTimeoutSeconds(connectionTimeoutSeconds),
+      mResolveTimeout{resolveTimeout},
       mIoContext{},
       // GEMREQ-start GS-A_4385
       // GEMREQ-start GS-A_5542
@@ -222,8 +225,8 @@ TlsSession::TlsSession(const boost::asio::ip::tcp::endpoint& ep, const std::stri
                        const uint16_t connectionTimeoutSeconds, bool enforceServerAuthentication,
                        const SafeString& caCertificates, const SafeString& clientCertificate,
                        const SafeString& clientPrivateKey, const std::optional<std::string>& forcedCiphers)
-    : TlsSession(hostname, std::to_string(ep.port()), connectionTimeoutSeconds, enforceServerAuthentication,
-                 caCertificates, clientCertificate, clientPrivateKey, forcedCiphers)
+    : TlsSession(hostname, std::to_string(ep.port()), connectionTimeoutSeconds, std::chrono::milliseconds{5000},
+                 enforceServerAuthentication, caCertificates, clientCertificate, clientPrivateKey, forcedCiphers)
 {
     mForcedEndpoint.emplace(ep);
 }
@@ -239,7 +242,7 @@ void TlsSession::establish (const bool trustCn)
     /* Look up the domain name. */
     if (! mForcedEndpoint.has_value())
     {
-        resolverResults = boost::asio::ip::tcp::resolver{mIoContext}.resolve(mHostName.c_str(), mPort.c_str());
+        resolverResults = Resolver::resolve(mHostName, mPort, mResolveTimeout);
     }
     else
     {

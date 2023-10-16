@@ -24,6 +24,7 @@ public:
     explicit UrlRequestSender(
         SafeString rootCertificates,
         const uint16_t connectionTimeoutSeconds,
+        std::chrono::milliseconds resolveTimeout,
         const bool enforceServerAuthentication = true);
     virtual ~UrlRequestSender() = default;
 
@@ -75,6 +76,7 @@ protected:
 private:
     const SafeString mTslRootCertificates;
     const uint16_t mConnectionTimeoutSeconds;
+    std::chrono::milliseconds mResolveTimeout;
     const bool mEnforceServerAuthentication;
     mutable DurationConsumer mDurationConsumer;
 };

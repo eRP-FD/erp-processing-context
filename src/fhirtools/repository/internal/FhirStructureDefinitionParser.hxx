@@ -118,6 +118,7 @@ private:
     std::list<FhirCodeSystem> mCodeSystems;
     std::list<FhirValueSet> mValueSets;
     FhirStructureDefinition::Builder mStructureBuilder;
+    std::string mStructureUrl;
     std::string mStructureType;
     FhirElement::Builder mElementBuilder;
     FhirConstraint::Builder mConstraintBuilder;

@@ -12,12 +12,13 @@ HttpsClient::HttpsClient (
     const std::string& host,
     const std::uint16_t port,
     const uint16_t connectionTimeoutSeconds,
+    std::chrono::milliseconds resolveTimeout,
     bool enforceServerAuthentication,
     const SafeString& caCertificates,
     const SafeString& clientCertificate,
     const SafeString& clientPrivateKey,
     const std::optional<std::string>& forcedCiphers)
-    : ClientBase<SslStream>(host, port, connectionTimeoutSeconds, enforceServerAuthentication,
+    : ClientBase<SslStream>(host, port, connectionTimeoutSeconds, resolveTimeout, enforceServerAuthentication,
                             caCertificates, clientCertificate, clientPrivateKey, forcedCiphers)
 {
 }

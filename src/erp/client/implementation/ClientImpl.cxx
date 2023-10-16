@@ -23,6 +23,7 @@ ClientImpl<SslStream>::ClientImpl (
     const std::string& hostname,
     const uint16_t port,
     const uint16_t connectionTimeoutSeconds,
+    std::chrono::milliseconds resolveTimeout,
     bool enforceServerAuthentication,
     const SafeString& caCertificates,
     const SafeString& clientCertificate,
@@ -30,7 +31,7 @@ ClientImpl<SslStream>::ClientImpl (
     const std::optional<std::string>& forcedCiphers)
     : mConnectionTimeoutSeconds(connectionTimeoutSeconds),
       mHostName(hostname),
-      mSessionContainer(hostname, std::to_string(port), connectionTimeoutSeconds,
+      mSessionContainer(hostname, std::to_string(port), connectionTimeoutSeconds, resolveTimeout,
                       enforceServerAuthentication, caCertificates, clientCertificate, clientPrivateKey, forcedCiphers)
 {
 }
@@ -53,6 +54,7 @@ ClientImpl<TcpStream>::ClientImpl (
     const std::string& hostname,
     const uint16_t port,
     const uint16_t connectionTimeoutSeconds,
+    std::chrono::milliseconds resolveTimeout,
     bool,
     const SafeString&,
     const SafeString&,
@@ -60,7 +62,7 @@ ClientImpl<TcpStream>::ClientImpl (
     const std::optional<std::string>&)
     : mConnectionTimeoutSeconds(connectionTimeoutSeconds),
       mHostName(hostname),
-      mSessionContainer{hostname, std::to_string(port), connectionTimeoutSeconds}
+      mSessionContainer{hostname, std::to_string(port), connectionTimeoutSeconds, resolveTimeout}
 {
 }
 

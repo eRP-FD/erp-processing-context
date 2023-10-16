@@ -16,14 +16,13 @@ PeriodicTimerBase::PeriodicTimerBase(std::shared_ptr<TimerHandler> timerHandler)
 {
 }
 
-auto PeriodicTimerBase::timerCallback(const HandlerSharedPtr& handler, TimerSharedPtr timer)
+auto PeriodicTimerBase::timerCallback(const HandlerSharedPtr& handler)
 {
-    return [weakHandler = std::weak_ptr{handler},
-            timer = std::move(timer)](const boost::system::error_code& code) mutable {
+    return [this, weakHandler = std::weak_ptr{handler}](const boost::system::error_code& code) mutable {
         auto lockedHandler = weakHandler.lock();
         if (lockedHandler)
         {
-            timerHandlerInternal(lockedHandler, std::move(timer), code);
+            timerHandlerInternal(lockedHandler, code);
         }
     };
 }
@@ -31,8 +30,22 @@ auto PeriodicTimerBase::timerCallback(const HandlerSharedPtr& handler, TimerShar
 
 void PeriodicTimerBase::start(boost::asio::io_context& context, std::chrono::steady_clock::duration initialInterval)
 {
-    auto timer = std::make_shared<boost::asio::steady_timer>(context, initialInterval);
-    timer->async_wait(timerCallback(mTimerHandler, timer));
+    if (! mTimer)
+    {
+        mTimer = std::make_unique<boost::asio::steady_timer>(context, initialInterval);
+    }
+    else
+    {
+        mTimer->cancel();
+    }
+    mTimer->async_wait(timerCallback(mTimerHandler));
+}
+
+
+void PeriodicTimerBase::cancel()
+{
+    if (mTimer)
+        mTimer->cancel();
 }
 
 PeriodicTimerBase::~PeriodicTimerBase()
@@ -52,13 +65,17 @@ PeriodicTimerBase::~PeriodicTimerBase()
     }
 }
 
-void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler, TimerSharedPtr timer,
+void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler,
                                              const boost::system::error_code& errorCode)
 {
 
     // The timer is canceled when either the object has been destroyed (and the timer task has not been properly deleted)
     // or if the underlying io_context is shut down. In either case exit before accessing any of the object's state because
     // its memory may have already been freed.
+    if (errorCode == boost::asio::error::operation_aborted)
+    {
+        return;
+    }
     if (errorCode.failed())
     {
         TVLOG(0) << "timerHandler called with error (" << errorCode.value() << "): " << errorCode.message();
@@ -94,15 +111,14 @@ void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler, Ti
     if (interval)
     {
         auto now = std::chrono::steady_clock::now();
-        auto newExpire = timer->expiry() + *interval;
+        auto newExpire = mTimer->expiry() + *interval;
         if (newExpire < now)
         {
             TLOG(WARNING) << "Periodic timer skipped interval.";
             newExpire = now + *interval;
         }
-        timer->expires_at(newExpire);
-        auto* const timerPtr = timer.get();
-        timerPtr->async_wait(timerCallback(handler, std::move(timer)));
+        mTimer->expires_at(newExpire);
+        mTimer->async_wait(timerCallback(handler));
     }
 }
 

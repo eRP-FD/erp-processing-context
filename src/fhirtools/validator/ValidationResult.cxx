@@ -72,6 +72,14 @@ const std::set<ValidationError>& fhirtools::ValidationResults::results() const&
 void fhirtools::ValidationResults::add(fhirtools::Severity severity, std::string message, std::string elementFullPath,
                                        const fhirtools::FhirStructureDefinition* profile)
 {
+#ifdef NDEBUG
+    // do not store severites in release builds
+    // as merging the results can significantly slow down validation
+    if (severity < fhirtools::Severity::warning)
+    {
+        return;
+    }
+#endif
     mResults.emplace(std::make_tuple(severity, std::move(message)), std::move(elementFullPath), profile);
 }
 

@@ -6,6 +6,7 @@
  */
 
 #include "erp/client/UrlRequestSender.hxx"
+#include "erp/common/Constants.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -40,7 +41,8 @@ int main (int argc, char** argv)
                 TLOG(INFO) << "Using no certificates";
             }
 
-            UrlRequestSender requestSender(SafeString{std::move(certificates)}, 30/*connectionTimeoutSeconds*/);
+            UrlRequestSender requestSender(SafeString{std::move(certificates)}, 30 /*connectionTimeoutSeconds*/,
+                Constants::resolveTimeout);
 
             ClientResponse response = requestSender.send(
                 argv[1],
