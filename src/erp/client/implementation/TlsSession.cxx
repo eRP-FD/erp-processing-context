@@ -242,7 +242,7 @@ void TlsSession::establish (const bool trustCn)
     /* Look up the domain name. */
     if (! mForcedEndpoint.has_value())
     {
-        resolverResults = Resolver::resolve(mHostName, mPort, mResolveTimeout);
+        resolverResults = boost::asio::ip::tcp::resolver{mIoContext}.resolve(mHostName.c_str(), mPort.c_str());
     }
     else
     {

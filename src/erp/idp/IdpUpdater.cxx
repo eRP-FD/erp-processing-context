@@ -66,12 +66,12 @@ private:
 /**
  * Make a GET request to the given `host` with the given URL `path` and return the returned body.
  */
-std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::UrlParts& url, std::chrono::milliseconds resolveTimeout)
+std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::UrlParts& url, std::chrono::milliseconds /*resolveTimeout*/)
 {
     ClientResponse response;
     boost::asio::io_context io;
     const auto port = std::to_string(url.mPort);
-    const auto& resolverResults = Resolver::resolve(url.mHost, port, resolveTimeout);
+    auto resolverResults = boost::asio::ip::tcp::resolver{io}.resolve(url.mHost.c_str(), port.c_str());
     for (const auto& resolverEntry : resolverResults)
     {
         try
