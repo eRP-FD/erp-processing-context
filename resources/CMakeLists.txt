@@ -102,6 +102,8 @@ set(SCHEMA_FILES
         "schema/not-profiled/parameters/ActivateTaskParameters.xsd"
         "schema/not-profiled/parameters/CreateTaskParameters.xsd"
         "schema/shared/json/BaseSchema.json"
+        "schema/shared/json/CommunicationDispReqPayload.json"
+        "schema/shared/json/CommunicationReplyPayload.json"
         "schema/shared/json/draft-4-meta-schema.json"
         "schema/shared/json/IKNR.json"
         "schema/shared/json/XX-Type.json"
@@ -448,6 +450,7 @@ set(FHIR_PROFILES_DIRS
         "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0"
         "fhir/profiles/KBV.Basis-1.3.0"
         "fhir/profiles/kbv.ita.erp-1.1.1"
+        "fhir/profiles/kbv.ita.erp-1.1.2"
         "fhir/profiles/kbv.ita.for-1.1.0/package/"
         "fhir/profiles/fhir.kbv.de"
         )
@@ -501,14 +504,13 @@ set(ERP_EASTER_LIST ${ERP_RUNTIME_RESOURCE_DIR}/easter.csv)
 message(STATUS "ERP_EASTER_LIST=${ERP_EASTER_LIST}")
 
 # create install script for installation
-set(ERP_CONFIGURATION_FILE ${CMAKE_INSTALL_FULL_BINDIR}/01_production.config.json)
+set(ERP_CONFIGURATION_FILE ${CMAKE_BINARY_DIR}/resources/01_production.config.json)
 set(ERP_CONFIGURATION_DEVEL_FILE "")
 set(ERP_RUNTIME_RESOURCE_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}")
 set(ERP_CONFIGURATION_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production.config.json.in")
 set(ERP_CONFIGURATION_DEVEL_IN "")
 configure_file(install-config.cmake.in install-config.cmake @ONLY)
-
-
+include(${CMAKE_CURRENT_BINARY_DIR}/install-config.cmake)
 
 # create install script for build tree
 set(ERP_CONFIGURATION_FILE ${CMAKE_BINARY_DIR}/bin/01_production.config.json)
@@ -542,9 +544,11 @@ add_custom_target(resources ALL
 install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/resources/
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
         COMPONENT production)
-install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/install-config.cmake
+install(FILES ${CMAKE_BINARY_DIR}/resources/01_production.config.json
+        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
         COMPONENT production)
-install(SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/install-config.cmake
+install(FILES ${CMAKE_BINARY_DIR}/resources/01_production.config.json
+        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
         COMPONENT blob-db-initialization)
 if (NOT TARGET production)
     add_custom_target(production)

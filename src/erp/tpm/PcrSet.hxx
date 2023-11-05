@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_PCRSET_HXX
 #define ERP_PROCESSING_CONTEXT_PCRSET_HXX
 
+#include <cstdint>
 #include <optional>
 #include <set>
 #include <string>

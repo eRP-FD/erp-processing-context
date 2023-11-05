@@ -35,7 +35,6 @@ enum class ConfigurationKey
 {
     C_FD_SIG_ERP,
     C_FD_SIG_ERP_VALIDATION_INTERVAL,
-    ECIES_CERTIFICATE,
     ENROLMENT_SERVER_PORT,
     ENROLMENT_ACTIVATE_FOR_PORT,
     ENROLMENT_API_CREDENTIALS,
@@ -57,7 +56,6 @@ enum class ConfigurationKey
     SERVER_THREAD_COUNT,
     SERVER_CERTIFICATE,
     SERVER_PRIVATE_KEY,
-    SERVER_REQUEST_PATH,
     SERVER_PROXY_CERTIFICATE,
     SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
     SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD,
@@ -65,7 +63,7 @@ enum class ConfigurationKey
     SERVICE_TASK_ACTIVATE_EASTER_CSV,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF,
-    SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE,
+    SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE,
     SERVICE_COMMUNICATION_MAX_MESSAGES,
     SERVICE_SUBSCRIPTION_SIGNING_KEY,
     PCR_SET,
@@ -74,7 +72,6 @@ enum class ConfigurationKey
     POSTGRES_USER,
     POSTGRES_PASSWORD,
     POSTGRES_DATABASE,
-    POSTGRES_CERTIFICATE,
     POSTGRES_SSL_ROOT_CERTIFICATE_PATH,
     POSTGRES_SSL_CERTIFICATE_PATH,
     POSTGRES_SSL_KEY_PATH,
@@ -109,8 +106,9 @@ enum class ConfigurationKey
     ERP_FHIR_VERSION,
     FHIR_PROFILE_VALID_FROM,
     FHIR_PROFILE_RENDER_FROM,
-    FHIR_PROFILE_XML_SCHEMA_KBV,
-    FHIR_PROFILE_XML_SCHEMA_GEMATIK,
+    FHIR_PROFILE_PATCH_VALID_FROM,
+    FHIR_PROFILE_PATCH_REPLACE,
+    FHIR_PROFILE_PATCH_REPLACE_WITH,
     FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
     FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
     FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
@@ -143,6 +141,7 @@ enum class ConfigurationKey
     REDIS_PORT,
     REDIS_CERTIFICATE_PATH,
     REDIS_CONNECTION_TIMEOUT,
+    REDIS_DOS_SOCKET_TIMEOUT,
     REDIS_CONNECTIONPOOL_SIZE,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_MASTER_NAME,
@@ -155,9 +154,6 @@ enum class ConfigurationKey
     REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS,
     REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS,
     REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS,
-
-    // Feature related configuration
-    FEATURE_PKV,
 
     // Admin interface settings
     ADMIN_SERVER_INTERFACE,
@@ -178,7 +174,7 @@ enum class ConfigurationKey
 /**
  * Generic representation of a configuration key's associated environment variable name and json path.
  */
-struct KeyNames
+struct KeyData
 {
     std::string_view environmentVariable;
     std::string_view jsonPath;
@@ -187,8 +183,15 @@ struct KeyNames
         none        = 0,
         credential  = 1 << 0,
         array       = 1 << 1,
+        deprecated  = 1 << 2,
+        categoryEnvironment = 1 << 3,
+        categoryFunctional = 1 << 4,
+        categoryFunctionalStatic = 1 << 5,
+        categoryDebug = 1 << 6,
+        all = INT_MAX,
     };
-    ConfigurationKeyFlags flags = none;
+    int flags = none;
+    std::string_view description;
 };
 
 /**
@@ -205,29 +208,35 @@ public:
     uint16_t serverPort() const;
 
 protected:
-    explicit ConfigurationBase(const std::vector<KeyNames>& allKeyNames);
+    explicit ConfigurationBase(const std::vector<KeyData>& allKeyNames);
 
-    std::optional<std::string> getStringValueInternal (KeyNames key) const;
-    std::optional<SafeString> getSafeStringValueInternal (KeyNames key) const;
-    std::optional<int> getIntValueInternal (KeyNames key) const;
-    std::optional<bool> getBoolValueInternal (KeyNames key) const;
-    std::vector<std::string> getArrayInternal (KeyNames key) const;
-    std::vector<std::string> getOptionalArrayInternal (KeyNames key) const;
-    std::map<std::string, std::vector<std::string>> getMapInternal (KeyNames key) const;
+    std::optional<std::string> getStringValueInternal (KeyData key) const;
+    std::optional<SafeString> getSafeStringValueInternal (KeyData key) const;
+    std::optional<int> getIntValueInternal (KeyData key) const;
+    std::optional<bool> getBoolValueInternal (KeyData key) const;
+    std::vector<std::string> getArrayInternal (KeyData key) const;
+    std::vector<std::string> getOptionalArrayInternal (KeyData key) const;
+    std::map<std::string, std::vector<std::string>> getMapInternal (KeyData key) const;
 
-    int getOptionalIntValue (KeyNames key, int defaultValue) const;
-    int getIntValue (KeyNames key) const;
+    int getOptionalIntValue (KeyData key, int defaultValue) const;
+    int getIntValue (KeyData key) const;
 
-    std::string getStringValue (KeyNames key) const;
-    std::string getOptionalStringValue (KeyNames key, const std::string& defaultValue) const;
-    std::optional<std::string> getOptionalStringValue (KeyNames key) const;
-    SafeString getSafeStringValue (KeyNames key) const;
-    SafeString getOptionalSafeStringValue (KeyNames key, SafeString defaultValue) const;
+    std::string getStringValue (KeyData key) const;
+    std::string getOptionalStringValue (KeyData key, const std::string& defaultValue) const;
+    std::optional<std::string> getOptionalStringValue (KeyData key) const;
+    SafeString getSafeStringValue (KeyData key) const;
+    SafeString getOptionalSafeStringValue (KeyData key, SafeString defaultValue) const;
+    std::optional<SafeString> getOptionalSafeStringValue (KeyData key) const;
 
-    std::filesystem::path getPathValue(KeyNames key) const;
+    std::filesystem::path getPathValue(KeyData key) const;
 
-    bool getBoolValue (KeyNames key) const;
-    bool getOptionalBoolValue (KeyNames key, bool defaultValue) const;
+    bool getBoolValue (KeyData key) const;
+    bool getOptionalBoolValue (KeyData key, bool defaultValue) const;
+
+    std::optional<std::string> getOptionalStringFromJson(KeyData key) const;
+    std::vector<std::string> getOptionalArrayFromJson(KeyData key) const;
+
+    const rapidjson::Value* getJsonValue(KeyData key) const;
 
 private:
     bool lookupKey(const std::string& pathPrefix, const std::string& jsonKey);
@@ -266,6 +275,7 @@ public:
     std::string getOptionalStringValue (Key key, const std::string& defaultValue) const;
     std::optional<std::string> getOptionalStringValue (Key key) const                   {return ConfigurationBase::getOptionalStringValue(names_.strings(key));}
     SafeString getSafeStringValue (Key key) const                {return ConfigurationBase::getSafeStringValue(names_.strings(key));}
+    std::optional<SafeString> getOptionalSafeStringValue (Key key) const                { return ConfigurationBase::getOptionalSafeStringValue(names_.strings(key)); }
     SafeString getOptionalSafeStringValue (Key key, SafeString&& defaultValue) const;
 
     bool getBoolValue (Key key) const                            {return ConfigurationBase::getBoolValue(names_.strings(key));}
@@ -279,6 +289,16 @@ public:
     std::filesystem::path getPathValue(Key key) const            {return ConfigurationBase::getPathValue(names_.strings(key));}
 
     const char* getEnvironmentVariableName (Key key) const       {return names_.strings(key).environmentVariable.data();}
+
+    std::optional<std::string> getOptionalStringFromJson(Key key) const
+    {
+        return ConfigurationBase::getOptionalStringFromJson(names_.strings(key));
+    }
+
+    std::vector<std::string> getOptionalArrayFromJson(Key key) const
+    {
+        return ConfigurationBase::getOptionalArrayFromJson(names_.strings(key));
+    }
 
     template<typename EnumT>
         requires std::is_enum_v<EnumT>
@@ -382,19 +402,19 @@ std::vector<typename TKeyValueContainer::mapped_type> getAllValues(const TKeyVal
 
 
 /**
- * A provider template of KeyNames objects for all keys in TConfigurationKey.
+ * A provider template of KeyData objects for all keys in TConfigurationKey.
  */
 template<class KeyType>
 class ConfigurationKeyNamesBase
 {
 public:
-    KeyNames strings (KeyType key) const
+    KeyData strings (KeyType key) const
     {
         const auto entry = mNamesByKey.find(key);
         Expect(entry != mNamesByKey.end(), "unknown configuration key: " + std::string(magic_enum::enum_name(key)));
         return entry->second;
     }
-    std::vector<KeyNames> allStrings() const
+    std::vector<KeyData> allStrings() const
     {
         return getAllValues(mNamesByKey);
     }
@@ -417,7 +437,7 @@ public:
     virtual ~ConfigurationKeyNamesBase() = default;
 
 protected:
-    std::map<KeyType, KeyNames> mNamesByKey;
+    std::map<KeyType, KeyData> mNamesByKey;
 };
 
 // contains all keys needed for operational, but no development or test related keys
@@ -449,21 +469,24 @@ public:
     enum class GenericValidationMode {
         disable, detail_only, ignore_errors, require_success
     };
-    enum class NonLiteralAutherRefMode
+    enum class NonLiteralAuthorRefMode
     {
         allow, deny,
+    };
+    enum class AnrChecksumValidationMode {
+        warning, error,
     };
 
     static const Configuration& instance();
     void check() const;
 
-    [[nodiscard]] bool featurePkvEnabled() const;
     [[nodiscard]] OnUnknownExtension kbvValidationOnUnknownExtension() const;
-    [[nodiscard]] NonLiteralAutherRefMode kbvValidationNonLiteralAuthorRef() const;
+    [[nodiscard]] NonLiteralAuthorRefMode kbvValidationNonLiteralAuthorRef() const;
     [[nodiscard]] GenericValidationMode genericValidationMode(model::ResourceVersion::FhirProfileBundleVersion) const;
     [[nodiscard]] bool timingLoggingEnabled(const std::string& category) const;
     fhirtools::ValidatorOptions
     defaultValidatorOptions(model::ResourceVersion::FhirProfileBundleVersion, SchemaType) const;
+    AnrChecksumValidationMode anrChecksumValidationMode() const;
 };
 
 

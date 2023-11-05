@@ -41,7 +41,7 @@ TEST_P(Erp8538Test, PostOperationWithInvalidPrescriptionId)
 INSTANTIATE_TEST_SUITE_P(
     x, Erp8538Test,
     testing::Values(Erp8538TestParams{"$abort",
-                                      []() { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456789"); }},
+                                      []() { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456788"); }},
                     Erp8538TestParams{"$activate", []() { return JwtBuilder::testBuilder().makeJwtArzt(); }},
                     Erp8538TestParams{"$accept", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }},
                     Erp8538TestParams{"$close", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }},

@@ -163,11 +163,9 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-co
         GTEST_SKIP();
     }
 
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
-    const char* const pkvKvnr = "X500000000";
+    const char* const pkvKvnr = "X500000056";
 
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
@@ -193,11 +191,10 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent)
     {
         GTEST_SKIP();
     }
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
-    const char* const pkvKvnr = "X500000001";
+    const char* const pkvKvnr = "X500000017";
 
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
@@ -215,10 +212,9 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent209)//NOLINT(readability-function
     {
         GTEST_SKIP();
     }
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50002);
-    const char* const pkvKvnr = "X500000002";
+    const char* const pkvKvnr = "X500000029";
 
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
@@ -245,10 +241,9 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent209)
     {
         GTEST_SKIP();
     }
-    EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
 
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50003);
-    const char* const pkvKvnr = "X500000003";
+    const char* const pkvKvnr = "X500000031";
 
     std::optional<model::Bundle> resultBundle;
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(

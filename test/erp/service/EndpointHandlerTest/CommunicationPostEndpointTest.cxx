@@ -26,7 +26,7 @@ struct CommunicationPostEndpointTestOptions {
 class CommunicationPostEndpointTest : public EndpointHandlerTest
 {
 protected:
-    static inline const std::string kvnr{"X123456789"};
+    static inline const std::string kvnr{"X123456788"};
     void test(std::string body, const CommunicationPostEndpointTestOptions& opt = {})
     {
         CommunicationPostHandler handler{};

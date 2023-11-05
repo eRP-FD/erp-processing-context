@@ -10,6 +10,7 @@
 
 #include <chrono>
 #include <string>
+#include <date/date.h>
 
 namespace model
 {
@@ -191,6 +192,9 @@ public:
      * - to allow modification of a Timestamp object by excursion to std::chrono and its manipulator functions.
      */
     timepoint_t toChronoTimePoint () const;
+
+    date::local_days localDay(const std::string& timezone = GermanTimezone) const;
+    date::year_month_day utcDay() const;
 
     /**
      * Convert to timestamp (time_t) format.

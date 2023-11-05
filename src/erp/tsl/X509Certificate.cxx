@@ -575,7 +575,7 @@ std::unique_ptr<EllipticCurvePublicKey> X509Certificate::getEllipticCurvePublicK
     auto* evpKey = getPublicKey();
     if (evpKey)
     {
-        auto* ecKey = EVP_PKEY_get0_EC_KEY(evpKey);
+        const auto* ecKey = EVP_PKEY_get0_EC_KEY(evpKey);
         if (ecKey)
         {
             const auto* ecPublicKey = EC_KEY_get0_public_key(ecKey);

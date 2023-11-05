@@ -5,6 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#if defined (__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include <pqxx/pqxx>
+#pragma GCC diagnostic pop
+#endif
+
 #include "erp/enrolment/EnrolmentServer.hxx"
 #include "erp/client/HttpsClient.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
@@ -305,7 +312,7 @@ public:
 
         static db_model::HashedKvnr dummyHashedKvnr()
         {
-            return DummyDerivation{}.derivation.hashKvnr(model::Kvnr{"X081547110"});
+            return DummyDerivation{}.derivation.hashKvnr(model::Kvnr{"X081547111"});
         }
 
         static db_model::HashedTelematikId dummyHashedTelematikId()
@@ -390,8 +397,10 @@ public:
             auto now = model::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                            model::Task::Status::draft, now, now);
-            db_model::AuditData auditEvent(model::AuditEvent::AgentType::machine,model::AuditEventId::GET_Task, {{}},model::AuditEvent::Action::read, dummyHashedKvnr(),
-                                           4711, std::get<model::PrescriptionId>(task), blobId);
+            db_model::AuditData auditEvent(model::AuditEvent::AgentType::machine, model::AuditEventId::GET_Task,
+                                           std::make_optional<db_model::EncryptedBlob>(),
+                                           model::AuditEvent::Action::read, dummyHashedKvnr(), 4711,
+                                           std::get<model::PrescriptionId>(task), blobId);
             Uuid auditId{backend.storeAuditEventData(auditEvent)};
             backend.commitTransaction();
             releaseKeyBlob = [&parent, id = std::get<model::PrescriptionId>(task), auditId]
@@ -408,7 +417,7 @@ public:
             chargeItem.blobId = blobId;
             auto db = parent.database();
             auto& backend = db->getBackend();
-            backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr(model::Kvnr{"X123456789"}, ::SafeString{}));
+            backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr(model::Kvnr{"X123456788"}, ::SafeString{}));
             backend.commitTransaction();
 
             releaseKeyBlob = [&parent, id = chargeItem.prescriptionId] {

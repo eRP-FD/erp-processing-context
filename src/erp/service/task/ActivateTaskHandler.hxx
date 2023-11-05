@@ -19,6 +19,7 @@ class ValidatorOptions;
 namespace model
 {
 enum class KbvStatusKennzeichen;
+class MedicationRequest;
 class KbvBundle;
 class KBVMultiplePrescription;
 template<typename>
@@ -41,7 +42,8 @@ private:
                                           const model::Timestamp& authoredOn);
     static void checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType);
     static void checkNarcoticsMatches(const model::KbvBundle& bundle);
-    static void checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle, const model::Timestamp& signingTime);
+    static void checkAuthoredOnEqualsSigningDate(const model::KbvMedicationRequest& medicationRequest, const model::Timestamp& signingTime);
+    static bool checkPractitioner(const model::KbvBundle& bundle);
     static HttpStatus checkExtensions(const model::ResourceFactory<model::KbvBundle>& factory,
                                       Configuration::OnUnknownExtension onUnknownExtension,
                                       Configuration::GenericValidationMode genericValidationMode,

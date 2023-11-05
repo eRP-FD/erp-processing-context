@@ -24,10 +24,6 @@ public:
 
     void SetUp() override//NOLINT(readability-function-cognitive-complexity)
     {
-        if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
-        {
-            GTEST_SKIP_("disabled, because the QES Key check could not be disabled");
-        }
         kvnr = jwtVersicherter().stringForClaim(JWT::idNumberClaim).value();
         telematikIdApotheke = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
         ASSERT_NO_FATAL_FAILURE(communicationDeleteAll(jwtVersicherter()));
@@ -51,14 +47,14 @@ public:
                         *task,
                         ActorRole::Pharmacists, telematikIdApotheke,
                         ActorRole::Insurant, kvnr,
-                        "Hallo potentieller Kunde, PZN ist vorrätig"));
+                        R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Hallo, wir haben das Medikament vorraetig."})"));
         ASSERT_TRUE(reply.has_value());
         std::optional<Communication> dispReq;
         ASSERT_NO_FATAL_FAILURE(dispReq = communicationPost(model::Communication::MessageType::DispReq,
                         *task,
                         ActorRole::Insurant, kvnr,
                         ActorRole::Pharmacists, telematikIdApotheke,
-                        "Ich will bestellen und habe ein E-Rezept"));
+                        R"({"version":1,"supplyOptionsType":"delivery","hint":"Ich will bestellen und habe ein E-Rezept"})"));
         ASSERT_TRUE(dispReq.has_value());
     }
 
@@ -119,7 +115,6 @@ public:
     std::string kvnr;
     std::string telematikIdApotheke;
     std::optional<Task> task;
-    EnvironmentVariableGuard environmentVariableGuard2{"DEBUG_DISABLE_QES_ID_CHECK", "true"};
 };
 
 TEST_F(Erp5822Test, InsurantFirst)//NOLINT(readability-function-cognitive-complexity)

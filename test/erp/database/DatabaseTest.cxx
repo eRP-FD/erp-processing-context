@@ -21,8 +21,8 @@ class DatabaseTest : public DatabaseTestFixture<::testing::TestWithParam<model::
 public:
     std::vector<model::TelematikId> pharmacyIds = {
         model::TelematikId{"X-0815-4711"sv}, model::TelematikId{"X-0815-4712"sv}, model::TelematikId{"X-0815-4713"sv}};
-    std::vector<model::Kvnr> insurantIds = {model::Kvnr{"X123456789"sv}, model::Kvnr{"X123456790"sv},
-                                            model::Kvnr{"X123456791"sv}};
+    std::vector<model::Kvnr> insurantIds = {model::Kvnr{"X123456788"sv}, model::Kvnr{"X123456790"sv},
+                                            model::Kvnr{"X123456701"sv}};
 
     void SetUp() override
     {
@@ -64,7 +64,7 @@ public:
         chargeItem.setAccessCode(::MockDatabase::mockAccessCode);
         chargeItem.deleteContainedBinary();
 
-        const auto& dispenseItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+        const auto& dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
         auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
         auto signedDispenseItem =
             ::model::Binary{dispenseItem.getIdentifier().toString(),

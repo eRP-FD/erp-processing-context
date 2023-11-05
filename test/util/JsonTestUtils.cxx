@@ -287,12 +287,13 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
         body += "," + boost::str(boost::format(fmtSpecReceived) % mTimeReceived.value());
     if (mPayload.has_value())
     {
+        auto payload = String::replaceAll(mPayload.value(), "\"", "\\\"");
         if (ResourceVersion::deprecatedProfile(mProfileVersion))
-            body += "," + boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % mPayload.value());
+            body += "," + boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % payload);
         else if (mMessageType == Communication::MessageType::InfoReq)
-            body += "," + boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % mPayload.value());
+            body += "," + boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % payload);
         else
-            body += "," + boost::str(boost::format(fmtSpecPayloadContentString) % mPayload.value());
+            body += "," + boost::str(boost::format(fmtSpecPayloadContentString) % payload);
     }
     if (mAbout)
     {
@@ -454,12 +455,13 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
         body += boost::str(boost::format(fmtSpecReceived) % mTimeReceived.value());
     if (mPayload.has_value())
     {
+        auto payload = String::replaceAll(mPayload.value(), "\"", "&quot;");
         if (ResourceVersion::deprecatedProfile(mProfileVersion))
-            body += boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % mPayload.value());
+            body += boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % payload);
         else if (mMessageType == Communication::MessageType::InfoReq)
-            body += boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % mPayload.value());
+            body += boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % payload);
         else
-            body += boost::str(boost::format(fmtSpecPayloadContentString) % mPayload.value());
+            body += boost::str(boost::format(fmtSpecPayloadContentString) % payload);
     }
     body += "</Communication>";
     return body;

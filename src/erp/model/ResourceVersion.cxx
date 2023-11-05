@@ -7,7 +7,6 @@
 
 #include "erp/common/HttpStatus.hxx"
 #include "erp/model/ResourceVersion.hxx"
-#include "erp/model/Timestamp.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
@@ -179,6 +178,8 @@ std::string_view v_str(FhirProfileBundleVersion v)
             return "2022.01.01";
         case FhirProfileBundleVersion::v_2023_07_01:
             return "2023.07.01";
+        case FhirProfileBundleVersion::v_2023_07_01_patch:
+            return "2023.07.01_patch";
     }
     Fail("Invalid FhirProfileBundleVersion version: " + std::to_string(uintmax_t(v)));
 }
@@ -187,7 +188,8 @@ FhirProfileBundleVersion str_vBundled(std::string_view versionString)
 {
     static const std::unordered_map<std::string_view, FhirProfileBundleVersion> mapping{
         {"2022.01.01", FhirProfileBundleVersion::v_2022_01_01},
-        {"2023.07.01", FhirProfileBundleVersion::v_2023_07_01}};
+        {"2023.07.01", FhirProfileBundleVersion::v_2023_07_01},
+        {"2023.07.01_patch", FhirProfileBundleVersion::v_2023_07_01_patch}};
     auto candidate = mapping.find(versionString);
     ErpExpect(candidate != mapping.end(), HttpStatus::BadRequest,
               "invalid FhirProfileBundleVersion version: " + std::string(versionString));
@@ -210,9 +212,9 @@ AllProfileVersion profileVersionFromBundle(FhirProfileBundleVersion bundleVersio
 }
 
 
-AllProfileVersion current()
+AllProfileVersion current(const model::Timestamp& timestamp)
 {
-    return profileVersionFromBundle(currentBundle());
+    return profileVersionFromBundle(currentBundle(timestamp));
 }
 
 AllProfileVersion deprecated()
@@ -309,39 +311,41 @@ std::tuple<AnyProfileVersion, FhirProfileBundleVersion> profileVersionFromName(s
     return version.value();
 }
 
-FhirProfileBundleVersion currentBundle()
+FhirProfileBundleVersion currentBundle(const model::Timestamp& timestamp)
 {
     const auto& configuration = ::Configuration::instance();
 
     const auto newProfileRenderFromDateSetting =
         configuration.getOptionalStringValue(::ConfigurationKey::FHIR_PROFILE_RENDER_FROM);
 
-    const auto now = ::model::Timestamp::now();
     auto fhirVersionKey = ConfigurationKey::ERP_FHIR_VERSION;
     if (newProfileRenderFromDateSetting &&
-        (::model::Timestamp::fromXsDateTime(newProfileRenderFromDateSetting.value()) > now))
+        (model::Timestamp::fromXsDate(newProfileRenderFromDateSetting.value(), model::Timestamp::GermanTimezone)
+             .localDay() > timestamp.localDay()))
     {
         fhirVersionKey = ConfigurationKey::ERP_FHIR_VERSION_OLD;
     }
 
-    const auto bundledVersion = configuration.getOptionalStringValue(fhirVersionKey, "Unknown");
+    const auto bundledVersion = configuration.getStringValue(fhirVersionKey);
     return str_vBundled(bundledVersion);
 }
 
-std::set<FhirProfileBundleVersion> supportedBundles()
+std::set<FhirProfileBundleVersion> supportedBundles(const model::Timestamp& timestamp)
 {
+    auto date = timestamp.localDay();
     std::set<FhirProfileBundleVersion> bundles;
     const auto& configuration = Configuration::instance();
-    const auto now = Timestamp::now();
     auto newProfileValidFrom = configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_VALID_FROM);
-    if (newProfileValidFrom.has_value() && now > Timestamp::fromXsDateTime(*newProfileValidFrom))
+    if (newProfileValidFrom.has_value() &&
+        date >= Timestamp::fromXsDate(*newProfileValidFrom, model::Timestamp::GermanTimezone).localDay())
     {
         auto bundleVersion = configuration.getStringValue(ConfigurationKey::ERP_FHIR_VERSION);
         bundles.insert(str_vBundled(bundleVersion));
     }
 
     auto oldProfileValidUntil = configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL);
-    if (oldProfileValidUntil.has_value() && now < Timestamp::fromXsDateTime(*oldProfileValidUntil))
+    if (oldProfileValidUntil.has_value() &&
+        date <= Timestamp::fromXsDate(*oldProfileValidUntil, model::Timestamp::GermanTimezone).localDay())
     {
         auto bundleVersion = configuration.getStringValue(ConfigurationKey::ERP_FHIR_VERSION_OLD);
         bundles.insert(str_vBundled(bundleVersion));

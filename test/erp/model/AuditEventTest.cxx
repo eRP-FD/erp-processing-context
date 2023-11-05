@@ -34,7 +34,7 @@ TEST(AuditEventTest, ConstructFromData)//NOLINT(readability-function-cognitive-c
                                                    : model::resource::naming_system::prescriptionID;
     const std::string_view whatIdentifierValue = "160.100.000.000.000.42";
     const std::string whatReference = "Task/" + std::string(whatIdentifierValue) + "/$activate";
-    const std::string_view entityName = "X123456789";
+    const std::string_view entityName = "X123456788";
     const auto entityDescription = std::string(whatIdentifierValue) + "*";
 
     model::AuditEvent auditEvent;
@@ -94,7 +94,7 @@ TEST(AuditEventTest, ConstructFromJson)//NOLINT(readability-function-cognitive-c
     const auto whatIdentifierSystem = isDeprecated ? model::resource::naming_system::deprecated::prescriptionID
                                                    : model::resource::naming_system::prescriptionID;
     const std::string whatReference = "Task/" + std::string(whatIdentifierValue);
-    const std::string_view entityName = "X122446688";
+    const std::string_view entityName = "X122446685";
     const auto entityDescription = whatIdentifierValue;
 
     const std::string gematikVersionStr{v_str(gematikVersion)};

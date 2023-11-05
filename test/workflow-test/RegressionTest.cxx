@@ -9,6 +9,7 @@
 #include "test/util/TestUtils.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
+#include <date/tz.h>
 #include <gtest/gtest.h>
 
 class RegressionTest : public ErpWorkflowTest
@@ -33,34 +34,41 @@ TEST_F(RegressionTest, Erp10674)
 
 TEST_F(RegressionTest, Erp10669)
 {
-    auto timestamp = model::Timestamp::fromXsDateTime("2022-07-29T00:05:57+02:00");
-    auto signingDay = model::Timestamp::fromGermanDate("2022-07-29");
+    using namespace std::literals::chrono_literals;
+    using zoned_ms = date::zoned_time<std::chrono::milliseconds>;
+    // today at 00:05 in german time zone
+    auto zt = zoned_ms{model::Timestamp::GermanTimezone, model::Timestamp::now().localDay() + 5min};
+    auto authoredOn = model::Timestamp(zt.get_sys_time());
+    auto signingDay = model::Timestamp::now();
+
+    ASSERT_EQ(signingDay.toGermanDate(), authoredOn.toGermanDate()); // sanity check to ensure this is the same day
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
     ASSERT_TRUE(task.has_value());
     std::string kbv_bundle_xml = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
-                                                  .timestamp = signingDay,
-                                                  .redeemPeriodStart = timestamp.toGermanDate(),
+                                                  .authoredOn = signingDay,
+                                                  .redeemPeriodStart = authoredOn.toGermanDate(),
                                                   .redeemPeriodEnd = {}});
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
     ASSERT_NO_FATAL_FAILURE(taskActivateResult = taskActivateWithOutcomeValidation(
                                 task->prescriptionId(), accessCode, toCadesBesSignature(kbv_bundle_xml, signingDay)));
     ASSERT_TRUE(taskActivateResult);
-    EXPECT_EQ(taskActivateResult->expiryDate().toGermanDate(), "2023-07-29");
-    EXPECT_EQ(taskActivateResult->acceptDate().toGermanDate(), "2023-07-29");
+    EXPECT_EQ(taskActivateResult->expiryDate().localDay(), signingDay.localDay() + date::days{365});
+    EXPECT_EQ(taskActivateResult->acceptDate().localDay(), signingDay.localDay() + date::days{365});
     auto bundle = taskGetId(taskActivateResult->prescriptionId(), taskActivateResult->kvnr().value().id());
     ASSERT_TRUE(bundle);
     std::optional<model::Task> getTaskResult;
     getTaskFromBundle(getTaskResult, *bundle);
     ASSERT_TRUE(getTaskResult);
-    EXPECT_EQ(getTaskResult->expiryDate().toGermanDate(), "2023-07-29");
-    EXPECT_EQ(getTaskResult->acceptDate().toGermanDate(), "2023-07-29");
+    EXPECT_EQ(getTaskResult->expiryDate().localDay(), signingDay.localDay() + date::days{365});
+    EXPECT_EQ(getTaskResult->acceptDate().localDay(), signingDay.localDay() + date::days{365});
 }
 
 TEST_F(RegressionTest, Erp10835)
 {
-    if (!Configuration::instance().featurePkvEnabled())
+    if (! model::ResourceVersion::isProfileSupported(
+            model::ResourceVersion::DeGematikErezeptPatientenrechnungR4::v1_0_0))
     {
         GTEST_SKIP();
     }
@@ -87,8 +95,13 @@ protected:
     std::string medicationDispense(const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense,
                                    const std::string&, model::ResourceVersion::FhirProfileBundleVersion version) override
     {
-        return ErpWorkflowTest::medicationDispense(kvnr, prescriptionIdForMedicationDispense, "0001-01-01T00:00:00Z",
-                                                   version);
+        auto gematikVersion = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(
+            model::ResourceVersion::profileVersionFromBundle(version));
+        return ResourceTemplates::medicationDispenseXml(
+            {.prescriptionId = prescriptionIdForMedicationDispense,
+             .kvnr = kvnr,
+             .whenPrepared = model::Timestamp::fromXsDateTime("0001-01-01T00:00:00Z"),
+             .gematikVersion = gematikVersion});
     }
 };
 
@@ -212,7 +225,7 @@ TEST_F(RegressionTest, Erp11050)
 
 TEST_F(RegressionTest, Erp16393)
 {
-    EnvironmentVariableGuard envGuard(ConfigurationKey::FHIR_PROFILE_VALID_FROM, "2023-09-29T00:00:00.000+02:00");
+    EnvironmentVariableGuard envGuard(ConfigurationKey::FHIR_PROFILE_VALID_FROM, "2023-09-29");
     auto kbvBundleXml = ResourceManager::instance().getStringResource(
         "test/validation/xml/v_2023_07_01/kbv/bundle/Bundle_invalid_ERP-16393_ABC.xml");
     std::optional<model::Task> task;

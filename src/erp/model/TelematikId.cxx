@@ -15,7 +15,7 @@ TelematikId::TelematikId(std::string_view telematikId)
 {
 }
 
-bool TelematikId::valid() const
+bool TelematikId::validFormat() const
 {
     return isTelematikId(mId);
 }

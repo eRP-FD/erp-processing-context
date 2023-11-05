@@ -41,7 +41,7 @@
     </observer>
   </source>
   <entity>
-    <name value="X123456789" />
+    <name value="X123456788" />
     <description value="*160.123.456.789.123.58*" />
   </entity>
 </AuditEvent>

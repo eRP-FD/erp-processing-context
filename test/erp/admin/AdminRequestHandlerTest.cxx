@@ -123,14 +123,18 @@ TEST_F(AdminRequestHandlerTest, ConfigurationHandler)
     // credential should be redacted
     {
         const auto credKey = confNames.strings(ConfigurationKey::ADMIN_CREDENTIALS);
-        rapidjson::Pointer credKeyPointer{std::string{"/"}.append(credKey.environmentVariable)};
+        rapidjson::Pointer credKeyPointer{
+            std::string{"/environment/"}.append(credKey.environmentVariable).append("/value")};
+        ASSERT_NE(credKeyPointer, nullptr);
         EXPECT_EQ(std::string(credKeyPointer.Get(configDocument)->GetString()), "<redacted>");
     }
 
     // line breaks should be preserved
     {
         const auto lineBreakKey = confNames.strings(ConfigurationKey::C_FD_SIG_ERP);
-        rapidjson::Pointer lineBreakKeyPointer{std::string{"/"}.append(lineBreakKey.environmentVariable)};
+        rapidjson::Pointer lineBreakKeyPointer{
+            std::string{"/environment/"}.append(lineBreakKey.environmentVariable).append("/value")};
+        ASSERT_NE(lineBreakKeyPointer, nullptr);
         EXPECT_EQ(std::string(lineBreakKeyPointer.Get(configDocument)->GetString()),
                   Configuration::instance().getStringValue(ConfigurationKey::C_FD_SIG_ERP));
     }

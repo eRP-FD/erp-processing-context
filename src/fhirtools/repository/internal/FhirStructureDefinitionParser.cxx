@@ -698,7 +698,7 @@ void FhirStructureDefinitionParser::enterValueSubtree(ElementType type, std::str
     mSlicingBuilder.emplace();
     auto& stackTop = mStack.emplace_back(type, localname);
     stackTop.valueBuilder = std::make_unique<FhirValue::Builder>(std::string{localnameView.substr(prefix.size())});
-    copyValueAttriutes(attributes);
+    copyValueAttributes(attributes);
 }
 
 void FhirStructureDefinitionParser::handleValueSubtree(const XmlStringView localname, const xmlChar* uri,
@@ -708,10 +708,10 @@ void FhirStructureDefinitionParser::handleValueSubtree(const XmlStringView local
     auto& prev = mStack.back();
     auto& stackTop = mStack.emplace_back(mStack.back().type, localname.xs_str());
     stackTop.valueBuilder = std::make_unique<FhirValue::Builder>(std::string{localname}, *prev.valueBuilder);
-    copyValueAttriutes(attributes);
+    copyValueAttributes(attributes);
 }
 
-void FhirStructureDefinitionParser::copyValueAttriutes(const AttributeList& attributes)
+void FhirStructureDefinitionParser::copyValueAttributes(const AttributeList& attributes)
 {
     auto& stackTop = mStack.back();
     for (size_t i = 0, end = attributes.size(); i < end; ++i)

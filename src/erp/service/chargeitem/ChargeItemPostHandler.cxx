@@ -196,10 +196,9 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     }
     // GEMREQ-end A_22137#storeChargeItem, A_22135-01#storeChargeItem, A_22134#storeChargeItem
 
-    // requirement only phrased for PUT /ChargeItem, but also true for POST:
-    A_23624.start("do not return access code in response");
+    A_23704.start("do not return access code in response");
     chargeInformation.chargeItem.deleteAccessCode();
-    A_23624.finish();
+    A_23704.finish();
 
     makeResponse(session, HttpStatus::Created, &chargeInformation.chargeItem);
 

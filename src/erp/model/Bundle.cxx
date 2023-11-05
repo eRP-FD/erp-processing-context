@@ -46,7 +46,7 @@ namespace
     Pointer signaturePointer ("/signature");
     Pointer signatureWhenPointer ("/signature/when");
     Pointer prescriptionIdPointer ("/identifier/value");
-
+    Pointer identifierSystemPointer ("/identifier/system");
 }
 
 // Сustom definitions of names for enum.
@@ -301,6 +301,13 @@ PrescriptionId BundleBase<DerivedBundle, SchemaVersionType>::getIdentifier() con
 {
     const auto prescriptionIdStr = getStringValue(prescriptionIdPointer);
     return PrescriptionId::fromString(prescriptionIdStr);
+}
+
+template <class DerivedBundle, typename SchemaVersionType>
+void BundleBase<DerivedBundle, SchemaVersionType>::setIdentifier(const PrescriptionId& prescriptionId)
+{
+    setValue(prescriptionIdPointer, prescriptionId.toString());
+    setValue(identifierSystemPointer, resource::naming_system::prescriptionID);
 }
 
 template <class DerivedBundle, typename SchemaVersionType>

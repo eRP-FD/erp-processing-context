@@ -227,7 +227,7 @@ TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
         GTEST_SKIP();
     }
     auto allTypes = magic_enum::enum_values<model::PrescriptionType>();
-    const model::Kvnr kvnr{"X012345678", model::Kvnr::Type::gkv};
+    const model::Kvnr kvnr{"X012345676", model::Kvnr::Type::gkv};
     SearchParameter paramStatus{"status", "status", SearchParameter::Type::TaskStatus};
     auto taskCount = [&](const std::optional<UrlArguments>& search = std::nullopt) {
         auto count = database().countAllTasksForPatient(kvnr, search);

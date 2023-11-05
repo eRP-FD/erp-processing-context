@@ -131,7 +131,6 @@ public:
 
     void SetUp (void) override
     {
-        EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
         ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
     }
 

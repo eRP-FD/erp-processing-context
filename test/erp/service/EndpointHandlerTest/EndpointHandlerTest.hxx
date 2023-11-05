@@ -121,6 +121,35 @@ public:
         return String::replaceAll(templateStr, "##KVNR##", kvnr);
     }
 
+    // GEMREQ-start callHandlerWithResponseStatusCheck
+    template<class HandlerType>
+    static void callHandlerWithResponseStatusCheck(PcSessionContext& sessionContext, HandlerType& handler,
+                                            const HttpStatus expectedStatus,
+                                            const std::optional<std::string_view> expectedExcWhat = std::nullopt)
+    {
+        auto status = HttpStatus::Unknown;
+        try
+        {
+            handler.preHandleRequestHook(sessionContext);
+            handler.handleRequest(sessionContext);
+            status = sessionContext.response.getHeader().status();
+        }
+        catch (const ErpException& exc)
+        {
+            status = exc.status();
+            if (expectedExcWhat)
+            {
+                ASSERT_EQ(exc.what(), *expectedExcWhat) << exc.what();
+            }
+        }
+        catch (const std::exception& exc)
+        {
+            FAIL() << "Unexpected exception " << exc.what();
+        }
+        ASSERT_EQ(status, expectedStatus);
+    }
+    // GEMREQ-end callHandlerWithResponseStatusCheck
+
 protected:
     std::unique_ptr<MockDatabase> mockDatabase;
     std::string dataPath;

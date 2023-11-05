@@ -305,6 +305,7 @@
         </ds:SignedInfo>
         <ds:SignatureValue/>
         <ds:KeyInfo>
+          <ds:KeyName>tslkey</ds:KeyName>
             <ds:X509Data>
                 <ds:X509Certificate/>
             </ds:X509Data>

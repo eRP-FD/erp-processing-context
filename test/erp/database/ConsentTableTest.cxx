@@ -7,8 +7,8 @@
 class ConsentTableTest : public DatabaseTestFixture<>
 {
 public:
-    const model::Kvnr kvnr1{"X123456789", model::Kvnr::Type::pkv};
-    const model::Kvnr kvnr2{"X012345678", model::Kvnr::Type::pkv};
+    const model::Kvnr kvnr1{"X123456788", model::Kvnr::Type::pkv};
+    const model::Kvnr kvnr2{"X012345676", model::Kvnr::Type::pkv};
 
     void SetUp() override
     {

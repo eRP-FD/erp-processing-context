@@ -19,7 +19,7 @@ public:
         ASSERT_NO_FATAL_FAILURE(task = taskCreate());
         ASSERT_TRUE(task.has_value());
 
-        mKbvBundleXml = kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp});
+        mKbvBundleXml = kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = timestamp});
         const auto patientPos = mKbvBundleXml.find("<Patient>");
         ASSERT_NE(patientPos, std::string::npos);
         patientIdentifierBeginPos = mKbvBundleXml.find("<identifier>", patientPos);
@@ -33,7 +33,7 @@ public:
 protected:
     std::string mKbvBundleXml;
     std::optional<model::Task> task;
-    model::Timestamp timestamp = model::Timestamp::fromXsDate("2021-04-02", model::Timestamp::UTCTimezone);
+    model::Timestamp timestamp = model::Timestamp::now();
     std::size_t patientIdentifierBeginPos = 0;
     std::size_t patientIdentifierEndPos = 0;
 };
@@ -70,7 +70,7 @@ TEST_F(Erp6590Test, fail_wrongPatientIdentifierSystem)
 TEST_F(Erp6590Test, fail_shortPatientIdentifier)
 {
     mKbvBundleXml =
-        kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .kvnr = "S04046411"});
+        kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = timestamp, .kvnr = "S04046411"});
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), task->accessCode(), toCadesBesSignature(mKbvBundleXml, timestamp),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));

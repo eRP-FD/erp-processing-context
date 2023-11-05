@@ -9,7 +9,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/Random.hxx"
+#include "erp/util/Mod10.hxx"
 #include "erp/util/String.hxx"
 
 #include <regex>
@@ -17,6 +17,17 @@
 
 namespace model
 {
+
+namespace
+{
+// convert a given character to the numeric value of the alphabet
+// A -> "1", .., Z -> "26"
+std::string charToAlphabetNumber(char c)
+{
+    int idx = c - 'A' + 1;
+    return std::to_string(idx);
+}
+} // namespace
 
 Kvnr::Kvnr(std::string kvnr, Type type)
     : mValue{std::move(kvnr)}
@@ -98,7 +109,7 @@ void Kvnr::setType(Type type)
     mType = type;
 }
 
-bool Kvnr::valid() const
+bool Kvnr::validFormat() const
 {
     return isKvnr(mValue);
 }
@@ -133,6 +144,19 @@ bool Kvnr::isKvnr(const std::string& value)
 {
     static const std::regex matchKvnr("[A-Z][0-9]{9}");
     return std::regex_match(value, matchKvnr);
+}
+
+bool Kvnr::validChecksum() const
+{
+    if (! validFormat())
+    {
+        return false;
+    }
+    // before calculating the checksum, we need to convert the
+    // letter to the numeric
+    auto numericPart = std::string_view{mValue.data() + 1, 8};
+    const auto checksumValue = checksum::mod10<1, 2>(charToAlphabetNumber(mValue.front()).append(numericPart));
+    return checksumValue == mValue.back();
 }
 
 bool operator==(const Kvnr& lhs, const Kvnr& rhs)

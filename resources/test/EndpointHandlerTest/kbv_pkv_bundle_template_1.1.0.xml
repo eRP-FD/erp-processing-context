@@ -373,7 +373,7 @@
         <subject>
           <reference value="Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7"/>
         </subject>
-        <authoredOn value="2021-06-08"/>
+        <authoredOn value="###AUTHORED_ON###"/>
         <requester>
           <reference value="Practitioner/6e6c209e-1b86-43e0-9794-f54ec147fc49"/>
         </requester>

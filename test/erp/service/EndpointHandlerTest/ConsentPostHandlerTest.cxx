@@ -45,7 +45,7 @@ TEST_F(ConsentPostHandlerTest, WrongProfileErp12831)
 "patient": {
   "identifier": {
     "system": "http://fhir.de/sid/pkv/kvid-10",
-    "value": "X764228532"
+    "value": "X764228538"
   }
 },
 "dateTime": "2023-01-30T14:18:58.004"

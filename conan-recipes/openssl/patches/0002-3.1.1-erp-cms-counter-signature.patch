@@ -1,0 +1,324 @@
+From a548039b18c428f8b5e0489c06c4d84f33ef475a Mon Sep 17 00:00:00 2001
+From: redacted <redacted>
+Date: Tue, 6 Jun 2023 13:30:32 +0200
+Subject: [PATCH 2/2] 3.1.1-erp-cms-counter-signature.patch
+
+---
+ crypto/cms/cms_att.c     |   3 +-
+ crypto/cms/cms_sd.c      | 238 ++++++++++++++++++++++++++++++++++-----
+ include/openssl/cms.h.in |   5 +
+ 3 files changed, 218 insertions(+), 28 deletions(-)
+
+diff --git a/crypto/cms/cms_att.c b/crypto/cms/cms_att.c
+index 5b99516b29..66af393a48 100644
+--- a/crypto/cms/cms_att.c
++++ b/crypto/cms/cms_att.c
+@@ -42,8 +42,7 @@ static const struct {
+     /* See RFC Section 11 */
+     { NID_pkcs9_contentType, CMS_ATTR_F_SIGNED
+                              | CMS_ATTR_F_ONLY_ONE
+-                             | CMS_ATTR_F_ONE_ATTR_VALUE
+-                             | CMS_ATTR_F_REQUIRED_COND },
++                             | CMS_ATTR_F_ONE_ATTR_VALUE },
+     { NID_pkcs9_messageDigest, CMS_ATTR_F_SIGNED
+                                | CMS_ATTR_F_ONLY_ONE
+                                | CMS_ATTR_F_ONE_ATTR_VALUE
+diff --git a/crypto/cms/cms_sd.c b/crypto/cms/cms_sd.c
+index fcaffea003..a3a31a2a30 100644
+--- a/crypto/cms/cms_sd.c
++++ b/crypto/cms/cms_sd.c
+@@ -333,23 +333,15 @@ static int ossl_cms_add1_signing_cert_v2(CMS_SignerInfo *si,
+     return ret;
+ }
+ 
+-CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+-                                X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
+-                                unsigned int flags)
++/* Creates and partially initializes a new signer info and adjusts signed data in CMS,
++ * but still do not add it to CMS directly */
++CMS_SignerInfo *cms_SignerInfo_init(CMS_SignedData *sd,
++                                     X509 *signer, EVP_PKEY *pk, const EVP_MD **md,
++                                     const CMS_CTX* ctx, unsigned int flags)
+ {
+-    CMS_SignedData *sd;
+     CMS_SignerInfo *si = NULL;
+-    X509_ALGOR *alg;
+-    int i, type;
+-    const CMS_CTX *ctx = ossl_cms_get0_cmsctx(cms);
++    int type = 0;
+ 
+-    if (!X509_check_private_key(signer, pk)) {
+-        ERR_raise(ERR_LIB_CMS, CMS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE);
+-        return NULL;
+-    }
+-    sd = cms_signed_data_init(cms);
+-    if (!sd)
+-        goto err;
+     si = M_ASN1_new_of(CMS_SignerInfo);
+     if (!si)
+         goto merr;
+@@ -383,28 +375,46 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+     if (!ossl_cms_set1_SignerIdentifier(si->sid, signer, type, ctx))
+         goto err;
+ 
+-    if (md == NULL) {
++    if (*md == NULL) {
+         int def_nid;
+         if (EVP_PKEY_get_default_digest_nid(pk, &def_nid) <= 0)
+             goto err;
+-        md = EVP_get_digestbynid(def_nid);
+-        if (md == NULL) {
++        *md = EVP_get_digestbynid(def_nid);
++        if (*md == NULL) {
+             ERR_raise(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST);
+             goto err;
+         }
+     }
+ 
+-    if (!md) {
+-        ERR_raise(ERR_LIB_CMS, CMS_R_NO_DIGEST_SET);
+-        goto err;
+-    }
++    X509_ALGOR_set_md(si->digestAlgorithm, *md);
+ 
+-    if (md == NULL) {
+-        ERR_raise(ERR_LIB_CMS, CMS_R_NO_DIGEST_SET);
+-        goto err;
+-    }
++    return si;
++
++ merr:
++    ERR_raise(ERR_LIB_CMS, ERR_R_MALLOC_FAILURE);
++ err:
++    M_ASN1_free_of(si, CMS_SignerInfo);
++    return NULL;
++}
+ 
+-    X509_ALGOR_set_md(si->digestAlgorithm, md);
++CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
++                                X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
++                                unsigned int flags)
++{
++    CMS_SignedData *sd = NULL;
++    CMS_SignerInfo *si = NULL;
++    X509_ALGOR *alg = NULL;
++    int i = 0, type = 0;
++    const CMS_CTX *ctx = ossl_cms_get0_cmsctx(cms);
++
++    if (!X509_check_private_key(signer, pk)) {
++        ERR_raise(ERR_LIB_CMS, CMS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE);
++        return NULL;
++    }
++    sd = cms_signed_data_init(cms);
++    if (!sd)
++        goto err;
++    si = cms_SignerInfo_init(sd, signer, pk, &md, ctx, flags);
+ 
+     /* See if digest is present in digestAlgorithms */
+     for (i = 0; i < sk_X509_ALGOR_num(sd->digestAlgorithms); i++) {
+@@ -1120,3 +1130,179 @@ int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
+         return 0;
+     return 1;
+ }
++
++int cms_create_digest(const EVP_MD *md,
++                      const unsigned char *message, size_t message_len,
++                      unsigned char **digest, unsigned int *digest_len)
++{
++    EVP_MD_CTX *mdctx;
++    mdctx = EVP_MD_CTX_new();
++    if(!mdctx)
++        goto merr;
++
++    if(EVP_DigestInit_ex(mdctx, md, NULL) != 1)
++        goto err;
++
++    if(EVP_DigestUpdate(mdctx, message, message_len) != 1)
++        goto err;
++
++    *digest = (unsigned char *)OPENSSL_malloc(EVP_MD_size(md));
++    if(!*digest)
++        goto merr;
++
++    if(EVP_DigestFinal_ex(mdctx, *digest, digest_len) != 1)
++        goto err;
++
++    EVP_MD_CTX_free(mdctx);
++    return 1;
++
++ merr:
++    ERR_raise(ERR_LIB_CMS, ERR_R_MALLOC_FAILURE);
++ err:
++    EVP_MD_CTX_free(mdctx);
++    return 0;
++
++}
++
++int cms_SignerInfo_add_counter_signature(CMS_SignerInfo *si, CMS_SignerInfo *counterSignature)
++{
++    unsigned char *csder = NULL;
++    int len = 0;
++
++    len = ASN1_item_i2d((ASN1_VALUE*)counterSignature, &csder, ASN1_ITEM_rptr(CMS_SignerInfo));
++    if (len < 0)
++        goto merr;
++
++    if (!CMS_unsigned_add1_attr_by_NID(si, NID_pkcs9_countersignature,
++                                       V_ASN1_SEQUENCE, csder, len))
++        goto err;
++
++    OPENSSL_free(csder);
++    return 1;
++
++ merr:
++    ERR_raise(ERR_LIB_CMS, ERR_R_MALLOC_FAILURE);
++
++ err:
++    OPENSSL_free(csder);
++
++    return 0;
++}
++
++int CMS_add1_counter_signature(CMS_SignerInfo *si, CMS_ContentInfo* cms,
++                               X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
++                               unsigned int flags)
++{
++    CMS_SignedData *sd = NULL;
++    CMS_SignerInfo *counterSignature = NULL;
++    int i = 0;
++    ASN1_OCTET_STRING *signature = NULL;
++    unsigned char *digest = NULL;
++    unsigned int digestLength = 0;
++
++    if (!X509_check_private_key(signer, pk)) {
++        ERR_raise(ERR_LIB_CMS,
++                  CMS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE);
++        return 0;
++    }
++
++    sd = cms_get0_signed(cms);
++    if (!sd)
++        goto err;
++    counterSignature = cms_SignerInfo_init(sd, signer, pk, &md, NULL, flags);
++    if (!counterSignature)
++        goto err;
++    if (md == NULL)
++        goto err;
++
++    if (!(flags & CMS_NOATTR)) {
++        if (!counterSignature->signedAttrs) {
++            counterSignature->signedAttrs = sk_X509_ATTRIBUTE_new_null();
++            if (!counterSignature->signedAttrs)
++                goto merr;
++        }
++
++        if (!(flags & CMS_NOSMIMECAP)) {
++            STACK_OF(X509_ALGOR) *smcap = NULL;
++            i = CMS_add_standard_smimecap(&smcap);
++            if (i)
++                i = CMS_add_smimecap(counterSignature, smcap);
++            sk_X509_ALGOR_pop_free(smcap, X509_ALGOR_free);
++            if (!i)
++                goto merr;
++        }
++        if (flags & CMS_CADES) {
++            ESS_SIGNING_CERT *sc = NULL;
++            ESS_SIGNING_CERT_V2 *sc2 = NULL;
++            int add_sc;
++
++            if (md == EVP_sha1() || md == NULL) {
++                if ((sc = OSSL_ESS_signing_cert_new_init(signer,
++                                                    NULL, 1)) == NULL)
++                    goto err;
++                add_sc = ossl_cms_add1_signing_cert(counterSignature, sc);
++                ESS_SIGNING_CERT_free(sc);
++            } else {
++                if ((sc2 = OSSL_ESS_signing_cert_v2_new_init(md, signer,
++                                                        NULL, 1)) == NULL)
++                    goto err;
++                add_sc = ossl_cms_add1_signing_cert_v2(counterSignature, sc2);
++                ESS_SIGNING_CERT_V2_free(sc2);
++            }
++            if (!add_sc)
++                goto err;
++        }
++    }
++
++    if (!(flags & CMS_NOCERTS)) {
++        /* NB ignore -1 return for duplicate cert */
++        if (!CMS_add1_cert(cms, signer))
++            goto merr;
++    }
++
++    if (flags & CMS_KEY_PARAM) {
++        if (flags & CMS_NOATTR) {
++            counterSignature->pctx = EVP_PKEY_CTX_new(counterSignature->pkey, NULL);
++            if (counterSignature->pctx == NULL)
++                goto err;
++            if (EVP_PKEY_sign_init(counterSignature->pctx) <= 0)
++                goto err;
++            if (EVP_PKEY_CTX_set_signature_md(counterSignature->pctx, md) <= 0)
++                goto err;
++        } else if (EVP_DigestSignInit(counterSignature->mctx, &counterSignature->pctx, md, NULL, pk) <=
++                   0)
++            goto err;
++    } else if (!cms_sd_asn1_ctrl(counterSignature, 0))
++        goto err;
++
++    signature = CMS_SignerInfo_get0_signature(si);
++    if (!signature)
++        goto err;
++
++    if (!cms_create_digest(md, signature->data, signature->length, &digest, &digestLength))
++        goto err;
++
++    if (!CMS_signed_add1_attr_by_NID(counterSignature, NID_pkcs9_messageDigest,
++                                    V_ASN1_OCTET_STRING,
++                                    digest, digestLength))
++        goto err;
++
++    OPENSSL_clear_free(digest, (size_t)digestLength);
++
++    if (!CMS_SignerInfo_sign(counterSignature))
++        goto err;
++
++    if (!cms_SignerInfo_add_counter_signature(si, counterSignature))
++        goto merr;
++
++    M_ASN1_free_of(counterSignature, CMS_SignerInfo);
++    return 1;
++
++ merr:
++    ERR_raise(ERR_LIB_CMS, ERR_R_MALLOC_FAILURE);
++ err:
++    M_ASN1_free_of(counterSignature, CMS_SignerInfo);
++    OPENSSL_clear_free(digest, (size_t)digestLength);
++    return 0;
++
++}
+diff --git a/include/openssl/cms.h.in b/include/openssl/cms.h.in
+index cb24d8238e..18c3e1430c 100644
+--- a/include/openssl/cms.h.in
++++ b/include/openssl/cms.h.in
+@@ -50,6 +50,7 @@ typedef struct CMS_OtherKeyAttribute_st CMS_OtherKeyAttribute;
+ -}
+ 
+ DECLARE_ASN1_FUNCTIONS(CMS_ContentInfo)
++DECLARE_ASN1_FUNCTIONS(CMS_SignerInfo)
+ DECLARE_ASN1_FUNCTIONS(CMS_ReceiptRequest)
+ DECLARE_ASN1_PRINT_FUNCTION(CMS_ContentInfo)
+ 
+@@ -391,6 +392,10 @@ int CMS_RecipientInfo_kari_decrypt(CMS_ContentInfo *cms,
+ int CMS_SharedInfo_encode(unsigned char **pder, X509_ALGOR *kekalg,
+                           ASN1_OCTET_STRING *ukm, int keylen);
+ 
++int CMS_add1_counter_signature(CMS_SignerInfo *si, CMS_ContentInfo* cms,
++                               X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
++                               unsigned int flags);
++
+ /* Backward compatibility for spelling errors. */
+ # define CMS_R_UNKNOWN_DIGEST_ALGORITM CMS_R_UNKNOWN_DIGEST_ALGORITHM
+ # define CMS_R_UNSUPPORTED_RECPIENTINFO_TYPE \
+-- 
+2.31.1
+

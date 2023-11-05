@@ -283,11 +283,10 @@ namespace
         if (allowNonQESCertificate && isSmcBOsig)
         {
             // This is a validation of SMC-B Signing Certificate specified by A_22141
-            static constexpr int defaultSmcBOsigGracePeriodSeconds = 12 * 60 * 60;
-            return {TslMode::TSL, { CertificateType::C_HCI_OSIG },
+            return {TslMode::TSL,
+                    {CertificateType::C_HCI_OSIG},
                     std::chrono::seconds(
-                        Configuration::instance().getOptionalIntValue(ConfigurationKey::OCSP_SMC_B_OSIG_GRACE_PERIOD,
-                                                                      defaultSmcBOsigGracePeriodSeconds))};
+                        Configuration::instance().getIntValue(ConfigurationKey::OCSP_SMC_B_OSIG_GRACE_PERIOD))};
         }
         else
         {

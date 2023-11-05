@@ -23,6 +23,8 @@ public:
     using Resource<KbvBundle, ResourceVersion::KbvItaErp>::fromJsonNoValidation;
 
     void additionalValidation() const override;
+
+    std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 };
 
 }

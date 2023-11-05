@@ -1,15 +1,13 @@
 sources:
-  1.1.1u:
-    sha256: e2f8d84b523eecd06c7be7626830370300fbcc15386bf5142d72758f6963ebc6
+  3.1.1:
+    sha256: b3aa61334233b852b63ddb048df181177c2c659eb9d4376008118f9c08d07674
     url:
-      - "https://www.openssl.org/source/openssl-1.1.1u.tar.gz"
-      - "https://www.openssl.org/source/old/1.1.1/openssl-1.1.1u.tar.gz"
+      - "https://www.openssl.org/source/openssl-3.1.1.tar.gz"
+      - "https://www.openssl.org/source/old/3.1.1/openssl-3.1.1.tar.gz"
 
 patches:
-  1.1.1u:
-    - patch_file: patches/0001-1.1.1t-erp-cms.patch
+  3.1.1:
+    - patch_file: patches/0001-3.1.1-erp-cms.patch
       patch_description: "erp-cms"
-    - patch_file: patches/0002-1.1.1t-cades-support-from-30.patch
-      patch_description: "cades-support-from-30"
-    - patch_file: patches/0003-1.1.1t-erp-cms-counter-signature.patch
+    - patch_file: patches/0002-3.1.1-erp-cms-counter-signature.patch
       patch_description: "erp-cms-counter-signature"

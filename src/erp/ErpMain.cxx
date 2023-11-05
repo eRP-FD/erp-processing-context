@@ -11,7 +11,6 @@
 #include "erp/admin/AdminServer.hxx"
 #include "erp/admin/AdminRequestHandler.hxx"
 #include "erp/ErpProcessingContext.hxx"
-#include "erp/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
@@ -68,8 +67,7 @@ std::unique_ptr<ApplicationHealthAndRegistrationUpdater> ErpMain::setupHeartbeat
     if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_REGISTRATION, false))
     {
         TLOG(INFO) << "Initializing Registration Heartbeating.";
-        sender = ApplicationHealthAndRegistrationUpdater::create(Configuration::instance(), serviceContext,
-                                         serviceContext.registrationInterface());
+        sender = ApplicationHealthAndRegistrationUpdater::create(Configuration::instance(), serviceContext);
         sender->start();
     }
     else
@@ -89,7 +87,7 @@ std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
     TLOG(INFO) << "Initializing Periodic Random Seeding.";
 
     std::chrono::seconds entropyFetchInterval{
-        Configuration::instance().getOptionalIntValue(ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS, 60)};
+        Configuration::instance().getIntValue(ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS)};
 
     auto seedTimer = std::make_unique<SeedTimer>(threadpool,
                                                  randomSource,
@@ -174,8 +172,7 @@ int ErpMain::runApplication (
     }
 
     log << "starting the TEE server";
-    const size_t threadCount =
-        static_cast<size_t>(configuration.getOptionalIntValue(ConfigurationKey::SERVER_THREAD_COUNT, 10));
+    const size_t threadCount = static_cast<size_t>(configuration.getIntValue(ConfigurationKey::SERVER_THREAD_COUNT));
     Expect(threadCount>0, "thread count is negative or zero");
     serviceContext->getTeeServer().serve(threadCount, "vau");
 
@@ -314,9 +311,9 @@ Factories ErpMain::createProductionFactories()
     }
 
     factories.redisClientFactory =
-        []{
+        [] (std::chrono::milliseconds socketTimeout) {
             // Note, that TestConfigurationKey::TEST_USE_REDIS_MOCK is ignored for production setup.
-            return std::make_unique<RedisClient>();
+            return std::make_unique<RedisClient>(socketTimeout);
         };
 
     factories.teeServerFactory = [](const std::string_view address, uint16_t port,
@@ -365,7 +362,7 @@ std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlVa
     {
         std::string tslSslRootCa;
         const std::string tslRootCaFile =
-            Configuration::instance().getOptionalStringValue(ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH, "");
+            Configuration::instance().getStringValue(ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH);
         if ( ! tslRootCaFile.empty())
         {
             tslSslRootCa = FileHelper::readFileAsString(tslRootCaFile);
@@ -385,9 +382,8 @@ std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlVa
                 std::logic_error);
 #endif
         auto requestSender = std::make_shared<UrlRequestSender>(
-            SafeString(std::move(tslSslRootCa)),
-            static_cast<uint16_t>(Configuration::instance().getOptionalIntValue(
-                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds)),
+            SafeString(std::move(tslSslRootCa)), static_cast<uint16_t>(Configuration::instance().getIntValue(
+                                                     ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
             std::chrono::milliseconds{
                 Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
         return std::make_shared<TslManager>(std::move(requestSender), xmlValidator);

@@ -122,7 +122,6 @@ void KbvCoverageValidator_V1_0_2::doValidate(const model::KbvCoverage& kbvCovera
     IK_Kostentraeger_BG_UK(kbvCoverage);
     DMP_Pflicht(kbvCoverage);
     KBVdate(kbvCoverage);
-    ik_1(kbvCoverage);
 }
 
 void KbvCoverageValidator_V1_0_2::IK_zustaendige_Krankenkasse_eGK(const model::KbvCoverage& kbvCoverage) const
@@ -138,8 +137,8 @@ void KbvCoverageValidator_V1_0_2::IK_zustaendige_Krankenkasse_eGK(const model::K
     {
         if (KbvValidationUtils::isKostentraeger(kbvCoverage, {{"GKV", "BG", "SKT", "UK", "PKV"}}))
         {
-            const auto& payorIdentifierValue = kbvCoverage.payorIdentifierValue();
-            ErpExpect(payorIdentifierValue, HttpStatus::BadRequest,
+            const auto& payorIknr = kbvCoverage.payorIknr();
+            ErpExpect(payorIknr, HttpStatus::BadRequest,
                       constraintError(KbvCoverageConstraint::IK_zustaendige_Krankenkasse_eGK));
         }
     }
@@ -267,16 +266,5 @@ void KbvCoverageValidator_V1_0_2::KBVdate(const model::KbvCoverage& kbvCoverage)
     catch (const model::ModelException& ex)
     {
         ErpFailWithDiagnostics(HttpStatus::BadRequest, constraintError(KbvCoverageConstraint::KBVdate), ex.what());
-    }
-}
-
-void KbvCoverageValidator_V1_0_2::ik_1(const model::KbvCoverage& kbvCoverage) const
-{
-    // ik-1
-    // matches('[0-9]{8,9}')
-    const auto& payorIdentifierValue = kbvCoverage.payorIdentifierValue();
-    if (payorIdentifierValue)
-    {
-        KbvValidationUtils::checkIknr(*payorIdentifierValue);
     }
 }

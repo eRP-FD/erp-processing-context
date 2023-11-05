@@ -18,7 +18,6 @@
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
-#include "erp/service/DosHandler.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"

@@ -46,7 +46,7 @@ shared_EVP_PKEY MockCryptography::getEciesPublicKey (void)
 
 const Certificate& MockCryptography::getEciesPublicKeyCertificate (void)
 {
-    static auto certificate = Certificate::build().withPublicKey(getEciesPublicKey()).build();
+    static auto certificate = Certificate::createSelfSignedCertificateMock(getEciesPrivateKey());
     return certificate;
 }
 
@@ -74,7 +74,7 @@ shared_EVP_PKEY MockCryptography::getIdpPublicKey (void)
 
 const Certificate& MockCryptography::getIdpPublicKeyCertificate (void)
 {
-    static auto certificate = Certificate::build().withPublicKey(getIdpPublicKey()).build();
+    static auto certificate = Certificate::createSelfSignedCertificateMock(getIdpPrivateKey());
     return certificate;
 }
 

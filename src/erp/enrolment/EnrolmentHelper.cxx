@@ -102,12 +102,7 @@ namespace
 
     PcrSet getConfiguredOrDefaultPcrSet (void)
     {
-        return PcrSet::fromString(
-            // Use the configured value ...
-            Configuration::instance().getOptionalStringValue(
-                ConfigurationKey::PCR_SET,
-                // ... and fall back to the default
-                PcrSet::defaultSet().toString(false)));
+        return PcrSet::fromString(Configuration::instance().getStringValue(ConfigurationKey::PCR_SET));
     }
 
 } // end of anonymous namespace

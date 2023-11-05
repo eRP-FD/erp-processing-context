@@ -20,6 +20,7 @@ class RedisInterface
 public:
     virtual ~RedisInterface() = default;
 
+    virtual void healthCheck() = 0;
     virtual bool exists(const std::string_view& key) = 0;
     virtual std::optional<std::string> fieldValueForKey(const std::string_view& key,
                                                         const std::string_view& field) = 0;

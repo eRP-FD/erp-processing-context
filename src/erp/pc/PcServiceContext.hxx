@@ -10,6 +10,7 @@
 
 #include "erp/crypto/Certificate.hxx"
 #include "erp/database/Database.hxx"
+#include "erp/database/redis/RateLimiter.hxx"
 #include "erp/hsm/HsmFactory.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/KeyDerivation.hxx"
@@ -19,7 +20,6 @@
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.hxx"
 #include "erp/service/AuditEventTextTemplates.hxx"
-#include "erp/service/DosHandler.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/tsl/TslRefreshJob.hxx"
 #include "erp/util/Configuration.hxx"
@@ -67,7 +67,7 @@ struct Factories
     std::function<std::unique_ptr<HsmFactory>(std::unique_ptr<HsmClient>,std::shared_ptr<BlobCache>)> hsmFactoryFactory;
     TeeTokenUpdater::TeeTokenUpdaterFactory teeTokenUpdaterFactory;
     TslManager::TslManagerFactory tslManagerFactory;
-    std::function<std::unique_ptr<RedisInterface>()> redisClientFactory;
+    std::function<std::unique_ptr<RedisInterface>(std::chrono::milliseconds socketTimeout)> redisClientFactory;
     std::function<std::unique_ptr<VsdmKeyBlobDatabase>()> vsdmKeyBlobDatabaseFactory;
 
     using HttpsServerFactoryT = std::function<std::unique_ptr<HttpsServer>(
@@ -99,12 +99,12 @@ class PcServiceContext
 {
 public:
     PcServiceContext(const Configuration& configuration, Factories&& factories);
-    ~PcServiceContext(void);
+    virtual ~PcServiceContext();
 
     void setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer);
 
     std::unique_ptr<Database> databaseFactory();
-    const DosHandler& getDosHandler();
+    const RateLimiter& getDosHandler();
     std::shared_ptr<RedisInterface> getRedisClient();
     HsmPool& getHsmPool();
     KeyDerivation& getKeyDerivation();
@@ -130,7 +130,7 @@ public:
     Idp idp;
     ApplicationHealth& applicationHealth ();
 
-    std::shared_ptr<RegistrationInterface> registrationInterface() const;
+    virtual std::shared_ptr<RegistrationInterface> registrationInterface() const;
 
     const EnrolmentData& getEnrolmentData() const;
     const Tpm::Factory& getTpmFactory() const;
@@ -158,7 +158,7 @@ private:
      */
     Database::Factory mDatabaseFactory;
     std::shared_ptr<RedisInterface> mRedisClient;
-    std::unique_ptr<DosHandler> mDosHandler;
+    std::unique_ptr<RateLimiter> mDosHandler;
     std::shared_ptr<BlobCache> mBlobCache;
     std::unique_ptr<HsmPool> mHsmPool;
     std::unique_ptr<VsdmKeyCache> mVsdmKeyCache;

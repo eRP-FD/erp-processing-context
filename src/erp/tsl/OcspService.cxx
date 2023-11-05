@@ -648,8 +648,7 @@ namespace
     OcspCheckDescriptor getTslSignerOcspCheckDescriptor()
     {
         std::chrono::seconds gracePeriod(
-            Configuration::instance().getOptionalIntValue(ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD,
-                                                          OcspHelper::DEFAULT_OCSP_NON_QES_GRACE_PERIOD_SECONDS));
+            Configuration::instance().getIntValue(ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD));
 
         return {
             OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE,

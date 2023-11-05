@@ -35,6 +35,7 @@ fs.mounts = [
     {type = "chroot", uri = "file:/var/log/erp", path = "/var/log/erp" },
     {type = "chroot", uri = "file:/usr/share/zoneinfo/", path = "/usr/share/zoneinfo/" }
 ]
+fs.start_dir = "/erp/bin"
 
 # Allowed files can be read/written from within the gramine environment.
 sgx.allowed_files = [
@@ -52,16 +53,16 @@ sgx.allowed_files = [
 "file:/etc/localtime",
 "file:/etc/ssl/openssl.cnf",
 # TPM/TSS runtime generated binary files.
-"file:h80fffffe.bin",
-"file:h80ffffff.bin",
-"file:hp80fffffe.bin",
-"file:hp80ffffff.bin",
-"file:h01c0000a.bin",
-"file:nvp01c0000a.bin",
-"file:h80fffffd.bin",
-"file:hp80fffffd.bin",
-"file:h03000000.bin",
-"file:h03000001.bin",
+"file:/erp/bin/h80fffffe.bin",
+"file:/erp/bin/h80ffffff.bin",
+"file:/erp/bin/hp80fffffe.bin",
+"file:/erp/bin/hp80ffffff.bin",
+"file:/erp/bin/h01c0000a.bin",
+"file:/erp/bin/nvp01c0000a.bin",
+"file:/erp/bin/h80fffffd.bin",
+"file:/erp/bin/hp80fffffd.bin",
+"file:/erp/bin/h03000000.bin",
+"file:/erp/bin/h03000001.bin",
 # ERP auxiliary configuration
 "file:/erp/tsl/tsl-ca.der",
 "file:/erp/tsl/tsl-ssl-root-ca.pem"
@@ -75,17 +76,6 @@ sgx.trusted_files = [
 "file:/usr/lib/x86_64-linux-gnu/",
 "file:/usr/lib/x86_64-linux-gnu/gramine/",
 # ERP files
-"file:01_production.config.json",
 "file:/var/log/erp/",
-# ERP libs
-"file:/erp/lib/libcrypto.so.1.1",
-"file:/erp/lib/libcsxapi.so",
-"file:/erp/lib/libhsmclient.so",
-"file:/erp/lib/libssl.so.1.1",
-"file:/erp/lib/libstdc++.so.6",
-"file:/erp/lib/libstdc++.so.6.0.30",
-"file:/erp/lib/libtpmclient.so",
-"file:/erp/lib/libz.so.1",
-"file:/erp/lib/libz.so.1.2.13",
 __ADDITIONAL_TRUST_FILES__
 ]

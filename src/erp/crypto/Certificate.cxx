@@ -9,10 +9,12 @@
 
 #include "erp/util/Base64.hxx"
 #include "erp/util/String.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <string_view>
 
@@ -247,8 +249,7 @@ Certificate Certificate::fromBase64Der (const std::string& base64Der)
 std::string Certificate::toPem(void) const
 {
     auto certificateMemory = shared_BIO::make();
-    const int status = PEM_write_bio_X509(certificateMemory,
-                                          mX509Certificate.removeConst());
+    const int status = PEM_write_bio_X509(certificateMemory, mX509Certificate);
     throwIfNot(
         status == 1,
         "can not convert certificate to PEM string");
@@ -410,6 +411,37 @@ Certificate::Builder& Certificate::Builder::withSubjectName (const std::vector<s
 }
 
 
+Certificate::Builder& Certificate::Builder::withSubjectAlternateName (const std::string& name)
+{
+    std::unique_ptr<ASN1_STRING, decltype(&ASN1_STRING_free)> asn1String{
+        ASN1_IA5STRING_new(), &ASN1_STRING_free};
+    throwIfNot(asn1String != nullptr, "can not create SAN string");
+
+    throwIfNot(1 == ASN1_STRING_set(asn1String.get(), name.data(), gsl::narrow<int>(name.length())),
+              "can not set SAN string");
+
+    std::unique_ptr<GENERAL_NAME, decltype(&GENERAL_NAME_free)> generalName{
+        GENERAL_NAME_new(), &GENERAL_NAME_free};
+    throwIfNot(generalName != nullptr, "can not create general name");
+    GENERAL_NAME_set0_value(generalName.get(), GEN_DNS, asn1String.get());
+    (void) asn1String.release();
+
+    std::unique_ptr<GENERAL_NAMES, decltype(&GENERAL_NAMES_free)> subjectAltName{
+        GENERAL_NAMES_new(), &GENERAL_NAMES_free};
+    throwIfNot(subjectAltName != nullptr, "can not create SAN stack of general names");
+
+    throwIfNot(1 == sk_GENERAL_NAME_push(subjectAltName.get(), generalName.get()),
+               "can not extend SAN stack of general names");
+    (void) generalName.release();
+
+    throwIfNot(1 == X509_add1_ext_i2d(
+                    mX509Certificate, NID_subject_alt_name, subjectAltName.get(), 0, X509V3_ADD_APPEND),
+               "can not add SAN extension");
+
+    return *this;
+}
+
+
 Certificate::Builder& Certificate::Builder::withIssuerName (const X509_NAME* name)
 {
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
@@ -549,7 +581,8 @@ Certificate Certificate::createSelfSignedCertificateMock (
     const shared_EVP_PKEY& keyPair,
     const AuthorizedIdentity& authorizedIdentity,
     const std::string& hostname,
-    const std::optional<std::string>& registrationNumber)
+    const std::optional<std::string>& registrationNumber,
+    const std::string& subjectAltName)
 {
     std::vector<std::string> subject = {
         "C", "DE",
@@ -575,7 +608,8 @@ Certificate Certificate::createSelfSignedCertificateMock (
             "C", "DE",
             "O", "mock-certificate-authority",
             "CN", hostname})
-        .withPublicKey(keyPair);
+        .withPublicKey(keyPair)
+        .withSubjectAlternateName(subjectAltName);
 
     if (registrationNumber)
     {
@@ -609,6 +643,7 @@ Certificate Certificate::createCertificateMock (
             "C", "DE",
             "O", "mock-organization",
             "CN", "localhost"})
+        .withSubjectAlternateName("IP:127.0.0.1")
         .withPublicKey(keyPair)
         .build();
     showAllOpenSslErrors();

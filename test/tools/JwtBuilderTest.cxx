@@ -73,7 +73,7 @@ TEST(JwtBuilderTest, testBuilder)//NOLINT(readability-function-cognitive-complex
     auto publicKey = idp.getCertificate().getPublicKey();
     EXPECT_NO_THROW(testBuilder.makeJwtApotheke().verify(publicKey));
     EXPECT_NO_THROW(testBuilder.makeJwtArzt().verify(publicKey));
-    EXPECT_NO_THROW(testBuilder.makeJwtVersicherter("X987654321").verify(publicKey));
+    EXPECT_NO_THROW(testBuilder.makeJwtVersicherter("X987654326").verify(publicKey));
 }
 
 
@@ -82,7 +82,7 @@ TEST(JwtBuilderTest, OIDs)
     auto testBuilder = JwtBuilder::testBuilder();
     auto jwtApotheke = testBuilder.makeJwtApotheke();
     auto jwtArzt = testBuilder.makeJwtArzt();
-    auto jwtVersicherter = testBuilder.makeJwtVersicherter("X987654321");
+    auto jwtVersicherter = testBuilder.makeJwtVersicherter("X987654326");
     // clang-format off
     EXPECT_EQ(jwtApotheke    .stringForClaim(JWT::professionOIDClaim), profession_oid::oid_oeffentliche_apotheke);
     EXPECT_EQ(jwtArzt        .stringForClaim(JWT::professionOIDClaim), profession_oid::oid_arzt                 );

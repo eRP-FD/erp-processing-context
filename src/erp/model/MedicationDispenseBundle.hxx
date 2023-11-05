@@ -23,6 +23,8 @@ public:
     using BundleBase<MedicationDispenseBundle>::BundleBase;
     using Resource<MedicationDispenseBundle>::fromXml;
     using Resource<MedicationDispenseBundle>::fromJson;
+
+    std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 };
 
 }

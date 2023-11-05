@@ -72,6 +72,8 @@ static Requirement A_20776    (R"(Anwendungsfall "Nachricht durch Abgebenden lö
 static Requirement A_20885_03 ("E-Rezept-Fachdienst - Nachricht einstellen - Versicherte - Prüfung Versichertenbezug und Berechtigung");
 static Requirement A_22731    ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Flowtype Task");
 static Requirement A_22734    ("E-Rezept-Fachdienst - Nachricht einstellen - Prüfung Existenz ChargeItem");
+static Requirement A_23878    ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung des Payload-Inhalt von GEM_ERP_PR_Communication_DispReq");
+static Requirement A_23879    ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung des Payload-Inhalt von GEM_ERP_PR_Communication_Reply");
 
 // Requirements for "Claims der Identitätsbestätigung"
 static Requirement A_19130    ("E-Rezept-Fachdienst - Authentifizierung erforderlich LEI-Endpunkt");
@@ -103,7 +105,7 @@ static Requirement A_21532_02 ("E-Rezept-Fachdienst - Task abrufen - Kein Secret
 static Requirement A_21371_02 ("E-Rezept-Fachdienst - Nachricht einstellen - Prüfung Existenz Task");
 static Requirement A_20702_03 ("E-Rezept-Fachdienst - Task abrufen - Keine Einlöseinformationen in unbekannten Clients");
 static Requirement A_19226_01 ("E-Rezept-Fachdienst - Task abrufen - Rückgabe Task inkl. Bundle im Bundle Apotheker");
-static Requirement A_19569_02 ("E-Rezept-Fachdienst - Suchparameter Task");
+static Requirement A_19569_03 ("E-Rezept-Fachdienst - Task abrufen - Versicherter - Suchparameter Task");
 static Requirement A_18952    ( R"(E-Rezept-Fachdienst – Abfrage E-Rezept mit Status "gelöscht")");
 static Requirement A_19030    ("E-Rezept-Fachdienst - unzulaessige Operationen Task");
 
@@ -111,7 +113,7 @@ static Requirement A_19030    ("E-Rezept-Fachdienst - unzulaessige Operationen T
 static Requirement A_19021_02 ("E-Rezept-Fachdienst - Task erzeugen - Generierung AccessCode");
 static Requirement A_19112    ("E-Rezept-Fachdienst - Parametrierung Task fuer Workflow-Typ");
 static Requirement A_19214    ("E-Rezept-Fachdienst - Ergaenzung Performer-Typ fuer Einloeseinstitutstyp");
-static Requirement A_19445_08 ("Prozessparameter - Flowtype");
+static Requirement A_19445_08 ("FHIR FLOWTYPE für Prozessparameter");
 static Requirement A_19114    ("E-Rezept-Fachdienst - Status draft");
 static Requirement A_19257_01 ("E-Rezept-Fachdienst - Task erzeugen - Schemavalidierung Rezept anlegen");
 
@@ -129,7 +131,6 @@ static Requirement A_19517_02 ("FHIR FLOWTYPE für Prozessparameter - Abweichend
 static Requirement A_22222    ("E-Rezept-Fachdienst - Ausschluss weitere Kostenträger");
 static Requirement A_22231    ("E-Rezept-Fachdienst - Ausschluss Betäubungsmittel und Thalidomid");
 static Requirement A_22487    ("E-Rezept-Fachdienst - Task aktivieren - Prüfregel Ausstellungsdatum");
-static Requirement A_22925    ("E-Rezept-Fachdienst - Task aktivieren - Längenprüfung PZN");
 static Requirement A_22627_01 ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - zulässige Flowtype");
 static Requirement A_22628    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Numerator-Denominator kleiner 5");
 static Requirement A_22704    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Numerator größer 0");
@@ -143,8 +144,18 @@ static Requirement A_23164    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfach
 static Requirement A_23537    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Startdatum nicht vor Ausstellungsdatum");
 static Requirement A_22927    ("E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
 static Requirement A_23443    ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 160/169 - Prüfung Coverage Type");
+static Requirement A_23888    ("E-Rezept-Fachdienst - Task aktivieren - Überprüfung der IK Nummer im Profil KBV_PR_FOR_Coverage");
+static Requirement A_24030    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der IK Nummer im Profil KBV_PR_FOR_Coverage");
+static Requirement A_23890    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der KVNR Nummer im Profil KBV_PR_FOR_Patient");
+static Requirement A_23891    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der ANR und ZANR im Profil KBV_PR_FOR_Practitioner");
+static Requirement A_23892    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der PZN im Profil KBV_PR_ERP_Medication_PZN");
+static Requirement A_24034    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der PZN im Profil KBV_PR_ERP_Medication_Compounding");
+static Requirement A_24031    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der ANR und ZANR - Konfiguration bei Auffälligkeiten");
+static Requirement A_24032    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der ANR und ZANR - Konfiguration Fehler");
+static Requirement A_24033    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der ANR und ZANR - Konfiguration Warning");
 // PKV related:
 static Requirement A_22347_01 ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 200/209 - Prüfung Coverage Type");
+static Requirement A_23936    ("E-Rezept-Fachdienst - Task aktivieren - Versicherten-ID als Identifikator von Versicherten");
 
 // Requirements for endpoint POST /Task/$accept
 static Requirement A_19149_02 ("E-Rezept-Fachdienst - Task akzeptieren - Prüfung Datensatz zwischenzeitlich gelöscht");
@@ -164,7 +175,7 @@ static Requirement A_20513    ("E-Rezept-Fachdienst - nicht mehr benötigte Einl
 static Requirement A_19233_05 ("E-Rezept-Fachdienst - Task schliessen - Quittung erstellen");
 static Requirement A_22069    ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
 static Requirement A_22070_02 ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
-static Requirement A_23384_draft("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
+static Requirement A_23384    ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
 
 // Requirements for endpoint POST /Task/$abort
 static Requirement A_19145    ("E-Rezept-Fachdienst - Statusprüfung Apotheker löscht Rezept");
@@ -211,6 +222,7 @@ static Requirement A_22140_01("E-Rezept-Fachdienst – Abrechnungsinformation be
 static Requirement A_22141   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Signaturzertifikat SMC-B prüfen");
 static Requirement A_22143   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – ChargeItem befüllen");
 static Requirement A_22614_02("E-Rezept-Fachdienst - Abrechnungsinformation bereitstellen - Generierung AccessCode");
+static Requirement A_23704   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – kein AccessCode und Quittung");
 // PUT /ChargeItem
 static Requirement A_22215   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Prüfung Einwilligung");
 static Requirement A_22146   ("E-Rezept-Fachdienst – Abrechnungsinformationen ändern – Apotheke - Prüfung Telematik-ID");

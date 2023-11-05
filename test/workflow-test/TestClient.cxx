@@ -7,7 +7,7 @@
 
 #include "TestClient.hxx"
 #include "erp/crypto/Certificate.hxx"
-#include "erp/util/Configuration.hxx"
+#include "test/util/TestConfiguration.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 
 
@@ -25,9 +25,9 @@ std::unique_ptr<TestClient> TestClient::create(std::shared_ptr<XmlValidator> xml
 
 Certificate TestClient::getEciesCertificate(void)
 {
-    const auto pemString = Configuration::instance().getOptionalStringValue(ConfigurationKey::ECIES_CERTIFICATE, "");
+    const auto pemString = TestConfiguration::instance().getOptionalStringValue(TestConfigurationKey::TEST_ECIES_CERTIFICATE, "");
     if (pemString.empty())
-        return Certificate::build().withPublicKey(MockCryptography::getEciesPublicKey()).build();
+        return Certificate::createSelfSignedCertificateMock(MockCryptography::getEciesPrivateKey());
     else
         return Certificate::fromPem(pemString);
 }

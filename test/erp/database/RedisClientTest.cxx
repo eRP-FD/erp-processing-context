@@ -8,7 +8,7 @@
 #include "erp/database/RedisClient.hxx"
 
 #include "erp/crypto/Jwt.hxx"
-#include "erp/service/DosHandler.hxx"
+#include "erp/database/redis/RateLimiter.hxx"
 #include "erp/util/JwtException.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "test_config.h"
@@ -34,7 +34,9 @@ class RedisClientTest : public testing::Test
 TEST_F(RedisClientTest, BasicTest)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::chrono;
-    DosHandler dosHandler(std::make_unique<MockRedisStore>());
+    RateLimiter dosHandler(std::make_unique<MockRedisStore>(), "ERP-PC-DOS",
+					gsl::narrow<size_t>(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS, 100)),
+					std::chrono::milliseconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS, 1000)));
 
     const auto privateKey = MockCryptography::getIdpPrivateKey();
     const auto publicKey = MockCryptography::getIdpPublicKey();
@@ -86,7 +88,9 @@ TEST_F(RedisClientTest, BasicTest2)//NOLINT(readability-function-cognitive-compl
 {
     using namespace std::chrono;
     std::shared_ptr<MockRedisStore> redis = std::make_unique<MockRedisStore>();
-    DosHandler dosHandler(redis);
+    RateLimiter dosHandler(redis, "ERP-PC-DOS",
+					gsl::narrow<size_t>(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS, 100)),
+					std::chrono::milliseconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS, 1000)));
 
     const auto privateKey = MockCryptography::getIdpPrivateKey();
     const auto publicKey = MockCryptography::getIdpPublicKey();

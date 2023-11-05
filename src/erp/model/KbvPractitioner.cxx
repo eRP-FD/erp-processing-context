@@ -13,6 +13,13 @@
 namespace model
 {
 
+namespace
+{
+const rapidjson::Pointer identifierArrayPointer("/identifier");
+const rapidjson::Pointer systemRelPointer("/system");
+const rapidjson::Pointer valueRelPointer("/value");
+}// namespace
+
 KbvPractitioner::KbvPractitioner(NumberAsStringParserDocument&& document)
     : Resource<KbvPractitioner, ResourceVersion::KbvItaErp>(std::move(document))
 {
@@ -78,4 +85,31 @@ std::optional<std::string_view> KbvPractitioner::qualificationCodeCodingCode(siz
     return getOptionalStringValue(qualificationCodeCodingSystemPointer);
 }
 
+std::optional<Lanr> KbvPractitioner::anr() const
+{
+    auto anrString =
+        findStringInArray(identifierArrayPointer, systemRelPointer, resource::naming_system::kbvAnr, valueRelPointer);
+    if (! anrString)
+    {
+        return std::nullopt;
+    }
+    return Lanr{*anrString, Lanr::Type::lanr};
 }
+
+std::optional<Lanr> KbvPractitioner::zanr() const
+{
+    auto zanrString =
+        findStringInArray(identifierArrayPointer, systemRelPointer, resource::naming_system::kbvZanr, valueRelPointer);
+    if (! zanrString)
+    {
+        zanrString = findStringInArray(identifierArrayPointer, systemRelPointer,
+                                       resource::naming_system::deprecated::kbvZanr, valueRelPointer);
+    }
+    if (! zanrString)
+    {
+        return std::nullopt;
+    }
+    return Lanr{*zanrString, Lanr::Type::zanr};
+}
+
+} // namespace model

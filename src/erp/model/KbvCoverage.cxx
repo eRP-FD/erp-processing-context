@@ -11,6 +11,16 @@
 namespace model
 {
 
+namespace
+{
+const rapidjson::Pointer extensionArrayPointer(resource::ElementName::path(resource::elements::payor, "0",
+                                                                           resource::elements::identifier,
+                                                                           resource::elements::extension));
+const rapidjson::Pointer urlPointer(resource::ElementName::path(resource::elements::url));
+const rapidjson::Pointer valuePointer(resource::ElementName::path(resource::elements::valueIdentifier,
+                                                                  resource::elements::value));
+}// namespace
+
 KbvCoverage::KbvCoverage(NumberAsStringParserDocument&& jsonTree)
     : Resource(std::move(jsonTree))
 {
@@ -25,20 +35,31 @@ std::string_view KbvCoverage::typeCodingCode() const
 
 bool KbvCoverage::hasPayorIdentifierExtension(const std::string_view& url) const
 {
-    static const rapidjson::Pointer extensionArrayPointer(resource::ElementName::path(
-        resource::elements::payor, "0", resource::elements::identifier, resource::elements::extension));
-    static const rapidjson::Pointer urlPointer(resource::ElementName::path(resource::elements::url));
-    static const rapidjson::Pointer valuePointer(
-        resource::ElementName::path(resource::elements::valueIdentifier, resource::elements::value));
     const auto alternativeId = findStringInArray(extensionArrayPointer, urlPointer, url, valuePointer);
     return alternativeId.has_value();
 }
 
-std::optional<std::string_view> KbvCoverage::payorIdentifierValue() const
+std::optional<Iknr> KbvCoverage::payorIknr() const
 {
     static const rapidjson::Pointer payorIdentifierValuePointer(resource::ElementName::path(
         resource::elements::payor, 0, resource::elements::identifier, resource::elements::value));
-    return getOptionalStringValue(payorIdentifierValuePointer);
+    auto iknr = getOptionalStringValue(payorIdentifierValuePointer);
+    if (! iknr)
+    {
+        return std::nullopt;
+    }
+    return model::Iknr(*iknr);
+}
+
+std::optional<Iknr> KbvCoverage::alternativeId() const
+{
+    const auto alternativeId =
+        findStringInArray(extensionArrayPointer, urlPointer, resource::extension::alternativeIk, valuePointer);
+    if (! alternativeId)
+    {
+        return std::nullopt;
+    }
+    return model::Iknr(*alternativeId);
 }
 
 std::optional<std::string_view> KbvCoverage::periodEnd() const
@@ -55,4 +76,4 @@ const rapidjson::Value* KbvCoverage::payorIdentifier() const
     return getValue(payorIdentifierPointer);
 }
 
-}
+} // namespace model

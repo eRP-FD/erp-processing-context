@@ -86,7 +86,7 @@ private:
     void enterValueSubtree(ElementType type, std::string_view prefix, const xmlChar* localname,
                            const AttributeList& attributes);
     void handleValueSubtree(const XmlStringView localname, const xmlChar* uri, const AttributeList& attributes);
-    void copyValueAttriutes(const AttributeList&);
+    void copyValueAttributes(const AttributeList&);
     void leaveValue();
     void handleCodeSystemSubtree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
     void handleConceptSubtree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);

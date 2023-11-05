@@ -123,13 +123,24 @@ void JsonValidator::loadSchema(const std::vector<std::string>& schemas, const st
 
 void JsonValidator::validate(const rapidjson::Document& document, SchemaType schemaType) const
 {
+    const auto error = validateWithErrorMessage(document, schemaType);
+    if (error.has_value())
+    {
+        TVLOG(1) << "The following document had validation errors: " << docToString(document);
+        TVLOG(1) << "validation failed for JSON document: " << error.value();
+        ErpFail(HttpStatus::BadRequest, "validation of JSON document failed");
+    }
+}
+
+std::optional<std::string> JsonValidator::validateWithErrorMessage(const rapidjson::Document& document, SchemaType schemaType) const
+{
     auto candidate = mSchemas.find(schemaType);
     Expect(candidate != mSchemas.end(),
            "no JSON schema loaded for type " + std::string(magic_enum::enum_name(schemaType)));
     rapidjson::SchemaValidator validator(*candidate->second);
     if (! document.Accept(validator) || ! validator.IsValid())
     {
-        TVLOG(1) << "The following document had validation errors: " << docToString(document);
-        reportValidationError(validator);
+        return docToString(validator.GetError());
     }
+    return {};
 }

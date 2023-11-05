@@ -2,7 +2,7 @@
   <id value="8938aff5-720a-414a-b574-114bd8d1e11c" />
   <meta>
     ###META_EXTENSION###
-    <lastUpdated value="###TIMESTAMP###" />
+    <lastUpdated value="2021-06-08T13:44:53.012475+02:00" />
     <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0" />
   </meta>
   <identifier>
@@ -10,7 +10,7 @@
     <value value="###PRESCRIPTION_ID###" />
   </identifier>
   <type value="document" />
-  <timestamp value="###TIMESTAMP###" />
+  <timestamp value="2021-06-08T13:44:53.012475+02:00" />
   <entry>
     <fullUrl value="http://pvs.praxis.local/fhir/Composition/1560e505-3862-4162-9f8f-9a88157e0905" />
     <resource>
@@ -35,7 +35,7 @@
         <subject>
           <reference value="Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7" />
         </subject>
-        <date value="###TIMESTAMP###" />
+        <date value="2021-06-08T13:44:53.012475+02:00" />
         <author>
           <reference value="Practitioner/6e6c209e-1b86-43e0-9794-f54ec147fc49" />
           <type value="Practitioner" />
@@ -87,8 +87,8 @@
         <identifier>
           <type>
             <coding>
-              <system value="http://fhir.de/CodeSystem/identifier-type-de-basis" />
-              <code value="###INSURANCE_TYPE###" />
+              <system value="###PATIENT_IDENTIFIER_SYSTEM###" />
+              <code value="###PATIENT_IDENTIFIER_CODE###" />
             </coding>
           </type>
           <system value="###KVID10###" />
@@ -129,12 +129,12 @@
         <identifier>
           <type>
             <coding>
-              <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
-              <code value="LANR" />
+              <system value="###LANR_CODE_SYSTEM###" />
+              <code value="###LANR_TYPE###" />
             </coding>
           </type>
-          <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_ANR" />
-          <value value="838382202" />
+          <system value="###LANR_SYSTEM###" />
+          <value value="###LANR###" />
         </identifier>
         <identifier>
           <type>
@@ -164,7 +164,7 @@
           <code>
             <coding>
               <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type" />
-              <code value="00" />
+              <code value="###QUALIFICATION_TYPE###" />
             </coding>
           </code>
         </qualification>
@@ -262,7 +262,7 @@
         <code>
           <coding>
             <system value="http://fhir.de/CodeSystem/ifa/pzn" />
-            <code value="04773414" />
+            <code value="###PZN###" />
           </coding>
           <text value="Doxycyclin AL 200 T, 10 Tabletten N1" />
         </code>
@@ -333,7 +333,7 @@
         <payor>
           <identifier>###COVERAGE_PAYOR_EXTENSION###
             <system value="http://fhir.de/sid/arge-ik/iknr" />
-            <value value="109500969" />
+            <value value="###IKNR###" />
           </identifier>
           <display value="Test GKV-SV" />
         </payor>
@@ -373,7 +373,7 @@
         <subject>
           <reference value="Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7" />
         </subject>
-        <authoredOn value="###TIMESTAMP_DATE###" />
+        <authoredOn value="###AUTHORED_ON###" />
         <requester>
           <reference value="Practitioner/6e6c209e-1b86-43e0-9794-f54ec147fc49" />
         </requester>

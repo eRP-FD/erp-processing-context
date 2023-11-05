@@ -1,0 +1,46 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "id": "CommunicationDispReqPayload",
+    "title": "Payload of CommunicationDispReq",
+    "type": "object",
+    "properties": {
+        "version": {
+            "enum": [
+                1
+            ]
+        },
+        "supplyOptionsType": {
+            "enum": [
+                "onPremise",
+                "shipment",
+                "delivery"
+            ]
+        },
+        "name": {
+            "type": "string",
+            "maxLength": 100
+        },
+        "address": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "maxLength": 500
+            },
+            "additionalItems": false
+        },
+        "hint": {
+            "type": "string",
+            "maxLength": 500
+        },
+        "phone": {
+            "type": "string",
+            "maxLength": 32
+        }
+    },
+    "required": [
+        "version",
+        "supplyOptionsType"
+    ],
+    "additionalProperties": false,
+    "version": "1"
+}

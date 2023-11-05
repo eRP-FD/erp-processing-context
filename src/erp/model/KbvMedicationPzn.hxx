@@ -10,6 +10,7 @@
 
 #include "erp/model/KbvMedicationBase.hxx"
 #include "erp/validation/SchemaType.hxx"
+#include "erp/model/Pzn.hxx"
 
 namespace model
 {
@@ -23,7 +24,7 @@ public:
     [[nodiscard]] std::optional<std::string_view> amountNumeratorValueAsString() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorSystem() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorCode() const;
-    [[nodiscard]] std::string_view pzn() const;
+    [[nodiscard]] Pzn pzn() const;
 
 private:
     friend Resource<KbvMedicationPzn, ResourceVersion::KbvItaErp>;

@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_RESOURCEVERSION_HXX
 
 #include "erp/model/ResourceNames.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/validation/SchemaType.hxx"
 
 #include <optional>
@@ -79,17 +80,19 @@ enum class FhirProfileBundleVersion
     v_2022_01_01,
 
     /**
-     * KBV: 1.1.0
+     * KBV: 1.1.1
      * gematik: Package 1.2.0 Profile 1.2
-     * gematik patientenrechnung: 1.0.0-rc3
+     * gematik patientenrechnung: 1.0.0
      * DAV: Package 1.2.0 Profile 1.2
      * GKV: Package 1.2.0 Profile 1.2
-     * PKV: 1.1.0-rc10
+     * PKV: 1.2.0
      */
-    v_2023_07_01
+    v_2023_07_01,
+    // KBV: 1.1.2
+    v_2023_07_01_patch
 };
 
-FhirProfileBundleVersion currentBundle();
+FhirProfileBundleVersion currentBundle(const model::Timestamp& timestamp = model::Timestamp::now());
 
 using AnyProfileVersion = std::variant<DeGematikErezeptWorkflowR4, DeGematikErezeptPatientenrechnungR4, KbvItaErp, AbgabedatenPkv, Fhir>;
 using AllProfileVersion = std::tuple<DeGematikErezeptWorkflowR4, DeGematikErezeptPatientenrechnungR4, KbvItaErp, AbgabedatenPkv, Fhir>;
@@ -105,7 +108,7 @@ std::optional<std::string> profileStr(SchemaType schemaType, model::ResourceVers
 
 
 /**
- * @brief Given a profile uri, append the matching curently active (rendering) version
+ * @brief Given a profile uri, append the matching currently active (rendering) version
  *
  * @param profile Profile URL, may contain a version number, e.g. http://address|1.0
  * @return std::string the versioned profile, depending on the active bundle version
@@ -121,7 +124,7 @@ template<typename SchemaVersionType>
  *
  * @return AllProfileVersion
  */
-[[nodiscard]] AllProfileVersion current();
+[[nodiscard]] AllProfileVersion current(const model::Timestamp& timestamp = model::Timestamp::now());
 
 /**
  * @brief Get each profile version from the deprecated bundle
@@ -132,8 +135,9 @@ template<typename SchemaVersionType>
 
 /**
  * Get the currently supported profile bundles, depending on configuration and the current time
+ * @param timestamp Reference timestamp to for considered validity periods.
  */
-[[nodiscard]] std::set<FhirProfileBundleVersion> supportedBundles();
+[[nodiscard]] std::set<FhirProfileBundleVersion> supportedBundles(const model::Timestamp& timestamp = model::Timestamp::now());
 
 /**
  * Get all available profile bundles, regardless of the current configuration.
@@ -163,9 +167,9 @@ isProfileSupported(AnyProfileVersion profileVersion,
 
 template<typename VersionType>
 [[nodiscard]] inline
-VersionType current()
+VersionType current(const model::Timestamp& timestamp = model::Timestamp::now())
 {
-    return std::get<VersionType>(current());
+    return std::get<VersionType>(current(timestamp));
 }
 
 template<typename VersionType>
@@ -192,9 +196,9 @@ NotProfiled deprecated()
 
 template<>
 [[nodiscard]] inline
-FhirProfileBundleVersion current()
+FhirProfileBundleVersion current(const model::Timestamp& timestamp)
 {
-    return currentBundle();
+    return currentBundle(timestamp);
 }
 
 std::string_view v_str(NotProfiled);

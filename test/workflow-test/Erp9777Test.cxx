@@ -15,7 +15,8 @@ class Erp9777Test : public ErpWorkflowTestP
 
 TEST_P(Erp9777Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (!Configuration::instance().featurePkvEnabled())
+    if (! model::ResourceVersion::isProfileSupported(
+            model::ResourceVersion::DeGematikErezeptPatientenrechnungR4::v1_0_0))
     {
         GTEST_SKIP();
     }

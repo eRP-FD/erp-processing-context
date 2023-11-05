@@ -15,12 +15,12 @@ TEST(AuditDataTest, ConstructFromData)//NOLINT(readability-function-cognitive-co
     using namespace std::string_literals;
     const model::AuditEventId eventId = model::AuditEventId::GET_Task_id_representative;
     const model::AuditEvent::Action action = model::AuditEvent::Action::update;
-    const model::Kvnr insurantKvnr{"X123456789"s, model::Kvnr::Type::gkv};
+    const model::Kvnr insurantKvnr{"X123456788"s, model::Kvnr::Type::gkv};
     const std::int16_t deviceId = 1234;
     const model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4241);
-    const std::string consentId = "CHARGCONS-X123456789";
-    const std::string_view kvnr = "X424242424";
+    const std::string consentId = "CHARGCONS-X123456788";
+    const std::string_view kvnr = "X424242422";
     const std::string_view agentName = "The Agent Name";
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
@@ -53,7 +53,7 @@ TEST(AuditDataTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     const model::AuditEventId eventId = model::AuditEventId::POST_Task_abort_doctor;
     const model::AuditEvent::Action action = model::AuditEvent::Action::del;
 
-    const model::Kvnr insurantKvnr{std::string{"X123456789"}, model::Kvnr::Type::gkv};
+    const model::Kvnr insurantKvnr{std::string{"X123456788"}, model::Kvnr::Type::gkv};
     const std::int16_t deviceId = 5678;
 
     const model::PrescriptionId prescriptionId =

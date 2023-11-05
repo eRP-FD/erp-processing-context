@@ -55,7 +55,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "17";
+    static constexpr const char* expectedSchemaVersion = "18";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey

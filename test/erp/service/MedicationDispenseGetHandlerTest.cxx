@@ -111,10 +111,7 @@ protected:
 
             auto medicationDispenseTelematicId = medicationDispenses[0].telematikId();
             ASSERT_EQ(medicationDispenseTelematicId, pharmacy);
-
-            std::chrono::system_clock::time_point handedOver = medicationDispenses[0].whenHandedOver().toChronoTimePoint();
-            std::chrono::system_clock::time_point now = Timestamp::now().toChronoTimePoint();
-            ASSERT_TRUE(handedOver > now - 10s && handedOver < now + 10s);
+            ASSERT_EQ(medicationDispenses[0].whenHandedOver().localDay(), Timestamp::now().localDay());
 
             std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispenses[0].whenPrepared();
             ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);

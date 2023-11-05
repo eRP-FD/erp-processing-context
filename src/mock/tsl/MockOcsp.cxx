@@ -296,7 +296,7 @@ std::string MockOcsp::toDer(void)
 
     // See comment regarding cast in ::toPemString.
     ASN1_i2d_bio(
-        reinterpret_cast<int (*) (void*, unsigned char**)>(i2d_OCSP_RESPONSE),
+        reinterpret_cast<int (*) (const void*, unsigned char**)>(i2d_OCSP_RESPONSE),
         mem.get(),
         reinterpret_cast<unsigned char *>(mOcspResponse.get()));
     return bioToString(mem.get());
@@ -312,7 +312,7 @@ std::string MockOcsp::toPemString (void)
     // PEM_read_bio_OCSP_RESPONSE uses a wrong cast. Maybe it was written for pure C compilers
     // or for less strict warning levels.
     PEM_ASN1_write_bio(
-        reinterpret_cast<int(*)(void*,unsigned char**)>(i2d_OCSP_RESPONSE),
+        reinterpret_cast<int(*)(const void*,unsigned char**)>(i2d_OCSP_RESPONSE),
         PEM_STRING_OCSP_RESPONSE,
         mem.get(),
         reinterpret_cast<char *>(mOcspResponse.get()),

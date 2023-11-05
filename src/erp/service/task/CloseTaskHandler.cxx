@@ -204,9 +204,13 @@ std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFrom
         if (resourceType == model::Bundle::resourceTypeName)
         {
             auto bundle = for_resource<model::MedicationDispenseBundle>(std::move(unspec)).getNoValidation();
+            const auto referenceTimestamp = bundle.getValidationReferenceTimestamp();
             auto ret = bundle.getResourcesByType<model::MedicationDispense>();
-            validateWithoutMedicationProfiles<model::MedicationDispenseBundle>(std::move(bundle).jsonDocument(),
-                                            "entry.resource.medicationReference.resolve()", session);
+            ErpExpect(referenceTimestamp.has_value(), HttpStatus::BadRequest,
+                      "Unable to determine whenHandedOver from MedicationDispenseBundle");
+            validateWithoutMedicationProfiles<model::MedicationDispenseBundle>(
+                std::move(bundle).jsonDocument(), "entry.resource.medicationReference.resolve()", *referenceTimestamp,
+                session);
             validateMedications(ret, session.serviceContext);
             return ret;
         }
@@ -215,10 +219,11 @@ std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFrom
             std::vector<model::MedicationDispense> ret;
             const auto& dispense =
                     ret.emplace_back(for_resource<model::MedicationDispense>(std::move(unspec)).getNoValidation());
+            const auto referenceTimestamp = ret[0].whenHandedOver();
             model::NumberAsStringParserDocument doc;
             doc.CopyFrom(dispense.jsonDocument(), doc.GetAllocator());
-            validateWithoutMedicationProfiles<model::MedicationDispense>(std::move(doc), "medicationReference.resolve()",
-                                                                        session);
+            validateWithoutMedicationProfiles<model::MedicationDispense>(
+                std::move(doc), "medicationReference.resolve()", referenceTimestamp, session);
             validateMedications(ret, session.serviceContext);
             return ret;
         }
@@ -237,6 +242,13 @@ void CloseTaskHandler::validateMedications(const std::vector<model::MedicationDi
     const auto* repo = std::addressof(Fhir::instance().structureRepository());
     auto extractMedication = fhirtools::FhirPathParser::parse(repo, "medicationReference.resolve()");
     Expect3(extractMedication, "Failed parsing extractMedication", std::logic_error);
+    // ensure that all past bundles are included
+    auto supportedBundles = rv::supportedBundles();
+    if (supportedBundles.contains(rv::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        supportedBundles.insert(rv::FhirProfileBundleVersion::v_2022_01_01);
+    }
+
     for (const auto& md : medicationDispenses)
     {
         auto elem = std::make_shared<ErpElement>(repo, std::weak_ptr<const ErpElement>{}, "MedicationDispense",
@@ -253,14 +265,14 @@ void CloseTaskHandler::validateMedications(const std::vector<model::MedicationDi
                   std::logic_error);
         }
         model::KbvMedicationGeneric::validateMedication(*medicationElement, service.getXmlValidator(),
-                                                        service.getInCodeValidator(), true);
+                                                        service.getInCodeValidator(), supportedBundles, true);
     }
 }
 
 template<typename ModelT>
 void CloseTaskHandler::validateWithoutMedicationProfiles(
-        model::NumberAsStringParserDocument&& medicationDispenseOrBundleDoc,
-        std::string_view medicationsPath, const PcSessionContext& session)
+    model::NumberAsStringParserDocument&& medicationDispenseOrBundleDoc, std::string_view medicationsPath,
+    const model::Timestamp& validationReferenceTimestamp, const PcSessionContext& session)
 {
     using namespace std::string_literals;
     namespace resource = model::resource;
@@ -293,21 +305,22 @@ void CloseTaskHandler::validateWithoutMedicationProfiles(
         resourceTypePtr.Set(*medicationValue, resourceTypeValue, medicationDispenseOrBundleDoc.GetAllocator());
     }
     typename Factory::Options factoryOptions{};
-    if (rv::supportedBundles().contains(rv::FhirProfileBundleVersion::v_2023_07_01))
+    const auto supportedBundles = rv::supportedBundles(validationReferenceTimestamp);
+    if (supportedBundles.contains(rv::FhirProfileBundleVersion::v_2023_07_01))
     {
         // ERP-13560 Ablehnen von FHIR 2022 Medication Dispense ab dem 1.7.2023 in Close Task
         factoryOptions.enforcedVersion =
             rv::ProfileBundle<rv::FhirProfileBundleVersion::v_2023_07_01, typename ModelT::SchemaVersionType>::version;
     }
     auto medicationDispenseOrBundle = Factory::fromJson(std::move(medicationDispenseOrBundleDoc), factoryOptions);
-    (void) std::move(medicationDispenseOrBundle).getValidated(ModelT::schemaType,
-                                                              session.serviceContext.getXmlValidator(),
-                                                              session.serviceContext.getInCodeValidator());
+    (void) std::move(medicationDispenseOrBundle)
+        .getValidated(ModelT::schemaType, session.serviceContext.getXmlValidator(),
+                      session.serviceContext.getInCodeValidator(), supportedBundles);
 }
 
 void CloseTaskHandler::validateSameMedicationVersion(const fhirtools::Collection& medications)
 {
-    A_23384_draft.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
+    A_23384.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
     using namespace std::string_literals;
     if (!medications.empty())
     {
@@ -321,5 +334,5 @@ void CloseTaskHandler::validateSameMedicationVersion(const fhirtools::Collection
                     "All Medications must have the same profile.", "expected: "s.append(firstProfiles[0]));
         }
     }
-    A_23384_draft.finish();
+    A_23384.finish();
 }

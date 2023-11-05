@@ -115,6 +115,7 @@ public:
     [[nodiscard]] size_t getTotalSearchMatches() const;
     [[nodiscard]] BundleType getBundleType() const;
     [[nodiscard]] PrescriptionId getIdentifier() const;
+    void setIdentifier(const PrescriptionId& prescriptionId);
 
     void setTotalSearchMatches(std::size_t totalSearchMatches);
 

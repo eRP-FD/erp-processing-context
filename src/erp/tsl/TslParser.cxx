@@ -581,7 +581,7 @@ namespace
             EVP_PKEY* publicKey = signerCertificate.getPublicKey();
             if (publicKey)
             {
-                auto* ecKey = EVP_PKEY_get0_EC_KEY(publicKey);
+                const auto* ecKey = EVP_PKEY_get0_EC_KEY(publicKey);
                 if (ecKey)
                 {
                     const auto* group = EC_KEY_get0_group(ecKey);

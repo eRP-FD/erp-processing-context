@@ -7,9 +7,10 @@
 
 #include "erp/ErpRequirements.hxx"
 #include "erp/util/ByteHelper.hxx"
-#include "test/util/ResourceManager.hxx"
-#include "test/util/TestUtils.hxx"
 #include "test/util/CertificateDirLoader.h"
+#include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <chrono>
@@ -435,7 +436,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
     EXPECT_FALSE(chargeItems[0].isMarked());
 
     // Change of dispense item by pharmacy
-    const auto dispenseBundleString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto dispenseBundleString = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
     const Uuid uuid;
     auto dispenseBundle = model::Bundle::fromXmlNoValidation(dispenseBundleString);
     dispenseBundle.setId(uuid);
@@ -832,8 +833,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
         ASSERT_TRUE(chargeItemFromBundle[0].accessCode().has_value());
         chargeItemAccessCode = chargeItemFromBundle[0].accessCode().value();
     }
-    const auto dispenseBundleString =
-        ResourceManager::instance().getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto dispenseBundleString = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
     auto dispenseBundle = model::Bundle::fromXmlNoValidation(dispenseBundleString);
     std::variant<model::ChargeItem, model::OperationOutcome> changedChargeItem;
     ASSERT_NO_FATAL_FAILURE(

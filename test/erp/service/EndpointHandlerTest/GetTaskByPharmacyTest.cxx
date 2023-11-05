@@ -121,7 +121,7 @@ public:
 
 protected:
     VsdmHmacKey keyPackage{'!', '1'};
-    model::Kvnr kvnr{"X123456789"};
+    model::Kvnr kvnr{"X123456788"};
 };
 
 TEST_F(GetTasksByPharmacyTest, success)

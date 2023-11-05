@@ -18,7 +18,7 @@
         <reference value="Patient/example" />
         <!-- <identifier>
             <system value="http://fhir.de/sid/pkv/kvid-10" />
-            <value value="X123456789" />
+            <value value="X123456788" />
         </identifier> -->
     </subject>
     <enterer>

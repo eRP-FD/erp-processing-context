@@ -146,11 +146,7 @@ public:
              {::model::PrescriptionType::apothekenpflichigeArzneimittel, ::model::PrescriptionType::direkteZuweisung,
               ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv})
         {
-            if ((taskType != ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv) ||
-                ::Configuration::instance().featurePkvEnabled())
-            {
-                ASSERT_NO_FATAL_FAILURE(action(taskType));
-            }
+            ASSERT_NO_FATAL_FAILURE(action(taskType));
         }
     }
 

@@ -25,6 +25,8 @@ constexpr std::string_view pkvKvid10 = "http://fhir.de/sid/pkv/kvid-10";
 constexpr std::string_view prescriptionID = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId";
 constexpr std::string_view secret = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_Secret";
 constexpr std::string_view telematicID = "https://gematik.de/fhir/sid/telematik-id";
+constexpr std::string_view kbvAnr = "https://fhir.kbv.de/NamingSystem/KBV_NS_Base_ANR";
+constexpr std::string_view kbvZanr = "http://fhir.de/sid/kzbv/zahnarztnummer";
 namespace deprecated
 {
 constexpr std::string_view accessCode = "https://gematik.de/fhir/NamingSystem/AccessCode";
@@ -33,6 +35,7 @@ constexpr std::string_view gkvKvid10 = "http://fhir.de/NamingSystem/gkv/kvid-10"
 constexpr std::string_view prescriptionID = "https://gematik.de/fhir/NamingSystem/PrescriptionID";
 constexpr std::string_view secret = "https://gematik.de/fhir/NamingSystem/Secret";
 constexpr std::string_view telematicID = "https://gematik.de/fhir/NamingSystem/TelematikID";
+constexpr std::string_view kbvZanr = "http://fhir.de/NamingSystem/kzbv/zahnarztnummer";
 } // namespace deprecated
 } // namespace naming_system
 
@@ -41,6 +44,7 @@ namespace code_system
 constexpr std::string_view consentType = "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType";
 constexpr std::string_view documentType = "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_DocumentType";
 constexpr std::string_view flowType = "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType";
+constexpr std::string_view pzn = "http://fhir.de/CodeSystem/ifa/pzn";
 namespace deprecated
 {
 constexpr std::string_view documentType = "https://gematik.de/fhir/CodeSystem/Documenttype";
@@ -128,8 +132,13 @@ constexpr std::string_view accept = "http://gematik.de/fhir/OperationDefinition/
 constexpr std::string_view reject = "http://gematik.de/fhir/OperationDefinition/RejectOperationDefinition";
 constexpr std::string_view close = "http://gematik.de/fhir/OperationDefinition/CloseOperationDefinition";
 constexpr std::string_view abort = "http://gematik.de/fhir/OperationDefinition/AbortOperationDefinition";
-}
-}
+} // namespace deprecated
+} // namespace operation_definition
+
+namespace extension
+{
+constexpr std::string_view alternativeIk = "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Alternative_IK";
+} // namespace extension
 
 namespace elements
 {

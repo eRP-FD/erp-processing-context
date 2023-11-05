@@ -29,9 +29,9 @@ HsmPool::HsmPool (
       mTeeToken(),
       mKeepAliveUpdateToken(Timer::NotAJob),
       mHsmIdleTimeout(std::chrono::seconds(
-          Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS, 15 * 60))),
+          Configuration::instance().getIntValue(ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS))),
       mMaxSessionCount(gsl::narrow<size_t>(
-          Configuration::instance().getOptionalIntValue(ConfigurationKey::HSM_MAX_SESSION_COUNT, 5))),
+          Configuration::instance().getIntValue(ConfigurationKey::HSM_MAX_SESSION_COUNT))),
       mMaxUsedSessionCount(0),
       mTimerManager(std::move(timerManager))
 {

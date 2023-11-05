@@ -18,6 +18,7 @@ class MockRedisStore : public RedisInterface
 public:
     MockRedisStore() = default;
 
+    void healthCheck() override;
     bool exists(const std::string_view& key) override;
     std::optional<std::string> fieldValueForKey(const std::string_view& key,
                                                 const std::string_view& field) override;

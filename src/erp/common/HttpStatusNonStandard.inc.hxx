@@ -5,4 +5,5 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+STATUS(dummy,                            OkWarnInvalidAnr,                            252)
 STATUS(dummy,                            BackendCallFailed,                           512)

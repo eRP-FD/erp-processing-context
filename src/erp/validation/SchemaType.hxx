@@ -51,6 +51,8 @@ enum class SchemaType
     PatchChargeItemParameters,
     DAV_DispenseItem,
     Pruefungsnachweis,
+    CommunicationDispReqPayload,
+    CommunicationReplyPayload,
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SCHEMATYPE_HXX

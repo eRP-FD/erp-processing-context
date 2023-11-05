@@ -40,7 +40,7 @@
         <for>
           <identifier>
             <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
-            <value value="X123456789" />
+            <value value="X123456788" />
           </identifier>
         </for>
         <authoredOn value="2020-03-02T08:25:05+00:00" />

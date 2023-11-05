@@ -16,6 +16,8 @@
 #include "erp/util/Uuid.hxx"
 #include "erp/validation/SchemaType.hxx"
 
+class JsonValidator;
+
 namespace model
 {
 // NOLINTNEXTLINE(bugprone-exception-escape)
@@ -84,7 +86,7 @@ public:
      */
     std::optional<std::string_view> contentString() const;
 
-    void verifyPayload() const;
+    void verifyPayload(const JsonValidator& validator) const;
 
     bool canValidateGeneric() const;
     static bool canValidateGeneric(MessageType messageType, ResourceVersion::WorkflowOrPatientenRechnungProfile profile);
@@ -100,6 +102,7 @@ private:
 
     void setSender(std::string_view sender, std::string_view namingSystem);
     void setRecipient(std::string_view recipient, std::string_view namingSystem);
+    std::optional<SchemaType> payloadSchema() const;
 
     CommunicationPayload mPayload;
 };

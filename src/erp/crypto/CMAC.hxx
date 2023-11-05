@@ -11,6 +11,7 @@
 #include "erp/crypto/RandomSource.hxx"
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <type_traits>
 #include <string>

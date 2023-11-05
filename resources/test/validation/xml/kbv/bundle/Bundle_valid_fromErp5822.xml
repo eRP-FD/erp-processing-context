@@ -161,7 +161,7 @@
                     </extension>
                     <text value="1-0-1-0"></text>
                 </dosageInstruction>
-                <dispenseRequest>                    
+                <dispenseRequest>
                     <quantity>
                         <value value="1"></value>
                         <system value="http://unitsofmeasure.org"></system>
@@ -266,7 +266,7 @@
                 <payor>
                     <identifier>
                         <system value="http://fhir.de/NamingSystem/arge-ik/iknr"></system>
-                        <value value="00000000"></value>
+                        <value value="109500969"></value>
                     </identifier>
                     <display value="test"></display>
                 </payor>

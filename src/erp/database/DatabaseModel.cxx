@@ -68,7 +68,7 @@ HashedKvnr::HashedKvnr(HashedId&& hashedKvnr)
 HashedKvnr HashedKvnr::fromKvnr(const model::Kvnr& kvnr,
                                 const SafeString& persistencyIndexKey)
 {
-    ErpExpect(kvnr.valid(), HttpStatus::BadRequest, "Invalid KVNR");
+    ErpExpect(kvnr.validFormat(), HttpStatus::BadRequest, "Invalid KVNR");
 
     return HashedKvnr{
         db_model::HashedId(db_model::EncryptedBlob(Pbkdf2Hmac::deriveKey(kvnr.id(), persistencyIndexKey)))};

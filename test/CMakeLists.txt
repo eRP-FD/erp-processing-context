@@ -28,6 +28,7 @@ set(ERP_TEST_UTIL_SOURCES
 add_library(erp-test-util-lib OBJECT ${ERP_TEST_UTIL_SOURCES})
 target_link_libraries(erp-test-util-lib
         PUBLIC
+        CONAN_PKG::date
         CONAN_PKG::glog
         CONAN_PKG::gtest
         CONAN_PKG::gsl-lite
@@ -64,7 +65,6 @@ set(ERP_TEST_LIB_SOURCES
         mock/RegistrationMock.cxx
         mock/TestUrlArguments.cxx
         util/JsonTestUtils.cxx
-        workflow-test/A_19445_ProzessParameterFlowtype.cxx
         workflow-test/A_21370_CheckPrescriptionIdOnActivate.cxx
         workflow-test/Mehrfachverordnung.cxx
         workflow-test/A_22231_BetaebungsmittelAblehnen.cxx
@@ -250,6 +250,8 @@ list(
         erp/service/EndpointErrorTest.cxx
         erp/service/EndpointHandlerTest/AcceptTaskTest.cxx
         erp/service/EndpointHandlerTest/ActivateTaskTest.cxx
+        erp/service/EndpointHandlerTest/ChargeItemPostHandlerTest.cxx
+        erp/service/EndpointHandlerTest/ChargeItemPutHandlerTest.cxx
         erp/service/EndpointHandlerTest/CloseTaskTest.cxx
         erp/service/EndpointHandlerTest/CommunicationPostEndpointTest.cxx
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
@@ -362,7 +364,7 @@ target_compile_definitions(erp-test PUBLIC WITH_HSM_MOCK=1)
 target_include_directories (
     erp-test
             PRIVATE ${CMAKE_SOURCE_DIR}/src
-            PRIVATE ${PROJECT_SOURCE_DIR}/..   # Include a leading `test/` in include paths.
+            PRIVATE ${CMAKE_SOURCE_DIR}/   # Include a leading `test/` in include paths.
             PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
 )
 
@@ -417,7 +419,7 @@ add_executable(
 target_include_directories (
         erp-connection-test
         PRIVATE ${CMAKE_SOURCE_DIR}/src
-        PRIVATE ${PROJECT_SOURCE_DIR}/..   # Include a leading `test/` in include paths.
+        PRIVATE ${CMAKE_SOURCE_DIR}   # Include a leading `test/` in include paths.
         PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
 )
 

@@ -40,9 +40,9 @@ TEST(ResourceVersionTest, currentSelectNewProfile)
     EnvironmentVariableGuard oldBundledVersion{"ERP_FHIR_VERSION_OLD", "x"};
     EnvironmentVariableGuard newBundledVersion{"ERP_FHIR_VERSION", "2023.07.01"};
 
-    const auto now = ::model::Timestamp::now().toXsDateTime();
+    const auto today = ::model::Timestamp::now().toXsDate(model::Timestamp::GermanTimezone);
 
-    EnvironmentVariableGuard renderFrom{"ERP_FHIR_PROFILE_RENDER_FROM", now};
+    EnvironmentVariableGuard renderFrom{"ERP_FHIR_PROFILE_RENDER_FROM", today};
 
     const auto [gematikVersion, gematikPatientenRechnungVersion, kbvVersion, abdaPkvVersion, fhirVersion] = ::model::ResourceVersion::current();
     const auto bundledVersion = ::model::ResourceVersion::currentBundle();

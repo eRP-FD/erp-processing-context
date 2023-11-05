@@ -294,7 +294,7 @@ shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex (
 std::tuple<std::string,std::string> EllipticCurveUtils::getPublicKeyCoordinatesHex (
     const shared_EVP_PKEY& privateKey)
 {
-    auto* key = EVP_PKEY_get0_EC_KEY(privateKey.removeConst());
+    const auto* key = EVP_PKEY_get0_EC_KEY(privateKey);
     const auto* ecPoint = EC_KEY_get0_public_key(key);
     const auto* group = EC_KEY_get0_group(key);
     auto x = shared_BN::make();
@@ -313,7 +313,7 @@ EllipticCurveUtils::PaddedComponents EllipticCurveUtils::getPaddedXYComponents (
     auto xComponent = shared_BN::make();
     auto yComponent = shared_BN::make();
 
-    auto* ecKey = EVP_PKEY_get0_EC_KEY(keyPair.removeConst());
+    const auto* ecKey = EVP_PKEY_get0_EC_KEY(keyPair);
     OpenSslExpect(ecKey!=nullptr, "could not extract elliptic curve key from key pair");
 
     const auto* publicKey = EC_KEY_get0_public_key(ecKey);
@@ -404,7 +404,7 @@ util::Buffer EllipticCurveUtils::convertSignatureFormat(const util::Buffer& sign
 std::string EllipticCurveUtils::publicKeyToPem (const shared_EVP_PKEY& publicKey)
 {
     auto memory = shared_BIO::make();
-    const int status = PEM_write_bio_PUBKEY(memory, publicKey.removeConst());
+    const int status = PEM_write_bio_PUBKEY(memory, publicKey);
     OpenSslExpect(status == 1, "can not convert public key to PEM string");
 
     char* data = nullptr;
@@ -436,7 +436,7 @@ std::string EllipticCurveUtils::publicKeyToX962Der (const shared_EVP_PKEY& publi
 std::string EllipticCurveUtils::privateKeyToPem (const shared_EVP_PKEY& privateKey)
 {
     auto memory = shared_BIO::make();
-    const int status = PEM_write_bio_PrivateKey(memory, privateKey.removeConst(), nullptr, nullptr, 0, nullptr, nullptr);
+    const int status = PEM_write_bio_PrivateKey(memory, privateKey, nullptr, nullptr, 0, nullptr, nullptr);
     OpenSslExpect(status == 1, "can not convert private key to PEM string");
 
     char* data = nullptr;

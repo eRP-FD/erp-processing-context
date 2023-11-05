@@ -11,10 +11,11 @@
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/Database.hxx"
+#include "erp/database/RedisClient.hxx"
 #include "erp/hsm/VsdmKeyBlobDatabase.hxx"
 #include "erp/hsm/VsdmKeyCache.hxx"
 #include "erp/pc/SeedTimer.hxx"
-#include "erp/service/DosHandler.hxx"
+#include "erp/util/Configuration.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
 #include "erp/ErpProcessingContext.hxx"
@@ -31,13 +32,19 @@ namespace
         const Configuration& configuration)
     {
         GS_A_4899.start("Create asynchronous TSL-Update job.");
+        // 24 Hours per default
         const std::chrono::seconds tslRefreshInterval{
-            configuration.getOptionalIntValue(
-                ConfigurationKey::TSL_REFRESH_INTERVAL, 86400)}; // 24 Hours per default
+            configuration.getIntValue(ConfigurationKey::TSL_REFRESH_INTERVAL)};
         auto refreshJob = std::make_unique<TslRefreshJob>(tslManager, tslRefreshInterval);
         refreshJob->start();
         GS_A_4899.finish();
         return refreshJob;
+    }
+
+    std::unique_ptr<RateLimiter> createRateLimiter(std::shared_ptr<RedisInterface>& redisClient) {
+        const auto calls = gsl::narrow<size_t>(Configuration::instance().getIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS));
+        const auto timespan = std::chrono::milliseconds(Configuration::instance().getIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS));
+        return std::make_unique<RateLimiter>(redisClient, "ERP-PC-DOS", calls, timespan);
     }
 }
 
@@ -47,8 +54,8 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     : idp()
     , mTimerManager(std::make_shared<Timer>())
     , mDatabaseFactory(std::move(factories.databaseFactory))
-    , mRedisClient(factories.redisClientFactory())
-    , mDosHandler(std::make_unique<DosHandler>(mRedisClient))
+    , mRedisClient(factories.redisClientFactory(std::chrono::milliseconds(configuration.getIntValue(ConfigurationKey::REDIS_DOS_SOCKET_TIMEOUT))))
+    , mDosHandler(createRateLimiter(mRedisClient))
     , mBlobCache(factories.blobCacheFactory())
     , mHsmPool(std::make_unique<HsmPool>(factories.hsmFactoryFactory(factories.hsmClientFactory(), mBlobCache),
                                         factories.teeTokenUpdaterFactory, mTimerManager))
@@ -63,7 +70,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, *mTslManager, *mHsmPool))
     , mTslRefreshJob(setupTslRefreshJob(*mTslManager, configuration))
     , mReportPseudonameKeyRefreshJob(PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(*mHsmPool, *getBlobCache(), configuration))
-    , mRegistrationInterface(std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(), factories.redisClientFactory()))
+    , mRegistrationInterface(std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(), factories.redisClientFactory(std::chrono::seconds(0))))
     , mTpmFactory(std::move(factories.tpmFactory))
 // GEMREQ-end A_20974-01
 {
@@ -71,7 +78,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
     mTeeServer = factories.teeServerFactory(
         HttpsServer::defaultHost, configuration.serverPort(), std::move(teeHandlers), *this, false,
-        SafeString(configuration.getOptionalStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE, "")));
+        configuration.getSafeStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE));
 
     auto enrolmentServerPort =
         getEnrolementServerPort(configuration.serverPort(), EnrolmentServer::DefaultEnrolmentServerPort);
@@ -127,7 +134,7 @@ std::unique_ptr<Database> PcServiceContext::databaseFactory()
     return mDatabaseFactory(*mHsmPool, mKeyDerivation);
 }
 
-const DosHandler& PcServiceContext::getDosHandler()
+const RateLimiter& PcServiceContext::getDosHandler()
 {
     return *mDosHandler;
 }

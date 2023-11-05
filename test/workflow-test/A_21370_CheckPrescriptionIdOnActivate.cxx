@@ -29,9 +29,9 @@ public:
 
     std::string getBundleWithId(const std::string& id)
     {
-        auto timestamp = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
+        auto timestamp = model::Timestamp::now();
         auto prescriptionId = model::PrescriptionId::fromStringNoValidation(id);
-        auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp});
+        auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = timestamp});
         return toCadesBesSignature(bundleXml, timestamp);
     }
 };

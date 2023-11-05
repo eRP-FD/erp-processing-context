@@ -153,17 +153,17 @@ TEST_F(TaskTest, SetKvnr)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_FALSE(task.kvnr().has_value());
 
     auto nsGkvKvid10Id = isDeprecated ? model::resource::naming_system::deprecated::gkvKvid10 : model::resource::naming_system::gkvKvid10;
-    task.setKvnr(model::Kvnr{"X123456789"s, model::Kvnr::Type::gkv});
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnr.data())), "X123456789");
+    task.setKvnr(model::Kvnr{"X123456788"s, model::Kvnr::Type::gkv});
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnr.data())), "X123456788");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnrSystem.data())), nsGkvKvid10Id);
-    ASSERT_EQ(task.kvnr(), "X123456789");
+    ASSERT_EQ(task.kvnr(), "X123456788");
 }
 
 TEST_F(TaskTest, FromJson)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     const auto task1 = ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .kvnr = "X123456789"});
+        {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .kvnr = "X123456788"});
     ASSERT_NO_THROW((void)model::Task::fromJsonNoValidation(task1));
     const auto task = model::Task::fromJsonNoValidation(task1);
     ASSERT_EQ(task.status(), model::Task::Status::ready);

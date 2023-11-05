@@ -35,7 +35,7 @@
     <itemCodeableConcept>
       <coding>
         <system value="http://fhir.de/CodeSystem/ifa/pzn"/>
-        <code value="PZN"/>
+        <code value="10000001"/>
       </coding>
       <text value="text"/>
     </itemCodeableConcept>

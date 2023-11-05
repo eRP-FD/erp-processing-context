@@ -107,10 +107,7 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
 
         auto medicationDispenseTelematicId = medicationDispense.telematikId();
         ASSERT_EQ(medicationDispenseTelematicId, pharmacy);
-
-        std::chrono::system_clock::time_point handedOver = medicationDispense.whenHandedOver().toChronoTimePoint();
-        std::chrono::system_clock::time_point now = Timestamp::now().toChronoTimePoint();
-        ASSERT_TRUE(handedOver > now - 10s && handedOver < now + 10s);
+        ASSERT_EQ(medicationDispense.whenHandedOver().localDay(), Timestamp::now().localDay());
 
         std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispense.whenPrepared();
         ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);

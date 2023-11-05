@@ -62,6 +62,7 @@ public:
         Builder& withSerial (long int serial);
         Builder& withSubjectName (const X509_NAME* name);
         Builder& withSubjectName (const std::vector<std::string>& parts);
+        Builder& withSubjectAlternateName (const std::string& name);
         Builder& withIssuerName (const X509_NAME* name);
         Builder& withIssuerName (const std::vector<std::string>& parts);
         Builder& fromNow (void);
@@ -78,6 +79,10 @@ public:
         Builder (void);
     };
 
+    /**
+     * Currently it produces per default an empty unsigned certificate that is not really usable,
+     * use very carefully.
+     */
     static Builder build (void);
 
     /**
@@ -92,7 +97,8 @@ public:
         const AuthorizedIdentity& authorizedIdentity = { "kvnr",
                                                          AuthorizedIdentity::IDENTITY_SUBJECT_ID},
         const std::string& hostname = "localhost",
-        const std::optional<std::string>& registrationNumber = std::nullopt);
+        const std::optional<std::string>& registrationNumber = std::nullopt,
+        const std::string& subjectAlternameName = "IP:127.0.0.1");
 
     static Certificate createCertificateMock (
         const Certificate& rootCertificate,

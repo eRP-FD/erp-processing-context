@@ -146,10 +146,12 @@ TEST_F(XmlValidatorTest, getSchemaValidationContext)//NOLINT(readability-functio
             case SchemaType::Pruefungsnachweis:
             case SchemaType::Gem_erxChargeItem:
             case SchemaType::Gem_erxConsent:
+            case SchemaType::CommunicationDispReqPayload:
+            case SchemaType::CommunicationReplyPayload:
                 // not validated with XSD
                 break;
             default:
-                ASSERT_TRUE(false) << "unhandled SchemaType";
+                FAIL() << "unhandled SchemaType";
                 break;
         }
     }
@@ -781,7 +783,7 @@ TEST_F(XmlValidatorTestPeriod, ValidityPeriods_invalidEndBeforeNow)
 TEST_F(XmlValidatorTest, VersionMixup)
 {
     using namespace ::std::chrono_literals;
-    const auto tomorrow = (::model::Timestamp::now() + 24h).toXsDateTime();
+    const auto tomorrow = (::model::Timestamp::now() + 24h).toXsDate(model::Timestamp::GermanTimezone);
     EnvironmentVariableGuard varGuard("ERP_FHIR_PROFILE_OLD_VALID_UNTIL", tomorrow);
     // <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_FreeText|1.0.2" />
     auto bundle =

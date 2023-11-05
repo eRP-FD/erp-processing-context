@@ -7,6 +7,7 @@
 
 #include "Utf8Helper.hxx"
 
+#include <cstdint>
 #include <codecvt>
 #include <locale>
 

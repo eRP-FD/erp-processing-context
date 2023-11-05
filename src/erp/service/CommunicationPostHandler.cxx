@@ -176,7 +176,11 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         // GEMREQ-start A_19450-01#callVerifyPayload
         A_19450_01.start("do not allow malicious code in payload");
-        communication.verifyPayload();
+        A_23878.start("verify json payload of DispReq");
+        A_23879.start("verify json payload of Reply");
+        communication.verifyPayload(session.serviceContext.getJsonValidator());
+        A_23879.finish();
+        A_23878.finish();
         A_19450_01.finish();
         // GEMREQ-end A_19450-01#callVerifyPayload
 
@@ -267,9 +271,16 @@ void CommunicationPostHandler::validateInfoRequest(const model::Communication& c
                                                    const InCodeValidator& inCodeValidator) const
 {
     using namespace std::string_literals;
+    namespace rv = model::ResourceVersion;
     static rapidjson::Pointer idPtr{resource::ElementName::path(elements::id)};
     static rapidjson::Pointer resourceTypePtr{resource::ElementName::path(elements::resourceType)};
     const auto* repo = std::addressof(Fhir::instance().structureRepository());
+    // ensure that all past bundles are included
+    auto supportedBundles = rv::supportedBundles();
+    if (supportedBundles.contains(rv::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        supportedBundles.insert(rv::FhirProfileBundleVersion::v_2022_01_01);
+    }
     const auto extractMedication = fhirtools::FhirPathParser::parse(repo, "about.resolve()");
     Expect3(extractMedication, "Failed to parse extractMedication expression.", std::logic_error);
     model::NumberAsStringParserDocument doc;
@@ -286,7 +297,7 @@ void CommunicationPostHandler::validateInfoRequest(const model::Communication& c
         //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
         auto* medicationValue = const_cast<rapidjson::Value*>(medicationErpElement->erpValue());
         model::KbvMedicationGeneric::validateMedication(*medicationErpElement, xmlValidator, inCodeValidator,
-                                                        false);
+                                                        supportedBundles, false);
         const std::string idValue = idPtr.Get(*medicationValue)->GetString();
         const std::string resourceTypeValue = resourceTypePtr.Get(*medicationValue)->GetString();
         medicationValue->SetObject();
@@ -338,7 +349,7 @@ void CommunicationPostHandler::validateRecipient(
     {
         ErpExpect(std::holds_alternative<model::TelematikId>(recipient), HttpStatus::BadRequest,
                   "Expected TelematikId, got KVNR");
-        ErpExpect(std::get<model::TelematikId>(recipient).valid(), HttpStatus::BadRequest,
+        ErpExpect(std::get<model::TelematikId>(recipient).validFormat(), HttpStatus::BadRequest,
             "A valid Telematic ID must contain at least one \"-\"");
     }
     else
@@ -348,7 +359,7 @@ void CommunicationPostHandler::validateRecipient(
         // Please note that the format of KVNRs is already checked when validating against the schema
         // but Telematic IDs are not validated against the schema.
         // Because of this discrepancy the code below has been kept for the sake of clarification.
-        ErpExpect(std::get<model::Kvnr>(recipient).valid(), HttpStatus::BadRequest, "Invalid Kvnr");
+        ErpExpect(std::get<model::Kvnr>(recipient).validFormat(), HttpStatus::BadRequest, "Invalid Kvnr");
     }
 }
 

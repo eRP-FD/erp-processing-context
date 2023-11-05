@@ -944,7 +944,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_sort_receivedSentAndSea
         {   givenCommunicationIds[1],
             givenCommunicationIds[3]});
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?recipient=X234567892&_sort=sent,-received");
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?recipient=X234567802&_sort=sent,-received");
 }
 
 

@@ -13,6 +13,7 @@
 #include "erp/model/Timestamp.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestUtils.hxx"
+#include "erp/util/Uuid.hxx"
 
 #include <boost/algorithm/string.hpp>
 
@@ -48,10 +49,10 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
             kvid10Ns = std::string{model::resource::naming_system::pkvKvid10};
             break;
     }
-    boost::replace_all(bundle, "###INSURANCE_TYPE###", bundleOptions.forceInsuranceType.value_or(insuranceType));
+    boost::replace_all(bundle, "###PATIENT_IDENTIFIER_SYSTEM###", bundleOptions.patientIdentifierSystem);
+    boost::replace_all(bundle, "###PATIENT_IDENTIFIER_CODE###", bundleOptions.forceInsuranceType.value_or(insuranceType));
     boost::replace_all(bundle, "###KVID10###", bundleOptions.forceKvid10Ns.value_or(kvid10Ns));
-    boost::replace_all(bundle, "###TIMESTAMP###", bundleOptions.timestamp.toXsDateTime());
-    boost::replace_all(bundle, "###TIMESTAMP_DATE###", bundleOptions.timestamp.toGermanDate());
+    boost::replace_all(bundle, "###AUTHORED_ON###", bundleOptions.authoredOn.toGermanDate());
     boost::replace_all(bundle, "###INSURANT_KVNR###", bundleOptions.kvnr);
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", prescriptionId.toString());
     boost::replace_all(bundle, "###MEDICATION_CATEGORY###", bundleOptions.medicationCategory);
@@ -60,6 +61,31 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     boost::replace_all(bundle, "###COVERAGE_INSURANCE_SYSTEM###", bundleOptions.coverageInsuranceSystem);
     boost::replace_all(bundle, "###COVERAGE_PAYOR_EXTENSION###", bundleOptions.coveragePayorExtension);
     boost::replace_all(bundle, "###META_EXTENSION###", bundleOptions.metaExtension);
+    boost::replace_all(bundle, "###IKNR###", bundleOptions.iknr.id());
+    boost::replace_all(bundle, "###LANR###", bundleOptions.lanr.id());
+    std::string anrType;
+    std::string anrCodeSystem;
+    std::string qualificationType;
+    switch(bundleOptions.lanr.getType())
+    {
+        case model::Lanr::Type::lanr:
+            anrType = "LANR";
+            anrCodeSystem = "http://terminology.hl7.org/CodeSystem/v2-0203";
+            qualificationType = "00";
+            break;
+        case model::Lanr::Type::zanr:
+            anrType = "ZANR";
+            anrCodeSystem = "http://fhir.de/CodeSystem/identifier-type-de-basis";
+            qualificationType = "01";
+            break;
+        case model::Lanr::Type::unspecified:
+            break;
+    }
+    boost::replace_all(bundle, "###LANR_TYPE###", anrType);
+    boost::replace_all(bundle, "###LANR_SYSTEM###", bundleOptions.lanr.namingSystem(deprecatedKbv));
+    boost::replace_all(bundle, "###LANR_CODE_SYSTEM###", anrCodeSystem);
+    boost::replace_all(bundle, "###QUALIFICATION_TYPE###", qualificationType);
+    boost::replace_all(bundle, "###PZN###", bundleOptions.pzn.id());
     return bundle;
 }
 
@@ -76,8 +102,8 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
         "test/EndpointHandlerTest/kbv_bundle_mehrfachverordnung_template_" + kbvVersionStr + ".xml";
 
     auto bundle = resourceManager.getStringResource(templateFileName);
-    boost::replace_all(bundle, "###TIMESTAMP###", bundleOptions.timestamp.toXsDateTime());
-    boost::replace_all(bundle, "###TIMESTAMP_DATE###", bundleOptions.timestamp.toGermanDate());
+    boost::replace_all(bundle, "###TIMESTAMP###", bundleOptions.authoredOn.toXsDateTime());
+    boost::replace_all(bundle, "###AUTHORED_ON###", bundleOptions.authoredOn.toGermanDate());
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", bundleOptions.prescriptionId.toString());
     boost::replace_all(bundle, "###LEGAL_BASIS_CODE###", bundleOptions.legalBasisCode);
     boost::replace_all(bundle, "###NUMERATOR###", std::to_string(bundleOptions.numerator));
@@ -98,14 +124,6 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
     return bundle;
 }
 
-KbvBundlePkvOptions::KbvBundlePkvOptions(const model::PrescriptionId& prescriptionId, const model::Kvnr& kvnr,
-                                         model::ResourceVersion::KbvItaErp kbvVersion)
-    : prescriptionId(prescriptionId)
-    , kvnr(kvnr)
-    , kbvVersion(kbvVersion)
-{
-}
-
 std::string kbvBundlePkvXml(const KbvBundlePkvOptions& bundleOptions)
 {
     auto& resourceManager = ResourceManager::instance();
@@ -114,6 +132,7 @@ std::string kbvBundlePkvXml(const KbvBundlePkvOptions& bundleOptions)
     auto bundle = resourceManager.getStringResource(templateFileName);
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", bundleOptions.prescriptionId.toString());
     boost::replace_all(bundle, "###KVNR###", bundleOptions.kvnr.id());
+    boost::replace_all(bundle, "###AUTHORED_ON###", bundleOptions.authoredOn.toGermanDate());
     return bundle;
 }
 
@@ -129,15 +148,26 @@ std::string medicationDispenseBundleXml(const MedicationDispenseBundleOptions& b
         profile = *profileStr;
     }
     model::MedicationDispenseBundle bundle{model::BundleType::collection, profile};
+    bundle.setIdentifier(bundleOptions.prescriptionId);
     for (size_t idx = 0; const auto& medicationDispenseOpt : bundleOptions.medicationDispenses)
     {
-        model::MedicationDispenseId id{medicationDispenseOpt.prescriptionId, idx};
+        std::optional<model::MedicationDispenseId> id;
+        if (std::holds_alternative<model::PrescriptionId>(medicationDispenseOpt.prescriptionId))
+        {
+            id.emplace(std::get<model::PrescriptionId>(medicationDispenseOpt.prescriptionId), idx);
+        }
+        else
+        {
+            id.emplace(model::PrescriptionId::fromStringNoValidation(
+                           std::get<std::string>(medicationDispenseOpt.prescriptionId)),
+                       idx);
+        }
         ++idx;
         auto medicationDispense =
             model::MedicationDispense::fromXmlNoValidation(medicationDispenseXml(medicationDispenseOpt));
-        medicationDispense.setId(id);
+        medicationDispense.setId(*id);
         std::string fullUrl = "http://pvs.praxis-topp-gluecklich.local/fhir/MedicationDispense/";
-        fullUrl.append(id.toString());
+        fullUrl.append(id->toString());
         bundle.addResource(fullUrl, std::nullopt, std::nullopt, std::move(medicationDispense).jsonDocument());
     }
     return bundle.serializeToXmlString();
@@ -155,11 +185,24 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
     auto medicationOptions = medicationDispenseOptions.medication;
     medicationOptions.version =
             medicationOptions.version.value_or(get<rv::KbvItaErp>(rv::profileVersionFromBundle(fhirBundleVersion)));
-
-    boost::replace_all(bundle, "###PRESCRIPTION_ID###", medicationDispenseOptions.prescriptionId.toString());
+    struct toString {
+        std::string operator()(const model::PrescriptionId& prescriptionId) const
+        {
+            return prescriptionId.toString();
+        }
+        std::string operator()(const model::Timestamp& timestamp) const
+        {
+            return timestamp.toXsDateTime();
+        }
+        std::string operator()(const std::string& str)
+        {
+            return str;
+        }
+    };
+    boost::replace_all(bundle, "###PRESCRIPTION_ID###", std::visit(toString{}, medicationDispenseOptions.prescriptionId));
     boost::replace_all(bundle, "###INSURANT_KVNR###", medicationDispenseOptions.kvnr);
     boost::replace_all(bundle, "###TELEMATIK_ID###", medicationDispenseOptions.telematikId);
-    boost::replace_all(bundle, "###WHENHANDEDOVER###", medicationDispenseOptions.whenHandedOver.toXsDateTime());
+    boost::replace_all(bundle, "###WHENHANDEDOVER###", std::visit(toString{}, medicationDispenseOptions.whenHandedOver));
     boost::replace_all(bundle, "###MEDICATION###", medicationXml(medicationOptions));
     std::string whenPrepared;
     if (medicationDispenseOptions.whenPrepared.has_value())
@@ -220,6 +263,32 @@ std::string taskJson(const TaskOptions& taskOptions)
     }
 
     return task;
+}
+
+std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions)
+{
+    auto& resourceManager = ResourceManager::instance();
+    std::string templateFileName;
+    switch (chargeItemOptions.operation)
+    {
+        case ChargeItemOptions::OperationType::Post:
+            templateFileName = "test/EndpointHandlerTest/charge_item_POST_template.xml";
+            break;
+        case ChargeItemOptions::OperationType::Put:
+            templateFileName = "test/EndpointHandlerTest/charge_item_PUT_template.xml";
+            break;
+    }
+    const auto& prescriptionId = chargeItemOptions.prescriptionId;
+    auto chargeItem = resourceManager.getStringResource(templateFileName);
+    boost::replace_all(chargeItem, "##KVNR##", chargeItemOptions.kvnr.id());
+    boost::replace_all(chargeItem, "##PRESCRIPTION_ID##", prescriptionId.toString());
+    boost::replace_all(chargeItem, "##DISPENSE_BUNDLE##", chargeItemOptions.dispenseBundleBase64);
+    boost::replace_all(chargeItem, "##RECEIPT_REF##",
+                       Uuid{prescriptionId.deriveUuid(model::uuidFeatureReceipt)}.toUrn());
+    boost::replace_all(chargeItem, "##PRESCRIPTION_REF##",
+                       Uuid{prescriptionId.deriveUuid(model::uuidFeaturePrescription)}.toUrn());
+
+    return chargeItem;
 }
 
 }// namespace ResourceTemplates

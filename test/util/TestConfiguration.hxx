@@ -24,6 +24,8 @@ enum class TestConfigurationKey
     TEST_QES_PEM_FILE_NAME,
     TEST_RESOURCE_MANAGER_PATH,
     TEST_VSDM_KEYS,
+    TEST_ECIES_CERTIFICATE,
+
 };
 
 class TestConfigKeyNames : public ConfigurationKeyNamesBase<TestConfigurationKey>

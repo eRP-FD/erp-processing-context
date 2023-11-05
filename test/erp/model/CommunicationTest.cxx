@@ -6,6 +6,7 @@
  */
 
 #include "test/erp/model/CommunicationTest.hxx"
+#include "erp/ErpRequirements.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "test_config.h"
 #include "test/util/JsonTestUtils.hxx"
@@ -373,7 +374,7 @@ TEST_F(CommunicationTest, InfoReqSetSender)//NOLINT(readability-function-cogniti
     EXPECT_EQ(communication.sender().has_value(), false);
 
     // This call adds the members "/sender/identifier/system" and "/sender/identifier/value".
-    communication.setSender(model::Kvnr{"X234567890"});
+    communication.setSender(model::Kvnr{"X234567891"});
 
     std::string jsonString = communication.serializeToJsonString();
 
@@ -390,15 +391,15 @@ TEST_F(CommunicationTest, InfoReqSetSender)//NOLINT(readability-function-cogniti
     else
         EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()), naming_system::gkvKvid10);
     EXPECT_EQ(Communication::senderIdentifierValuePointer.Get(document)->IsString(), true);
-    EXPECT_EQ(std::string(Communication::senderIdentifierValuePointer.Get(document)->GetString()), "X234567890");
+    EXPECT_EQ(std::string(Communication::senderIdentifierValuePointer.Get(document)->GetString()), "X234567891");
 
     EXPECT_EQ(communication.sender().has_value(), true);
-    ASSERT_EQ(model::getIdentityString(*communication.sender()), "X234567890");
+    ASSERT_EQ(model::getIdentityString(*communication.sender()), "X234567891");
 
     // This call updates the already existing member "/sender/identifier/value".
-    communication.setSender(model::Kvnr{"X098765432"});
+    communication.setSender(model::Kvnr{"X098765439"});
     EXPECT_EQ(communication.sender().has_value(), true);
-    ASSERT_EQ(model::getIdentityString(*communication.sender()), "X098765432");
+    ASSERT_EQ(model::getIdentityString(*communication.sender()), "X098765439");
 }
 
 TEST_F(CommunicationTest, InfoReqSetRecipient)//NOLINT(readability-function-cognitive-complexity)
@@ -1080,4 +1081,274 @@ TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
     EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyX");
     EXPECT_EQ(json.getStringValueFromPointer(Communication::metaProfile0Pointer),
               model::ResourceVersion::versionizeProfile(structure_definition::communicationChargChangeReq));
+}
+
+namespace
+{
+
+enum ExpectedOutcome
+{
+    success,
+    failure,
+};
+
+void testVerifyPayload(Communication::MessageType messageType, std::string_view payload,
+                       ExpectedOutcome expectedOutcome, std::optional<std::string_view> expectedMessage = std::nullopt)
+{
+    auto builder = CommunicationJsonStringBuilder(messageType);
+    std::string body = builder.setPayload(std::string{payload}).createJsonString();
+    auto jsonValidator = StaticData::getJsonValidator();
+    const auto comm = Communication::fromJson(std::move(body), *jsonValidator, *StaticData::getXmlValidator(),
+                                              *StaticData::getInCodeValidator(), SchemaType::fhir,
+                                              model::ResourceVersion::supportedBundles(), false);
+    try
+    {
+        comm.verifyPayload(*jsonValidator);
+    }
+    catch (const std::exception& e)
+    {
+        ASSERT_EQ(expectedOutcome, ExpectedOutcome::failure);
+        if (expectedMessage.has_value())
+        {
+            ASSERT_TRUE(String::starts_with(std::string_view{e.what()}, *expectedMessage));
+        }
+        return;
+    }
+
+    ASSERT_EQ(expectedOutcome, ExpectedOutcome::success);
+}
+
+}
+
+TEST_F(CommunicationTest, verifyPayloadDispReq)
+{
+    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
+    if (model::ResourceVersion::deprecatedProfile(profileVersion))
+    {
+        GTEST_SKIP_("Does not apply to 2022 profiles");
+    }
+    const auto msgType = Communication::MessageType::DispReq;
+    A_23878.test("Validierung DispReq payload");
+
+    // simple success cases
+    {
+        std::string_view payload = R"({"version":1,"supplyOptionsType":"onPremise"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string_view payload =
+            R"({"version":1,"supplyOptionsType":"shipment","name": "Hans Peter Willich","address":["Hausnummer 1","3.OG","12345 Berlin"],"hint":"bla","phone":"004916094858168"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string_view payload =
+            R"({"version":1,"supplyOptionsType":"delivery","name": "Hans Peter Willich","address":["Hausnummer 1","3.OG","12345 Berlin"],"hint":"bla","phone":"004916094858168"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+
+    // failures
+    {
+        std::string_view payload = R"({"version":1,"supplyOptionsType":"invalid"})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    {
+        std::string_view payload = R"({"version":2,"supplyOptionsType":"onPremise"})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    {
+        std::string_view payload = R"({})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    {
+        std::string_view payload = R"(not-a-json)";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure, "Invalid JSON in payload.contentString"));
+    }
+    {
+        std::string_view payload = R"({"version":1,"supplyOptionsType":"onPremise","extraElement":"1"})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    // failures with too large field lengths
+    {
+        std::string longName(101, 'A');
+        std::string payload = R"({"version":1,"supplyOptionsType":"onPremise","name":")" + longName + R"("})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload = R"({"version":1,"supplyOptionsType":"onPremise","name":")" + longName.substr(1) + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string longHint(501, 'A');
+        std::string payload = R"({"version":1,"supplyOptionsType":"onPremise","hint":")" + longHint + R"("})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload = R"({"version":1,"supplyOptionsType":"onPremise","hint":")" + longHint.substr(1) + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string longPhone(33, '0');
+        std::string payload = R"({"version":1,"supplyOptionsType":"onPremise","phone":")" + longPhone + R"("})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload = R"({"version":1,"supplyOptionsType":"onPremise","phone":")" + longPhone.substr(1) + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string longAddress(501, 'A');
+        std::string payload = R"({"version":1,"supplyOptionsType":"onPremise","address":[")" + longAddress + "\",\"" +
+                              longAddress + R"("]})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload = R"({"version":1,"supplyOptionsType":"onPremise","address":[")" + longAddress.substr(1) + "\",\"" +
+                  longAddress.substr(1) + R"("]})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+}
+
+TEST_F(CommunicationTest, verifyPayloadReply)
+{
+    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
+    if (model::ResourceVersion::deprecatedProfile(profileVersion))
+    {
+        GTEST_SKIP_("Does not apply to 2022 profiles");
+    }
+    A_23879.test("Validierung DispReq payload");
+    const auto msgType = Communication::MessageType::Reply;
+
+    // simple success cases
+    {
+        std::string_view payload = R"({"version":1,"supplyOptionsType":"onPremise"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string_view payload =
+            R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Hallo","url":"https://gematik.de","pickUpCodeHR":"12345678","pickUpCodeDMC":"123459789"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string_view payload =
+            R"({"version":1,"supplyOptionsType":"delivery","info_text":"Hallo der Herr","url":"https://gematik.de"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string_view payload =
+            R"({"version":1,"supplyOptionsType":"shipment","info_text":"Hallo der Herr","url":"https://www.example.com/path/to/file.txt?userid=1001&pages=3&results=full#page1"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    // failures
+    {
+        std::string_view payload = R"({"version":1,"supplyOptionsType":"invalid"})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    {
+        std::string_view payload = R"({"version":2,"supplyOptionsType":"onPremise"})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    {
+        std::string_view payload = R"({})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    {
+        std::string_view payload = R"(not-a-json)";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure, "Invalid JSON in payload.contentString"));
+    }
+    {
+        std::string_view payload = R"({"version":1,"supplyOptionsType":"onPremise","extraElement":"1"})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    // failures with too large field lengths
+    {
+        std::string longInfo(501, 'A');
+        std::string payload = R"({"version":1,"supplyOptionsType":"onPremise","info_text":")" + longInfo + R"("})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload = R"({"version":1,"supplyOptionsType":"onPremise","info_text":")" + longInfo.substr(1) + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string url{"https://gematik.de/"};
+        url.append(std::string(501 - url.size(), 'A'));
+        std::string payload = R"({"version":1,"supplyOptionsType":"onPremise","url":")" + url + R"("})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload = R"({"version":1,"supplyOptionsType":"onPremise","url":")" + url.substr(1) + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string pickUpCodeHR(9, 'A');
+        std::string payload =
+            R"({"version":1,"supplyOptionsType":"onPremise","pickUpCodeHR":")" + pickUpCodeHR + R"("})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload = R"({"version":1,"supplyOptionsType":"onPremise","pickUpCodeHR":")" + pickUpCodeHR.substr(1) + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    {
+        std::string pickUpCodeDMC(129, 'A');
+        std::string payload =
+            R"({"version":1,"supplyOptionsType":"onPremise","pickUpCodeDMC":")" + pickUpCodeDMC + R"("})";
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        payload =
+            R"({"version":1,"supplyOptionsType":"onPremise","pickUpCodeDMC":")" + pickUpCodeDMC.substr(1) + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
+    // requirement to have supplyOptionsType = "onPremise" when pickUpCodeDMC or pickUpCodeHR are set
+    {
+        std::string payload = R"({"version":1,"supplyOptionsType":"shipment","pickUpCodeDMC":"abcd"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure,
+                                                  "Invalid payload: Value of 'supplyOptionsType' must be 'onPremise'"));
+    }
+    {
+        std::string payload = R"({"version":1,"supplyOptionsType":"delivery","pickUpCodeDMC":"abcd"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure,
+                                                  "Invalid payload: Value of 'supplyOptionsType' must be 'onPremise'"));
+    }
+    {
+        std::string payload = R"({"version":1,"supplyOptionsType":"shipment","pickUpCodeHR":"abcd"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure,
+                                                  "Invalid payload: Value of 'supplyOptionsType' must be 'onPremise'"));
+    }
+    {
+        std::string payload = R"({"version":1,"supplyOptionsType":"delivery","pickUpCodeHR":"abcd"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure,
+                                                  "Invalid payload: Value of 'supplyOptionsType' must be 'onPremise'"));
+    }
+    {
+        std::string url{"something"};
+        std::string payload = R"({"version":1,"supplyOptionsType":"onPremise","url":")" + url + R"("})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure, "Invalid payload: URL not valid."));
+    }
+}
+
+
+TEST_F(CommunicationTest, verifyPayloadNoJson)
+{
+    using enum model::Communication::MessageType;
+    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
+    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
+    std::string_view payload = "not-a-json";
+    std::vector<model::Communication::MessageType> messageTypes;
+    if (isDeprecated)
+    {
+        // 2022 profiles must allow any payload, without chargeChange
+        messageTypes = {InfoReq, Representative, DispReq, Reply};
+    }
+    else
+    {
+        // 2023 profiles must all, without DispReq & Reply
+        messageTypes = {InfoReq, Representative, ChargChangeReply, ChargChangeReq};
+    }
+
+    for (const auto& msgType : messageTypes)
+    {
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, success));
+    }
 }

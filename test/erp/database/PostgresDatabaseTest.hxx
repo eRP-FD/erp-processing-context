@@ -165,9 +165,9 @@ protected:
     // Names of doctors and pharmacies may have up to 256 characters.
     // In contrary several tests need different insurants so here a set of predefined
     // insurant names is provided. The KVNRs of insurants is limited to 10 characters.
-    static constexpr const char* InsurantA = "X000000001";
-    static constexpr const char* InsurantB = "X000000002";
-    static constexpr const char* InsurantC = "X000000003";
+    static constexpr const char* InsurantA = "X000000012";
+    static constexpr const char* InsurantB = "X000000024";
+    static constexpr const char* InsurantC = "X000000036";
 
     KeyDerivation& getKeyDerivation()
     {

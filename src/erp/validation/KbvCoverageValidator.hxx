@@ -38,7 +38,6 @@ private:
     void IK_Kostentraeger_BG_UK(const model::KbvCoverage& kbvCoverage) const;
     void DMP_Pflicht(const model::KbvCoverage& kbvCoverage) const;
     void KBVdate(const model::KbvCoverage& kbvCoverage) const;
-    void ik_1(const model::KbvCoverage& kbvCoverage) const;
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_VALIDATION_KBVCOVERAGEVALIDATOR_HXX

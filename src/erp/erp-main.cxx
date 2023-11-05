@@ -18,6 +18,7 @@
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
+#include "erp/util/ConfigurationFormatter.hxx"
 
 #include <cstdlib>
 #include <iostream>
@@ -32,18 +33,34 @@ namespace
         // to stderr, and that would bypass our GLog settings in production.
         xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {});
     }
+
+    void processCommandLine(const int argc, const char* argv[])
+    {
+        for (int i = 1; i < argc; ++i)
+        {
+            std::string_view arg{argv[i]};
+            if (arg == "--print-configuration")
+            {
+                using Flags = KeyData::ConfigurationKeyFlags;
+                const auto& config = Configuration::instance();
+                std::cout << ConfigurationFormatter::formatAsJson(config, Flags::all);
+                exit(EXIT_SUCCESS); //NOLINT(concurrency-mt-unsafe)
+            }
+        }
+    }
 }
 
 
-int main (const int, const char* argv[], char** /*environment*/)
+int main (const int argc, const char* argv[], char** /*environment*/)
 {
     int exitCode = EXIT_FAILURE;
 
     try
     {
+        processCommandLine(argc, argv);
         GLogConfiguration::init_logging(argv[0]);
         ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
-        CrashHandler::registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGSYS, SIGFPE});
+        CrashHandler::registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGSYS, SIGFPE, SIGPIPE});
 
         TLOG(INFO) << "Starting erp-processing-context " << ErpServerInfo::ReleaseVersion()
                     << " (build: " << ErpServerInfo::BuildVersion() << "; " << ErpServerInfo::ReleaseDate() << ")";

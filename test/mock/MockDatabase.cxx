@@ -384,7 +384,7 @@ void MockDatabase::fillWithStaticData ()
         v_str(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
     const auto dataPath(std::string{ TEST_DATA_DIR } + "/EndpointHandlerTest");
 
-    const char* const kvnr = "X123456789";
+    const char* const kvnr = "X123456788";
     const auto taskId1 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     const auto task1 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId1, .kvnr = kvnr}));
@@ -419,6 +419,10 @@ void MockDatabase::fillWithStaticData ()
     const auto task169 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId169, .kvnr = kvnr}));
 
+    const auto taskId169Draft = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 4718);
+    const auto task169Draft = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = taskId169Draft, .kvnr = kvnr}));
+
     const auto healthCarePrescriptionUuid4 = task4.healthCarePrescriptionUuid().value();
     const auto healthCarePrescriptionBundle4 = model::Binary(healthCarePrescriptionUuid4, kbvBundle).serializeToJsonString();
 
@@ -437,6 +441,7 @@ void MockDatabase::fillWithStaticData ()
     insertTask(task6);
     insertTask(task7);
     insertTask(task169);
+    insertTask(task169Draft);
 
     // add static audit event entries
     const std::string auditEventFileName = dataPath + "/audit_event_" + gematikVersionStr + ".json";
@@ -455,25 +460,25 @@ void MockDatabase::fillWithStaticData ()
     // PKV tasks
     // Activated task with consent and charge item (added below):
     const auto pkvTaskId1 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
-    const char* const pkvKvnr1 = "X500000000";
+    const char* const pkvKvnr1 = "X500000056";
     auto taskPkv1 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId1, .kvnr = pkvKvnr1}));
     taskPkv1.setHealthCarePrescriptionUuid();
     // Activated task without consent:
     const auto pkvTaskId1a = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
-    const char* const pkvKvnr1a = "X500000001";
+    const char* const pkvKvnr1a = "X500000017";
     auto taskPkv1a = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId1a, .kvnr = pkvKvnr1a}));
     taskPkv1a.setHealthCarePrescriptionUuid();
     // Activated task with consent (added below):
     const auto pkvTaskId209 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50002);
-    const char* const pkvKvnr209 = "X500000002";
+    const char* const pkvKvnr209 = "X500000029";
     auto taskPkv209 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId209, .kvnr = pkvKvnr209}));
     taskPkv209.setHealthCarePrescriptionUuid();
     // Activated task without consent:
     const auto pkvTaskId209a = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50003);
-    const char* const pkvKvnr209a = "X500000003";
+    const char* const pkvKvnr209a = "X500000031";
     auto taskPkv209a = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId209a, .kvnr = pkvKvnr209a}));
     taskPkv209a.setHealthCarePrescriptionUuid();
@@ -526,7 +531,7 @@ void MockDatabase::fillWithStaticData ()
     // add static chargeItem entry for kvnr1
     const auto chargeItemInput = resourceManager.getStringResource(dataPath + "/charge_item_input_marked.json");
     auto chargeItem = model::ChargeItem::fromJsonNoValidation(chargeItemInput);
-    const auto dispenseItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml();
     const auto dispenseItemBundle = ::model::Bundle::fromXmlNoValidation(dispenseItemXML);
 
     chargeItem.setPrescriptionId(pkvTaskId1);
@@ -581,10 +586,11 @@ void MockDatabase::fillWithStaticData ()
     insertTask(taskPkv5, std::nullopt, healthCarePrescriptionBundlePkv5, receipt5);
 
     // static ChargeItem for task for insurant with consent (added above):
-    const auto chargeItemTemplateXml = resourceManager.getStringResource(dataPath + "/charge_item_PUT_template.xml");
     const auto chargeItemXml =
-        String::replaceAll(replaceKvnr(replacePrescriptionId(chargeItemTemplateXml, pkvTaskId3.toString()), pkvKvnr1),
-                           "##DISPENSE_BUNDLE##", Base64::encode(dispenseItemXML));
+        ResourceTemplates::chargeItemXml({.kvnr = model::Kvnr{pkvKvnr1},
+                                          .prescriptionId = pkvTaskId3,
+                                          .dispenseBundleBase64 = "",
+                                          .operation = ResourceTemplates::ChargeItemOptions::OperationType::Put});
     auto chargeItemForManip = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
     chargeItemForManip.setPrescriptionId(pkvTaskId3);
     chargeItemForManip.deleteContainedBinary();

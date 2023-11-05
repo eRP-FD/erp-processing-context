@@ -11,6 +11,7 @@
 #include "erp/util/Uuid.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <gtest/gtest.h>
 
@@ -46,7 +47,7 @@ void checkCommon(model::ChargeItem& chargeItem)
 {
     ASSERT_TRUE(chargeItem.prescriptionId());
     EXPECT_EQ(chargeItem.prescriptionId()->toString(), "160.123.456.789.123.58");
-    EXPECT_EQ(chargeItem.subjectKvnr(), "X234567890");
+    EXPECT_EQ(chargeItem.subjectKvnr(), "X234567891");
     EXPECT_EQ(chargeItem.entererTelematikId(), "606358757");
     ASSERT_TRUE(chargeItem.enteredDate());
     EXPECT_EQ(chargeItem.enteredDate()->toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
@@ -69,7 +70,7 @@ void checkCommon(model::ChargeItem& chargeItem)
     ASSERT_TRUE(chargeItem.prescriptionId());
     EXPECT_EQ(chargeItem.prescriptionId()->toString(), prescriptionId.toString());
 
-    const std::string_view kvnr = "X424242424";
+    const std::string_view kvnr = "X424242422";
     chargeItem.setSubjectKvnr(kvnr);
     EXPECT_EQ(chargeItem.subjectKvnr(), kvnr);
 
@@ -303,8 +304,7 @@ TEST_F(ChargeItemTest, SupportingInfoReference)//NOLINT(readability-function-cog
     ASSERT_TRUE(receiptReference.has_value());
     EXPECT_EQ(receiptReference.value(), receiptInput);
 
-    const auto& dispenseItemXML =
-        ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto& dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
     auto dispenseBundle = ::model::Bundle::fromXmlNoValidation(dispenseItemXML);
     dispenseInput = Uuid{pId.deriveUuid(model::uuidFeatureDispenseItem)}.toUrn();
     chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);

@@ -84,27 +84,24 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
-    if (Configuration::instance().featurePkvEnabled())
+    switch (prescriptionId.type())
     {
-        switch (prescriptionId.type())
-        {
-            case model::PrescriptionType::apothekenpflichigeArzneimittel:
-            case model::PrescriptionType::direkteZuweisung:
-                break;
-            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            case model::PrescriptionType::direkteZuweisungPkv: {
-                A_22110.start("Evaluate consent for flowtype 200/209 (PKV prescription) and add to response bundle");
-                const auto consent = databaseHandle->retrieveConsent(kvnr.value());
-                if (consent.has_value())
-                {
-                    TVLOG(1) << "Consent found for Kvnr of task";
-                    Expect3(consent->id().has_value(), "Consent id not set", std::logic_error);
-                    responseBundle.addResource(makeFullUrl("/Consent/" + std::string(consent->id().value())), {}, {},
-                                               consent->jsonDocument());
-                }
-                A_22110.finish();
-                break;
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv: {
+            A_22110.start("Evaluate consent for flowtype 200/209 (PKV prescription) and add to response bundle");
+            const auto consent = databaseHandle->retrieveConsent(kvnr.value());
+            if (consent.has_value())
+            {
+                TVLOG(1) << "Consent found for Kvnr of task";
+                Expect3(consent->id().has_value(), "Consent id not set", std::logic_error);
+                responseBundle.addResource(makeFullUrl("/Consent/" + std::string(consent->id().value())), {}, {},
+                                           consent->jsonDocument());
             }
+            A_22110.finish();
+            break;
         }
     }
 

@@ -17,6 +17,28 @@
 #include <thread> // for std::this_thread::sleep_for
 #include <string>
 
+class PcServiceContextWithMockRegistrationManager : public PcServiceContext
+{
+public:
+    PcServiceContextWithMockRegistrationManager(const Configuration& configuration, Factories&& factories)
+        : PcServiceContext(configuration, std::move(factories))
+    {
+    }
+
+    std::shared_ptr<RegistrationInterface> registrationInterface() const override
+    {
+        return mRegistrationInterface;
+    }
+
+    std::shared_ptr<RegistrationMock> mockRegistrationInterface() const
+    {
+        return mRegistrationInterface;
+    }
+
+private:
+    std::shared_ptr<RegistrationMock> mRegistrationInterface = std::make_shared<RegistrationMock>();
+};
+
 
 class ApplicationHealthAndRegistrationUpdaterTest : public testing::Test
 {
@@ -26,6 +48,11 @@ public:
         MockTerminationHandler::setupForTesting();
     }
 
+    static PcServiceContextWithMockRegistrationManager makeServiceContext()
+    {
+        return PcServiceContextWithMockRegistrationManager(Configuration::instance(), StaticData::makeMockFactories());
+    }
+
 protected:
     void TearDown() override
     {
@@ -33,13 +60,12 @@ protected:
     }
 };
 
+
 TEST_F(ApplicationHealthAndRegistrationUpdaterTest, Success)
 {
-    auto uniqueRegistrationManager = std::make_shared<RegistrationMock>();
-    auto& registrationManager = *uniqueRegistrationManager;
-    auto serviceContext = StaticData::makePcServiceContext();
+    auto serviceContext{makeServiceContext()};
     auto sender =
-        std::make_unique<ApplicationHealthAndRegistrationUpdater>(std::move(uniqueRegistrationManager), std::chrono::milliseconds(1500),
+        std::make_unique<ApplicationHealthAndRegistrationUpdater>(std::chrono::milliseconds(1500),
                                           std::chrono::seconds(1), serviceContext);
 
     sender->start();
@@ -47,38 +73,37 @@ TEST_F(ApplicationHealthAndRegistrationUpdaterTest, Success)
     MockTerminationHandler::instance().notifyTerminationCallbacks(false);
     dynamic_cast<MockTerminationHandler&>(MockTerminationHandler::instance()).waitForTerminated();
 
-    ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::deregistered);
+    ASSERT_EQ(serviceContext.mockRegistrationInterface()->currentState(), RegistrationMock::State::deregistered);
 }
 
 TEST_F(ApplicationHealthAndRegistrationUpdaterTest, FailStartup)
 {
-    auto uniqueRegistrationManager = std::make_shared<RegistrationMock>();
-    auto& registrationManager = *uniqueRegistrationManager;
-    auto serviceContext = StaticData::makePcServiceContext();
-    auto sender = std::make_unique<ApplicationHealthAndRegistrationUpdater>(
-        std::move(uniqueRegistrationManager), std::chrono::seconds(1), std::chrono::seconds(1), serviceContext);
+    auto serviceContext{makeServiceContext()};
+    auto sender = std::make_unique<ApplicationHealthAndRegistrationUpdater>(std::chrono::seconds(1),
+                                                                            std::chrono::seconds(1), serviceContext);
 
-    registrationManager.setSimulateServerDown(true);
+    serviceContext.mockRegistrationInterface()->setSimulateServerDown(true);
     sender->start();
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::initialized);
+    ASSERT_EQ(serviceContext.mockRegistrationInterface()->currentState(), RegistrationMock::State::initialized);
+
+    serviceContext.mockRegistrationInterface()->setSimulateServerDown(false);
+    serviceContext.mockRegistrationInterface()->registration();
 }
 
 TEST_F(ApplicationHealthAndRegistrationUpdaterTest, FailDeregistration)
 {
-    auto uniqueRegistrationManager = std::make_shared<RegistrationMock>();
-    auto& registrationManager = *uniqueRegistrationManager;
-    auto serviceContext = StaticData::makePcServiceContext();
-    auto sender = std::make_unique<ApplicationHealthAndRegistrationUpdater>(
-        std::move(uniqueRegistrationManager), std::chrono::seconds(20), std::chrono::seconds(10), serviceContext);
+    auto serviceContext{makeServiceContext()};
+    auto sender = std::make_unique<ApplicationHealthAndRegistrationUpdater>(std::chrono::seconds(20),
+                                                                            std::chrono::seconds(10), serviceContext);
 
     sender->start();
     std::this_thread::sleep_for(std::chrono::seconds(2));
-    registrationManager.setSimulateServerDown(true);
+    serviceContext.mockRegistrationInterface()->setSimulateServerDown(true);
     MockTerminationHandler::instance().notifyTerminationCallbacks(false);
     dynamic_cast<MockTerminationHandler&>(MockTerminationHandler::instance()).waitForTerminated();
 
-    ASSERT_TRUE(registrationManager.deregistrationCalled());
-    ASSERT_EQ(registrationManager.currentState(), RegistrationMock::State::registered);
+    ASSERT_TRUE(serviceContext.mockRegistrationInterface()->deregistrationCalled());
+    ASSERT_EQ(serviceContext.mockRegistrationInterface()->currentState(), RegistrationMock::State::registered);
 }

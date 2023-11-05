@@ -46,13 +46,12 @@ std::vector<std::pair<std::string, int>> extractSentinalHostsAndPorts(const std:
 } // anonymous namespace
 
 
-RedisClient::RedisClient()
-{
+RedisClient::RedisClient(std::chrono::milliseconds socketTimeout) {
     const auto& configuration = Configuration::instance();
     TLOG(INFO) << "Initializing Redis Client.";
 
     const auto sentinelHosts = configuration.getOptionalStringValue(ConfigurationKey::REDIS_SENTINEL_HOSTS);
-    const auto caCert = configuration.getOptionalStringValue(ConfigurationKey::REDIS_CERTIFICATE_PATH, "/erp/redis/REDIS_CERT");
+    const auto caCert = configuration.getStringValue(ConfigurationKey::REDIS_CERTIFICATE_PATH);
 
     TVLOG(2) << "redis config:" << std::endl
         << "database=" << configuration.getIntValue(ConfigurationKey::REDIS_DATABASE) << std::endl
@@ -70,10 +69,11 @@ RedisClient::RedisClient()
     sw::redis::tls::disable_auto_init();
 
     const auto connectTimeout =
-        std::chrono::milliseconds(configuration.getOptionalIntValue(ConfigurationKey::REDIS_CONNECTION_TIMEOUT, 200));
+        std::chrono::milliseconds(configuration.getIntValue(ConfigurationKey::REDIS_CONNECTION_TIMEOUT));
     mOptions.db = configuration.getIntValue(ConfigurationKey::REDIS_DATABASE);
     mOptions.tls.enabled = true;
     mOptions.connect_timeout = connectTimeout;
+    mOptions.socket_timeout = socketTimeout;
     mOptions.user = configuration.getStringValue(ConfigurationKey::REDIS_USER);
     mOptions.password = configuration.getStringValue(ConfigurationKey::REDIS_PASSWORD);
     mOptions.tls.cacert = caCert;
@@ -86,7 +86,7 @@ RedisClient::RedisClient()
         // "sentinel" mode
         TLOG(INFO) << "Connecting in sentinel mode.";
         mOptions.socket_timeout = std::chrono::milliseconds(
-            configuration.getOptionalIntValue(ConfigurationKey::REDIS_SENTINEL_SOCKET_TIMEOUT, 200));
+            configuration.getIntValue(ConfigurationKey::REDIS_SENTINEL_SOCKET_TIMEOUT));
         sw::redis::SentinelOptions mSentinelOptions;
         mSentinelOptions.nodes = extractSentinalHostsAndPorts(*sentinelHosts);
         mSentinelOptions.connect_timeout = connectTimeout;
@@ -105,6 +105,17 @@ RedisClient::RedisClient()
         mOptions.host = configuration.getStringValue(ConfigurationKey::REDIS_HOST);
         mConnection = std::make_unique<sw::redis::Redis>(Redis(mOptions, mPoolOptions));
     }
+}
+
+RedisClient::RedisClient() : RedisClient(std::chrono::milliseconds(0))
+{
+}
+
+void RedisClient::healthCheck()
+{
+    constexpr static std::string_view countField = "count";
+    constexpr static std::string_view healthCheckKey = "health_check";
+    setKeyFieldValue(healthCheckKey, countField, "1");
 }
 
 bool RedisClient::exists(const std::string_view& key)

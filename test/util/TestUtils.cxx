@@ -9,6 +9,7 @@
 #include "erp/model/Timestamp.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
+#include <date/tz.h>
 #include <algorithm>
 #include <chrono>
 #include <regex>
@@ -19,12 +20,15 @@ namespace testutils
 std::vector<EnvironmentVariableGuard> getNewFhirProfileEnvironment()
 {
     using namespace std::chrono_literals;
-    const auto yesterday = (model::Timestamp::now() - 24h).toXsDateTime();
+    const auto yesterday = (model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
+    const auto dbYesterday = (model::Timestamp::now() - date::days{2}).toXsDate(model::Timestamp::GermanTimezone);
+    const auto tomorrow = (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
 
     std::vector<EnvironmentVariableGuard> envVars;
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, yesterday);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, dbYesterday);
     envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, yesterday);
     envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, yesterday);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, tomorrow);
     return envVars;
 }
 
@@ -32,25 +36,41 @@ std::vector<EnvironmentVariableGuard> getNewFhirProfileEnvironment()
 std::vector<EnvironmentVariableGuard> getOldFhirProfileEnvironment()
 {
     using namespace std::chrono_literals;
-    const auto tomorrow = (model::Timestamp::now() + 24h).toXsDateTime();
+    const auto tomorrow = (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
+    const auto today = (model::Timestamp::now()).toXsDate(model::Timestamp::GermanTimezone);
 
     std::vector<EnvironmentVariableGuard> envVars;
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, tomorrow);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, today);
     envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, tomorrow);
     envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, tomorrow);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, tomorrow);
     return envVars;
 }
 
 std::vector<EnvironmentVariableGuard> getOverlappingFhirProfileEnvironment()
 {
     using namespace std::chrono_literals;
-    const auto tomorrow = (model::Timestamp::now() + 24h).toXsDateTime();
-    const auto yesterday = (model::Timestamp::now() - 24h).toXsDateTime();
-
+    const auto tomorrow = (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
+    const auto yesterday = (model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
     std::vector<EnvironmentVariableGuard> envVars;
     envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, tomorrow);
     envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, yesterday);
     envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, yesterday);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, tomorrow);
+    return envVars;
+}
+
+std::vector<EnvironmentVariableGuard> getPatchedFhirProfileEnvironment()
+{
+    using namespace std::chrono_literals;
+    const auto yesterday = (model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
+    const auto dbYesterday = (model::Timestamp::now() - date::days{2}).toXsDate(model::Timestamp::GermanTimezone);
+
+    std::vector<EnvironmentVariableGuard> envVars;
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, dbYesterday);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, yesterday);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, yesterday);
+    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, yesterday);
     return envVars;
 }
 

@@ -106,7 +106,7 @@ void ServerTestBase::startServer (void)
 
     auto factories = StaticData::makeMockFactories();
     factories.databaseFactory = createDatabaseFactory();
-    factories.redisClientFactory = []{return createRedisInstance();};
+    factories.redisClientFactory = [](std::chrono::milliseconds){return createRedisInstance();};
     mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
     initializeIdp(mContext->idp);
     const auto& config = Configuration::instance();
@@ -394,7 +394,7 @@ JWT ServerTestBase::jwtWithProfessionOID(const std::string_view professionOID)
             "family_name": "Nachname",
             "given_name": "Vorname",
             "iat": ##IAT##,
-            "idNummer": "X020406089",
+            "idNummer": "X020406082",
             "iss": "https://idp1.telematik.de/jwt",
             "jti": "<IDP>_01234567890123456789",
             "nonce": "fuu bar baz",
@@ -662,7 +662,7 @@ model::ChargeItem ServerTestBase::addChargeItemToDatabase(const ChargeItemDescri
     auto& resourceManager = ResourceManager::instance();
     const auto chargeItemInput = resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_input_marked.json");
     auto chargeItem = model::ChargeItem::fromJsonNoValidation(chargeItemInput);
-    const auto dispenseItemXML = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
     const auto dispenseItemBundle = ::model::Bundle::fromXmlNoValidation(dispenseItemXML);
 
     const auto kbvBundlePkvXml =

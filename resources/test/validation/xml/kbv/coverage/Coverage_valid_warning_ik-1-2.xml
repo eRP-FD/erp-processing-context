@@ -40,7 +40,7 @@
   <payor>
     <identifier>
       <system value="http://fhir.de/NamingSystem/arge-ik/iknr" />
-      <value value="04212059X" />
+      <value value="109500969" />
     </identifier>
     <display value="AOK Rheinland/Hamburg" />
   </payor>

@@ -87,6 +87,7 @@ protected:
         database->updateTaskStatusAndSecret(task);
         database->commitTransaction();
     }
+
 };
 
 TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexity)
@@ -254,7 +255,7 @@ TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readabili
     }
     {// wrong KVNR
         const ResourceTemplates::MedicationDispenseOptions settings{.prescriptionId = correctId,
-                                                                    .kvnr = "X888888888",
+                                                                    .kvnr = "X888888880",
                                                                     .telematikId = telematikId};
         const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml(settings);
         const auto medicationDispenseBundleXml =
@@ -268,7 +269,7 @@ TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readabili
     }
     {// wrong Telematik-ID
         const ResourceTemplates::MedicationDispenseOptions settings{.prescriptionId = correctId,
-                                                                    .kvnr = "X888888888",
+                                                                    .kvnr = "X888888880",
                                                                     .telematikId = "falsch"};
         const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml(settings);
         const auto medicationDispenseBundleXml =
@@ -397,6 +398,77 @@ TEST_F(CloseTaskTest, MedicationDispenseBundleAcceptInvalid2022)
     ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
 }
 
+TEST_F(CloseTaskTest, whenHandedOver)
+{
+    if (! rv::supportedBundles().contains(rv::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        GTEST_SKIP_("Only relevant starting with overlapping period");
+    }
+    using namespace std::chrono_literals;
+    const auto yesterday = model::Timestamp::now() - 24h;
+    ResourceTemplates::MedicationDispenseOptions dispenseOptions{
+        .prescriptionId = prescriptionId,
+        .telematikId = telematikId,
+        .whenHandedOver = yesterday,
+    };
+
+    ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
+        .medicationDispenses = {dispenseOptions, dispenseOptions}
+    };
+    // whenHandedOver during new profile period
+    {
+        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
+                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
+        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
+                                                      (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
+        ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
+        ASSERT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::success));
+    }
+
+    // whenHandedOver before overlapping period
+    {
+        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
+                                                     (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
+        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
+                                                      (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
+        ASSERT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
+        ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
+    }
+    // whenHandedOver during new overlapping period
+    {
+        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
+                                                     (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
+        EnvironmentVariableGuard oldProfileValidUntil(
+            ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
+            (model::Timestamp::now() + 24h).toXsDate(model::Timestamp::GermanTimezone));
+        ASSERT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
+        ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
+    }
+}
+
+TEST_F(CloseTaskTest, whenHandedOverConsistentInBundle)
+{
+    // test that the whenHandedOver may have different dates (cf ANFERP-1847, ERP-16337, ANFERP-1995)
+    using namespace std::chrono_literals;
+    const auto now = model::Timestamp::now();
+    const auto later = now + 1min;
+    ResourceTemplates::MedicationDispenseOptions dispenseLaterOptions{
+        .prescriptionId = prescriptionId,
+        .telematikId = telematikId,
+        .whenHandedOver = later,
+    };
+
+    ResourceTemplates::MedicationDispenseOptions dispenseNowOptions{
+        .prescriptionId = prescriptionId,
+        .telematikId = telematikId,
+        .whenHandedOver = now,
+    };
+
+    ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
+        .medicationDispenses = {dispenseLaterOptions, dispenseNowOptions}
+    };
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
+}
 
 struct CloseTaskMixedProfileTestParam
 {
@@ -531,7 +603,7 @@ class CloseTaskMixedMedicationVersionsTest
 
 TEST_P(CloseTaskMixedMedicationVersionsTest, run)
 {
-    A_23384_draft.test("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
+    A_23384.test("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
     ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
         .bundleFhirBundleVersion = rv::currentBundle(),
         .medicationDispenses = {}

@@ -62,7 +62,7 @@
     <identifier>
         <use value="official"/>
         <system value="http://fhir.de/sid/gkv/kvid-10"/>
-        <value value="X123456789"/>
+        <value value="X123456788"/>
     </identifier>
     <display value="P. van de Heuvel"/>
   </patient>

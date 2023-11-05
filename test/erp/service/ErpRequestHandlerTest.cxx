@@ -121,8 +121,9 @@ public:
             case SchemaType::PatchChargeItemParameters:
             case SchemaType::DAV_DispenseItem:
             case SchemaType::Pruefungsnachweis:
-
-                ASSERT_TRUE(false) << "wrong SchemaType for this test";
+            case SchemaType::CommunicationDispReqPayload:
+            case SchemaType::CommunicationReplyPayload:
+                FAIL() << "wrong SchemaType for this test";
                 break;
             case SchemaType::Gem_erxChargeItem:
                 testParseAndValidateRequestBodyT<model::ChargeItem>(body, contentMimeType, schemaType, expectFail);

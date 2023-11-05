@@ -11,7 +11,6 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/service/DosHandler.hxx"
 #include "erp/util/Expect.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"

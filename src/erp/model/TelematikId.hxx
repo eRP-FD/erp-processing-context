@@ -19,7 +19,7 @@ class TelematikId
 public:
     explicit TelematikId(std::string_view telematikId);
 
-    bool valid() const;
+    bool validFormat() const;
 
     const std::string& id() const&;
     /** Moves stored value */

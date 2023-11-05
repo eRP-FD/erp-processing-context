@@ -5,6 +5,14 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+
+#if defined (__GNUC__) && __GNUC__ == 12
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#include <pqxx/pqxx>
+#pragma GCC diagnostic pop
+#endif
+
 #include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test_config.h"
 #include "erp/model/Binary.hxx"
@@ -292,7 +300,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     const auto id = database().storeTask(task);
     database().commitTransaction();
     task.setPrescriptionId(id);
-    task.setKvnr(model::Kvnr{std::string{"X123456789"}, id.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{std::string{"X123456788"}, id.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
     task.setAcceptDate(model::Timestamp::now());
     task.setExpiryDate(model::Timestamp::now());
 
@@ -317,8 +325,8 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
     A_19115_01.test("Ensure only own tasks can be retrieved by KVNR");
 
     const auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    const model::Kvnr kvnr1{"X678901234", kvnrType};
-    const model::Kvnr kvnr2{"X012345678", kvnrType};
+    const model::Kvnr kvnr1{"X678901238", kvnrType};
+    const model::Kvnr kvnr2{"X012345676", kvnrType};
 
     // cleanup
     {
@@ -412,7 +420,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     model::Task task(prescriptionType(), "access_code");
     task.setPrescriptionId(database().storeTask(task));
     auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    task.setKvnr(model::Kvnr{std::string{"X123456789"}, kvnrType});
+    task.setKvnr(model::Kvnr{std::string{"X123456788"}, kvnrType});
 
     const auto medicationDispenseJson =
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_output1.json");
@@ -496,6 +504,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
 
         pqxx::result result;
         auto &&txn = createTransaction();
+        // secondCallData.blobId causes a maybe-uninitialized warning in pqxx in gcc 12 when building with release build options
         ASSERT_NO_THROW(result = txn.exec_prepared(
             updateTaskComplete.name, id.toDatabaseId(), 1, kvnr.id(), healthCareProviderPrescription,
             receipt, performer, secondCallData.blobId, medicationDispense, hashedKvnr.binarystring(),
@@ -587,7 +596,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)//NOLINT(readability-function
 
     // we now have one task in status=ready and two in status=completed
 
-    A_19569_02.test("SearchParameter: Task.status");
+    A_19569_03.test("SearchParameter: Task.status");
     {
         auto result = database().retrieveAllTasksForPatient(kvnr1, searchForStatus("ready"));
         ASSERT_EQ(result.size(), 1);
@@ -655,7 +664,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksLastModified)//NOLINT(readability-fu
         txn.commit();
     }
 
-    A_19569_02.test("SearchParameter: Task.lastModified");
+    A_19569_03.test("SearchParameter: Task.lastModified");
     {
         auto result =
             database().retrieveAllTasksForPatient(kvnr1, searchForLastModified(lastModified1, ""));
@@ -736,7 +745,7 @@ TEST_P(PostgresDatabaseTaskTest, SearchTasksAuthoredOn)//NOLINT(readability-func
         txn.commit();
     }
 
-    A_19569_02.test("SearchParameter: Task.authoredOn");
+    A_19569_03.test("SearchParameter: Task.authoredOn");
     {
         auto result =
             database().retrieveAllTasksForPatient(kvnr1, searchForAuthoredOn(authoredOn1, ""));

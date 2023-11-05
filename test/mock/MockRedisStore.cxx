@@ -7,6 +7,13 @@
 
 #include "test/mock/MockRedisStore.hxx"
 
+void MockRedisStore::healthCheck()
+{
+    constexpr static std::string_view countField = "count";
+    constexpr static std::string_view healthCheckKey = "health_check";
+    setKeyFieldValue(healthCheckKey, countField, "1");
+}
+
 bool MockRedisStore::exists(const std::string_view& key)
 {
     removeExpiredEntries();

@@ -17,15 +17,19 @@
 
 using namespace model;
 template<typename MedicationModelT>
-void KbvMedicationGeneric::validateMedication(NumberAsStringParserDocument&& medicationDoc,
-                                              const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator)
+void KbvMedicationGeneric::validateMedication(
+    NumberAsStringParserDocument&& medicationDoc, const XmlValidator& xmlValidator,
+    const InCodeValidator& inCodeValidator,
+    const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles)
 {
     auto medicationFactory = ResourceFactory<MedicationModelT>::fromJson(std::move(medicationDoc));
-    (void) std::move(medicationFactory).getValidated(MedicationModelT::schemaType, xmlValidator, inCodeValidator);
+    (void) std::move(medicationFactory)
+        .getValidated(MedicationModelT::schemaType, xmlValidator, inCodeValidator, supportedBundles);
 }
 
-void KbvMedicationGeneric::validateMedication(const ErpElement& medicationElement, const XmlValidator& xmlValidator,
-                                              const InCodeValidator& inCodeValidator, bool allowDummyValidation)
+void KbvMedicationGeneric::validateMedication(
+    const ErpElement& medicationElement, const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator,
+    const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles, bool allowDummyValidation)
 {
     using namespace std::string_literals;
     model::NumberAsStringParserDocument medicationDoc;
@@ -56,20 +60,23 @@ void KbvMedicationGeneric::validateMedication(const ErpElement& medicationElemen
     switch (*schemaType)
     {
         case model::KbvMedicationCompounding::schemaType:
-            validateMedication<model::KbvMedicationCompounding>(std::move(medicationDoc), xmlValidator,
-                                                                inCodeValidator);
+            validateMedication<model::KbvMedicationCompounding>(std::move(medicationDoc), xmlValidator, inCodeValidator,
+                                                                supportedBundles);
             break;
         case model::KbvMedicationDummy::schemaType:
-            validateMedication<model::KbvMedicationDummy>(std::move(medicationDoc), xmlValidator, inCodeValidator);
+            validateMedication<model::KbvMedicationDummy>(std::move(medicationDoc), xmlValidator, inCodeValidator,
+                                                          supportedBundles);
             break;
         case model::KbvMedicationFreeText::schemaType:
-            validateMedication<model::KbvMedicationFreeText>(std::move(medicationDoc), xmlValidator, inCodeValidator);
+            validateMedication<model::KbvMedicationFreeText>(std::move(medicationDoc), xmlValidator, inCodeValidator,
+                                                             supportedBundles);
             break;
         case model::KbvMedicationIngredient::schemaType:
-            validateMedication<model::KbvMedicationIngredient>(std::move(medicationDoc), xmlValidator, inCodeValidator);
+            validateMedication<model::KbvMedicationIngredient>(std::move(medicationDoc), xmlValidator, inCodeValidator, supportedBundles);
             break;
         case model::KbvMedicationPzn::schemaType:
-            validateMedication<model::KbvMedicationPzn>(std::move(medicationDoc), xmlValidator, inCodeValidator);
+            validateMedication<model::KbvMedicationPzn>(std::move(medicationDoc), xmlValidator, inCodeValidator,
+                                                        supportedBundles);
             break;
         default:
             ErpFailWithDiagnostics(HttpStatus::BadRequest, "Invalid schema type for medication.",

@@ -29,7 +29,6 @@ extern const char evp_pkey_name[] = "EVP_PKEY";
 extern const char evp_pkey_ctx_name[] = "EVP_PKEY_CTX";
 extern const char ocsp_basic_response_name[] = "OCSP_BASICRESP";
 extern const char ocsp_response_name[] = "OCSP_RESPONSE";
-extern const char rsa_name[] = "RSA";
 extern const char x509_name[] = "X509";
 extern const char x509_Name_name[] = "X509_NAME";
 extern const char x509_Store_name[] = "X509_STORE";
@@ -88,6 +87,11 @@ std::string x509NametoString(const X509_NAME* name)
 EVP_PKEY_CTX* new_EVP_PKEY_CTX (void)
 {
     return EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr);
+}
+
+ASN1_SEQUENCE_ANY* make_ASN1_SEQUENCE_ANY()
+{
+    return sk_ASN1_TYPE_new_null();
 }
 
 

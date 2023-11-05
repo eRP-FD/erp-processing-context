@@ -1,14 +1,9 @@
-#!/usr/bin/env python3
-
 # (C) Copyright IBM Deutschland GmbH 2021, 2023
 # (C) Copyright IBM Corp. 2021, 2023
 #
 # non-exclusively licensed to gematik GmbH
 
-from conans import CMake
-from conans import ConanFile
-from conans import tools
-import os
+from conan import ConanFile
 
 
 class ErpProcessingContext(ConanFile):
@@ -49,7 +44,7 @@ class ErpProcessingContext(ConanFile):
                 'glog/0.6.0',
                 'gsl-lite/0.40.0',
                 'libxml2/2.11.4',
-                'openssl/1.1.1u@erp/stable-1',
+                'openssl/3.1.1@erp/stable-1',
                 'rapidjson/cci.20220822',
                 'magic_enum/0.9.1',
                 'libpqxx/7.7.5',
@@ -62,9 +57,9 @@ class ErpProcessingContext(ConanFile):
 
     def requirements(self):
         if self.options.with_tpmclient:
-            self.requires('tpmclient/0.15.0-B33')
+            self.requires('tpmclient/0.15.0-B35')
         if self.options.with_hsmclient:
-            self.requires('hsmclient/2.7.0-B75')
+            self.requires('hsmclient/2.8.0-B00')
 
     def build_requirements(self):
         if self.options.with_sbom:

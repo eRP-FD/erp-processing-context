@@ -21,6 +21,8 @@ public:
     using Resource<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>::fromXml;
     using Resource<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>::fromJson;
 
+    std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
+
     static constexpr auto resourceTypeName = "Bundle";
 };
 

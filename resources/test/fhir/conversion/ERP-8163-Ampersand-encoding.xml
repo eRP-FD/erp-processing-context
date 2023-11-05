@@ -15,7 +15,7 @@
   <recipient>
     <identifier>
       <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
-      <value value="X123456799"/>
+      <value value="X123456790"/>
     </identifier>
   </recipient>
   <sender>

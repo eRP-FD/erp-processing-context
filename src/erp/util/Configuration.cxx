@@ -124,7 +124,7 @@ namespace {
 
 
     rapidjson::Document parseConfigFile (
-        const char* filePathVariable, const std::string& configLocation)
+        const char* filePathVariable, const std::filesystem::path& configLocation)
     {
         const auto configFileName = Environment::get(filePathVariable);
         rapidjson::Document configuration;
@@ -178,7 +178,7 @@ namespace {
         return configuration;
     }
 
-    ExceptionWrapper<InvalidConfigurationException> createMissingKeyException(const KeyNames key,
+    ExceptionWrapper<InvalidConfigurationException> createMissingKeyException(const KeyData key,
                                                                               const FileNameAndLineNumber& location)
     {
         return ExceptionWrapper<InvalidConfigurationException>::create(location,
@@ -204,8 +204,8 @@ namespace {
 }
 
 
-ConfigurationBase::ConfigurationBase (const std::vector<KeyNames>& allKeyNames)
-    : mDocument(parseConfigFile(ErpConstants::ConfigurationFileNameVariable, ErpConstants::ConfigurationFileSearchPathDefault))
+ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
+    : mDocument(parseConfigFile(ErpConstants::ConfigurationFileNameVariable, std::filesystem::current_path()))
     , mServerPort(determineServerPort())
 {
     auto serverHost = Environment::get(ServerHostEnvVar.data());
@@ -216,21 +216,13 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyNames>& allKeyNames)
     if (! mDocument.IsObject())
         return;
 
-    const auto* pathPrefixCommon = "/common";
-    const auto pathPrefixHost = "/" + mServerHost;
-    const auto pathPrefixHostPort = pathPrefixHost + "/" + std::to_string(mServerPort);
+    const auto* pathPrefix = "";
 
     for (const auto& keyNames : allKeyNames)
     {
         const auto jsonPath = std::string(keyNames.jsonPath);
 
-        if (lookupKey(pathPrefixHostPort, jsonPath))
-            continue;
-
-        if (lookupKey(pathPrefixHost, jsonPath))
-            continue;
-
-        lookupKey(pathPrefixCommon, jsonPath);
+        lookupKey(pathPrefix, jsonPath);
     }
 }
 
@@ -260,132 +252,131 @@ bool ConfigurationBase::lookupKey(const std::string& pathPrefix, const std::stri
 
 OpsConfigKeyNames::OpsConfigKeyNames()
 {
-    using Flags = KeyNames::ConfigurationKeyFlags;
+    using Flags = KeyData::ConfigurationKeyFlags;
     // clang-format off
     mNamesByKey.insert({
-    {ConfigurationKey::C_FD_SIG_ERP                                   , {"ERP_C_FD_SIG_ERP"                                   , "/erp/c.fd.sig-erp"}},
-    {ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL               , {"ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL"               , "/erp/c.fd.sig-erp-validation"}},
-    {ConfigurationKey::ECIES_CERTIFICATE                              , {"ERP_ECIES_CERTIFICATE"                              , "/erp/ecies-certificate"}},
-    {ConfigurationKey::ENROLMENT_SERVER_PORT                          , {"ERP_ENROLMENT_SERVER_PORT"                          , "/erp/enrolment/server/port"}},
-    {ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT                    , {"ERP_ENROLMENT_ACTIVATE_FOR_PORT"                    , "/erp/enrolment/server/activateForPort"}},
-    {ConfigurationKey::ENROLMENT_API_CREDENTIALS                      , {"ERP_ENROLMENT_API_CREDENTIALS"                      , "/erp/enrolment/api/credentials", Flags::credential}},
-    {ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS                 , {"ERP_ENTROPY_FETCH_INTERVAL_SECONDS"                 , "/erp/entropy_fetch_interval_seconds"}},
-    {ConfigurationKey::IDP_REGISTERED_FD_URI                          , {"ERP_IDP_REGISTERED_FD_URI"                          , "/erp/idp/registeredFdUri"}},
-    {ConfigurationKey::IDP_CERTIFICATE_MAX_AGE_HOURS                  , {"ERP_IDP_CERTIFICATE_MAX_AGE_HOURS"                  , "/erp/idp/certificateMaxAgeHours"}},
-    {ConfigurationKey::IDP_UPDATE_ENDPOINT                            , {"ERP_IDP_UPDATE_ENDPOINT"                            , "/erp/idp/updateEndpoint"}},
-    {ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH           , {"ERP_IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH"           , "/erp/idp/sslRootCaPath"}},
-    {ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES                    , {"ERP_IDP_UPDATE_INTERVAL_MINUTES"                    , "/erp/idp/updateIntervalMinutes"}},
-    {ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS, {"ERP_IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS", "/erp/idp/noValidCertificateUpdateIntervalSeconds"}},
-    {ConfigurationKey::OCSP_C_FD_SIG_ERP_GRACE_PERIOD                 , {"ERP_OCSP_C_FD_SIG_ERP_GRACE_PERIOD"                 , "/erp/ocsp/gracePeriodCFdSigErp"}},
-    {ConfigurationKey::OCSP_SMC_B_OSIG_GRACE_PERIOD                   , {"ERP_OCSP_SMC_B_OSIG_GRACE_PERIOD"                   , "/erp/ocsp/gracePeriodSmcBOsig"}},
-    {ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD                      , {"ERP_OCSP_NON_QES_GRACE_PERIOD"                      , "/erp/ocsp/gracePeriodNonQes"}},
-    {ConfigurationKey::OCSP_QES_GRACE_PERIOD                          , {"ERP_OCSP_QES_GRACE_PERIOD"                          , "/erp/ocsp/gracePeriodQes"}},
-    {ConfigurationKey::SERVER_THREAD_COUNT                            , {"ERP_SERVER_THREAD_COUNT"                            , "/erp/server/thread-count"}},
-    {ConfigurationKey::SERVER_CERTIFICATE                             , {"ERP_SERVER_CERTIFICATE"                             , "/erp/server/certificate"}},
-    {ConfigurationKey::SERVER_PRIVATE_KEY                             , {"ERP_SERVER_PRIVATE_KEY"                             , "/erp/server/certificateKey", Flags::credential}},
-    {ConfigurationKey::SERVER_REQUEST_PATH                            , {"ERP_SERVER_REQUEST_PATH"                            , "/erp/server/requestPath"}},
-    {ConfigurationKey::SERVER_PROXY_CERTIFICATE                       , {"ERP_SERVER_PROXY_CERTIFICATE"                       , "/erp/server/proxy/certificate"}},
-    {ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE    , {"ERP_SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE"    , "/erp/fhir-profile-old/fhir-validation/mode"}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD, {"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD", "/erp/service/task/activate/entlassRezeptValidityInWorkDays"}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS                 , {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS"                 , "/erp/service/task/activate/holidays", Flags::array}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv"}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension"}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF", "/erp/service/task/activate/kbvValidationNonLiteralAuthorRef"}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, {"ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE", "/erp/service/task/activate/authoredOnMustEqualSigningDate"}},
-    {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount"}},
-    {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey", Flags::credential}},
-    {ConfigurationKey::PCR_SET                                        , {"ERP_PCR_SET"                                        , "/erp/service/pcr-set"}},
-    {ConfigurationKey::POSTGRES_HOST                                  , {"ERP_POSTGRES_HOST"                                  , "/erp/postgres/host"}},
-    {ConfigurationKey::POSTGRES_PORT                                  , {"ERP_POSTGRES_PORT"                                  , "/erp/postgres/port"}},
-    {ConfigurationKey::POSTGRES_USER                                  , {"ERP_POSTGRES_USER"                                  , "/erp/postgres/user"}},
-    {ConfigurationKey::POSTGRES_PASSWORD                              , {"ERP_POSTGRES_PASSWORD"                              , "/erp/postgres/password", Flags::credential}},
-    {ConfigurationKey::POSTGRES_DATABASE                              , {"ERP_POSTGRES_DATABASE"                              , "/erp/postgres/database"}},
-    {ConfigurationKey::POSTGRES_CERTIFICATE                           , {"ERP_POSTGRES_CERTIFICATE"                           , "/erp/postgres/certificate"}},
-    {ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH             , {"ERP_POSTGRES_CERTIFICATE_PATH"                      , "/erp/postgres/certificatePath"}},
-    {ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH                  , {"ERP_POSTGRES_SSL_CERTIFICATE_PATH"                  , "/erp/postgres/sslCertificatePath"}},
-    {ConfigurationKey::POSTGRES_SSL_KEY_PATH                          , {"ERP_POSTGRES_SSL_KEY_PATH"                          , "/erp/postgres/sslKeyPath"}},
-    {ConfigurationKey::POSTGRES_USESSL                                , {"ERP_POSTGRES_USESSL"                                , "/erp/postgres/useSsl"}},
-    {ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS               , {"ERP_POSTGRES_CONNECT_TIMEOUT_SECONDS"               , "/erp/postgres/connectTimeoutSeconds"}},
-    {ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION           , {"ERP_POSTGRES_ENABLE_SCRAM_AUTHENTICATION"           , "/erp/postgres/enableScramAuthentication"}},
-    {ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS                   , {"ERP_POSTGRES_TCP_USER_TIMEOUT_MS"                   , "/erp/postgres/tcpUserTimeoutMs"}},
-    {ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC                   , {"ERP_POSTGRES_KEEPALIVES_IDLE_SEC"                   , "/erp/postgres/keepalivesIdleSec"}},
-    {ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC               , {"ERP_POSTGRES_KEEPALIVES_INTERVAL_SEC"               , "/erp/postgres/keepalivesIntervalSec"}},
-    {ConfigurationKey::POSTGRES_KEEPALIVES_COUNT                      , {"ERP_POSTGRES_KEEPALIVES_COUNT"                      , "/erp/postgres/keepalivesCount"}},
-    {ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS                  , {"ERP_POSTGRES_TARGET_SESSION_ATTRS"                  , "/erp/postgres/targetSessionAttrs"}},
-    {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL              , {"ERP_E_PRESCRIPTION_SERVICE_URL"                     , "/erp/publicEPrescriptionServiceUrl"}},
-    {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec"}},
-    {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl"}},
-    {ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH                 , {"ERP_TSL_FRAMEWORK_SSL_ROOT_CA_PATH"                 , "/erp/tsl/sslRootCaPath"}},
-    {ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL                       , {"ERP_TSL_INITIAL_DOWNLOAD_URL"                       , "/erp/tsl/initialDownloadUrl"}},
-    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH                        , {"ERP_TSL_INITIAL_CA_DER_PATH"                        , "/erp/tsl/initialCaDerPath"}},
-    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW                    , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW"                    , "/erp/tsl/initialCaDerPathNew"}},
-    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW_START              , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW_START"              , "/erp/tsl/initialCaDerPathStart"}},
-    {ConfigurationKey::TSL_REFRESH_INTERVAL                           , {"ERP_TSL_REFRESH_INTERVAL"                           , "/erp/tsl/refreshInterval"}},
-    {ConfigurationKey::TSL_DOWNLOAD_CIPHERS                           , {"ERP_TSL_DOWNLOAD_CIPHERS"                           , "/erp/tsl/downloadCiphers"}},
-    {ConfigurationKey::JSON_META_SCHEMA                               , {"ERP_JSON_META_SCHEMA"                               , "/erp/json-meta-schema"}},
-    {ConfigurationKey::JSON_SCHEMA                                    , {"ERP_JSON_SCHEMA"                                    , "/erp/json-schema", Flags::array}},
-    {ConfigurationKey::REDIS_DATABASE                                 , {"ERP_REDIS_DATABASE"                                 , "/erp/redis/database"}},
-    {ConfigurationKey::REDIS_USER                                     , {"ERP_REDIS_USERNAME"                                 , "/erp/redis/user"}},
-    {ConfigurationKey::REDIS_PASSWORD                                 , {"ERP_REDIS_PASSWORD"                                 , "/erp/redis/password", Flags::credential}},
-    {ConfigurationKey::REDIS_HOST                                     , {"ERP_REDIS_HOST"                                     , "/erp/redis/host"}},
-    {ConfigurationKey::REDIS_PORT                                     , {"ERP_REDIS_PORT"                                     , "/erp/redis/port"}},
-    {ConfigurationKey::REDIS_CERTIFICATE_PATH                         , {"ERP_REDIS_CERTIFICATE_PATH"                         , "/erp/redis/certificatePath"}},
-    {ConfigurationKey::REDIS_CONNECTION_TIMEOUT                       , {"ERP_REDIS_CONNECTION_TIMEOUT"                       , "/erp/redis/connectionTimeout"}},
-    {ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE                      , {"ERP_REDIS_CONNECTIONPOOL_SIZE"                      , "/erp/redis/connectionPoolSize"}},
-    {ConfigurationKey::REDIS_SENTINEL_HOSTS                           , {"ERP_REDIS_SENTINEL_HOSTS"                           , "/erp/redis/sentinelHosts"}},
-    {ConfigurationKey::REDIS_SENTINEL_MASTER_NAME                     , {"ERP_REDIS_SENTINEL_MASTER_NAME"                     , "/erp/redis/sentinelMasterName"}},
-    {ConfigurationKey::REDIS_SENTINEL_SOCKET_TIMEOUT                  , {"ERP_REDIS_SENTINEL_SOCKET_TIMEOUT"                  , "/erp/redis/sentinelSocketTimeout"}},
-    {ConfigurationKey::TOKEN_ULIMIT_CALLS                             , {"ERP_TOKEN_ULIMIT_CALLS"                             , "/erp/server/token/ulimitCalls"}},
-    {ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS                       , {"ERP_TOKEN_ULIMIT_TIMESPAN_MS"                       , "/erp/server/token/ulimitTimespanMS"}},
-    {ConfigurationKey::REPORT_LEIPS_KEY_ENABLE                        , {"ERP_REPORT_LEIPS_KEY_ENABLE"                        , "/erp/report/leips/enable"}},
-    {ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS      , {"ERP_REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS"      , "/erp/report/leips/refreshIntervalSeconds"}},
-    {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds"}},
-    {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds"}},
-    {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL                   , {"ERP_FHIR_PROFILE_OLD_VALID_UNTIL"                   , "/erp/fhir-profile-old/valid-until"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV                , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_KBV"                , "/erp/fhir-profile-old/kbv.ita.erp", Flags::array}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK            , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK"            , "/erp/fhir-profile-old/de.gematik.erezept-workflow.r4", Flags::array}},
-    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD                 , {"ERP_FHIR_STRUCTURE_DEFINITIONS_OLD"                 , "/erp/fhir-profile-old/fhir/structure-files", Flags::array}},
-    {ConfigurationKey::ERP_FHIR_VERSION_OLD                           , {"ERP_FHIR_VERSION_OLD"                               , "/erp/fhir-profile-old/erp-fhir-version"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-bundled-resource"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-contained-resource"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile-old/fhir-validation/levels/mandatory-resolvable-reference-failure"}},
-    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir-profile/fhir/structure-files", Flags::array}},
-    {ConfigurationKey::ERP_FHIR_VERSION                               , {"ERP_FHIR_VERSION"                                   , "/erp/fhir-profile/erp-fhir-version"}},
-    {ConfigurationKey::FHIR_PROFILE_VALID_FROM                        , {"ERP_FHIR_PROFILE_VALID_FROM"                        , "/erp/fhir-profile/valid-from"}},
-    {ConfigurationKey::FHIR_PROFILE_RENDER_FROM                       , {"ERP_FHIR_PROFILE_RENDER_FROM"                       , "/erp/fhir-profile/render-from"}},
-    {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV                    , {"ERP_FHIR_PROFILE_XML_SCHEMA_KBV"                    , "/erp/fhir-profile/kbv.ita.erp", Flags::array}},
-    {ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK                , {"ERP_FHIR_PROFILE_XML_SCHEMA_GEMATIK"                , "/erp/fhir-profile/de.gematik.erezept-workflow.r4", Flags::array}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-bundled-resource"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-contained-resource"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile/fhir-validation/levels/mandatory-resolvable-reference-failure"}},
-    {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds"}},
-    {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device"}},
-    {ConfigurationKey::HSM_MAX_SESSION_COUNT                          , {"ERP_HSM_MAX_SESSION_COUNT"                          , "/erp/hsm/max-session-count"}},
-    {ConfigurationKey::HSM_WORK_USERNAME                              , {"ERP_HSM_WORK_USERNAME"                              , "/erp/hsm/work-username"}},
-    {ConfigurationKey::HSM_WORK_PASSWORD                              , {"ERP_HSM_WORK_PASSWORD"                              , "/erp/hsm/work-password", Flags::credential}},
-    {ConfigurationKey::HSM_WORK_KEYSPEC                               , {"ERP_HSM_WORK_KEYSPEC"                               , "/erp/hsm/work-keyspec"}},
-    {ConfigurationKey::HSM_SETUP_USERNAME                             , {"ERP_HSM_SETUP_USERNAME"                             , "/erp/hsm/setup-username"}},
-    {ConfigurationKey::HSM_SETUP_PASSWORD                             , {"ERP_HSM_SETUP_PASSWORD"                             , "/erp/hsm/setup-password", Flags::credential}},
-    {ConfigurationKey::HSM_SETUP_KEYSPEC                              , {"ERP_HSM_SETUP_KEYSPEC"                              , "/erp/hsm/setup-keyspec"}},
-    {ConfigurationKey::HSM_CONNECT_TIMEOUT_SECONDS                    , {"ERP_HSM_CONNECT_TIMEOUT_SECONDS"                    , "/erp/hsm/connect-timeout-seconds"}},
-    {ConfigurationKey::HSM_READ_TIMEOUT_SECONDS                       , {"ERP_HSM_READ_TIMEOUT_SECONDS"                       , "/erp/hsm/read-timeout-seconds"}},
-    {ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS                       , {"ERP_HSM_IDLE_TIMEOUT_SECONDS"                       , "/erp/hsm/idle-timeout-seconds"}},
-    {ConfigurationKey::HSM_RECONNECT_INTERVAL_SECONDS                 , {"ERP_HSM_RECONNECT_INTERVAL_SECONDS"                 , "/erp/hsm/reconnect-interval-seconds"}},
-    {ConfigurationKey::DEPRECATED_HSM_USERNAME                        , {"ERP_HSM_USERNAME"                                   , "/erp/hsm/username"}},
-    {ConfigurationKey::DEPRECATED_HSM_PASSWORD                        , {"ERP_HSM_PASWORD"                                    , "/erp/hsm/password", Flags::credential}},
-    {ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS                       , {"ERP_TEE_TOKEN_UPDATE_SECONDS"                       , "/erp/hsm/tee-token/update-seconds"}},
-    {ConfigurationKey::TEE_TOKEN_RETRY_SECONDS                        , {"ERP_TEE_TOKEN_RETRY_SECONDS"                        , "/erp/hsm/tee-token/retry-seconds"}},
-    {ConfigurationKey::TIMING_CATEGORIES                              , {"ERP_TIMING_CATEGORIES"                              , "/erp/timingCategories", Flags::array}},
-    {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir"}},
-    {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds"}},
-    {ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS        , {"ERP_HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS"        , "/erp/httpClientResolveTimeoutMilliseconds"}},
-    {ConfigurationKey::FEATURE_PKV                                    , {"ERP_FEATURE_PKV"                                    , "/erp/feature/pkv"}},
-    {ConfigurationKey::ADMIN_SERVER_INTERFACE                         , {"ERP_ADMIN_SERVER_INTERFACE"                         , "/erp/admin/server/interface"}},
-    {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port"}},
-    {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds"}},
-    {ConfigurationKey::ADMIN_CREDENTIALS                              , {"ERP_ADMIN_CREDENTIALS"                              , "/erp/admin/credentials", Flags::credential}},
-    {ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS                    , {"ERP_PROOF_VALIDITY_SECONDS"                         , "/erp/vsdmValiditySeconds"}},
+    {ConfigurationKey::C_FD_SIG_ERP                                   , {"ERP_C_FD_SIG_ERP"                                   , "/erp/c.fd.sig-erp", Flags::categoryEnvironment|Flags::deprecated, "The ERP signature certificate"}},
+    {ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL               , {"ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL"               , "/erp/c.fd.sig-erp-validation", Flags::categoryEnvironment, "The OCSP validation interval for C.FD.OSIG-eRP signer certificate in seconds"}},
+    {ConfigurationKey::ENROLMENT_SERVER_PORT                          , {"ERP_ENROLMENT_SERVER_PORT"                          , "/erp/enrolment/server/port", Flags::categoryEnvironment, "Port number for the enrolment server"}},
+    {ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT                    , {"ERP_ENROLMENT_ACTIVATE_FOR_PORT"                    , "/erp/enrolment/server/activateForPort", Flags::categoryEnvironment, "Port of the processing-context for which the enrolment server shall be active"}},
+    {ConfigurationKey::ENROLMENT_API_CREDENTIALS                      , {"ERP_ENROLMENT_API_CREDENTIALS"                      , "/erp/enrolment/api/credentials", Flags::credential | Flags::categoryEnvironment, "Basic authentication credentials for enrolment server"}},
+    {ConfigurationKey::ENTROPY_FETCH_INTERVAL_SECONDS                 , {"ERP_ENTROPY_FETCH_INTERVAL_SECONDS"                 , "/erp/entropy_fetch_interval_seconds", Flags::categoryFunctionalStatic, "Interval for the refresh of the entropy in seconds"}},
+    {ConfigurationKey::IDP_REGISTERED_FD_URI                          , {"ERP_IDP_REGISTERED_FD_URI"                          , "/erp/idp/registeredFdUri", Flags::categoryEnvironment, "The value expected in the aud Claim of the Authentication-Token (JWT)"}},
+    {ConfigurationKey::IDP_CERTIFICATE_MAX_AGE_HOURS                  , {"ERP_IDP_CERTIFICATE_MAX_AGE_HOURS"                  , "/erp/idp/certificateMaxAgeHours", Flags::categoryFunctional, "The maximum acceptable age of the Idp-Certificate before health status changes to DOWN (hours)"}},
+    {ConfigurationKey::IDP_UPDATE_ENDPOINT                            , {"ERP_IDP_UPDATE_ENDPOINT"                            , "/erp/idp/updateEndpoint", Flags::categoryEnvironment, "Download location for IDP-Configuration"}},
+    {ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH           , {"ERP_IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH"           , "/erp/idp/sslRootCaPath", Flags::categoryEnvironment, "Root certificate for IDP download for ERP_IDP_UPDATE_ENDPOINT"}},
+    {ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES                    , {"ERP_IDP_UPDATE_INTERVAL_MINUTES"                    , "/erp/idp/updateIntervalMinutes", Flags::categoryFunctionalStatic, "Update interval for IDP Configuration/Certificate, when the IDP health is up"}},
+    {ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS, {"ERP_IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS", "/erp/idp/noValidCertificateUpdateIntervalSeconds", Flags::categoryFunctionalStatic, "Update interval for IDP Certificate, when the IDP health is down"}},
+    {ConfigurationKey::OCSP_C_FD_SIG_ERP_GRACE_PERIOD                 , {"ERP_OCSP_C_FD_SIG_ERP_GRACE_PERIOD"                 , "/erp/ocsp/gracePeriodCFdSigErp", Flags::categoryFunctionalStatic, "OCSP grace period in seconds for OCSP-response of C.FD.OSIG-eRP signer certificate"}},
+    {ConfigurationKey::OCSP_SMC_B_OSIG_GRACE_PERIOD                   , {"ERP_OCSP_SMC_B_OSIG_GRACE_PERIOD"                   , "/erp/ocsp/gracePeriodSmcBOsig", Flags::categoryFunctionalStatic, "OCSP Grace period in seconds for OCSP-response of SMC-B certificate from CAdES-BES packet provided in ChargeItem-Post/-Put request"}},
+    {ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD                      , {"ERP_OCSP_NON_QES_GRACE_PERIOD"                      , "/erp/ocsp/gracePeriodNonQes", Flags::categoryFunctionalStatic, "OCSP Grace period in seconds for OCSP-response of non-QES Certificates. According to A_20158 for IDP Certificate"}},
+    {ConfigurationKey::OCSP_QES_GRACE_PERIOD                          , {"ERP_OCSP_QES_GRACE_PERIOD"                          , "/erp/ocsp/gracePeriodQes", Flags::categoryFunctionalStatic, "OCSP-Grace period in seconds for OCSP-response of QES Certificate"}},
+    {ConfigurationKey::SERVER_THREAD_COUNT                            , {"ERP_SERVER_THREAD_COUNT"                            , "/erp/server/thread-count", Flags::categoryEnvironment, "Number of threads to process requests from the VAU Proxy"}},
+    {ConfigurationKey::SERVER_CERTIFICATE                             , {"ERP_SERVER_CERTIFICATE"                             , "/erp/server/certificate", Flags::categoryEnvironment, "TLS-Server Certificate used for https endpoints"}},
+    {ConfigurationKey::SERVER_PRIVATE_KEY                             , {"ERP_SERVER_PRIVATE_KEY"                             , "/erp/server/certificateKey", Flags::categoryEnvironment|Flags::credential, "Private key for ERP_SERVER_CERTIFICATE"}},
+    {ConfigurationKey::SERVER_PROXY_CERTIFICATE                       , {"ERP_SERVER_PROXY_CERTIFICATE"                       , "/erp/server/proxy/certificate", Flags::categoryEnvironment, "Certificate to verify Client-Certificate for connections on tee-server"}},
+    {ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE    , {"ERP_SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE"    , "/erp/fhir-profile-old/fhir-validation/mode", Flags::categoryFunctionalStatic, "Configures when to run the Generic-FHIR-Validator and what to do with the results (disable, detail_only, ignore_errors, require_success)"}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD, {"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD", "/erp/service/task/activate/entlassRezeptValidityInWorkDays", Flags::categoryFunctional, "Validity duration for Entlassrezepte in days. Including the day of issuing."}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS                 , {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS"                 , "/erp/service/task/activate/holidays", Flags::categoryFunctionalStatic|Flags::array, "Dates that shall not count as workday, i.e. public holidays. The holidays by name are enum values of holidays, that have no fixed dates."}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv", Flags::categoryFunctionalStatic, "Path to a csv file that contains all easter dates. The dates have the format \"mm-dd\""}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension", Flags::categoryFunctional, "ignore: Do not check for unknown extensions. report: respond with HTTP 202 Accepted instead of 200 OK, when a KBV-Bundle contains unknown extensions. reject: reject with HTTP 400 Bad Request, when a KBV-Bundle contains unknown extensions"}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF", "/erp/service/task/activate/kbvValidationNonLiteralAuthorRef", Flags::categoryFunctional, "Controls the Validation of the field Composition.author."}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE       ,{"ERP_SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE"      , "/erp/service/task/activate/anrChecksumValidationMode", Flags::categoryFunctional, "Mode for validating ANR/ZANR. Allowed values: warning, error."}},
+    {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount", Flags::categoryFunctional, "Maximum number of communication messages per task and representative"}},
+    {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey", Flags::credential|Flags::categoryEnvironment, "Key to sign the header and payload of an incoming subscription"}},
+    {ConfigurationKey::PCR_SET                                        , {"ERP_PCR_SET"                                        , "/erp/service/pcr-set", Flags::categoryEnvironment, "PCR register set to be used to calculate quote (TPM)"}},
+    {ConfigurationKey::POSTGRES_HOST                                  , {"ERP_POSTGRES_HOST"                                  , "/erp/postgres/host", Flags::categoryEnvironment, "Postgres server host"}},
+    {ConfigurationKey::POSTGRES_PORT                                  , {"ERP_POSTGRES_PORT"                                  , "/erp/postgres/port", Flags::categoryEnvironment, "Postgres server port number"}},
+    {ConfigurationKey::POSTGRES_USER                                  , {"ERP_POSTGRES_USER"                                  , "/erp/postgres/user", Flags::categoryEnvironment, "Postgres user name"}},
+    {ConfigurationKey::POSTGRES_PASSWORD                              , {"ERP_POSTGRES_PASSWORD"                              , "/erp/postgres/password", Flags::credential | Flags::categoryEnvironment, "Postgres user password"}},
+    {ConfigurationKey::POSTGRES_DATABASE                              , {"ERP_POSTGRES_DATABASE"                              , "/erp/postgres/database", Flags::categoryEnvironment, "Postgres database name"}},
+    {ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH             , {"ERP_POSTGRES_CERTIFICATE_PATH"                      , "/erp/postgres/certificatePath", Flags::categoryEnvironment, "This parameter specifies the name of a file containing SSL certificate authority (CA) certificate(s)"}},
+    {ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH                  , {"ERP_POSTGRES_SSL_CERTIFICATE_PATH"                  , "/erp/postgres/sslCertificatePath", Flags::categoryEnvironment, "This parameter specifies the file name of the client SSL certificate"}},
+    {ConfigurationKey::POSTGRES_SSL_KEY_PATH                          , {"ERP_POSTGRES_SSL_KEY_PATH"                          , "/erp/postgres/sslKeyPath", Flags::categoryEnvironment, "This parameter specifies the location for the secret key used for the client certificate"}},
+    {ConfigurationKey::POSTGRES_USESSL                                , {"ERP_POSTGRES_USESSL"                                , "/erp/postgres/useSsl", Flags::categoryEnvironment, "Sets Postgres connection parameter sslmode to require if true. sslmode remains on its default value otherwise"}},
+    {ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS               , {"ERP_POSTGRES_CONNECT_TIMEOUT_SECONDS"               , "/erp/postgres/connectTimeoutSeconds", Flags::categoryEnvironment, "Maximum time to wait while connecting, in seconds (write as a decimal integer, e.g., 10). Zero, negative, or not specified means wait indefinitely. The minimum allowed timeout is 2 seconds, therefore a value of 1 is interpreted as 2. This timeout applies separately to each host name or IP address. For example, if you specify two hosts and connect_timeout is 5, each host will time out if no connection is made within 5 seconds, so the total time spent waiting for a connection might be up to 10 seconds"}},
+    {ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION           , {"ERP_POSTGRES_ENABLE_SCRAM_AUTHENTICATION"           , "/erp/postgres/enableScramAuthentication", Flags::categoryEnvironment, "Sets Postgres connection parameter channel_binding to 'require'. channel_binding remains on its default value otherwise"}},
+    {ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS                   , {"ERP_POSTGRES_TCP_USER_TIMEOUT_MS"                   , "/erp/postgres/tcpUserTimeoutMs", Flags::categoryEnvironment, "Controls the number of milliseconds that transmitted data may remain unacknowledged before a connection is forcibly closed. A value of zero uses the system default. This parameter is ignored for connections made via a Unix-domain socket. It is only supported on systems where TCP_USER_TIMEOUT is available; on other systems, it has no effect."}},
+    {ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC                   , {"ERP_POSTGRES_KEEPALIVES_IDLE_SEC"                   , "/erp/postgres/keepalivesIdleSec", Flags::categoryEnvironment, "Controls the number of seconds of inactivity after which TCP should send a keepalive message to the server. A value of zero uses the system default."}},
+    {ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC               , {"ERP_POSTGRES_KEEPALIVES_INTERVAL_SEC"               , "/erp/postgres/keepalivesIntervalSec", Flags::categoryEnvironment, "Controls the number of seconds after which a TCP keepalive message that is not acknowledged by the server should be retransmitted. A value of zero uses the system default."}},
+    {ConfigurationKey::POSTGRES_KEEPALIVES_COUNT                      , {"ERP_POSTGRES_KEEPALIVES_COUNT"                      , "/erp/postgres/keepalivesCount", Flags::categoryEnvironment, "Controls the number of TCP keepalives that can be lost before the client's connection to the server is considered dead. A value of zero uses the system default"}},
+    {ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS                  , {"ERP_POSTGRES_TARGET_SESSION_ATTRS"                  , "/erp/postgres/targetSessionAttrs", Flags::categoryEnvironment, "If this parameter is set to read-write, only a connection in which read-write transactions are accepted by default is considered acceptable. The query SHOW transaction_read_only will be sent upon any successful connection; if it returns on, the connection will be closed. If multiple hosts were specified in the connection string, any remaining servers will be tried just as if the connection attempt had failed. The default value of this parameter, any, regards all connections as acceptable."}},
+    {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL              , {"ERP_E_PRESCRIPTION_SERVICE_URL"                     , "/erp/publicEPrescriptionServiceUrl", Flags::categoryEnvironment, "Used as basis for links in outgoing resources, e.g. fullUrl"}},
+    {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec", Flags::categoryEnvironment, "interval for the regular health check and registration status update."}},
+    {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl", Flags::categoryEnvironment, "Special handling for G0 QES certificates for which no mapping exists in the TSL. In this case a special TI OCSP proxy should be used."}},
+    {ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH                 , {"ERP_TSL_FRAMEWORK_SSL_ROOT_CA_PATH"                 , "/erp/tsl/sslRootCaPath", Flags::categoryEnvironment, "Path to the root CA to be used for the https-TSL-Update URL connection."}},
+    {ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL                       , {"ERP_TSL_INITIAL_DOWNLOAD_URL"                       , "/erp/tsl/initialDownloadUrl", Flags::categoryEnvironment, "The URL to download initial TSL from."}},
+    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH                        , {"ERP_TSL_INITIAL_CA_DER_PATH"                        , "/erp/tsl/initialCaDerPath", Flags::categoryEnvironment, "Path to the TSL-Signer CA."}},
+    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW                    , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW"                    , "/erp/tsl/initialCaDerPathNew", Flags::categoryEnvironment, "Path to the additional TSL-Signer CA. It could be used when TSL-Signer CA is being changed to support both old and new TSL-Signer CA."}},
+    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW_START              , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW_START"              , "/erp/tsl/initialCaDerPathStart", Flags::categoryEnvironment, "The timestamp in FHIR DateTime format https://www.hl7.org/fhir/datatypes.html#dateTime to use the additional TSL-Signer CA from. Using this variable the additional TSL-Signer CA can be configured before it is active."}},
+    {ConfigurationKey::TSL_REFRESH_INTERVAL                           , {"ERP_TSL_REFRESH_INTERVAL"                           , "/erp/tsl/refreshInterval", Flags::categoryFunctional, "How often the TSL update should be tried."}},
+    {ConfigurationKey::TSL_DOWNLOAD_CIPHERS                           , {"ERP_TSL_DOWNLOAD_CIPHERS"                           , "/erp/tsl/downloadCiphers", Flags::categoryFunctionalStatic, "Specifies ciphers to be used for TSL download if set."}},
+    {ConfigurationKey::JSON_META_SCHEMA                               , {"ERP_JSON_META_SCHEMA"                               , "/erp/json-meta-schema", Flags::categoryFunctionalStatic, "Path to JSON meta-schema for json schema validation"}},
+    {ConfigurationKey::JSON_SCHEMA                                    , {"ERP_JSON_SCHEMA"                                    , "/erp/json-schema", Flags::categoryFunctionalStatic|Flags::array, "List of JSON schemas"}},
+    {ConfigurationKey::REDIS_DATABASE                                 , {"ERP_REDIS_DATABASE"                                 , "/erp/redis/database", Flags::categoryEnvironment, "Redis database name"}},
+    {ConfigurationKey::REDIS_USER                                     , {"ERP_REDIS_USERNAME"                                 , "/erp/redis/user", Flags::categoryEnvironment, "Redis user name"}},
+    {ConfigurationKey::REDIS_PASSWORD                                 , {"ERP_REDIS_PASSWORD"                                 , "/erp/redis/password", Flags::categoryEnvironment|Flags::credential, "Redis user password"}},
+    {ConfigurationKey::REDIS_HOST                                     , {"ERP_REDIS_HOST"                                     , "/erp/redis/host", Flags::categoryEnvironment, "Redis host name"}},
+    {ConfigurationKey::REDIS_PORT                                     , {"ERP_REDIS_PORT"                                     , "/erp/redis/port", Flags::categoryEnvironment, "Redis port"}},
+    {ConfigurationKey::REDIS_CERTIFICATE_PATH                         , {"ERP_REDIS_CERTIFICATE_PATH"                         , "/erp/redis/certificatePath", Flags::categoryEnvironment, "Path to trusted SSL certificate authority certificate(s)"}},
+    {ConfigurationKey::REDIS_CONNECTION_TIMEOUT                       , {"ERP_REDIS_CONNECTION_TIMEOUT"                       , "/erp/redis/connectionTimeout", Flags::categoryEnvironment, "Connection timeout in ms"}},
+    {ConfigurationKey::REDIS_DOS_SOCKET_TIMEOUT                       , {"ERP_REDIS_DOS_SOCKET_TIMEOUT"                       , "/erp/redis/dosSocketTimeoutMs", Flags::categoryEnvironment, "Socket timeout used for DOS checks in ms"}},
+    {ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE                      , {"ERP_REDIS_CONNECTIONPOOL_SIZE"                      , "/erp/redis/connectionPoolSize", Flags::categoryEnvironment, "Number of parallel redis connections"}},
+    {ConfigurationKey::REDIS_SENTINEL_HOSTS                           , {"ERP_REDIS_SENTINEL_HOSTS"                           , "/erp/redis/sentinelHosts", Flags::categoryEnvironment, "Use redis in sentinel mode and use the given sentinel hosts, separated by comma"}},
+    {ConfigurationKey::REDIS_SENTINEL_MASTER_NAME                     , {"ERP_REDIS_SENTINEL_MASTER_NAME"                     , "/erp/redis/sentinelMasterName", Flags::categoryEnvironment, "Redis sentinel master name"}},
+    {ConfigurationKey::REDIS_SENTINEL_SOCKET_TIMEOUT                  , {"ERP_REDIS_SENTINEL_SOCKET_TIMEOUT"                  , "/erp/redis/sentinelSocketTimeout", Flags::categoryEnvironment, "Timeout for sending or receiving from sentinel host"}},
+    {ConfigurationKey::TOKEN_ULIMIT_CALLS                             , {"ERP_TOKEN_ULIMIT_CALLS"                             , "/erp/server/token/ulimitCalls", Flags::categoryEnvironment, "Specify how many requests per time slot are allowed until it is interpreted as a DoS attack."}},
+    {ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS                       , {"ERP_TOKEN_ULIMIT_TIMESPAN_MS"                       , "/erp/server/token/ulimitTimespanMS", Flags::categoryEnvironment, "Time slot for counting incoming requests until it is interpreted as a DoS attack."}},
+    {ConfigurationKey::REPORT_LEIPS_KEY_ENABLE                        , {"ERP_REPORT_LEIPS_KEY_ENABLE"                        , "/erp/report/leips/enable", Flags::categoryFunctional, "Enable hashing of telematik id for report generation"}},
+    {ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS      , {"ERP_REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS"      , "/erp/report/leips/refreshIntervalSeconds", Flags::categoryFunctionalStatic, "Maximum age of the pseudoname_key in seconds from the time of its creation until it is considered as expired."}},
+    {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds", Flags::categoryFunctionalStatic, "Interval in seconds to check for pseudoname_key expiration."}},
+    {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds", Flags::categoryFunctionalStatic, "Retry-Interval in seconds to check for pseudoname_key expiration, when the last call failed"}},
+    {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array|Flags::categoryFunctionalStatic, "File names of additional XML schemas"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL                   , {"ERP_FHIR_PROFILE_OLD_VALID_UNTIL"                   , "/erp/fhir-profile-old/valid-until", Flags::categoryFunctionalStatic, "The system allows to maintain two sets of profiled resource schemas. The \"old profile set\" is optional, but if used all OLD* parameters must be set. The schemas of the \"old profile set\" are valid until this timestamp. There must be no gap between this and ERP_FHIR_PROFILE_VALID_FROM"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV                , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_KBV"                , "/erp/fhir-profile-old/kbv.ita.erp", Flags::array|Flags::categoryFunctionalStatic, "XSD validation schemas for old kbv profiles"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK            , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK"            , "/erp/fhir-profile-old/de.gematik.erezept-workflow.r4", Flags::categoryFunctionalStatic|Flags::array, "XSD validation schemas for old gematik profiles"}},
+    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD                 , {"ERP_FHIR_STRUCTURE_DEFINITIONS_OLD"                 , "/erp/fhir-profile-old/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of old profiles"}},
+    {ConfigurationKey::ERP_FHIR_VERSION_OLD                           , {"ERP_FHIR_VERSION_OLD"                               , "/erp/fhir-profile-old/erp-fhir-version", Flags::categoryFunctionalStatic, "Identifier for old profile set bundle"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in old profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in old profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile-old/fhir-validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in old profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir-profile/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
+    {ConfigurationKey::ERP_FHIR_VERSION                               , {"ERP_FHIR_VERSION"                                   , "/erp/fhir-profile/erp-fhir-version", Flags::categoryFunctionalStatic, "Identifier for new profile set bundle"}},
+    {ConfigurationKey::FHIR_PROFILE_VALID_FROM                        , {"ERP_FHIR_PROFILE_VALID_FROM"                        , "/erp/fhir-profile/valid-from", Flags::categoryFunctionalStatic, "Start date for accepting resources of new profiles. Ignored when no old profile is set."}},
+    {ConfigurationKey::FHIR_PROFILE_RENDER_FROM                       , {"ERP_FHIR_PROFILE_RENDER_FROM"                       , "/erp/fhir-profile/render-from", Flags::categoryFunctionalStatic, "Date used to determine when to output resources as new profiles. Ignored when no old profile is set."}},
+    {ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM                  , {"ERP_FHIR_PROFILE_PATCH_VALID_FROM"                  , "/erp/fhir-profile-patch/valid-from", Flags::categoryFunctionalStatic, "KBV_STICHTAG for KBV.ITA.ERP patch 1.1.2"}},
+    {ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE                     , {"ERP_FHIR_PROFILE_PATCH_REPLACE"                     , "/erp/fhir-profile-patch/replace", Flags::categoryFunctionalStatic, "Path to the KBV.ITA.ERP 1.1.1 package as in FHIR_STRUCTURE_DEFINITIONS"}},
+    {ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE_WITH                , {"ERP_FHIR_PROFILE_PATCH_REPLACE_WITH"                , "/erp/fhir-profile-patch/replace-with", Flags::categoryFunctionalStatic, "Path to the KBV.ITA.ERP 1.1.2 patch"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile/fhir-validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds", Flags::categoryEnvironment, "Blob and VSDM++ Key Cache refresh time. Blobs and VSDM Keys are re-read from database in the given interval."}},
+    {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device", Flags::categoryEnvironment, "Comma separated list of the HSM devices. Format: \"<port>@<IP address>,<port>@<IP address>,...\""}},
+    {ConfigurationKey::HSM_MAX_SESSION_COUNT                          , {"ERP_HSM_MAX_SESSION_COUNT"                          , "/erp/hsm/max-session-count", Flags::categoryEnvironment, "Maximum number of parallel connections to HSM"}},
+    {ConfigurationKey::HSM_WORK_USERNAME                              , {"ERP_HSM_WORK_USERNAME"                              , "/erp/hsm/work-username", Flags::categoryEnvironment, "Username used to authenticate against HSM (see also ERP_HSM_USERNAME)"}},
+    {ConfigurationKey::HSM_WORK_PASSWORD                              , {"ERP_HSM_WORK_PASSWORD"                              , "/erp/hsm/work-password", Flags::credential|Flags::categoryEnvironment, "Password to authenticate ERP_HSM_WORK_USERNAME user against the HSM. ERP_HSM_WORK_KEYSPEC takes precedence over the ERP_HSM_WORK_PASSWORD."}},
+    {ConfigurationKey::HSM_WORK_KEYSPEC                               , {"ERP_HSM_WORK_KEYSPEC"                               , "/erp/hsm/work-keyspec", Flags::categoryEnvironment, "Path to the KeySpec File to  authenticate ERP_HSM_WORK_USERNAME user against the HSM. ERP_HSM_WORK_KEYSPEC takes precedence over the ERP_HSM_WORK_PASSWORD."}},
+    {ConfigurationKey::HSM_SETUP_USERNAME                             , {"ERP_HSM_SETUP_USERNAME"                             , "/erp/hsm/setup-username", Flags::categoryEnvironment, "Currently unused"}},
+    {ConfigurationKey::HSM_SETUP_PASSWORD                             , {"ERP_HSM_SETUP_PASSWORD"                             , "/erp/hsm/setup-password", Flags::categoryEnvironment|Flags::credential, "Currently unused"}},
+    {ConfigurationKey::HSM_SETUP_KEYSPEC                              , {"ERP_HSM_SETUP_KEYSPEC"                              , "/erp/hsm/setup-keyspec", Flags::categoryEnvironment, "Currently unused"}},
+    {ConfigurationKey::HSM_CONNECT_TIMEOUT_SECONDS                    , {"ERP_HSM_CONNECT_TIMEOUT_SECONDS"                    , "/erp/hsm/connect-timeout-seconds", Flags::categoryEnvironment, "Connection timeout to HSM in seconds."}},
+    {ConfigurationKey::HSM_READ_TIMEOUT_SECONDS                       , {"ERP_HSM_READ_TIMEOUT_SECONDS"                       , "/erp/hsm/read-timeout-seconds", Flags::categoryEnvironment, "Timeout of read operations with HSM in seconds."}},
+    {ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS                       , {"ERP_HSM_IDLE_TIMEOUT_SECONDS"                       , "/erp/hsm/idle-timeout-seconds", Flags::categoryEnvironment, "Interval used to perform regular keep-alive calls to the HSM (calling getRandomData(1))"}},
+    {ConfigurationKey::HSM_RECONNECT_INTERVAL_SECONDS                 , {"ERP_HSM_RECONNECT_INTERVAL_SECONDS"                 , "/erp/hsm/reconnect-interval-seconds", Flags::categoryEnvironment, "Interval after a failover before retrying a connection to the original HSM in seconds"}},
+    {ConfigurationKey::DEPRECATED_HSM_USERNAME                        , {"ERP_HSM_USERNAME"                                   , "/erp/hsm/username", Flags::categoryEnvironment|Flags::deprecated, "Used instead of ERP_HSM_WORK_USERNAME, if the latter is not available"}},
+    {ConfigurationKey::DEPRECATED_HSM_PASSWORD                        , {"ERP_HSM_PASWORD"                                    , "/erp/hsm/password", Flags::categoryEnvironment|Flags::credential|Flags::deprecated, "Password used to authenticate against HSM, if neither ERP_HSM_WORK_KEYSPEC nor ERP_HSM_WORK_PASSWORD are set."}},
+    {ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS                       , {"ERP_TEE_TOKEN_UPDATE_SECONDS"                       , "/erp/hsm/tee-token/update-seconds", Flags::categoryFunctionalStatic, "Time between regular tee-token updates"}},
+    {ConfigurationKey::TEE_TOKEN_RETRY_SECONDS                        , {"ERP_TEE_TOKEN_RETRY_SECONDS"                        , "/erp/hsm/tee-token/retry-seconds", Flags::categoryFunctionalStatic, "Time between tee-token update retries after a failure"}},
+    {ConfigurationKey::TIMING_CATEGORIES                              , {"ERP_TIMING_CATEGORIES"                              , "/erp/timingCategories", Flags::categoryEnvironment|Flags::array, "Array of timing categories that shall be logged to INFO level from the following list: redis, postgres, http-client, fhir-validation, ocsp-request, hsm, enrolment, all"}},
+    {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir", Flags::categoryFunctionalStatic, "Path to the compression dictionary for database compression."}},
+    {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds", Flags::categoryEnvironment, "Connection timeout for outgoing tcp connections"}},
+    {ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS        , {"ERP_HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS"        , "/erp/httpClientResolveTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout of DNS resolve requests in ms"}},
+    {ConfigurationKey::ADMIN_SERVER_INTERFACE                         , {"ERP_ADMIN_SERVER_INTERFACE"                         , "/erp/admin/server/interface", Flags::categoryEnvironment, "The network interface for the admin server binds to"}},
+    {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port", Flags::categoryEnvironment, "The port for the admin server."}},
+    {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds", Flags::categoryEnvironment, "Default delay for shutdown commands, if no delay is given in request parameter"}},
+    {ConfigurationKey::ADMIN_CREDENTIALS                              , {"ERP_ADMIN_CREDENTIALS"                              , "/erp/admin/credentials", Flags::credential|Flags::categoryEnvironment, "HTTP Basic Authentication credential for admin server."}},
+    {ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS                    , {"ERP_PROOF_VALIDITY_SECONDS"                         , "/erp/vsdmValiditySeconds", Flags::categoryFunctional, "Validity period for VSDM++ proofs, in seconds"}}
+    // */
     });
     // clang-format on
 }
@@ -393,20 +384,21 @@ OpsConfigKeyNames::OpsConfigKeyNames()
 DevConfigKeyNames::DevConfigKeyNames()
     : OpsConfigKeyNames()
 {
+    using Flags = KeyData::ConfigurationKeyFlags;
     // clang-format off
     mNamesByKey.insert({
-    {ConfigurationKey::DEBUG_ENABLE_HSM_MOCK,                 {"DEBUG_ENABLE_HSM_MOCK",             "/debug/enable-hsm-mock"}},
-    {ConfigurationKey::DEBUG_DISABLE_REGISTRATION,            {"DEBUG_DISABLE_REGISTRATION",        "/debug/disable-registration"}},
-    {ConfigurationKey::DEBUG_DISABLE_DOS_CHECK,               {"DEBUG_DISABLE_DOS_CHECK",           "/debug/disable-dos-check"}},
-    {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check"}},
-    {ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER,         {"DEBUG_ENABLE_MOCK_TSL_MANAGER",     "/debug/enable-mock-tsl-manager"}}
+    {ConfigurationKey::DEBUG_ENABLE_HSM_MOCK,                 {"DEBUG_ENABLE_HSM_MOCK",             "/debug/enable-hsm-mock", Flags::categoryDebug, "Use HSM mock"}},
+    {ConfigurationKey::DEBUG_DISABLE_REGISTRATION,            {"DEBUG_DISABLE_REGISTRATION",        "/debug/disable-registration", Flags::categoryDebug, "Disable VAU registration"}},
+    {ConfigurationKey::DEBUG_DISABLE_DOS_CHECK,               {"DEBUG_DISABLE_DOS_CHECK",           "/debug/disable-dos-check", Flags::categoryDebug, "Disable DOS check"}},
+    {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check", Flags::categoryDebug, "In activateTask, disable validation of "}},
+    {ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER,         {"DEBUG_ENABLE_MOCK_TSL_MANAGER",     "/debug/enable-mock-tsl-manager", Flags::categoryDebug, "Enable TSL mock"}}
     });
     // clang-format on
 }
 
 // -----------------------------------------------------------------------------------------------------
 
-std::optional<int> ConfigurationBase::getIntValueInternal(KeyNames key) const
+std::optional<int> ConfigurationBase::getIntValueInternal(KeyData key) const
 {
     const auto value = getStringValueInternal(key);
     if (value.has_value())
@@ -432,7 +424,7 @@ std::optional<int> ConfigurationBase::getIntValueInternal(KeyNames key) const
         return {};
 }
 
-std::optional<bool> ConfigurationBase::getBoolValueInternal(KeyNames key) const
+std::optional<bool> ConfigurationBase::getBoolValueInternal(KeyData key) const
 {
     const auto value = getStringValueInternal(key);
     if (value.has_value())
@@ -441,13 +433,13 @@ std::optional<bool> ConfigurationBase::getBoolValueInternal(KeyNames key) const
         return {};
 }
 
-int ConfigurationBase::getOptionalIntValue (const KeyNames key, const int defaultValue) const
+int ConfigurationBase::getOptionalIntValue (const KeyData key, const int defaultValue) const
 {
     return getIntValueInternal(key).value_or(defaultValue);
 }
 
 
-int ConfigurationBase::getIntValue (const KeyNames key) const
+int ConfigurationBase::getIntValue (const KeyData key) const
 {
     const auto value = getIntValueInternal(key);
     if (value.has_value())
@@ -456,7 +448,7 @@ int ConfigurationBase::getIntValue (const KeyNames key) const
         throw createMissingKeyException(key, {__FILE__, __LINE__});
 }
 
-std::string ConfigurationBase::getStringValue (const KeyNames key) const
+std::string ConfigurationBase::getStringValue (const KeyData key) const
 {
     const auto value = getStringValueInternal(key);
     if (value.has_value())
@@ -466,7 +458,7 @@ std::string ConfigurationBase::getStringValue (const KeyNames key) const
 }
 
 
-std::string ConfigurationBase::getOptionalStringValue (const KeyNames key, const std::string& defaultValue) const
+std::string ConfigurationBase::getOptionalStringValue (const KeyData key, const std::string& defaultValue) const
 {
     const auto value = getStringValueInternal(key);
     if (value.has_value())
@@ -476,7 +468,7 @@ std::string ConfigurationBase::getOptionalStringValue (const KeyNames key, const
 }
 
 
-std::optional<std::string> ConfigurationBase::getOptionalStringValue (const KeyNames key) const
+std::optional<std::string> ConfigurationBase::getOptionalStringValue (const KeyData key) const
 {
     const auto value = getStringValueInternal(key);
     if (value.has_value())
@@ -486,7 +478,7 @@ std::optional<std::string> ConfigurationBase::getOptionalStringValue (const KeyN
 }
 
 
-SafeString ConfigurationBase::getSafeStringValue (const KeyNames key) const
+SafeString ConfigurationBase::getSafeStringValue (const KeyData key) const
 {
     auto value = getSafeStringValueInternal(key);
     if (value.has_value())
@@ -496,7 +488,7 @@ SafeString ConfigurationBase::getSafeStringValue (const KeyNames key) const
 }
 
 
-SafeString ConfigurationBase::getOptionalSafeStringValue (const KeyNames key, SafeString defaultValue) const
+SafeString ConfigurationBase::getOptionalSafeStringValue (const KeyData key, SafeString defaultValue) const
 {
     auto value = getSafeStringValueInternal(key);
     if (value.has_value())
@@ -506,14 +498,19 @@ SafeString ConfigurationBase::getOptionalSafeStringValue (const KeyNames key, Sa
 }
 
 
-std::filesystem::path ConfigurationBase::getPathValue(const KeyNames key) const
+std::optional<SafeString> ConfigurationBase::getOptionalSafeStringValue (const KeyData key) const
+{
+    return getSafeStringValueInternal(key);
+}
+
+std::filesystem::path ConfigurationBase::getPathValue(const KeyData key) const
 {
     namespace fs = std::filesystem;
     fs::path path(getStringValue(key));
     return path.lexically_normal();
 }
 
-bool ConfigurationBase::getBoolValue (const KeyNames key) const
+bool ConfigurationBase::getBoolValue (const KeyData key) const
 {
     const auto value = getBoolValueInternal(key);
     if (value.has_value())
@@ -523,7 +520,7 @@ bool ConfigurationBase::getBoolValue (const KeyNames key) const
 }
 
 
-bool ConfigurationBase::getOptionalBoolValue (KeyNames key, const bool defaultValue) const
+bool ConfigurationBase::getOptionalBoolValue (KeyData key, const bool defaultValue) const
 {
     const auto value = getBoolValueInternal(key);
     if (value.has_value())
@@ -548,7 +545,7 @@ std::vector<std::string> getArrayHelper(const JsonArray& jsonArray)
 }
 }
 
-std::vector<std::string> ConfigurationBase::getArrayInternal(KeyNames key) const
+std::vector<std::string> ConfigurationBase::getArrayInternal(KeyData key) const
 {
     auto arr = getOptionalArrayInternal(key);
     if (arr.empty())
@@ -558,7 +555,7 @@ std::vector<std::string> ConfigurationBase::getArrayInternal(KeyNames key) const
     return arr;
 }
 
-std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyNames key) const
+std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyData key) const
 {
     std::vector<std::string> result;
     const auto& value = Environment::get(std::string{key.environmentVariable});
@@ -568,25 +565,21 @@ std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyNames ke
         return result;
     }
 
-    const auto jsonValueIter = mValuesByKey.find(std::string(key.jsonPath));
-    if(jsonValueIter != mValuesByKey.end())
+    const auto* jsonValue = getJsonValue(key);
+    if (jsonValue != nullptr)
     {
-        const auto* jsonValue = jsonValueIter->second;
-        Expect3(jsonValue != nullptr, "JSON value must not be nullptr", std::logic_error);
         Expect3(jsonValue->IsArray(), "JSON value must be array", std::logic_error);
         return getArrayHelper(jsonValue->GetArray());
     }
     return result;
 }
 
-std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInternal(KeyNames key) const
+std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInternal(KeyData key) const
 {
     std::map<std::string, std::vector<std::string>> ret;
-    const auto jsonValueIter = mValuesByKey.find(std::string(key.jsonPath));
-    if (jsonValueIter != mValuesByKey.end())
+    const auto* jsonValue = getJsonValue(key);
+    if (jsonValue != nullptr)
     {
-        const auto* jsonValue = jsonValueIter->second;
-        Expect3(jsonValue != nullptr, "JSON value must not be nullptr", std::logic_error);
         Expect3(jsonValue->IsObject(), "JSON value must be object", std::logic_error);
         const auto& jsonObj = jsonValue->GetObject();
         for (const auto& member : jsonObj)
@@ -600,39 +593,57 @@ std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInterna
     throw createMissingKeyException(key, {__FILE__, __LINE__});
 }
 
-std::optional<std::string> ConfigurationBase::getStringValueInternal (KeyNames key) const
+std::optional<std::string> ConfigurationBase::getOptionalStringFromJson(KeyData key) const
+{
+    const auto* jsonValue = getJsonValue(key);
+    if (! jsonValue) {
+        return std::nullopt;
+    }
+    Expect3(jsonValue->IsString(), "JSON Value must be string", std::logic_error);
+    return jsonValue->GetString();
+}
+
+std::vector<std::string> ConfigurationBase::getOptionalArrayFromJson(KeyData key) const
+{
+    const auto* jsonValue = getJsonValue(key);
+    if (! jsonValue)
+    {
+        return {};
+    }
+    Expect3(jsonValue->IsArray(), "JSON value must be array", std::logic_error);
+    return getArrayHelper(jsonValue->GetArray());
+}
+
+std::optional<std::string> ConfigurationBase::getStringValueInternal (KeyData key) const
 {
     const auto& value = Environment::get(key.environmentVariable.data());
     if (value)
         return value;
 
     // Could not find the value in the environment. Now try the configuration file.
-    const auto jsonValueIter = mValuesByKey.find(std::string(key.jsonPath));
-    if(jsonValueIter != mValuesByKey.end())
-    {
-        const auto* jsonValue = jsonValueIter->second;
-        Expect3(jsonValue != nullptr, "JSON value must not be nullptr", std::logic_error);
-        Expect3(jsonValue->IsString(), "JSON value must be string", std::logic_error);
-        return jsonValue->GetString();
-    }
-
-    // Not found in the configuration file either.
-    return {};
+    return getOptionalStringFromJson(key);
 }
 
+const rapidjson::Value* ConfigurationBase::getJsonValue(KeyData key) const
+{
+    const auto jsonValueIter = mValuesByKey.find(std::string(key.jsonPath));
+    if(jsonValueIter != mValuesByKey.end() && jsonValueIter->second != nullptr)
+    {
+        return jsonValueIter->second;
+    }
+    return nullptr;
+}
 
-std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const KeyNames key) const
+std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const KeyData key) const
 {
     const char* value = Environment::getCharacterPointer(key.environmentVariable.data());
     if (value != nullptr)
         return SafeString(value);
 
     // Could not find the value in the environment. Now try the configuration file.
-    const auto jsonValueIter = mValuesByKey.find(std::string(key.jsonPath));
-    if(jsonValueIter != mValuesByKey.end())
+    const auto* jsonValue = getJsonValue(key);
+    if(jsonValue != nullptr)
     {
-        const auto* jsonValue = jsonValueIter->second;
-        Expect3(jsonValue != nullptr, "JSON value must not be nullptr", std::logic_error);
         Expect3(jsonValue->IsString(), "JSON value must be string", std::logic_error);
         return SafeString(jsonValue->GetString());
     }
@@ -682,7 +693,8 @@ static void ensureCorrectOldProfileConfiguration(const std::optional<model::Time
     if (oldValidUntil && profileValidFrom)
     {
         using namespace std::chrono_literals;
-        Expect(*oldValidUntil >= *profileValidFrom, "The two configured profiles have a validity gap in between");
+        Expect(oldValidUntil->localDay() + date::days{1} >= profileValidFrom->localDay(),
+               "The two configured profiles have a validity gap in between");
     }
 }
 
@@ -696,21 +708,23 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     const auto& profileValidFromStr =
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_VALID_FROM);
     std::optional<model::Timestamp> profileValidfrom =
-        profileValidFromStr ? std::make_optional(model::Timestamp::fromXsDateTime(*profileValidFromStr))
-                             : std::nullopt;
+        profileValidFromStr
+            ? std::make_optional(model::Timestamp::fromXsDate(*profileValidFromStr, model::Timestamp::GermanTimezone))
+            : std::nullopt;
     const auto& profileRenderFromStr =
         configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_RENDER_FROM);
-    const auto& profileRenderFrom = profileRenderFromStr
-                                     ? std::make_optional(model::Timestamp::fromXsDateTime(*profileRenderFromStr)) : std::nullopt;
-    const auto& profileKbvSchemas = configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_KBV);
+    const auto& profileRenderFrom =
+        profileRenderFromStr
+            ? std::make_optional(model::Timestamp::fromXsDate(*profileRenderFromStr, model::Timestamp::GermanTimezone))
+            : std::nullopt;
     const auto& erpFhirVersion = configuration.getStringValue(ConfigurationKey::ERP_FHIR_VERSION);
-    const auto& profileGematikSchemas =
-        configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_XML_SCHEMA_GEMATIK);
 
     // this is the optional old profile, that is still valid for some grace-period.
     const auto& oldValidUntilStr = configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL);
     const auto& oldValidUntil =
-        oldValidUntilStr ? std::make_optional(model::Timestamp::fromXsDateTime(*oldValidUntilStr)) : std::nullopt;
+        oldValidUntilStr
+            ? std::make_optional(model::Timestamp::fromXsDate(*oldValidUntilStr, model::Timestamp::GermanTimezone))
+            : std::nullopt;
     const auto& oldKbvSchemas = configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV);
     const auto& oldErpFhirVersion = configuration.getOptionalStringValue(ConfigurationKey::ERP_FHIR_VERSION_OLD);
     const auto& oldGematikSchemas =
@@ -726,12 +740,9 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     if (oldValidUntilStr && oldErpFhirVersion)
     {
         (void)model::ResourceVersion::str_vBundled(*oldErpFhirVersion);
-        xmlValidator.loadSchemas(oldKbvSchemas, std::nullopt, oldValidUntil);
-        xmlValidator.loadSchemas(oldGematikSchemas, std::nullopt, oldValidUntil);
+        xmlValidator.loadSchemas(oldKbvSchemas);
+        xmlValidator.loadSchemas(oldGematikSchemas);
     }
-    Expect3(profileKbvSchemas.empty(), "FHIR_PROFILE_XML_SCHEMA_KBV must not contain any schemas", std::logic_error);
-    Expect3(profileGematikSchemas.empty(),
-            "FHIR_PROFILE_XML_SCHEMA_GEMATIK must not contain any schemas", std::logic_error);
 }
 
 static std::optional<uint16_t> getPortFromConfiguration (const Configuration& configuration, const ConfigurationKey key)
@@ -784,6 +795,7 @@ Configuration::defaultValidatorOptions(model::ResourceVersion::FhirProfileBundle
                 config.get<Severity>(FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
             break;
         case v_2023_07_01:
+        case v_2023_07_01_patch:
             options.levels.mandatoryResolvableReferenceFailure =
                 config.get<Severity>(FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
             options.levels.unreferencedBundledResource =
@@ -794,7 +806,7 @@ Configuration::defaultValidatorOptions(model::ResourceVersion::FhirProfileBundle
     }
     if (schemaType == SchemaType::KBV_PR_ERP_Bundle)
     {
-        options.allowNonLiteralAuthorReference = kbvValidationNonLiteralAuthorRef() == NonLiteralAutherRefMode::allow;
+        options.allowNonLiteralAuthorReference = kbvValidationNonLiteralAuthorRef() == NonLiteralAuthorRefMode::allow;
     }
     return options;
 }
@@ -809,6 +821,7 @@ void Configuration::check() const
 {
     (void) kbvValidationOnUnknownExtension();
     (void) kbvValidationNonLiteralAuthorRef();
+    (void) anrChecksumValidationMode();
     for (auto bundleVer: magic_enum::enum_values<model::ResourceVersion::FhirProfileBundleVersion>())
     {
         (void)genericValidationMode(bundleVer);
@@ -823,21 +836,16 @@ void Configuration::check() const
     (void) getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS);
 }
 
-bool Configuration::featurePkvEnabled() const
-{
-    return getOptionalBoolValue(ConfigurationKey::FEATURE_PKV, false);
-}
-
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
 {
     return getOptional<OnUnknownExtension>(ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
                                            OnUnknownExtension::report);
 }
 
-Configuration::NonLiteralAutherRefMode Configuration::kbvValidationNonLiteralAuthorRef() const
+Configuration::NonLiteralAuthorRefMode Configuration::kbvValidationNonLiteralAuthorRef() const
 {
-    return getOptional<NonLiteralAutherRefMode>(
-        ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, NonLiteralAutherRefMode::allow);
+    return getOptional<NonLiteralAuthorRefMode>(
+        ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, NonLiteralAuthorRefMode::allow);
 }
 
 
@@ -851,9 +859,15 @@ Configuration::genericValidationMode(model::ResourceVersion::FhirProfileBundleVe
             return getOptional<GenericValidationMode>(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
                                                     GenericValidationMode::ignore_errors);
         case v_2023_07_01:
+        case v_2023_07_01_patch:
             return GenericValidationMode::require_success;
     }
     Fail2("unknown FhirProfileBundleVersion: " + std::to_string(static_cast<intmax_t>(bundleVersion)), std::logic_error);
+}
+
+Configuration::AnrChecksumValidationMode Configuration::anrChecksumValidationMode() const
+{
+    return get<AnrChecksumValidationMode>(ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE);
 }
 
 bool Configuration::timingLoggingEnabled(const std::string& category) const

@@ -53,12 +53,14 @@ public:
      * Returns true if the stored kvnr is valid in the sense that the format
      * is correct, the checksum is not tested.
      */
-    bool valid() const;
+    bool validFormat() const;
 
     /**
      * Returns true if the KVNR is a verification identity, cf. A_20751
      */
     bool verificationIdentity() const;
+
+    bool validChecksum() const;
 
 private:
     std::string mValue;

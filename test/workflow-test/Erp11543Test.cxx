@@ -8,6 +8,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
@@ -18,8 +19,7 @@ class Erp11543Test : public ErpWorkflowTest
 public:
     void SetUp() override
     {
-        if (! Configuration::instance().featurePkvEnabled() ||
-            ! model::ResourceVersion::isProfileSupported(
+        if (! model::ResourceVersion::isProfileSupported(
                 model::ResourceVersion::DeGematikErezeptPatientenrechnungR4::v1_0_0))
         {
             GTEST_SKIP();
@@ -72,8 +72,7 @@ public:
             mCreatedChargeItem = model::ChargeItem::fromJsonNoValidation(chargeItems[0].serializeToJsonString());
             mCreatedChargeItem->deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::dispenseItemBundle);
 
-            mDispenseBundle = ResourceManager::instance().getStringResource(
-                "test/EndpointHandlerTest/dispense_item.xml");
+            mDispenseBundle = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
         }
     }
 

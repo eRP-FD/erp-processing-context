@@ -12,16 +12,16 @@
 | libpqxx         | 7.7.5        | BSD-3-Clause | https://github.com/jtv/libpqxx/tree/7.7.5                            |
 | libxml2         | 2.11.4       | MIT          | https://github.com/GNOME/libxml2/tree/v2.11.4                        |
 | magic_enum      | 0.9.1        | MIT          | https://github.com/Neargye/magic_enum/releases/tag/v0.9.1            |
-| openssl*        | 1.1.1u       | OpenSSL      | https://github.com/openssl/openssl/tree/OpenSSL_1_1_1u               |
+| openssl*        | 3.1.1        | OpenSSL      | https://github.com/openssl/openssl/tree/openssl-3.1                  |
 | rapidjson       | cci.20220822 | MIT          | https://github.com/Tencent/rapidjson                                 |
 | redis-plus-plus | 1.3.7        | Apache-2.0   | https://github.com/sewenew/redis-plus-plus/releases/tag/1.3.7        |
 | zlib            | 1.2.13       | Zlib License | https://github.com/madler/zlib/tree/v1.2.13                          |
 | zstd            | 1.5.5        | BSD-3-Clause | https://github.com/facebook/zstd/tree/v1.5.5                         |
 
- \* openssl 1.1.1*: The openssl 1.1.1* is based on the version provided by conan-center (https://conan.io/center/)
+ \* openssl 3.1.1: The openssl 3.1.1 is based on the version provided by conan-center (https://conan.io/center/)
    additionally a patch has been applied to access the embedded OCSP response.
    The changed package recipes and the patch are located in the subfolder `conan-recipes/openssl`
 
- \* openssl 1.1.1*: Die verwendete openssl 1.1.1* basiert auf der auf conan-center (https://conan.io/center/) Verfügbaren.
+ \* openssl 3.1.1: Die verwendete openssl 3.1.1 basiert auf der auf conan-center (https://conan.io/center/) Verfügbaren.
    zusätzlich wird ein weiterer Patch angewandt, der den Zugriff auf die eingebettete OCSP-Response ermöglicht.
    Das geänderte Conan-Rezept und der Patch befinden sich im Unterordner `conan-recipes/openssl`

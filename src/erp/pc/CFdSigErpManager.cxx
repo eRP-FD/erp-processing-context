@@ -9,16 +9,12 @@
 
 namespace
 {
-    // the default C.FD.OSIG eRP Signer certificate OCSP grace period value according to A_20765-02
-    constexpr int defaultCFdSigErpOcspGracePeriodSeconds = 24 * 60 * 60;
 
 // GEMREQ-start A_20974-01#intervall
     std::chrono::system_clock::duration getOcspRequestInterval(const Configuration& configuration)
     {
-        static constexpr int defaultCFdSigErpValidationIntervalSeconds = 3600;
         std::chrono::seconds updateSeconds(
-                configuration.getOptionalIntValue(ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL,
-                                              defaultCFdSigErpValidationIntervalSeconds));
+            configuration.getIntValue(ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL));
         return updateSeconds;
     }
 // GEMREQ-end A_20974-01#intervall
@@ -26,19 +22,16 @@ namespace
 
 
 // GEMREQ-start A_20974-01#creation,A_20765-02#creation
-CFdSigErpManager::CFdSigErpManager(
-    const Configuration& configuration,
-    TslManager& tslManager,
-    HsmPool& hsmPool)
+CFdSigErpManager::CFdSigErpManager(const Configuration& configuration, TslManager& tslManager, HsmPool& hsmPool)
     : TimerJobBase("CFdSigErpManager job", getOcspRequestInterval(configuration))
     , mMutex()
     , mTslManager(tslManager)
     , mValidationHookId()
     , mHsmPool(hsmPool)
     , mValidationTimer()
-    , mOcspRequestGracePeriod(std::chrono::seconds(
-          configuration.getOptionalIntValue(ConfigurationKey::OCSP_C_FD_SIG_ERP_GRACE_PERIOD,
-                                            defaultCFdSigErpOcspGracePeriodSeconds)))
+    // the default C.FD.OSIG eRP Signer certificate OCSP grace period is defined in A_20765-02
+    , mOcspRequestGracePeriod(
+          std::chrono::seconds(configuration.getIntValue(ConfigurationKey::OCSP_C_FD_SIG_ERP_GRACE_PERIOD)))
     , mLastProducedAt()
     , mLastOcspSuccess()
     , mLastOcspRequestSuccessful(false)

@@ -185,7 +185,7 @@
                         </coding>
                     </type>
                     <system value="http://fhir.de/NamingSystem/gkv/kvid-10"></system>
-                    <value value="K220645120"></value>
+                    <value value="K220645122"></value>
                 </identifier>
                 <name>
                     <use value="official"></use>

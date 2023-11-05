@@ -414,7 +414,7 @@ function generate_tsl()
   fi
 
   # sign TSL
-  xmlsec1 --sign --privkey-pem "$signerKeyFile,$signerCertFile" --output "$tslSigned" "$tslUnsigned"
+  xmlsec1 --sign --privkey-pem:tslkey "$signerKeyFile,$signerCertFile" --output "$tslSigned" "$tslUnsigned"
 }
 
 

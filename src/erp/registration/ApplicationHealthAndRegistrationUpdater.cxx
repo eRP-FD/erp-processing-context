@@ -18,51 +18,45 @@
 
 
 std::unique_ptr<ApplicationHealthAndRegistrationUpdater>
-ApplicationHealthAndRegistrationUpdater::create(const Configuration& configuration,
-                                                         PcServiceContext& serviceContext,
-                                                         std::shared_ptr<RegistrationInterface> registrationInterface)
+ApplicationHealthAndRegistrationUpdater::create(const Configuration& configuration, PcServiceContext& serviceContext)
 {
-    Expect(registrationInterface, "can not create ApplicationHealthAndRegistrationUpdater without registration");
     const auto interval = std::chrono::seconds(
         configuration.getOptionalIntValue(ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC, 30));
     // Conceptually the time between two retry calls is different from the time between two successful
     // heartbeat calls. But as long as we have not agreed on a different value, we will use the same.
     const auto retryInterval = interval;
 
-    return std::make_unique<ApplicationHealthAndRegistrationUpdater>(std::move(registrationInterface), interval, retryInterval, serviceContext);
+    return std::make_unique<ApplicationHealthAndRegistrationUpdater>(interval, retryInterval, serviceContext);
 }
 
 
-ApplicationHealthAndRegistrationUpdater::ApplicationHealthAndRegistrationUpdater(std::shared_ptr<RegistrationInterface> registration,
-                                 const std::chrono::steady_clock::duration interval,
-                                 const std::chrono::steady_clock::duration retryInterval,
-                                 PcServiceContext& serviceContext)
+ApplicationHealthAndRegistrationUpdater::ApplicationHealthAndRegistrationUpdater(
+    const std::chrono::steady_clock::duration interval, const std::chrono::steady_clock::duration retryInterval,
+    PcServiceContext& serviceContext)
     : TimerJobBase("heartbeat", interval)
-    , mRegistration(std::move(registration))
+    , mRegistration(serviceContext.registrationInterface())
     , mRetryInterval(retryInterval)
     , mServiceContext(serviceContext)
 {
     Expect(mRegistration, "can not create ApplicationHealthAndRegistrationUpdater without registration");
 }
 
+ApplicationHealthAndRegistrationUpdater::~ApplicationHealthAndRegistrationUpdater() noexcept
+{
+    // make sure we wait for finishing, otherwise the jobTimerBase might
+    // call us after destruction
+    shutdown();
+}
 
 void ApplicationHealthAndRegistrationUpdater::onStart(void)
 {
-    HealthCheck::update(mServiceContext);
-    mRegistration->updateRegistrationBasedOnApplicationHealth(mServiceContext.applicationHealth());
-
-    if (mRegistration->registered())
-    {
-        // first execution is done immediately
-        executeJob();
-    }
+    executeJob();
 }
 
 
 void ApplicationHealthAndRegistrationUpdater::executeJob(void)
 {
     HealthCheck::update(mServiceContext);
-    mRegistration->updateRegistrationBasedOnApplicationHealth(mServiceContext.applicationHealth());
     if (!mRegistration->registered())
     {
         return;

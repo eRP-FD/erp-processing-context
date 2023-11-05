@@ -8,7 +8,7 @@ git fetch --depth=1 origin llvmorg-15.0.2
 git checkout FETCH_HEAD
 mkdir build
 cd build
-CC=gcc-11 CXX=g++-11 cmake -C../../clang-tidy.cmake -GNinja ../llvm
+CC=gcc-12 CXX=g++-12 cmake -C../../clang-tidy.cmake -GNinja ../llvm
 cmake --build . --target install
 cd /root
 rm -rf llvm-build

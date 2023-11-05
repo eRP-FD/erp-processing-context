@@ -24,17 +24,14 @@ class PcServiceContext;
 class ApplicationHealthAndRegistrationUpdater : public TimerJobBase
 {
 public:
-    ApplicationHealthAndRegistrationUpdater(
-        std::shared_ptr<RegistrationInterface> registration,
-        const std::chrono::steady_clock::duration interval,
-        const std::chrono::steady_clock::duration retryInterval,
-        PcServiceContext& serviceContext);
-    ~ApplicationHealthAndRegistrationUpdater() noexcept override = default;
+    ApplicationHealthAndRegistrationUpdater(const std::chrono::steady_clock::duration interval,
+                                            const std::chrono::steady_clock::duration retryInterval,
+                                            PcServiceContext& serviceContext);
+    ~ApplicationHealthAndRegistrationUpdater() noexcept override;
 
     static std::unique_ptr<ApplicationHealthAndRegistrationUpdater> create (
         const Configuration& configuration,
-        PcServiceContext& serviceContext,
-        std::shared_ptr<RegistrationInterface> registrationInterface);
+        PcServiceContext& serviceContext);
 
 protected:
     void onStart(void) override;

@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_HSM_HSMEXCEPTION_HXX
 #define ERP_PROCESSING_CONTEXT_HSM_HSMEXCEPTION_HXX
 
+#include <cstdint>
 #include <stdexcept>
 
 

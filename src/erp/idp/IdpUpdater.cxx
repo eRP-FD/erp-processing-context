@@ -7,7 +7,6 @@
 
 #include "erp/idp/IdpUpdater.hxx"
 
-#include "erp/common/Constants.hxx"
 #include "erp/crypto/Jwt.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/tsl/OcspHelper.hxx"
@@ -24,7 +23,7 @@ namespace
 
     std::chrono::system_clock::duration getMaxCertificateAge (void)
     {
-        const auto maxAgeInHours = Configuration::instance().getOptionalIntValue(ConfigurationKey::IDP_CERTIFICATE_MAX_AGE_HOURS, 24);
+        const auto maxAgeInHours = Configuration::instance().getIntValue(ConfigurationKey::IDP_CERTIFICATE_MAX_AGE_HOURS);
         return std::chrono::hours(maxAgeInHours);
     }
 
@@ -120,7 +119,7 @@ IdpUpdater::IdpUpdater (
 {
     SafeString idpSslRootCa;
     const std::string idpRootCaFile =
-        Configuration::instance().getOptionalStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH, "");
+        Configuration::instance().getStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH);
     if ( ! idpRootCaFile.empty())
     {
         idpSslRootCa = FileHelper::readFileAsString(idpRootCaFile);
@@ -131,10 +130,9 @@ IdpUpdater::IdpUpdater (
     }
     if (mRequestSender == nullptr)
     {
-        mRequestSender = std::make_shared<UrlRequestSender>(
-            std::move(idpSslRootCa),
-            static_cast<uint16_t>(Configuration::instance().getOptionalIntValue(
-                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS, Constants::httpTimeoutInSeconds)),
+        mRequestSender = std::make_shared<UrlRequestSender>(std::move(idpSslRootCa),
+                                                            static_cast<uint16_t>(Configuration::instance().getIntValue(
+                                                                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
             mResolveTimeout);
     }
 

@@ -25,8 +25,6 @@ public:
         : mRequestHandlerManager(),
           mAllProfessionOIDs()
     {
-        EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
-
         ErpProcessingContext::addSecondaryEndpoints(mRequestHandlerManager);
         ErpProcessingContext::addPrimaryEndpoints(mRequestHandlerManager);
         std::string prefix = "1.2.276.0.76.4.";

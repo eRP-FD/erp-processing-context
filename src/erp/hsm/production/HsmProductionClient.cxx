@@ -413,18 +413,12 @@ HsmRawSession HsmProductionClient::connect (const HsmIdentity& identity)
 
     const std::string hsmDeviceString = Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE);
     auto [devices,devicesBuffer] = String::splitIntoNullTerminatedArray(hsmDeviceString, ",");
-    const auto connectTimeout = std::chrono::seconds(
-        Configuration::instance().getOptionalIntValue(
-            ConfigurationKey::HSM_CONNECT_TIMEOUT_SECONDS,
-            5));
-    const auto readTimeout = std::chrono::seconds(
-        Configuration::instance().getOptionalIntValue(
-            ConfigurationKey::HSM_READ_TIMEOUT_SECONDS,
-            1));
-    const auto reconnectInterval = std::chrono::seconds(
-        Configuration::instance().getOptionalIntValue(
-            ConfigurationKey::HSM_RECONNECT_INTERVAL_SECONDS,
-            15));
+    const auto connectTimeout =
+        std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::HSM_CONNECT_TIMEOUT_SECONDS));
+    const auto readTimeout =
+        std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::HSM_READ_TIMEOUT_SECONDS));
+    const auto reconnectInterval =
+        std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::HSM_RECONNECT_INTERVAL_SECONDS));
 
     TVLOG(1) << "connecting to HSM cluster with " << devices.size()-1 << " devices: " << hsmDeviceString;
     const auto connectedSession =

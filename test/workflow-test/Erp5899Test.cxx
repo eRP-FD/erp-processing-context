@@ -41,9 +41,10 @@ public:
                                    model::ResourceVersion::FhirProfileBundleVersion) override
     {
         return ResourceTemplates::medicationDispenseXml(
-            {.prescriptionId = model::PrescriptionId::fromString(prescriptionIdForMedicationDispense), .kvnr = kvnr,
+            {.prescriptionId = model::PrescriptionId::fromString(prescriptionIdForMedicationDispense),
+             .kvnr = kvnr,
              .telematikId = "3-SMC-B-Testkarte-883110000129068",
-             .whenHandedOver = model::Timestamp::fromXsDateTime("2021-05-30T07:58:37+02:00")});
+             .whenHandedOver = now});
     }
 
     size_t countMedicationDispenses(const std::string_view& query)
@@ -53,6 +54,7 @@ public:
         return count;
     }
 
+    const model::Timestamp now = model::Timestamp::now();
 
 private:
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -77,19 +79,15 @@ private:
 
 TEST_F(Erp5899Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
-    EnvironmentVariableGuard environmentVariableGuard3("ERP_SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE",
-                                                       "false");
-    EnvironmentVariableGuard environmentVariableGuard2("DEBUG_DISABLE_QES_ID_CHECK", "true");
-    if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
-    {
-        GTEST_SKIP_("disabled, because the QES Key check could not be diabled");
-    }
-    static constexpr auto originalQuery
-        {"whenhandedover=gt2021-05-30T07%3A58%3A37%2B02%3A00&performer=3-SMC-B-Testkarte-883110000129068"};
-    static constexpr auto geQuery
-        {"whenhandedover=ge2021-05-30T07%3A58%3A37%2B02%3A00&performer=3-SMC-B-Testkarte-883110000129068"};
-    static constexpr auto oneSecondEarlierQuery
-        {"whenhandedover=gt2021-05-30T07%3A58%3A36%2B02%3A00&performer=3-SMC-B-Testkarte-883110000129068"};
+    const auto nowStr = UrlHelper::escapeUrl(now.toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone));
+    const auto originalQuery =
+        std::string{"whenhandedover=gt"} + nowStr + "&performer=3-SMC-B-Testkarte-883110000129068";
+    const auto geQuery =
+        std::string{"whenhandedover=ge"} + nowStr + "&performer=3-SMC-B-Testkarte-883110000129068";
+    const auto beforeNowStr = UrlHelper::escapeUrl(
+        (now - std::chrono::seconds(1)).toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone));
+    const auto oneSecondEarlierQuery =
+        std::string{"whenhandedover=gt"} + beforeNowStr + "&performer=3-SMC-B-Testkarte-883110000129068";
 
     size_t originalCount = 0;
     ASSERT_NO_FATAL_FAILURE(originalCount = countMedicationDispenses(originalQuery));

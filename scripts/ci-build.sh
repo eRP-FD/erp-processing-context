@@ -64,13 +64,18 @@ conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy t
 conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force
 conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force
 set -x
+
+export GCC_VERSION=12
+export CC=gcc-${GCC_VERSION}
+export CXX=g++-${GCC_VERSION}
 # Add credentials for IBM internal nexus
 conan user -r erp -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
 conan user -r conan-center-binaries -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
 conan profile new --detect default
+conan profile update env.CC=${CC} default
+conan profile update env.CXX=${CXX} default
+conan profile update settings.compiler.version=${GCC_VERSION} default
 set +x
-export CC=gcc-11
-export CXX=g++-11
 cmake -GNinja \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DERP_BUILD_VERSION=${erp_build_version} \

@@ -6,6 +6,7 @@
 #
 
 # Enforce use of conan-provided OpenSSL
+unset(OPENSSL CACHE)
 find_program(OPENSSL
     NAMES openssl
     PATHS "${CONAN_BIN_DIRS_OPENSSL}"

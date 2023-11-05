@@ -6,7 +6,7 @@
   <identifier>
     <use value="usual"/>
     <system value="http://fhir.de/NamingSystem/gkv/kvk-versichertennummer" />
-    <value value="X234567890" />
+    <value value="X234567891" />
   </identifier>
   <name>
     <use value="official" />

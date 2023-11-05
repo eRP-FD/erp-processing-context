@@ -23,8 +23,8 @@ Communication with the outside world
 A [guide](doc/GuideToImplementation.md) outlines the implementation.
 
 # Notes
-The test key/certificate pair in `resources/test/02_development.config.json.in` (erp/processing-context/server/certificate)
-was generated on macOS Catalina 10.15.1 using OpenSSL 3.0.0-dev.
+The test key/certificate pair in `resources/test/02_development.config.json.in` (erp/server/certificate)
+was generated on RHEL 8 using OpenSSL 1.1.1k.
 
 They are meant to be used exclusively for testing purposes on a server running locally.
 
@@ -33,21 +33,21 @@ They are meant to be used exclusively for testing purposes on a server running l
               -x509 -days 3650 -out cert.pem \
               -subj "/C=DE/ST=HH/L=Hamburg/O=IBM/OU=Gesundheitsplattform" \
                     "/CN=ePA Backend Mock -- FdV-Modul Unit Testing" \
-              -addext "subjectAltName = DNS:127.0.0.1"
+              -addext "subjectAltName = IP:127.0.0.1"
  ```
 
 # Build image
 ```$xslt
 cd docker/build
-docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3 .
-docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3
+docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4 .
+docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4
 ```
 
 # Tools
 ## JWT signing tool `jwt`
 
 This tool uses the private key located in the source tree at `resources/test/jwt/idp_id` to sign a json-claim file
-provided at the command line and prints it to _stdout_.  
+provided at the command line and prints it to _stdout_.
 
 ```
 Usage: jwt <claimfile>

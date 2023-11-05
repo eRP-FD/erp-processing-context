@@ -273,7 +273,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, "X123456789")
+            .setRecipient(ActorRole::Pharmacists, "X123456788")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(InfoReqMessage).createJsonString();
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -302,7 +302,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, "X123456789")
+            .setRecipient(ActorRole::Pharmacists, "X123456788")
             .setAccessCode(std::string(task.accessCode()))
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(DispReqMessage).createJsonString();
@@ -346,7 +346,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, "X12345678901234567890")
+            .setRecipient(ActorRole::Insurant, "X12345678801234567890")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
@@ -360,7 +360,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
     {
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
             .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, "X12345678901234567890")
+            .setRecipient(ActorRole::Insurant, "X12345678801234567890")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
             .setPayload(RepresentativeMessageByInsurant).createJsonString();
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };

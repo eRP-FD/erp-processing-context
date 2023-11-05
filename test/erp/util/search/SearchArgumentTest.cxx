@@ -36,8 +36,8 @@
 class SearchArgumentTest : public ServerTestBase
 {
 public:
-    static constexpr const char* sender = "X506060003";
-    static constexpr const char* recipient = "X234567890";
+    static constexpr const char* sender = "X506060007";
+    static constexpr const char* recipient = "X234567891";
 
     void SetUp (void) override
     {
@@ -50,7 +50,7 @@ public:
         // Create a task object that can be referenced from communication objects.
         const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
         const auto task = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
-            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .kvnr = "X123456789"}));
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .kvnr = "X123456788"}));
         mTaskId.emplace(database->storeTask(task));
 
         // Create a communication object.
@@ -202,7 +202,7 @@ TEST_F(SearchArgumentTest, getSelfLinkPathParameters)
     ServerRequest request(std::move(header));
     request.setQueryParameters({
         {"sent",          "lt2021-09-08"},
-        {"recipient",     "X123456789"},
+        {"recipient",     "X123456788"},
         {"sent",          "lt2021-09-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
@@ -214,7 +214,7 @@ TEST_F(SearchArgumentTest, getSelfLinkPathParameters)
     // - the second 'sent' timestamp is normalized to UTC.
     // - the 'to-be-ignored' argument is ignored and not included in the self link.
     ASSERT_EQ(UrlHelper::unescapeUrl(search.getLinkPathArguments(model::Link::Type::Self)),
-        "?sent=lt2021-09-08&recipient=X123456789&sent=lt2021-09-08T10:58:58+00:00");
+        "?sent=lt2021-09-08&recipient=X123456788&sent=lt2021-09-08T10:58:58+00:00");
 
     // additional test for DateAsUuid, which should behave identical to Date type
     search = UrlArguments({
@@ -242,7 +242,7 @@ TEST_F(SearchArgumentTest, multipleParameters)
     ServerRequest request(std::move(header));
     request.setQueryParameters({
         {"sent",          "gt2021-09-08"},
-        {"recipient",     "X123456789"},
+        {"recipient",     "X123456788"},
         {"sent",          "gt2022-01-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
@@ -255,7 +255,7 @@ TEST_F(SearchArgumentTest, multipleParameters)
     // - the 'to-be-ignored' argument is ignored and not included in the self link.
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
         "(erp.timestamp_from_suuid(id) >= '2021-09-09T00:00:00+00:00') AND (recipient = '\\x"
-        + hashedHex("X123456789") + "') AND (erp.timestamp_from_suuid(id) >= '2022-01-08T10:58:59+00:00')");
+        + hashedHex("X123456788") + "') AND (erp.timestamp_from_suuid(id) >= '2022-01-08T10:58:59+00:00')");
 }
 
 TEST_F(SearchArgumentTest, suuid)
@@ -296,14 +296,14 @@ TEST_F(SearchArgumentTest, Parse_DelimiterValueOnly_BadRequest)
     EXPECT_ERP_EXCEPTION(search.parse(request, mServer->serviceContext().getKeyDerivation()), HttpStatus::BadRequest);
     request.setQueryParameters({
         {"sent",          "gt2021-09-08"},
-        {"recipient",     ",X123456789"},
+        {"recipient",     ",X123456788"},
         {"sent",          "gt2022-01-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
     EXPECT_ERP_EXCEPTION(search.parse(request, mServer->serviceContext().getKeyDerivation()), HttpStatus::BadRequest);
     request.setQueryParameters({
         {"sent",          "gt2021-09-08"},
-        {"recipient",     ",X123456789,"},
+        {"recipient",     ",X123456788,"},
         {"sent",          "gt2022-01-08T23:32:58+12:34"},
         {"to-be-ignored", "also to be ignored"}
     });
@@ -325,8 +325,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
     Header header;
     ServerRequest request(std::move(header));
     request.setQueryParameters({
-        {"recipient",     "X123456789,K987654321"},
-        {"sender",        "X123456789,K987654321"},
+        {"recipient",     "X123456788,K987654321"},
+        {"sender",        "X123456788,K987654321"},
         {"sent",          "2021-09-08,2021-09-01"},
         {"received",      "gt2022-01-08,2021-09-01"} // doesn't make sense but its not a failure
         });
@@ -338,8 +338,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
     // - the 'sent' timestamps are normalized to UTC and ored.
     // - the 'received' timestamps  are normalized to UTC and ored.
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
-        "((recipient = '\\x" + hashedHex("X123456789") + "') OR (recipient = '\\x" + hashedHex("K987654321") + "'))"
-        + " AND ((sender = '\\x" + hashedHex("X123456789") + "') OR (sender = '\\x" + hashedHex("K987654321") + "'))"
+        "((recipient = '\\x" + hashedHex("X123456788") + "') OR (recipient = '\\x" + hashedHex("K987654321") + "'))"
+        + " AND ((sender = '\\x" + hashedHex("X123456788") + "') OR (sender = '\\x" + hashedHex("K987654321") + "'))"
         + " AND ((('2021-09-08T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-09T00:00:00+00:00'))"
         + " OR (('2021-09-01T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-02T00:00:00+00:00')))"
         + " AND ((received >= '2022-01-09T00:00:00+00:00') OR (received >= '2021-09-02T00:00:00+00:00'))");
@@ -360,8 +360,8 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValuesWithFailure)
     Header header;
     ServerRequest request(std::move(header));
     request.setQueryParameters({
-        {"recipient",     "X123456789,K987654321"},
-        {"sender",        "X123456789,K987654321"},
+        {"recipient",     "X123456788,K987654321"},
+        {"sender",        "X123456788,K987654321"},
         {"sent",          "gt2021-09-08,lt2021-09-01"} // changing prefix is not supported
         });
     ASSERT_THROW(search.parse(request, mServer->serviceContext().getKeyDerivation()), ErpException);
@@ -682,8 +682,8 @@ TEST_F(SearchArgumentTest, data_failForFractionalSeconds)
 
 TEST_F(SearchArgumentTest, eq_syntax)
 {
-    testSyntax("recipient", "X123456789",
-               "(recipient = '\\x" + hashedHex("X123456789") + "')");
+    testSyntax("recipient", "X123456788",
+               "(recipient = '\\x" + hashedHex("X123456788") + "')");
 }
 
 

@@ -105,6 +105,7 @@ public:
 
     [[nodiscard]] SchemaType getProfile() const;
     [[nodiscard]] std::optional<std::string_view> getProfileName() const;
+    virtual std::optional<model::Timestamp> getValidationReferenceTimestamp() const;
 
 protected:
     explicit ResourceBase(Profile profile);

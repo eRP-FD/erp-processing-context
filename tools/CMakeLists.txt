@@ -12,7 +12,6 @@ target_compile_definitions(erp-tool-lib PUBLIC WITH_HSM_MOCK=1)
 target_include_directories(erp-tool-lib
     PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}"
-        ${PROJECT_SOURCE_DIR}   # Allow a leading `test/` or `util/` in include paths.
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}"
 )
@@ -44,7 +43,7 @@ target_link_libraries(enrolment-api-client
 )
 
 target_include_directories(enrolment-api-client
-    PUBLIC ${PROJECT_SOURCE_DIR}/.. ${CMAKE_SOURCE_DIR}/src)
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_SOURCE_DIR}/src)
 
 # The blob-db-initialization relies on HSM and TPM support. On platforms where they are not supported, the tool can
 # not be built.

@@ -28,7 +28,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -76,7 +76,6 @@ pipeline {
                             cd jenkins-build-debug/bin
                             sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./01_production.config.json
                             sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./02_development.config.json
-                            export ERP_FHIR_PROFILE_VALID_FROM="2022-11-01T00:00:00+01:00"
                             LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
                             LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
                         """

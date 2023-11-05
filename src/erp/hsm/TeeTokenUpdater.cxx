@@ -43,8 +43,8 @@ TeeTokenUpdater::TeeTokenUpdater (
           hsmPool,
           std::move(tokenRefresher),
           std::move(timerManager),
-          std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS, 1200)),
-          std::chrono::seconds(Configuration::instance().getOptionalIntValue(ConfigurationKey::TEE_TOKEN_RETRY_SECONDS, 60)))
+          std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS)),
+          std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::TEE_TOKEN_RETRY_SECONDS)))
 {
 }
 

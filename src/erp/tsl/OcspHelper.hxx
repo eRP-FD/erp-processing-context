@@ -22,9 +22,6 @@ public:
         void operator() (ASN1_SEQUENCE_ANY* asn1SequenceAny);
     };
 
-    static constexpr int DEFAULT_OCSP_NON_QES_GRACE_PERIOD_SECONDS = 3600; // 1 hour
-    static constexpr int DEFAULT_OCSP_QES_GRACE_PERIOD_SECONDS = 43200; // 12 hours
-
     using Asn1SequencePtr = std::unique_ptr<ASN1_SEQUENCE_ANY, Asn1SequenceDeleter>;
 
     static const EVP_MD* getDigestFromExtension (ASN1_SEQUENCE_ANY* extensionData);

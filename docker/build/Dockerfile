@@ -15,7 +15,7 @@ RUN apt-get update --fix-missing && \
     add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     openjdk-11-jre-headless \
-    gcc-11 g++-11 \
+    gcc-12 g++-12 \
     jq \
     wget \
     libgtest-dev \

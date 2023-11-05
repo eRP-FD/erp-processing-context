@@ -38,4 +38,32 @@ void Fhir::loadVersion(ConfigurationKey versionKey, ConfigurationKey structureKe
     });
     TLOG(INFO) << "Loading FHIR structure repository for " << magic_enum::enum_name(version);
     mStructureRepository[version].load(files);
+
+    if (model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01 == version)
+    {
+        const auto patchVersion = model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01_patch;
+        auto patchReplace =
+            Configuration::instance().getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE);
+        auto patchReplaceWith =
+            Configuration::instance().getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE_WITH);
+        auto patchValidFrom =
+            Configuration::instance().getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM);
+        Expect3(patchReplace && patchReplaceWith && patchValidFrom,
+                "please check fhir package configuration or remove hard-coded kbv 1.1.2 patch if obsolete.",
+                std::logic_error);
+        TLOG(INFO) << "Loading PATCHED FHIR structure repository for " << magic_enum::enum_name(patchVersion);
+        bool replaced = false;
+        for (auto& file : files)
+        {
+            if (std::filesystem::equivalent(file, std::filesystem::path{*patchReplace}))
+            {
+                LOG(INFO) << "FHIR profile patch replacing " << file.string() << " with " << *patchReplaceWith;
+                file = std::filesystem::path{*patchReplaceWith};
+                replaced = true;
+            }
+        }
+        Expect(replaced, "patch not applied, check configuration! FHIR_PROFILE_PATCH_REPLACE=" + *patchReplace +
+                             " FHIR_PROFILE_PATCH_REPLACE_WITH=" + *patchReplaceWith);
+        mStructureRepository[patchVersion].load(files);
+    }
 }

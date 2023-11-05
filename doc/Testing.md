@@ -40,17 +40,15 @@ Adjust the test-configuration such that the HSM simulator, e.g. by adding a sepa
 
 ```json
 {
-  "common": {
-    "erp": {
-      "hsm": {
-        "device": "3001@localhost",
-        "username": "ERP_WORK",
-        "password": "password",
-        "max-session-count" : "5",
-        "tee-token" :{
-           "update-seconds" : "1200",
-           "retry-seconds" : "30"
-        }
+  "erp": {
+    "hsm": {
+      "device": "3001@localhost",
+      "username": "ERP_WORK",
+      "password": "password",
+      "max-session-count" : "5",
+      "tee-token" :{
+          "update-seconds" : "1200",
+          "retry-seconds" : "30"
       }
     }
   }

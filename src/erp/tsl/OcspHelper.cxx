@@ -119,14 +119,10 @@ std::chrono::system_clock::duration OcspHelper::getOcspGracePeriod(TslMode tslMo
 {
     if (tslMode == TslMode::TSL)
     {
-        return std::chrono::seconds(
-            Configuration::instance().getOptionalIntValue(ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD,
-                                                          OcspHelper::DEFAULT_OCSP_NON_QES_GRACE_PERIOD_SECONDS));
+        return std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD));
     }
     else
     {
-        return std::chrono::seconds(
-            Configuration::instance().getOptionalIntValue(ConfigurationKey::OCSP_QES_GRACE_PERIOD,
-                                                          OcspHelper::DEFAULT_OCSP_QES_GRACE_PERIOD_SECONDS));
+        return std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::OCSP_QES_GRACE_PERIOD));
     }
 }

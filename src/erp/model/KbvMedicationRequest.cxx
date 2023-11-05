@@ -47,9 +47,7 @@ std::optional<date::year_month_day> KbvMedicationRequest::mvoEndDate() const
             auto endDate = mPExt->endDate();
             if (endDate.has_value())
             {
-                return date::year_month_day{date::floor<date::days>(
-                    date::make_zoned(model::Timestamp::GermanTimezone, endDate->toChronoTimePoint())
-                        .get_local_time())};
+                return date::year_month_day{endDate->localDay(Timestamp::GermanTimezone)};
             }
         }
     }

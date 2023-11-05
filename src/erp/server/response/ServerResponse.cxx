@@ -61,6 +61,13 @@ void ServerResponse::setHeader (const std::string& key, const std::string& value
     mHeader.addHeaderField(key, value);
 }
 
+void ServerResponse::addWarningHeader(int code, const std::string& agent, const std::string& text)
+{
+    std::stringstream ss;
+    ss << code << " " << agent << " " << text;
+    mHeader.addHeaderField(Header::Warning, ss.str());
+}
+
 
 void ServerResponse::removeHeader (const std::string& key)
 {

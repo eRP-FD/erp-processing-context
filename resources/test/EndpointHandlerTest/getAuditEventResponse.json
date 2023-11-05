@@ -82,7 +82,7 @@
               },
               "reference": "https://prescriptionserver.telematik/Task/4711"
             },
-            "name": "X123456789"
+            "name": "X123456788"
           }
         ]
       },
@@ -133,7 +133,7 @@
             },
             "who": {
               "identifier": {
-                "value": "Max Mustermann, KVNR X123456789"
+                "value": "Max Mustermann, KVNR X123456788"
               }
             },
             "requestor": false
@@ -156,7 +156,7 @@
               },
               "reference": "https://prescriptionserver.telematik/Task/4711"
             },
-            "name": "X123456789"
+            "name": "X123456788"
           }
         ]
       },
@@ -230,7 +230,7 @@
               },
               "reference": "https://prescriptionserver.telematik/Task/4711"
             },
-            "name": "X123456789"
+            "name": "X123456788"
           }
         ]
       },

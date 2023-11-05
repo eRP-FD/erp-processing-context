@@ -18,13 +18,9 @@ public:
         {
             prepare(mIouSchemaVersion);
             prepare(mDeleteSchemaVersion);
-
-            const Query retrieveSchemaVersion{"retrieveSchemaVersion",
-                                              "SELECT value FROM erp.config WHERE parameter = 'schema_version'"};
-            prepare(retrieveSchemaVersion);
             pqxx::result result;
             auto &&txn = createTransaction();
-            ASSERT_NO_THROW(result = txn.exec_prepared(retrieveSchemaVersion.name));
+            ASSERT_NO_THROW(result = txn.exec_params("SELECT value FROM erp.config WHERE parameter = 'schema_version'"));
             ASSERT_TRUE(result.size() <= 1);
             if(!result.empty())
             {

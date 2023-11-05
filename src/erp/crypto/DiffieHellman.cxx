@@ -24,7 +24,7 @@ void DiffieHellman::setPeerPublicKey (const shared_EVP_PKEY& peerPublicKey)
 {
     Expect(peerPublicKey.isSet(), "got invalid peer's public key");
 
-    EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(peerPublicKey.removeConst());
+    const EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(peerPublicKey);
     Expect(ecKey != nullptr, "peer key has no public key");
     const EC_POINT* ecPoint = EC_KEY_get0_public_key(ecKey);
     Expect(ecPoint!=nullptr, "peer's public key not valid");
@@ -90,10 +90,16 @@ std::string DiffieHellman::hkdf (const SafeString& sharedKey, const std::string_
 
     // Salt is not used.
 
-    status = EVP_PKEY_CTX_set1_hkdf_key(context, static_cast<const char*>(sharedKey), static_cast<int>(sharedKey.size()));
+    status = EVP_PKEY_CTX_set1_hkdf_key(
+        context,
+        static_cast<const unsigned char*>(sharedKey),
+        static_cast<int>(sharedKey.size()));
     Expect(status==1, "can not set HKDF shared key");
 
-    status = EVP_PKEY_CTX_add1_hkdf_info(context, derivationKey.data(), static_cast<int>(derivationKey.size()));
+    status = EVP_PKEY_CTX_add1_hkdf_info(
+        context,
+        reinterpret_cast<const unsigned char*>(derivationKey.data()),
+        static_cast<int>(derivationKey.size()));
     Expect(status==1, "can not set HKDF info");
 
     std::string derivedKey(keyLength, ' ');

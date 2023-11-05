@@ -38,7 +38,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -94,7 +94,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -145,7 +145,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -197,7 +197,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -250,7 +250,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -403,7 +403,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "whenHandedOver":"2020-03-20T07:13:00+05:00",
@@ -446,7 +446,7 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -515,7 +515,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -523,7 +523,7 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
             "actor":{
                 "identifier":{
                     "system":"http://fhir.de/NamingSystem/gkv/kvid-10",
-                    "value":"X123456789"
+                    "value":"X123456788"
                 }
             }
         }
@@ -569,7 +569,7 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -621,7 +621,7 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[
@@ -653,7 +653,7 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     medicationDispense.setId({prescriptionId, 0});
     EXPECT_EQ(medicationDispense.prescriptionId().toString(), prescriptionId.toString());
 
-    const model::Kvnr kvnr{"X424242424"};
+    const model::Kvnr kvnr{"X424242422"};
     medicationDispense.setKvnr(kvnr);
     EXPECT_EQ(medicationDispense.kvnr(), kvnr);
 
@@ -663,7 +663,7 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
 
     const model::Timestamp whenHandedOver = model::Timestamp::now();
     medicationDispense.setWhenHandedOver(whenHandedOver);
-    EXPECT_EQ(medicationDispense.whenHandedOver(), whenHandedOver);
+    EXPECT_EQ(medicationDispense.whenHandedOver().localDay(), whenHandedOver.localDay());
 
     EXPECT_FALSE(medicationDispense.whenPrepared().has_value());
     const model::Timestamp whenPrepared = model::Timestamp::now();
@@ -703,7 +703,7 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function
     "subject":{
         "identifier":{
             "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
-            "value":"X123456789"
+            "value":"X123456788"
         }
     },
     "performer":[

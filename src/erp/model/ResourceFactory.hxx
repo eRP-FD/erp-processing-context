@@ -43,6 +43,7 @@ public:
     void validateLegacyXSD(SchemaType, const XmlValidator&) const;
     std::optional<std::string_view> getProfileName() const;
     std::string_view getResourceType() const;
+    std::optional<model::Timestamp> getValidationReferenceTimestamp() const;
 
     virtual ~ResourceFactoryBase() noexcept = default;
 
@@ -98,7 +99,8 @@ protected:
     /// @param validatorOptions options passed to validator
     /// @param validationErpException exception from previous validation, if any
     void conditionalValidateGeneric(std::optional<ResourceVersion::FhirProfileBundleVersion> version,
-                                    SchemaType schemaType, const fhirtools::ValidatorOptions& validatorOptions,
+                                    const std::vector<std::string>& supportedProfiles,
+                                    const fhirtools::ValidatorOptions& validatorOptions,
                                     const std::optional<ErpException>& validationErpException) const;
     void validateNoAdditional(SchemaType schemaType, const XmlValidator& xmlValidator,
                               const InCodeValidator& inCodeValidator,
@@ -136,7 +138,7 @@ public:
     // throws when the input doesn't conform to fhir base schema
     static ResourceFactory fromJson(std::string_view, const JsonValidator& jsonValidator, Options = {});
 
-    // asumes that jsonValue is already validated with fhir base schema
+    // assumes that jsonValue is already validated with fhir base schema
     static ResourceFactory fromJson(NumberAsStringParserDocument&& jsonValue, Options options = {});
 
     ResourceType getValidated(SchemaType, const XmlValidator&, const InCodeValidator& inCodeValidator,
@@ -176,7 +178,6 @@ ResourceFactory<ResourceT> model::ResourceFactory<ResourceT>::fromJson(NumberAsS
     return ResourceFactory<ResourceT>{std::move(jsonValue), std::monostate{}, std::move(options)};
 }
 
-using namespace model;
 template<typename ResourceT>
 ResourceFactory<ResourceT> model::ResourceFactory<ResourceT>::fromXml(std::string_view xmlDoc,
                                                                       const XmlValidator& xmlValidator, Options opt)
@@ -184,7 +185,6 @@ ResourceFactory<ResourceT> model::ResourceFactory<ResourceT>::fromXml(std::strin
     return ResourceFactory<ResourceT>{ResourceFactoryBase::fromXml(xmlDoc, xmlValidator), xmlDoc, std::move(opt)};
 }
 
-using namespace model;
 template<typename ResourceT>
 ResourceFactory<ResourceT> model::ResourceFactory<ResourceT>::fromXml(std::string&& xmlDoc,
                                                                       const XmlValidator& xmlValidator, Options opt)

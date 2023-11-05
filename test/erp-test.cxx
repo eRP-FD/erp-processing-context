@@ -24,6 +24,7 @@ int main(int argc, char** argv)
     static constexpr auto erp_profiles = "--erp_profiles="sv;
     static constexpr auto old_profiles = "2022-01-01"sv;
     static constexpr auto new_profiles = "2023-07-01"sv;
+    static constexpr auto patched_profiles = "2024-01-01"sv;
     static constexpr auto all_profiles = "all"sv;
 
     static constexpr auto erp_instance = "--erp_instance="sv;
@@ -64,23 +65,25 @@ int main(int argc, char** argv)
     if (supportedProfiles == old_profiles)
     {
         std::ranges::move(testutils::getOldFhirProfileEnvironment(), std::inserter(env, env.end()));
-        env.emplace_back(FEATURE_PKV, "false");
     }
     else if (supportedProfiles == new_profiles)
     {
         std::ranges::move(testutils::getNewFhirProfileEnvironment(), std::inserter(env, env.end()));
-        env.emplace_back(FEATURE_PKV, "true");
     }
     else if (supportedProfiles == all_profiles)
     {
         std::ranges::move(testutils::getOverlappingFhirProfileEnvironment(), std::inserter(env, env.end()));
-        env.emplace_back(FEATURE_PKV, "true");
+    }
+    else if (supportedProfiles == patched_profiles)
+    {
+        std::ranges::move(testutils::getPatchedFhirProfileEnvironment(), std::inserter(env, env.end()));
     }
     else
     {
         std::clog << "missing or invalid argument to " << erp_profiles << '\n';
         std::clog << "    possible values are: ";
-        std::clog << old_profiles << ", " << new_profiles << ", " << all_profiles << std::endl;
+        std::clog << old_profiles << ", " << new_profiles << ", " << all_profiles << ", " << patched_profiles
+                  << std::endl;
         return EXIT_FAILURE;
     }
     ::testing::InitGoogleTest(&argc, argv);

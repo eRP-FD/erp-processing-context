@@ -274,6 +274,8 @@ Communication::MessageType Communication::schemaTypeToMessageType(SchemaType sch
         case SchemaType::PatchChargeItemParameters:
         case SchemaType::DAV_DispenseItem:
         case SchemaType::Pruefungsnachweis:
+        case SchemaType::CommunicationDispReqPayload:
+        case SchemaType::CommunicationReplyPayload:
             ModelFail("Not a Communication Schema");
     }
     Fail2("Communication::schemaTypeToMessageType: Unknown SchemaType: "
@@ -490,11 +492,40 @@ std::optional<std::string_view> Communication::contentString() const
 }
 
 // GEMREQ-start A_19450-01
-void Communication::verifyPayload() const
+void Communication::verifyPayload(const JsonValidator& validator) const
 {
     mPayload.verifyLength();
+    const auto schema = payloadSchema();
+    if (schema.has_value())
+    {
+        mPayload.validateJsonSchema(validator, *schema);
+    }
 }
 // GEMREQ-end A_19450-01
+
+
+std::optional<SchemaType> Communication::payloadSchema() const
+{
+    // resources of 2022 profiles are excluded from payload validation
+    if (isDeprecatedProfile())
+    {
+        return std::nullopt;
+    }
+    using enum MessageType;
+    switch (messageType())
+    {
+        case ChargChangeReq:
+        case ChargChangeReply:
+        case InfoReq:
+        case Representative:
+            return std::nullopt;
+        case DispReq:
+            return SchemaType::CommunicationDispReqPayload;
+        case Reply:
+            return SchemaType::CommunicationReplyPayload;
+    }
+    Fail2("Unexpected value for 'messageType': " + std::to_string(intmax_t(messageType())), std::logic_error);
+}
 
 bool Communication::canValidateGeneric(MessageType messageType, ResourceVersion::WorkflowOrPatientenRechnungProfile profile)
 {

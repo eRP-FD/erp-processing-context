@@ -40,7 +40,7 @@
           {
             "use": "official",
             "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
-            "value": "X123456789"
+            "value": "X123456788"
           }
         ],
         "intent": "order",
@@ -126,7 +126,7 @@
           {
             "use": "official",
             "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
-            "value": "X123456789"
+            "value": "X123456788"
           }
         ],
         "intent": "order",
@@ -460,7 +460,7 @@
                     ]
                   },
                   "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
-                  "value": "X234567890"
+                  "value": "X234567891"
                 }
               ],
               "name": [
@@ -1006,7 +1006,7 @@
                     ]
                   },
                   "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
-                  "value": "X234567890"
+                  "value": "X234567891"
                 }
               ],
               "name": [

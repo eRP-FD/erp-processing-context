@@ -424,8 +424,10 @@ void ServerSession::do_close (SessionDataPointer&& data)
 void ServerSession::on_shutdown (boost::beast::error_code ec, SessionDataPointer&& data)
 {
     DebugLog("on_shutdown");
-
-    mSslStream.getLowestLayer().socket().shutdown(boost::asio::socket_base::shutdown_both, ec);
+    if (mSslStream.getLowestLayer().socket().is_open())
+    {
+        mSslStream.getLowestLayer().socket().shutdown(boost::asio::socket_base::shutdown_both, ec);
+    }
 
     data.reset();
 

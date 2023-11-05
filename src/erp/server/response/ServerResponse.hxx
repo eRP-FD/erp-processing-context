@@ -35,6 +35,7 @@ public:
 
     void setStatus (HttpStatus status);
     void setHeader (const std::string& key, const std::string& value);
+    void addWarningHeader(int code, const std::string& agent, const std::string& text);
     void removeHeader (const std::string& key);
     std::optional<std::string> getHeader (const std::string& key) const;
     const Header& getHeader (void) const;

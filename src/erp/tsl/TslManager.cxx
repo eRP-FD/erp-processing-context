@@ -20,9 +20,7 @@ namespace
 {
     std::vector<std::string> getInitialTslDownloadUrls()
     {
-        return {Configuration::instance().getOptionalStringValue(
-            ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL,
-            "http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml")};
+        return {Configuration::instance().getStringValue(ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL)};
     }
 
 

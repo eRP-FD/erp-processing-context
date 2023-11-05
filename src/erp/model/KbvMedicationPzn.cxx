@@ -36,10 +36,11 @@ std::optional<std::string_view> KbvMedicationPzn::amountNumeratorCode() const
     return getOptionalStringValue(amountNumeratorCodePointer);
 }
 
-std::string_view KbvMedicationPzn::pzn() const
+model::Pzn KbvMedicationPzn::pzn() const
 {
     static const rapidjson::Pointer pznPointer(resource::ElementName::path(
         resource::elements::code, resource::elements::coding, 0, resource::elements::code));
-    return getStringValue(pznPointer);
+    return model::Pzn{getStringValue(pznPointer)};
 }
-}
+
+} // namespace model

@@ -83,8 +83,7 @@ public:
             chargeItem.setAccessCode(::MockDatabase::mockAccessCode);
             chargeItem.deleteContainedBinary();
 
-            const auto& dispenseItemXML =
-                resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+            const auto& dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
             auto medicationDispense = ::model::MedicationDispense::fromXmlNoValidation(dispenseItemXML);
             medicationDispense.setTelematicId(model::TelematikId("606358757"));
             medicationDispense.setWhenHandedOver(::model::Timestamp::now());
@@ -223,8 +222,7 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
         chargeInformationForUpdate.chargeItem.markingFlags()->serializeToJsonString(), "false", "true");
     chargeInformationForUpdate.chargeItem.setMarkingFlags(::model::Extension::fromJsonNoValidation(markingFlag));
 
-    const auto dispenseItemXML = ::String::replaceAll(
-        ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/dispense_item.xml"), "4.50", "5.00");
+    const auto dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
     auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
     dispenseItem.setId(Uuid{"fe4a04af-0828-4977-a5ce-bfeed16ebf10"});
     chargeInformationForUpdate.dispenseItem =

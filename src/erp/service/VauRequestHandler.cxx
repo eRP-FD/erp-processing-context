@@ -11,6 +11,7 @@
 #include "erp/crypto/CMAC.hxx"
 #include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/Database.hxx"
+#include "erp/database/redis/RateLimiter.hxx"
 #include "erp/hsm/HsmException.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/OperationOutcome.hxx"
@@ -21,7 +22,6 @@
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ResponseBuilder.hxx"
-#include "erp/service/DosHandler.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
@@ -561,7 +561,7 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
 
             A_22698.start("#4,#5 Create LEI.Telematik-ID pseudonym for and set value in the outer header field.");
             A_22975.start("Use feature only if enabled in configuration");
-            if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::REPORT_LEIPS_KEY_ENABLE, false) && professionOIDClaim != profession_oid::oid_versicherter)
+            if (Configuration::instance().getBoolValue(ConfigurationKey::REPORT_LEIPS_KEY_ENABLE) && professionOIDClaim != profession_oid::oid_versicherter)
             {
                 const auto telematikId = innerServerRequest->getAccessToken().stringForClaim(JWT::idNumberClaim);
                 if (telematikId.has_value())

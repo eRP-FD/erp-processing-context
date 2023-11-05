@@ -23,8 +23,8 @@ Siehe [hier](doc/Building.md) für Einzelheiten zur Erstellung des Projekts und 
 Eine [Anleitung](doc/GuideToImplementation.md) beschreibt die Implementierung.
 
 # Hinweise
-Das test key/certificate-Paar in `resources/test/02_development.config.json.in` (erp/processing-context/server/certificate)
-wurde auf macOS Catalina 10.15.1 mit OpenSSL 3.0.0-dev erzeugt.
+Das test key/certificate-Paar in `resources/test/02_development.config.json.in` (erp/server/certificate)
+wurde auf RHEL 8 mit OpenSSL 1.1.1k erzeugt.
 
 Sie sind ausschließlich für Testzwecke auf einem lokal betriebenen Server gedacht.
 
@@ -33,21 +33,21 @@ Sie sind ausschließlich für Testzwecke auf einem lokal betriebenen Server geda
               -x509 -days 3650 -out cert.pem \
               -subj "/C=DE/ST=HH/L=Hamburg/O=IBM/OU=Gesundheitsplattform" \
                     "/CN=ePA Backend Mock -- FdV-Modul Unit Testing" \
-              -addext "subjectAltName = DNS:127.0.0.1"
+              -addext "subjectAltName = IP:127.0.0.1"
  ```
 
 # Build Environment im Docker-Image
 ```shell
 cd docker/build
-docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3 .
-docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3
+docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4 .
+docker push de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4
 ```
 
 # Tools
 ## JWT-Signatur-Tool `jwt`
 
 Dieses Werkzeug verwendet den Private Key, der sich im Quellbaum unter `resources/test/jwt/idp_id` befindet, um eine json-claim-Datei zu signieren, welche
- in der Befehlszeile angegeben wird, und gibt sie auf _stdout_ aus.  
+ in der Befehlszeile angegeben wird, und gibt sie auf _stdout_ aus.
 
 ```
 Usage: jwt <claimfile>

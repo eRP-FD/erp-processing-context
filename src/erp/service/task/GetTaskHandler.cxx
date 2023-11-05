@@ -318,7 +318,7 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     A_23455.finish();
     const auto& proofContent = *proofInformation.proofContent;
     const auto& kvnr = proofContent.kvnr;
-    ErpExpect(kvnr.valid(), HttpStatus::Forbidden, "Invalid Kvnr");
+    ErpExpect(kvnr.validFormat(), HttpStatus::Forbidden, "Invalid Kvnr");
     A_23450.finish();
 
     // Now that we have a KVNR, start collecting the audit data
@@ -468,7 +468,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     addToPatientBundle(responseBundle, task.value(), patientConfirmation, {});
     A_21375_02.finish();
 
-    A_19569_02.start("_revinclude: reverse include referencing audit events");
+    A_19569_03.start("_revinclude: reverse include referencing audit events");
     UrlArguments urlArguments({});
     urlArguments.parse(session.request, session.serviceContext.getKeyDerivation());
     if (urlArguments.hasReverseIncludeAuditEventArgument())
@@ -485,7 +485,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
             responseBundle.addResource(Uuid{auditEvent.id()}.toUrn(), {}, {}, auditEvent.jsonDocument());
         }
     }
-    A_19569_02.finish();
+    A_19569_03.finish();
 
     makeResponse(session, HttpStatus::OK, &responseBundle);
 

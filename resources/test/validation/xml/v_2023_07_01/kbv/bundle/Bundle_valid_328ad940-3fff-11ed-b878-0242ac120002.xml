@@ -212,7 +212,7 @@
             </coding>
           </type>
           <system value="http://fhir.de/sid/pkv/kvid-10" />
-          <value value="P123464113" />
+          <value value="P123464117" />
         </identifier>
         <name>
           <use value="official" />
@@ -397,7 +397,7 @@
         <payor>
           <identifier>
             <system value="http://fhir.de/sid/arge-ik/iknr" />
-            <value value="123456789" />
+            <value value="109500969" />
           </identifier>
           <display value="Allianz Private Krankenversicherung" />
         </payor>

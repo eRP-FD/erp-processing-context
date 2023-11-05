@@ -173,9 +173,8 @@ std::string PostgresBackend::connectStringSslMode (void)
 {
     const auto& configuration = Configuration::instance();
 
-    const bool useSsl = configuration.getOptionalBoolValue(ConfigurationKey::POSTGRES_USESSL, true);
-    const std::string serverRootCertPath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH,
-        "/erp/config/POSTGRES_CERTIFICATE"); // default path not named POSTGRES_SSL_ROOT_CERTIFICATE for backward compatibility.
+    const bool useSsl = configuration.getBoolValue(ConfigurationKey::POSTGRES_USESSL);
+    const std::string serverRootCertPath = configuration.getStringValue(ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH);
     const auto sslCertificatePath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH);
     const auto sslKeyPath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_KEY_PATH);
 
@@ -212,12 +211,12 @@ std::string PostgresBackend::defaultConnectString (void)
     const std::string password = configuration.getStringValue(ConfigurationKey::POSTGRES_PASSWORD);
     const std::string dbname = configuration.getStringValue(ConfigurationKey::POSTGRES_DATABASE);
     const std::string connectTimeout = configuration.getStringValue(ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS);
-    bool enableScramAuthentication = configuration.getOptionalBoolValue(ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION, false);
+    bool enableScramAuthentication = configuration.getBoolValue(ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION);
     const std::string tcpUserTimeoutMs = configuration.getStringValue(ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS);
     const std::string keepalivesIdleSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC);
     const std::string keepalivesIntervalSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC);
     const std::string keepalivesCountSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_COUNT);
-    const std::string targetSessionAttrs = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS, "");
+    const std::string targetSessionAttrs = configuration.getStringValue(ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS);
 
     std::string sslmode = connectStringSslMode();
 
@@ -591,8 +590,12 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
             prescriptionIdRes.emplace(
                 model::PrescriptionId::fromDatabaseId(*prescriptionType, res.at(6).as<std::int64_t>()));
         }
-        const auto metaData = res.at(8).is_null() ? std::optional<db_model::EncryptedBlob>()
-                                                  : db_model::EncryptedBlob(res.at(8).as<db_model::postgres_bytea>());
+
+        std::optional<db_model::EncryptedBlob> metaData;
+        if(! res.at(8).is_null())
+        {
+             metaData = db_model::EncryptedBlob(res.at(8).as<db_model::postgres_bytea>());
+        }
         const auto blobId = res.at(9).is_null() ? std::optional<BlobId>() : res.at(9).as<int>();
 
         db_model::AuditData auditData(
@@ -650,9 +653,9 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
     std::string query = retrieveAllTasksByKvnr.query;
     if (search.has_value())
     {
-        A_19569_02.start("Add search parameter to query");
+        A_19569_03.start("Add search parameter to query");
         query.append(search->getSqlExpression(mTransaction->conn(), "                "));
-        A_19569_02.finish();
+        A_19569_03.finish();
     }
     TVLOG(2) << query;
 

@@ -443,6 +443,18 @@ Timestamp::timepoint_t Timestamp::toChronoTimePoint() const
     return mDateAndTime;
 }
 
+date::local_days Timestamp::localDay(const std::string& timezone) const
+{
+    using zoned_ms = date::zoned_time<std::chrono::milliseconds>;
+    auto zt = zoned_ms{timezone, toChronoTimePoint()};
+    return date::floor<date::days>(zt.get_local_time());
+}
+
+date::year_month_day Timestamp::utcDay() const
+{
+    return date::year_month_day{localDay(UTCTimezone)};
+}
+
 
 std::time_t Timestamp::toTimeT() const
 {

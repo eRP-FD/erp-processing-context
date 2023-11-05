@@ -19,12 +19,12 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_00_direkteZuweisung)//NOLINT(r
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::direkteZuweisung));
     ASSERT_TRUE(task.has_value());
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    auto authoredOn = model::Timestamp::now();
     auto bundle =
-        kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .medicationCategory = "00"});
+        kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .medicationCategory = "00"});
     auto accessCode = std::string{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
-                                         toCadesBesSignature(bundle, timestamp),
+                                         toCadesBesSignature(bundle, authoredOn),
                                          HttpStatus::OK));
 }
 
@@ -33,11 +33,11 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_01_direkteZuweisung)//NOLINT(r
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::direkteZuweisung));
     ASSERT_TRUE(task.has_value());
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    auto authoredOn = model::Timestamp::now();
     auto bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(), .medicationCategory = "01"});
     auto accessCode = std::string{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, timestamp),
+        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, authoredOn),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "BTM und Thalidomid nicht zulässig"));
 }
 
@@ -50,12 +50,12 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_02_apothekenpflichtigeArzneimi
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv));
     ASSERT_TRUE(task.has_value());
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    auto authoredOn = model::Timestamp::now();
     auto bundle =
-        kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .medicationCategory = "02"});
+        kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .medicationCategory = "02"});
     auto accessCode = std::string{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, timestamp),
+        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, authoredOn),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "BTM und Thalidomid nicht zulässig"));
 }
 
@@ -64,12 +64,12 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_00)//NOLINT(readability-functi
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
     ASSERT_TRUE(task.has_value());
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    auto authoredOn = model::Timestamp::now();
     auto bundle =
-        kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .medicationCategory = "00"});
+        kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .medicationCategory = "00"});
     auto accessCode = std::string{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
-                                         toCadesBesSignature(bundle, timestamp),
+                                         toCadesBesSignature(bundle, authoredOn),
                                          HttpStatus::OK));
 }
 
@@ -78,12 +78,12 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_01)//NOLINT(readability-functi
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
     ASSERT_TRUE(task.has_value());
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    auto authoredOn = model::Timestamp::now();
     auto bundle =
-        kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .medicationCategory = "01"});
+        kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .medicationCategory = "01"});
     auto accessCode = std::string{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, timestamp),
+        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, authoredOn),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "BTM und Thalidomid nicht zulässig"));
 }
 
@@ -92,11 +92,11 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_02)//NOLINT(readability-functi
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
     ASSERT_TRUE(task.has_value());
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    auto authoredOn = model::Timestamp::now();
     auto bundle =
-        kbvBundleXml({.prescriptionId = task->prescriptionId(), .timestamp = timestamp, .medicationCategory = "02"});
+        kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .medicationCategory = "02"});
     auto accessCode = std::string{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, timestamp),
+        task->prescriptionId(), accessCode, toCadesBesSignature(bundle, authoredOn),
         HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "BTM und Thalidomid nicht zulässig"));
 }

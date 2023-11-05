@@ -12,13 +12,16 @@
 
 #include "erp/service/RedisInterface.hxx"
 #include "erp/util/Configuration.hxx"
+#include <chrono>
 
 class RedisClient : public RedisInterface
 {
 public:
     explicit RedisClient();
+    explicit RedisClient(std::chrono::milliseconds socketTimeout);
     ~RedisClient() override = default;
 
+    void healthCheck() override;
     bool exists(const std::string_view& key) override;
     std::optional<std::string> fieldValueForKey(const std::string_view& key,
                                                 const std::string_view& field) override;

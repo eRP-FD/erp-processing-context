@@ -113,6 +113,7 @@ list(
         hsm/TeeTokenUpdater.cxx
         idp/Idp.cxx
         idp/IdpUpdater.cxx
+        model/AbgabedatenPkvBundle.cxx
         model/AuditData.cxx
         model/AuditEvent.cxx
         model/Binary.cxx
@@ -131,6 +132,7 @@ list(
         model/extensions/KBVMedicationCategory.cxx
         model/extensions/KBVMultiplePrescription.cxx
         model/Health.cxx
+        model/Iknr.cxx
         model/KbvBundle.cxx
         model/KbvComposition.cxx
         model/KbvCoverage.cxx
@@ -145,8 +147,10 @@ list(
         model/KbvPractitioner.cxx
         model/KbvPracticeSupply.cxx
         model/Kvnr.cxx
+        model/Lanr.cxx
         model/Link.cxx
         model/MedicationDispense.cxx
+        model/MedicationDispenseBundle.cxx
         model/MedicationDispenseId.cxx
         model/MetaData.cxx
         model/ModelException.cxx
@@ -158,6 +162,7 @@ list(
         model/Patient.cxx
         model/PrescriptionId.cxx
         model/PrescriptionType.cxx
+        model/Pzn.cxx
         model/Reference.cxx
         model/Resource.cxx
         model/ResourceFactory.cxx
@@ -204,7 +209,6 @@ list(
         service/CommunicationGetHandler.cxx
         service/CommunicationPostHandler.cxx
         service/DeviceHandler.cxx
-        service/DosHandler.cxx
         service/ErpRequestHandler.cxx
         service/HealthHandler.cxx
         service/MedicationDispenseHandler.cxx
@@ -254,10 +258,12 @@ list(
         tsl/X509Certificate.cxx
         tsl/X509Store.cxx
         util/Base64.cxx
+        util/BoostUrl.cxx
         util/Buffer.cxx
         util/ByteHelper.cxx
         util/Condition.cxx
         util/Configuration.cxx
+        util/ConfigurationFormatter.cxx
         util/CrashHandler.cxx
         util/Demangle.cxx
         util/DurationConsumer.cxx
@@ -343,8 +349,8 @@ target_compile_definitions(erp-processing-context-files
 
 target_include_directories (
     erp-processing-context-files
-        PUBLIC ${PROJECT_SOURCE_DIR}/..
-        PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/.. # Include the erp/ and library/ prefixes in include statements.
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..
+        PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/.. # Include the erp/ and fhirtools/ prefixes in include statements.
 )
 
 target_link_libraries (
@@ -367,6 +373,7 @@ target_link_libraries (
         PUBLIC $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
         PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
         PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
+        PUBLIC $<$<BOOL:${WITH_PROFILING}>:gperftools::profiler>
 )
 
 add_executable(erp-processing-context erp-main.cxx)
@@ -375,7 +382,7 @@ set_property(TARGET erp-processing-context PROPERTY ENABLE_EXPORTS ON)
 
 target_include_directories (
     erp-processing-context
-        PRIVATE ${PROJECT_SOURCE_DIR}/.. # Include the erp/ and library/ prefixes in include statements.
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. # Include the erp/ and fhirtools/ prefixes in include statements.
 )
 
 target_link_libraries (

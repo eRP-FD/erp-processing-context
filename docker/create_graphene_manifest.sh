@@ -42,7 +42,6 @@ echo "--------------------------------------------"
 
 BUF=""
 while read line || [ -n "$line" ]; do
-    basename=`basename $line`
 
     # Add 'comma,newline' only when BUF is not empty. This ensures that these chars appear to every row except the initial row.
     # This mechanism is required in order to have a clean substition within the array syntax.
@@ -50,11 +49,7 @@ while read line || [ -n "$line" ]; do
         BUF+=",\n"
     fi
 
-    if [ $basename = "erp-processing-context" ]; then
-        BUF+="\"file:$basename\""
-    else
-        BUF+="\"file:$line\""
-    fi
+    BUF+="\"file:$line\""
 done < <(cat $INSTALL_MANIFEST)
 
 # Replace the placeholders in the manifest file with the given values.

@@ -102,8 +102,8 @@ namespace
     {
         TVLOG(2) << "getTslSignerCa";
 
-        const std::string initialCaDerPath = Configuration::instance().getOptionalStringValue(
-            ConfigurationKey::TSL_INITIAL_CA_DER_PATH, "/erp/config/tsl/tsl-ca.der");
+        const std::string initialCaDerPath =
+            Configuration::instance().getStringValue(ConfigurationKey::TSL_INITIAL_CA_DER_PATH);
 
         TVLOG(2) << "initial TSL Signer CA path: " << initialCaDerPath;
         Expect(!initialCaDerPath.empty(), "Initial TSL signer CA path must be set.");
@@ -116,9 +116,9 @@ namespace
     std::optional<X509Certificate> getNewTslSignerCa()
     {
         TVLOG(2) << "getNewTslSignerCa";
-        const std::string initialCaDerPathNew = Configuration::instance().getOptionalStringValue(
-            ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW, "");
-        if (!initialCaDerPathNew.empty())
+        const std::string initialCaDerPathNew =
+            Configuration::instance().getStringValue(ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW);
+        if (! initialCaDerPathNew.empty())
         {
             TVLOG(0) << "New TSL Signer CA is configured.";
             return getCertificateFromDerFile(initialCaDerPathNew);
@@ -167,8 +167,8 @@ std::vector<X509Certificate> TrustStore::getTslSignerCas() const
 {
     const X509Certificate mainTslSignerCa = getMainTslSignerCa();
     const std::optional<X509Certificate> newTslSignerCa = getNewTslSignerCa();
-    const std::string newTslSignerCaStart = Configuration::instance().getOptionalStringValue(
-        ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW_START, "");
+    const std::string newTslSignerCaStart =
+        Configuration::instance().getStringValue(ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW_START);
 
     std::vector<X509Certificate> tslSignerCaCerts{
         mainTslSignerCa

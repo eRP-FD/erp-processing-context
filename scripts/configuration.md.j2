@@ -1,0 +1,21 @@
+
+## Configuration
+
+{% for env in config if env != "unusedVariables" %}
+### {{ env }} configuration
+
+| Environment variable | Value | Description | Default value | Modified | Deprecated |
+| :-------------------- | :----- | :----------- | :------------- | :--------- | :--------  |
+{% for var in config[env] -%}
+| {{ var }} | `"{{ config[env][var]["value"] | replace("\n", '\\n') | truncate(100, true) }}"` | {{ config[env][var]["description"] }} | `"{{ config[env][var]["default"] | replace("\n", '\\n') | truncate(100, true)  }}"` | {{ "✅" if config[env][var]["isModified"] else "❌" }} | {{"yes" if config[env][var]["isDeprecated"] else "no" }}
+{% endfor %}
+
+{% endfor %}
+
+### Unused variables
+
+| Environment variable |
+| -------------------- |
+{% for var in config["unusedVariables"] -%}
+| {{ var }} |
+{% endfor %}

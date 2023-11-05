@@ -51,13 +51,13 @@ PROFILES=(
     "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding"
 )
 
-COMMAND=(sed -i)
-
-for p in "${PROFILES[@]}" ; do
-    COMMAND=("${COMMAND[@]}" -e "s;$p|1.0.1;$p|1.0.2;g")
-done
-
 find "${FILEDIR}" -iname '*.xml' -type f -print0 |
 while IFS='' read -d '' bundle_file; do
-    "${COMMAND[@]}" "$bundle_file"
+    for p in "${PROFILES[@]}" ; do
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' -E "s;$p|1.0.1;$p|1.0.2;g" "$bundle_file"
+        else
+            sed -i -e "s;$p|1.0.1;$p|1.0.2;g" "$bundle_file"
+        fi
+    done
 done

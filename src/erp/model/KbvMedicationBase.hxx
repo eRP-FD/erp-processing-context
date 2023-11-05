@@ -54,12 +54,15 @@ public:
     }
 
     static void validateMedication(const ErpElement& medicationElement, const XmlValidator& xmlValidator,
-                                   const InCodeValidator& inCodeValidator, bool allowDummyValidation);
+                                   const InCodeValidator& inCodeValidator,
+                                   const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles,
+                                   bool allowDummyValidation);
 
 private:
     template<typename MedicationModelT>
     static void validateMedication(NumberAsStringParserDocument&& medicationDoc, const XmlValidator& xmlValidator,
-                                   const InCodeValidator& inCodeValidator);
+                                   const InCodeValidator& inCodeValidator,
+                                   const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles);
 
     friend KbvMedicationBase<KbvMedicationGeneric, ResourceVersion::KbvItaErp>;
 };

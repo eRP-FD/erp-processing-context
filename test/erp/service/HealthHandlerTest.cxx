@@ -203,7 +203,7 @@ public:
             return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
         };
 
-        factories.redisClientFactory = []{return std::make_unique<HealthHandlerTestMockRedisStore>();};
+        factories.redisClientFactory = [](std::chrono::milliseconds){return std::make_unique<HealthHandlerTestMockRedisStore>();};
         factories.hsmClientFactory = []{return std::make_unique<HealthHandlerTestHsmMockClient>();};
         factories.teeTokenUpdaterFactory = HealthHandlerTestTeeTokenUpdaterFactory::createHealthHandlerTestMockTeeTokenUpdaterFactory();
         factories.tslManagerFactory = [cert, certCA, ocspUrl](const std::shared_ptr<XmlValidator> &){

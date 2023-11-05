@@ -199,7 +199,7 @@
         </coding>
       </type>
       <system value="http://fhir.de/NamingSystem/gkv/kvid-10" />
-      <value value="X123456789" />
+      <value value="X123456788" />
     </identifier>
   </for>
   <encounter>

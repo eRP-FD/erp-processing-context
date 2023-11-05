@@ -15,6 +15,7 @@
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/ByteHelper.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/Mod10.hxx"
 #include "erp/util/Uuid.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
@@ -234,7 +235,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
     const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematicId.has_value());
 
-    std::string kvnrRepresentative = "X234567890";
+    std::string kvnrRepresentative = "X234567891";
     ASSERT_NE(kvnr, kvnrRepresentative);
 
     std::optional<model::Communication> communicationResponse;
@@ -248,7 +249,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
         model::Communication::MessageType::Reply, task.value(),
         ActorRole::Pharmacists, telematicId.value(),
         ActorRole::Insurant, kvnr,
-        "Wir haben das Medikament."));
+        R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Hallo, wir haben das Medikament vorraetig."})"));
     if (communicationResponse.has_value()) communications.emplace_back(std::move(communicationResponse.value()));
 
     // communications below not possible for WF169,209, because the access code is not delivered to the patient.
@@ -277,7 +278,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
         model::Communication::MessageType::DispReq, task.value(),
         ActorRole::Insurant, kvnr,
         ActorRole::Pharmacists, telematicId.value(),
-        "Bitte schicken Sie einen Boten."));
+        R"({"version":1,"supplyOptionsType":"delivery","hint":"Bitte schicken Sie einen Boten."})"));
     if (communicationResponse.has_value()) communications.emplace_back(std::move(communicationResponse.value()));
 }
 
@@ -1254,19 +1255,14 @@ std::string ErpWorkflowTestBase::medicationDispense(const std::string& kvnr,
                                                     const std::string& whenHandedOver,
                                                     model::ResourceVersion::FhirProfileBundleVersion bundleVersion)
 {
-    std::string kbvVersionStr{model::ResourceVersion::v_str(
-        std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(model::ResourceVersion::profileVersionFromBundle(bundleVersion)))};
-    std::string templateFileName = "test/EndpointHandlerTest/medication_dispense_input1_" + kbvVersionStr + ".xml";
 
-    auto closeBody = ResourceManager::instance().getStringResource(templateFileName);
-
-    closeBody = String::replaceAll(closeBody, "###PRESCRIPTIONID###", prescriptionIdForMedicationDispense);
-    closeBody = String::replaceAll(closeBody, "X234567890", kvnr);
-    closeBody = String::replaceAll(closeBody, "2021-09-21", whenHandedOver);
-    closeBody = String::replaceAll(closeBody, "3-SMC-B-Testkarte-883110000120312",
-                                   jwtApotheke().stringForClaim(JWT::idNumberClaim).value());
-
-    return closeBody;
+    auto gematikVersion = std::get<model::ResourceVersion::DeGematikErezeptWorkflowR4>(
+        model::ResourceVersion::profileVersionFromBundle(bundleVersion));
+    return ResourceTemplates::medicationDispenseXml(
+        {.prescriptionId = prescriptionIdForMedicationDispense,
+         .kvnr = kvnr,
+         .whenHandedOver = whenHandedOver,
+         .gematikVersion = gematikVersion});
 }
 
 std::string ErpWorkflowTestBase::medicationDispenseBundle(
@@ -1283,7 +1279,7 @@ std::string ErpWorkflowTestBase::medicationDispenseBundle(
             profile = model::Bundle::NoProfile;
             break;
         case v_2023_07_01:
-
+        case v_2023_07_01_patch:
             profile = v_2023_07_01_profile;
             break;
     }
@@ -1331,8 +1327,8 @@ model::ResourceVersion::DeGematikErezeptWorkflowR4 ErpWorkflowTestBase::serverGe
 bool ErpWorkflowTestBase::isUnsupportedFlowtype(const model::PrescriptionType workflowType)
 {
     bool featurePkvEnabled =
-        Configuration::instance().featurePkvEnabled() &&
-        model::ResourceVersion::isProfileSupported(model::ResourceVersion::DeGematikErezeptPatientenrechnungR4::v1_0_0);
+        model::ResourceVersion::isProfileSupported(model::ResourceVersion::DeGematikErezeptPatientenrechnungR4::v1_0_0)
+            .has_value();
     switch (workflowType)
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
@@ -1738,7 +1734,7 @@ void ErpWorkflowTestBase::chargeItemPostInternal(
     const std::optional<std::function<std::string(const std::string&)>>& signFunction)
 {
     auto& resourceManager = ResourceManager::instance();
-    const auto dispenseBundleString = resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+    const auto dispenseBundleString = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
     const auto chargeItemTemplate = resourceManager.getStringResource(
             templateFile.has_value() ? *templateFile : "test/EndpointHandlerTest/charge_item_POST_template.xml");
 
@@ -2486,8 +2482,8 @@ ErpWorkflowTestBase::taskClose(const model::PrescriptionId& prescriptionId, cons
                                size_t numMedicationDispenses)
 {
     std::optional<model::ErxReceipt> receipt;
-    taskCloseInternal(receipt, prescriptionId, secret, kvnr, prescriptionId.toString(),
-                      expectedInnerStatus, expectedErrorCode, {}, {}, "2020-09-21", numMedicationDispenses);
+    taskCloseInternal(receipt, prescriptionId, secret, kvnr, prescriptionId.toString(), expectedInnerStatus,
+                      expectedErrorCode, {}, {}, model::Timestamp::now().toGermanDate(), numMedicationDispenses);
     return receipt;
 }
 void ErpWorkflowTestBase::taskClose_MedicationDispense_invalidPrescriptionId(
@@ -2497,8 +2493,8 @@ void ErpWorkflowTestBase::taskClose_MedicationDispense_invalidPrescriptionId(
     const std::string& kvnr)
 {
     std::optional<model::ErxReceipt> receipt;
-    taskCloseInternal(receipt, prescriptionId, secret, kvnr, invalidPrescriptionId,
-                      HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, {}, {}, "2020-09-21", 1);
+    taskCloseInternal(receipt, prescriptionId, secret, kvnr, invalidPrescriptionId, HttpStatus::BadRequest,
+                      model::OperationOutcome::Issue::Type::invalid, {}, {}, model::Timestamp::now().toGermanDate(), 1);
     EXPECT_TRUE(!receipt.has_value());
 }
 void ErpWorkflowTestBase::taskClose_MedicationDispense_invalidWhenHandedOver(
@@ -2608,7 +2604,7 @@ std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(
     const model::PrescriptionId& prescriptionId,
     const model::Timestamp& timestamp)
 {
-    std::string qesBundle = kbvBundleXml({.prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
+    std::string qesBundle = kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = timestamp, .kvnr = kvnr});
     return std::make_tuple(toCadesBesSignature(qesBundle, timestamp), qesBundle);
 }
 std::optional<model::MedicationDispense> ErpWorkflowTestBase::medicationDispenseGet(
@@ -2912,15 +2908,16 @@ model::Kvnr ErpWorkflowTestBase::generateNewRandomKVNR()
 
 void ErpWorkflowTestBase::generateNewRandomKVNR(std::string& kvnr)
 {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    // > 50010 to avoid generating verification identities
-    std::uniform_int_distribution<int64_t> distrib(50010, 999999999);
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    // > 5001 to avoid generating verification identities
+    static std::uniform_int_distribution<int64_t> distrib(5001, 99999999);
     for (int tries = 0; tries < 1000; ++tries)
     {
         std::ostringstream oss;
-        oss << "X" << std::setfill('0') << std::setw(9) << distrib(gen);
-        kvnr = oss.str();
+        oss << std::setfill('0') << std::setw(8) << distrib(gen);
+        auto numericPart = oss.str();
+        kvnr = "X" + numericPart + checksum::mod10<1, 2>("24" + numericPart);
         const auto& bundle = taskGet(kvnr);
         if (bundle->getResourceCount() == 0)
         {

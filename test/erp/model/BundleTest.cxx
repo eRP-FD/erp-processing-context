@@ -119,7 +119,7 @@ TEST_F(BundleTest, getResourcesByTypePatient)
 
     auto patients = bundle.getResourcesByType<model::Patient>("Patient");
     ASSERT_EQ(patients.size(), 1);
-    ASSERT_EQ((patients[0].kvnr()), "X234567890");
+    ASSERT_EQ((patients[0].kvnr()), "X234567891");
 }
 
 TEST_F(BundleTest, getSignatureWhen)

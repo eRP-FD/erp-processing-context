@@ -23,7 +23,7 @@ class ConsentTest : public testing::Test
 
 TEST_F(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity)
 {
-    const model::Kvnr kvnr{"X987654321"};
+    const model::Kvnr kvnr{"X987654326"};
     const auto consentType = model::Consent::Type::CHARGCONS;
     const auto consentIdStr = std::string("CHARGCONS-") + kvnr.id();
 
@@ -35,8 +35,8 @@ TEST_F(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity
     EXPECT_EQ(consentIdParts.second, kvnr);
 
     EXPECT_THROW(consentIdParts = model::Consent::splitIdString(""), model::ModelException);
-    EXPECT_THROW(consentIdParts = model::Consent::splitIdString("-X123456789"), model::ModelException);
-    EXPECT_THROW(consentIdParts = model::Consent::splitIdString("INVALID-X123456789"), model::ModelException);
+    EXPECT_THROW(consentIdParts = model::Consent::splitIdString("-X123456788"), model::ModelException);
+    EXPECT_THROW(consentIdParts = model::Consent::splitIdString("INVALID-X123456788"), model::ModelException);
 }
 
 TEST_F(ConsentTest, Construct)
@@ -48,7 +48,7 @@ TEST_F(ConsentTest, Construct)
         GTEST_SKIP();
     }
     const auto consentType = model::Consent::Type::CHARGCONS;
-    const model::Kvnr kvnr{"X123456789"};
+    const model::Kvnr kvnr{"X123456788"};
     const model::Timestamp dateTime = model::Timestamp::now();
     model::Consent consent(kvnr, dateTime);
     EXPECT_TRUE(consent.id().has_value());
@@ -71,7 +71,7 @@ TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     auto& consent = optConsent.value();
 
     EXPECT_FALSE(consent.id().has_value());
-    const model::Kvnr kvnr{"X123456789"};
+    const model::Kvnr kvnr{"X123456788"};
     EXPECT_EQ(consent.patientKvnr(), kvnr);
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 
@@ -99,7 +99,7 @@ TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-com
                                     {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01});
 
     EXPECT_FALSE(consent.id().has_value());
-    const model::Kvnr kvnr{"X123456789"};
+    const model::Kvnr kvnr{"X123456788"};
     EXPECT_EQ(consent.patientKvnr(), kvnr);
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 

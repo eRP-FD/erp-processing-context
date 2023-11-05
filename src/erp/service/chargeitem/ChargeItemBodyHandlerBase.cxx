@@ -58,13 +58,19 @@ std::pair<model::AbgabedatenPkvBundle, std::string> ChargeItemBodyHandlerBase::v
 {
     try
     {
-        const CadesBesSignature cadesBesSignature{containedBinary.data().value().data(),
-                                                  serviceContext.getTslManager(),
+        const CadesBesSignature cadesBesSignature{containedBinary.data().value().data(), serviceContext.getTslManager(),
                                                   true};
-        return std::make_pair(
-            model::AbgabedatenPkvBundle::fromXml(cadesBesSignature.payload(), serviceContext.getXmlValidator(),
-                                                 serviceContext.getInCodeValidator(), SchemaType::DAV_DispenseItem),
-            cadesBesSignature.getBase64());
+        // parse it without validation, at this point a fhir document is fine
+        auto pkvBundleFactory = model::ResourceFactory<model::AbgabedatenPkvBundle>::fromXml(cadesBesSignature.payload(),
+                                                                                      serviceContext.getXmlValidator());
+        const auto referenceTimestamp = pkvBundleFactory.getValidationReferenceTimestamp();
+        ErpExpect(referenceTimestamp.has_value(), HttpStatus::BadRequest,
+                  "Unable to determine validation timestamp. whenHandedOver missing?");
+        const auto supportedBundles = model::ResourceVersion::supportedBundles(referenceTimestamp.value());
+        return std::make_pair(std::move(pkvBundleFactory).getValidated(SchemaType::DAV_DispenseItem,
+                                                            serviceContext.getXmlValidator(),
+                                                            serviceContext.getInCodeValidator(), supportedBundles),
+                              cadesBesSignature.getBase64());
     }
     catch (const TslError& ex)
     {

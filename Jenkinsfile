@@ -86,7 +86,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -103,7 +103,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.11.0"
+                                    def erp_release_version = "1.12.0"
                                     sh "cd /media/erp && scripts/ci-build.sh " +
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'"
@@ -148,7 +148,6 @@ pipeline {
                                                 asn1c
                                                 csxapi
                                                 hsmclient
-                                                swtpm2
                                                 tpmclient
                                                 tss
                                         )
@@ -184,7 +183,7 @@ pipeline {
                                     projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
                             }
                         }
-                        stage ("Run Tests (2023 profiles)") {
+                        stage ("after transition (2023 profiles)") {
                             steps {
                                 sh """
                                     # Run the unit and integration tests
@@ -198,7 +197,21 @@ pipeline {
                                 }
                             }
                         }
-                        stage ("Run Tests (2022 profiles)") {
+                        stage ("patched with KBV.ITA.ERP 1.1.2 (2023 profiles)") {
+                            steps {
+                                sh """
+                                    # Run the unit and integration tests
+                                    cd jenkins-build-debug/bin
+                                    ./erp-test --erp_profiles="2024-01-01" --erp_instance=3 --gtest_output=xml:erp-test-2023-kbv-1.1.2.xml
+                                """
+                            }
+                            post {
+                                always {
+                                    junit "jenkins-build-debug/bin/erp-test-2023-kbv-1.1.2.xml"
+                                }
+                            }
+                        }
+                        stage ("before transition (2022 profiles)") {
                             steps {
                                 sh """
                                     cd jenkins-build-debug/bin
@@ -211,7 +224,7 @@ pipeline {
                                 }
                             }
                         }
-                        stage ("Run Tests (all profiles)") {
+                        stage ("in transition (2022+2023 profiles)") {
                             steps {
                                 sh """
                                     cd jenkins-build-debug/bin
@@ -283,7 +296,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.11.0"
+                                def release_version = "1.12.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -297,6 +310,10 @@ pipeline {
                                 sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}):/erp/erp-processing-context.tar.gz ./erp-processing-context.tar.gz"
                                 sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}):/debug/erp/erp-processing-context-debug.tar.gz ./erp-processing-context-debug.tar.gz"
                                 image.push()
+
+                                // SBOM generation
+                                sh "syft --file erp-processing-context-syft-bom.xml --output cyclonedx-xml de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}"
+                                archiveArtifacts allowEmptyArchive: true, artifacts: '*bom.xml', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
                             }
                         }
                     }
@@ -319,7 +336,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.11.0"
+                                def release_version = "1.12.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -331,10 +348,26 @@ pipeline {
                                     ".")
 
                                 image.push()
+
+                                // SBOM generation
+                                sh "syft --file blob-db-initialization-syft-bom.xml --output cyclonedx-xml de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}"
+                                archiveArtifacts allowEmptyArchive: true, artifacts: '*bom.xml', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
                             }
                         }
                     }
                 }
+            }
+        }
+
+        stage('SBOM') {
+            when {
+                anyOf {
+                    branch 'master'
+                    branch 'release/*'
+                }
+            }
+            steps {
+                sbomMerge(files: ["erp-processing-context-syft-bom.xml", "blob-db-initialization-syft-bom.xml", "jenkins-build-debug/bom.xml"])
             }
         }
 

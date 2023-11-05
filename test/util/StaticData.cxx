@@ -58,10 +58,10 @@ Factories StaticData::makeMockFactories()
 
     factories.tslManagerFactory = MockTslManager::createMockTslManager;
 
-    factories.redisClientFactory = [] {
+    factories.redisClientFactory = [] (std::chrono::milliseconds socketTimeout) {
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
                    ? std::unique_ptr<RedisInterface>(new MockRedisStore())
-                   : std::unique_ptr<RedisInterface>(new RedisClient());
+                   : std::unique_ptr<RedisInterface>(new RedisClient(socketTimeout));
     };
     factories.vsdmKeyBlobDatabaseFactory = []() -> std::unique_ptr<VsdmKeyBlobDatabase> {
         if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))

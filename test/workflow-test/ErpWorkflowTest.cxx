@@ -84,14 +84,14 @@ TEST_F(ErpWorkflowTest, ActivateTaskUnsupportedProfile)
     }
     std::optional<model::Task> task;
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
-    const auto signingTime = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone);
+    const auto signingTime = model::Timestamp::now();
     // create a task with the deprecated profile and send them to a server with the new profile set
     {
         auto envVars = testutils::getOldFhirProfileEnvironment();
         ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
         ASSERT_TRUE(task.has_value());
 
-        auto kbvBundle = kbvBundleXml({.timestamp = signingTime});
+        auto kbvBundle = kbvBundleXml({.authoredOn = signingTime});
         auto envVarsNew = testutils::getNewFhirProfileEnvironment();
         ASSERT_NO_FATAL_FAILURE(result =
                                     taskActivate(task->prescriptionId(), task->accessCode(),
@@ -135,8 +135,8 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, *prescriptionId), communications.size());
     auto medicationDipenseRenderVersion =
         model::ResourceVersion::fhirProfileBundleFromSchemaVersion(serverGematikProfileVersion());
-    const auto closeBody =
-        medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20", medicationDipenseRenderVersion);
+    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), model::Timestamp::now().toGermanDate(),
+                                              medicationDipenseRenderVersion);
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
     const JWT jwt{ jwtApotheke() };
     ClientResponse serverResponse;
@@ -1077,7 +1077,7 @@ TEST_P(ErpWorkflowTestP, TaskEmptyOutput)// NOLINT
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
-    const std::string kvnr{"X987654321"};
+    const std::string kvnr{"X987654326"};
     std::string qesBundle;
     std::vector<model::Communication> communications;
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
@@ -1134,15 +1134,15 @@ TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitiv
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
     ASSERT_TRUE(prescriptionId.has_value());
 
-    const std::string kvnr{"K220645129"};
+    const std::string kvnr{"K220645122"};
 
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    auto authoredOn = model::Timestamp::now();
     // prepare QES-Bundle for invocation of POST /task/<id>/$activate
-    auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId.value(), .timestamp = timestamp, .kvnr = kvnr});
+    auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOn, .kvnr = kvnr});
     auto qesBundle = model::KbvBundle::fromXml(
         bundleXml, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::KBV_PR_ERP_Bundle,
         model::ResourceVersion::supportedBundles());
-    std::string qesBundleSigned = toCadesBesSignature(bundleXml, timestamp);
+    std::string qesBundleSigned = toCadesBesSignature(bundleXml, authoredOn);
 
     std::optional<model::Task> task;
     // invoke /task/<id>/$activate
@@ -1310,7 +1310,7 @@ TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWh
     ASSERT_TRUE(task);
     std::string accessCode(task->accessCode());
 
-    const std::string kvnr{"X007654321"};
+    const std::string kvnr{"X007654320"};
     const auto [qesBundle, _] = makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, qesBundle));
     ASSERT_TRUE(task);
@@ -1364,7 +1364,7 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
     ASSERT_TRUE(task);
     const std::string accessCode(task->accessCode());
     const auto prescriptionId = task->prescriptionId();
-    const std::string kvnr{"X101010101"};
+    const std::string kvnr{"X101010104"};
 
     const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
     ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle));
@@ -1462,8 +1462,8 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
     checkJsonString(outerErrorResponseDocument, errorPointer,
                     "vau decryption failed: ErpException Unable to create public key from message data");
     checkJsonString(outerErrorResponseDocument, messagePointer,
-                    "could not create public key from x,y components error:1012606B:elliptic curve routines:"
-                    "EC_POINT_set_affine_coordinates:point is not on curve");
+                    "could not create public key from x,y components error:0800006B:elliptic curve routines:"
+                    ":point is not on curve");
 
     ASSERT_NO_FATAL_FAILURE(
         std::tie(outerResponse, innerResponse) =
@@ -1495,10 +1495,11 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     std::string accessCode;
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
 
-    const std::string kvnr{"X987654321"};
+    const std::string kvnr{"X987654326"};
     auto medicationDipenseRenderVersion =
         model::ResourceVersion::fhirProfileBundleFromSchemaVersion(serverGematikProfileVersion());
-    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), "2021-09-20", medicationDipenseRenderVersion);
+    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), model::Timestamp::now().toGermanDate(),
+                                              medicationDipenseRenderVersion);
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=XXXXX" ;
     const JWT jwt{ jwtApotheke() };
     RequestArguments args{HttpMethod::POST, closePath, closeBody, "application/fhir+xml", false};

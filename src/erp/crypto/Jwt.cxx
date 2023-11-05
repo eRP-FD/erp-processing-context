@@ -426,8 +426,7 @@ std::optional<std::string> JWT::displayName() const
     }
     else
     {
-
         return stringForClaim(JWT::organizationNameClaim);
     }
-    A_19391_01.finish();
+    // A_19391_01.finish();
 }

@@ -17,6 +17,7 @@
 #include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationCompounding.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
+#include "erp/model/KbvPractitioner.hxx"
 #include "erp/model/Parameters.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
@@ -87,7 +88,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     const auto& prescription = cadesBesSignature.payload();
 
-    auto [extensionsStatus, prescriptionBundle] =
+    auto [responseStatus, prescriptionBundle] =
         prescriptionBundleFromXml(session.serviceContext, prescription, prescriptionId);
 
     const auto compositions = prescriptionBundle.getResourcesByType<model::Composition>("Composition");
@@ -96,17 +97,14 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     auto legalBasisCode = compositions[0].legalBasisCode();
 
     const auto& medicationRequests = prescriptionBundle.getResourcesByType<model::KbvMedicationRequest>();
-    ErpExpect(medicationRequests.size() <= 1, HttpStatus::BadRequest,
-              "Too many MedicationRequests in prescription bundle: " + std::to_string(medicationRequests.size()));
-
-    bool isMvo = ! medicationRequests.empty() && medicationRequests[0].isMultiplePrescription();
-    std::optional<date::year_month_day> mvoEndDate =
-        medicationRequests.empty() ? std::nullopt : medicationRequests[0].mvoEndDate();
-    if (! medicationRequests.empty())
-    {
-        checkMultiplePrescription(medicationRequests[0].getExtension<model::KBVMultiplePrescription>(),
-                                  prescriptionId.type(), legalBasisCode, medicationRequests[0].authoredOn());
-    }
+    ErpExpect(medicationRequests.size() == 1, HttpStatus::BadRequest,
+              "Unexpected number of MedicationRequests in prescription bundle: " +
+                  std::to_string(medicationRequests.size()));
+    const auto& medicationRequest = medicationRequests[0];
+    bool isMvo = medicationRequest.isMultiplePrescription();
+    std::optional<date::year_month_day> mvoEndDate = medicationRequest.mvoEndDate();
+    checkMultiplePrescription(medicationRequest.getExtension<model::KBVMultiplePrescription>(), prescriptionId.type(),
+                              legalBasisCode, medicationRequest.authoredOn());
 
     A_22231.start("check narcotics and Thalidomid");
     checkNarcoticsMatches(prescriptionBundle);
@@ -144,19 +142,38 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto signingTime = cadesBesSignature.getSigningTime();
     ErpExpect(signingTime.has_value(), HttpStatus::BadRequest, "No signingTime in PKCS7 file");
 
-    if (config.getOptionalBoolValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_AUTHORED_ON_MUST_EQUAL_SIGNING_DATE, true))
+    try
     {
-        try
-        {
-            checkAuthoredOnEqualsSigningDate(prescriptionBundle, *signingTime);
-        }
-        catch (const model::ModelException& m)
-        {
-            ErpFailWithDiagnostics(HttpStatus::BadRequest, "error checking authoredOn==signature date", m.what());
-        }
+        checkAuthoredOnEqualsSigningDate(medicationRequest, *signingTime);
+    }
+    catch (const model::ModelException& m)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "error checking authoredOn==signature date", m.what());
     }
 
     checkValidCoverage(prescriptionBundle, prescriptionId.type());
+
+    if (! checkPractitioner(prescriptionBundle))
+    {
+        A_24031.start("Use configuration value for ANR handling");
+        const auto* errorMessage = "Ungültige Arztnummer (LANR oder ZANR): Die übergebene Arztnummer entspricht nicht "
+                                   "den Prüfziffer-Validierungsregeln.";
+        switch (config.anrChecksumValidationMode())
+        {
+            case Configuration::AnrChecksumValidationMode::warning:
+                A_24033.start("Return a warning when ANR validation fails");
+                session.response.addWarningHeader(252, "erp-server", errorMessage);
+                responseStatus = HttpStatus::OkWarnInvalidAnr;
+                A_24033.finish();
+                break;
+            case Configuration::AnrChecksumValidationMode::error:
+                A_24032.start("Return an error when ANR validation fails");
+                ErpFail(HttpStatus::BadRequest, errorMessage);
+                A_24032.finish();
+                break;
+        }
+        A_24031.finish();
+    }
 
     A_19025_02.start("3. reference the PKCS7 file in task");
     task.setHealthCarePrescriptionUuid();
@@ -167,8 +184,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_19025_02.finish();
 
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
-    date::year_month_day signingDay{date::floor<date::days>(
-        date::make_zoned(model::Timestamp::GermanTimezone, signingTime->toChronoTimePoint()).get_local_time())};
+    date::year_month_day signingDay{signingTime->localDay()};
     if (isMvo)
     {
         setMvoExpiryAcceptDates(task, mvoEndDate, signingDay);
@@ -202,6 +218,11 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     try
     {
         kvnr = patients[0].kvnr();
+        A_23890.start("Validate Kvnr Checksum");
+        ErpExpect(kvnr->validChecksum(), HttpStatus::BadRequest,
+                  "Ungültige Versichertennummer (KVNR): Die übergebene Versichertennummer des Patienten entspricht "
+                  "nicht den Prüfziffer-Validierungsregeln.");
+        A_23890.finish();
     }
     catch (const model::ModelException& ex)
     {
@@ -223,7 +244,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     databaseHandle->activateTask(taskAndKey->task, *taskAndKey->key, healthCareProviderPrescriptionBinary);
     A_19025_02.finish();
 
-    makeResponse(session, extensionsStatus, &task);
+    makeResponse(session, responseStatus, &task);
 
     // Collect audit data:
     session.auditDataCollector()
@@ -300,31 +321,25 @@ void ActivateTaskHandler::checkNarcoticsMatches(const model::KbvBundle& bundle)
     A_22231.finish();
 }
 
-void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvBundle& bundle,
+void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvMedicationRequest& medicationRequest,
                                                            const model::Timestamp& signingTime)
 {
     A_22487.start("check equality of signing day and authoredOn");
     // using German timezone was decided, but sadly did not make it into the requirement
     // date::local_days is a date not bound to any timezone.
-    const date::local_days signingDay{date::floor<date::days>(
-        date::make_zoned(model::Timestamp::GermanTimezone, signingTime.toChronoTimePoint()).get_local_time())};
-    const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationRequest>();
-    for (const auto& mr : medicationRequests)
-    {
-        const date::local_days authoredOn{date::floor<date::days>(
-            date::make_zoned(model::Timestamp::GermanTimezone, mr.authoredOn().toChronoTimePoint()).get_local_time())};
+    const date::local_days signingDay{signingTime.localDay()};
+    const date::local_days authoredOn{medicationRequest.authoredOn().localDay()};
 
-        if (signingDay != authoredOn)
-        {
-            std::ostringstream oss;
-            oss << "KBVBundle.signature.signingDay=" << signingDay
-                << " != KBVBundle.MedicationRequest.authoredOn=" << authoredOn;
-            TVLOG(1) << oss.str();
-            ErpFailWithDiagnostics(
-                HttpStatus::BadRequest,
-                "Ausstellungsdatum und Signaturzeitpunkt weichen voneinander ab, müssen aber taggleich sein",
-                oss.str());
-        }
+    if (signingDay != authoredOn)
+    {
+        std::ostringstream oss;
+        oss << "KBVBundle.signature.signingDay=" << signingDay
+            << " != KBVBundle.MedicationRequest.authoredOn=" << authoredOn;
+        TVLOG(1) << oss.str();
+        ErpFailWithDiagnostics(
+            HttpStatus::BadRequest,
+            "Ausstellungsdatum und Signaturzeitpunkt weichen voneinander ab, müssen aber taggleich sein",
+            oss.str());
     }
     A_22487.finish();
 }
@@ -341,18 +356,38 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
     const auto& config = Configuration::instance();
     const auto& xmlValidator = serviceContext.getXmlValidator();
     const auto& inCodeValidator = serviceContext.getInCodeValidator();
-    const auto& supportedBundles = model::ResourceVersion::supportedBundles();
 
     try
     {
         auto factory = KbvBundleFactory::fromXml(prescription, xmlValidator);
         auto profileName = factory.getProfileName();
-        ErpExpect(profileName.has_value(), HttpStatus::BadRequest, "Missing meta.profile in Bundel.");
+        ErpExpect(profileName.has_value(), HttpStatus::BadRequest, "Missing meta.profile in Bundle.");
         const auto* profInfo = model::ResourceVersion::profileInfoFromProfileName(*profileName);
         ErpExpectWithDiagnostics(profInfo != nullptr, HttpStatus::BadRequest, "unknown or unexpected profile",
                                  "Unable to determine profile type from name: "s.append(*profileName));
-        const auto fhirProfileBundleVersion = profInfo->bundleVersion;
-        ErpExpect(model::ResourceVersion::supportedBundles().contains(fhirProfileBundleVersion), HttpStatus::BadRequest,
+        auto fhirProfileBundleVersion = profInfo->bundleVersion;
+
+        const auto referenceTimestamp = factory.getValidationReferenceTimestamp();
+        ErpExpect(referenceTimestamp.has_value(), HttpStatus::BadRequest,
+                  "Unable to determine validation timestamp. authoredOn missing?");
+
+        std::set<model::ResourceVersion::FhirProfileBundleVersion> supportedBundles;
+        auto patchValidFrom = model::Timestamp::fromXsDate(
+            config.getStringValue(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM), model::Timestamp::GermanTimezone);
+        if (referenceTimestamp->localDay() >= patchValidFrom.localDay())
+        {
+            supportedBundles.emplace(model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01_patch);
+            if (fhirProfileBundleVersion == model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)
+            {
+                fhirProfileBundleVersion = model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01_patch;
+            }
+        }
+        else
+        {
+            supportedBundles = model::ResourceVersion::supportedBundles(referenceTimestamp.value());
+        }
+
+        ErpExpect(supportedBundles.contains(fhirProfileBundleVersion), HttpStatus::BadRequest,
                   "Unsupported profile version");
         ErpExpect(! prescriptionId.isPkv() ||
                       fhirProfileBundleVersion > model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01,
@@ -505,6 +540,9 @@ HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<mod
     if (highestSeverity >= fhirtools::Severity::error &&
         genericValidationMode == GenericValidationMode::require_success)
     {
+#ifdef ENABLE_DEBUG_LOG
+        validationResult.dumpToLog();
+#endif
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "FHIR-Validation error", validationResult.summary());
     }
     bool haveUnslicedWarn = std::ranges::any_of(validationResult.results(), [](const fhirtools::ValidationError& err) {
@@ -529,21 +567,18 @@ HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<mod
 void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType)
 {
     A_22222.start("Check for allowed coverage type");
-    const auto& config = Configuration::instance();
     const auto& coverage = bundle.getResourcesByType<model::KbvCoverage>("Coverage");
     ErpExpect(coverage.size() <= 1, HttpStatus::BadRequest, "Unexpected number of Coverage Resources in KBV Bundle");
-    bool featurePkvEnabled = config.featurePkvEnabled();
     bool pkvCovered = false;
     for (const auto& currentCoverage : coverage)
     {
         const auto coverageType = currentCoverage.typeCodingCode();
-        pkvCovered = featurePkvEnabled && (coverageType == "PKV");
+        pkvCovered = (coverageType == "PKV");
         ErpExpect((coverageType == "GKV")
                   || (coverageType == "SEL")
                   || (coverageType == "BG")
                   || (coverageType == "UK")
                   || pkvCovered,
-
                   HttpStatus::BadRequest,
                   "Kostenträger nicht zulässig");
     }
@@ -565,4 +600,27 @@ void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, con
     }
     A_23443.finish();
     A_22347_01.finish();
+}
+
+
+bool ActivateTaskHandler::checkPractitioner(const model::KbvBundle& bundle)
+{
+    const auto kbvPractitioners = bundle.getResourcesByType<model::KbvPractitioner>();
+    for (const auto& practitioner : kbvPractitioners)
+    {
+        A_23891.start("Validate Practitioner Checksum");
+        auto anr = practitioner.anr();
+        if (anr.has_value() && ! anr->validChecksum())
+        {
+            return false;
+        }
+
+        auto zanr = practitioner.zanr();
+        if (zanr.has_value() && ! zanr->validChecksum())
+        {
+            return false;
+        }
+        A_23891.finish();
+    }
+    return true;
 }

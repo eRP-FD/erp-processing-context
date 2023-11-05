@@ -5,7 +5,7 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.3 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -28,7 +28,8 @@ ARG ERP_RELEASE_VERSION
 ENV CONAN_LOGIN_USERNAME=${CONAN_LOGIN_USERNAME:-''} \
     CONAN_PASSWORD=${CONAN_PASSWORD:-''} \
     ERP_BUILD_VERSION=${ERP_BUILD_VERSION:-'0.0.0'} \
-    ERP_RELEASE_VERSION=${ERP_RELEASE_VERSION:-'0.0.0'}
+    ERP_RELEASE_VERSION=${ERP_RELEASE_VERSION:-'0.0.0'} \
+    GCC_VERSION=12
 
 RUN conan remote clean &&\
     conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force &&\
@@ -36,14 +37,17 @@ RUN conan remote clean &&\
     conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force &&\
     conan user -r erp -p "${CONAN_PASSWORD}" "${CONAN_LOGIN_USERNAME}" &&\
     conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force &&\
-    conan profile new --detect default
+    conan profile new --detect default && \
+    conan profile update settings.compiler.version=${GCC_VERSION} default && \
+    conan profile update env.CC=gcc-${GCC_VERSION} default && \
+    conan profile update env.CXX=g++-${GCC_VERSION} default
 
 
 # Build Release variant:
 FROM build AS release_build
 
 WORKDIR /build/erp-processing-context/release
-RUN CC=gcc-11 CXX=g++-11 cmake \
+RUN CC=gcc-${GCC_VERSION} CXX=g++-${GCC_VERSION} cmake \
     -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DERP_WITH_HSM_MOCK=OFF \
@@ -73,7 +77,7 @@ RUN tar -czf ./erp-processing-context.tar.gz /erp
 FROM build AS reldeb_build
 
 WORKDIR /build/erp-processing-context/reldeb
-RUN CC=gcc-11 CXX=g++-11 cmake \
+RUN CC=gcc-12 CXX=g++-12 cmake \
     -GNinja \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DERP_WITH_HSM_MOCK=OFF \

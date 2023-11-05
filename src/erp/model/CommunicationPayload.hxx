@@ -8,8 +8,11 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATIONPAYLOAD_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATIONPAYLOAD_HXX
 
+#include "erp/validation/SchemaType.hxx"
+
 #include <rapidjson/document.h>
 
+class JsonValidator;
 
 namespace model
 {
@@ -21,9 +24,11 @@ public:
     explicit CommunicationPayload(const rapidjson::Value* payloadValue);
 
     void verifyLength() const;
+    void validateJsonSchema(const JsonValidator& validator, SchemaType schemaType) const;
 
 private:
     std::size_t mLength = 0;
+    const rapidjson::Value* mPayloadValue = nullptr;
 };
 
 } // namespace model

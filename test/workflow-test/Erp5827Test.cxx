@@ -49,7 +49,7 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
         model::Communication::MessageType::Reply, task.value(),
         ActorRole::Pharmacists, pharmacy1,
         ActorRole::Insurant, kvnrInsurant,
-        "Nein"));
+        R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Nein"})"));
     ASSERT_TRUE(reply1.has_value());
     std::optional<model::Communication> infoReq2;
     ASSERT_NO_FATAL_FAILURE(infoReq2 = communicationPost(
@@ -63,7 +63,7 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
         model::Communication::MessageType::Reply, task.value(),
         ActorRole::Pharmacists, pharmacy2,
         ActorRole::Insurant, kvnrInsurant,
-        "Ja"));
+        R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Ja"})"));
     ASSERT_TRUE(reply2.has_value());
     const JWT jwtInsurant{ JwtBuilder::testBuilder().makeJwtVersicherter(kvnrInsurant) };
     model::Timestamp timestamp = model::Timestamp::now() + std::chrono::hours(-24);

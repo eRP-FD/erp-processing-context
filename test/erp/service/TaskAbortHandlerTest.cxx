@@ -262,7 +262,7 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)//NOLINT(re
     auto task = addTaskToDatabase({model::Task::Status::completed, kvnr.id(), telematicId });
 
     // Call /Task/<id>/$abort for user representative
-    const JWT jwtRepresentative = mJwtBuilder.makeJwtVersicherter("X987654321");
+    const JWT jwtRepresentative = mJwtBuilder.makeJwtVersicherter("X987654326");
     const auto idNumberClaim = jwtRepresentative.stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(idNumberClaim.has_value());
     const auto displayName = jwtRepresentative.stringForClaim(JWT::displayNameClaim);

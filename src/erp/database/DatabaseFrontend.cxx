@@ -444,7 +444,7 @@ DatabaseFrontend::retrieveTaskAndPrescriptionAndReceipt(const PrescriptionId& ta
 std::vector<model::Task> DatabaseFrontend::retrieveAllTasksForPatient(const model::Kvnr& kvnr,
                                                                       const std::optional<UrlArguments>& search)
 {
-    ErpExpect(kvnr.valid(), HttpStatus::BadRequest, "Invalid KVNR");
+    ErpExpect(kvnr.validFormat(), HttpStatus::BadRequest, "Invalid KVNR");
 
     auto dbTaskList = mBackend->retrieveAllTasksForPatient(mDerivation.hashKvnr(kvnr), search);
     std::vector<model::Task> allTasks;

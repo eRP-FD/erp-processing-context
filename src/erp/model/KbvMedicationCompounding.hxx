@@ -9,7 +9,10 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONCOMPOUNDING_HXX
 
 #include "erp/model/KbvMedicationBase.hxx"
+#include "erp/model/Pzn.hxx"
 #include "erp/validation/SchemaType.hxx"
+
+#include <vector>
 
 namespace model
 {
@@ -20,6 +23,7 @@ class KbvMedicationCompounding : public KbvMedicationBase<KbvMedicationCompoundi
 public:
     static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_Compounding;
     const rapidjson::Value* ingredientArray() const;
+    std::vector<Pzn> ingredientPzns() const;
 
 private:
     friend Resource<KbvMedicationCompounding, ResourceVersion::KbvItaErp>;

@@ -61,9 +61,8 @@ namespace
         // A difference is regarded as error. This is the first step in removing the pcr set as input parameter.
         try
         {
-            const auto expectedPcrSet = PcrSet::fromString(Configuration::instance().getOptionalStringValue(
-                ConfigurationKey::PCR_SET,
-                PcrSet::defaultSet().toString(false)));
+            const auto expectedPcrSet =
+                PcrSet::fromString(Configuration::instance().getStringValue(ConfigurationKey::PCR_SET));
             const auto givenPcrSet = PcrSet::fromList(inputPcrSet);
             ErpExpect(givenPcrSet == expectedPcrSet, HttpStatus::BadRequest,
                 "given pcr set " + givenPcrSet.toString() + " is not the same as the expected " + expectedPcrSet.toString());
@@ -238,8 +237,7 @@ EnrolmentModel GetEnclaveStatus::doHandleRequest (EnrolmentSession& session)
     responseData.set(responseEnclaveId, session.serviceContext.getEnrolmentData().enclaveId.toString());
     responseData.set(responseEnclaveTime, std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     responseData.set(responseEnrolmentStatus, magic_enum::enum_name(enrolmentStatus));
-    const auto pcrSet = ::PcrSet::fromString(::Configuration::instance().getOptionalStringValue(
-        ::ConfigurationKey::PCR_SET, ::PcrSet::defaultSet().toString(false)));
+    const auto pcrSet = ::PcrSet::fromString(::Configuration::instance().getStringValue(::ConfigurationKey::PCR_SET));
     responseData.set(responsePcrSet, pcrSet.toString());
 
     auto hsmPoolSession = session.serviceContext.getHsmPool().acquire();
@@ -393,9 +391,8 @@ EnrolmentModel PutKnownQuote::doHandleRequest (EnrolmentSession& session)
     }
     else
     {
-        pcrSet = ::PcrSet::fromString(::Configuration::instance().getOptionalStringValue(
-                                          ::ConfigurationKey::PCR_SET, ::PcrSet::defaultSet().toString(false)))
-                     .toPcrList();
+        pcrSet =
+            ::PcrSet::fromString(::Configuration::instance().getStringValue(::ConfigurationKey::PCR_SET)).toPcrList();
     }
 
     ::BlobDatabase::Entry entry;

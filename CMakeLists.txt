@@ -11,7 +11,9 @@
 
 cmake_minimum_required(VERSION 3.18)
 
-project(erp-processing-context)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+project(erp-processing-context LANGUAGES CXX)
 
 # Perform a Debug build by default,
 if(NOT CMAKE_BUILD_TYPE)
@@ -58,6 +60,10 @@ endif()
 
 string(TIMESTAMP ERP_RELEASE_DATE "%Y-%m-%dT%H:%M:%S+00:00" UTC)
 message(NOTICE "ERP_RELEASE_DATE: ${ERP_RELEASE_DATE}")
+option(WITH_PROFILING "Build binaries with profiling" OFF)
+if (WITH_PROFILING)
+    find_package(GPerftools REQUIRED)
+endif()
 
 #
 # Conan: including 3rd party packages by running "conan install" on the fly
@@ -229,7 +235,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_link_options(-NODEFAULTLIB:libboost_regex-vc142-mt-gd-x64-1_74.lib)
 else()
     add_compile_options(-Wall) # This may require an additional -g3 to activate debug symbols for boost::beast
-    add_compile_options(-Wextra -Wpedantic -Wconversion)
+    add_compile_options(-Wextra -Wpedantic -Wconversion -Wno-deprecated-declarations)
+    # disable -Wrestict for gcc, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105651
+    if(CMAKE_BUILD_TYPE MATCHES Release)
+        add_compile_options($<$<CXX_COMPILER_ID:GNU>:-Wno-restrict> $<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overread>)
+    endif()
     if(ERP_WARNING_AS_ERROR)
         add_compile_options(-Werror)
     endif()

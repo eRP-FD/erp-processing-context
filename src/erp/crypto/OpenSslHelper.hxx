@@ -110,6 +110,7 @@ private:
 };
 
 EVP_PKEY_CTX* new_EVP_PKEY_CTX (void);
+ASN1_SEQUENCE_ANY* make_ASN1_SEQUENCE_ANY();
 void free_ASN1_SEQUENCE_ANY (ASN1_SEQUENCE_ANY* sequence);
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays)
@@ -123,7 +124,7 @@ extern const char asn1_object_name[];
 using shared_ASN1_OBJECT =         openssl_shared_ptr< ASN1_OBJECT,       ASN1_OBJECT_new,       ASN1_OBJECT_free,       nullptr,          asn1_object_name>;
 
 extern const char asn1_sequence_name[];
-using shared_ASN1_SEQUENCE_ANY =   openssl_shared_ptr< ASN1_SEQUENCE_ANY, sk_ASN1_TYPE_new_null, free_ASN1_SEQUENCE_ANY, nullptr,        asn1_sequence_name>;
+using shared_ASN1_SEQUENCE_ANY =   openssl_shared_ptr< ASN1_SEQUENCE_ANY, make_ASN1_SEQUENCE_ANY, free_ASN1_SEQUENCE_ANY, nullptr,        asn1_sequence_name>;
 
 extern const char asn1_type_name[];
 using shared_ASN1_TYPE =           openssl_shared_ptr< ASN1_TYPE,         ASN1_TYPE_new,         ASN1_TYPE_free,         nullptr,          asn1_type_name>;
@@ -138,7 +139,10 @@ extern const char ec_group_name[];
 using shared_EC_GROUP =            openssl_shared_ptr< EC_GROUP,          nullptr,               EC_GROUP_free,          nullptr,          ec_group_name>;
 
 extern const char ec_key_name[];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 using shared_EC_KEY =              openssl_shared_ptr< EC_KEY,            EC_KEY_new,            EC_KEY_free,            EC_KEY_up_ref,    ec_key_name>;
+#pragma GCC diagnostic pop
 
 extern const char ec_point_name[];
 using shared_EC_POINT =            openssl_shared_ptr< EC_POINT,          nullptr,               EC_POINT_free,          nullptr,          ec_point_name>;
@@ -157,9 +161,6 @@ using shared_OCSP_BASICRESP =      openssl_shared_ptr< OCSP_BASICRESP,    OCSP_B
 
 extern const char ocsp_response_name[];
 using shared_OCSP_RESPONSE =       openssl_shared_ptr< OCSP_RESPONSE,     OCSP_RESPONSE_new,     OCSP_RESPONSE_free,     nullptr,          ocsp_response_name>;
-
-extern const char rsa_name[];
-using shared_RSA =                 openssl_shared_ptr< RSA,               RSA_new,               RSA_free,               RSA_up_ref,       rsa_name>;
 
 extern const char x509_name[];
 using shared_X509 =                openssl_shared_ptr< X509,              X509_new,              X509_free,              X509_up_ref,      x509_name>;

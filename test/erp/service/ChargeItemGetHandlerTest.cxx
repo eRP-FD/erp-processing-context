@@ -77,8 +77,7 @@ protected:
             chargeItem.setAccessCode(accessCode);
             chargeItem.deleteContainedBinary();
 
-            const auto& dispenseItemXML =
-                resourceManager.getStringResource("test/EndpointHandlerTest/dispense_item.xml");
+            const auto& dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
             auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
             auto signedDispenseItem =
                 ::model::Binary{dispenseItem.getIdentifier().toString(),

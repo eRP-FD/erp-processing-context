@@ -313,7 +313,7 @@
                 <payor>
                     <identifier>
                         <system value="http://fhir.de/NamingSystem/arge-ik/iknr"/>
-                        <value value="249753760"/>
+                        <value value="109500969"/>
                     </identifier>
                     <display value="KOA Nordwürttemberg"/>
                 </payor>

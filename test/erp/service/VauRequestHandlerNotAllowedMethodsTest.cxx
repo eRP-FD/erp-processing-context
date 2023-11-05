@@ -73,7 +73,7 @@ public:
     }
 
     VauRequestHandlerNotAllowedMethodTest()
-        : jwtVersicherter(JwtBuilder::testBuilder().makeJwtVersicherter(std::string{"X987654321"})), teeProtocol(),
+        : jwtVersicherter(JwtBuilder::testBuilder().makeJwtVersicherter(std::string{"X987654326"})), teeProtocol(),
           mClient(createClient()),
           taskId(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711)
                      .toString())
@@ -82,7 +82,6 @@ public:
 
     void SetUp (void) override
     {
-        EnvironmentVariableGuard enablePkv{"ERP_FEATURE_PKV", "true"};
         ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
     }
 

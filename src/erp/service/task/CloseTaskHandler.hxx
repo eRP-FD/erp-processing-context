@@ -32,6 +32,7 @@ private:
     template<typename ModelT>
     static void validateWithoutMedicationProfiles(model::NumberAsStringParserDocument&& medicationDispenseOrBundleDoc,
                                                   std::string_view medicationsPath,
+                                                  const model::Timestamp& validationReferenceTimestamp,
                                                   const PcSessionContext& session);
     static void validateSameMedicationVersion(const fhirtools::Collection& medications);
 

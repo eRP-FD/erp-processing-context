@@ -48,9 +48,9 @@ public:
     const std::string InfoReqMessage =
         "Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.";
     const std::string ReplyMessage =
-        "Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten.";
+        R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten."})";
     const std::string DispReqMessage =
-        "Bitte schicken Sie einen Boten.";
+        R"({"version":1,"supplyOptionsType":"delivery","hint":"Bitte schicken Sie einen Boten."})";
     const std::string RepresentativeMessageByInsurant =
         "Hallo, kannst Du das Medikament fuer mich holen?";
     const std::string RepresentativeMessageByRepresentative =
@@ -153,7 +153,7 @@ protected:
         const model::Timestamp& whenHandedOver = model::Timestamp::now(),
         const std::optional<model::Timestamp>& whenPrepared = std::nullopt) const;
 
-    // Jwt of InsurantF ("X234567890"):
+    // Jwt of InsurantF ("X234567891"):
     std::unique_ptr<JWT> mJwt;
     std::unique_ptr<MockDatabase> mMockDatabase;
     std::unique_ptr<HsmPool> mHsmPool;
@@ -171,20 +171,20 @@ protected:
     // Names of doctors and pharmacies may have up to 256 characters.
     // In contrary several tests need different insurants so here a set of predefined
     // insurant names is provided. The KVNRs of insurants is limited to 10 characters.
-    static constexpr const char* InsurantA = "X000000001";
-    static constexpr const char* InsurantB = "X000000002";
-    static constexpr const char* InsurantC = "X000000003";
-    static constexpr const char* InsurantD = "X000000004";
-    static constexpr const char* InsurantE = "X123456789";
-    static constexpr const char* InsurantF = "X234567890";
+    static constexpr const char* InsurantA = "X100000013";
+    static constexpr const char* InsurantB = "X100000025";
+    static constexpr const char* InsurantC = "X100000037";
+    static constexpr const char* InsurantD = "X100000049";
+    static constexpr const char* InsurantE = "X123456788";
+    static constexpr const char* InsurantF = "A123457895";
     static constexpr const char* InsurantG = "X234567891";
-    static constexpr const char* InsurantH = "X234567892";
+    static constexpr const char* InsurantH = "X234567802";
 
     // eGK test card identities based on the formation rule in Card-G2-A_3820
     // (X0000nnnnP, with nnnn from the set {0001 .. 5000} and P = Check digit)
-    static constexpr const char* VerificationIdentityKvnrMin = "X000000017";
-    static constexpr const char* VerificationIdentityKvnrAny = "X000025007";
-    static constexpr const char* VerificationIdentityKvnrMax = "X000050007";
+    static constexpr const char* VerificationIdentityKvnrMin = "X000000012";
+    static constexpr const char* VerificationIdentityKvnrAny = "X000025003";
+    static constexpr const char* VerificationIdentityKvnrMax = "X000050005";
 
     // The names of the pharmacy and doctor will be retrieved from the JWTs.
     model::TelematikId mPharmacy;

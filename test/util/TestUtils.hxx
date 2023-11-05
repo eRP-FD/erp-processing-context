@@ -37,6 +37,7 @@ static void waitFor(T predicate)
 std::vector<EnvironmentVariableGuard> getNewFhirProfileEnvironment();
 std::vector<EnvironmentVariableGuard> getOldFhirProfileEnvironment();
 std::vector<EnvironmentVariableGuard> getOverlappingFhirProfileEnvironment();
+std::vector<EnvironmentVariableGuard> getPatchedFhirProfileEnvironment();
 using NewFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getNewFhirProfileEnvironment>;
 using OldFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getOldFhirProfileEnvironment>;
 using OverlappingFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getOverlappingFhirProfileEnvironment>;

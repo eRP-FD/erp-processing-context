@@ -531,6 +531,11 @@ std::optional<std::string_view> ResourceBase::getProfileName() const
     return getStringValue(profilePointer);
 }
 
+std::optional<model::Timestamp> ResourceBase::getValidationReferenceTimestamp() const
+{
+    return std::nullopt;
+}
+
 
 // ---
 
@@ -577,7 +582,6 @@ template<class TDerivedModel, typename SchemaVersionType>
 void Resource<TDerivedModel, SchemaVersionType>::additionalValidation() const
 {
 }
-
 
 template<class TDerivedModel, typename SchemaVersionType>
 fhirtools::ValidationResults

@@ -30,7 +30,7 @@ TEST(PatientTest, getKvnr)
               ]
             },
             "system": "http://fhir.de/NamingSystem/gkv/kvid-10",
-            "value": "X234567890"
+            "value": "X234567891"
           }
         ],
         "name": [
@@ -79,5 +79,5 @@ TEST(PatientTest, getKvnr)
 
     const auto patient = model::Patient::fromJsonNoValidation(patientJson);
 
-    ASSERT_EQ(patient.kvnr(), "X234567890");
+    ASSERT_EQ(patient.kvnr(), "X234567891");
 }

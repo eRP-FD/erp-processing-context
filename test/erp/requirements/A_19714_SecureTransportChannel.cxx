@@ -88,7 +88,7 @@ TEST_F(A_19714_Test, getCommunicationById_failForInvalidJWT)
     // Instead of just calling encryptRequest(request) we duplicate that method so that we can inject an invalid JWT.
     // => Unauthorized
     JwtBuilder builder (EllipticCurve::BrainpoolP256R1->createKeyPair());
-    auto invalidJwt = std::make_unique<JWT>( builder.makeJwtVersicherter("X234567890") );
+    auto invalidJwt = std::make_unique<JWT>( builder.makeJwtVersicherter("X234567891") );
     innerRequest.setHeader(Header::Authorization, "Bearer " + invalidJwt->serialize());
     ClientRequest outerRequest(
         Header(

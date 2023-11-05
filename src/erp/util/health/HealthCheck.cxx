@@ -131,7 +131,7 @@ void HealthCheck::checkPostgres(PcServiceContext& context)
 
 void HealthCheck::checkRedis (PcServiceContext& context)
 {
-    context.getDosHandler().healthCheck();
+    context.getRedisClient()->healthCheck();
 }
 
 

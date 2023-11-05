@@ -22,12 +22,14 @@
 
 namespace
 {
-std::list<std::string> supportedProfiles(SchemaType schemaType)
+std::vector<std::string>
+supportedProfiles(SchemaType schemaType,
+                  const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles)
 {
-    std::list<std::string> result;
+    std::vector<std::string> result;
     if (schemaType != SchemaType::fhir)
     {
-        for (const auto& profileBundle : model::ResourceVersion::supportedBundles())
+        for (const auto& profileBundle : supportedBundles)
         {
             auto profStr = model::ResourceVersion::profileStr(schemaType, profileBundle);
             if (profStr)
@@ -39,7 +41,7 @@ std::list<std::string> supportedProfiles(SchemaType schemaType)
     return result;
 }
 
-}
+} // namespace
 
 
 model::ResourceFactoryBase::ResourceFactoryBase(XmlDocCache xml)
@@ -175,6 +177,11 @@ std::string_view model::ResourceFactoryBase::getResourceType() const
     return resource().getResourceType();
 }
 
+std::optional<model::Timestamp> model::ResourceFactoryBase::getValidationReferenceTimestamp() const
+{
+    return resource().getValidationReferenceTimestamp();
+}
+
 
 template<typename SchemaVersionT>
 model::ResourceFactorySchemaVersionBase<SchemaVersionT>::ResourceFactorySchemaVersionBase(XmlDocCache xmlDoc,
@@ -208,7 +215,7 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validatorOptions(f
 
 template<typename SchemaVersionT>
 void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::conditionalValidateGeneric(
-    std::optional<ResourceVersion::FhirProfileBundleVersion> version, SchemaType schemaType,
+    std::optional<ResourceVersion::FhirProfileBundleVersion> version, const std::vector<std::string>& supportedProfiles,
     const fhirtools::ValidatorOptions& validatorOptions,
     const std::optional<ErpException>& validationErpException) const
 {
@@ -245,10 +252,9 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::conditionalValidat
 
         std::ostringstream msg;
         msg << "unsupported or unknown profile version";
-        auto profs = supportedProfiles(schemaType);
-        if (! profs.empty())
+        if (! supportedProfiles.empty())
         {
-            msg << R"( expected one of: [")" << String::join(profs, R"(", ")") << R"("])";
+            msg << R"( expected one of: [")" << String::join(supportedProfiles, R"(", ")") << R"("])";
         }
         ModelFail(std::move(msg).str());
     }
@@ -312,6 +318,7 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validateNoAddition
                           : fhirtools::ValidatorOptions{});
 
     validateEnforcedSchemaVersion();
+    const auto profs = supportedProfiles(schemaType, supportedBundles);
 
     if (fhirProfBundleVer == ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 && schemaType != SchemaType::fhir)
     {
@@ -324,12 +331,12 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validateNoAddition
         {
             if (erpException.status() == HttpStatus::BadRequest)
             {
-                conditionalValidateGeneric(fhirProfBundleVer, schemaType, validatorOptions, erpException);
+                conditionalValidateGeneric(fhirProfBundleVer, profs, validatorOptions, erpException);
             }
             throw;
         }
     }
-    conditionalValidateGeneric(fhirProfBundleVer, schemaType, validatorOptions, std::nullopt);
+    conditionalValidateGeneric(fhirProfBundleVer, profs, validatorOptions, std::nullopt);
 }
 
 

@@ -46,8 +46,8 @@ namespace
             {
                 TVLOG(2) << "Trying to download file [" << url.toString() << "], try " << i;
 
-                const std::string ciphers = Configuration::instance().getOptionalStringValue(
-                    ConfigurationKey::TSL_DOWNLOAD_CIPHERS, "");
+                const std::string ciphers =
+                    Configuration::instance().getStringValue(ConfigurationKey::TSL_DOWNLOAD_CIPHERS);
                 const std::optional<std::string> forcedCiphers =
                     (ciphers.empty() ? std::nullopt : std::optional<std::string>{ciphers});
                 const ClientResponse response = requestSender.send(
@@ -636,8 +636,8 @@ namespace
                 // and in this case a special TI Ocsp proxy should be used
                 // The Gematik TI proxy works in the way that the original ocsp url is appended to the
                 // the proxy url, e.g. "http://ocsp.proxy.ibm.de/http://ocsp.test.ibm.de/"
-                std::string tiOcspProxyUrl = Configuration::instance().getOptionalStringValue(
-                    ConfigurationKey::TSL_TI_OCSP_PROXY_URL, "");
+                std::string tiOcspProxyUrl =
+                    Configuration::instance().getStringValue(ConfigurationKey::TSL_TI_OCSP_PROXY_URL);
                 if (!tiOcspProxyUrl.empty())
                 {
                     if (tiOcspProxyUrl.back() != '/')

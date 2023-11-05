@@ -84,24 +84,32 @@ void PseudonameKeyRefreshJob::executeJob()
         if (results.at(0) == false)
         {
             // Existing key expired. Create new key and store it, remove previous key.
-            TVLOG(1) << "PseudonameKeyRefreshJob add missing OR replace expired key for pseudoname";
+            TLOG(INFO) << "PseudonameKeyRefreshJob add missing OR replace expired key for pseudoname";
             const BlobId id = createAndStoreKey();
             const std::vector<BlobDatabase::Entry> blobs = mBlobCache.getAllBlobsSortedById();
             for (const BlobDatabase::Entry& blob : blobs)
             {
                 if (blob.type == BlobType::PseudonameKey && blob.id != id)
                 {
-                    TVLOG(1) << "PseudonameKeyRefreshJob remove expired key for pseudoname";
+                    TLOG(INFO) << "PseudonameKeyRefreshJob remove expired key";
                     mBlobCache.deleteBlob(blob.type, blob.name);
                 }
             }
         }
-        else if (sKey.size() == 0)
+        else
         {
-            TVLOG(1) << "PseudonameKeyRefreshJob loading key";
             auto hsmPoolSession = mHsmPool.acquire();
             ErpArray<Aes256Length> key = hsmPoolSession.session().unwrapPseudonameKey();
+            SafeString currentKey{sKey};
             sKey = SafeString{key.data(), key.size()};
+            if (currentKey == sKey)
+            {
+                TLOG(INFO) << "PseudonameKeyRefreshJob loaded existing key";
+            }
+            else
+            {
+                TLOG(INFO) << "PseudonameKeyRefreshJob loaded new key";
+            }
         }
         setInterval(mCheckInterval);
     }
@@ -137,14 +145,14 @@ std::unique_ptr<PseudonameKeyRefreshJob>
 PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(HsmPool& hsmPool, BlobCache& blobCache,
                                                       const Configuration& configuration)
 {
-    if (configuration.getOptionalBoolValue(ConfigurationKey::REPORT_LEIPS_KEY_ENABLE, false))
+    if (configuration.getBoolValue(ConfigurationKey::REPORT_LEIPS_KEY_ENABLE))
     {
-        const std::chrono::seconds expireInterval{configuration.getOptionalIntValue(
-            ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS, 15552000)};// About 6 months per default.
-        const std::chrono::seconds refreshInterval{configuration.getOptionalIntValue(
-            ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS, 86400)};// 24 hours per default.
-        const std::chrono::seconds failedCheckInterval{configuration.getOptionalIntValue(
-            ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS, 300)};// 5 minutes per default.
+        const std::chrono::seconds expireInterval{
+            configuration.getIntValue(ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS)};
+        const std::chrono::seconds refreshInterval{
+            configuration.getIntValue(ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS)};
+        const std::chrono::seconds failedCheckInterval{
+            configuration.getIntValue(ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS)};
         std::unique_ptr<PseudonameKeyRefreshJob> refreshJob = std::make_unique<PseudonameKeyRefreshJob>(
             hsmPool, blobCache, refreshInterval, failedCheckInterval, expireInterval);
         refreshJob->start();
