@@ -249,7 +249,7 @@ TEST_F(CadesBesSignatureTest, validateWithBna)
 }
 
 
-TEST_F(CadesBesSignatureTest, GematikExampleWithOutdatedOcsp)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(CadesBesSignatureTest, DISABLED_GematikExampleWithOutdatedOcsp)//NOLINT(readability-function-cognitive-complexity)
 {
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>();
 

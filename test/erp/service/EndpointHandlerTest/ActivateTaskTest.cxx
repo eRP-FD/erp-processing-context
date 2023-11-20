@@ -1069,8 +1069,8 @@ TEST_F(ActivateTaskTest, warnInvalidANR)
             {.expectedStatus = HttpStatus::OkWarnInvalidAnr, .signingTime = signingTime, .outHeader = responseHeader}));
         ASSERT_TRUE(responseHeader.header(Header::Warning).has_value());
         ASSERT_EQ(responseHeader.header(Header::Warning).value(),
-                  "252 erp-server Ungültige Arztnummer (LANR oder ZANR): Die übergebene Arztnummer entspricht nicht "
-                  "den Prüfziffer-Validierungsregeln.");
+                  "252 erp-server \"Ungültige Arztnummer (LANR oder ZANR): Die übergebene Arztnummer entspricht nicht "
+                  "den Prüfziffer-Validierungsregeln.\"");
     }
 }
 

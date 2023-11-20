@@ -109,7 +109,6 @@ private:
     std::optional<boost::asio::ip::tcp::endpoint> mForcedEndpoint;
 
     const uint16_t mConnectionTimeoutSeconds;
-    std::chrono::milliseconds mResolveTimeout;
 
     /* Boost.ASIO I/O context. A reference to this is required by most Beast/ASIO classes. */
     boost::asio::io_context mIoContext;

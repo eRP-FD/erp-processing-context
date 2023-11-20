@@ -194,7 +194,7 @@ TlsSession::TlsSession(
     const std::string& hostname,
     const std::string& port,
     const uint16_t connectionTimeoutSeconds,
-    std::chrono::milliseconds resolveTimeout,
+    std::chrono::milliseconds /*resolveTimeout*/,
     bool enforceServerAuthentication,
     const SafeString& caCertificates,
     const SafeString& clientCertificate,
@@ -203,7 +203,6 @@ TlsSession::TlsSession(
     : mHostName{hostname},
       mPort{port},
       mConnectionTimeoutSeconds(connectionTimeoutSeconds),
-      mResolveTimeout{resolveTimeout},
       mIoContext{},
       // GEMREQ-start GS-A_4385
       // GEMREQ-start GS-A_5542

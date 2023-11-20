@@ -32,12 +32,14 @@ private:
 
 TEST_F(ConsentTableTest, createAndGet)
 {
+    auto startTime = model::Timestamp::now();
     auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
     { // scope
         auto db = database();
         db.storeConsent(model::Consent{kvnr1, timestamp});
         db.commitTransaction();
     }
+    auto endTime = model::Timestamp::now();
     { //scope
         auto db = database();
         auto fromDB = db.retrieveConsent(kvnr1);
@@ -45,7 +47,8 @@ TEST_F(ConsentTableTest, createAndGet)
         EXPECT_EQ(fromDB->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr1));
         EXPECT_EQ(fromDB->patientKvnr(), kvnr1);
         EXPECT_TRUE(fromDB->isChargingConsent());
-        EXPECT_EQ(fromDB->dateTime(), timestamp);
+        EXPECT_GE(fromDB->dateTime().toChronoTimePoint(), startTime.toChronoTimePoint());
+        EXPECT_LE(fromDB->dateTime().toChronoTimePoint(), endTime.toChronoTimePoint());
         db.commitTransaction();
     }
 }

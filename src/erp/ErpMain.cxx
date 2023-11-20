@@ -67,7 +67,8 @@ std::unique_ptr<ApplicationHealthAndRegistrationUpdater> ErpMain::setupHeartbeat
     if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_REGISTRATION, false))
     {
         TLOG(INFO) << "Initializing Registration Heartbeating.";
-        sender = ApplicationHealthAndRegistrationUpdater::create(Configuration::instance(), serviceContext);
+        sender = ApplicationHealthAndRegistrationUpdater::create(Configuration::instance(), serviceContext,
+                                         serviceContext.registrationInterface());
         sender->start();
     }
     else

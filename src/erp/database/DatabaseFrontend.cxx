@@ -575,7 +575,7 @@ void DatabaseFrontend::deleteCommunicationsForTask(const model::PrescriptionId& 
 void DatabaseFrontend::storeConsent(const Consent& consent)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(consent.patientKvnr());
-    return mBackend->storeConsent(hashedKvnr, consent.dateTime());
+    return mBackend->storeConsent(hashedKvnr, Timestamp::now());
 }
 
 std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const model::Kvnr& kvnr)

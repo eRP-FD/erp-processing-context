@@ -99,7 +99,7 @@ class PcServiceContext
 {
 public:
     PcServiceContext(const Configuration& configuration, Factories&& factories);
-    virtual ~PcServiceContext();
+    ~PcServiceContext(void);
 
     void setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer);
 
@@ -130,7 +130,7 @@ public:
     Idp idp;
     ApplicationHealth& applicationHealth ();
 
-    virtual std::shared_ptr<RegistrationInterface> registrationInterface() const;
+    std::shared_ptr<RegistrationInterface> registrationInterface() const;
 
     const EnrolmentData& getEnrolmentData() const;
     const Tpm::Factory& getTpmFactory() const;
