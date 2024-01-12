@@ -33,16 +33,19 @@ const rapidjson::Value* KbvMedicationCompounding::ingredientArray() const
 std::vector<Pzn> KbvMedicationCompounding::ingredientPzns() const
 {
     std::vector<Pzn> pzns;
-    const auto* ingredients = ingredientArray();
-    for (auto item = ingredients->Begin(), end = ingredients->End(); item != end; ++item)
+    if (const auto* ingredients = ingredientArray())
     {
-        const auto ingredientResource = model::UnspecifiedResource::fromJson(*item);
-        auto system = ingredientResource.jsonDocument().getOptionalStringValue(itemCodeableConceptSystemPointer);
-        if (system == resource::code_system::pzn)
+        for (auto item = ingredients->Begin(), end = ingredients->End(); item != end; ++item)
         {
-            const auto codeValue = ingredientResource.jsonDocument().getOptionalStringValue(itemCodeableConceptCodePointer);
-            ModelExpect(codeValue.has_value(), "Unexpected missing itemCodeableConcept.coding[0].code");
-            pzns.emplace_back(*codeValue);
+            const auto ingredientResource = model::UnspecifiedResource::fromJson(*item);
+            auto system = ingredientResource.jsonDocument().getOptionalStringValue(itemCodeableConceptSystemPointer);
+            if (system == resource::code_system::pzn)
+            {
+                const auto codeValue =
+                    ingredientResource.jsonDocument().getOptionalStringValue(itemCodeableConceptCodePointer);
+                ModelExpect(codeValue.has_value(), "Unexpected missing itemCodeableConcept.coding[0].code");
+                pzns.emplace_back(*codeValue);
+            }
         }
     }
 

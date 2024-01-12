@@ -59,9 +59,23 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     const auto coverageInsuranceType = bundleOptions.coverageInsuranceType.value_or(insuranceType);
     boost::replace_all(bundle, "###COVERAGE_INSURANCE_TYPE###", coverageInsuranceType);
     boost::replace_all(bundle, "###COVERAGE_INSURANCE_SYSTEM###", bundleOptions.coverageInsuranceSystem);
-    boost::replace_all(bundle, "###COVERAGE_PAYOR_EXTENSION###", bundleOptions.coveragePayorExtension);
+    if (bundleOptions.iknr.id().empty())
+    {
+        boost::replace_all(bundle, "###PAYOR_IDENTIFIER###", "");
+    }
+    else
+    {
+        std::string argeIknrNs = deprecatedKbv ? std::string{model::resource::naming_system::deprecated::argeIknr}
+                                            : std::string{model::resource::naming_system::argeIknr};
+        boost::replace_all(bundle, "###PAYOR_IDENTIFIER###",
+            "<identifier>\n###COVERAGE_PAYOR_EXTENSION###"
+            "            <system value=\"" + argeIknrNs +  "\"/>\n"
+            "            <value value=\"###IKNR###\" />\n"
+            "          </identifier>" );
+        boost::replace_all(bundle, "###COVERAGE_PAYOR_EXTENSION###", bundleOptions.coveragePayorExtension);
+        boost::replace_all(bundle, "###IKNR###", bundleOptions.iknr.id());
+    }
     boost::replace_all(bundle, "###META_EXTENSION###", bundleOptions.metaExtension);
-    boost::replace_all(bundle, "###IKNR###", bundleOptions.iknr.id());
     boost::replace_all(bundle, "###LANR###", bundleOptions.lanr.id());
     std::string anrType;
     std::string anrCodeSystem;

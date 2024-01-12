@@ -614,6 +614,54 @@ void MockDatabase::fillWithStaticData ()
                     ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId3.toString()))},
             optionalData.blobId, ::db_model::Blob{optionalData.salt}, key, mCodec},
         mDerivation.hashKvnr(model::Kvnr{std::string{pkvKvnr1}}));
+
+    // ERP-17321 Charge item signed with an old certification
+    {
+        const char* qesOldFilename = "test/tsl/X509Certificate/80276883531000000027-C.HP.QES.pem";
+        const char* erp17321kvnr = "E173210118";
+        const auto pkvTaskId6 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50023);
+        const auto taskPkv6 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId6, .kvnr = erp17321kvnr}));
+        const auto& kbvBundlePkv6 = CryptoHelper::toCadesBesSignature(
+            ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId6, .kvnr = erp17321kvnr}), qesOldFilename);
+        const auto healthCarePrescriptionBundlePkv6 =
+            model::Binary(taskPkv6.healthCarePrescriptionUuid().value(), kbvBundlePkv6).serializeToJsonString();
+        const auto receipt6 = replacePrescriptionId(FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId6.toString());
+        insertTask(taskPkv6, std::nullopt, healthCarePrescriptionBundlePkv6, receipt6);
+        TLOG(INFO) << pkvTaskId6.toString();
+
+        const auto chargeItemXml =
+            ResourceTemplates::chargeItemXml({.kvnr = model::Kvnr{pkvKvnr1},
+                                            .prescriptionId = pkvTaskId6,
+                                            .dispenseBundleBase64 = "",
+                                            .operation = ResourceTemplates::ChargeItemOptions::OperationType::Put});
+        auto chargeItemForManip = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+        chargeItemForManip.setPrescriptionId(pkvTaskId6);
+        chargeItemForManip.deleteContainedBinary();
+        chargeItemForManip.setAccessCode(mockAccessCode);
+
+        const auto [key, optionalData] = mDerivation.initialChargeItemKey(chargeItemForManip.prescriptionId().value());
+
+        storeChargeInformation(
+            ::db_model::ChargeItem{
+                ::model::ChargeInformation{
+                    ::std::move(chargeItemForManip),
+                    ::model::Binary{taskPkv6.healthCarePrescriptionUuid().value(),
+                                    CryptoHelper::toCadesBesSignature(
+                                        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId6, .kvnr = pkvKvnr1}),
+                                        qesOldFilename)},
+                    ::model::Bundle::fromXmlNoValidation(
+                        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId6, .kvnr = pkvKvnr1})),
+                    ::model::Binary{dispenseItemBundle.getIdentifier().toString(),
+                                    ::CryptoHelper::toCadesBesSignature(dispenseItemBundle.serializeToXmlString(),
+                                        qesOldFilename)},
+                    ::model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML),
+                    ::model::Bundle::fromJsonNoValidation(replacePrescriptionId(
+                        ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId6.toString()))},
+                optionalData.blobId, ::db_model::Blob{optionalData.salt}, key, mCodec},
+            mDerivation.hashKvnr(model::Kvnr{std::string{pkvKvnr1}}));
+    }
+
 }
 
 std::tuple<model::PrescriptionId, model::Timestamp> MockDatabase::createTask(model::PrescriptionType prescriptionType,

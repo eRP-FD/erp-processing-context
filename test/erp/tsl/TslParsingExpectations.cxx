@@ -6,16 +6,13 @@
  */
 
 #include "test/erp/tsl/TslParsingExpectations.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "erp/model/Timestamp.hxx"
 
 
 const std::string TslParsingExpectations::expectedId{"ID31003620200826113628Z"};
 const std::string TslParsingExpectations::expectedSequenceNumber{"10036"};
 const std::chrono::system_clock::time_point TslParsingExpectations::expectedNextUpdate{model::Timestamp::fromFhirDateTime("2020-09-25T11:36:28Z").toChronoTimePoint()};
-
-
-const X509Certificate TslParsingExpectations::expectedSignerCertificate{
-    X509Certificate::createFromBase64("MIICjTCCAjSgAwIBAgIHATaiVFkSQzAKBggqhkjOPQQDAjCBgTELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMTAvBgNVBAsMKFRTTC1TaWduZXItQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHjAcBgNVBAMMFUdFTS5UU0wtQ0E4IFRFU1QtT05MWTAeFw0xODEyMTAwMDAwMDBaFw0yMzEyMTAyMzU5NTlaMFAxCzAJBgNVBAYTAkRFMRowGAYDVQQKDBFnZW1hdGlrIE5PVC1WQUxJRDElMCMGA1UEAwwcVFNMIFNpZ25pbmcgVW5pdCA4IFRFU1QtT05MWTBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAASXUc9TBrnW4mgIUxmcR3Hg/R5lc+k8qmW2h3Z7+UJlggcxfbdcX7Yd0Xf32kRWYCmhNTIhS+ul2VJH7gFgDreio4HFMIHCMDgGCCsGAQUFBwEBBCwwKjAoBggrBgEFBQcwAYYcaHR0cDovL2VoY2EuZ2VtYXRpay5kZS9vY3NwLzAdBgNVHQ4EFgQUm5ZuiaNyonce7zle8/ApoyjSLYQwDAYDVR0TAQH/BAIwADAfBgNVHSMEGDAWgBTJrs3I3irsYJS5ISNlXnHvJvjh+jAVBgNVHSAEDjAMMAoGCCqCFABMBIEwMA4GA1UdDwEB/wQEAwIGQDARBgNVHSUECjAIBgYEAJE3AwAwCgYIKoZIzj0EAwIDRwAwRAIgBI911x3KlzNIygBO4QiNML2zqlo34uz0inKCY+zf1jQCIE2fMPhpelrPlmQKDhbOAV610U3LFnSApWlR23XCCDC6")};
 
 
 const TslParser::CertificateList TslParsingExpectations::expectedOcspCertificateList{
@@ -252,3 +249,11 @@ const TslParser::ServiceInformationMap TslParsingExpectations::expectedServiceIn
     { { "/C=DE/O=gematik GmbH TEST-ONLY - NOT-VALID/CN=SGD1-Aktor", "333437591d1bee969571b5acc9b6d588d436451f" }, TslParser::ServiceInformation{X509Certificate::createFromBase64("MIIC0zCCAnigAwIBAgIHAuaYoXu2zjAKBggqhkjOPQQDAjCBhDELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMjAwBgNVBAsMKUtvbXBvbmVudGVuLUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMSAwHgYDVQQDDBdHRU0uS09NUC1DQTEwIFRFU1QtT05MWTAeFw0yMDA4MTkwMDAwMDBaFw0yNTA4MTkyMzU5NTlaME8xCzAJBgNVBAYTAkRFMSswKQYDVQQKDCJnZW1hdGlrIEdtYkggVEVTVC1PTkxZIC0gTk9ULVZBTElEMRMwEQYDVQQDDApTR0QxLUFrdG9yMFowFAYHKoZIzj0CAQYJKyQDAwIIAQEHA0IABDLcIAZAxC6j1sqaRxnDwCqF5bjSW2f0ADJDt09Tfl2yN+xeuboqUm5AwvZqLsm7VmwL8t7+gefnXrG9HL3zsZCjggEGMIIBAjA4BggrBgEFBQcBAQQsMCowKAYIKwYBBQUHMAGGHGh0dHA6Ly9laGNhLmdlbWF0aWsuZGUvb2NzcC8wHwYDVR0jBBgwFoAUKPD45qnId8xDRduartc6g6wOD6gwIQYDVR0gBBowGDAKBggqghQATASBVjAKBggqghQATASBIzBFBgUrJAgDAwQ8MDowODA2MDQwMjAkDCJIU00gU2NobMO8c3NlbGdlbmVyaWVydW5nc2RpZW5zdCAxMAoGCCqCFABMBIFbMB0GA1UdDgQWBBQzNDdZHRvulpVxtazJttWI1DZFHzAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAKBggqhkjOPQQDAgNJADBGAiEAgEKgxwVkrpbZIXKE1/VWGCo1xXF+BDkRclIFZ4lb5B4CIQCMPtkKbF8Ha+YFF5DCq8puEden+i61jpP8WrWN4gSNoQ=="), "http://uri.etsi.org/TrstSvc/Svctype/unspecified", TslParser::ServiceSupplyPointList{"http://ocsp00.gematik.invalid/not-used"}, TslParser::AcceptanceHistoryMap{{std::chrono::time_point<std::chrono::system_clock>(std::chrono::milliseconds(1597795200000)), true},}, TslParser::ExtensionOidList{"1.2.276.0.76.4.124"}}},
     { { "/C=DE/O=gematik GmbH TEST-ONLY - NOT-VALID/CN=SGD2-Aktor", "225e337c62422e9e25d6060b90b2f4f75f5d0603" }, TslParser::ServiceInformation{X509Certificate::createFromBase64("MIIC0jCCAnigAwIBAgIHAdmPN1XGEDAKBggqhkjOPQQDAjCBhDELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxMjAwBgNVBAsMKUtvbXBvbmVudGVuLUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMSAwHgYDVQQDDBdHRU0uS09NUC1DQTEwIFRFU1QtT05MWTAeFw0yMDA4MTkwMDAwMDBaFw0yNTA4MTkyMzU5NTlaME8xCzAJBgNVBAYTAkRFMSswKQYDVQQKDCJnZW1hdGlrIEdtYkggVEVTVC1PTkxZIC0gTk9ULVZBTElEMRMwEQYDVQQDDApTR0QyLUFrdG9yMFowFAYHKoZIzj0CAQYJKyQDAwIIAQEHA0IABHEtTWzNFG79ch9sAMdWxr/2HUSmVVtTzVjc7dgdaR8kaEk3vJFu+tnRheboQsefhlQghtoPoe/aBYA65/sCAo+jggEGMIIBAjAhBgNVHSAEGjAYMAoGCCqCFABMBIEjMAoGCCqCFABMBIFWMEUGBSskCAMDBDwwOjA4MDYwNDAyMCQMIkhTTSBTY2hsw7xzc2VsZ2VuZXJpZXJ1bmdzZGllbnN0IDIwCgYIKoIUAEwEgVwwDgYDVR0PAQH/BAQDAgeAMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFCJeM3xiQi6eJdYGC5Cy9PdfXQYDMB8GA1UdIwQYMBaAFCjw+OapyHfMQ0Xbmq7XOoOsDg+oMDgGCCsGAQUFBwEBBCwwKjAoBggrBgEFBQcwAYYcaHR0cDovL2VoY2EuZ2VtYXRpay5kZS9vY3NwLzAKBggqhkjOPQQDAgNIADBFAiB6qoIHb/c94M7B7mPPJtLWhVRylKxmf/wYoDB51/+LBwIhAIw+0NbqcCfUuYslcyb+A49u5Ib0RKUMIwVT8ACNdbb0"), "http://uri.etsi.org/TrstSvc/Svctype/unspecified", TslParser::ServiceSupplyPointList{"http://ocsp00.gematik.invalid/not-used"}, TslParser::AcceptanceHistoryMap{{std::chrono::time_point<std::chrono::system_clock>(std::chrono::milliseconds(1597795200000)), true},}, TslParser::ExtensionOidList{"1.2.276.0.76.4.124"}}},
 };
+
+
+X509Certificate TslParsingExpectations::getExpectedSignerCertificate()
+{
+    const std::string derFormat = ResourceManager::instance().getStringResource("test/generated_pki/sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");
+    return X509Certificate::createFromAsnBytes(
+        { reinterpret_cast<const unsigned char*>(derFormat.data()), derFormat.size() });
+}

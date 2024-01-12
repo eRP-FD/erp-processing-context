@@ -13,22 +13,38 @@
 #include "test/util/TestConfiguration.hxx"
 
 #include "ResourceManager.hxx"
-std::string CryptoHelper::toCadesBesSignature(const std::string& content,
-                                              const std::optional<model::Timestamp>& signingTime)
+
+std::string CryptoHelper::createCadesBesSignature(const std::string& pem_str,
+                                                  const std::string& content,
+                                                  const std::optional<model::Timestamp>& signingTime)
 {
-    auto pem_str = qesCertificatePem();
     auto cert = Certificate::fromPem(pem_str);
-    SafeString pem{std::move(pem_str)};
+    SafeString pem{pem_str.c_str()};
     auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(pem);
     CadesBesSignature cadesBesSignature{cert, privKey, content, signingTime};
     return cadesBesSignature.getBase64();
 }
 
-std::string CryptoHelper::qesCertificatePem()
+std::string CryptoHelper::toCadesBesSignature(const std::string& content,
+                                              const std::optional<model::Timestamp>& signingTime)
 {
-    const auto& pemFilename = TestConfiguration::instance()
+    auto pem_str = qesCertificatePem();
+    return createCadesBesSignature(pem_str, content, signingTime);
+}
+
+std::string CryptoHelper::toCadesBesSignature(const std::string& content,
+                                              const std::string& cert_pem_filename,
+                                              const std::optional<model::Timestamp>& signingTime)
+{
+    auto pem_str = qesCertificatePem(cert_pem_filename);
+    return createCadesBesSignature(pem_str, content, signingTime);
+}
+
+std::string CryptoHelper::qesCertificatePem(const std::optional<std::string>& cert_pem_filename)
+{
+    const auto& pemFilename = cert_pem_filename.value_or(TestConfiguration::instance()
                                   .getOptionalStringValue(TestConfigurationKey::TEST_QES_PEM_FILE_NAME)
-                                  .value_or("test/qes.pem");
+                                  .value_or("test/qes.pem"));
     return ResourceManager::instance().getStringResource(pemFilename);
 }
 

@@ -548,6 +548,7 @@ generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_no_ocsp_mapping.xml" "TSL_no
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_outdated.xml" $outdated
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_multiple_new_cas.xml" $multipleNewCA
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_broken_new_ca.xml" $brokenNewCA
+generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_parserTest.xml" "TSL_parserTest.xml" $normal
 generate_tsl bna_signer_ec outdated_ca_ec "template_BNA_EC_valid.xml" "BNA_EC_valid.xml" $normal
 generate_tsl tsl_signer_wrong_key_usage_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_wrongSigner.xml" $normal
 

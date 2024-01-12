@@ -1513,6 +1513,25 @@ TEST_F(EndpointHandlerTest, GetChargeItemById)//NOLINT(readability-function-cogn
                                       HttpStatus::Forbidden));
 }
 
+TEST_F(EndpointHandlerTest, GetChargeItemById_OldCertificate)
+{
+    // ERP-17321 GET ChargeItem/<id> validiert fälschlicherweise das Signaturzertifikat - B_FD-800
+    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50023);
+
+    if (model::ResourceVersion::deprecatedProfile(
+            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
+    {
+        GTEST_SKIP();
+    }
+
+    EXPECT_NO_FATAL_FAILURE(
+        checkGetChargeItemByIdHandler(mServiceContext,
+                                      JwtBuilder::testBuilder().makeJwtApotheke(std::string("606358757")),
+                                      pkvTaskId.toString(),
+                                      HttpStatus::OK,
+                                      MockDatabase::mockAccessCode));
+}
+
 namespace {
 
 // GEMREQ-start checkDeleteChargeItemHandler

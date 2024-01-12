@@ -164,8 +164,7 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
     Expect3(chargeInformation.prescription->data().has_value(), "Prescription binary has no data",
             ::std::logic_error);
     Expect3(chargeInformation.unsignedDispenseItem.has_value(), "Dispense Item not present", ::std::logic_error);
-    const CadesBesSignature cadesBesSignature(std::string(chargeInformation.prescription.value().data().value()),
-                                              session.serviceContext.getTslManager());
+    const CadesBesSignature cadesBesSignature(std::string(chargeInformation.prescription.value().data().value()));
     auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
     const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
 
@@ -261,8 +260,7 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
 
         // embed signed dispense into signature of KBV-Bundle which is intentionally data duplication.
         Expect3(chargeInformation.dispenseItem.has_value(), "Dispense Item not present", ::std::logic_error);
-        const CadesBesSignature dispenseItemCadesBesSignature{chargeInformation.dispenseItem->data().value().data(),
-                                                              session.serviceContext.getTslManager(), true};
+        const CadesBesSignature dispenseItemCadesBesSignature{chargeInformation.dispenseItem->data().value().data()};
         const model::Signature dispenseItemSignature{
             dispenseItemCadesBesSignature.getBase64(),
             dispenseItemCadesBesSignature.getSigningTime().value_or(model::Timestamp::now()), std::nullopt, "Apotheke"};

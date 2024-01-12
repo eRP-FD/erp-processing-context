@@ -989,6 +989,24 @@ TEST_F(ActivateTaskTest, failInvalidIK)
         "entspricht nicht den Prüfziffer-Validierungsregeln.");
 }
 
+TEST_F(ActivateTaskTest, validWithoutIK)
+{
+    A_23888.test("Test valid case without IK");
+    const model::Kvnr kvnr{"B123457897"};
+    const model::Iknr iknr{""};
+    auto signingTime = model::Timestamp::now();
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = taskId, .authoredOn = signingTime, .kvnr = kvnr.id(),
+        .coverageInsuranceType = "SEL", .iknr = iknr });
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
+        mServiceContext, taskJson, kbvBundleXml, kvnr.id(), {.signingTime = signingTime}));
+}
+
 TEST_F(ActivateTaskTest, failInvalidAlternativeIK)
 {
     A_24030.test("Invalid IKNR in coverage extension");
@@ -1094,6 +1112,34 @@ TEST_F(ActivateTaskTest, failInvalidPZN)
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE(std::rethrow_exception(exception), HttpStatus::BadRequest,
                                       "Ungültige PZN: Die übergebene Pharmazentralnummer entspricht nicht den "
                                       "vorgeschriebenen Prüfziffer-Validierungsregeln.");
+}
+
+TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
+{
+    if (! model::ResourceVersion::supportedBundles().contains(
+        model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        GTEST_SKIP_("This test is only relevant for 2023 profiles");
+    }
+    auto kbvBundleXml = ResourceManager::instance().getStringResource(
+        "test/issues/ERP-17605/Bundle_invalid_MedicationCompounding_missing_ingredient_array.xml");
+    const auto taskId =
+        model::PrescriptionId::fromString("160.100.000.000.051.83");
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = taskId});
+
+    auto now = model::Timestamp::now();
+    kbvBundleXml = String::replaceAll(kbvBundleXml, "2023-12-20", now.toGermanDate());
+
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
+        mServiceContext, taskJson, kbvBundleXml, "H030170228",
+        {.expectedStatus = HttpStatus::BadRequest, .signingTime = model::Timestamp::fromGermanDate("2022-05-20"),
+        .insertTask=true, .outExceptionPtr = exception}));
+    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+        std::rethrow_exception(exception),
+        "Bundle.entry[2].resource{Medication}.ingredient[*]: error: missing mandatory element (from profile: "
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.1.0); ");
 }
 
 

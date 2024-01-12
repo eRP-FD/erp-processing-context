@@ -331,10 +331,7 @@
           <reference value="Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7" />
         </beneficiary>
         <payor>
-          <identifier>###COVERAGE_PAYOR_EXTENSION###
-            <system value="http://fhir.de/sid/arge-ik/iknr" />
-            <value value="###IKNR###" />
-          </identifier>
+          ###PAYOR_IDENTIFIER###
           <display value="Test GKV-SV" />
         </payor>
       </Coverage>

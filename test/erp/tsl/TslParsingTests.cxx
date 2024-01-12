@@ -85,14 +85,14 @@ TEST_F(TslParsingTests, TslXmlIsCompletelyValidAndParsedCorrectly)//NOLINT(reada
 {
     // Just use an outdated TSL.xml to test parsing
     TslParser tslParser{
-        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/TSL_parserTest.xml"),
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_parserTest.xml"),
         TslMode::TSL,
         *StaticData::getXmlValidator()};
 
     EXPECT_EQ(tslParser.getId(), TslParsingExpectations::expectedId);
     EXPECT_EQ(tslParser.getSequenceNumber(), TslParsingExpectations::expectedSequenceNumber);
     EXPECT_EQ(tslParser.getNextUpdate(), TslParsingExpectations::expectedNextUpdate);
-    EXPECT_EQ(tslParser.getSignerCertificate(), TslParsingExpectations::expectedSignerCertificate);
+    EXPECT_EQ(tslParser.getSignerCertificate(), TslParsingExpectations::getExpectedSignerCertificate());
     EXPECT_EQ(tslParser.getOcspCertificateList(), TslParsingExpectations::expectedOcspCertificateList);
 
     for (const auto& [key, value] : tslParser.getServiceInformationMap())

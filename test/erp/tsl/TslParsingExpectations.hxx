@@ -20,9 +20,10 @@ public:
     static const std::string expectedId;
     static const std::string expectedSequenceNumber;
     static const std::chrono::system_clock::time_point expectedNextUpdate;
-    static const X509Certificate expectedSignerCertificate;
     static const TslParser::CertificateList expectedOcspCertificateList;
     static const TslParser::ServiceInformationMap expectedServiceInformationMap;
+
+    static X509Certificate getExpectedSignerCertificate();
 };
 
 

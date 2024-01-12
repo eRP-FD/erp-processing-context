@@ -20,9 +20,15 @@ class Certificate;
 class CryptoHelper
 {
 public:
+    static std::string createCadesBesSignature(const std::string& pem_str,
+                                            const std::string& content,
+                                            const std::optional<model::Timestamp>& signingTime);
     static std::string toCadesBesSignature(const std::string& content,
                                            const std::optional<model::Timestamp>& signingTime = std::nullopt);
-    static std::string qesCertificatePem();
+    static std::string toCadesBesSignature(const std::string& content,
+                                           const std::string& cert_pem_filename,
+                                           const std::optional<model::Timestamp>& signingTime = std::nullopt);
+    static std::string qesCertificatePem(const std::optional<std::string>& cert_pem_filename = std::nullopt);
     static Certificate cHpQes();
     static shared_EVP_PKEY cHpQesPrv();
     static Certificate cQesG0();

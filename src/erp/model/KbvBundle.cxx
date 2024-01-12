@@ -68,7 +68,7 @@ void model::KbvBundle::additionalValidation() const
     {
         A_23888.start("Validate IK number");
         const auto payorIknr = kbvCoverage.payorIknr();
-        ErpExpect(payorIknr.has_value() && payorIknr->validChecksum(), HttpStatus::BadRequest,
+        ErpExpect(! payorIknr.has_value() || payorIknr->validChecksum(), HttpStatus::BadRequest,
                   "Ungültiges Institutionskennzeichen (IKNR): Das übergebene Institutionskennzeichen im "
                   "Versicherungsstatus entspricht nicht den Prüfziffer-Validierungsregeln.");
         A_23888.finish();
