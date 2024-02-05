@@ -47,7 +47,8 @@ public:
     void updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                    model::Task::Status status,
                                    const model::Timestamp& lastModifiedDate,
-                                   const std::optional<db_model::EncryptedBlob>& secret) override;
+                                   const std::optional<db_model::EncryptedBlob>& secret,
+                                   const std::optional<db_model::EncryptedBlob>& owner) override;
     void activateTask(const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr,
                       const db_model::HashedKvnr& hashedKvnr,
@@ -80,9 +81,12 @@ public:
     retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
+    std::optional<db_model::Task> retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId) override;
     std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
     std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                                            const std::optional<UrlArguments>& search) override;
+    std::vector<db_model::Task> retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                                const std::optional<UrlArguments>& search) override;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) override;
 

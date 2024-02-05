@@ -80,6 +80,8 @@ public:
         const ErpVector& name) = 0;
 
     virtual std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const = 0;
+
+    virtual void recreateConnection() = 0;
 };
 
 

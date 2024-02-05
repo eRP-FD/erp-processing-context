@@ -6,7 +6,7 @@ libraries is also possible, but requires additional dependencies, that are not i
 Make sure to use the patched openssl, provided in this repository.
 Export the recipe, that will apply the patch, from within the folder `conan-recipes/openssl`:
 ```
-conan export . openssl/3.1.1@erp/stable-1
+conan export . openssl/3.1.4@erp/stable-1
 ```
 
 Afterwards enter the erp-processing-context folder, and roughly follow these steps:

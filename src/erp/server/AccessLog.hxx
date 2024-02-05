@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_ACCESSLOG_HXX
 
 #include "erp/util/JsonLog.hxx"
+#include "erp/model/PrescriptionId.hxx"
 
 #include <boost/exception/exception.hpp>
 #include <chrono>
@@ -81,12 +82,14 @@ public:
     template<typename ValueType>
     void keyValue (const std::string_view key, ValueType value);
 
-    void prescriptionId(const std::string_view id);
+    void prescriptionId(const model::PrescriptionId& id);
+    const std::optional<model::PrescriptionId>& getPrescriptionId() const;
 
 private:
     std::optional<std::chrono::system_clock::time_point> mStartTime;
     JsonLog mLog;
     std::string mError;
+    std::optional<model::PrescriptionId> mPrescriptionId;
 };
 
 

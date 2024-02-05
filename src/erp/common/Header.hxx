@@ -143,6 +143,10 @@ public:
     static const std::string InnerRequestLeips;
     static const std::string InnerResponseCode;
     static const std::string BackendDurationMs;
+    static const std::string MvoNumber;
+    static const std::string ANR;
+    static const std::string ZANR;
+    static const std::string PrescriptionId;
 
     // Values for selected header fiels.
     static const std::string ConnectionClose;

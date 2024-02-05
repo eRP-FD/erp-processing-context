@@ -69,6 +69,7 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/Mehrfachverordnung.cxx
         workflow-test/A_22231_BetaebungsmittelAblehnen.cxx
         workflow-test/A_22487_AuthoredOnEqualsQesSigningDate.cxx
+        workflow-test/BdeV2Test.cxx
         workflow-test/TestClient.cxx
         workflow-test/Erp5827Test.cxx
         workflow-test/Erp5833Test.cxx
@@ -101,7 +102,7 @@ set(ERP_TEST_LIB_SOURCES
         util/JwtBuilder.cxx
         util/ResourceTemplates.cxx
         util/StaticData.cxx
-    )
+)
 
 add_library(erp-test-lib OBJECT ${ERP_TEST_LIB_SOURCES})
 target_link_libraries(erp-test-lib
@@ -250,6 +251,9 @@ list(
         erp/service/EndpointErrorTest.cxx
         erp/service/EndpointHandlerTest/AcceptTaskTest.cxx
         erp/service/EndpointHandlerTest/ActivateTaskTest.cxx
+        erp/service/EndpointHandlerTest/ChargeItemDeleteEndpointTest.cxx
+        erp/service/EndpointHandlerTest/ChargeItemGetEndpointTest.cxx
+        erp/service/EndpointHandlerTest/ChargeItemPatchEndpointTest.cxx
         erp/service/EndpointHandlerTest/ChargeItemPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/ChargeItemPutHandlerTest.cxx
         erp/service/EndpointHandlerTest/CloseTaskTest.cxx
@@ -257,6 +261,7 @@ list(
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
         erp/service/EndpointHandlerTest/GetTaskByPharmacyTest.cxx
+        erp/service/EndpointHandlerTest/RejectTaskTest.cxx
         erp/service/ErpRequestHandlerTest.cxx
         erp/service/HealthHandlerTest.cxx
         erp/service/MedicationDispenseGetHandlerTest.cxx

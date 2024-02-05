@@ -30,6 +30,7 @@ class DatabaseEncryptionTest : public PostgresDatabaseTest
 protected:
     static constexpr std::string_view accessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
     static constexpr std::string_view secret = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+    static constexpr std::string_view owner = "3-SMC-B-Testkarte-883110000120312";
     static constexpr std::string_view binId = "someId";
     static constexpr std::string_view binData = "SOME++DATA==";
     static constexpr std::string_view erxBundleResource = "test/fhir/conversion/erx_bundle.json";
@@ -53,6 +54,7 @@ protected:
         task.updateLastUpdate(model::Timestamp{3.0});
         task.setStatus(model::Task::Status::completed);
         task.setSecret(secret);
+        task.setOwner(owner);
         model::PrescriptionId prescriptionId = db.storeTask(task);
         task.setPrescriptionId(prescriptionId);
         db.activateTask(task, model::Binary{binId, binData});
@@ -127,6 +129,7 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
             performer,
             medication_dispense_blob_id,
             medication_dispense_bundle,
+            owner,
             COUNT
         };
     };
@@ -135,7 +138,7 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
     auto txn = createTransaction();
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
     auto row = txn.exec_params1("SELECT * FROM erp.task WHERE prescription_id = $1", prescriptionId.toDatabaseId());
-    ASSERT_EQ(row.size(), col::index::COUNT) << "Expected table `erp.task` to have 18 columns.";
+    ASSERT_EQ(row.size(), col::index::COUNT) << "Expected table `erp.task` to have 20 columns.";
     txn.commit();
     db_model::Blob salt{row[col::salt].as<db_model::postgres_bytea>()};
     BlobId blobId = gsl::narrow<BlobId>(row[col::task_key_blob_id].as<int32_t>());
@@ -214,6 +217,11 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
         ASSERT_FALSE(decryptedMedicationDispenses.empty());
         EXPECT_EQ(decryptedMedicationDispenses[0].kvnr(), medicationDispense.kvnr());
     }
+    // 19: owner bytea
+    db_model::EncryptedBlob encryptedOwner{row[col::owner].as<db_model::postgres_bytea>()};
+    SafeString decryptedOwner;
+    ASSERT_NO_THROW(decryptedOwner = getDBCodec().decode(encryptedOwner, taskKey));
+    EXPECT_EQ(decryptedOwner, owner);
     A_19688.finish();
 }
 

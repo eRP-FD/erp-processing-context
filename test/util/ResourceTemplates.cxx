@@ -267,6 +267,9 @@ std::string taskJson(const TaskOptions& taskOptions)
     boost::replace_all(task, "###PRESCRIPTION_TYPE###", std::to_string(static_cast<int>(taskOptions.prescriptionId.type())));
     boost::replace_all(task, "###PRESCRIPTION_TYPE_DISPLAY###", model::PrescriptionTypeDisplay.at(taskOptions.prescriptionId.type()));
     boost::replace_all(task, "###TIMESTAMP###", taskOptions.timestamp.toXsDateTime());
+    boost::replace_all(task, "###OWNING_PHARMACY###", taskOptions.owningPharmacy);
+    boost::replace_all(task, "###PRESCRIPTION_UUID###", taskOptions.prescriptionId.deriveUuid(model::uuidFeaturePrescription));
+    boost::replace_all(task, "###EXPIRY_DATE###", taskOptions.expirydate.toGermanDate());
 
     if(taskOptions.gematikVersion >= model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0)
     {

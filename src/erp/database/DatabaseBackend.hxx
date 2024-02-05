@@ -88,7 +88,8 @@ public:
 
     virtual void updateTaskStatusAndSecret(const model::PrescriptionId& taskId, model::Task::Status status,
                                            const model::Timestamp& lastModifiedDate,
-                                           const std::optional<db_model::EncryptedBlob>& secret) = 0;
+                                           const std::optional<db_model::EncryptedBlob>& secret,
+                                           const std::optional<db_model::EncryptedBlob>& owner) = 0;
     virtual void activateTask(const model::PrescriptionId& taskId, const db_model::EncryptedBlob& encryptedKvnr,
                               const db_model::HashedKvnr& hashedKvnr, model::Task::Status taskStatus,
                               const model::Timestamp& lastModified, const model::Timestamp& expiryDate,
@@ -118,9 +119,13 @@ public:
 
     virtual std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
+    virtual std::optional<db_model::Task> retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId) = 0;
     virtual std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                                                    const std::optional<UrlArguments>& search) = 0;
+    virtual std::vector<db_model::Task>
+    retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                      const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                              const std::optional<UrlArguments>& search) = 0;
 

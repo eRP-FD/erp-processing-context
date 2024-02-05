@@ -333,17 +333,13 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     validateProof(session, proofContent);
     // GEMREQ-end A_23451#validate, A_23456#validate
 
-    A_23452.start("Read tasks according to KVNR and with status 'ready'");
+    A_23452_01.start("Read tasks according to KVNR and with status 'ready'");
+    // GEMREQ-start A_23452-01#retrieveAllTasksForPatient
     const auto statusReadyFilter = getTaskStatusReadyUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
     auto* database = session.database();
-    auto tasks = database->retrieveAllTasksForPatient(kvnr, statusReadyFilter);
-    A_23452.finish();
-
-    for (auto& task : tasks)
-    {
-        const auto [taskWithAccessCode, data] = database->retrieveTaskAndPrescription(task.prescriptionId());
-        task.setAccessCode(taskWithAccessCode->task.accessCode());
-    }
+    auto tasks = database->retrieveAll160TasksWithAccessCode(kvnr, statusReadyFilter);
+    A_23452_01.finish();
+    // GEMREQ-end A_23452-01#retrieveAllTasksForPatient
 
     model::Bundle responseBundle{model::BundleType::searchset, model::ResourceBase::NoProfile};
     responseBundle.setTotalSearchMatches(tasks.size());
@@ -380,7 +376,7 @@ void GetTaskHandler::handleRequest(PcSessionContext& session)
     }
     else
     {
-        handleRequestFromPharmacist(session, prescriptionId);
+        handleRequestFromPharmacist(session, prescriptionId, accessToken);
     }
 
     // Collect Audit data
@@ -494,20 +490,52 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
 }
 // GEMREQ-end A_21360-01#handleRequestFromPatient
 
-void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, const model::PrescriptionId& prescriptionId)
+void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, const model::PrescriptionId& prescriptionId,
+                                                 const JWT& accessToken)
 {
     auto* databaseHandle = session.database();
-    auto [task, receipt] = databaseHandle->retrieveTaskAndReceipt(prescriptionId);
 
-    checkTaskState(task, false);
+    std::optional<model::Task> task;
+    std::optional<model::Bundle> receipt;
+    std::optional<model::Binary> prescriptionBinary;
+
+    // GEMREQ-start A_24176#Call
+    // GEMREQ-start A_24177#Call
+    // GEMREQ-start A_24178
+    if (const auto uriSecret = session.request.getQueryParameter("secret"))
+    {
+        std::tie(task, receipt) = databaseHandle->retrieveTaskAndReceipt(prescriptionId);
+        checkTaskState(task, false);
+        A_20703.start("Set VAU-Error-Code header field to brute-force whenever AccessCode or Secret mismatches");
+        VauExpect(uriSecret.value() == task->secret(), HttpStatus::Forbidden,
+                    VauErrorCode::brute_force, "No or invalid secret provided for user pharmacy");
+        A_20703.finish();
+    }
+    else
+    // GEMREQ-start A_24179#loadFromDB
+    {
+        // call to `/Task/<id>?ac=...` --> SecretRecovery
+        ErpExpect(getAccessCode(session.request).has_value(), HttpStatus::Forbidden,
+                  "Neither AccessCode(ac) nor secret provided as URI-Parameter.");
+        std::tie(task, prescriptionBinary) = databaseHandle->retrieveTaskWithSecretAndPrescription(prescriptionId);
+        checkTaskState(task, false);
+        A_24177.start("check AccessCode");
+        checkAccessCodeMatches(session.request, value(task));
+        A_24177.finish();
+        A_24178.start("only allow secrect recovery for Tasks that are in-progress");
+        ErpExpect(value(task).status()== model::Task::Status::inprogress, HttpStatus::PreconditionFailed,
+                  "Task not in-progress.");
+        A_24178.finish();
+        checkPharmacyIsOwner(value(task), accessToken);
+        task->setHealthCarePrescriptionUuid();
+    }
+    // GEMREQ-end A_24179#loadFromDB
+    // GEMREQ-end A_24178
+    // GEMREQ-end A_24177#Call
+    // GEMREQ-end A_24176#Call
+    task->deleteAccessCode();
 
     A_19226_01.start("create response bundle for pharmacist");
-    A_20703.start("Set VAU-Error-Code header field to brute-force whenever AccessCode or Secret mismatches");
-    const auto uriSecret = session.request.getQueryParameter("secret");
-    VauExpect(uriSecret.has_value() && uriSecret.value() == task->secret(), HttpStatus::Forbidden,
-              VauErrorCode::brute_force, "No or invalid secret provided for user pharmacy");
-    A_20703.finish();
-
     const auto selfLink = makeFullUrl("/Task/" + task.value().prescriptionId().toString());
     model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, selfLink);
@@ -515,12 +543,22 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
     if (task->status() == model::Task::Status::completed && receipt.has_value())
     {
         task->setReceiptUuid();
-        responseBundle.addResource(selfLink, {}, {}, task->jsonDocument());
-        responseBundle.addResource(receipt->getId().toUrn(), {}, {}, receipt->jsonDocument());
     }
     else
     {
-        responseBundle.addResource(selfLink, {}, {}, task->jsonDocument());
+        receipt.reset();
+    }
+    responseBundle.addResource(selfLink, {}, {}, task->jsonDocument());
+    // GEMREQ-start A_24179#addToBundle
+    if (prescriptionBinary)
+    {
+        auto fullUrl = std::string{"urn:uuid:"}.append(value(task->healthCarePrescriptionUuid()));
+        responseBundle.addResource(fullUrl, {}, {}, prescriptionBinary->jsonDocument());
+    }
+    // GEMREQ-end A_24179#addToBundle
+    if (receipt)
+    {
+        responseBundle.addResource(receipt->getId().toUrn(), {}, {}, receipt->jsonDocument());
     }
     A_19226_01.finish();
 
@@ -547,3 +585,16 @@ void GetTaskHandler::checkTaskState(const std::optional<model::Task>& task, bool
     ErpExpect(task->status() != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
     A_18952.finish();
 }
+
+// GEMREQ-start A_24176#checkPharmacyIsOwner
+void GetTaskHandler::checkPharmacyIsOwner(const model::Task& task, const JWT& accessToken)
+{
+    A_24176.start("compare Task.owner to idNumberClaim in ACCESS_TOKEN");
+    auto telematikId = accessToken.stringForClaim(JWT::idNumberClaim);
+    ErpExpect(telematikId.has_value(), HttpStatus::BadRequest, "Missing Telematik-ID in ACCESS_TOKEN");
+    const auto& owner = task.owner();
+    ErpExpect(owner && *owner == *telematikId, HttpStatus::PreconditionFailed,
+              "Task.owner doesn't match idNumberClaim in ACCESS_TOKEN");
+    A_24176.finish();
+}
+// GEMREQ-end A_24176#checkPharmacyIsOwner

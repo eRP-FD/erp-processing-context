@@ -37,6 +37,8 @@ public:
     virtual void storeBlob(Entry&& entry) = 0;
 
     virtual void deleteBlob(char operatorId, char version) = 0;
+
+    virtual void recreateConnection() = 0;
 };
 
 

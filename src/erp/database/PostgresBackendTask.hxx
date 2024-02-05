@@ -39,7 +39,8 @@ public:
 
     void updateTaskStatusAndSecret(pqxx::work& transaction, const model::PrescriptionId& taskId,
                                    model::Task::Status status, const model::Timestamp& lastModifiedDate,
-                                   const std::optional<db_model::EncryptedBlob>& secret) const;
+                                   const std::optional<db_model::EncryptedBlob>& secret,
+                                   const std::optional<db_model::EncryptedBlob>& owner) const;
 
     void activateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr, const db_model::HashedKvnr& hashedKvnr,
@@ -68,7 +69,14 @@ public:
     retrieveTaskAndPrescription(pqxx::work& transaction, const model::PrescriptionId& taskId);
 
     [[nodiscard]] std::optional<db_model::Task>
+    retrieveTaskWithSecretAndPrescription(pqxx::work& transaction, const model::PrescriptionId& taskId);
+
+    [[nodiscard]] std::optional<db_model::Task>
     retrieveTaskAndPrescriptionAndReceipt(pqxx::work& transaction, const model::PrescriptionId& taskId);
+
+    [[nodiscard]] std::vector<db_model::Task> retrieveAllTasksWithAccessCode(::pqxx::work& transaction,
+                                                                             const db_model::HashedKvnr& kvnrHashed,
+                                                                             const std::optional<UrlArguments>& search);
 
     struct TaskQueryIndexes {
         pqxx::row::size_type prescriptionIdIndex = 0;
@@ -82,6 +90,7 @@ public:
         pqxx::row::size_type keyBlobIdIndex = 8;
         std::optional<pqxx::row::size_type> accessCodeIndex = 9;
         std::optional<pqxx::row::size_type> secretIndex = 10;
+        std::optional<pqxx::row::size_type> ownerIndex = 11;
         std::optional<pqxx::row::size_type> healthcareProviderPrescriptionIndex = {};
         std::optional<pqxx::row::size_type> receiptIndex = {};
     };
@@ -104,7 +113,9 @@ private:
         QueryDefinition retrieveTaskByIdPlusReceipt;
         QueryDefinition retrieveTaskByIdForUpdatePlusPrescription;
         QueryDefinition retrieveTaskByIdPlusPrescription;
+        QueryDefinition retrieveTaskWithSecretByIdPlusPrescription;
         QueryDefinition retrieveTaskByIdPlusPrescriptionPlusReceipt;
+        QueryDefinition retrieveAllTasksByKvnrWithAccessCode;
         QueryDefinition getTaskKeyData;
     };
     Queries mQueries;

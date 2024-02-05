@@ -6,12 +6,17 @@
  */
 
 #include "erp/util/DurationConsumer.hxx"
+#include "erp/util/TimerJobBase.hxx"
+#include "erp/util/PeriodicTimer.hxx"
 
 #include "erp/util/TLog.hxx"
 
 #include <atomic>
+#include <boost/asio/io_context.hpp>
 #include <gtest/gtest.h>
 #include <thread>
+
+static constexpr std::chrono::milliseconds interval(200);
 
 
 class DurationConsumerTest : public testing::Test
@@ -166,4 +171,78 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
     ASSERT_EQ(keyValueMap.size(), 1);
     ASSERT_EQ(keyValueMap.begin()->first, "key");
     ASSERT_EQ(keyValueMap.begin()->second, "value");
+}
+
+TEST_F(DurationConsumerTest, TimerJob)
+{
+    testing::internal::CaptureStderr();
+
+    class TestTimer : public TimerJobBase {
+        public:
+        TestTimer()
+            : TimerJobBase{"DurationConsumerTest", interval}
+        {
+        }
+        ~TestTimer() override = default;
+        void onStart() override {}
+        void executeJob() override
+        {
+            ::DurationConsumer::getCurrent().getTimer("DurationConsumerTest", "TEST:executeJob");
+        }
+        void onFinish() override {}
+    };
+    TestTimer testTimer;
+    testTimer.start();
+    std::this_thread::sleep_for(interval * 2);
+    testTimer.shutdown();
+
+    std::string output = testing::internal::GetCapturedStderr();
+    TLOG(INFO) << output;
+    ASSERT_TRUE(output.find("TEST:executeJob was successful") != std::string::npos);
+}
+
+TEST_F(DurationConsumerTest, PeriodicTimer)
+{
+    testing::internal::CaptureStderr();
+
+    class TestTimerHandler : public FixedIntervalHandler {
+        using FixedIntervalHandler::FixedIntervalHandler;
+        void timerHandler() override
+        {
+            ::DurationConsumer::getCurrent().getTimer("DurationConsumerTest", "TEST:timerHandler");
+        }
+    };
+    using TestTimer = PeriodicTimer<TestTimerHandler>;
+    boost::asio::io_context ioContext;
+    TestTimer testTimer(interval);
+    testTimer.start(ioContext, interval);
+    ioContext.run_for(interval * 2);
+    ioContext.stop();
+
+    std::string output = testing::internal::GetCapturedStderr();
+    TLOG(INFO) << output;
+    ASSERT_TRUE(output.find("TEST:timerHandler was successful") != std::string::npos);
+}
+
+TEST_F(DurationConsumerTest, Blockduration)
+{
+   testing::internal::CaptureStderr();
+
+    {
+        int session = 0;
+        DurationConsumerGuard durationConsumerGuard(
+            "Block duration",
+            [&session](const std::chrono::steady_clock::duration /*duration*/, const std::string& /*category*/,
+                            const std::string& /*description*/, const std::string& /*sessionIdentifier*/,
+                            const std::unordered_map<std::string, std::string>& /*keyValueMap*/,
+                            const std::optional<JsonLog::LogReceiver>& /*logReceiverOverride*/) {
+                session += 1;
+            });
+        ::DurationConsumer::getCurrent().getTimer("DurationConsumerTest", "TEST:Blockduration");
+        ASSERT_EQ(session, 1);
+    }
+
+    std::string output = testing::internal::GetCapturedStderr();
+    TLOG(INFO) << output;
+    ASSERT_TRUE(output.find("TEST:Blockduration was successful") != std::string::npos);
 }

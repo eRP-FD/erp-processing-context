@@ -7,18 +7,20 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_DATABASECONNECTIONINFO_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_DATABASECONNECTIONINFO_HXX
 
+#include "erp/model/Timestamp.hxx"
+
 #include <string>
 
 struct DatabaseConnectionInfo {
     std::string dbname;
     std::string hostname;
     std::string port;
+    model::Timestamp connectionTimestamp;
+    model::Timestamp::duration_t maxAge;
 };
 
-inline std::string toString(const DatabaseConnectionInfo& info)
-{
-    auto res = info.hostname;
-    return res.append(":").append(info.port).append("/").append(info.dbname);
-}
+model::Timestamp::duration_t connectionDuration(const DatabaseConnectionInfo& info);
+std::string connectionDurationStr(const DatabaseConnectionInfo& info);
+std::string toString(const DatabaseConnectionInfo& info);
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_DATABASECONNECTIONINFO_HXX

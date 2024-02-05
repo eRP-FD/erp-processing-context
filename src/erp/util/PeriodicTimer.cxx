@@ -9,6 +9,7 @@
 #include "erp/util/Demangle.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
+#include "erp/util/DurationConsumer.hxx"
 
 
 PeriodicTimerBase::PeriodicTimerBase(std::shared_ptr<TimerHandler> timerHandler)
@@ -92,6 +93,8 @@ void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler,
         }
         try
         {
+            // Set up the duration consumer that will log spend time
+            DurationConsumerGuard durationConsumerGuard("PeriodicTimer");
             handler->timerHandler();
         }
         catch (const std::exception& e)

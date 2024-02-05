@@ -17,7 +17,7 @@
     },
     {
       "url": "https://gematik.de/fhir/StructureDefinition/ExpiryDate",
-      "valueDate": "2022-03-01"
+      "valueDate": "###EXPIRY_DATE###"
     },
     {
       "url": "https://gematik.de/fhir/StructureDefinition/AcceptDate",
@@ -59,6 +59,19 @@
     }
   ],
   "input": [
+      {
+      "type": {
+        "coding": [
+          {
+            "system": "https://gematik.de/fhir/CodeSystem/Documenttype",
+            "code": "1"
+          }
+        ]
+      },
+      "valueReference": {
+        "reference": "###PRESCRIPTION_UUID###"
+      }
+    },
     {
       "type": {
         "coding": [

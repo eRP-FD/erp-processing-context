@@ -51,17 +51,18 @@ TEST(IknrTest, checksum)
 TEST(LanrTest, checksum)
 {
     using model::Lanr;
+    EXPECT_TRUE(Lanr{"000000000"}.validChecksum());
     EXPECT_TRUE(Lanr{"000001100"}.validChecksum());
     EXPECT_TRUE(Lanr{"000010600"}.validChecksum());
     EXPECT_TRUE(Lanr{"111111100"}.validChecksum());
     EXPECT_TRUE(Lanr{"123456699"}.validChecksum());
-    EXPECT_TRUE(Lanr{"654321199"}.validChecksum());
+    EXPECT_TRUE(Lanr{"333333300"}.validChecksum());
     EXPECT_TRUE(Lanr{"444444400"}.validChecksum());
     EXPECT_TRUE(Lanr{"444444455"}.validChecksum());
-    // reserved values
-    EXPECT_TRUE(Lanr{"999999900"}.validChecksum());
+    EXPECT_TRUE(Lanr{"555555500"}.validChecksum());
     EXPECT_TRUE(Lanr{"555555999"}.validChecksum());
-    EXPECT_TRUE(Lanr{"000000000"}.validChecksum());
+    EXPECT_TRUE(Lanr{"654321199"}.validChecksum());
+    EXPECT_TRUE(Lanr{"999999900"}.validChecksum());
     EXPECT_TRUE(Lanr{"999999991"}.validChecksum());
 }
 

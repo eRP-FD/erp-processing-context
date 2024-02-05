@@ -34,7 +34,10 @@ private:
     static void checkTaskState(const std::optional<model::Task>& task, bool isPatient);
     void handleRequestFromPatient(PcSessionContext& session, const model::PrescriptionId& prescriptionId,
                                   const JWT& accessToken);
-    void handleRequestFromPharmacist(PcSessionContext& session, const model::PrescriptionId& prescriptionId);
+    void handleRequestFromPharmacist(PcSessionContext& session, const model::PrescriptionId& prescriptionId,
+                                     const JWT& accessToken);
+
+    static void checkPharmacyIsOwner(const model::Task& task, const JWT& accessToken);
 };
 
 #endif

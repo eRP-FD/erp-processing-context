@@ -38,31 +38,7 @@ PostgresDatabaseTest::PostgresDatabaseTest() :
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), std::move(blobCache)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
     mKeyDerivation = std::make_unique<KeyDerivation>(*mHsmPool);
-    mDurationConsumerGuard = std::make_unique<DurationConsumerGuard>(
-        "PostgresDatabaseTest", [](const std::chrono::steady_clock::duration duration, const std::string& category,
-                                   const std::string& description, const std::string& sessionIdentifier,
-                                   const std::unordered_map<std::string, std::string>& keyValueMap,
-                                   const std::optional<JsonLog::LogReceiver>& logReceiverOverride) {
-            const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
-            auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
-                if (logReceiverOverride)
-                {
-                    return *logReceiverOverride;
-                }
-                return timingLoggingEnabled ? JsonLog::makeInfoLogReceiver() : JsonLog::makeVLogReceiver(0);
-            };
-            JsonLog log(LogId::INFO, getLogReceiver());
-            log.keyValue("log-type", "timing")
-                .keyValue("x-request-id", sessionIdentifier)
-                .keyValue("category", category)
-                .keyValue("description", description);
-            for (const auto& item : keyValueMap)
-            {
-                log.keyValue(item.first, item.second);
-            }
-            log.keyValue("duration-us",
-                         gsl::narrow<size_t>(std::chrono::duration_cast<std::chrono::microseconds>(duration).count()));
-        });
+    mDurationConsumerGuard = std::make_unique<DurationConsumerGuard>("PostgresDatabaseTest");
 }
 
 

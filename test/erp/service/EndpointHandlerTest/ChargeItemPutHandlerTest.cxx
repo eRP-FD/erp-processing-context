@@ -12,6 +12,7 @@
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
 
 #include <gtest/gtest.h>
+#include <erp/util/Demangle.hxx>
 
 using OperationType = ResourceTemplates::ChargeItemOptions::OperationType;
 
@@ -381,5 +382,33 @@ TEST_F(ChargeItemPutHandlerTest, whenHandedOverReference)
         std::optional<model::ChargeItem> resultChargeItem;
         ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
                                                           inputChargeItem, pkvTaskId, HttpStatus::BadRequest));
+    }
+}
+
+TEST_F(ChargeItemPutHandlerTest, PutNonPkvFails)
+{
+    ChargeItemPutHandler handler{{}};
+    auto serviceContext = StaticData::makePcServiceContext();
+    auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
+    Header requestHeader{HttpMethod::POST, "/chargeitem/" + prescriptionId.toString(), 0, {}, HttpStatus::Unknown};
+    ServerRequest serverRequest{std::move(requestHeader)};
+    serverRequest.setPathParameters({"id"},  {prescriptionId.toString()});
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext(serviceContext, serverRequest, serverResponse, accessLog);
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    try
+    {
+        handler.handleRequest(sessionContext);
+        ADD_FAILURE() << "Expected ErpException";
+    }
+    catch (const ErpException& ex)
+    {
+        EXPECT_EQ(ex.status(), HttpStatus::BadRequest);
+        EXPECT_STREQ(ex.what(), "Attempt to access charge item for non-PKV Prescription.");
+    }
+    catch (const std::exception& ex)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << util::demangle(typeid(ex).name()) << ": " << ex.what();
     }
 }

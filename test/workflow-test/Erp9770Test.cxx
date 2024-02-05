@@ -17,5 +17,7 @@ TEST_F(Erp9770Test, run)//NOLINT(readability-function-cognitive-complexity)
 {
     auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 3954242);
-    send(RequestArguments(HttpMethod::DELETE, "/ChargeItem/" + prescriptionId.toString(), "{}").withJwt(jwtApotheke()));
+    send(RequestArguments(HttpMethod::DELETE, "/ChargeItem/" + prescriptionId.toString(), "{}")
+             .withJwt(jwtVersicherter())
+             .withExpectedInnerStatus(HttpStatus::NotFound));
 }

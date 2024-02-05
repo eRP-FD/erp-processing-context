@@ -36,5 +36,4 @@ private:
     std::optional<VauErrorCode> mVauErrorCode;
 };
 
-
 #endif

@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_CLOSETASKHANDLER_HXX
 
 #include "erp/service/task/TaskHandler.hxx"
+#include "erp/util/Configuration.hxx"
 
 namespace fhirtools
 {
@@ -35,6 +36,8 @@ private:
                                                   const model::Timestamp& validationReferenceTimestamp,
                                                   const PcSessionContext& session);
     static void validateSameMedicationVersion(const fhirtools::Collection& medications);
+
+    static std::string generateCloseTaskDeviceRef(Configuration::DeviceRefType refType, const std::string& linkBase);
 
 };
 

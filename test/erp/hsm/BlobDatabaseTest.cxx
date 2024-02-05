@@ -41,6 +41,8 @@ namespace {
         BlobId storeBlob (Entry&& entry) override {return mDatabase.storeBlob(std::move(entry));}
         void deleteBlob (BlobType type, const ErpVector& name) override {mDatabase.deleteBlob(type,name);}
         std::vector<bool> hasValidBlobsOfType (std::vector<BlobType>&& blobTypes) const override {return mDatabase.hasValidBlobsOfType(std::move(blobTypes));}
+        void recreateConnection() override { mDatabase.recreateConnection(); }
+
     private:
         MockBlobDatabase& mDatabase;
     };

@@ -67,6 +67,7 @@ public:
     [[nodiscard]] std::optional<std::string_view> healthCarePrescriptionUuid() const;
     [[nodiscard]] std::optional<std::string_view> patientConfirmationUuid() const;
     [[nodiscard]] std::optional<std::string_view> receiptUuid() const;
+    [[nodiscard]] std::optional<std::string_view> owner() const;
 
     void setPrescriptionId (const model::PrescriptionId& prescriptionId);
     void setStatus(Status newStatus);
@@ -81,9 +82,11 @@ public:
                        int entlassRezeptValidityWorkingDays);
     void setSecret(std::string_view secret);
     void setAccessCode(std::string_view accessCode);
+    void setOwner(std::string_view owner);
 
     void deleteAccessCode();
     void deleteSecret();
+    void deleteOwner();
 
     void updateLastUpdate(const model::Timestamp& timestamp = model::Timestamp::now());
 

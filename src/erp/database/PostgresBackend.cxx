@@ -328,6 +328,11 @@ std::optional<DatabaseConnectionInfo> PostgresBackend::getConnectionInfo() const
     return mConnection.getConnectionInfo();
 }
 
+/*static*/ void PostgresBackend::recreateConnection()
+{
+    mConnection.recreateConnection();
+}
+
 
 std::tuple<std::vector<db_model::MedicationDispense>, bool>
 PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnrHashed,
@@ -445,10 +450,12 @@ PostgresBackend::getTaskKeyData(const model::PrescriptionId& taskId)
 void PostgresBackend::updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                                  model::Task::Status status,
                                                  const model::Timestamp& lastModifiedDate,
-                                                 const std::optional<db_model::EncryptedBlob>& secret)
+                                                 const std::optional<db_model::EncryptedBlob>& secret,
+                                                 const std::optional<db_model::EncryptedBlob>& owner)
 {
     checkCommonPreconditions();
-    getTaskBackend(taskId.type()).updateTaskStatusAndSecret(*mTransaction, taskId, status, lastModifiedDate, secret);
+    getTaskBackend(taskId.type()).updateTaskStatusAndSecret(*mTransaction, taskId, status, lastModifiedDate, secret,
+                                                            owner);
 }
 
 void PostgresBackend::activateTask (
@@ -636,6 +643,13 @@ PostgresBackend::retrieveTaskAndPrescription(const model::PrescriptionId& taskId
 }
 
 std::optional<db_model::Task>
+PostgresBackend::retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId)
+{
+    checkCommonPreconditions();
+    return getTaskBackend(taskId.type()).retrieveTaskWithSecretAndPrescription(*mTransaction, taskId);
+}
+
+std::optional<db_model::Task>
 PostgresBackend::retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId)
 {
     checkCommonPreconditions();
@@ -664,6 +678,7 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
     PostgresBackendTask::TaskQueryIndexes indexes;
     indexes.accessCodeIndex.reset();
     indexes.secretIndex.reset();
+    indexes.ownerIndex.reset();
 
     TVLOG(2) << "got " << results.size() << " results";
     std::vector<db_model::Task> resultSet;
@@ -679,6 +694,15 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
         resultSet.emplace_back(PostgresBackendTask::taskFromQueryResultRow(res, indexes, prescription_type_opt.value()));
     }
     return resultSet;
+}
+
+std::vector<db_model::Task>
+PostgresBackend::retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                                   const std::optional<UrlArguments>& search)
+{
+    checkCommonPreconditions();
+    return getTaskBackend(model::PrescriptionType::apothekenpflichigeArzneimittel)
+        .retrieveAllTasksWithAccessCode(*mTransaction, kvnrHashed, search);
 }
 
 uint64_t PostgresBackend::countAllTasksForPatient(const db_model::HashedKvnr& kvnr,

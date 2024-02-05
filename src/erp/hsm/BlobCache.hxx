@@ -97,6 +97,7 @@ public:
     void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);
 
     BlobDatabase& getBlobDatabase();
+    void recreateDatabaseConnection();
 
 private:
     mutable ::std::shared_mutex mDatabaseMutex{};

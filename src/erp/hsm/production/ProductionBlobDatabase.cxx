@@ -6,12 +6,11 @@
  */
 
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
-
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/erp-serverinfo.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/TLog.hxx"
-#include "erp/erp-serverinfo.hxx"
 
 #include <pqxx/except>
 #include <pqxx/pqxx>
@@ -315,6 +314,11 @@ ProductionBlobDatabase::Transaction ProductionBlobDatabase::createTransaction (v
 {
     mConnection.connectIfNeeded();
     return Transaction(mConnection.createTransaction());
+}
+
+void ProductionBlobDatabase::recreateConnection()
+{
+    mConnection.recreateConnection();
 }
 
 

@@ -99,6 +99,13 @@ TEST_F(TimestampTest, fromXsDateTime_successWithMilliseconds)
     EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T12:34:56.123Z"), expectedDateTime);
 }
 
+TEST_F(TimestampTest, fromXsDateTime_successWithNanoseconds)
+{
+    EXPECT_NO_THROW(Timestamp::fromXsDateTime("2022-01-29T12:34:56.123456Z"));
+    EXPECT_NO_THROW(Timestamp::fromXsDateTime("2022-01-29T12:34:56.123456+01:00"));
+    EXPECT_NO_THROW(Timestamp::fromXsDateTime("2022-01-29T12:34:56.123456-01:00"));
+}
+
 
 TEST_F(TimestampTest, fromXsDateTime_failForInvalidFormats)//NOLINT(readability-function-cognitive-complexity)
 {

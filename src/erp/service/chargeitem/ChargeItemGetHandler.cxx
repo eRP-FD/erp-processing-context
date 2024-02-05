@@ -166,7 +166,7 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
     Expect3(chargeInformation.unsignedDispenseItem.has_value(), "Dispense Item not present", ::std::logic_error);
     const CadesBesSignature cadesBesSignature(std::string(chargeInformation.prescription.value().data().value()));
     auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
-    const auto authorIdentifier = model::Device::createReferenceString(getLinkBase());
+    const auto authorIdentifier = model::Device::createReferenceUrl(getLinkBase());
 
     if (professionOIDClaim == profession_oid::oid_versicherter)
     {

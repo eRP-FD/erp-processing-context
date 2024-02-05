@@ -1,7 +1,7 @@
-From d8f6b1ae8cc74e90aa2ecdd298e4205dad5765b5 Mon Sep 17 00:00:00 2001
+From 94c7b8007411e0bb2251143bc32de04727ee50ad Mon Sep 17 00:00:00 2001
 From: redacted <redacted>
-Date: Mon, 5 Jun 2023 18:42:19 +0200
-Subject: [PATCH 1/2] 3.1.1-erp-cms.patch
+Date: Mon, 20 Nov 2023 12:10:22 +0100
+Subject: [PATCH 1/2] 3.1.4-erp-cms.patch
 
 ---
  crypto/cms/cms_asn1.c    |  3 +-
@@ -25,10 +25,10 @@ index ebbc8e1bcd..3ac03cefb4 100644
  ASN1_CHOICE(CMS_RevocationInfoChoice) = {
          ASN1_SIMPLE(CMS_RevocationInfoChoice, d.crl, X509_CRL),
 diff --git a/crypto/cms/cms_lib.c b/crypto/cms/cms_lib.c
-index dfd1f44e06..627f296e42 100644
+index 4cc7e3cb61..974059a5dd 100644
 --- a/crypto/cms/cms_lib.c
 +++ b/crypto/cms/cms_lib.c
-@@ -622,6 +622,26 @@ int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl)
+@@ -623,6 +623,26 @@ int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl)
      return 0;
  }
  
@@ -55,7 +55,7 @@ index dfd1f44e06..627f296e42 100644
  STACK_OF(X509) *CMS_get1_certs(CMS_ContentInfo *cms)
  {
      STACK_OF(X509) *certs = NULL;
-@@ -674,6 +694,57 @@ STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms)
+@@ -675,6 +695,57 @@ STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms)
      return crls;
  }
  
@@ -114,10 +114,10 @@ index dfd1f44e06..627f296e42 100644
  {
      int ret;
 diff --git a/crypto/cms/cms_local.h b/crypto/cms/cms_local.h
-index 2f9b8e39ac..7f778eb9c8 100644
+index c262a906f8..ec2fd9742a 100644
 --- a/crypto/cms/cms_local.h
 +++ b/crypto/cms/cms_local.h
-@@ -491,6 +491,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
+@@ -492,6 +492,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
  DECLARE_ASN1_ITEM(CMS_KeyTransRecipientInfo)
  DECLARE_ASN1_ITEM(CMS_OriginatorPublicKey)
  DECLARE_ASN1_ITEM(CMS_OtherKeyAttribute)
@@ -145,5 +145,5 @@ index da20ddf2f4..cb24d8238e 100644
  CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
                                  X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
 -- 
-2.31.1
+2.39.3
 

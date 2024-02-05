@@ -40,6 +40,11 @@
           "@ERP_FHIR_RESOURCE_DIR@CodeSystem-flowType-supplements.xml"
         ]
       }
+    },
+    "report": {
+      "leips": {
+        "enable": "true"
+      }
     }
   },
   "debug": {

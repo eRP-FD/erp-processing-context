@@ -102,7 +102,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             ErpExpect(taskKvnr.has_value(), HttpStatus::BadRequest, "Referenced task does not contain a KVNR");
         }
 
-        session.accessLog.prescriptionId(prescriptionId.toString());
+        session.accessLog.prescriptionId(prescriptionId);
 
         // Check for valid format of KNVR of recipient or Telematic ID
         validateRecipient(messageType, recipient);

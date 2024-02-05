@@ -83,7 +83,7 @@ bool Lanr::isLanr(const std::string& value)
 
 bool Lanr::isPseudoLanr() const
 {
-    static const auto exceptions = {"4444444", "999999900", "555555", /*"000000000",*/ "999999991"};
+    static const auto exceptions = {"555555"};
     for (const auto* head : exceptions)
     {
         if (String::starts_with(mValue, head))

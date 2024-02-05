@@ -87,6 +87,9 @@ public:
     void addIssue(Issue&& issue);
 
     [[nodiscard]] std::vector<Issue> issues() const;
+    std::string concatDetails() const;
+
+    static Issue::Type httpCodeToOutcomeIssueType(HttpStatus httpCode);
 
 private:
     friend Resource<OperationOutcome, ResourceVersion::Fhir>;

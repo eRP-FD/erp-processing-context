@@ -14,6 +14,8 @@
 #endif
 
 #include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/CryptoHelper.hxx"
 #include "test_config.h"
 #include "erp/model/Binary.hxx"
 #include "erp/model/MedicationDispense.hxx"
@@ -68,6 +70,9 @@ public:
         ASSERT_NO_THROW(result = txn.exec_prepared(mRetrieveTask.name, prescriptionId.toDatabaseId()));
         txn.commit();
         ASSERT_FALSE(result.empty());
+        ASSERT_EQ(result.size(), 1);
+        ASSERT_FALSE(result.front().empty());
+        ASSERT_EQ(result.front().size(), 20);
     }
 
     UrlArguments searchForStatus(const std::string& status)
@@ -278,6 +283,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
 
     task1.setStatus(model::Task::Status::ready);
     task1.setSecret("secret");
+    task1.setOwner("owner");
     database().updateTaskStatusAndSecret(task1);
     database().commitTransaction();
 
@@ -285,8 +291,100 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
         const auto taskFromDb = std::get<0>(database().retrieveTaskAndReceipt(task1.prescriptionId()));
         ASSERT_EQ(taskFromDb->status(), model::Task::Status::ready);
         ASSERT_EQ(taskFromDb->secret(), "secret");
+        A_24174.test("owner has been stored in Database");
+        // GEMREQ-start A_24174#test1
+        ASSERT_EQ(taskFromDb->owner(), "owner");
+        // GEMREQ-end A_24174#test1
+    }
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndPrescription(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->task.secret(), std::nullopt);
+        ASSERT_EQ(taskFromDb->task.owner(), "owner");
+    }
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskForUpdateAndPrescription(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->task.secret(), "secret");
+        ASSERT_EQ(taskFromDb->task.owner(), "owner");
+    }
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndPrescriptionAndReceipt(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->secret(), "secret");
+        ASSERT_EQ(taskFromDb->owner(), "owner");
+    }
+    {
+        const auto taskFromDb = database().retrieveTaskForUpdate(task1.prescriptionId());
+        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->task.secret(), "secret");
+        ASSERT_EQ(taskFromDb->task.owner(), "owner");
     }
     database().commitTransaction();
+}
+
+TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecretNoOwner)
+{
+    if (!usePostgres())
+    {
+        GTEST_SKIP();
+    }
+
+    model::Task task1(prescriptionType(), "access_code");
+    auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
+    task1.setKvnr(model::Kvnr{std::string{InsurantA}, kvnrType});
+
+    // does not store the KVNR:
+    task1.setPrescriptionId(database().storeTask(task1));
+    database().commitTransaction();
+
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndPrescription(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::draft);
+        const auto task2FromDb = database().retrieveTaskForUpdate(task1.prescriptionId());
+        ASSERT_EQ(task2FromDb->task.status(), model::Task::Status::draft);
+    }
+
+    task1.setStatus(model::Task::Status::ready);
+    task1.setSecret("secret");
+    database().updateTaskStatusAndSecret(task1);
+    database().commitTransaction();
+
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndReceipt(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->secret(), "secret");
+        ASSERT_EQ(taskFromDb->owner(), std::nullopt);
+        database().commitTransaction();
+    }
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndPrescription(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->task.secret(), std::nullopt);
+        ASSERT_EQ(taskFromDb->task.owner(), std::nullopt);
+        database().commitTransaction();
+    }
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskForUpdateAndPrescription(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->task.secret(), "secret");
+        ASSERT_EQ(taskFromDb->task.owner(), std::nullopt);
+        database().commitTransaction();
+    }
+    {
+        const auto taskFromDb = std::get<0>(database().retrieveTaskAndPrescriptionAndReceipt(task1.prescriptionId()));
+        ASSERT_EQ(taskFromDb->status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->secret(), "secret");
+        ASSERT_EQ(taskFromDb->owner(), std::nullopt);
+        database().commitTransaction();
+    }
+    {
+        const auto taskFromDb = database().retrieveTaskForUpdate(task1.prescriptionId());
+        ASSERT_EQ(taskFromDb->task.status(), model::Task::Status::ready);
+        ASSERT_EQ(taskFromDb->task.secret(), "secret");
+        ASSERT_EQ(taskFromDb->task.owner(), std::nullopt);
+        database().commitTransaction();
+    }
 }
 
 TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
@@ -411,6 +509,37 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
 }
 // GEMREQ-end A_19115-01
 
+// GEMREQ-start A_23452-01
+TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatientAsPharmacy)//NOLINT(readability-function-cognitive-complexity)
+{
+    if (!usePostgres())
+    {
+        GTEST_SKIP();
+    }
+
+    const model::Kvnr kvnr{"X012345676"};
+    std::vector<model::Task> tasks;
+    setupTasks(1, kvnr, tasks);
+
+    A_23452_01.test("Ensure only tasks for workflow 160 can be retrieved by KVNR");
+    {
+        auto result = database().retrieveAll160TasksWithAccessCode(kvnr, searchForStatus("ready"));
+        if(prescriptionType() == ::model::PrescriptionType::apothekenpflichigeArzneimittel)
+        {
+            ASSERT_EQ(result.size(), 1);
+            EXPECT_NO_THROW(auto accessCode [[maybe_unused]] = result[0].accessCode());
+            EXPECT_EQ(result[0].status(), model::Task::Status::ready);
+            EXPECT_EQ(result[0].kvnr(), kvnr);
+        }
+        else
+        {
+            ASSERT_EQ(result.size(), 0);
+        }
+    }
+    database().commitTransaction();
+}
+// GEMREQ-end A_23452-01
+
 TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
@@ -470,7 +599,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         GTEST_SKIP();
     }
 
-    A_19027_03.test("Deletion of personal data from database");
+    A_19027_04.test("Deletion of personal data from database");
 
     model::Task task(prescriptionType(), "access_code");
     task.setStatus(model::Task::Status::ready);
@@ -487,6 +616,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         const char* const performer = "Performer";
         const char* const medicationDispense = "MedicationDispense";
         const char* const secret = "Secret";
+        const char* const owner = "Owner";
         const auto whenHandedOver = model::Timestamp::now();
         const auto whenPrepared = model::Timestamp::now();
         SafeString key;
@@ -498,7 +628,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
                 "UPDATE " + taskTableName() +
                 " SET status = $2, kvnr = $3, healthcare_provider_prescription = $4, "
                 "    receipt = $5, performer = $6, medication_dispense_blob_id = $7, medication_dispense_bundle = $8, "
-                "    kvnr_hashed = $9, secret = $10, when_handed_over = $11, when_prepared = $12 "
+                "    kvnr_hashed = $9, secret = $10, when_handed_over = $11, when_prepared = $12, owner = $13 "
                 "WHERE prescription_id = $1"};
         prepare(updateTaskComplete);
 
@@ -508,7 +638,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         ASSERT_NO_THROW(result = txn.exec_prepared(
             updateTaskComplete.name, id.toDatabaseId(), 1, kvnr.id(), healthCareProviderPrescription,
             receipt, performer, secondCallData.blobId, medicationDispense, hashedKvnr.binarystring(),
-            secret, whenHandedOver.toXsDateTime(), whenPrepared.toXsDateTime()));
+            secret, whenHandedOver.toXsDateTime(), whenPrepared.toXsDateTime(), owner));
         txn.commit();
         ASSERT_TRUE(result.empty());
     }
@@ -529,6 +659,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         ASSERT_FALSE(result.front().at(row++).is_null()); // salt
         ASSERT_FALSE(result.front().at(row++).is_null()); // access_code
         ASSERT_FALSE(result.front().at(row++).is_null()); // secret
+        ASSERT_FALSE(result.front().at(row++).is_null()); // owner
         ASSERT_FALSE(result.front().at(row++).is_null()); // healthcare_provider_prescription
         ASSERT_FALSE(result.front().at(row++).is_null()); // receipt
         ASSERT_FALSE(result.front().at(row++).is_null()); // when_handed_over
@@ -557,6 +688,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         ASSERT_TRUE(result.front().at(row++).is_null()); // salt
         ASSERT_TRUE(result.front().at(row++).is_null()); // access_code
         ASSERT_TRUE(result.front().at(row++).is_null()); // secret
+        ASSERT_TRUE(result.front().at(row++).is_null()); // owner
         ASSERT_TRUE(result.front().at(row++).is_null()); // healthcare_provider_prescription
         ASSERT_TRUE(result.front().at(row++).is_null()); // receipt
         ASSERT_TRUE(result.front().at(row++).is_null()); // when_handed_over
@@ -960,6 +1092,58 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
 
     cleanKvnr(kvnr, taskTableName());
 }
+
+TEST_P(PostgresDatabaseTaskTest, retrieveTaskWithSecretAndPrescription)
+{
+    using namespace std::chrono_literals;
+    if (!usePostgres())
+    {
+        GTEST_SKIP();
+    }
+    std::optional<model::Timestamp> authoredOn;
+    std::optional<model::PrescriptionId> prescriptionId;
+    std::string secret;
+    std::string accessCode;
+    std::string kvnr = "X234567891";
+    { // create in-progress task
+        auto task = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 0)}));
+        prescriptionId.emplace(database().storeTask(task));
+        task = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = *prescriptionId, .kvnr = kvnr}));
+        authoredOn.emplace(task.authoredOn());
+        const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = *prescriptionId, .kvnr = kvnr});
+        model::Binary bin{task.healthCarePrescriptionUuid().value() , CryptoHelper::toCadesBesSignature(bundle), model::Binary::Type::PKCS7};
+        database().activateTask(task, bin);
+        task = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = *prescriptionId, .kvnr = kvnr}));
+        task.updateLastUpdate(*authoredOn + 1s);
+        accessCode = task.accessCode();
+        secret = task.secret().value();
+        database().updateTaskStatusAndSecret(task);
+        database().commitTransaction();
+    }
+    auto expect = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = *prescriptionId, .kvnr = kvnr}));
+    auto [task, prescriptionBin] = database().retrieveTaskWithSecretAndPrescription(*prescriptionId);
+    database().commitTransaction();
+    ASSERT_TRUE(task.has_value());
+    EXPECT_EQ(task->status(), model::Task::Status::inprogress);
+    EXPECT_EQ(task->kvnr(), kvnr);
+    EXPECT_EQ(task->prescriptionId(), prescriptionId);
+    EXPECT_EQ(task->authoredOn(), authoredOn);
+    EXPECT_EQ(task->type(), GetParam());
+    EXPECT_EQ(task->lastModifiedDate(), *authoredOn + 1s);
+    EXPECT_EQ(task->accessCode(), expect.accessCode());
+    EXPECT_EQ(task->expiryDate().toGermanDate(), expect.expiryDate().toGermanDate());
+    EXPECT_EQ(task->acceptDate().toGermanDate(), expect.acceptDate().toGermanDate());
+    EXPECT_EQ(task->secret(), secret);
+    // not stored in db:
+    // task->healthCarePrescriptionUuid()
+    // task->patientConfirmationUuid()
+    // task->receiptUuid()
+    EXPECT_EQ(task->owner(), expect.owner());
+
+    ASSERT_TRUE(prescriptionBin.has_value());
+    EXPECT_EQ(prescriptionBin->id(), expect.healthCarePrescriptionUuid());
+}
+
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseTaskTestInst, PostgresDatabaseTaskTest,
                          testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,

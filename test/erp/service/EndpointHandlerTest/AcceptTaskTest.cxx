@@ -14,6 +14,8 @@
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
+#include <erp/model/OperationOutcome.hxx>
+
 class AcceptTaskTest : public EndpointHandlerTest
 {
 };
@@ -38,6 +40,7 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     ServerRequest serverRequest{std::move(requestHeader)};
     serverRequest.setPathParameters({"id"}, {task.prescriptionId().toString()});
     serverRequest.setQueryParameters({{"ac", std::string(task.accessCode())}});
+    serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke());
 
     ServerResponse serverResponse;
     AccessLog accessLog;
@@ -62,6 +65,12 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     EXPECT_EQ(tasks[0].status(), model::Task::Status::inprogress);
     EXPECT_TRUE(tasks[0].secret().has_value());
     EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*tasks[0].secret()));
+
+    // GEMREQ-start A_24174#test2
+    A_24174.test("owner has been stored");
+    EXPECT_TRUE(tasks[0].owner().has_value());
+    EXPECT_EQ(tasks[0].owner(), serverRequest.getAccessToken().stringForClaim(JWT::idNumberClaim));
+    // GEMREQ-end A_24174#test2
 
     const auto binaryResources = resultBundle->getResourcesByType<model::Binary>("Binary");
     ASSERT_EQ(binaryResources.size(), 1);
@@ -133,19 +142,22 @@ TEST_F(AcceptTaskTest, AcceptTaskInvalidMvoDate)
     // Create Task in database
     auto db = mServiceContext.databaseFactory();
     auto task = model::Task::fromJsonNoValidation(
-        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready}));
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft}));
     const auto taskId = db->storeTask(task);
     task.setPrescriptionId(taskId);
     task.setHealthCarePrescriptionUuid();
+    task.setKvnr(model::Kvnr{"X234567891", model::Kvnr::Type::gkv});
+    task.setAcceptDate(model::Timestamp::fromGermanDate("2022-04-02"));
     using namespace std::chrono_literals;
     const auto tomorrow = model::Timestamp(std::chrono::system_clock::now() + 24h);
+    task.setExpiryDate(tomorrow);
     auto kbvBundle =
         ResourceTemplates::kbvBundleMvoXml({.prescriptionId = taskId, .redeemPeriodEnd = tomorrow.toXsDateTime()});
 
     const auto healthCarePrescriptionUuid = task.healthCarePrescriptionUuid().value();
     const auto healthCarePrescriptionBundle =
         model::Binary(healthCarePrescriptionUuid, CryptoHelper::toCadesBesSignature(kbvBundle));
-
+    task.setStatus(model::Task::Status::ready);
     db->activateTask(task, healthCarePrescriptionBundle);
     db->commitTransaction();
     db.reset();
@@ -306,5 +318,116 @@ TEST_F(AcceptTaskTest, AcceptTaskFail)//NOLINT(readability-function-cognitive-co
         AccessLog accessLog;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
+    }
+}
+
+TEST_F(AcceptTaskTest, AcceptTaskAlreadyInProgress)
+{
+    A_19168_01.test("AcceptTaskAlreadyInProgress");
+    const std::string validAccessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
+    AcceptTaskHandler handler({});
+    const auto id =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714).toString();
+    const Header requestHeader{HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
+    ServerRequest serverRequest{Header(requestHeader)};
+    serverRequest.setPathParameters({"id"}, {id});
+    serverRequest.setQueryParameters({{"ac", validAccessCode}});
+    serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke());
+    {
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+    }
+    {
+        serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke("different-telematik-id"));
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+        EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::Conflict,
+                                          "Task has invalid status in-progress");
+    }
+}
+
+TEST_F(AcceptTaskTest, AcceptTaskAlreadyInProgressSelf)
+{
+    A_19168_01.test("AcceptTaskAlreadyInProgressSelf");
+    const std::string validAccessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
+    AcceptTaskHandler handler({});
+    const auto id =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714).toString();
+    const Header requestHeader{HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
+    ServerRequest serverRequest{Header(requestHeader)};
+    serverRequest.setPathParameters({"id"}, {id});
+    serverRequest.setQueryParameters({{"ac", validAccessCode}});
+    serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke());
+    {
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+    }
+    {
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+        try
+        {
+            handler.handleRequest(sessionContext);
+        }
+        catch (const ErpServiceException& serviceException)
+        {
+            ASSERT_EQ(serviceException.status(), HttpStatus::Conflict);
+            const auto issues = serviceException.operationOutcome().issues();
+            ASSERT_EQ(issues.size(), 2);
+            EXPECT_EQ(issues[0].code, model::OperationOutcome::Issue::Type::conflict);
+            EXPECT_FALSE(issues[0].diagnostics.has_value());
+            EXPECT_TRUE(issues[0].expression.empty());
+            EXPECT_EQ(issues[0].severity, model::OperationOutcome::Issue::Severity::error);
+            EXPECT_EQ(issues[0].detailsText, "Task has invalid status in-progress");
+            EXPECT_EQ(issues[1].code, model::OperationOutcome::Issue::Type::conflict);
+            EXPECT_FALSE(issues[1].diagnostics.has_value());
+            EXPECT_TRUE(issues[1].expression.empty());
+            EXPECT_EQ(issues[1].severity, model::OperationOutcome::Issue::Severity::error);
+            EXPECT_EQ(issues[1].detailsText, "Task is processed by requesting institution");
+        }
+    }
+}
+
+TEST_F(AcceptTaskTest, AcceptTaskFailExpiryDate)
+{
+    auto kbvBundle = ResourceTemplates::kbvBundleXml();
+
+    using namespace std::chrono_literals;
+    const auto yesterday = model::Timestamp::now() - 24h;
+    const auto taskId = model::PrescriptionId::fromDatabaseId(
+        model::PrescriptionType::apothekenpflichigeArzneimittel, 11508);
+    const auto taskJson = ResourceTemplates::taskJson({
+        .taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .expirydate = yesterday});
+    model::Task task = model::Task::fromJsonNoValidation(taskJson);
+    mockDatabase->insertTask(task);
+
+    try
+    {
+        const auto id = taskId.toString();
+        const std::string validAccessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
+        AcceptTaskHandler handler({});
+        const Header requestHeader{HttpMethod::POST, "/Task/" + id + "/$accept/", 0, {}, HttpStatus::Unknown};
+        ServerRequest serverRequest{Header(requestHeader)};
+        serverRequest.setPathParameters({"id"}, {id});
+        serverRequest.setQueryParameters({{"ac", validAccessCode}});
+        serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke());
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+        handler.handleRequest(sessionContext);
+    }
+    catch(const ErpException& erpException)
+    {
+        EXPECT_EQ(erpException.what(), std::string("Verordnung bis " + yesterday.toGermanDateFormat() + " einlösbar."));
+    }
+    catch (const std::exception& ex)
+    {
+        ADD_FAILURE() << "expected ErpException but got: " << typeid(ex).name() << ": " << ex.what();
     }
 }

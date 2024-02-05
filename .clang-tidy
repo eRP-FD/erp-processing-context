@@ -41,6 +41,7 @@ Checks: >-
   -llvmlibc-*,
   -misc-bool-pointer-implicit-conversion,
   -misc-definitions-in-headers,
+  -misc-include-cleaner,
   -misc-non-private-member-variables-in-classes,
   -misc-unused-alias-decls,
   -misc-unused-parameters,

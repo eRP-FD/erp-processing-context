@@ -9,6 +9,7 @@
 #define ERP_UTIL_EXPECT_HXX
 
 #include "erp/util/ErpException.hxx"
+#include "erp/util/ErpServiceException.hxx"
 #include "erp/util/ExceptionWrapper.hxx"
 #include "erp/model/ModelException.hxx"
 
@@ -157,6 +158,8 @@ decltype(auto) value(const std::optional<T>& opt, std::source_location loc = std
 
 #define ErpFail(errorStatus, message) \
     local::logAndThrow<ErpException>(message, fileAndLine, errorStatus)
+#define ErpFail2(errorStatus, message, message2) \
+    local::logAndThrow<ErpServiceException>(message, fileAndLine, errorStatus, message2)
 #define ErpFailWithDiagnostics(errorStatus, message, diagnostics) \
     local::logAndThrow<ErpException>(message, fileAndLine, errorStatus, diagnostics)
 #define VauFail(errorStatus, vauError, message) \

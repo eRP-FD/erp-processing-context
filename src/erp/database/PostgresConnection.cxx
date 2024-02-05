@@ -6,6 +6,7 @@
  */
 
 #include "erp/database/PostgresConnection.hxx"
+#include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
 
@@ -26,7 +27,12 @@ void PostgresConnection::connectIfNeeded()
         mConnectionInfo = {};
         mConnection = std::make_unique<pqxx::connection>(mConnectionString);
         mConnectionInfo = std::make_optional<DatabaseConnectionInfo>(
-            {.dbname = mConnection->dbname(), .hostname = mConnection->hostname(), .port = mConnection->port()});
+            {.dbname = mConnection->dbname(),
+             .hostname = mConnection->hostname(),
+             .port = mConnection->port(),
+             .connectionTimestamp = model::Timestamp::now(),
+             .maxAge = std::chrono::minutes{
+                 Configuration::instance().getIntValue(ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES)}});
         TVLOG(1) << "connected to " << toString(mConnectionInfo.value());
         mErrorHandler = std::make_unique<ErrorHandler>(*mConnection);
     }
@@ -79,6 +85,16 @@ PostgresConnection::operator pqxx::connection&() const
 std::optional<DatabaseConnectionInfo> PostgresConnection::getConnectionInfo() const
 {
     return mConnectionInfo;
+}
+
+void PostgresConnection::recreateConnection()
+{
+    if (mConnectionInfo && connectionDuration(*mConnectionInfo) > mConnectionInfo->maxAge)
+    {
+        TVLOG(1) << "recreating connection to database";
+        close();
+        connectIfNeeded();
+    }
 }
 
 

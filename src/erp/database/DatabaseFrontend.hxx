@@ -76,10 +76,14 @@ public:
     retrieveTaskAndReceipt(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>>
     retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
+    [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Binary>>
+    retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
     retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
     [[nodiscard]] std::vector<model::Task>
     retrieveAllTasksForPatient(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] std::vector<model::Task>
+    retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t
     countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
@@ -133,6 +137,10 @@ public:
     [[nodiscard]] DatabaseBackend& getBackend() override;
 
 private:
+    [[nodiscard]] std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>>
+    toTaskAndKeyAndPrescription(const std::optional<db_model::Task>& dbTask);
+
+
     static std::shared_ptr<Compression> compressionInstance();
     [[nodiscard]] model::Task getModelTask(const db_model::Task& dbTask,
                                            const std::optional<SafeString>& key = std::nullopt);

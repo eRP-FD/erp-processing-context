@@ -35,6 +35,8 @@ public:
     static constexpr std::string_view p_prescriptionId       = "/identifier/0/value";
     static constexpr std::string_view p_accessCode           = "/identifier/1/value";
     static constexpr std::string_view p_secret               = "/identifier/2/value";
+    static constexpr std::string_view p_ownerIdentifierSystem= "/owner/identifier/system";
+    static constexpr std::string_view p_ownerIdentifierValue = "/owner/identifier/value";
     static constexpr std::string_view p_flowtypeCode         = "/extension/0/valueCoding/code";
     static constexpr std::string_view p_flowtypeDisplay      = "/extension/0/valueCoding/display";
     static constexpr std::string_view p_performerType        = "/performerType/0/coding/0/code";
@@ -324,4 +326,28 @@ TEST_F(TaskTest, SetAndDeleteSecret)//NOLINT(readability-function-cognitive-comp
     task.deleteSecret();
     ASSERT_EQ(rapidjson::Pointer(p_secret.data()).Get(task.jsonDocument()), nullptr);
     ASSERT_FALSE(task.secret().has_value());
+}
+
+TEST_F(TaskTest, SetAndDeleteOwner)//NOLINT(readability-function-cognitive-complexity)
+{
+    model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
+    auto nsTelematikId = deprecatedBundle(model::ResourceVersion::currentBundle())
+        ? model::resource::naming_system::deprecated::telematicID
+        : model::resource::naming_system::telematicID;
+
+
+    ASSERT_EQ(rapidjson::Pointer(p_ownerIdentifierSystem.data()).Get(task.jsonDocument()), nullptr);
+    ASSERT_EQ(rapidjson::Pointer(p_ownerIdentifierValue.data()).Get(task.jsonDocument()), nullptr);
+    ASSERT_FALSE(task.owner().has_value());
+
+    const std::string_view owner = "Owner";
+    task.setOwner(owner);
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_ownerIdentifierSystem.data())), nsTelematikId);
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_ownerIdentifierValue.data())), owner);
+    ASSERT_EQ(task.owner(), owner);
+
+    task.deleteOwner();
+    ASSERT_EQ(rapidjson::Pointer(p_ownerIdentifierSystem.data()).Get(task.jsonDocument()), nullptr);
+    ASSERT_EQ(rapidjson::Pointer(p_ownerIdentifierValue.data()).Get(task.jsonDocument()), nullptr);
+    ASSERT_FALSE(task.owner().has_value());
 }

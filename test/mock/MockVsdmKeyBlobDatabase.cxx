@@ -50,3 +50,7 @@ std::vector<MockVsdmKeyBlobDatabase::Entry>::const_iterator MockVsdmKeyBlobDatab
         return entry.operatorId == operatorId && entry.version == version;
     });
 }
+
+void MockVsdmKeyBlobDatabase::recreateConnection()
+{
+}

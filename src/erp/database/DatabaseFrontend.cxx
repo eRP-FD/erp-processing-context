@@ -213,7 +213,18 @@ void DatabaseFrontend::updateTaskStatusAndSecret(const Task& task, const SafeStr
     }
     A_19688.finish();
 
-    mBackend->updateTaskStatusAndSecret(task.prescriptionId(), task.status(), task.lastModifiedDate(), secret);
+    // GEMREQ-start A_19688#encrypt-telematikid
+    A_19688.start("encrypt telematik-id as task owner");
+    std::optional<db_model::EncryptedBlob> owner;
+    if (task.owner().has_value())
+    {
+        owner = mCodec.encode(task.owner().value(), key, Compression::DictionaryUse::Default_json);
+    }
+    A_19688.finish();
+    // GEMREQ-end A_19688#encrypt-telematikid
+    // GEMREQ-start A_24174#call-backend
+    mBackend->updateTaskStatusAndSecret(task.prescriptionId(), task.status(), task.lastModifiedDate(), secret, owner);
+    // GEMREQ-end A_24174#call-backend
 }
 
 void DatabaseFrontend::activateTask(const model::Task& task, const Binary& healthCareProviderPrescription)
@@ -427,6 +438,19 @@ DatabaseFrontend::retrieveTaskAndPrescription(const PrescriptionId& taskId)
     return std::make_tuple(std::move(taskAndKey), std::move(prescription));
 }
 
+std::tuple<std::optional<model::Task>, std::optional<model::Binary>>
+DatabaseFrontend::retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId)
+{
+    const auto& dbTask = mBackend->retrieveTaskWithSecretAndPrescription(taskId);
+    if (! dbTask)
+    {
+        return {};
+    }
+    auto keyForTask = taskKey(*dbTask);
+    return std::make_tuple(getModelTask(*dbTask, keyForTask),
+                           keyForTask ? getHealthcareProviderPrescription(*dbTask, *keyForTask) : std::nullopt);
+}
+
 std::tuple<std::optional<Task>, std::optional<Binary>, std::optional<Bundle>>
 DatabaseFrontend::retrieveTaskAndPrescriptionAndReceipt(const PrescriptionId& taskId)
 {
@@ -453,6 +477,22 @@ std::vector<model::Task> DatabaseFrontend::retrieveAllTasksForPatient(const mode
         auto modelTask = getModelTask(dbTask);
         auto kvnrType = modelTask.prescriptionId().isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
         modelTask.setKvnr(model::Kvnr{kvnr.id(), kvnrType});
+        allTasks.emplace_back(std::move(modelTask));
+    }
+    return allTasks;
+}
+
+std::vector<model::Task> DatabaseFrontend::retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr,
+                                                                             const std::optional<UrlArguments>& search)
+{
+    ErpExpect(kvnr.validFormat(), HttpStatus::BadRequest, "Invalid KVNR");
+
+    auto dbTaskList = mBackend->retrieveAll160TasksWithAccessCode(mDerivation.hashKvnr(kvnr), search);
+    std::vector<model::Task> allTasks;
+    for (const auto& dbTask : dbTaskList)
+    {
+        auto keyForTask = taskKey(dbTask);
+        auto modelTask = getModelTask(dbTask, keyForTask);
         allTasks.emplace_back(std::move(modelTask));
     }
     return allTasks;
@@ -761,6 +801,10 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
     if (dbTask.secret && key)
     {
         modelTask.setSecret(mCodec.decode(*dbTask.secret, *key));
+    }
+    if (dbTask.owner && key)
+    {
+        modelTask.setOwner(mCodec.decode(*dbTask.owner, *key));
     }
     return modelTask;
 }

@@ -46,7 +46,11 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
     auto& task = taskAndKey->task;
 
-    checkTaskPreconditions(session, task);
+    // GEMREQ-start A_24174#get-telematikid
+    auto telematikId = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
+    ErpExpect(telematikId.has_value(), HttpStatus::BadRequest, "Missing Telematik-ID in ACCESS_TOKEN");
+    // GEMREQ-end A_24174#get-telematikid
+    checkTaskPreconditions(session, task, *telematikId);
 
     ErpExpect(healthCareProviderPrescription.has_value() && healthCareProviderPrescription->data().has_value(),
               HttpStatus::NotFound, "Healthcare provider prescription not found for prescription id");
@@ -55,13 +59,20 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     const auto cadesBesSignature =
         unpackCadesBesSignatureNoVerify(std::string{*healthCareProviderPrescription->data()});
     const auto& prescription = cadesBesSignature.payload();
-    checkMultiplePrescription(model::KbvBundle::fromXmlNoValidation(prescription));
+    checkMultiplePrescription(session, model::KbvBundle::fromXmlNoValidation(prescription));
 
     // GEMREQ-start A_19169-01
     A_19169_01.start("Set status to in-progress, create and set secret");
     task.setStatus(model::Task::Status::inprogress);
     const auto secret = SecureRandomGenerator::generate(32);
     task.setSecret(ByteHelper::toHex(secret));
+
+    // GEMREQ-start A_24174#store-telematikid
+    A_24174.start("store Task.owner");
+    task.setOwner(*telematikId),
+    A_24174.finish();
+    // GEMREQ-end A_24174#store-telematikid
+
     task.updateLastUpdate();
     A_19169_01.finish();
 
@@ -118,14 +129,15 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 }
 
 
-void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, const model::Task& task)
+void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, const model::Task& task,
+                                               const std::string& telematikId)
 {
     std::string taskAccessCode;
     try
     {
         taskAccessCode = task.accessCode();
     }
-    catch (const model::ModelException&)
+    catch (const model::ModelException&) // NOLINT(*-empty-catch)
     {
         // handled by taskAccessCode.empty() below.
     }
@@ -143,27 +155,53 @@ void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, 
     A_19167_04.start("Check if access code from URL is equal to access code from task");
     checkAccessCodeMatches(session.request, task);
     A_19167_04.finish();
-
-    A_19168.start("Check if task has correct status");
-    if(taskStatus == model::Task::Status::completed ||
-       taskStatus == model::Task::Status::inprogress ||
-       taskStatus == model::Task::Status::draft)
+    A_19168_01.start("Check if task has correct status");
+    switch (taskStatus)
     {
-        ErpFail(HttpStatus::Conflict,
-                "Task has invalid status " + std::string(model::Task::StatusNames.at(taskStatus)));
+        case model::Task::Status::inprogress:
+            if (task.owner() == telematikId)
+            {
+                ErpFail2(HttpStatus::Conflict,
+                         "Task has invalid status " + std::string(model::Task::StatusNames.at(taskStatus)),
+                         "Task is processed by requesting institution");
+            }
+            else
+            {
+                [[fallthrough]];
+            }
+        case model::Task::Status::draft:
+        case model::Task::Status::completed:
+            ErpFail(HttpStatus::Conflict,
+                    "Task has invalid status " + std::string(model::Task::StatusNames.at(taskStatus)));
+        case model::Task::Status::ready:
+        case model::Task::Status::cancelled:
+            break;
     }
-    A_19168.finish();
+    A_19168_01.finish();
+
+    A_23539_01.start("Check task expiry date");
+    const auto now = std::chrono::system_clock::now();
+    const auto expiryDate = task.expiryDate();
+    using namespace std::chrono_literals;
+    auto validUntil =
+        date::make_zoned(model::Timestamp::GermanTimezone, expiryDate.toChronoTimePoint() + 24h);
+    validUntil = floor<date::days>(validUntil.get_local_time());
+    if (validUntil.get_sys_time() < now)
+    {
+        ErpFail(HttpStatus::Forbidden, "Verordnung bis " + expiryDate.toGermanDateFormat() + " einlösbar.");
+    }
+    A_23539_01.finish();
 }
 
-void AcceptTaskHandler::checkMultiplePrescription(const model::KbvBundle& prescription)
+void AcceptTaskHandler::checkMultiplePrescription(PcSessionContext& session, const model::KbvBundle& prescription)
 {
     A_22635.start("check MVO period start");
-    A_23539.start("check MVO period end");
     const auto now = std::chrono::system_clock::now();
     const auto& medicationRequests = prescription.getResourcesByType<model::KbvMedicationRequest>();
     if (!medicationRequests.empty())
     {
         auto mPExt = medicationRequests[0].getExtension<model::KBVMultiplePrescription>();
+        fillMvoBdeV2(mPExt, session);
         if (mPExt && mPExt->isMultiplePrescription())
         {
             const auto startDate = mPExt->startDateTime();
@@ -179,22 +217,6 @@ void AcceptTaskHandler::checkMultiplePrescription(const model::KbvBundle& prescr
                 std::ostringstream ss;
                 ss << "Teilverordnung ab " << germanFmtTs << " einlösbar.";
                 ErpFail(HttpStatus::Forbidden, ss.str());
-            }
-
-            const auto endDate = mPExt->endDateTime();
-            if (endDate.has_value())
-            {
-                using namespace std::chrono_literals;
-                auto validUntil =
-                    date::make_zoned(model::Timestamp::GermanTimezone, endDate->toChronoTimePoint() + 24h);
-                validUntil = floor<date::days>(validUntil.get_local_time());
-                if (validUntil.get_sys_time() < now)
-                {
-                    std::string germanFmtTs = model::Timestamp(endDate->toChronoTimePoint()).toGermanDateFormat();
-                    std::ostringstream ss;
-                    ss << "Teilverordnung bis " << germanFmtTs << " einlösbar.";
-                    ErpFail(HttpStatus::Forbidden, ss.str());
-                }
             }
         }
     }

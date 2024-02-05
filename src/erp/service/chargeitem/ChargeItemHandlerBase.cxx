@@ -22,7 +22,7 @@ model::PrescriptionId parseId(
     try
     {
         auto prescriptionId = model::PrescriptionId::fromString(prescriptionIdValue.value());
-        accessLog.prescriptionId(prescriptionIdValue.value());
+        accessLog.prescriptionId(prescriptionId);
         return prescriptionId;
     }
     catch (const model::ModelException& exc)
@@ -48,7 +48,10 @@ model::PrescriptionId ChargeItemHandlerBase::parseIdFromPath(
     AccessLog& accessLog,
     const std::string& paramName)
 {
-    return parseId(request.getPathParameter(paramName), accessLog, paramName);
+    auto prescriptionId = parseId(request.getPathParameter(paramName), accessLog, paramName);
+    ErpExpect(prescriptionId.isPkv(), HttpStatus::BadRequest,
+              "Attempt to access charge item for non-PKV Prescription.");
+    return prescriptionId;
 }
 
 

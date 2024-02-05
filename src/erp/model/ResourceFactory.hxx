@@ -83,12 +83,14 @@ public:
         std::optional<Configuration::GenericValidationMode> genericValidationMode = std::nullopt;
         std::optional<SchemaVersionType> enforcedVersion = std::nullopt;
         std::optional<fhirtools::ValidatorOptions> validatorOptions;
+        bool additionalValidation = true;
     };
 
     [[nodiscard]] std::optional<SchemaVersionT> getSchemaVersion() const;
 
     void genericValidationMode(Configuration::GenericValidationMode);
     void validatorOptions(fhirtools::ValidatorOptions);
+    void enableAdditionalValidation(bool enable);
 
 protected:
     explicit ResourceFactorySchemaVersionBase(XmlDocCache, Options&&);
@@ -221,7 +223,10 @@ void ResourceFactory<ResourceT>::validate(
     try
     {
         SchemaVersionBase::validateNoAdditional(schemaType, xmlValidator, inCodeValidator, supportedBundles);
-        mResource.additionalValidation();
+        if (SchemaVersionBase::mOptions.additionalValidation)
+        {
+            mResource.additionalValidation();
+        }
     }
     catch (const ErpException&)
     {

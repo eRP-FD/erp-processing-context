@@ -31,7 +31,6 @@ TEST_P(Erp8538Test, PostOperationWithInvalidPrescriptionId)
     requestArguments.jwt = jwt;
     requestArguments.overrideExpectedInnerOperation = "POST /Task/<id>/" + GetParam().operation;
     requestArguments.overrideExpectedInnerRole = "";
-    requestArguments.expectedInnerFlowType = "";
 
     const auto& [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);

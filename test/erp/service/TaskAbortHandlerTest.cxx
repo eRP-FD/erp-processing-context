@@ -76,6 +76,7 @@ void TaskAbortHandlerTest::checkCreatedData(
         if (taskStatus == model::Task::Status::completed)
         {
             EXPECT_TRUE(taskWithSecret->secret().has_value());
+            EXPECT_TRUE(taskWithSecret->owner().has_value());
             EXPECT_TRUE(receipt.has_value());
         }
     }
@@ -114,6 +115,7 @@ void TaskAbortHandlerTest::checkResultingData(
 
     EXPECT_FALSE(taskAndKey1->task.kvnr().has_value());
     EXPECT_FALSE(taskAndKey1->task.secret().has_value());
+    EXPECT_FALSE(taskAndKey1->task.owner().has_value());
     ASSERT_ANY_THROW((void)taskAndKey1->task.accessCode());
     EXPECT_FALSE(taskAndKey1->task.healthCarePrescriptionUuid().has_value());
     EXPECT_FALSE(taskAndKey1->task.patientConfirmationUuid().has_value());
@@ -130,7 +132,7 @@ void TaskAbortHandlerTest::checkResultingData(
 // GEMREQ-start A_19027-03
 TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_19027_03.test("Check deletion of personal data and Task related communications");
+    A_19027_04.test("Check deletion of personal data and Task related communications");
     const std::string insurant = InsurantF;
     const std::string telematicId = mPharmacy.id();
 

@@ -9,6 +9,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/client/HttpsClient.hxx"
 #include "erp/crypto/Jwt.hxx"
+#include "erp/fhir/Fhir.hxx"
 #include "erp/pc/ProfessionOid.hxx"
 
 #include "erp/crypto/Certificate.hxx"
@@ -132,6 +133,7 @@ public:
     void SetUp (void) override
     {
         ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
+        ASSERT_NO_FATAL_FAILURE(Fhir::instance());
     }
 
     std::unique_ptr<Database> createDatabaseFrontend()
@@ -184,9 +186,10 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetTaskSuccess)
     A_19113_01.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/Task/" + taskIdNotFound;
     testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::GET, endpoint + "?secret=caffe", jwtOeffentliche_apotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::GET, endpoint + "?secret=caffe", jwtKrankenhausapotheke, HttpStatus::NotFound);
 }
+
 TEST_F(VauRequestHandlerProfessionOIDTest, GetTaskForbidden)
 {
     A_19113_01.test("Invalid professionOID claim in JWT");

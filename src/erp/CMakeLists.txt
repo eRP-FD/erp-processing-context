@@ -76,6 +76,8 @@ list(
         crypto/Sha256.cxx
         database/Database.cxx
         database/DatabaseCodec.cxx
+        database/DatabaseConnectionInfo.cxx
+        database/DatabaseConnectionTimer.cxx
         database/DatabaseFrontend.cxx
         database/DatabaseModel.cxx
         database/PostgresBackend.cxx
@@ -269,6 +271,7 @@ list(
         util/DurationConsumer.cxx
         util/Environment.cxx
         util/ErpException.cxx
+        util/ErpServiceException.cxx
         util/ExceptionHelper.cxx
         util/ExceptionWrapper.cxx
         util/Expect.cxx

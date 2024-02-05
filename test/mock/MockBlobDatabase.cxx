@@ -146,3 +146,7 @@ std::shared_ptr< BlobCache > MockBlobDatabase::createBlobCache(const MockBlobCac
     else
         return MockBlobCache::createAndSetup(target, std::make_unique<ProductionBlobDatabase>());
 }
+
+void MockBlobDatabase::recreateConnection()
+{
+}

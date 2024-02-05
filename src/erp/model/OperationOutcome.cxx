@@ -154,6 +154,50 @@ std::vector<OperationOutcome::Issue> OperationOutcome::issues() const
     return results;
 }
 
+std::string OperationOutcome::concatDetails() const
+{
+    std::string out;
+    std::string sep;
+    for (const auto& issue : issues())
+    {
+        if (issue.detailsText)
+        {
+            out += sep + *issue.detailsText;
+            sep = ", ";
+        }
+    }
+    return out;
+}
+
+// This fixed mapping from HTTP code to issue code might be to unexact.
+// It is a first approach for an easy creation of an error response.
+OperationOutcome::Issue::Type OperationOutcome::httpCodeToOutcomeIssueType(HttpStatus httpCode)
+{
+    switch (httpCode)
+    {
+        case HttpStatus::BadRequest:
+            return Issue::Type::invalid;
+        case HttpStatus::Unauthorized:
+            return Issue::Type::unknown;
+        case HttpStatus::Forbidden:
+            return Issue::Type::forbidden;
+        case HttpStatus::NotFound:
+            return Issue::Type::not_found;
+        case HttpStatus::MethodNotAllowed:
+            return Issue::Type::not_supported;
+        case HttpStatus::Conflict:
+            return Issue::Type::conflict;
+        case HttpStatus::Gone:
+            return Issue::Type::processing;
+        case HttpStatus::UnsupportedMediaType:
+            return Issue::Type::value;
+        case HttpStatus::TooManyRequests:
+            return Issue::Type::transient;
+        default:
+            return Issue::Type::processing;
+    }
+}
+
 
 bool operator==(const OperationOutcome::Issue& lhs, const OperationOutcome::Issue& rhs)
 {

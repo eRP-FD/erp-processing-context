@@ -108,6 +108,7 @@ public:
     std::optional<EncryptedBlob> secret;
     std::optional<EncryptedBlob> receipt;
     std::optional<EncryptedBlob> healthcareProviderPrescription;
+    std::optional<EncryptedBlob> owner;
 };
 
 class MedicationDispense

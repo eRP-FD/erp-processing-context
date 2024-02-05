@@ -27,6 +27,7 @@ public:
     void storeBlob(Entry&& entry) override;
 
     void deleteBlob(char operatorId, char version) override;
+    void recreateConnection() override;
 
 private:
     std::vector<Entry>::const_iterator find(char operatorId, char version) const;

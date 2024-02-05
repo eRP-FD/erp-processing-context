@@ -359,9 +359,7 @@ TEST_P(ResourceGenericValidationTest, genericValidationModeXMLKbvBundle)
                                                  std::string{magic_enum::enum_name(GetParam())}};
     EnvironmentVariableGuard validationModeGuardOld{"ERP_SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE",
                                                  std::string{magic_enum::enum_name(GetParam())}};
-    fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true,
-                                        .levels{.unreferencedBundledResource = fhirtools::Severity::warning,
-                                                .mandatoryResolvableReferenceFailure = fhirtools::Severity::warning}};
+    fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
     std::optional<model::Parameters> params;
     EXPECT_NO_THROW(fromXml<model::KbvBundle>(goodBundleXML(), SchemaType::KBV_PR_ERP_Bundle, options));
     if (GetParam() == Configuration::GenericValidationMode::require_success)

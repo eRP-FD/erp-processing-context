@@ -282,6 +282,9 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension", Flags::categoryFunctional, "ignore: Do not check for unknown extensions. report: respond with HTTP 202 Accepted instead of 200 OK, when a KBV-Bundle contains unknown extensions. reject: reject with HTTP 400 Bad Request, when a KBV-Bundle contains unknown extensions"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF", "/erp/service/task/activate/kbvValidationNonLiteralAuthorRef", Flags::categoryFunctional, "Controls the Validation of the field Composition.author."}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE       ,{"ERP_SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE"      , "/erp/service/task/activate/anrChecksumValidationMode", Flags::categoryFunctional, "Mode for validating ANR/ZANR. Allowed values: warning, error."}},
+    {ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE             ,{"ERP_SERVICE_TASK_CLOSE_DEVICE_REF_TYPE" , "/erp/service/task/close/deviceRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
+    {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE" , "/erp/service/task/close/prescriptionDigestRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
+    {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID", "/erp/service/task/close/prescriptionDigestMetaVersionId", Flags::categoryFunctional, "Value for Meta.versionId in Prescription-Digest Binary-Resource. If not provided, the field will not be included."}},
     {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount", Flags::categoryFunctional, "Maximum number of communication messages per task and representative"}},
     {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey", Flags::credential|Flags::categoryEnvironment, "Key to sign the header and payload of an incoming subscription"}},
     {ConfigurationKey::PCR_SET                                        , {"ERP_PCR_SET"                                        , "/erp/service/pcr-set", Flags::categoryEnvironment, "PCR register set to be used to calculate quote (TPM)"}},
@@ -301,6 +304,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC               , {"ERP_POSTGRES_KEEPALIVES_INTERVAL_SEC"               , "/erp/postgres/keepalivesIntervalSec", Flags::categoryEnvironment, "Controls the number of seconds after which a TCP keepalive message that is not acknowledged by the server should be retransmitted. A value of zero uses the system default."}},
     {ConfigurationKey::POSTGRES_KEEPALIVES_COUNT                      , {"ERP_POSTGRES_KEEPALIVES_COUNT"                      , "/erp/postgres/keepalivesCount", Flags::categoryEnvironment, "Controls the number of TCP keepalives that can be lost before the client's connection to the server is considered dead. A value of zero uses the system default"}},
     {ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS                  , {"ERP_POSTGRES_TARGET_SESSION_ATTRS"                  , "/erp/postgres/targetSessionAttrs", Flags::categoryEnvironment, "If this parameter is set to read-write, only a connection in which read-write transactions are accepted by default is considered acceptable. The query SHOW transaction_read_only will be sent upon any successful connection; if it returns on, the connection will be closed. If multiple hosts were specified in the connection string, any remaining servers will be tried just as if the connection attempt had failed. The default value of this parameter, any, regards all connections as acceptable."}},
+    {ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES            , {"ERP_POSTGRES_CONNECTION_MAX_AGE_MINUTES"            , "/erp/postgres/connectionMaxAgeMinutes", Flags::categoryEnvironment, "After this time the database connections will be closed and re-opened."}},
     {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL              , {"ERP_E_PRESCRIPTION_SERVICE_URL"                     , "/erp/publicEPrescriptionServiceUrl", Flags::categoryEnvironment, "Used as basis for links in outgoing resources, e.g. fullUrl"}},
     {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec", Flags::categoryEnvironment, "interval for the regular health check and registration status update."}},
     {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl", Flags::categoryEnvironment, "Special handling for G0 QES certificates for which no mapping exists in the TSL. In this case a special TI OCSP proxy should be used."}},
@@ -596,7 +600,8 @@ std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInterna
 std::optional<std::string> ConfigurationBase::getOptionalStringFromJson(KeyData key) const
 {
     const auto* jsonValue = getJsonValue(key);
-    if (! jsonValue) {
+    if (! jsonValue || jsonValue->IsNull())
+    {
         return std::nullopt;
     }
     Expect3(jsonValue->IsString(), "JSON Value must be string", std::logic_error);
@@ -642,14 +647,13 @@ std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const K
 
     // Could not find the value in the environment. Now try the configuration file.
     const auto* jsonValue = getJsonValue(key);
-    if(jsonValue != nullptr)
+    if (jsonValue == nullptr || jsonValue->IsNull())
     {
-        Expect3(jsonValue->IsString(), "JSON value must be string", std::logic_error);
-        return SafeString(jsonValue->GetString());
+        // Not found in the configuration file either.
+        return std::nullopt;
     }
-
-    // Not found in the configuration file either.
-    return std::nullopt;
+    Expect3(jsonValue->IsString(), "JSON value must be string", std::logic_error);
+    return SafeString(jsonValue->GetString());
 }
 
 static bool allDefined(const std::optional<model::Timestamp>& oldValidUntil,
@@ -834,6 +838,9 @@ void Configuration::check() const
     (void) getOptional<fhirtools::Severity>(
         ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, fhirtools::Severity::error);
     (void) getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS);
+
+    (void) prescriptionDigestRefType();
+    (void) closeTaskDeviceRefType();
 }
 
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
@@ -868,6 +875,16 @@ Configuration::genericValidationMode(model::ResourceVersion::FhirProfileBundleVe
 Configuration::AnrChecksumValidationMode Configuration::anrChecksumValidationMode() const
 {
     return get<AnrChecksumValidationMode>(ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE);
+}
+
+Configuration::PrescriptionDigestRefType Configuration::prescriptionDigestRefType() const
+{
+    return get<PrescriptionDigestRefType>(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE);
+}
+
+Configuration::DeviceRefType Configuration::closeTaskDeviceRefType() const
+{
+    return get<DeviceRefType>(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE);
 }
 
 bool Configuration::timingLoggingEnabled(const std::string& category) const

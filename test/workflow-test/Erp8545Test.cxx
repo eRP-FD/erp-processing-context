@@ -97,8 +97,7 @@ TEST_P(Erp8545TestActivate, run)//NOLINT(readability-function-cognitive-complexi
     const auto body = std::regex_replace(GetParam(), prescriptionPlaceholder, bundle);
     const auto& [outerResponse, innerResponse] =
         send(RequestArguments{HttpMethod::POST, path, body, ContentMimeType::fhirXmlUtf8}
-                 .withJwt(jwtArzt())
-                 .withExpectedInnerFlowType("160"));
+                 .withJwt(jwtArzt()));
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }

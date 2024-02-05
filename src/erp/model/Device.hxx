@@ -60,7 +60,7 @@ public:
     void setName(const std::string_view& name);
     void setContact(CommunicationSystem system, const std::string_view& contact);
 
-    static std::string createReferenceString(const std::string& linkBase);
+    static std::string createReferenceUrl(const std::string& linkBase);
 
 private:
     friend Resource<Device>;

@@ -12,6 +12,7 @@
 #include "erp/service/chargeitem/ChargeItemPostHandler.hxx"
 #include "erp/tsl/OcspHelper.hxx"
 #include "erp/util/Base64.hxx"
+#include "erp/util/Demangle.hxx"
 #include "mock/util/MockConfiguration.hxx"
 
 #include <gtest/gtest.h>
@@ -512,5 +513,33 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemWhenHandedOverReference)
         ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy,
                                                            chargeItemXml, inputChargeItem.prescriptionId(),
                                                            referencedTask.secret(), HttpStatus::BadRequest));
+    }
+}
+
+TEST_F(ChargeItemPostHandlerTest, PostNonPkvFails)
+{
+    ChargeItemPostHandler handler{{}};
+    auto serviceContext = StaticData::makePcServiceContext();
+    auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
+    Header requestHeader{HttpMethod::POST, "/chargeitem/" + prescriptionId.toString(), 0, {}, HttpStatus::Unknown};
+    ServerRequest serverRequest{std::move(requestHeader)};
+    serverRequest.setQueryParameters({{"task", prescriptionId.toString()}});
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext(serviceContext, serverRequest, serverResponse, accessLog);
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    try
+    {
+        handler.handleRequest(sessionContext);
+        ADD_FAILURE() << "Expected ErpException";
+    }
+    catch (const ErpException& ex)
+    {
+        EXPECT_EQ(ex.status(), HttpStatus::BadRequest);
+        EXPECT_STREQ(ex.what(), "Referenced task is not of type PKV");
+    }
+    catch (const std::exception& ex)
+    {
+        ADD_FAILURE() << "Unexpected exception: " << util::demangle(typeid(ex).name()) << ": " << ex.what();
     }
 }

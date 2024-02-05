@@ -87,6 +87,7 @@ MockChargeItemTable::retrieveAllChargeItemsForInsurant(const ::db_model::HashedK
 
 ::db_model::ChargeItem MockChargeItemTable::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
+    Expect(id.isPkv(), "Attempt to retrieve charge information for non-PKV Prescription.");
     const auto item = ::std::find_if(::std::begin(mChargeItems), ::std::end(mChargeItems), [id](const auto& item) {
         return (::std::get<::db_model::ChargeItem>(item).prescriptionId == id);
     });

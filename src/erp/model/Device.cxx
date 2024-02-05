@@ -193,7 +193,7 @@ void Device::setContact(CommunicationSystem system, const std::string_view& cont
     setValue(contactValuePointer, contact);
 }
 
-std::string Device::createReferenceString(const std::string& linkBase)
+std::string Device::createReferenceUrl(const std::string& linkBase)
 {
     return linkBase + "/Device/" + std::to_string(Id);
 }

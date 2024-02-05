@@ -171,6 +171,12 @@ BlobDatabase& BlobCache::getBlobDatabase()
     return *mDatabase;
 }
 
+void BlobCache::recreateDatabaseConnection()
+{
+    std::unique_lock lock(mDatabaseMutex);
+    mDatabase->recreateConnection();
+}
+
 std::vector<bool> BlobCache::hasValidBlobsOfType(std::vector<BlobType>&& blobTypes) const
 {
     std::unique_lock lock(mDatabaseMutex);

@@ -96,6 +96,10 @@ public:
                     nextId = entry.id + 1;
         return nextId;
     }
+
+    void recreateConnection() override
+    {
+    }
 };
 
 

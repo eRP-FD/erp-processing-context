@@ -13,6 +13,7 @@
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/TimerJobBase.hxx"
+#include "erp/util/DurationConsumer.hxx"
 
 
 TimerJobBase::TimerJobBase (
@@ -91,6 +92,9 @@ void TimerJobBase::shutdown()
 void TimerJobBase::run (void)
 {
     ThreadNames::instance().setCurrentThreadName(mJobName);
+
+    // Set up the duration consumer that will log spend time
+    DurationConsumerGuard durationConsumerGuard(mJobName);
 
     try
     {

@@ -100,7 +100,24 @@ std::vector<db_model::Task> MockDatabase::retrieveAllTasksForPatient(const db_mo
     std::vector<db_model::Task> allTasks;
     for (const auto& table: mTasks)
     {
-        auto&& tasks = table.second.retrieveAllTasksForPatient(kvnrHashed, {});
+        auto&& tasks = table.second.retrieveAllTasksForPatient(kvnrHashed, {}, false, false, false);
+        std::move(tasks.begin(), tasks.end(), std::back_inserter(allTasks));
+    }
+    if (search.has_value())
+    {
+        return TestUrlArguments(search.value()).apply(std::move(allTasks));
+    }
+    return allTasks;
+}
+
+std::vector<db_model::Task>
+MockDatabase::retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                                          const std::optional<UrlArguments>& search)
+{
+    std::vector<db_model::Task> allTasks;
+    for (const auto& table: mTasks)
+    {
+        auto&& tasks = table.second.retrieveAllTasksForPatient(kvnrHashed, {}, true, false, true);
         std::move(tasks.begin(), tasks.end(), std::back_inserter(allTasks));
     }
     if (search.has_value())
@@ -319,6 +336,7 @@ void MockDatabase::insertTask(const model::Task& task,
     newRow.salt = db_model::Blob{derivationData.salt};
     newRow.accessCode = optionalEncrypt(taskKey, tryOptional(task, &model::Task::accessCode));
     newRow.secret = optionalEncrypt(taskKey, task.secret());
+    newRow.owner = optionalEncrypt(taskKey, task.owner());
     if (medicationDispense)
     {
         Expect3(newRow.kvnrHashed, "KVNR required to encrypt MedicationDispense", std::logic_error);
@@ -400,7 +418,6 @@ void MockDatabase::fillWithStaticData ()
     const auto taskId4 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714);
     auto task4 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId4}));
-    task4.setHealthCarePrescriptionUuid();
 
     const auto taskId5 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
     const auto task5 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
@@ -463,25 +480,21 @@ void MockDatabase::fillWithStaticData ()
     const char* const pkvKvnr1 = "X500000056";
     auto taskPkv1 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId1, .kvnr = pkvKvnr1}));
-    taskPkv1.setHealthCarePrescriptionUuid();
     // Activated task without consent:
     const auto pkvTaskId1a = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
     const char* const pkvKvnr1a = "X500000017";
     auto taskPkv1a = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId1a, .kvnr = pkvKvnr1a}));
-    taskPkv1a.setHealthCarePrescriptionUuid();
     // Activated task with consent (added below):
     const auto pkvTaskId209 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50002);
     const char* const pkvKvnr209 = "X500000029";
     auto taskPkv209 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId209, .kvnr = pkvKvnr209}));
-    taskPkv209.setHealthCarePrescriptionUuid();
     // Activated task without consent:
     const auto pkvTaskId209a = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50003);
     const char* const pkvKvnr209a = "X500000031";
     auto taskPkv209a = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId209a, .kvnr = pkvKvnr209a}));
-    taskPkv209a.setHealthCarePrescriptionUuid();
     // Created task:
 
     const auto pkvTaskId2 =
@@ -697,9 +710,10 @@ void MockDatabase::updateTask(const model::PrescriptionId& taskId,
 void MockDatabase::updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                              model::Task::Status taskStatus,
                                              const model::Timestamp& lastModifiedDate,
-                                             const std::optional<db_model::EncryptedBlob>& taskSecret)
+                                             const std::optional<db_model::EncryptedBlob>& taskSecret,
+                                             const std::optional<db_model::EncryptedBlob>& owner)
 {
-    return mTasks.at(taskId.type()).updateTaskStatusAndSecret(taskId, taskStatus, lastModifiedDate, taskSecret);
+    return mTasks.at(taskId.type()).updateTaskStatusAndSecret(taskId, taskStatus, lastModifiedDate, taskSecret, owner);
 }
 
 void MockDatabase::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
@@ -766,6 +780,11 @@ std::optional<db_model::Task> MockDatabase::retrieveTaskAndReceipt(const model::
 std::optional<db_model::Task> MockDatabase::retrieveTaskAndPrescription(const model::PrescriptionId& taskId)
 {
     return mTasks.at(taskId.type()).retrieveTaskAndPrescription(taskId);
+}
+
+std::optional<db_model::Task> MockDatabase::retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId)
+{
+    return mTasks.at(taskId.type()).retrieveTaskWithSecretAndPrescription(taskId);
 }
 
 std::optional<db_model::Task> MockDatabase::retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId)

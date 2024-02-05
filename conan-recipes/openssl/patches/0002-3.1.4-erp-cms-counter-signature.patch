@@ -1,13 +1,13 @@
-From a548039b18c428f8b5e0489c06c4d84f33ef475a Mon Sep 17 00:00:00 2001
+From dcafe2c658a52d7fd13333f9d4b76e612517dd49 Mon Sep 17 00:00:00 2001
 From: redacted <redacted>
-Date: Tue, 6 Jun 2023 13:30:32 +0200
-Subject: [PATCH 2/2] 3.1.1-erp-cms-counter-signature.patch
+Date: Mon, 20 Nov 2023 12:41:51 +0100
+Subject: [PATCH 2/2] 3.1.4-erp-cms-counter-signature.patch
 
 ---
  crypto/cms/cms_att.c     |   3 +-
- crypto/cms/cms_sd.c      | 238 ++++++++++++++++++++++++++++++++++-----
+ crypto/cms/cms_sd.c      | 237 ++++++++++++++++++++++++++++++++++-----
  include/openssl/cms.h.in |   5 +
- 3 files changed, 218 insertions(+), 28 deletions(-)
+ 3 files changed, 217 insertions(+), 28 deletions(-)
 
 diff --git a/crypto/cms/cms_att.c b/crypto/cms/cms_att.c
 index 5b99516b29..66af393a48 100644
@@ -24,7 +24,7 @@ index 5b99516b29..66af393a48 100644
                                 | CMS_ATTR_F_ONLY_ONE
                                 | CMS_ATTR_F_ONE_ATTR_VALUE
 diff --git a/crypto/cms/cms_sd.c b/crypto/cms/cms_sd.c
-index fcaffea003..a3a31a2a30 100644
+index cfac556957..5a12a3778c 100644
 --- a/crypto/cms/cms_sd.c
 +++ b/crypto/cms/cms_sd.c
 @@ -333,23 +333,15 @@ static int ossl_cms_add1_signing_cert_v2(CMS_SignerInfo *si,
@@ -57,20 +57,25 @@ index fcaffea003..a3a31a2a30 100644
      si = M_ASN1_new_of(CMS_SignerInfo);
      if (!si)
          goto merr;
-@@ -383,28 +375,46 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+@@ -383,7 +375,7 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
      if (!ossl_cms_set1_SignerIdentifier(si->sid, signer, type, ctx))
          goto err;
  
 -    if (md == NULL) {
 +    if (*md == NULL) {
          int def_nid;
-         if (EVP_PKEY_get_default_digest_nid(pk, &def_nid) <= 0)
+ 
+         if (EVP_PKEY_get_default_digest_nid(pk, &def_nid) <= 0) {
+@@ -391,26 +383,43 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+                            "pkey nid=%d", EVP_PKEY_get_id(pk));
              goto err;
+         }
 -        md = EVP_get_digestbynid(def_nid);
 -        if (md == NULL) {
 +        *md = EVP_get_digestbynid(def_nid);
 +        if (*md == NULL) {
-             ERR_raise(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST);
+             ERR_raise_data(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST,
+                            "default md nid=%d", def_nid);
              goto err;
          }
      }
@@ -80,13 +85,12 @@ index fcaffea003..a3a31a2a30 100644
 -        goto err;
 -    }
 +    X509_ALGOR_set_md(si->digestAlgorithm, *md);
++    return si;
  
 -    if (md == NULL) {
 -        ERR_raise(ERR_LIB_CMS, CMS_R_NO_DIGEST_SET);
 -        goto err;
 -    }
-+    return si;
-+
 + merr:
 +    ERR_raise(ERR_LIB_CMS, ERR_R_MALLOC_FAILURE);
 + err:
@@ -104,7 +108,7 @@ index fcaffea003..a3a31a2a30 100644
 +    X509_ALGOR *alg = NULL;
 +    int i = 0, type = 0;
 +    const CMS_CTX *ctx = ossl_cms_get0_cmsctx(cms);
-+
+ 
 +    if (!X509_check_private_key(signer, pk)) {
 +        ERR_raise(ERR_LIB_CMS, CMS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE);
 +        return NULL;
@@ -113,10 +117,11 @@ index fcaffea003..a3a31a2a30 100644
 +    if (!sd)
 +        goto err;
 +    si = cms_SignerInfo_init(sd, signer, pk, &md, ctx, flags);
- 
++ 
      /* See if digest is present in digestAlgorithms */
      for (i = 0; i < sk_X509_ALGOR_num(sd->digestAlgorithms); i++) {
-@@ -1120,3 +1130,179 @@ int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
+         const ASN1_OBJECT *aoid;
+@@ -1128,3 +1137,179 @@ int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
          return 0;
      return 1;
  }
@@ -320,5 +325,5 @@ index cb24d8238e..18c3e1430c 100644
  # define CMS_R_UNKNOWN_DIGEST_ALGORITM CMS_R_UNKNOWN_DIGEST_ALGORITHM
  # define CMS_R_UNSUPPORTED_RECPIENTINFO_TYPE \
 -- 
-2.31.1
+2.39.3
 

@@ -55,7 +55,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "18";
+    static constexpr const char* expectedSchemaVersion = "19";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey
@@ -105,10 +105,14 @@ public:
 
     virtual std::tuple<std::optional<model::Task>, std::optional<model::Bundle>> retrieveTaskAndReceipt(const model::PrescriptionId& taskId) = 0;
     virtual std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) = 0;
+    virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>>
+    retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId) = 0;
     [[nodiscard]] virtual std::tuple<std::optional<model::Task>, std::optional<model::Binary>, std::optional<model::Bundle>>
     retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) = 0;
 
-    virtual std::vector<model::Task> retrieveAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
+    virtual std::vector<model::Task> retrieveAllTasksForPatient(const model::Kvnr& kvnr,
+                                                                const std::optional<UrlArguments>& search) = 0;
+    virtual std::vector<model::Task> retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     // @return <medications, hasNextPage>

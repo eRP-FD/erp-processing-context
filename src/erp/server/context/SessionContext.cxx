@@ -48,3 +48,13 @@ const model::Timestamp& SessionContext::sessionTime() const
 {
     return mSessionTime;
 }
+
+void SessionContext::addOuterResponseHeaderField(std::string_view key, std::string_view value)
+{
+    mOuterResponseHeaderFields.emplace(key, value);
+}
+
+const Header::keyValueMap_t& SessionContext::getOuterResponseHeaderFields() const
+{
+    return mOuterResponseHeaderFields;
+}

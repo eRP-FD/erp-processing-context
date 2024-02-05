@@ -73,7 +73,13 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     // The prescriptionId will be persisted during $activate inside the task bundle.
     task.setPrescriptionId(prescriptionId);
 
-    session.accessLog.prescriptionId(prescriptionId.toString());
+    session.accessLog.prescriptionId(prescriptionId);
+
+    A_23090_02.start("\"vnr\": $vorgangsnummer: Task-ID im Fachdienst, Datentyp String");
+    session.addOuterResponseHeaderField(Header::PrescriptionId, prescriptionId.toString());
+    A_23090_02.finish();
+    session.addOuterResponseHeaderField(Header::InnerRequestFlowtype,
+                                        std::to_string(magic_enum::enum_integer(prescriptionId.type())));
 
     A_19114.start("return the created Task");
     makeResponse(session, HttpStatus::Created, &task);

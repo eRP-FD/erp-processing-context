@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     GLogConfiguration::init_logging(argv[0]);
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
 
-    std::string_view supportedProfiles = old_profiles;
+    std::string_view supportedProfiles = patched_profiles;
     std::optional<size_t> instance;
     for (int i = 0; i < argc; ++i)
     {

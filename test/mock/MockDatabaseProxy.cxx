@@ -128,6 +128,14 @@ std::vector<db_model::Task> MockDatabaseProxy::retrieveAllTasksForPatient(const 
     return mDatabase.retrieveAllTasksForPatient(kvnrHashed, search);
 }
 
+std::vector<db_model::Task>
+MockDatabaseProxy::retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                                               const std::optional<UrlArguments>& search)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase.retrieveAll160TasksWithAccessCode(kvnrHashed, search);
+}
+
 uint64_t MockDatabaseProxy::countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                                     const std::optional<UrlArguments>& search)
 {
@@ -175,6 +183,13 @@ std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndPrescription(con
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
     return mDatabase.retrieveTaskAndPrescription(taskId);
+}
+
+std::optional<db_model::Task>
+MockDatabaseProxy::retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase.retrieveTaskWithSecretAndPrescription(taskId);
 }
 
 std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId)
@@ -244,10 +259,11 @@ void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(const model::Prescri
 void MockDatabaseProxy::updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                                   model::Task::Status status,
                                                   const model::Timestamp& lastModifiedDate,
-                                                  const std::optional<db_model::EncryptedBlob>& secret)
+                                                  const std::optional<db_model::EncryptedBlob>& secret,
+                                                  const std::optional<db_model::EncryptedBlob>& owner)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskStatusAndSecret(taskId, status, lastModifiedDate, secret);
+    mDatabase.updateTaskStatusAndSecret(taskId, status, lastModifiedDate, secret, owner);
 }
 std::tuple<BlobId, db_model::Blob, model::Timestamp> MockDatabaseProxy::getTaskKeyData(const model::PrescriptionId& taskId)
 {

@@ -17,7 +17,7 @@
     },
     {
       "url": "https://gematik.de/fhir/StructureDefinition/ExpiryDate",
-      "valueDate": "2022-03-01"
+      "valueDate": "###EXPIRY_DATE###"
     },
     {
       "url": "https://gematik.de/fhir/StructureDefinition/AcceptDate",
@@ -63,6 +63,12 @@
       "text": "Öffentliche Apotheke"
     }
   ],
+  "owner": {
+    "identifier": {
+      "system": "https://gematik.de/fhir/sid/telematik-id",
+      "value": "###OWNING_PHARMACY###"
+    }
+  },
   "input": [
     {
       "type": {
@@ -74,7 +80,7 @@
         ]
       },
       "valueReference": {
-        "reference": "9774f67f-a238-4daf-b4e6-679deeef3811"
+        "reference": "###PRESCRIPTION_UUID###"
       }
     },
     {

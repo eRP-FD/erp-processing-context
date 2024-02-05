@@ -22,7 +22,6 @@ const std::string binary_template = R"--(
   "resourceType": "Binary",
   "id": "",
   "meta": {
-    "versionId": "1",
     "profile": [
       ""
     ]
@@ -50,12 +49,13 @@ void initTemplates()
 rapidjson::Pointer idPointer("/id");
 rapidjson::Pointer contentTypePointer("/contentType");
 rapidjson::Pointer dataPointer("/data");
+rapidjson::Pointer metaVersionIdPointer{"/meta/versionId"};
 
 }// anonymous namespace
 
-
 Binary::Binary(std::string_view id, std::string_view data, const Type type,
-               ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+               ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion,
+               const std::optional<std::string_view>& metaVersionId)
     : Resource<Binary>(
           [type, profileVersion]() -> std::string_view {
               switch (type)
@@ -91,6 +91,10 @@ Binary::Binary(std::string_view id, std::string_view data, const Type type,
         case Type::Digest:
             setValue(contentTypePointer, "application/octet-stream");
             break;
+    }
+    if (metaVersionId)
+    {
+        setValue(metaVersionIdPointer, *metaVersionId);
     }
 }
 

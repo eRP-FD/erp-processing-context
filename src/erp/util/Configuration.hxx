@@ -64,6 +64,9 @@ enum class ConfigurationKey
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF,
     SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE,
+    SERVICE_TASK_CLOSE_DEVICE_REF_TYPE,
+    SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE,
+    SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID,
     SERVICE_COMMUNICATION_MAX_MESSAGES,
     SERVICE_SUBSCRIPTION_SIGNING_KEY,
     PCR_SET,
@@ -83,6 +86,7 @@ enum class ConfigurationKey
     POSTGRES_KEEPALIVES_INTERVAL_SEC,
     POSTGRES_KEEPALIVES_COUNT,
     POSTGRES_TARGET_SESSION_ATTRS,
+    POSTGRES_CONNECTION_MAX_AGE_MINUTES,
     PUBLIC_E_PRESCRIPTION_SERVICE_URL,
     REGISTRATION_HEARTBEAT_INTERVAL_SEC,
     TSL_TI_OCSP_PROXY_URL,
@@ -476,6 +480,16 @@ public:
     enum class AnrChecksumValidationMode {
         warning, error,
     };
+    enum class PrescriptionDigestRefType
+    {
+        relative,
+        uuid
+    };
+    enum class DeviceRefType
+    {
+        url,
+        uuid
+    };
 
     static const Configuration& instance();
     void check() const;
@@ -487,6 +501,8 @@ public:
     fhirtools::ValidatorOptions
     defaultValidatorOptions(model::ResourceVersion::FhirProfileBundleVersion, SchemaType) const;
     AnrChecksumValidationMode anrChecksumValidationMode() const;
+    [[nodiscard]] PrescriptionDigestRefType prescriptionDigestRefType() const;
+    [[nodiscard]] DeviceRefType closeTaskDeviceRefType() const;
 };
 
 

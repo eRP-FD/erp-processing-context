@@ -8,12 +8,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_BINARY_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_BINARY_HXX
 
-#include "erp/model/Resource.hxx"
 #include "erp/model/PrescriptionId.hxx"
+#include "erp/model/Resource.hxx"
 
 #include <rapidjson/document.h>
-
 #include <optional>
+#include <string_view>
 
 namespace model
 {
@@ -32,8 +32,10 @@ public:
         PKCS7
     };
 
-    Binary(std::string_view id, std::string_view data, const Type type = Type::PKCS7, ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
+    Binary(std::string_view id, std::string_view data, const Type type = Type::PKCS7,
+           ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
+               model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>(),
+           const std::optional<std::string_view>& metaVersionId = "1");
 
     [[nodiscard]] std::optional<std::string_view> id() const;
     [[nodiscard]] std::optional<std::string_view> data() const;

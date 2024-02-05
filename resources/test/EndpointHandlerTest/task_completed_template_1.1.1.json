@@ -21,7 +21,7 @@
     },
     {
       "url": "https://gematik.de/fhir/StructureDefinition/AcceptDate",
-      "valueDate": "2021-12-29"
+      "valueDate": "###EXPIRY_DATE###"
     }
   ],
   "identifier": [
@@ -69,7 +69,7 @@
         ]
       },
       "valueReference": {
-        "reference": "c8010000-0000-0000-0001-000000000000"
+        "reference": "###PRESCRIPTION_UUID###"
       }
     },
     {

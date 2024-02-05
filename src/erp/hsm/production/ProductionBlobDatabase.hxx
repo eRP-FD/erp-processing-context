@@ -56,6 +56,7 @@ public:
         std::unique_ptr<pqxx::work> mWork;
     };
     Transaction createTransaction(void) const;
+    void recreateConnection() override;
 
 private:
     mutable PostgresConnection mConnection;

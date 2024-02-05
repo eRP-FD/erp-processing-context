@@ -83,6 +83,18 @@ public:
     std::optional<std::string> getSessionIdentifier (void) const;
 
     /**
+     * @brief
+     * Default implementation of DurationTimer::Receiver
+     */
+    static void defaultReceiver(
+        std::chrono::steady_clock::duration duration,
+        const std::string& category,
+        const std::string& description,
+        const std::string& sessionIdentifier,
+        const std::unordered_map<std::string, std::string>& keyValueMap,
+        const std::optional<JsonLog::LogReceiver>& logReceiverOverride);
+
+    /**
      * Return a timer that measures how long it takes until its destructor is called.
      */
     DurationTimer getTimer(const std::string& category, const std::string& description,
@@ -104,7 +116,8 @@ class DurationConsumerGuard
 public:
     DurationConsumerGuard (
         const std::string& sessionIdentifier,
-        DurationTimer::Receiver&& receiver);
+        DurationTimer::Receiver&& receiver = nullptr);
+
     ~DurationConsumerGuard (void);
 };
 

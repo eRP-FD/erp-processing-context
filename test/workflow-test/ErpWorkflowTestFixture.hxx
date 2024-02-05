@@ -101,6 +101,7 @@ public:
     class RequestArguments
     {
     public:
+        RequestArguments() = default;
         RequestArguments(HttpMethod _method, std::string _vauPath, std::string _clearTextBody,
                          std::string _contentType = "", bool _skipOuterResponseVerification = true)
             : method(_method)
@@ -109,7 +110,31 @@ public:
             , contentType(std::move(_contentType))
             , skipOuterResponseVerification(_skipOuterResponseVerification)
         {}
-        RequestArguments&& withJwt(JWT _jwt) && { jwt = std::move(_jwt); return std::move(*this); }
+        RequestArguments&& withHttpMethod(HttpMethod _method) &&
+        {
+            method = std::move(_method);
+            return std::move(*this);
+        }
+        RequestArguments&& withVauPath(std::string _vauPath) &&
+        {
+            vauPath = std::move(_vauPath);
+            return std::move(*this);
+        }
+        RequestArguments&& withBody(std::string _clearTextBody) &&
+        {
+            clearTextBody = std::move(_clearTextBody);
+            return std::move(*this);
+        }
+        RequestArguments&& withContentType(std::string _contentType) &&
+        {
+            contentType = std::move(_contentType);
+            return std::move(*this);
+        }
+        RequestArguments&& withJwt(JWT _jwt) &&
+        {
+            jwt = std::move(_jwt);
+            return std::move(*this);
+        }
         RequestArguments&& withHeader(const std::string& name, const std::string& value) &&
         {
             headerFields.emplace(name, value);
@@ -118,11 +143,6 @@ public:
         RequestArguments&& withExpectedInnerStatus(HttpStatus innerStatus)
         {
             expectedInnerStatus = innerStatus;
-            return std::move(*this);
-        }
-        RequestArguments&& withExpectedInnerFlowType(const std::string& innerFlowType)
-        {
-            expectedInnerFlowType = innerFlowType;
             return std::move(*this);
         }
         RequestArguments&& withQueryParams(std::unordered_map<std::string, std::string> queryParamsArg)
@@ -152,7 +172,7 @@ public:
             return result;
         }
 
-        HttpMethod method;
+        HttpMethod method{HttpMethod::UNKNOWN};
         std::string vauPath;
         std::unordered_map<std::string, std::string> queryParams;
         std::string clearTextBody;
@@ -163,14 +183,22 @@ public:
         std::string overrideExpectedInnerOperation;
         std::string overrideExpectedInnerRole;
         std::string overrideExpectedInnerClientId;
-        std::string expectedInnerFlowType = "XXX";
+        std::string overrideExpectedLeips;
         HttpStatus expectedInnerStatus = HttpStatus::Unknown;
+        std::string expectedMvoNumber = "XXX";
+        std::string expectedLANR = "XXX";
+        std::string expectedZANR = "XXX";
+        std::string overrideExpectedPrescriptionId;
 
         RequestArguments(const RequestArguments&) = default;
         RequestArguments(RequestArguments&&) = default;
         RequestArguments& operator= (const RequestArguments&) = delete;
         RequestArguments& operator= (RequestArguments&&) = delete;
     };
+
+    RequestArguments mActivateTaskRequestArgs;
+    RequestArguments mAcceptTaskRequestArgs;
+    RequestArguments mCloseTaskRequestArgs;
 
     /// @returns {outerResponse, innerResponse}
     std::tuple<ClientResponse, ClientResponse> send(
@@ -241,8 +269,7 @@ public:
     void taskReject(const std::string& prescriptionIdString,
         const std::string& secret,
         HttpStatus expectedInnerStatus = HttpStatus::NoContent,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
-        const std::string& expectedFlowType = "160");
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::optional<model::Bundle> taskGetId(const model::PrescriptionId& prescriptionId,
         const std::string& kvnrOrTid,
@@ -491,6 +518,8 @@ private:
         const std::function<void(std::string&)>& manipEncryptedInnerRequest = {},
         const std::function<void(Header&)>& manipInnerRequestHeader = {});
     void validateInternal(const ClientResponse& innerResponse);
+    void verifyBdeV2Headers(const Header& outerResponseHeader, const ClientResponse& innerResponse,
+                            const RequestArguments& args) const;
     virtual std::string creatTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
                                         const JWT& jwt);
     virtual std::string creatUnvalidatedTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
@@ -656,10 +685,9 @@ private:
         const std::string& kvnr);
 
     static std::string toExpectedOperation(const RequestArguments& args);
-
     std::string toExpectedRole(const RequestArguments& args) const;
-
     std::string toExpectedClientId(const ErpWorkflowTestBase::RequestArguments& args) const;
+    std::string toExpectedLeips(const RequestArguments& args) const;
 
 public:
 

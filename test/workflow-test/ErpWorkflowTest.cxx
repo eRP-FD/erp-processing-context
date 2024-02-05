@@ -145,16 +145,14 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_NO_FATAL_FAILURE(
         std::tie(std::ignore, serverResponse) =
             send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                .withExpectedInnerFlowType(std::to_string(magic_enum::enum_integer(GetParam())))));
+                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK) << serverResponse.getBody();
 
     // Test that any further close request is denied.
     ASSERT_NO_FATAL_FAILURE(
         std::tie(std::ignore, serverResponse) =
             send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                .withExpectedInnerFlowType(std::to_string(magic_enum::enum_integer(GetParam())))));
+                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Forbidden);
 }
 
@@ -205,6 +203,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
         ASSERT_TRUE(task);
         EXPECT_ANY_THROW((void)task->accessCode());
         EXPECT_FALSE(task->secret().has_value());
+        EXPECT_FALSE(task->owner().has_value());
     }
 
     // Check audit events
@@ -803,7 +802,7 @@ TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
     EXPECT_EQ(bundle.getResourcesByType<model::Task>("Task").size(), taskNum);
     EXPECT_EQ(bundle.getTotalSearchMatches(), taskNum);
 
-    A_19027_03.test("Retrieve list of cancelled tasks");
+    A_19027_04.test("Retrieve list of cancelled tasks");
     bundle = taskGet(kvnr, "status=cancelled").value();
     const auto tasks = bundle.getResourcesByType<model::Task>("Task");
     EXPECT_EQ(tasks.size(), taskNum / 2);
@@ -1272,11 +1271,15 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
                                                                         "    </parameter>\n"
                                                                         "</Parameters>\n";
     std::string activatePath = "/Task/" + (*prescriptionId).toString() + "/$activate";
-    ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(RequestArguments{HttpMethod::POST, activatePath, activateBody, "application/fhir+xml"}
-                .withJwt(jwt)
-                .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                .withHeader("X-AccessCode", accessCode)
-                .withExpectedInnerFlowType("160")));
+    ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
+                                send(RequestArguments{mActivateTaskRequestArgs}
+                                         .withHttpMethod(HttpMethod::POST)
+                                         .withVauPath(activatePath)
+                                         .withBody(activateBody)
+                                         .withContentType("application/fhir+xml")
+                                         .withJwt(jwt)
+                                         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                         .withHeader("X-AccessCode", accessCode)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *getXmlValidator(),
                                                 *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
@@ -1323,6 +1326,8 @@ TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWh
     ASSERT_EQ(tasks.size(), 1);
     const auto secret = tasks[0].secret();
     ASSERT_TRUE(secret.has_value());
+    ASSERT_TRUE(tasks[0].owner().has_value());
+    ASSERT_EQ(tasks[0].owner(), jwtApotheke().stringForClaim(JWT::idNumberClaim));
 
     // Invalid format of prescriptionId for Medication dispense, will be rejected by schema check:
     ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidPrescriptionId(
@@ -1508,6 +1513,8 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     args.overrideExpectedInnerOperation = "UNKNOWN";
     args.overrideExpectedInnerRole = "XXX";
     args.overrideExpectedInnerClientId = "XXX";
+    args.overrideExpectedLeips = "XXX";
+    args.overrideExpectedPrescriptionId = "XXX";
     ClientResponse innerResponse;
 
     // Send request with missing ContentLength header
@@ -1557,7 +1564,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 999999);
     const std::string activePath = "/Task/" + prescriptionId_apothekenpflichigeArzneimittel.toString() + "/$activate";
     RequestArguments args{HttpMethod::POST, activePath, {}};
-    args.withExpectedInnerFlowType("160");
+    args.jwt = JwtBuilder::testBuilder().makeJwtArzt();
 
     // Send request with PrescriptionType =  apothekenpflichigeArzneimittel
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
@@ -1569,7 +1576,6 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     const model::PrescriptionId prescriptionId_direkteZuweisung =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 999999);
     args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString() + "/$activate";
-    args.withExpectedInnerFlowType("169");
 
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
     EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
@@ -1577,6 +1583,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
 
     // Send request with operation $reject
     args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString() + "/$reject";
+    args.jwt = JwtBuilder::testBuilder().makeJwtApotheke();
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
     EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
               std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(model::PrescriptionType::direkteZuweisung)));
@@ -1584,9 +1591,11 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     // Send request with HttpMethod::GET
     args.vauPath = "/MedicationDispense/" + prescriptionId_direkteZuweisung.toString();
     args.method = HttpMethod::GET;
-    args.withExpectedInnerFlowType("XXX");
+    args.jwt = defaultJwt();
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
-    EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value_or("XXX"),"XXX");
+    EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value_or("XXX"),
+              std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(
+                  model::PrescriptionType::direkteZuweisung)));
 }
 
 TEST_P(ErpWorkflowTestP, OperationOutcomeIncodeValidation)// NOLINT

@@ -34,6 +34,7 @@ public:
 
     void healthCheck() override;
     std::optional<DatabaseConnectionInfo> getConnectionInfo() const override;
+    static void recreateConnection();
 
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                    model::Task::Status taskStatus,
@@ -51,7 +52,8 @@ public:
     void updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                    model::Task::Status status,
                                    const model::Timestamp& lastModifiedDate,
-                                   const std::optional<db_model::EncryptedBlob>& secret) override;
+                                   const std::optional<db_model::EncryptedBlob>& secret,
+                                   const std::optional<db_model::EncryptedBlob>& owner) override;
     void activateTask(const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr,
                       const db_model::HashedKvnr& hashedKvnr,
@@ -92,9 +94,15 @@ public:
     [[nodiscard]]
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId) override;
     [[nodiscard]]
-    std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
+    std::optional<db_model::Task> retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId) override;
     [[nodiscard]]
-    std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed, const std::optional<UrlArguments>& search) override;
+    std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId) override;
+    [[nodiscard]] std::vector<db_model::Task>
+    retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
+                               const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] std::vector<db_model::Task>
+    retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                      const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]

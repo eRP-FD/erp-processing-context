@@ -103,8 +103,9 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     const auto& medicationRequest = medicationRequests[0];
     bool isMvo = medicationRequest.isMultiplePrescription();
     std::optional<date::year_month_day> mvoEndDate = medicationRequest.mvoEndDate();
-    checkMultiplePrescription(medicationRequest.getExtension<model::KBVMultiplePrescription>(), prescriptionId.type(),
-                              legalBasisCode, medicationRequest.authoredOn());
+    const auto mvoExtension = medicationRequest.getExtension<model::KBVMultiplePrescription>();
+    fillMvoBdeV2(mvoExtension, session);
+    checkMultiplePrescription(mvoExtension, prescriptionId.type(), legalBasisCode, medicationRequest.authoredOn());
 
     A_22231.start("check narcotics and Thalidomid");
     checkNarcoticsMatches(prescriptionBundle);
@@ -153,7 +154,7 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     checkValidCoverage(prescriptionBundle, prescriptionId.type());
 
-    if (! checkPractitioner(prescriptionBundle))
+    if (! checkPractitioner(prescriptionBundle, session))
     {
         A_24031.start("Use configuration value for ANR handling");
         const auto* errorMessage = "Ungültige Arztnummer (LANR oder ZANR): Die übergebene Arztnummer entspricht nicht "
@@ -396,8 +397,7 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
         const auto& fhirStructureRepo = Fhir::instance().structureRepository(fhirProfileBundleVersion);
         const auto genericValidationMode = config.genericValidationMode(fhirProfileBundleVersion);
         const auto onUnknownExtension = config.kbvValidationOnUnknownExtension();
-
-
+        factory.enableAdditionalValidation(false);
         if (onUnknownExtension != OnUnknownExtension::ignore &&
             genericValidationMode == GenericValidationMode::require_success)
         {
@@ -416,7 +416,9 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
         {
             status = checkExtensions(factory, onUnknownExtension, genericValidationMode, fhirStructureRepo, valOpts);
         }
-        return {status, std::move(factory).getNoValidation()};
+        std::tuple<HttpStatus, model::KbvBundle> result{status, std::move(factory).getNoValidation()};
+        get<model::KbvBundle>(result).additionalValidation();
+        return result;
     }
     catch (const model::ModelException& er)
     {
@@ -603,7 +605,7 @@ void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, con
 }
 
 
-bool ActivateTaskHandler::checkPractitioner(const model::KbvBundle& bundle)
+bool ActivateTaskHandler::checkPractitioner(const model::KbvBundle& bundle, PcSessionContext& session)
 {
     const auto kbvPractitioners = bundle.getResourcesByType<model::KbvPractitioner>();
     for (const auto& practitioner : kbvPractitioners)
@@ -612,12 +614,20 @@ bool ActivateTaskHandler::checkPractitioner(const model::KbvBundle& bundle)
         auto anr = practitioner.anr();
         if (anr.has_value() && ! anr->validChecksum())
         {
+            A_23090_02.start("\"anr\": $anrvalue: Der Wert des Feldes identifier:ANR.value bei aufgetretenem "
+                             "Prüfungsfehler gem. A_24032, Datentyp Integer");
+            session.addOuterResponseHeaderField(Header::ANR, anr->id());
+            A_23090_02.finish();
             return false;
         }
 
         auto zanr = practitioner.zanr();
         if (zanr.has_value() && ! zanr->validChecksum())
         {
+            A_23090_02.start("\"zanr\": $zanrvalue: Der Wert des Feldes identifier:ZANR.value bei aufgetretenem "
+                             "Prüfungsfehler gem. A_24032, Datentyp Integer");
+            session.addOuterResponseHeaderField(Header::ZANR, zanr->id());
+            A_23090_02.finish();
             return false;
         }
         A_23891.finish();

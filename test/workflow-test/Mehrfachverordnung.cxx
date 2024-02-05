@@ -63,6 +63,11 @@ TEST_F(MVO_A_22628, Step_01_Denominator_5)
     const auto mvoPrescription = kbvBundleMvoXml(
         {.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .numerator = 3, .denominator = 5});
 
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
+
     std::string issueText = "FHIR-Validation error";
     std::optional<std::string> issueDiagnostics = "Mehrfachverordnung: Nenner muss den Wert 2, 3 oder 4 haben";
     if (serverUsesOldProfile())
@@ -89,6 +94,10 @@ TEST_F(MVO_A_22628, Step_02_Numerator_5)
     TestStep(A_22628, "ERP-A_22628.02 - Task aktivieren - Mehrfachverordnung - Numerator gleich 5");
     const auto mvoPrescription = kbvBundleMvoXml(
         {.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .numerator = 5, .denominator = 4});
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
 
     std::string issueText = "FHIR-Validation error";
@@ -121,6 +130,10 @@ TEST_F(MVO_A_22704, Step_01_Numerator_0)
     TestStep(A_22704, "ERP-A_22704.01 - Task aktivieren - Mehrfachverordnung - Numerator gleich 0");
     const auto mvoPrescription = kbvBundleMvoXml(
         {.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .numerator = 0, .denominator = 3});
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
 
     std::string issueText = "FHIR-Validation error";
     std::optional<std::string> issueDiagnostics = "Mehrfachverordnung: Zaehler muss den Wert 1, 2, 3 oder 4 haben";
@@ -150,6 +163,10 @@ TEST_F(MVO_A_22629, Step_01_Denominator_1)
     TestStep(A_22629, "ERP-A_22629.01 - Task aktivieren - Mehrfachverordnung - Denominator gleich 1");
     const auto mvoPrescription = kbvBundleMvoXml(
         {.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .numerator = 1, .denominator = 1});
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
     std::string issueText = "FHIR-Validation error";
     std::optional<std::string> issueDiagnostics = "Mehrfachverordnung: Nenner muss den Wert 2, 3 oder 4 haben";
     if (serverUsesOldProfile())
@@ -181,6 +198,10 @@ TEST_F(MVO_A_22630, Step_01_Numerator_greater_Denominator)
              "ERP-A_22630.01 - E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Numerator > Denominator");
     const auto mvoPrescription = kbvBundleMvoXml(
         {.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .numerator = 4, .denominator = 3});
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
     std::string issueText = "FHIR-Validation error";
     std::optional<std::string> issueDiagnostics =
         "Mehrfachverordnung: Der Zaehler (Nummer der Teilverordnung) darf nicht größer als "
@@ -257,6 +278,10 @@ TEST_F(MVO_A_22631, Step_02_Nummerierung)
                         </valueRatio>
                     </extension>)";
     auto mvoPrescription = kbvBundleXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn});
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
 
     constexpr std::string_view multiplePrescriptionExtStart =
         R"(<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription">)";
@@ -393,6 +418,10 @@ TEST_F(MVO_A_22634, Step_01_MissingStart)
     TestStep(A_22634, "ERP-A_22634.01 - Task aktivieren - Mehrfachverordnung - Beginn Einlösefrist nicht angegeben");
     const auto mvoPrescription =
         kbvBundleMvoXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .redeemPeriodStart = {}});
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
 
     std::string issueText = "FHIR-Validation error";
@@ -440,6 +469,7 @@ TEST_F(MVO_A_22635Test, Step_01_Zeitraum_InvalidDate)
                                             .authoredOn = authoredOn,
                                             .redeemPeriodStart = "2021-01-01",
                                             .redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
+    mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
 
     std::string issueText = "FHIR-Validation error";
     std::optional<std::string> issueDiagnostics =
@@ -530,6 +560,10 @@ TEST_F(MVO_A_23164, Step_01_EndDateBeforeStartDateNoValidation_BadRequest)
                                                   .authoredOn = authoredOn,
                                                   .redeemPeriodStart = startDate.toGermanDate(),
                                                   .redeemPeriodEnd = endDate.toGermanDate()});
+    if (!serverUsesOldProfile())
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
 
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
@@ -606,7 +640,7 @@ class MVO_A_23539Test : public Mehrfachverordnung
 
 TEST_F(MVO_A_23539Test, Step_01_PastEndDate)
 {
-    TestStep(A_23539, "ERP-A_23539.01 Apotheker ruft Accept Task für eine MVO mit End-Datum in der Vergangenheit");
+    TestStep(A_23539_01, "ERP-A_23539.01 Apotheker ruft Accept Task für eine MVO mit End-Datum in der Vergangenheit");
     using namespace std::chrono_literals;
     const auto yesterday = authoredOn - 24h;
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
@@ -615,16 +649,22 @@ TEST_F(MVO_A_23539Test, Step_01_PastEndDate)
                                                   .redeemPeriodEnd = yesterday.toGermanDate()});
     std::string yesterdayStr = yesterday.toGermanDateFormat();
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
-    ASSERT_NO_FATAL_FAILURE(
-        taskActivate(task->prescriptionId(), task->accessCode(), toCadesBesSignature(mvoPrescription, yesterday)));
+    std::optional<std::variant<model::Task, model::OperationOutcome>> result;
+    ASSERT_NO_FATAL_FAILURE( result =
+            taskActivate(task->prescriptionId(), task->accessCode(), toCadesBesSignature(mvoPrescription, yesterday))
+        );
+    ASSERT_TRUE(std::holds_alternative<model::Task>(*result));
+    const auto& resultTask = std::get<model::Task>(*result);
+    EXPECT_EQ(resultTask.expiryDate().toGermanDateFormat(), yesterdayStr);
+    mAcceptTaskRequestArgs.expectedMvoNumber = "XXX";
     ASSERT_NO_FATAL_FAILURE(taskAccept(task->prescriptionId(), std::string{task->accessCode()}, HttpStatus::Forbidden,
                                        model::OperationOutcome::Issue::Type::forbidden,
-                                       "Teilverordnung bis " + yesterdayStr + " einlösbar."));
+                                       "Verordnung bis " + yesterdayStr + " einlösbar."));
 }
 
 TEST_F(MVO_A_23539Test, Step_02_TodayEndDate)
 {
-    TestStep(A_23539, "ERP-A_23539.02 Apotheker ruft Accept Task für eine MVO mit End-Datum heute");
+    TestStep(A_23539_01, "ERP-A_23539.02 Apotheker ruft Accept Task für eine MVO mit End-Datum heute");
     using namespace std::chrono_literals;
     const auto today = authoredOn;
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),

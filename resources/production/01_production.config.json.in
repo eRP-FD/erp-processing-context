@@ -46,6 +46,11 @@
           "kbvValidationOnUnknownExtension": "reject",
           "kbvValidationNonLiteralAuthorRef": "allow",
           "anrChecksumValidationMode": "warning"
+        },
+        "close": {
+          "deviceRefType": "uuid",
+          "prescriptionDigestRefType": "uuid",
+          "prescriptionDigestMetaVersionId": null
         }
       },
       "communication": {
@@ -70,7 +75,8 @@
       "keepalivesIntervalSec": "75",
       "keepalivesCount": "9",
       "targetSessionAttrs": "read-write",
-      "enableScramAuthentication": "false"
+      "enableScramAuthentication": "false",
+      "connectionMaxAgeMinutes": "120"
     },
     "json-meta-schema": "@ERP_SCHEMA_DIR@shared/json/draft-4-meta-schema.json",
     "json-schema": [

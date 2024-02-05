@@ -47,10 +47,14 @@ public:
     std::unique_ptr<Database> releaseDatabase();
     const model::Timestamp& sessionTime() const;
 
+    void addOuterResponseHeaderField(std::string_view key, std::string_view value);
+    const Header::keyValueMap_t& getOuterResponseHeaderFields() const;
+
 private:
     std::unique_ptr<AuditDataCollector> mAuditDataCollector;
     std::unique_ptr<Database> mDatabase;
     model::Timestamp mSessionTime;
+    Header::keyValueMap_t mOuterResponseHeaderFields;
 };
 
 

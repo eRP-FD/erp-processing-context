@@ -18,8 +18,9 @@ public:
     void handleRequest (PcSessionContext& session) override;
 
 private:
-    static void checkTaskPreconditions(const PcSessionContext& session, const model::Task& task);
-    static void checkMultiplePrescription(const model::KbvBundle& prescription);
+    static void checkTaskPreconditions(const PcSessionContext& session, const model::Task& task,
+                                       const std::string& telematikId);
+    static void checkMultiplePrescription(PcSessionContext& session, const model::KbvBundle& prescription);
 };
 
 

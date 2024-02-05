@@ -6,11 +6,11 @@
  */
 
 #include "erp/ErpMain.hxx"
-
 #include "ErpRequirements.hxx"
-#include "erp/admin/AdminServer.hxx"
-#include "erp/admin/AdminRequestHandler.hxx"
 #include "erp/ErpProcessingContext.hxx"
+#include "erp/admin/AdminRequestHandler.hxx"
+#include "erp/admin/AdminServer.hxx"
+#include "erp/database/DatabaseConnectionTimer.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
@@ -23,22 +23,22 @@
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
 #include "erp/registration/RegistrationManager.hxx"
+#include "erp/server/context/SessionContext.hxx"
+#include "erp/server/request/ServerRequest.hxx"
+#include "erp/server/response/ServerResponse.hxx"
 #include "erp/tpm/Tpm.hxx"
 #include "erp/tsl/error/TslError.hxx"
 #include "erp/util/Condition.hxx"
-#include "erp/util/health/HealthCheck.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Holidays.hxx"
 #include "erp/util/SignalHandler.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"
+#include "erp/util/health/HealthCheck.hxx"
 #include "erp/validation/InCodeValidator.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
-#include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
 
 
 #if WITH_HSM_MOCK > 0
@@ -100,6 +100,23 @@ std::unique_ptr<SeedTimer> ErpMain::setupPrngSeeding(
     return seedTimer;
 }
 // GEMREQ-end A_19021-02#setupPrngSeeding
+
+std::unique_ptr<DatabaseConnectionTimer> ErpMain::setupDatabaseTimer(PcServiceContext& serviceContext)
+{
+    if (Configuration::instance().getIntValue(ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES) > 0)
+    {
+        TLOG(INFO) << "Initializing Periodic Database-Connection check.";
+        auto timer = std::make_unique<DatabaseConnectionTimer>(serviceContext, std::chrono::minutes(1));
+        timer->start(serviceContext.getTeeServer().getThreadPool().ioContext(), std::chrono::minutes(0));
+        return timer;
+    }
+    else
+    {
+        TLOG(INFO) << "Periodic Database-Connection check disabled by configuration "
+                      "ERP_POSTGRES_CONNECTION_MAX_AGE_MINUTES <= 0";
+        return {};
+    }
+}
 
 
 int ErpMain::runApplication (
@@ -210,6 +227,8 @@ int ErpMain::runApplication (
         log << "setting up heartbeat sender";
         heartbeatSender = setupHeartbeatSender(*serviceContext);
     }
+    serviceContext->databaseFactory()->closeConnection();
+    auto databaseConnectionRefresher = setupDatabaseTimer(*serviceContext);
     state = State::WaitingForTermination;
     serviceContext->getTeeServer().waitForShutdown();
     if (serviceContext->getEnrolmentServer())

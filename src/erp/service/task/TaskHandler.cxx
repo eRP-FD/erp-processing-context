@@ -16,6 +16,7 @@
 #include "erp/model/Signature.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/TLog.hxx"
@@ -53,7 +54,7 @@ void TaskHandlerBase::addToPatientBundle(model::Bundle& bundle, const model::Tas
 
 
 model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Binary& healthcareProviderPrescription,
-                                                            const Uuid& uuid, PcServiceContext& serviceContext)
+                                                               const Uuid& uuid, PcServiceContext& serviceContext)
 {
     A_19029_05.start("1. convert prescription bundle to JSON");
     Expect3(healthcareProviderPrescription.data().has_value(), "healthcareProviderPrescription unexpected empty Binary",
@@ -87,7 +88,7 @@ model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Bina
 
     A_19029_05.start("store the signature in the bundle");
     model::Signature signature(Base64::encode(signatureData), model::Timestamp::now(),
-                               model::Device::createReferenceString(getLinkBase()));
+                               model::Device::createReferenceUrl(getLinkBase()));
     signature.setTargetFormat(MimeType::fhirJson);
     signature.setSigFormat(MimeType::jose);
     signature.setType(model::Signature::jwsSystem, model::Signature::jwsCode);
@@ -106,7 +107,7 @@ model::PrescriptionId TaskHandlerBase::parseId(const ServerRequest& request, Acc
     try
     {
         auto prescriptionId = model::PrescriptionId::fromString(prescriptionIdValue.value());
-        accessLog.prescriptionId(prescriptionIdValue.value());
+        accessLog.prescriptionId(prescriptionId);
         return prescriptionId;
     }
     catch (const model::ModelException&)
@@ -115,14 +116,21 @@ model::PrescriptionId TaskHandlerBase::parseId(const ServerRequest& request, Acc
     }
 }
 
-// GEMREQ-start checkAccessCodeMatches
-void TaskHandlerBase::checkAccessCodeMatches(const ServerRequest& request, const model::Task& task)
+// GEMREQ-start getAccessCode
+std::optional<std::string> TaskHandlerBase::getAccessCode(const ServerRequest& request)
 {
     auto accessCode = request.getQueryParameter("ac");
     if (! accessCode.has_value())
     {
-        accessCode = request.header().header(Header::XAccessCode);
+        return request.header().header(Header::XAccessCode);
     }
+    return accessCode;
+}
+// GEMREQ-end getAccessCode
+// GEMREQ-start checkAccessCodeMatches
+void TaskHandlerBase::checkAccessCodeMatches(const ServerRequest& request, const model::Task& task)
+{
+    auto accessCode = getAccessCode(request);
     A_20703.start("Set VAU-Error-Code header field to brute-force whenever AccessCode or Secret mismatches");
     VauExpect(accessCode == task.accessCode(), HttpStatus::Forbidden, VauErrorCode::brute_force,
               "AccessCode mismatch");
@@ -200,6 +208,7 @@ CadesBesSignature TaskHandlerBase::doUnpackCadesBesSignature(const std::string& 
                 "unexpected throwable");
     }
 }
+
 // GEMREQ-end A_20159-03#doUnpackCadesBesSignature
 
 CadesBesSignature TaskHandlerBase::unpackCadesBesSignature(const std::string& cadesBesSignatureFile,
@@ -211,4 +220,16 @@ CadesBesSignature TaskHandlerBase::unpackCadesBesSignature(const std::string& ca
 CadesBesSignature TaskHandlerBase::unpackCadesBesSignatureNoVerify(const std::string& cadesBesSignatureFile)
 {
     return doUnpackCadesBesSignature(cadesBesSignatureFile, nullptr);
+}
+
+void TaskHandlerBase::fillMvoBdeV2(const std::optional<model::KBVMultiplePrescription>& mPExt,
+                                   PcSessionContext& session)
+{
+    if (mPExt && mPExt->isMultiplePrescription() && mPExt->numerator().has_value())
+    {
+        A_23090_02.start(
+            "\"mvonr\": $mvo-nummer: Der Wert Nummer des Rezepts der Mehrfachverordnung, Datentyp Integer");
+        session.addOuterResponseHeaderField(Header::MvoNumber, std::to_string(*mPExt->numerator()));
+        A_23090_02.finish();
+    }
 }

@@ -173,6 +173,8 @@ const rapidjson::Pointer inputArrayPointer("/input");
 const rapidjson::Pointer outputArrayPointer("/output");
 const rapidjson::Pointer identifierArrayPointer("/identifier");
 const rapidjson::Pointer extensionArrayPointer("/extension");
+const rapidjson::Pointer ownerIdentifierSystemPointer("/owner/identifier/system");
+const rapidjson::Pointer ownerIdentifierValuePointer("/owner/identifier/value");
 
 // relative pointers
 // The coding array is fixed length 1
@@ -317,6 +319,11 @@ std::optional<std::string_view> Task::patientConfirmationUuid() const
 std::optional<std::string_view> Task::receiptUuid() const
 {
     return uuidFromArray(outputArrayPointer, codeOutputReceipt);
+}
+
+std::optional<std::string_view> Task::owner() const
+{
+    return getOptionalStringValue(ownerIdentifierValuePointer);
 }
 
 std::optional<std::string_view> Task::uuidFromArray(const rapidjson::Pointer& array,
@@ -519,6 +526,15 @@ void Task::setAccessCode(std::string_view accessCode)
     addToArray(identifierArrayPointer, std::move(newValue));
 }
 
+void Task::setOwner(std::string_view owner)
+{
+    auto nsTelematikId = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
+                             ? resource::naming_system::deprecated::telematicID
+                             : resource::naming_system::telematicID;
+    setValue(ownerIdentifierSystemPointer, nsTelematikId);
+    setValue(ownerIdentifierValuePointer, owner);
+}
+
 void Task::deleteAccessCode()
 {
     auto nsAccessCode = ResourceVersion::deprecatedProfile(value(getSchemaVersion()))
@@ -543,6 +559,12 @@ void Task::deleteSecret()
     {
         removeFromArray(identifierArrayPointer, std::get<1>(secretAndPos.value()));
     }
+}
+
+void Task::deleteOwner()
+{
+    removeElement(ownerIdentifierSystemPointer);
+    removeElement(ownerIdentifierValuePointer);
 }
 
 Task::Task(NumberAsStringParserDocument&& jsonTree)

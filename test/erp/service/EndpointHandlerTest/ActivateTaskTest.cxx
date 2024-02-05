@@ -1021,11 +1021,13 @@ TEST_F(ActivateTaskTest, failInvalidAlternativeIK)
     auto signingTime = model::Timestamp::now();
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
-    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.prescriptionId = taskId,
-                                                               .authoredOn = signingTime,
-                                                               .kvnr = kvnr.id(),
-                                                               .coverageInsuranceType = "UK",
-                                                               .coveragePayorExtension = extensionCoverage});
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = taskId,
+         .authoredOn = signingTime,
+         .kvnr = kvnr.id(),
+         .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
+         .coverageInsuranceType = "UK",
+         .coveragePayorExtension = extensionCoverage});
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
 
@@ -1092,7 +1094,7 @@ TEST_F(ActivateTaskTest, warnInvalidANR)
     }
 }
 
-TEST_F(ActivateTaskTest, failInvalidPZN)
+TEST_F(ActivateTaskTest, failInvalidPZNChecksum)
 {
     A_23892.test("pzn checksum must be correct");
     const model::Kvnr kvnr{"B123457897"};
@@ -1112,6 +1114,33 @@ TEST_F(ActivateTaskTest, failInvalidPZN)
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE(std::rethrow_exception(exception), HttpStatus::BadRequest,
                                       "Ungültige PZN: Die übergebene Pharmazentralnummer entspricht nicht den "
                                       "vorgeschriebenen Prüfziffer-Validierungsregeln.");
+}
+
+TEST_F(ActivateTaskTest, failInvalidPZNFormat)
+{
+    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)
+    {
+        GTEST_SKIP();
+    }
+    const model::Kvnr kvnr{"B123457897"};
+    const model::Pzn shortPZN{"2750891"};
+    auto signingTime = model::Timestamp::now();
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = taskId, .authoredOn = signingTime, .kvnr = kvnr.id(), .pzn = shortPZN});
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
+        mServiceContext, taskJson, kbvBundleXml, kvnr.id(),
+        {.expectedStatus = HttpStatus::BadRequest, .signingTime = signingTime, .outExceptionPtr = exception}));
+    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+        std::rethrow_exception(exception),
+        "Bundle.entry[4].resource{Medication}.code.coding[0]: "
+        "error: -erp-begrenzungPznCode: Der PZN-Code muss aus genau 8 Zeichen bestehen. "
+        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:pznCode|1.1.0); ");
 }
 
 TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)

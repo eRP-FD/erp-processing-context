@@ -137,3 +137,39 @@ TEST_F(ConfigurationTest, getArrayFromFile)
     ScopedSetEnv scopeEnv(varName, {});
     EXPECT_EQ(createConfiguration()->getArray(key), (std::vector<std::string>{"value1", "value2"}));
 }
+
+TEST_F(ConfigurationTest, OptionalStringValue_null)
+{
+    static constexpr auto key = ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL;
+    {
+        // first check that this is configured in some other config file
+        ScopedSetEnv configFileEnv(
+            ErpConstants::ConfigurationFileNameVariable,
+            ResourceManager::getAbsoluteFilename("test/configuration-emptyObject.json").string());
+        EXPECT_FALSE(createConfiguration()->getOptionalStringValue(key).has_value());
+    }
+    {
+        // now check, that we can unset it by providing null as value
+        ScopedSetEnv configFileEnv(ErpConstants::ConfigurationFileNameVariable,
+                                   ResourceManager::getAbsoluteFilename("test/configuration-null.json").string());
+        EXPECT_FALSE(createConfiguration()->getOptionalStringValue(key).has_value());
+    }
+}
+
+TEST_F(ConfigurationTest, OptionalSafeStringValue_null)
+{
+    static constexpr auto key = ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL;
+    {
+        // first check that this is configured in some other config file
+        ScopedSetEnv configFileEnv(
+            ErpConstants::ConfigurationFileNameVariable,
+            ResourceManager::getAbsoluteFilename("test/configuration-emptyObject.json").string());
+        EXPECT_FALSE(createConfiguration()->getOptionalSafeStringValue(key).has_value());
+    }
+    {
+        // now check, that we can unset it by providing null as value
+        ScopedSetEnv configFileEnv(ErpConstants::ConfigurationFileNameVariable,
+                                   ResourceManager::getAbsoluteFilename("test/configuration-null.json").string());
+        EXPECT_FALSE(createConfiguration()->getOptionalSafeStringValue(key).has_value());
+    }
+}

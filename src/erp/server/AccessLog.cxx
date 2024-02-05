@@ -152,7 +152,13 @@ void AccessLog::discard (void)
 }
 
 
-void AccessLog::prescriptionId(const std::string_view id)
+void AccessLog::prescriptionId(const model::PrescriptionId& id)
 {
-    keyValue("prescription_id", id);
+    keyValue("prescription_id", id.toString());
+    mPrescriptionId.emplace(id);
+}
+
+const std::optional<model::PrescriptionId>& AccessLog::getPrescriptionId() const
+{
+    return mPrescriptionId;
 }

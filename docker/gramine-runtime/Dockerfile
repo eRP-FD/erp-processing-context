@@ -19,7 +19,7 @@ RUN apt-get update --fix-missing && \
 
 COPY files/gramine-keyring.gpg /usr/share/keyrings
 
-RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ jammy main' \
+RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ 1.6 main' \
     |  tee /etc/apt/sources.list.d/gramine.list \
     && apt-get update \
     && apt-get install -y gramine

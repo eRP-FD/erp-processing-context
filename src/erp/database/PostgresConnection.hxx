@@ -29,6 +29,8 @@ public:
 
     std::optional<DatabaseConnectionInfo> getConnectionInfo() const;
 
+    void recreateConnection();
+
 private:
     std::string mConnectionString;
     std::unique_ptr<pqxx::connection> mConnection;

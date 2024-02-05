@@ -212,6 +212,11 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validatorOptions(f
     mOptions.validatorOptions = newOpts;
 }
 
+template<typename SchemaVersionT>
+void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::enableAdditionalValidation(bool enable)
+{
+    mOptions.additionalValidation = enable;
+}
 
 template<typename SchemaVersionT>
 void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::conditionalValidateGeneric(

@@ -1230,7 +1230,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
         GTEST_SKIP();
     }
 
-    A_19027_03.test("Deletion of task related communications from database");
+    A_19027_04.test("Deletion of task related communications from database");
 
     // Make sure that there are no leftovers from previous tests.
     verifyDatabaseIsTidy();

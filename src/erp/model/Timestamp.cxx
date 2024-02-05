@@ -28,8 +28,8 @@ namespace
  * it seems best to avoid the intermediate std::string which had to be manipulated to make room
  * for the trailing '\0' amd use `const char*` directly with std::chrono::from_stream.
  */
-constexpr const char* xsDateTimeZ = "%Y-%m-%dT%H:%M:%SZ";
-constexpr const char* xsDateTimeTz = "%Y-%m-%dT%H:%M:%S%Ez";
+constexpr const char* xsDateTimeZ = "%Y-%m-%dT%H:%M:%9SZ";
+constexpr const char* xsDateTimeTz = "%Y-%m-%dT%H:%M:%9S%Ez";
 constexpr const char* xsDate = "%Y-%m-%d";
 
 constexpr const char* xsDateTimeWithoutSecondsZ = "%Y-%m-%dT%H:%MZ";

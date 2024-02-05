@@ -77,6 +77,9 @@ private:
         const std::string& sub,
         PcSessionContext& session);
     static shared_EVP_PKEY getIdpPublicKey (const PcServiceContext& serviceContext);
+    static void transferResponseHeadersFromInnerSession(const PcSessionContext& innerSession,
+                                                        PcSessionContext& outerSession,
+                                                        const std::optional<model::PrescriptionId>& prescriptionId);
 };
 
 

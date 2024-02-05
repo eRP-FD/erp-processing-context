@@ -43,7 +43,7 @@ private:
     static void checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType);
     static void checkNarcoticsMatches(const model::KbvBundle& bundle);
     static void checkAuthoredOnEqualsSigningDate(const model::KbvMedicationRequest& medicationRequest, const model::Timestamp& signingTime);
-    static bool checkPractitioner(const model::KbvBundle& bundle);
+    static bool checkPractitioner(const model::KbvBundle& bundle, PcSessionContext& session);
     static HttpStatus checkExtensions(const model::ResourceFactory<model::KbvBundle>& factory,
                                       Configuration::OnUnknownExtension onUnknownExtension,
                                       Configuration::GenericValidationMode genericValidationMode,

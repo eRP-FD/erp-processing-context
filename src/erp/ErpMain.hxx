@@ -30,8 +30,10 @@ class ThreadPool;
 struct Factories;
 class HttpsServer;
 class XmlValidator;
+class DatabaseConnectionTimerHandler;
 
 using SeedTimer = PeriodicTimer<SeedTimerHandler>;
+using DatabaseConnectionTimer = PeriodicTimer<DatabaseConnectionTimerHandler>;
 
 /**
  * A collection of high-level functions that are required to initialize and run the processing context application.
@@ -70,6 +72,8 @@ private:
     static std::unique_ptr<SeedTimer> setupPrngSeeding (
         ThreadPool& threadpool,
         HsmPool& randomSource);
+
+    static std::unique_ptr<DatabaseConnectionTimer> setupDatabaseTimer(PcServiceContext& serviceContext);
 
     static std::shared_ptr<TslManager> setupTslManager (const std::shared_ptr<XmlValidator>& xmlValidator);
 

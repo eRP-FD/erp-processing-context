@@ -36,6 +36,7 @@ public:
         std::optional<db_model::Blob> salt = std::nullopt;
         std::optional<db_model::EncryptedBlob> accessCode = std::nullopt;
         std::optional<db_model::EncryptedBlob> secret = std::nullopt;
+        std::optional<db_model::EncryptedBlob> owner = std::nullopt;
         std::optional<db_model::EncryptedBlob> healthcareProviderPrescription = std::nullopt;
         std::optional<db_model::EncryptedBlob> receipt = std::nullopt;
         std::optional<model::Timestamp> whenHandedOver = std::nullopt;
@@ -67,7 +68,8 @@ public:
     void updateTaskStatusAndSecret(const model::PrescriptionId& taskId,
                                    model::Task::Status taskStatus,
                                    const model::Timestamp& lastModifiedDate,
-                                   const std::optional<db_model::EncryptedBlob>& taskSecret);
+                                   const std::optional<db_model::EncryptedBlob>& taskSecret,
+                                   const std::optional<db_model::EncryptedBlob>& owner);
     void activateTask(const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr,
                       const db_model::HashedKvnr& hashedKvnr,
@@ -94,10 +96,12 @@ public:
     std::optional<db_model::Task> retrieveTaskAndReceipt(const model::PrescriptionId& taskId);
     ::std::optional<::db_model::Task> retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId);
     std::optional<db_model::Task> retrieveTaskAndPrescription(const model::PrescriptionId& taskId);
+    std::optional<db_model::Task> retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId);
     std::optional<db_model::Task> retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId);
     std::vector<db_model::Task> retrieveAllTasksForPatient (const db_model::HashedKvnr& kvnrHashed,
                                                             const std::optional<UrlArguments>& search,
-                                                            bool applyOnlySearch = false) const;
+                                                            const bool onlyFlowtype160,
+                                                            bool applyOnlySearch, bool withAccessCode) const;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) const;
 
@@ -126,6 +130,7 @@ private:
         salt,
         access_code,
         secret,
+        owner,
         healthcare_provider_prescription,
         receipt,
         when_handed_over,

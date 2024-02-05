@@ -52,16 +52,6 @@
 
 namespace fs = std::filesystem;
 
-namespace {
-constexpr fhirtools::ValidatorOptions receiptValidationOptions
-{
-    .levels{
-        .unreferencedBundledResource = fhirtools::Severity::warning,
-        .unreferencedContainedResource = fhirtools::Severity::warning
-    }
-};
-}
-
 using namespace ::std::literals;
 
 
@@ -1376,8 +1366,7 @@ void checkGetChargeItemByIdHandler(
             using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
             std::optional<model::ErxReceipt> checkedReceipt;
             ASSERT_NO_THROW(checkedReceipt =
-                    ErxReceiptFactory::fromXml(receipt.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                               {.validatorOptions = receiptValidationOptions})
+                    ErxReceiptFactory::fromXml(receipt.serializeToXmlString(), *StaticData::getXmlValidator())
                     .getValidated(SchemaType::Gem_erxReceiptBundle, *StaticData::getXmlValidator(),
                          *StaticData::getInCodeValidator()));
 
@@ -1418,8 +1407,7 @@ void checkGetChargeItemByIdHandler(
                 using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
                 std::optional<model::ErxReceipt> receiptFromSignature;
                 ASSERT_NO_THROW(receiptFromSignature =
-                        ErxReceiptFactory::fromXml(cms.payload(), *StaticData::getXmlValidator(),
-                                                   {.validatorOptions = receiptValidationOptions })
+                        ErxReceiptFactory::fromXml(cms.payload(), *StaticData::getXmlValidator())
                         .getValidated(SchemaType::Gem_erxReceiptBundle, *StaticData::getXmlValidator(),
                              *StaticData::getInCodeValidator()));
                 EXPECT_FALSE(receiptFromSignature->getSignature().has_value());

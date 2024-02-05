@@ -50,6 +50,10 @@ class DummyBlobDatabase : public BlobDatabase
     {
         Fail("DummyBlobDatabase::storeBlob should not be called.");
     }
+    void recreateConnection() override
+    {
+        Fail("DummyBlobDatabase::recreateConnection should not be called.");
+    }
 };
 
 void usage(const char* argv0, const std::string& message = "")

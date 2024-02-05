@@ -132,3 +132,9 @@ void ProductionVsdmKeyBlobDatabase::deleteBlob(char operatorId, char version)
         ErpFail(HttpStatus::InternalServerError, std::string(error_));
     }
 }
+
+void ProductionVsdmKeyBlobDatabase::recreateConnection()
+{
+    std::lock_guard lock(mMutex);
+    mConnection.recreateConnection();
+}

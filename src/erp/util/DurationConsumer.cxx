@@ -7,6 +7,7 @@
 
 #include "erp/util/DurationConsumer.hxx"
 
+#include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/ExceptionHelper.hxx"
 
@@ -70,7 +71,8 @@ void DurationTimer::keyValue(const std::string& key, const std::string& value)
 DurationTimer DurationConsumer::getTimer(const std::string& category, const std::string& description,
                                          const std::unordered_map<std::string, std::string>& keyValueMap)
 {
-    return DurationTimer(mReceiver, category, description, mSessionIdentifier.value_or("unknown"), keyValueMap);
+    DurationTimer::Receiver receiver = DurationConsumer::defaultReceiver;
+    return DurationTimer(receiver, category, description, mSessionIdentifier.value_or("unknown"), keyValueMap);
 }
 
 DurationConsumer& DurationConsumer::getCurrent (void)
@@ -117,6 +119,39 @@ std::optional<std::string> DurationConsumer::getSessionIdentifier (void) const
     return mSessionIdentifier;
 }
 
+void DurationConsumer::defaultReceiver(
+    std::chrono::steady_clock::duration duration,
+    const std::string &category,
+    const std::string &description,
+    const std::string &sessionIdentifier,
+    const std::unordered_map<std::string, std::string> &keyValueMap,
+    const std::optional<JsonLog::LogReceiver> &logReceiverOverride)
+{
+    const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
+    auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
+        if (logReceiverOverride)
+        {
+            return *logReceiverOverride;
+        }
+        return timingLoggingEnabled ? JsonLog::makeInfoLogReceiver() : JsonLog::makeVLogReceiver(0);
+    };
+    const auto durationMusecs = std::chrono::duration_cast<std::chrono::microseconds>(duration);
+    JsonLog log(LogId::INFO, getLogReceiver());
+    log.keyValue("log-type", "timing")
+        .keyValue("x-request-id", sessionIdentifier)
+        .keyValue("category", category)
+        .keyValue("description", description);
+    for (const auto& item : keyValueMap)
+    {
+        log.keyValue(item.first, item.second);
+    }
+    log.keyValue("duration-us", gsl::narrow<size_t>(durationMusecs.count()));
+
+    DurationTimer::Receiver receiver = getCurrent().mReceiver;
+    if(receiver){
+        receiver(duration, category, description, sessionIdentifier, keyValueMap, logReceiverOverride);
+    }
+}
 
 DurationConsumerGuard::DurationConsumerGuard (
     const std::string& sessionIdentifier,
@@ -124,7 +159,6 @@ DurationConsumerGuard::DurationConsumerGuard (
 {
     DurationConsumer::getCurrent().initialize(sessionIdentifier, std::move(receiver));
 }
-
 
 DurationConsumerGuard::~DurationConsumerGuard (void)
 {

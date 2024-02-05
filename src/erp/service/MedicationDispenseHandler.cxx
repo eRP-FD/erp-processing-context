@@ -93,7 +93,9 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
 
     if (identifierSearchArgument.has_value() && identifierSearchArgument->valuesCount() == 1)
     {
-        session.auditDataCollector().setPrescriptionId(identifierSearchArgument->valueAsPrescriptionId(0));
+        auto prescriptionId = identifierSearchArgument->valueAsPrescriptionId(0);
+        session.auditDataCollector().setPrescriptionId(prescriptionId);
+        session.accessLog.prescriptionId(prescriptionId);
     }
     A_19140.finish();
 }
@@ -151,7 +153,7 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     }();
 
     const auto& prescriptionId = medicationDispenseId.getPrescriptionId();
-    session.accessLog.prescriptionId(prescriptionId.toString());
+    session.accessLog.prescriptionId(prescriptionId);
     // GEMREQ-end A_19406-01#getId-2
 
     // GEMREQ-start A_19406-01#getId-3

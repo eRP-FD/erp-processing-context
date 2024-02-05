@@ -40,6 +40,8 @@ public:
 
     static std::shared_ptr<BlobCache> createBlobCache(const MockBlobCache::MockTarget target);
 
+    void recreateConnection() override;
+
 private:
     mutable std::mutex mMutex;
     BlobId mNextBlobId = 0;

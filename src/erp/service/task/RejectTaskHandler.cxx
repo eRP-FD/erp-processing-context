@@ -55,6 +55,12 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     task.deleteSecret();
     A_19172_01.finish();
 
+    // GEMREQ-start A_24175#delete-task
+    A_24175.start("Delete owner from Task");
+    task.deleteOwner();
+    A_24175.finish();
+    // GEMREQ-end A_24175#delete-task
+
     A_19172_01.start("Set Task status to ready");
     task.setStatus(model::Task::Status::ready);
     A_19172_01.finish();

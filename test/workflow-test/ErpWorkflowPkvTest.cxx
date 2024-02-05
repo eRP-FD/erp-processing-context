@@ -924,6 +924,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     EXPECT_EQ(task->status(), model::Task::Status::inprogress);
     ASSERT_TRUE(task->secret().has_value());
     ASSERT_EQ(secret, task->secret().value());
+    ASSERT_TRUE(task->owner().has_value());
+    ASSERT_EQ(task->owner(), jwtApotheke().stringForClaim(JWT::idNumberClaim));
 
     ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, task->lastModifiedDate(), communications));
 

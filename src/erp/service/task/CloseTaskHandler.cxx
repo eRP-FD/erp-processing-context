@@ -24,6 +24,8 @@
 #include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/NumberAsStringParserWriter.hxx"
 #include "erp/model/Signature.hxx"
+#include "erp/model/KbvBundle.hxx"
+#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/server/request/ServerRequest.hxx"
@@ -39,6 +41,32 @@
 #include <boost/range/adaptors.hpp>
 #include <memory>
 #include <optional>
+
+namespace
+{
+struct DigestIdentifier {
+    DigestIdentifier(Configuration::PrescriptionDigestRefType refType, const std::string& linkBase,
+                     const model::PrescriptionId& prescriptionId)
+    {
+        switch (refType)
+        {
+            case Configuration::PrescriptionDigestRefType::uuid:
+                id = Uuid{}.toString();
+                ref = "urn:uuid:" + id;
+                fullUrl = ref;
+                break;
+            case Configuration::PrescriptionDigestRefType::relative:
+                id = "PrescriptionDigest-" + prescriptionId.toString();
+                ref = "Binary/" + id;
+                fullUrl = linkBase + '/' + ref;
+                break;
+        }
+    }
+    std::string id;
+    std::string ref;
+    std::string fullUrl;
+};
+}
 
 
 CloseTaskHandler::CloseTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -123,10 +151,11 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     const auto inProgressDate = task.lastModifiedDate();
     const auto completedTimestamp = model::Timestamp::now();
     const auto linkBase = getLinkBase();
-    const auto authorIdentifier = model::Device::createReferenceString(linkBase);
-    const std::string prescriptionDigestIdentifier = "PrescriptionDigest-" + prescriptionId.toString();
+    const auto& configuration = Configuration::instance();
+    const auto authorIdentifier = generateCloseTaskDeviceRef(configuration.closeTaskDeviceRefType(), linkBase);
+    const DigestIdentifier digestIdentifier{configuration.prescriptionDigestRefType(), linkBase, prescriptionId};
     const model::Composition compositionResource(telematikIdFromAccessToken.value(), inProgressDate, completedTimestamp,
-                                           authorIdentifier, "Binary/" + prescriptionDigestIdentifier);
+                                                 authorIdentifier, digestIdentifier.ref);
     const model::Device deviceResource;
 
     A_19233_05.start("Save bundle reference in task.output");
@@ -136,17 +165,28 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19233_05.start("Add the prescription signature digest");
     ErpExpect(prescription.has_value() && prescription.value().data().has_value(), ::HttpStatus::InternalServerError,
               "No matching prescription found.");
-    const std::string digest =
-        CadesBesSignature{::std::string{prescription.value().data().value()}}.getMessageDigest();
+
+    const auto cadesBesSignature =
+    unpackCadesBesSignatureNoVerify(std::string{*prescription->data()});
+    const auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
+    fillMvoBdeV2(kbvBundle.getExtension<model::KBVMultiplePrescription>(), session);
+
+    const std::string digest = cadesBesSignature.getMessageDigest();
     const auto base64Digest = ::Base64::encode(digest);
-    const auto prescriptionDigestResource =
-        ::model::Binary{prescriptionDigestIdentifier, base64Digest, ::model::Binary::Type::Digest};
+    std::optional metaVersionId =
+        configuration.getOptionalStringValue(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID);
+    if (metaVersionId && metaVersionId->empty())
+    {
+        metaVersionId.reset();
+    }
+    const auto prescriptionDigestResource = ::model::Binary{
+        digestIdentifier.id, base64Digest, ::model::Binary::Type::Digest,
+        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>(), metaVersionId};
 
     const auto taskUrl = linkBase + "/Task/" + prescriptionId.toString();
-    const auto prescriptionDigestUrl = linkBase + "/Binary/" + prescriptionDigestIdentifier;
     model::ErxReceipt responseReceipt(Uuid(*task.receiptUuid()), taskUrl + "/$close/", prescriptionId,
-                                      compositionResource, authorIdentifier, deviceResource,
-                                      prescriptionDigestUrl, prescriptionDigestResource);
+                                      compositionResource, authorIdentifier, deviceResource, digestIdentifier.fullUrl,
+                                      prescriptionDigestResource);
     A_19233_05.finish();
     A_19233_05.finish();
 
@@ -335,4 +375,16 @@ void CloseTaskHandler::validateSameMedicationVersion(const fhirtools::Collection
         }
     }
     A_23384.finish();
+}
+
+std::string CloseTaskHandler::generateCloseTaskDeviceRef(Configuration::DeviceRefType refType, const std::string& linkBase)
+{
+    switch (refType)
+    {
+        case Configuration::DeviceRefType::url:
+            return model::Device::createReferenceUrl(linkBase);
+        case Configuration::DeviceRefType::uuid:
+            return Uuid{}.toUrn();
+    }
+    Fail2("Invalid value for Configuration::DeviceRefType: " + std::to_string(static_cast<uintmax_t>(refType)), std::logic_error);
 }

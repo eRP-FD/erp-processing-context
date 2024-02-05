@@ -111,7 +111,9 @@ struct TaskOptions
     TaskType taskType;
     model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
     model::Timestamp timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
+    model::Timestamp expirydate = model::Timestamp::now(); // + 24h;
     std::string_view kvnr = "X234567891";
+    std::string_view owningPharmacy = "3-SMC-B-Testkarte-883110000120312";
 };
 
 

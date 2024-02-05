@@ -14,6 +14,7 @@
 #include "erp/database/redis/RateLimiter.hxx"
 #include "erp/hsm/HsmException.hxx"
 #include "erp/model/Device.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/OperationOutcome.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
 #include "erp/pc/ProfessionOid.hxx"
@@ -86,40 +87,10 @@ JWT getJwtFromAuthorizationHeader(const std::string& authorizationHeaderValue)
     return JWT(authorizationHeaderValue.substr(7));
 }
 
-// This fixed mapping from HTTP code to issue code might be to unexact.
-// It is a first approach for an easy creation of an error response.
-model::OperationOutcome::Issue::Type httpCodeToOutcomeIssueType(HttpStatus httpCode)
-{
-    switch(httpCode)
-    {
-        case HttpStatus::BadRequest:
-            return model::OperationOutcome::Issue::Type::invalid;
-        case HttpStatus::Unauthorized:
-            return model::OperationOutcome::Issue::Type::unknown;
-        case HttpStatus::Forbidden:
-            return model::OperationOutcome::Issue::Type::forbidden;
-        case HttpStatus::NotFound:
-            return model::OperationOutcome::Issue::Type::not_found;
-        case HttpStatus::MethodNotAllowed:
-            return model::OperationOutcome::Issue::Type::not_supported;
-        case HttpStatus::Conflict:
-            return model::OperationOutcome::Issue::Type::conflict;
-        case HttpStatus::Gone:
-            return model::OperationOutcome::Issue::Type::processing;
-        case HttpStatus::UnsupportedMediaType:
-            return model::OperationOutcome::Issue::Type::value;
-        case HttpStatus::TooManyRequests:
-            return model::OperationOutcome::Issue::Type::transient;
-        default:
-            return model::OperationOutcome::Issue::Type::processing;
-    }
-}
-
 void fillErrorResponse(ServerResponse& innerResponse,
                        const HttpStatus httpStatus,
                        const std::unique_ptr<ServerRequest>& innerRequest,
-                       const std::string& detailsText,
-                       const std::optional<std::string>& diagnostics)
+                       const model::OperationOutcome& operationOutcome)
 {
     ResponseBuilder(innerResponse).status(httpStatus).clearBody().keepAlive(false);
     bool callerWantsJson = false;
@@ -136,12 +107,21 @@ void fillErrorResponse(ServerResponse& innerResponse,
             callerWantsJson = professionOIDClaim.has_value() && professionOIDClaim == profession_oid::oid_versicherter;
         }
     }
+    ResponseBuilder(innerResponse).body(callerWantsJson, operationOutcome);
+}
+
+void fillErrorResponse(ServerResponse& innerResponse,
+                       const HttpStatus httpStatus,
+                       const std::unique_ptr<ServerRequest>& innerRequest,
+                       const std::string& detailsText,
+                       const std::optional<std::string>& diagnostics)
+{
     // By now issue type, error text and diagnostics (if available) are filled.
     const model::OperationOutcome operationOutcome({
         model::OperationOutcome::Issue::Severity::error,
-        httpCodeToOutcomeIssueType(httpStatus),
+        model::OperationOutcome::httpCodeToOutcomeIssueType(httpStatus),
         detailsText, diagnostics, {} /*expression*/ });
-    ResponseBuilder(innerResponse).body(callerWantsJson, operationOutcome);
+    fillErrorResponse(innerResponse, httpStatus, innerRequest, operationOutcome);
 }
 
 } // anonymous namespace
@@ -178,6 +158,41 @@ void runErpExceptionHandler(const ErpException& exception,
         A_20703.start("Set VAU-Error-Code header field to brute_force whenever AccessCode or Secret mismatches");
         A_20704.start("Set VAU-Error-Code header field to invalid_prescription when an invalid prescription has been "
                       "transmitted");
+        outerSession.response.setHeader(Header::VAUErrorCode, std::string{vauErrorCodeStr(*exception.vauErrorCode())});
+        A_20704.finish();
+        A_20703.finish();
+    }
+}
+
+void erpServiceExceptionHandler(const ErpServiceException& exception,
+                                const std::unique_ptr<ServerRequest>& innerRequest,
+                                ServerResponse& innerResponse, PcSessionContext& outerSession)
+{
+    using namespace std::string_literals;
+    TVLOG(1) << "caught ErServiceException what=" << exception.what()
+         << " OperationOutcome=" << exception.operationOutcome().serializeToJsonString();
+    outerSession.accessLog.locationFromException(exception);
+    switch (exception.status())
+    {
+        case HttpStatus::BadRequest:
+        case HttpStatus::BackendCallFailed:
+            outerSession.accessLog.error("ErpServiceException: " + exception.operationOutcome().concatDetails());
+            fillErrorResponse(innerResponse, exception.status(), innerRequest, exception.operationOutcome());
+            break;
+        case HttpStatus::InternalServerError:
+            // fixed text and no diagnostics for internal errors to avoid leaking of personal information;
+            fillErrorResponse(innerResponse, exception.status(), innerRequest, "Internal server error.", {});
+            break;
+        default:
+            outerSession.accessLog.error("ErpServiceException"s);
+            fillErrorResponse(innerResponse, exception.status(), innerRequest, exception.operationOutcome());
+            break;
+    }
+    if (exception.vauErrorCode().has_value())
+    {
+        A_20703.start("Set VAU-Error-Code header field to brute_force whenever AccessCode or Secret mismatches");
+        A_20704.start("Set VAU-Error-Code header field to invalid_prescription when an invalid prescription has been "
+            "transmitted");
         outerSession.response.setHeader(Header::VAUErrorCode, std::string{vauErrorCodeStr(*exception.vauErrorCode())});
         A_20704.finish();
         A_20703.finish();
@@ -267,37 +282,18 @@ void VauRequestHandler::handleRequest(PcSessionContext& session)
 {
     const auto sessionIdentifier = session.request.header().header(Header::XRequestId).value_or("unknown X-Request-Id");
 
-    // Set up the duration consumer that will output times spent on calls to external services without the need
-    // of explicitly passing an object to the downloading code.
+    // Set up the duration consumer that will log spend time and call back
     DurationConsumerGuard durationConsumerGuard(
         sessionIdentifier,
         [&session](const std::chrono::steady_clock::duration duration, const std::string& category,
-                           const std::string& description, const std::string& sessionIdentifier,
-                           const std::unordered_map<std::string, std::string>& keyValueMap,
-                           const std::optional<JsonLog::LogReceiver>& logReceiverOverride) {
-            const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
-            auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
-                if (logReceiverOverride)
-                {
-                    return *logReceiverOverride;
-                }
-                return timingLoggingEnabled ? JsonLog::makeInfoLogReceiver() : JsonLog::makeVLogReceiver(0);
-            };
+                           const std::string& /*description*/, const std::string& /*sessionIdentifier*/,
+                           const std::unordered_map<std::string, std::string>& /*keyValueMap*/,
+                           const std::optional<JsonLog::LogReceiver>& /*logReceiverOverride*/) {
             const auto durationMusecs = std::chrono::duration_cast<std::chrono::microseconds>(duration);
             if (category == DurationConsumer::categoryOcspRequest)
             {
                 session.backendDuration += durationMusecs;
             }
-            JsonLog log(LogId::INFO, getLogReceiver());
-            log.keyValue("log-type", "timing")
-                .keyValue("x-request-id", sessionIdentifier)
-                .keyValue("category", category)
-                .keyValue("description", description);
-            for (const auto& item : keyValueMap)
-            {
-                log.keyValue(item.first, item.second);
-            }
-            log.keyValue("duration-us", gsl::narrow<size_t>(durationMusecs.count()));
         });
 
     session.accessLog.keyValue("health", session.serviceContext.applicationHealth().isUp() ? "UP" : "DOWN");
@@ -465,10 +461,14 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
                 matchingHandler.handlerContext->handler->handleRequest(innerSession);
                 A_20163.finish();
                 // GEMREQ-end role-check
+                transferResponseHeadersFromInnerSession(innerSession, outerSession,
+                                                        innerSession.accessLog.getPrescriptionId());
                 shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnSuccess();
             }
             catch(const ErpException& exc)
             {
+                transferResponseHeadersFromInnerSession(innerSession, outerSession,
+                                                        innerSession.accessLog.getPrescriptionId());
                 // check if to write an audit event for error case:
                 shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnError(exc.status());
                 if(!shouldCreateAuditEvent)
@@ -528,25 +528,6 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
             Header::BackendDurationMs,
             std::to_string(
                 std::chrono::duration_cast<std::chrono::milliseconds>(outerSession.backendDuration).count()));
-        if (innerServerRequest != nullptr && innerServerRequest->header().method() == HttpMethod::POST)
-        {
-            const auto prescriptionIdValue = innerServerRequest->getPathParameter("id");
-            if (prescriptionIdValue.has_value())
-            {
-                std::string flowtype;
-                try
-                {
-                    const auto prescriptionId = model::PrescriptionId::fromString(prescriptionIdValue.value());
-                    flowtype = std::to_string(
-                        static_cast<std::underlying_type_t<model::PrescriptionType>>(prescriptionId.type()));
-                }
-                catch (const model::ModelException& ex)
-                {
-                    TVLOG(1) << "error parsing prescription ID for Inner-Request-Flowtype: " << ex.what();
-                }
-                outerSession.response.setHeader(Header::InnerRequestFlowtype, flowtype);
-            }
-        }
 
         if (innerServerRequest)
         {
@@ -656,19 +637,23 @@ bool VauRequestHandler::checkProfessionOID(
 // GEMREQ-end checkProfessionOID
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void VauRequestHandler::processException(const std::exception_ptr& exception,
+void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
                                          const std::unique_ptr<ServerRequest>& innerRequest,
                                          ServerResponse& innerResponse, PcSessionContext& outerSession)
 {
     try
     {
         // This is a small trick that helps to avoid having a large number of catches in the calling method.
-        if (exception)
-            std::rethrow_exception(exception);
+        if (exceptionPtr)
+            std::rethrow_exception(exceptionPtr);
     }
     catch (const ErpException &e)
     {
         exception_handlers::runErpExceptionHandler(e, innerRequest, innerResponse, outerSession);
+    }
+    catch (const ErpServiceException& e)
+    {
+        exception_handlers::erpServiceExceptionHandler(e, innerRequest, innerResponse, outerSession);
     }
     // GEMREQ-start A_19439#catchJwtError, A_20373#catchExpiredException
     catch (const JwtExpiredException& exception)
@@ -841,3 +826,21 @@ shared_EVP_PKEY VauRequestHandler::getIdpPublicKey (const PcServiceContext& serv
     A_20365_01.finish();
 }
 // GEMREQ-end A_20365#getIdpPublicKey
+
+void VauRequestHandler::transferResponseHeadersFromInnerSession(
+    const PcSessionContext& innerSession, PcSessionContext& outerSession,
+    const std::optional<model::PrescriptionId>& prescriptionId)
+{
+    for (const auto& outerHeaderField : innerSession.getOuterResponseHeaderFields())
+    {
+        outerSession.response.setHeader(outerHeaderField.first, outerHeaderField.second);
+    }
+    if (prescriptionId)
+    {
+        A_23090_02.start("\"vnr\": $vorgangsnummer: Task-ID im Fachdienst, Datentyp String");
+        outerSession.response.setHeader(Header::PrescriptionId, prescriptionId->toString());
+        A_23090_02.finish();
+        outerSession.response.setHeader(Header::InnerRequestFlowtype,
+                                        std::to_string(magic_enum::enum_integer(prescriptionId->type())));
+    }
+}

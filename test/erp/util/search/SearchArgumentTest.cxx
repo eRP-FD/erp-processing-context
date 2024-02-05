@@ -254,7 +254,7 @@ TEST_F(SearchArgumentTest, multipleParameters)
     // - the second 'sent' timestamp is normalized to UTC.
     // - the 'to-be-ignored' argument is ignored and not included in the self link.
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
-        "(erp.timestamp_from_suuid(id) >= '2021-09-09T00:00:00+00:00') AND (recipient = '\\x"
+        "(erp.timestamp_from_suuid(id) >= '2021-09-08T22:00:00+00:00') AND (recipient = '\\x"
         + hashedHex("X123456788") + "') AND (erp.timestamp_from_suuid(id) >= '2022-01-08T10:58:59+00:00')");
 }
 
@@ -270,7 +270,7 @@ TEST_F(SearchArgumentTest, suuid)
     request.setQueryParameters({{"sent", "gt2021-09-08"}, {"sent", "gt2022-01-08T23:32:58+12:34"}});
     search.parse(request, mServer->serviceContext().getKeyDerivation());
 
-    const auto firstUuid = model::Timestamp::fromXsDateTime("2021-09-09T00:00:00+00:00").toDatabaseSUuid();
+    const auto firstUuid = model::Timestamp::fromXsDateTime("2021-09-08T22:00:00+00:00").toDatabaseSUuid();
     const auto secondUuid = model::Timestamp::fromXsDateTime("2022-01-08T10:58:59+00:00").toDatabaseSUuid();
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
               std::string{"(id >= '"}.append(firstUuid).append("') AND (id >= '").append(secondUuid).append("')"));
@@ -340,9 +340,9 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValues)
     ASSERT_EQ(search.getSqlWhereExpression(getConnection()),
         "((recipient = '\\x" + hashedHex("X123456788") + "') OR (recipient = '\\x" + hashedHex("K987654321") + "'))"
         + " AND ((sender = '\\x" + hashedHex("X123456788") + "') OR (sender = '\\x" + hashedHex("K987654321") + "'))"
-        + " AND ((('2021-09-08T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-09T00:00:00+00:00'))"
-        + " OR (('2021-09-01T00:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-02T00:00:00+00:00')))"
-        + " AND ((received >= '2022-01-09T00:00:00+00:00') OR (received >= '2021-09-02T00:00:00+00:00'))");
+        + " AND ((('2021-09-07T22:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-08T22:00:00+00:00'))"
+        + " OR (('2021-08-31T22:00:00+00:00' <= erp.timestamp_from_suuid(id)) AND (erp.timestamp_from_suuid(id) < '2021-09-01T22:00:00+00:00')))"
+        + " AND ((received >= '2022-01-08T23:00:00+00:00') OR (received >= '2021-09-01T22:00:00+00:00'))");
 }
 
 
@@ -370,14 +370,14 @@ TEST_F(SearchArgumentTest, multipleParametersMultipleValuesWithFailure)
 
 TEST_F(SearchArgumentTest, eq_date_syntax)
 {
-    testSyntax("received", "eq2021",                          "(('2021-01-01T00:00:00+00:00' <= received) AND (received < '2022-01-01T00:00:00+00:00'))");
-    testSyntax("received", "eq2021-09",                       "(('2021-09-01T00:00:00+00:00' <= received) AND (received < '2021-10-01T00:00:00+00:00'))");
-    testSyntax("received", "eq2021-09-08",                    "(('2021-09-08T00:00:00+00:00' <= received) AND (received < '2021-09-09T00:00:00+00:00'))");
+    testSyntax("received", "eq2021",                          "(('2020-12-31T23:00:00+00:00' <= received) AND (received < '2021-12-31T23:00:00+00:00'))");
+    testSyntax("received", "eq2021-09",                       "(('2021-08-31T22:00:00+00:00' <= received) AND (received < '2021-09-30T22:00:00+00:00'))");
+    testSyntax("received", "eq2021-09-08",                    "(('2021-09-07T22:00:00+00:00' <= received) AND (received < '2021-09-08T22:00:00+00:00'))");
     testSyntax("received", "eq2021-09-08T23:32:58+00:00",     "(('2021-09-08T23:32:58+00:00' <= received) AND (received < '2021-09-08T23:32:59+00:00'))");
     testSyntax("received", "eq2021-09-08T23:32:58+12:34",     "(('2021-09-08T10:58:58+00:00' <= received) AND (received < '2021-09-08T10:58:59+00:00'))");
     testSyntax("received", "eq2021-09-07T23:32:59Z",          "(('2021-09-07T23:32:59+00:00' <= received) AND (received < '2021-09-07T23:33:00+00:00'))");
-    testSyntax("received", "eq2021-09-07T23:32:59",           "(('2021-09-07T23:32:59+00:00' <= received) AND (received < '2021-09-07T23:33:00+00:00'))");
-    testSyntax("received", "eq2021-09-07T20:59",              "(('2021-09-07T20:59:00+00:00' <= received) AND (received < '2021-09-07T21:00:00+00:00'))");
+    testSyntax("received", "eq2021-09-07T23:32:59",           "(('2021-09-07T21:32:59+00:00' <= received) AND (received < '2021-09-07T21:33:00+00:00'))");
+    testSyntax("received", "eq2021-09-07T20:59",              "(('2021-09-07T18:59:00+00:00' <= received) AND (received < '2021-09-07T19:00:00+00:00'))");
     testSyntax("received", "eq2021-09-07T20:59Z",              "(('2021-09-07T20:59:00+00:00' <= received) AND (received < '2021-09-07T21:00:00+00:00'))");
     testSyntax("received", "eq2021-09-07T20:59+02:00",        "(('2021-09-07T18:59:00+00:00' <= received) AND (received < '2021-09-07T19:00:00+00:00'))");
 }
@@ -390,9 +390,9 @@ TEST_F(SearchArgumentTest, eq_date_sql)
     testSql("sent", "eq2021-09",                       1);
     testSql("sent", "eq2021-09-08",                    1);
     testSql("sent", "eq2021-09-08T12:34:56+00:00",     1);
-    testSql("sent", "eq2021-09-08T12:34:56",           1);
+    testSql("sent", "eq2021-09-08T14:34:56",           1);
     testSql("sent", "eq2021-09-08T12:34Z",             1);
-    testSql("sent", "eq2021-09-08T12:34",              1);
+    testSql("sent", "eq2021-09-08T14:34",              1);
 
     // Fail for T < B
     testSql("sent", "eq2022",                          0);
@@ -413,13 +413,13 @@ TEST_F(SearchArgumentTest, eq_date_sql)
 
 TEST_F(SearchArgumentTest, ne_date_syntax)
 {
-    testSyntax("received", "ne2021",                          "(('2021-01-01T00:00:00+00:00' > received) OR (received >= '2022-01-01T00:00:00+00:00'))");
-    testSyntax("received", "ne2021-09",                       "(('2021-09-01T00:00:00+00:00' > received) OR (received >= '2021-10-01T00:00:00+00:00'))");
-    testSyntax("received", "ne2021-09-08",                    "(('2021-09-08T00:00:00+00:00' > received) OR (received >= '2021-09-09T00:00:00+00:00'))");
+    testSyntax("received", "ne2021",                          "(('2020-12-31T23:00:00+00:00' > received) OR (received >= '2021-12-31T23:00:00+00:00'))");
+    testSyntax("received", "ne2021-09",                       "(('2021-08-31T22:00:00+00:00' > received) OR (received >= '2021-09-30T22:00:00+00:00'))");
+    testSyntax("received", "ne2021-09-08",                    "(('2021-09-07T22:00:00+00:00' > received) OR (received >= '2021-09-08T22:00:00+00:00'))");
     testSyntax("received", "ne2021-09-08T23:32:58+00:00",     "(('2021-09-08T23:32:58+00:00' > received) OR (received >= '2021-09-08T23:32:59+00:00'))");
     testSyntax("received", "ne2021-09-07T23:32:59Z",          "(('2021-09-07T23:32:59+00:00' > received) OR (received >= '2021-09-07T23:33:00+00:00'))");
-    testSyntax("received", "ne2021-09-07T23:32:59",           "(('2021-09-07T23:32:59+00:00' > received) OR (received >= '2021-09-07T23:33:00+00:00'))");
-    testSyntax("received", "ne2021-09-07T20:59",              "(('2021-09-07T20:59:00+00:00' > received) OR (received >= '2021-09-07T21:00:00+00:00'))");
+    testSyntax("received", "ne2021-09-07T23:32:59",           "(('2021-09-07T21:32:59+00:00' > received) OR (received >= '2021-09-07T21:33:00+00:00'))");
+    testSyntax("received", "ne2021-09-07T20:59",              "(('2021-09-07T18:59:00+00:00' > received) OR (received >= '2021-09-07T19:00:00+00:00'))");
     testSyntax("received", "ne2021-09-07T20:59Z",             "(('2021-09-07T20:59:00+00:00' > received) OR (received >= '2021-09-07T21:00:00+00:00'))");
     testSyntax("received", "ne2021-09-07T20:59+02:00",        "(('2021-09-07T18:59:00+00:00' > received) OR (received >= '2021-09-07T19:00:00+00:00'))");
 }
@@ -433,7 +433,7 @@ TEST_F(SearchArgumentTest, ne_date_sql)
     testSql("sent", "ne2021-09-09",                    1);
     testSql("sent", "ne2021-09-08T12:34:57+00:00",     1);
     testSql("sent", "ne2021-09-08T12:35+00:00",        1);
-    testSql("sent", "ne2021-09-08T12:35",              1);
+    testSql("sent", "ne2021-09-08T14:35",              1);
 
     // Success with T >= E
     testSql("sent", "ne2011",                          1);
@@ -447,21 +447,21 @@ TEST_F(SearchArgumentTest, ne_date_sql)
     testSql("sent", "ne2021-09",                       0);
     testSql("sent", "ne2021-09-08",                    0);
     testSql("sent", "ne2021-09-08T12:34:56+00:00",     0);
-    testSql("sent", "ne2021-09-08T12:34:56",           0);
+    testSql("sent", "ne2021-09-08T14:34:56",           0);
     testSql("sent", "ne2021-09-08T12:34Z",             0);
-    testSql("sent", "ne2021-09-08T12:34",              0);
+    testSql("sent", "ne2021-09-08T14:34",              0);
 }
 
 
 TEST_F(SearchArgumentTest, gt_date_syntax)
 {
-    testSyntax("received", "gt2021",                          "(received >= '2022-01-01T00:00:00+00:00')");
-    testSyntax("received", "gt2021-09",                       "(received >= '2021-10-01T00:00:00+00:00')");
-    testSyntax("received", "gt2021-09-08",                    "(received >= '2021-09-09T00:00:00+00:00')");
+    testSyntax("received", "gt2021",                          "(received >= '2021-12-31T23:00:00+00:00')");
+    testSyntax("received", "gt2021-09",                       "(received >= '2021-09-30T22:00:00+00:00')");
+    testSyntax("received", "gt2021-09-08",                    "(received >= '2021-09-08T22:00:00+00:00')");
     testSyntax("received", "gt2021-09-08T23:32:58+00:00",     "(received >= '2021-09-08T23:32:59+00:00')");
     testSyntax("received", "gt2021-09-07T23:32:59Z",          "(received >= '2021-09-07T23:33:00+00:00')");
-    testSyntax("received", "gt2021-11-11T12:34:22",           "(received >= '2021-11-11T12:34:23+00:00')");
-    testSyntax("received", "gt2021-09-07T20:59",              "(received >= '2021-09-07T21:00:00+00:00')");
+    testSyntax("received", "gt2021-11-11T12:34:22",           "(received >= '2021-11-11T11:34:23+00:00')");
+    testSyntax("received", "gt2021-09-07T20:59",              "(received >= '2021-09-07T19:00:00+00:00')");
     testSyntax("received", "gt2021-09-07T20:59Z",             "(received >= '2021-09-07T21:00:00+00:00')");
     testSyntax("received", "gt2021-09-07T20:59+02:00",        "(received >= '2021-09-07T19:00:00+00:00')");
 }
@@ -482,19 +482,19 @@ TEST_F(SearchArgumentTest, gt_date_sql)
     testSql("sent", "gt2021-09-08",                    0);
     testSql("sent", "gt2021-09-08T12:34:56+00:00",     0);
     testSql("sent", "gt2021-09-08T12:34+00:00",        0);
-    testSql("sent", "gt2021-09-08T12:34",              0);
+    testSql("sent", "gt2021-09-08T14:34",              0);
 }
 
 
 TEST_F(SearchArgumentTest, lt_date_syntax)
 {
-    testSyntax("received", "lt2021",                          "(received < '2021-01-01T00:00:00+00:00')");
-    testSyntax("received", "lt2021-09",                       "(received < '2021-09-01T00:00:00+00:00')");
-    testSyntax("received", "lt2021-09-08",                    "(received < '2021-09-08T00:00:00+00:00')");
+    testSyntax("received", "lt2021",                          "(received < '2020-12-31T23:00:00+00:00')");
+    testSyntax("received", "lt2021-09",                       "(received < '2021-08-31T22:00:00+00:00')");
+    testSyntax("received", "lt2021-09-08",                    "(received < '2021-09-07T22:00:00+00:00')");
     testSyntax("received", "lt2021-09-08T23:32:58+00:00",     "(received < '2021-09-08T23:32:58+00:00')");
     testSyntax("received", "lt2021-09-07T23:32:59Z",          "(received < '2021-09-07T23:32:59+00:00')");
-    testSyntax("received", "lt2021-11-11T12:34:22",           "(received < '2021-11-11T12:34:22+00:00')");
-    testSyntax("received", "lt2021-09-07T20:59",              "(received < '2021-09-07T20:59:00+00:00')");
+    testSyntax("received", "lt2021-11-11T12:34:22",           "(received < '2021-11-11T11:34:22+00:00')");
+    testSyntax("received", "lt2021-09-07T20:59",              "(received < '2021-09-07T18:59:00+00:00')");
     testSyntax("received", "lt2021-09-07T20:59Z",             "(received < '2021-09-07T20:59:00+00:00')");
     testSyntax("received", "lt2021-09-07T20:59+02:00",        "(received < '2021-09-07T18:59:00+00:00')");
 }
@@ -508,7 +508,7 @@ TEST_F(SearchArgumentTest, lt_date_sql)
     testSql("sent", "lt2021-09-09", 1);
     testSql("sent", "lt2021-09-08T23:34:57+00:00", 1);
     testSql("sent", "lt2021-09-08T12:35+00:00", 1);
-    testSql("sent", "lt2021-09-08T12:35", 1);
+    testSql("sent", "lt2021-09-08T14:35", 1);
 
     // Fail for T >= B
     testSql("sent", "lt2021",                          0);
@@ -516,19 +516,19 @@ TEST_F(SearchArgumentTest, lt_date_sql)
     testSql("sent", "lt2021-09-08",                    0);
     testSql("sent", "lt2021-09-08T12:34:56+00:00",     0);
     testSql("sent", "lt2021-09-08T12:34+00:00",        0);
-    testSql("sent", "lt2021-09-08T12:34",              0);
+    testSql("sent", "lt2021-09-08T14:34",              0);
 }
 
 
 TEST_F(SearchArgumentTest, ge_date_syntax)
 {
-    testSyntax("received", "ge2021",                          "(received >= '2021-01-01T00:00:00+00:00')");
-    testSyntax("received", "ge2021-09",                       "(received >= '2021-09-01T00:00:00+00:00')");
-    testSyntax("received", "ge2021-09-08",                    "(received >= '2021-09-08T00:00:00+00:00')");
+    testSyntax("received", "ge2021",                          "(received >= '2020-12-31T23:00:00+00:00')");
+    testSyntax("received", "ge2021-09",                       "(received >= '2021-08-31T22:00:00+00:00')");
+    testSyntax("received", "ge2021-09-08",                    "(received >= '2021-09-07T22:00:00+00:00')");
     testSyntax("received", "ge2021-09-08T23:32:58+00:00",     "(received >= '2021-09-08T23:32:58+00:00')");
     testSyntax("received", "ge2021-09-07T23:32:59Z",          "(received >= '2021-09-07T23:32:59+00:00')");
-    testSyntax("received", "ge2021-11-11T12:34:22",           "(received >= '2021-11-11T12:34:22+00:00')");
-    testSyntax("received", "ge2021-09-07T20:59",              "(received >= '2021-09-07T20:59:00+00:00')");
+    testSyntax("received", "ge2021-11-11T12:34:22",           "(received >= '2021-11-11T11:34:22+00:00')");
+    testSyntax("received", "ge2021-09-07T20:59",              "(received >= '2021-09-07T18:59:00+00:00')");
     testSyntax("received", "ge2021-09-07T20:59Z",             "(received >= '2021-09-07T20:59:00+00:00')");
     testSyntax("received", "ge2021-09-07T20:59+02:00",        "(received >= '2021-09-07T18:59:00+00:00')");
 }
@@ -542,7 +542,7 @@ TEST_F(SearchArgumentTest, ge_date_sql)
     testSql("sent", "ge2021-09-08",                    1);
     testSql("sent", "ge2021-09-08T12:33:56+00:00",     1);
     testSql("sent", "ge2021-09-08T12:33+00:00",        1);
-    testSql("sent", "ge2021-09-08T12:33",              1);
+    testSql("sent", "ge2021-09-08T14:33",              1);
 
     // Fail for T < B
     testSql("sent", "ge2022",                          0);
@@ -550,19 +550,19 @@ TEST_F(SearchArgumentTest, ge_date_sql)
     testSql("sent", "ge2021-09-09",                    0);
     testSql("sent", "ge2021-09-08T12:34:57+00:00",     0);
     testSql("sent", "ge2021-09-08T12:35+00:00",        0);
-    testSql("sent", "ge2021-09-08T12:35",              0);
+    testSql("sent", "ge2021-09-08T14:35",              0);
 }
 
 
 TEST_F(SearchArgumentTest, le_date_syntax)
 {
-    testSyntax("received", "le2021",                          "(received < '2022-01-01T00:00:00+00:00')");
-    testSyntax("received", "le2021-09",                       "(received < '2021-10-01T00:00:00+00:00')");
-    testSyntax("received", "le2021-09-08",                    "(received < '2021-09-09T00:00:00+00:00')");
+    testSyntax("received", "le2021",                          "(received < '2021-12-31T23:00:00+00:00')");
+    testSyntax("received", "le2021-09",                       "(received < '2021-09-30T22:00:00+00:00')");
+    testSyntax("received", "le2021-09-08",                    "(received < '2021-09-08T22:00:00+00:00')");
     testSyntax("received", "le2021-09-08T23:32:58+00:00",     "(received < '2021-09-08T23:32:59+00:00')");
     testSyntax("received", "le2021-09-07T23:32:59Z",          "(received < '2021-09-07T23:33:00+00:00')");
-    testSyntax("received", "le2021-11-11T12:34:22",           "(received < '2021-11-11T12:34:23+00:00')");
-    testSyntax("received", "le2021-09-07T20:59",              "(received < '2021-09-07T21:00:00+00:00')");
+    testSyntax("received", "le2021-11-11T12:34:22",           "(received < '2021-11-11T11:34:23+00:00')");
+    testSyntax("received", "le2021-09-07T20:59",              "(received < '2021-09-07T19:00:00+00:00')");
     testSyntax("received", "le2021-09-07T20:59Z",             "(received < '2021-09-07T21:00:00+00:00')");
     testSyntax("received", "le2021-09-07T20:59+02:00",        "(received < '2021-09-07T19:00:00+00:00')");
 }
@@ -576,7 +576,7 @@ TEST_F(SearchArgumentTest, le_date_sql)
     testSql("sent", "le2021-09-08",                    1);
     testSql("sent", "le2021-09-08T12:34:56+00:00",     1);
     testSql("sent", "le2021-09-08T12:34+00:00",        1);
-    testSql("sent", "le2021-09-08T12:34",              1);
+    testSql("sent", "le2021-09-08T14:34",              1);
 
     // Fail for T >= E
     testSql("sent", "le2011",                          0);
@@ -584,7 +584,7 @@ TEST_F(SearchArgumentTest, le_date_sql)
     testSql("sent", "le2021-09-07",                    0);
     testSql("sent", "le2021-09-08T12:34:55+00:00",     0);
     testSql("sent", "le2021-09-08T12:33+00:00",        0);
-    testSql("sent", "le2021-09-08T12:33",              0);
+    testSql("sent", "le2021-09-08T14:33",              0);
 }
 
 
@@ -593,13 +593,13 @@ TEST_F(SearchArgumentTest, le_date_sql)
  */
 TEST_F(SearchArgumentTest, sa_date_syntax)
 {
-    testSyntax("received", "sa2021",                          "(received >= '2022-01-01T00:00:00+00:00')");
-    testSyntax("received", "sa2021-09",                       "(received >= '2021-10-01T00:00:00+00:00')");
-    testSyntax("received", "sa2021-09-08",                    "(received >= '2021-09-09T00:00:00+00:00')");
+    testSyntax("received", "sa2021",                          "(received >= '2021-12-31T23:00:00+00:00')");
+    testSyntax("received", "sa2021-09",                       "(received >= '2021-09-30T22:00:00+00:00')");
+    testSyntax("received", "sa2021-09-08",                    "(received >= '2021-09-08T22:00:00+00:00')");
     testSyntax("received", "sa2021-09-08T23:32:58+00:00",     "(received >= '2021-09-08T23:32:59+00:00')");
     testSyntax("received", "sa2021-09-07T23:32:59Z",          "(received >= '2021-09-07T23:33:00+00:00')");
-    testSyntax("received", "sa2021-11-11T12:34:22",           "(received >= '2021-11-11T12:34:23+00:00')");
-    testSyntax("received", "sa2021-09-07T20:59",              "(received >= '2021-09-07T21:00:00+00:00')");
+    testSyntax("received", "sa2021-11-11T12:34:22",           "(received >= '2021-11-11T11:34:23+00:00')");
+    testSyntax("received", "sa2021-09-07T20:59",              "(received >= '2021-09-07T19:00:00+00:00')");
     testSyntax("received", "sa2021-09-07T20:59Z",             "(received >= '2021-09-07T21:00:00+00:00')");
     testSyntax("received", "sa2021-09-07T20:59+02:00",        "(received >= '2021-09-07T19:00:00+00:00')");
 }
@@ -623,7 +623,7 @@ TEST_F(SearchArgumentTest, sa_date_sql)
     testSql("sent", "sa2021-09-08",                    0);
     testSql("sent", "sa2021-09-08T12:34:56+00:00",     0);
     testSql("sent", "sa2021-09-08T12:34+00:00",        0);
-    testSql("sent", "sa2021-09-08T12:34",              0);
+    testSql("sent", "sa2021-09-08T14:34",              0);
 }
 
 
@@ -632,13 +632,13 @@ TEST_F(SearchArgumentTest, sa_date_sql)
  */
 TEST_F(SearchArgumentTest, eb_date_syntax)
 {
-    testSyntax("received", "eb2021",                          "(received < '2021-01-01T00:00:00+00:00')");
-    testSyntax("received", "eb2021-09",                       "(received < '2021-09-01T00:00:00+00:00')");
-    testSyntax("received", "eb2021-09-08",                    "(received < '2021-09-08T00:00:00+00:00')");
+    testSyntax("received", "eb2021",                          "(received < '2020-12-31T23:00:00+00:00')");
+    testSyntax("received", "eb2021-09",                       "(received < '2021-08-31T22:00:00+00:00')");
+    testSyntax("received", "eb2021-09-08",                    "(received < '2021-09-07T22:00:00+00:00')");
     testSyntax("received", "eb2021-09-08T23:32:58+00:00",     "(received < '2021-09-08T23:32:58+00:00')");
     testSyntax("received", "eb2021-09-07T23:32:59Z",          "(received < '2021-09-07T23:32:59+00:00')");
-    testSyntax("received", "eb2021-11-11T12:34:22",           "(received < '2021-11-11T12:34:22+00:00')");
-    testSyntax("received", "eb2021-09-07T20:59",              "(received < '2021-09-07T20:59:00+00:00')");
+    testSyntax("received", "eb2021-11-11T12:34:22",           "(received < '2021-11-11T11:34:22+00:00')");
+    testSyntax("received", "eb2021-09-07T20:59",              "(received < '2021-09-07T18:59:00+00:00')");
     testSyntax("received", "eb2021-09-07T20:59Z",             "(received < '2021-09-07T20:59:00+00:00')");
     testSyntax("received", "eb2021-09-07T20:59+02:00",        "(received < '2021-09-07T18:59:00+00:00')");
 }
@@ -655,7 +655,7 @@ TEST_F(SearchArgumentTest, eb_date_sql)
     testSql("sent", "eb2021-09-09",                    1);
     testSql("sent", "eb2021-09-08T23:34:57+00:00",     1);
     testSql("sent", "eb2021-09-08T12:35+00:00",        1);
-    testSql("sent", "eb2021-09-08T12:35",              1);
+    testSql("sent", "eb2021-09-08T14:35",              1);
 
     // Fail for T >= B
     testSql("sent", "eb2021",                          0);
@@ -663,7 +663,7 @@ TEST_F(SearchArgumentTest, eb_date_sql)
     testSql("sent", "eb2021-09-08",                    0);
     testSql("sent", "eb2021-09-08T12:34:56+00:00",     0);
     testSql("sent", "eb2021-09-08T12:34+00:00",        0);
-    testSql("sent", "eb2021-09-08T12:34",              0);
+    testSql("sent", "eb2021-09-08T14:34",              0);
 }
 
 

@@ -29,6 +29,8 @@ public:
 
     void deleteBlob(char operatorId, char version) override;
 
+    void recreateConnection() override;
+
 private:
     static ProductionVsdmKeyBlobDatabase::Entry entryFromRow(const pqxx::row& rowEntry);
 

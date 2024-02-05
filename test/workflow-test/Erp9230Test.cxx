@@ -46,6 +46,7 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
     requestArguments.headerFields.emplace(Header::Accept, MimeType::fhirJson);
     requestArguments.headerFields.emplace(Header::XAccessCode, accessCode);
     requestArguments.expectedInnerStatus = HttpStatus::Created;
+    requestArguments.overrideExpectedPrescriptionId = prescriptionId->toString();
     ClientResponse serverResponse;
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(requestArguments));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);

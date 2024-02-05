@@ -33,7 +33,7 @@ TEST_F(Erp5833Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(
         std::tie(std::ignore, innerResponse) =
             send(RequestArguments{HttpMethod::POST, taskRejectWithoutSecret, {}, "application/fhir+xml"}
-                .withJwt(jwtApotheke()).withExpectedInnerFlowType("160")
+                .withJwt(jwtApotheke())
             )
         );
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
