@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -123,6 +123,15 @@ TEST_F(AdminRequestHandlerTest, ConfigurationHandler)
     // credential should be redacted
     {
         const auto credKey = confNames.strings(ConfigurationKey::ADMIN_CREDENTIALS);
+        rapidjson::Pointer credKeyPointer{
+            std::string{"/environment/"}.append(credKey.environmentVariable).append("/value")};
+        ASSERT_NE(credKeyPointer, nullptr);
+        EXPECT_EQ(std::string(credKeyPointer.Get(configDocument)->GetString()), "<redacted>");
+    }
+
+    // credential should be redacted
+    {
+        const auto credKey = confNames.strings(ConfigurationKey::ADMIN_RC_CREDENTIALS);
         rapidjson::Pointer credKeyPointer{
             std::string{"/environment/"}.append(credKey.environmentVariable).append("/value")};
         ASSERT_NE(credKeyPointer, nullptr);

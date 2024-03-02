@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -106,7 +106,10 @@ bool AuditDataCollector::shouldCreateAuditEventOnSuccess() const noexcept
 
 bool AuditDataCollector::shouldCreateAuditEventOnError(HttpStatus errorCode) const noexcept
 {
-    return errorCode == HttpStatus::Forbidden &&
+    return (errorCode == HttpStatus::Forbidden &&
            mEventId.has_value() &&
-           *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed;
+           *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed)
+        || (errorCode == HttpStatus::NotAcceptPN3 &&
+           mEventId.has_value() &&
+           *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed);
 }

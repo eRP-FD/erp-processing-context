@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -1093,7 +1093,8 @@ enum ExpectedOutcome
 };
 
 void testVerifyPayload(Communication::MessageType messageType, std::string_view payload,
-                       ExpectedOutcome expectedOutcome, std::optional<std::string_view> expectedMessage = std::nullopt)
+                       ExpectedOutcome expectedOutcome, std::optional<std::string_view> expectedMessage = std::nullopt,
+                       bool withDiagnostics = true)
 {
     auto builder = CommunicationJsonStringBuilder(messageType);
     std::string body = builder.setPayload(std::string{payload}).createJsonString();
@@ -1104,6 +1105,16 @@ void testVerifyPayload(Communication::MessageType messageType, std::string_view 
     try
     {
         comm.verifyPayload(*jsonValidator);
+    }
+    catch (const ErpException& e)
+    {
+        ASSERT_EQ(expectedOutcome, ExpectedOutcome::failure);
+        if (expectedMessage.has_value())
+        {
+            ASSERT_TRUE(String::starts_with(std::string_view{e.what()}, *expectedMessage));
+            ASSERT_EQ(e.diagnostics().has_value(), withDiagnostics) << body;
+        }
+        return;
     }
     catch (const std::exception& e)
     {
@@ -1159,12 +1170,13 @@ TEST_F(CommunicationTest, verifyPayloadDispReq)
     }
     {
         std::string_view payload = R"({})";
-        EXPECT_NO_FATAL_FAILURE(
-            testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure,
+                                                  "Invalid payload: does not conform to expected JSON schema:"));
     }
     {
         std::string_view payload = R"(not-a-json)";
-        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure, "Invalid JSON in payload.contentString"));
+        EXPECT_NO_FATAL_FAILURE(
+            testVerifyPayload(msgType, payload, failure, "Invalid JSON in payload.contentString", false));
     }
     {
         std::string_view payload = R"({"version":1,"supplyOptionsType":"onPremise","extraElement":"1"})";

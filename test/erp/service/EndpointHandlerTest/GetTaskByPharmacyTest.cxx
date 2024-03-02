@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -13,9 +13,11 @@
 #include "erp/util/Base64.hxx"
 #include "erp/util/Demangle.hxx"
 #include "erp/util/Random.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JwtBuilder.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 #include <erp/service/task/CloseTaskHandler.hxx>
@@ -58,10 +60,32 @@ std::string makePz(const model::Kvnr& kvnr, const model::Timestamp& timestamp, c
 std::string createEncodedPnw(std::optional<std::string> pnwPzNumberInput = std::nullopt)
 {
     std::string pnwXml{
-        R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?><PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0"><TS>20230303111110</TS><E>1</E>)"};
+        R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?><PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0"><TS>20230303111110</TS>)"};
     if (pnwPzNumberInput.has_value())
     {
-        pnwXml += "<PZ>" + pnwPzNumberInput.value() + "</PZ>";
+        pnwXml += "<E>1</E><PZ>" + pnwPzNumberInput.value() + "</PZ>";
+    }
+    else
+    {
+        pnwXml += "<E>3</E><EC>12101</EC>";
+    }
+    pnwXml += "</PN>";
+    const auto gzippedPnw = Deflate().compress(pnwXml, Compression::DictionaryUse::Undefined);
+
+    return Base64::encode(gzippedPnw);
+}
+
+std::string createEncodedPnwWithError(std::optional<std::string> pnwResult = std::nullopt)
+{
+    std::string pnwXml{
+        R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?><PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0"><TS>20230303111110</TS>)"};
+    if (pnwResult.has_value())
+    {
+        pnwXml += "<E>" + pnwResult.value() + "</E>";
+    }
+    else
+    {
+        pnwXml += "<E>6</E>";
     }
     pnwXml += "</PN>";
     const auto gzippedPnw = Deflate().compress(pnwXml, Compression::DictionaryUse::Undefined);
@@ -97,7 +121,7 @@ public:
         vsdmBlobDb.storeBlob(std::move(blobEntry));
     }
 
-    void callHandler(const std::string& pnw, ServerResponse& serverResponse)
+    void callHandler(const std::string& pnw, ServerResponse& serverResponse, std::optional<model::Kvnr> kvnr = std::nullopt )
     {
         GetAllTasksHandler handler({});
 
@@ -105,13 +129,53 @@ public:
         Header requestHeader{HttpMethod::GET, "/Task", 0, {}, HttpStatus::Unknown};
         ServerRequest serverRequest{std::move(requestHeader)};
         serverRequest.setAccessToken(jwtPharmacy);
-        // store the unescaped string, the real handler also gets the the unescaped string
-        serverRequest.setQueryParameters({{"pnw", pnw}});
+        if(kvnr.has_value())
+        {
+            serverRequest.setQueryParameters({{"pnw", pnw}, {"kvnr", kvnr.value().id()}});
+        }
+        else
+        {
+            serverRequest.setQueryParameters({{"pnw", pnw}});
+        }
         AccessLog accessLog;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
         handler.handleRequest(sessionContext);
+    }
+
+    void verifyTasksReady(ServerResponse serverResponse)
+    {
+        model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+        const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
+        A_23452_02.test("task.status=ready and task.for=kvnr");
+        // see MockDatabase::fillWithStaticData() for the above KVNR with status ready
+        EXPECT_EQ(tasks.size(), 2);
+        for (const auto& task : tasks)
+        {
+            ASSERT_NO_THROW((void) model::Task::fromXml(task.serializeToXmlString(), *StaticData::getXmlValidator(),
+                                                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+            ASSERT_EQ(task.status(), model::Task::Status::ready);
+            EXPECT_EQ(task.kvnr(), kvnr);
+            EXPECT_NO_THROW(auto accessCode [[maybe_unused]] = task.accessCode());
+        }
+    }
+
+
+    void setAcceptPN3(bool enable, const std::optional<model::Timestamp>& expiry)
+    {
+        auto runtimeConfig = mServiceContext.getRuntimeConfigurationSetter();
+        if (enable)
+        {
+            runtimeConfig->enableAcceptPN3(expiry.has_value()?
+               expiry.value():
+               model::Timestamp::now() + std::chrono::hours{1}
+            );
+        }
+        else
+        {
+            runtimeConfig->disableAcceptPN3();
+        }
     }
 
     void TearDown() override
@@ -134,33 +198,69 @@ TEST_F(GetTasksByPharmacyTest, success)
     ASSERT_NO_THROW(callHandler(pnw, serverResponse));
 
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-    model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
-    const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
-    A_23452_01.test("task.status=ready and task.for=kvnr");
-    // see MockDatabase::fillWithStaticData() for the above KVNR with status ready
-    EXPECT_EQ(tasks.size(), 2);
-    for (const auto& task : tasks)
-    {
-        ASSERT_NO_THROW((void) model::Task::fromXml(task.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                    *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
-        ASSERT_EQ(task.status(), model::Task::Status::ready);
-        EXPECT_EQ(task.kvnr(), kvnr);
-        EXPECT_NO_THROW(auto accessCode [[maybe_unused]] = task.accessCode());
-    }
+    verifyTasksReady(serverResponse);
 }
 
-
-TEST_F(GetTasksByPharmacyTest, missingKey)
+TEST_F(GetTasksByPharmacyTest, successAcceptPN3)
 {
-    A_23455.test("missing value for 'pz' in xml");
+    setAcceptPN3(true, std::nullopt);
     auto pnw = createEncodedPnw();
+    ServerResponse serverResponse;
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr));
+
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Accepted);
+    verifyTasksReady(serverResponse);
+}
+
+TEST_F(GetTasksByPharmacyTest, invalidResult)
+{
+    A_25206.test("Result of PNW is not 3");
+    auto pnw = createEncodedPnwWithError("5");
     ServerResponse serverResponse;
 
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Prüfziffer "
-                                      "fehlt im VSDM Prüfungsnachweis).");
+                                      "fehlt im VSDM Prüfungsnachweis oder ungültiges Ergebnis im Prüfungsnachweis).");
 }
 
+TEST_F(GetTasksByPharmacyTest, notAcceptPn3)
+{
+    A_25207.test("no 'pz' in xml and accept PN3 disabled");
+    setAcceptPN3(false, std::nullopt);
+    auto pnw = createEncodedPnw();
+    ServerResponse serverResponse;
+
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::NotAcceptPN3,
+                                      "Es wird kein Prüfnachweis mit Ergebnis 3 (ohne Prüfziffer) akzeptiert.");
+}
+
+TEST_F(GetTasksByPharmacyTest, notAcceptPn3WithoutKvnr)
+{
+    A_25208.test("no 'pz' in xml, no 'kvnr' in URL and accept PN3");
+    setAcceptPN3(true, std::nullopt);
+    auto pnw = createEncodedPnw();
+    ServerResponse serverResponse;
+
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::NotAcceptPN3WithoutKVNR,
+                                      "Ein Prüfnachweis mit Ergebnis '3' ohne KVNR wird nicht akzeptiert.");
+}
+
+TEST_F(GetTasksByPharmacyTest, successAcceptPN3expired)
+{
+    using namespace std::chrono_literals;
+    setAcceptPN3(true, model::Timestamp::now() - 1min);
+    auto pnw = createEncodedPnw();
+    ServerResponse serverResponse;
+
+    ::testing::internal::CaptureStderr();
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr));
+
+    std::string output = ::testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find("AcceptPN3 expired") != std::string::npos);
+
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Accepted);
+    verifyTasksReady(serverResponse);
+}
 
 TEST_F(GetTasksByPharmacyTest, outdatedData)
 {
@@ -177,7 +277,7 @@ TEST_F(GetTasksByPharmacyTest, outdatedData)
 
 TEST_F(GetTasksByPharmacyTest, dateTooNew)
 {
-    A_23451.test("PNW with timestamp too new minutes causes error message with code 403");
+    A_23451_01.test("PNW with timestamp too new minutes causes error message with code 403");
     using namespace std::chrono_literals;
     EnvironmentVariableGuard guardTimestamp(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS, "60");
     auto pz = makePz(kvnr, model::Timestamp::now() + 2min, 'U', keyPackage);
@@ -190,7 +290,7 @@ TEST_F(GetTasksByPharmacyTest, dateTooNew)
 }
 
 
-// GEMREQ-start A_23456#test
+// GEMREQ-start A_23456-01#test
 TEST_F(GetTasksByPharmacyTest, unknownKey)
 {
     VsdmHmacKey newKeyPackage{'$', '1'};
@@ -217,7 +317,7 @@ TEST_F(GetTasksByPharmacyTest, differentKey)
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Fehler bei "
                                       "Prüfung der HMAC-Sicherung).");
 }
-// GEMREQ-end A_23456#test
+// GEMREQ-end A_23456-01#test
 
 TEST_F(GetTasksByPharmacyTest, pzTooShort)
 {
@@ -466,9 +566,7 @@ TEST_F(GetTaskByIdByPharmacyTest, accessCodeAndSecret)
     ASSERT_NO_THROW(callHandler(prescriptionId, telematikID, accessCode, secret, serverResponse););
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::Bundle> bundle;
-    ASSERT_NO_THROW(bundle.emplace(model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
-                                                          *StaticData::getInCodeValidator(), SchemaType::fhir)));
-
+    ASSERT_NO_THROW(bundle.emplace(testutils::getValidatedErxReceiptBundle<model::Bundle>(serverResponse.getBody(), SchemaType::fhir)));
     auto receiptBundle = bundle->getResourcesByType<model::ErxReceipt>();
     ASSERT_EQ(receiptBundle.size(), 1) << serverResponse.getBody();
     auto profileName = receiptBundle.at(0).getProfileName();

@@ -1,19 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
- * non-exclusively licensed to gematik GmbH
- */
-
-/*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
- * non-exclusively licensed to gematik GmbH
- */
-
-/*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
- *
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -125,11 +112,4 @@ SELECT prescription_id,
        owner
 FROM erp.task_209
     );
-
-alter view erp.task_view owner to role_proc_admin;
-revoke all on erp.task_view from role_proc_admin;
-revoke all on erp.task_view from role_proc_user;
-grant select on erp.task_view to role_proc_admin, role_proc_user;
-
-
 COMMIT;

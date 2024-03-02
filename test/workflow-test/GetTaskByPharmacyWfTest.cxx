@@ -1,14 +1,16 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/ErpRequirements.hxx"
+#include "erp/common/Header.hxx"
 #include "erp/compression/Deflate.hxx"
 #include "erp/enrolment/VsdmHmacKey.hxx"
 #include "erp/util/Hash.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <gtest/gtest.h>
@@ -65,10 +67,14 @@ std::string makePz(const model::Kvnr& kvnr, const model::Timestamp& timestamp,
 std::string createEncodedPnw(std::optional<std::string> pnwPzNumberInput = std::nullopt)
 {
     std::string pnwXml{
-        R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?><PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0"><TS>20230303111110</TS><E>1</E>)"};
+        R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?><PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0"><TS>20230303111110</TS>)"};
     if (pnwPzNumberInput.has_value())
     {
-        pnwXml += "<PZ>" + pnwPzNumberInput.value() + "</PZ>";
+        pnwXml += "<E>1</E><PZ>" + pnwPzNumberInput.value() + "</PZ>";
+    }
+    else
+    {
+        pnwXml += "<E>3</E><EC>12101</EC>";
     }
     pnwXml += "</PN>";
 
@@ -76,6 +82,26 @@ std::string createEncodedPnw(std::optional<std::string> pnwPzNumberInput = std::
     const auto base64Pnw = Base64::encode(gzippedPnw);
     return UrlHelper::escapeUrl(base64Pnw);
 }
+
+std::string createEncodedPnwWithError(std::optional<std::string> pnwResult = std::nullopt)
+{
+    std::string pnwXml{
+        R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?><PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0"><TS>20230303111110</TS>)"};
+    if (pnwResult.has_value())
+    {
+        pnwXml += "<E>" + pnwResult.value() + "</E>";
+    }
+    else
+    {
+        pnwXml += "<E>6</E>";
+    }
+    pnwXml += "</PN>";
+
+    const auto gzippedPnw = Deflate().compress(pnwXml, Compression::DictionaryUse::Undefined);
+    const auto base64Pnw = Base64::encode(gzippedPnw);
+    return UrlHelper::escapeUrl(base64Pnw);
+}
+
 }// namespace
 
 class GetTaskByPharmacyWfTest : public ErpWorkflowTest
@@ -102,7 +128,7 @@ protected:
 
 TEST_F(GetTaskByPharmacyWfTest, BadPnwMissing)
 {
-    A_23455.test("Missing PNW causes error message with code 403");
+    A_25206.test("PNW without PZ and results other then 3 causes error message with code 403");
     std::optional<model::PrescriptionId> prescriptionId{};
     createActivatedTask(prescriptionId);
 
@@ -136,7 +162,7 @@ TEST_F(GetTaskByPharmacyWfTest, BadPnwCannotDecode)
 
 TEST_F(GetTaskByPharmacyWfTest, TimestampTooOld)
 {
-    A_23451.test("PNW with timestamp older than 30 minutes causes error message with code 403");
+    A_23451_01.test("PNW with timestamp older than 30 minutes causes error message with code 403");
     const auto startTime = model::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId{};
@@ -202,13 +228,14 @@ TEST_F(GetTaskByPharmacyWfTest, RejectWithoutPnwPzNumber)
     std::optional<model::PrescriptionId> prescriptionId{};
     std::optional<model::Bundle> tasks{};
     createActivatedTask(prescriptionId);
-    const auto pnw = createEncodedPnw();
+    const auto pnw = createEncodedPnwWithError("5");
 
-    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::Forbidden,
-                                            model::OperationOutcome::Issue::Type::forbidden,
-                                            "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden "
-                                            "(Prüfziffer fehlt im VSDM Prüfungsnachweis).",
-                                            pnw));
+    ASSERT_NO_FATAL_FAILURE(tasks =
+                                taskGet(kvnr.id(), std::string{}, HttpStatus::Forbidden,
+                                        model::OperationOutcome::Issue::Type::forbidden,
+                                        "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Prüfziffer "
+                                        "fehlt im VSDM Prüfungsnachweis oder ungültiges Ergebnis im Prüfungsnachweis).",
+                                        pnw));
     ASSERT_FALSE(tasks);
 }
 
@@ -228,6 +255,48 @@ TEST_F(GetTaskByPharmacyWfTest, Success)
     const auto pnw = createEncodedPnw(pz);
 
     ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::OK, std::nullopt, std::nullopt, pnw));
+    ASSERT_TRUE(tasks);
+    ASSERT_EQ(tasks->getResourceCount(), 1);
+    const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
+    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
+        {prescriptionId, prescriptionId, std::nullopt}, kvnr.id(), "en", startTime,
+        {telematikIdDoctor, kvnr.id(), telematikIdPharmacy}, {0, 2},
+        {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
+}
+
+TEST_F(GetTaskByPharmacyWfTest, SuccessAcceptPN3)
+{
+    GTEST_SKIP_("[ERP-19096] cannot run, because the two test clients start two independent servers and while Jenkins the port is noch reachable.");
+    {
+        // prepare: enabel accept PN3
+        const auto expiry = model::Timestamp::now() + std::chrono::hours(12);
+        std::unique_ptr<TestClient> client = TestClient::create(StaticData::getXmlValidator(), TestClient::Target::ADMIN);
+        ClientRequest clientRequest(
+            Header(
+                HttpMethod::PUT,
+                "/admin/configuration",
+                Header::Version_1_1,
+                {{Header::Host, client->getHostHttpHeader()},
+                {Header::Authorization, "Basic cred"},
+                {Header::ContentType, ContentMimeType::xWwwFormUrlEncoded}},
+                HttpStatus::Unknown
+            ),
+                "AcceptPN3=true&AcceptPN3Expiry=" + expiry.toXsDateTime()
+            );
+        auto response = client->send(clientRequest);
+        EXPECT_EQ(response.getHeader().status(), HttpStatus::OK);
+    }
+
+    A_25209.test("Successful GET Task by pharmacy with PN3");
+    const auto startTime = model::Timestamp::now();
+    std::optional<model::PrescriptionId> prescriptionId{};
+    std::optional<model::Bundle> tasks{};
+    createActivatedTask(prescriptionId);
+
+    const auto pnw = createEncodedPnw();
+
+    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), "kvnr="+kvnr.id(), HttpStatus::Accepted, std::nullopt, std::nullopt, pnw));
     ASSERT_TRUE(tasks);
     ASSERT_EQ(tasks->getResourceCount(), 1);
     const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();

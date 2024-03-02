@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -164,6 +164,7 @@ enum class ConfigurationKey
     ADMIN_SERVER_PORT,
     ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS,
     ADMIN_CREDENTIALS,
+    ADMIN_RC_CREDENTIALS,
 
     // Debug related configuration
     DEBUG_DISABLE_REGISTRATION,
@@ -192,6 +193,7 @@ struct KeyData
         categoryFunctional = 1 << 4,
         categoryFunctionalStatic = 1 << 5,
         categoryDebug = 1 << 6,
+        categoryRuntime = 1 << 7,
         all = INT_MAX,
     };
     int flags = none;

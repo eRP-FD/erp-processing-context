@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -12,15 +12,21 @@
 #include "erp/server/response/ServerResponse.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/ConfigurationFormatter.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/UrlHelper.hxx"
+
+AdminRequestHandlerBase::AdminRequestHandlerBase(ConfigurationKey credentialsKey)
+    : mCredentialsKey(credentialsKey)
+{
+}
 
 void AdminRequestHandlerBase::handleRequest(SessionContext& session)
 {
     try
     {
-        handleBasicAuthentication(session, ConfigurationKey::ADMIN_CREDENTIALS);
+        handleBasicAuthentication(session, mCredentialsKey);
         doHandleRequest(session);
         session.response.setStatus(HttpStatus::OK);
     }
@@ -28,6 +34,11 @@ void AdminRequestHandlerBase::handleRequest(SessionContext& session)
     {
         session.response.setStatus(ex.status());
         session.response.setBody(ex.what());
+    }
+    catch (const model::ModelException& me)
+    {
+        session.response.setStatus(HttpStatus::BadRequest);
+        session.response.setBody(me.what());
     }
     catch (const std::exception& ex)
     {
@@ -44,7 +55,8 @@ void AdminRequestHandlerBase::handleRequest(SessionContext& session)
 }
 
 PostRestartHandler::PostRestartHandler()
-    : mDefaultShutdownDelay(
+    : AdminRequestHandlerBase(ConfigurationKey::ADMIN_CREDENTIALS)
+    , mDefaultShutdownDelay(
           Configuration::instance().getIntValue(ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS))
 {
 }
@@ -85,6 +97,11 @@ void PostRestartHandler::doHandleRequest(SessionContext& session)
     session.response.setBody("shutdown in " + std::to_string(delay) + " seconds");
 }
 
+GetConfigurationHandler::GetConfigurationHandler()
+    : AdminRequestHandlerBase(ConfigurationKey::ADMIN_CREDENTIALS)
+{
+}
+
 Operation PostRestartHandler::getOperation(void) const
 {
     return Operation::POST_Admin_restart;
@@ -94,8 +111,9 @@ void GetConfigurationHandler::doHandleRequest(SessionContext& session)
 {
     TVLOG(1) << "configuration requested by: " << session.request.header().serializeFields();
     const auto& config = Configuration::instance();
+    const auto runtimeConfig = session.serviceContext.getRuntimeConfigurationGetter();
     using Flags = KeyData::ConfigurationKeyFlags;
-    session.response.setBody(ConfigurationFormatter::formatAsJson(config, Flags::all));
+    session.response.setBody(ConfigurationFormatter::formatAsJson(config, *runtimeConfig, Flags::all));
     session.response.setHeader(Header::ContentType, MimeType::json);
 }
 

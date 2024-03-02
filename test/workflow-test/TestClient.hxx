@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -63,6 +63,8 @@ public:
     virtual Certificate getEciesCertificate();
 
     virtual PcServiceContext* getContext() const;
+
+    virtual bool runsInErpTest() const = 0;
 
 
 private:

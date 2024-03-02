@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -181,6 +181,62 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithInvalidPnw)
     }
 }
 
+TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPn3)
+{
+    const std::string telematikId{"12345654321"};
+    const std::string_view agentName = "Test Name";
+
+    model::AuditData auditData(
+        model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3,
+        model::AuditMetaData(agentName, telematikId),
+        model::AuditEvent::Action::read,
+        model::AuditEvent::AgentType::human,
+        model::Kvnr{std::string{"X123456788"}, model::Kvnr::Type::pkv},
+        1234,
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 4241),
+        std::nullopt);
+
+    auditData.setId("audit_data_id");
+    auditData.setRecorded(model::Timestamp::now());
+
+    AuditEventTextTemplates textResources{};
+    const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
+    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
+
+    const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
+                                " hat mit Ihrer eGK die Liste der offenen E-Rezepte abgerufen. (Offline-Check wurde akzeptiert)</div>";
+    EXPECT_EQ(auditEvent.textDiv(), textDiv);
+}
+
+TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPn3Failed)
+{
+    const std::string telematikId{"12345654321"};
+    const std::string_view agentName = "Test Name";
+
+    model::AuditData auditData(
+        model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed,
+        model::AuditMetaData(agentName, telematikId),
+        model::AuditEvent::Action::read,
+        model::AuditEvent::AgentType::human,
+        model::Kvnr{std::string{"X123456788"}, model::Kvnr::Type::pkv},
+        1234,
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 4241),
+        std::nullopt);
+
+    auditData.setId("audit_data_id");
+    auditData.setRecorded(model::Timestamp::now());
+
+    AuditEventTextTemplates textResources{};
+    const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
+    {
+        const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
+        const std::string textDiv =
+            "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
+            " konnte aufgrund eines Fehlerfalls nicht die Liste der offenen E-Rezepte mit Ihrer eGK abrufen."
+            " (Offline-Check wurde nicht akzeptiert)</div>";
+        EXPECT_EQ(auditEvent.textDiv(), textDiv);
+    }
+}
 
 TEST_F(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognitive-complexity)
 {

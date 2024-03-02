@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -11,6 +11,8 @@
 #include "erp/crypto/Certificate.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/database/redis/RateLimiter.hxx"
+#include "erp/enrolment/EnrolmentData.hxx"
+#include "erp/hsm/BlobCache.hxx"
 #include "erp/hsm/HsmFactory.hxx"
 #include "erp/hsm/HsmPool.hxx"
 #include "erp/hsm/KeyDerivation.hxx"
@@ -19,22 +21,21 @@
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.hxx"
+#include "erp/server/HttpsServer.hxx"
 #include "erp/service/AuditEventTextTemplates.hxx"
+#include "erp/tpm/Tpm.hxx"
 #include "erp/tsl/TslManager.hxx"
 #include "erp/tsl/TslRefreshJob.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/health/ApplicationHealth.hxx"
-#include "erp/enrolment/EnrolmentData.hxx"
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/tpm/Tpm.hxx"
-#include "erp/server/HttpsServer.hxx"
-
 
 #include <functional>
 #include <memory>
 #include <mutex>
 
 
+class RuntimeConfigurationSetter;
+class RuntimeConfigurationGetter;
 class BlobCache;
 class BlobDatabase;
 class PreUserPseudonymManager;
@@ -42,7 +43,7 @@ class TelematicPseudonymManager;
 class InCodeValidator;
 class JsonValidator;
 class XmlValidator;
-template <typename>
+template<typename>
 class PeriodicTimer;
 class RegistrationInterface;
 class SeedTimerHandler;
@@ -51,6 +52,7 @@ class RequestHandlerManager;
 class RegistrationManager;
 class VsdmKeyBlobDatabase;
 class VsdmKeyCache;
+class RuntimeConfiguration;
 
 using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 
@@ -58,13 +60,13 @@ using SeedTimer = PeriodicTimer<SeedTimerHandler>;
  * This collection of factories can be extended to allow other classes like database, hsm, etc. to
  * be created differently for production or for tests.
  */
-struct Factories
-{
+struct Factories {
     Database::Factory databaseFactory;
 
     std::function<std::shared_ptr<BlobCache>()> blobCacheFactory;
     std::function<std::unique_ptr<HsmClient>()> hsmClientFactory;
-    std::function<std::unique_ptr<HsmFactory>(std::unique_ptr<HsmClient>,std::shared_ptr<BlobCache>)> hsmFactoryFactory;
+    std::function<std::unique_ptr<HsmFactory>(std::unique_ptr<HsmClient>, std::shared_ptr<BlobCache>)>
+        hsmFactoryFactory;
     TeeTokenUpdater::TeeTokenUpdaterFactory teeTokenUpdaterFactory;
     TslManager::TslManagerFactory tslManagerFactory;
     std::function<std::unique_ptr<RedisInterface>(std::chrono::milliseconds socketTimeout)> redisClientFactory;
@@ -72,8 +74,7 @@ struct Factories
 
     using HttpsServerFactoryT = std::function<std::unique_ptr<HttpsServer>(
         const std::string_view address, uint16_t port, RequestHandlerManager&& requestHandlers,
-        PcServiceContext& serviceContext, bool enforceClientAuthentication,
-        const SafeString& caCertificates)>;
+        PcServiceContext& serviceContext, bool enforceClientAuthentication, const SafeString& caCertificates)>;
 
     HttpsServerFactoryT teeServerFactory;
     HttpsServerFactoryT enrolmentServerFactory;
@@ -128,7 +129,7 @@ public:
     const SeedTimer* getPrngSeeder() const;
 
     Idp idp;
-    ApplicationHealth& applicationHealth ();
+    ApplicationHealth& applicationHealth();
 
     std::shared_ptr<RegistrationInterface> registrationInterface() const;
 
@@ -144,6 +145,9 @@ public:
     VsdmKeyCache& getVsdmKeyCache() const;
 
     std::shared_ptr<Timer> getTimerManager();
+
+    std::unique_ptr<RuntimeConfigurationGetter> getRuntimeConfigurationGetter() const;
+    std::unique_ptr<RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
 
     PcServiceContext(const PcServiceContext& other) = delete;
     PcServiceContext& operator=(const PcServiceContext& other) = delete;
@@ -188,6 +192,8 @@ private:
     std::unique_ptr<HttpsServer> mTeeServer;
     std::unique_ptr<HttpsServer> mEnrolmentServer;
     std::unique_ptr<HttpsServer> mAdminServer;
+
+    gsl::not_null<std::unique_ptr<RuntimeConfiguration>> mRuntimeConfiguration;
 };
 
 class SessionContext;

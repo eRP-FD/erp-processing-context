@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -507,6 +507,7 @@ protected:
 
     // some tests must know if they run with proxy in between, because the proxy modifies the Http Response.
     bool runsInCloudEnv() const;
+    bool runsInErpTest() const;
 
     model::ResourceVersion::DeGematikErezeptWorkflowR4 serverGematikProfileVersion();
 

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -51,7 +51,9 @@ enum class AuditEventId : std::int16_t
     GET_Tasks_by_pharmacy_with_pz,
     GET_Tasks_by_pharmacy_pnw_check_failed = 28,
     Communication_delete_expired_id = 29, // deletion of expired Communications by maintenance script => Id 29 used by database script!
-    MAX = Communication_delete_expired_id
+    GET_Tasks_by_pharmacy_with_pn3,
+    GET_Tasks_by_pharmacy_with_pn3_failed,
+    MAX = GET_Tasks_by_pharmacy_with_pn3_failed
 };
 
 bool isEventCausedByPatient(AuditEventId eventId);

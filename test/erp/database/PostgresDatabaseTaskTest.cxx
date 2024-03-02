@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -509,7 +509,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
 }
 // GEMREQ-end A_19115-01
 
-// GEMREQ-start A_23452-01
+// GEMREQ-start A_23452-02
 TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatientAsPharmacy)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
@@ -521,7 +521,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatientAsPharmacy)//NOLINT(r
     std::vector<model::Task> tasks;
     setupTasks(1, kvnr, tasks);
 
-    A_23452_01.test("Ensure only tasks for workflow 160 can be retrieved by KVNR");
+    A_23452_02.test("Ensure only tasks for workflow 160 can be retrieved by KVNR");
     {
         auto result = database().retrieveAll160TasksWithAccessCode(kvnr, searchForStatus("ready"));
         if(prescriptionType() == ::model::PrescriptionType::apothekenpflichigeArzneimittel)
@@ -538,7 +538,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatientAsPharmacy)//NOLINT(r
     }
     database().commitTransaction();
 }
-// GEMREQ-end A_23452-01
+// GEMREQ-end A_23452-02
 
 TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(readability-function-cognitive-complexity)
 {

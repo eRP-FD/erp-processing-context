@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -111,13 +111,18 @@ uint16_t HttpsTestClient::getTargetPort(TestClient::Target target)
     Fail2("Invalid value for target: " + std::to_string(static_cast<intmax_t>(target)), std::logic_error);
 }
 
-Certificate HttpsTestClient::getEciesCertificate (void)
+Certificate HttpsTestClient::getEciesCertificate(void)
 {
     if (mRemoteCertificate)
     {
         return *mRemoteCertificate;
     }
     return TestClient::getEciesCertificate();
+}
+
+bool HttpsTestClient::runsInErpTest() const
+{
+    return false;
 }
 
 

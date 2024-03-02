@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -16,6 +16,12 @@
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
+
+namespace model
+{
+class Bundle;
+class ErxReceipt;
+}
 
 namespace testutils
 {
@@ -52,6 +58,15 @@ telematikIdNamespace(model::ResourceVersion::FhirProfileBundleVersion = model::R
 
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options);
+
+template <typename BundleT = model::ErxReceipt>
+[[nodiscard]] BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc,
+                                                         SchemaType schemaType = SchemaType::Gem_erxReceiptBundle);
+
+extern template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
+extern template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
+
+
 } // namespace testutils
 
 #endif// ERP_PROCESSING_CONTEXT_TEST_UTILS

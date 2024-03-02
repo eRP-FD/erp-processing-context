@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -16,6 +16,7 @@
 #include "erp/service/AuditEventCreator.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Hash.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "erp/util/String.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "erp/xml/XmlDocument.hxx"
@@ -156,8 +157,8 @@ UrlArguments getTaskStatusReadyUrlArgumentsFilter(const KeyDerivation& keyDeriva
 
 void validateProof(const SessionContext& context, const ProofContent& proofContent)
 {
-    A_23451.start("Validate the timestamp");
-    // GEMREQ-start A_23451#validateTimestamp
+    A_23451_01.start("Validate the timestamp");
+    // GEMREQ-start A_23451-01#validateTimestamp
     ErpExpectWithDiagnostics(
         proofContent.timestamp.has_value(), HttpStatus::Forbidden,
         "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche Gültigkeit des "
@@ -171,10 +172,10 @@ void validateProof(const SessionContext& context, const ProofContent& proofConte
     ErpExpect(timeDifference <= proofValidity, HttpStatus::Forbidden,
               "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche Gültigkeit des "
               "Anwesenheitsnachweis überschritten).");
-    A_23451.finish();
-    // GEMREQ-end A_23451#validateTimestamp
+    A_23451_01.finish();
+    // GEMREQ-end A_23451-01#validateTimestamp
 
-    // GEMREQ-start A_23456#calcHmac
+    // GEMREQ-start A_23456-01#calcHmac
     SafeString hmacKey;
     try
     {
@@ -187,11 +188,11 @@ void validateProof(const SessionContext& context, const ProofContent& proofConte
                                        "Prüfung der HMAC-Sicherung).");
     }
     A_23454.start("extract 'prüfziffer' and calculate hash");
-    A_23456.start("Use 23 leading bytes to calculate hash, compare the first 24 bytes of result");
+    A_23456_01.start("Use 23 leading bytes to calculate hash, compare the first 24 bytes of result");
     // the first 23 byte are the data we have to hash using the vsdm key
     const auto calculatedHash = Hash::hmacSha256(hmacKey, proofContent.validationDataForHash);
-    // GEMREQ-end A_23456#calcHmac
-    // GEMREQ-start A_23456#compareHmac
+    // GEMREQ-end A_23456-01#calcHmac
+    // GEMREQ-start A_23456-01#compareHmac
     std::string_view truncatedCalculatedHash{reinterpret_cast<const char*>(calculatedHash.data()),
                                              ProofInformation::truncatedHmacSize};
 
@@ -202,8 +203,8 @@ void validateProof(const SessionContext& context, const ProofContent& proofConte
         ErpFail(HttpStatus::Forbidden, "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Fehler bei "
                                        "Prüfung der HMAC-Sicherung).");
     }
-    // GEMREQ-end A_23456#compareHmac
-    A_23456.finish();
+    // GEMREQ-end A_23456-01#compareHmac
+    A_23456_01.finish();
     A_23454.finish();
 }
 
@@ -220,24 +221,18 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
-    std::optional<model::Bundle> response{};
-
     const auto& accessToken = session.request.getAccessToken();
     if (accessToken.stringForClaim(JWT::professionOIDClaim) == profession_oid::oid_versicherter)
     {
-        response = handleRequestFromInsurant(session);
+        handleRequestFromInsurant(session);
     }
     else
     {
-        response = handleRequestFromPharmacist(session);
+        handleRequestFromPharmacist(session);
     }
-
-    A_19514.start("HttpStatus 200 for successful GET");
-    makeResponse(session, HttpStatus::OK, &response.value());
-    A_19514.finish();
 }
 
-model::Bundle GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
+void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
 {
     const auto& accessToken = session.request.getAccessToken();
 
@@ -289,17 +284,18 @@ model::Bundle GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& se
     responseBundle.setTotalSearchMatches(totalSearchMatches);
 
     // No Audit data collected and no Audit event created for GET /Task (since ERP-8507).
-
-    return responseBundle;
+    A_19514.start("HttpStatus 200 for successful GET");
+    makeResponse(session, HttpStatus::OK, &responseBundle);
+    A_19514.finish();
 }
 
-model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
+void GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
 {
     const std::optional<std::string> telematikId = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     ErpExpect(telematikId.has_value(), HttpStatus::BadRequest, "No valid Telematik-ID in JWT");
 
     A_23450.start("Check provided 'pnw' value");
-    // GEMREQ-start A_23451#pnw
+    // GEMREQ-start A_23451-01#pnw
     std::optional<std::string> pnw = session.request.getQueryParameter("pnw");
     if (! pnw.has_value())
     {
@@ -309,37 +305,100 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     ErpExpect(pnw.has_value() && ! pnw->empty(), HttpStatus::Forbidden, "Missing or invalid PNW query parameter");
 
     const auto proofInformation = proofInformationFromPnw(session, *pnw);
-    // GEMREQ-end A_23451#pnw
+    // GEMREQ-end A_23451-01#pnw
 
-    A_23455.start("Validate presence of prüfziffer");
-    ErpExpect(proofInformation.proofContent.has_value(), HttpStatus::Forbidden,
+    A_25206.start("Validate result equal 3");
+    ErpExpect(proofInformation.proofContent.has_value() || proofInformation.result == "3", HttpStatus::Forbidden,
               "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Prüfziffer fehlt im VSDM "
-              "Prüfungsnachweis).");
-    A_23455.finish();
-    const auto& proofContent = *proofInformation.proofContent;
-    const auto& kvnr = proofContent.kvnr;
-    ErpExpect(kvnr.validFormat(), HttpStatus::Forbidden, "Invalid Kvnr");
+              "Prüfungsnachweis oder ungültiges Ergebnis im Prüfungsnachweis).");
+    A_25206.finish();
+
+    // GEMREQ-start A_23451-01#proofContent, A_23456-01##proofContent
+    if (proofInformation.proofContent.has_value())
+    // GEMREQ-end A_23451-01#proofContent, A_23456-01##proofContent
+    {
+        const auto& proofContent = *proofInformation.proofContent;
+        const auto& kvnr = proofContent.kvnr;
+        ErpExpect(kvnr.validFormat(), HttpStatus::Forbidden, "Invalid Kvnr");
+
+        // Now that we have a KVNR, start collecting the audit data
+        session
+            .auditDataCollector()
+            // Default, will be overridden after successful decoding PNW
+            .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed)
+            .setAction(model::AuditEvent::Action::read)
+            .setInsurantKvnr(kvnr);
+
+        // GEMREQ-start A_23451-01#validate, A_23456-01#validate
+        validateProof(session, proofContent);
+        // GEMREQ-end A_23451-01#validate, A_23456-01#validate
+
+        // Override audit event id
+        session.auditDataCollector().setEventId(
+            model::AuditEventId::GET_Tasks_by_pharmacy_with_pz
+        );
+
+       const auto response = handleRequestFromPharmacist(session, kvnr);
+
+        A_19514.start("HttpStatus 200 for successful GET");
+        makeResponse(session, HttpStatus::OK, &response);
+        A_19514.finish();
+    }
+    else
+    {
+        A_25208.start("Verify given KVNR");
+        const auto kvnrQueryValue = session.request.getQueryParameter("kvnr");
+        ErpExpect(kvnrQueryValue.has_value(), HttpStatus::NotAcceptPN3WithoutKVNR,
+            "Ein Prüfnachweis mit Ergebnis '3' ohne KVNR wird nicht akzeptiert.");
+        A_25208.finish();
+
+        const model::Kvnr kvnr{kvnrQueryValue.value()};
+        ErpExpect(kvnr.validFormat(), HttpStatus::Forbidden, "Invalid Kvnr");
+
+        const auto runtimeConfig = session.serviceContext.getRuntimeConfigurationGetter();
+        const auto isAcceptPN3 = runtimeConfig->isAcceptPN3Enabled();
+
+        session
+            .auditDataCollector()
+            .setEventId(isAcceptPN3?
+                model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3:
+                model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed
+            )
+            .setAction(model::AuditEvent::Action::read)
+            .setInsurantKvnr(kvnr);
+
+        A_25207.start("Accept PN3 disabled");
+        ErpExpect(isAcceptPN3, HttpStatus::NotAcceptPN3,
+            "Es wird kein Prüfnachweis mit Ergebnis 3 (ohne Prüfziffer) akzeptiert.");
+        A_25207.finish();
+
+        const auto acceptPN3Expiry = runtimeConfig->getAcceptPN3Expiry();
+        if(acceptPN3Expiry <= model::Timestamp::now())
+        {
+            TLOG(ERROR) << "GET Task successfully called with a PN3, but AcceptPN3 expired at "
+                    << acceptPN3Expiry.toXsDateTime();
+        }
+
+        const auto response = handleRequestFromPharmacist(session, kvnr);
+
+        A_25209.start("HttpStatus 202 for successful GET");
+        makeResponse(session, HttpStatus::Accepted, &response);
+        A_25209.finish();
+    }
     A_23450.finish();
+}
 
-    // Now that we have a KVNR, start collecting the audit data
-    session
-        .auditDataCollector()
-        // Default, will be overridden after successful decoding PNW
-        .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed)
-        .setAction(model::AuditEvent::Action::read)
-        .setInsurantKvnr(kvnr);
-
-    // GEMREQ-start A_23451#validate, A_23456#validate
-    validateProof(session, proofContent);
-    // GEMREQ-end A_23451#validate, A_23456#validate
-
-    A_23452_01.start("Read tasks according to KVNR and with status 'ready'");
-    // GEMREQ-start A_23452-01#retrieveAllTasksForPatient
+model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session, const model::Kvnr& kvnr)
+{
+    A_25209.start("Read tasks according to KVNR and with status 'ready'");
+    A_23452_02.start("Read tasks according to KVNR and with status 'ready'");
+    // GEMREQ-start A_23452-02#retrieveAllTasksForPatient
     const auto statusReadyFilter = getTaskStatusReadyUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
     auto* database = session.database();
     auto tasks = database->retrieveAll160TasksWithAccessCode(kvnr, statusReadyFilter);
-    A_23452_01.finish();
-    // GEMREQ-end A_23452-01#retrieveAllTasksForPatient
+    // GEMREQ-end A_23452-02#retrieveAllTasksForPatient
+    A_23452_02.finish();
+    A_25209.finish();
 
     model::Bundle responseBundle{model::BundleType::searchset, model::ResourceBase::NoProfile};
     responseBundle.setTotalSearchMatches(tasks.size());
@@ -349,9 +408,6 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
         responseBundle.addResource(makeFullUrl("/Task/" + task.prescriptionId().toString()), {},
                                    model::Bundle::SearchMode::match, task.jsonDocument());
     }
-
-    // Collect Audit data
-    session.auditDataCollector().setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_with_pz);
 
     return responseBundle;
 }

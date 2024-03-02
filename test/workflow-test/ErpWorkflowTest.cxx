@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -1712,6 +1712,51 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     EXPECT_EQ(communications[0].id(), communicationResponseA->id());
     EXPECT_EQ(communications[1].id(), communicationResponseB->id());
 
+}
+
+TEST_F(ErpWorkflowTest, CommunicationJsonValidationError)
+{
+    std::string communication =
+        R"___({"resourceType":"Communication","meta":{"lastUpdated":null,"profile":["https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq"]},"basedOn":[{"reference":"Task/160.000.226.093.129.57/$accept?ac=5edb4d3d90e21fbba2b72855e851e8e5dc7ca1ef470a727103d069627687c8b4","type":null,"identifier":null,"display":null}],"status":"unknown","recipient":[{"reference":null,"type":null,"identifier":{"use":null,"type":null,"system":"https://gematik.de/fhir/sid/telematik-id","value":"3-10.2.0110201000.579","period":null},"display":null}],"identifier":{"use":null,"type":null,"system":"https://gematik.de/fhir/NamingSystem/OrderID","value":"6e59e060-0131-4020-ad05-1b4196a75f5e","period":null},"contained":[],"payload":[{"extension":null,"contentString":"{\"supplyOptionsType\":\"onPremise\",\"hint\":\"\"}"}]})___";
+    RequestArguments reqArgs(HttpMethod::POST, "/Communication", communication, "application/json");
+    auto [outerResonse, innerResponse] = send(reqArgs);
+    checkOperationOutcome(
+        operationOutcomeFromResponse(innerResponse.getBody(), true), model::OperationOutcome::Issue::Type::invalid,
+        "validation of JSON document failed. FHIR JSON schema can be retrieved here: "
+        "https://hl7.org/fhir/R4/fhir.schema.json.zip"/*,
+        "{\"expected\":[\"string\"],\"actual\":\"null\",\"errorCode\":20,\"instanceRef\":\"#/meta/"
+        "lastUpdated\",\"schemaRef\":\"/home/jens/erp/erp-processing-context/cmake-build-debug-wsl-gcc-12/bin/"
+        "resources/schema/hl7.fhir.r4.core/4.0.1/json/fhir.json#/definitions/instant\"}"*/);
+}
+
+TEST_F(ErpWorkflowTest, CommunicationPayloadJsonValidationError)
+{
+    if (serverUsesOldProfile())
+    {
+        GTEST_SKIP();
+    }
+    auto task = taskCreate();
+    auto kvnr = generateNewRandomKVNR();
+    taskActivate(task->prescriptionId(), task->accessCode(),
+                 std::get<0>(makeQESBundle(kvnr.id(), task->prescriptionId(), model::Timestamp::now())));
+    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
+    CommunicationJsonStringBuilder builder(model::Communication::MessageType::DispReq, profileVersion);
+    builder.setPayload(
+        R"___({ "version": 1, "supplyOptionsType": "invalid", "name": "Dr. Maximilian von Muster", "address": [ "wohnhaft bei Emilia Fischer", "Bundesallee 312", "123. OG", "12345 Berlin" ], "hint": "Bitte im Morsecode klingeln: -.-.", "phone": "004916094858168" })___");
+    builder.setPrescriptionId(task->prescriptionId().toString());
+    builder.setRecipient(ActorRole::Pharmacists, "3-10.2.0110201000.579");
+    builder.setAccessCode(std::string{task->accessCode()});
+    auto communication = builder.createJsonString();
+    auto reqArgs = RequestArguments(HttpMethod::POST, "/Communication", communication, "application/json")
+                       .withHeader(Header::XAccessCode, std::string{task->accessCode()});
+    reqArgs.overrideExpectedPrescriptionId = task->prescriptionId().toString();
+    auto [outerResonse, innerResponse] = send(reqArgs);
+    checkOperationOutcome(
+        operationOutcomeFromResponse(innerResponse.getBody(), true), model::OperationOutcome::Issue::Type::invalid,
+        "Invalid payload: does not conform to expected JSON schema: validation of JSON document failed"/*,
+        "{\"enum\":{\"errorCode\":19,\"instanceRef\":\"#/supplyOptionsType\",\"schemaRef\":\"/home/jens/erp/"
+        "erp-processing-context/cmake-build-debug-wsl-gcc-12/bin/resources/schema/shared/json/"
+        "CommunicationDispReqPayload.json#/properties/supplyOptionsType\"}}"*/);
 }
 
 INSTANTIATE_TEST_SUITE_P(ErpWorkflowTestPInst, ErpWorkflowTestP,

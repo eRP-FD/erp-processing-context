@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -11,6 +11,7 @@
 #include "erp/registration/RegistrationInterface.hxx"
 #include "erp/util/Demangle.hxx"
 #include "erp/util/ExceptionHelper.hxx"
+#include <sw/redis++/errors.h>
 
 namespace
 {
@@ -160,15 +161,28 @@ void HealthCheck::check (
     PcServiceContext& context,
     void (* checkAction)(PcServiceContext&))
 {
-    try
+    // Try again in case of EAGAIN errors, which are handled with the same exception as ETIMEDOUT and EWOULDBLOCK errors.
+    const size_t max_retries = 3;
+	const auto period = std::chrono::milliseconds(50);
+    for (size_t i = 0; i <= max_retries; ++i)
     {
-        (*checkAction)(context);
-
-        context.applicationHealth().up(service);
-    }
-    catch (...)
-    {
-        handleException(service, context);
+        try
+        {
+            (*checkAction)(context);
+            context.applicationHealth().up(service);
+            break;
+        }
+        catch (const sw::redis::TimeoutError& ex)
+        {
+            // LOG WARNING
+            JsonLog(LogId::INTERNAL_WARNING, JsonLog::makeErrorLogReceiver())
+                .message("Retry #" + std::to_string(i) + " health check due to resource temporarily unavailable ");
+            std::this_thread::sleep_for(std::chrono::milliseconds((1 + i) * period));
+        }
+        catch (...)
+        {
+            handleException(service, context);
+        }
     }
 }
 

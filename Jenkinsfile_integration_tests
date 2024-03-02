@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -76,8 +76,8 @@ pipeline {
                             cd jenkins-build-debug/bin
                             sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./01_production.config.json
                             sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./02_development.config.json
-                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
-                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
+                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
+                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
                         """
                     }
                 }

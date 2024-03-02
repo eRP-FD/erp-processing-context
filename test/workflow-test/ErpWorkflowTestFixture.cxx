@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -421,16 +421,8 @@ void ErpWorkflowTestBase::checkTaskClose(
     // Check receipt bundle saved during /Task/Close
     const auto bundles = taskBundle->getResourcesByType<model::Bundle>("Bundle");
     ASSERT_EQ(bundles.size(), 1);  // 1.: Receipt bundle
-    using ReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
-    std::optional<ReceiptFactory> receiptFactory;
-    ASSERT_NO_THROW(
-        receiptFactory.emplace(ReceiptFactory::fromXml(bundles.back().serializeToXmlString(), *getXmlValidator(),
-                                {.fallbackVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
-                                 .validatorOptions = {}})));
-
     std::optional<model::ErxReceipt> receipt;
-    ASSERT_NO_THROW(receipt.emplace(std::move(*receiptFactory).getValidated(SchemaType::Gem_erxReceiptBundle, *getXmlValidator(),
-                                                                   *StaticData::getInCodeValidator())));
+    ASSERT_NO_THROW(receipt.emplace(testutils::getValidatedErxReceiptBundle(bundles.back().serializeToXmlString())));
     // Must be the same as the result from the service call:
     EXPECT_EQ(canonicalJson(receipt->serializeToJsonString()), canonicalJson(closeReceipt->serializeToJsonString()));
 
@@ -1092,7 +1084,15 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
     RequestArguments args(HttpMethod::GET, endpointPath, {});
     if (!searchArguments.empty())
     {
-        args.vauPath.append("?").append(searchArguments);
+        if(args.vauPath.find('?') == std::string::npos)
+        {
+            args.vauPath.append("?");
+        }
+        else
+        {
+            args.vauPath.append("&");
+        }
+        args.vauPath.append(searchArguments);
     }
 
     args.jwt = encodedPnw.has_value() ? JwtBuilder::testBuilder().makeJwtApotheke(telematikId)
@@ -1102,7 +1102,7 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
     ClientResponse response;
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(args));
     ASSERT_EQ(response.getHeader().status(), expectedStatus);
-    if(expectedStatus == HttpStatus::OK)
+    if(expectedStatus == HttpStatus::OK || expectedStatus == HttpStatus::Accepted)
     {
         auto contentType = response.getHeader().header(Header::ContentType);
         ASSERT_TRUE(contentType);
@@ -1219,10 +1219,7 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
             {
                 if (!isPatient)
                 {
-                    using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
-                    ASSERT_NO_THROW((void) ErxReceiptFactory::fromXml(
-                            patientConfirmationOrReceipt[0].serializeToXmlString(), *getXmlValidator())
-                        .getValidated(SchemaType::Gem_erxReceiptBundle, *getXmlValidator(), *StaticData::getInCodeValidator()));
+                    ASSERT_NO_THROW((void) testutils::getValidatedErxReceiptBundle(patientConfirmationOrReceipt[0].serializeToXmlString()));
                     ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
                     ASSERT_FALSE(tasks[0].patientConfirmationUuid().has_value());
                     if (tasks[0].status() == model::Task::Status::completed)
@@ -1317,6 +1314,11 @@ bool ErpWorkflowTestBase::runsInCloudEnv() const
     return hostaddress != "localhost" && hostaddress != "127.0.0.1";
 }
 
+bool ErpWorkflowTestBase::runsInErpTest() const
+{
+    return client->runsInErpTest();
+}
+
 model::ResourceVersion::DeGematikErezeptWorkflowR4 ErpWorkflowTestBase::serverGematikProfileVersion()
 {
     static std::optional<model::MetaData> metaData;
@@ -1385,9 +1387,7 @@ void ErpWorkflowTestBase::taskCloseInternal(
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
-        using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
-        ASSERT_NO_THROW(receipt = ErxReceiptFactory::fromXml(serverResponse.getBody(), *getXmlValidator())
-                        .getValidated(SchemaType::Gem_erxReceiptBundle, *getXmlValidator(), *StaticData::getInCodeValidator()));
+        ASSERT_NO_THROW(receipt.emplace(testutils::getValidatedErxReceiptBundle(serverResponse.getBody())));
     }
     else
     {
@@ -2038,12 +2038,8 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
                 std::string signatureData;
                 ASSERT_NO_THROW(signatureData = signature->data().value().data());
                 auto cms = runsInCloudEnv() ? CadesBesSignature(signatureData) : CadesBesSignature(certs, signatureData);
-                using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
                 std::optional<model::ErxReceipt> receiptFromSignature;
-                ASSERT_NO_THROW(receiptFromSignature =
-                        ErxReceiptFactory::fromXml(cms.payload(), *StaticData::getXmlValidator())
-                        .getValidated(SchemaType::Gem_erxReceiptBundle,*StaticData::getXmlValidator(),
-                             *StaticData::getInCodeValidator()));
+                ASSERT_NO_THROW(receiptFromSignature.emplace(testutils::getValidatedErxReceiptBundle(cms.payload())));
                 EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
                 EXPECT_EQ(expectedReceipt->serializeToJsonString(), receiptFromSignature->serializeToJsonString());
             }

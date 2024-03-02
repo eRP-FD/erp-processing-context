@@ -6,15 +6,17 @@
  */
 
 #include "erp/util/ConfigurationFormatter.hxx"
+#include "Configuration.hxx"
+#include "RuntimeConfiguration.hxx"
 #include "erp/util/String.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
 #include <rapidjson/writer.h>
-
 #include <unordered_set>
 
-std::string ConfigurationFormatter::formatAsJson(const Configuration& config, int flags)
+std::string ConfigurationFormatter::formatAsJson(const Configuration& config,
+                                                 const RuntimeConfigurationGetter& runtimeConfig, int flags)
 {
     OpsConfigKeyNames confNames;
     rapidjson::Document document;
@@ -61,23 +63,8 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config, in
             value = "<redacted>";
             defaultValue = value;
         }
-        std::string category;
-        if (confOption.flags & KeyData::categoryEnvironment)
-        {
-            category = "environment/";
-        }
-        else if (confOption.flags & KeyData::categoryFunctional)
-        {
-            category = "functional/";
-        }
-        else if (confOption.flags & KeyData::categoryFunctionalStatic)
-        {
-            category = "functionalStatic/";
-        }
-        else if (confOption.flags & KeyData::categoryDebug)
-        {
-            category = "debug/";
-        }
+        std::string category = getCategoryPath(confOption.flags);
+
         const auto keyEnvVar = std::string{confOption.environmentVariable};
         const std::string key = std::string{"/"}.append(category).append(keyEnvVar);
         {
@@ -88,12 +75,14 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config, in
         {
             const std::string descriptionPath = key + "/description";
             auto descPointer = rapidjson::Pointer(rapidjson::StringRef(descriptionPath.data(), descriptionPath.size()));
-            descPointer.Set(document, rapidjson::Value(confOption.description.data(), document.GetAllocator()), document.GetAllocator());
+            descPointer.Set(document, rapidjson::Value(confOption.description.data(), document.GetAllocator()),
+                            document.GetAllocator());
         }
         {
             const std::string defaultPath = key + "/default";
             auto defaultPointer = rapidjson::Pointer(rapidjson::StringRef(defaultPath.data(), defaultPath.size()));
-            defaultPointer.Set(document, rapidjson::Value(defaultValue.data(), document.GetAllocator()), document.GetAllocator());
+            defaultPointer.Set(document, rapidjson::Value(defaultValue.data(), document.GetAllocator()),
+                               document.GetAllocator());
         }
         {
             const std::string modifiedPath = key + "/isModified";
@@ -102,7 +91,8 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config, in
         }
         {
             const std::string deprecatedPath = key + "/isDeprecated";
-            auto deprecatedPointer = rapidjson::Pointer(rapidjson::StringRef(deprecatedPath.data(), deprecatedPath.size()));
+            auto deprecatedPointer =
+                rapidjson::Pointer(rapidjson::StringRef(deprecatedPath.data(), deprecatedPath.size()));
             deprecatedPointer.Set(document, rapidjson::Value(deprecated), document.GetAllocator());
         }
 
@@ -117,8 +107,62 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config, in
     {
         unusedVarsArray.PushBack(rapidjson::Value(envVar, document.GetAllocator()), document.GetAllocator());
     }
+    if ((KeyData::ConfigurationKeyFlags::categoryRuntime & flags) != 0)
+    {
+        appendRuntimeConfiguration(document, runtimeConfig);
+    }
     rapidjson::StringBuffer buffer;
     rapidjson::Writer writer(buffer);
     document.Accept(writer);
     return buffer.GetString();
+}
+
+std::string ConfigurationFormatter::getCategoryPath(int flags)
+{
+    if (flags & KeyData::categoryEnvironment)
+    {
+        return "environment/";
+    }
+    if (flags & KeyData::categoryFunctional)
+    {
+        return "functional/";
+    }
+    if (flags & KeyData::categoryFunctionalStatic)
+    {
+        return "functionalStatic/";
+    }
+    if (flags & KeyData::categoryDebug)
+    {
+        return "debug/";
+    }
+    return {};
+}
+
+void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& document,
+                                                        const RuntimeConfigurationGetter& runtimeConfig)
+{
+    const rapidjson::Pointer acceptPN3Pointer("/runtime/" + std::string{RuntimeConfiguration::parameter_accept_pn3} +
+                                              "/value");
+    acceptPN3Pointer.Set(
+        document, rapidjson::Value((runtimeConfig.isAcceptPN3Enabled() ? "true" : "false"), document.GetAllocator()),
+        document.GetAllocator());
+    if (runtimeConfig.isAcceptPN3Enabled())
+    {
+        const rapidjson::Pointer acceptPN3ExpiryPointer(
+            "/runtime/" + std::string{RuntimeConfiguration::parameter_accept_pn3_expiry} + "/value");
+        acceptPN3ExpiryPointer.Set(
+            document, rapidjson::Value(runtimeConfig.getAcceptPN3Expiry().toXsDateTime(), document.GetAllocator()),
+            document.GetAllocator());
+    }
+    const rapidjson::Pointer acceptPN3MaxActive(
+        "/runtime/" + std::string{RuntimeConfiguration::parameter_accept_pn3_max_active} + "/value");
+
+    // std::chrono::hh_mm_ss::operator<< not yet implemented in gcc-12.
+    const std::chrono::hh_mm_ss hhmmss(RuntimeConfiguration::accept_pn3_max_active);
+    acceptPN3MaxActive.Set(
+        document,
+        rapidjson::Value(
+            (std::ostringstream{} << hhmmss.hours() << " " << hhmmss.minutes() << " " << hhmmss.seconds()).str(),
+            document.GetAllocator()),
+        document.GetAllocator());
 }

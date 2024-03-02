@@ -1,20 +1,21 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "JsonValidator.hxx"
+#include "erp/util/Expect.hxx"
+#include "erp/util/FileHelper.hxx"
+#include "erp/util/TLog.hxx"
+#include "erp/validation/RapidjsonErrorDocument.hxx"
 
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 #include <rapidjson/schema.h>
 #include <rapidjson/writer.h>
-
-#include "erp/util/Expect.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/TLog.hxx"
+#include <iostream>
 
 
 namespace
@@ -123,24 +124,38 @@ void JsonValidator::loadSchema(const std::vector<std::string>& schemas, const st
 
 void JsonValidator::validate(const rapidjson::Document& document, SchemaType schemaType) const
 {
-    const auto error = validateWithErrorMessage(document, schemaType);
-    if (error.has_value())
-    {
-        TVLOG(1) << "The following document had validation errors: " << docToString(document);
-        TVLOG(1) << "validation failed for JSON document: " << error.value();
-        ErpFail(HttpStatus::BadRequest, "validation of JSON document failed");
-    }
-}
-
-std::optional<std::string> JsonValidator::validateWithErrorMessage(const rapidjson::Document& document, SchemaType schemaType) const
-{
     auto candidate = mSchemas.find(schemaType);
     Expect(candidate != mSchemas.end(),
            "no JSON schema loaded for type " + std::string(magic_enum::enum_name(schemaType)));
     rapidjson::SchemaValidator validator(*candidate->second);
+    validator.SetValidateFlags(rapidjson::kValidateDefaultFlags);
     if (! document.Accept(validator) || ! validator.IsValid())
     {
-        return docToString(validator.GetError());
+        RapidjsonErrorDocument errDoc(validator.GetError());
+        std::string errStr;
+        bool withDiag = false;
+        if (errDoc.firstError())
+        {
+            errStr = docToString(*errDoc.firstError());
+            withDiag = true;
+        }
+        else
+        {
+            errStr = docToString(validator.GetError());
+        }
+        TVLOG(1) << "The following document had validation errors: " << docToString(document);
+        TVLOG(1) << "validation failed for JSON document: " << errStr;
+
+        std::string details = "validation of JSON document failed";
+        if (schemaType == SchemaType::fhir)
+        {
+            details.append(". FHIR JSON schema can be retrieved here: https://hl7.org/fhir/R4/fhir.schema.json.zip");
+        }
+
+        if (withDiag)
+        {
+            ErpFailWithDiagnostics(HttpStatus::BadRequest, details, errStr);
+        }
+        ErpFail(HttpStatus::BadRequest, details);
     }
-    return {};
 }

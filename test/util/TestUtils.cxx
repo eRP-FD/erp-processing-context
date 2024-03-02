@@ -1,13 +1,16 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/util/TestUtils.hxx"
+#include "erp/model/ErxReceipt.hxx"
+#include "erp/model/ResourceFactory.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <date/tz.h>
 #include <algorithm>
@@ -162,5 +165,39 @@ std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::Val
                                 customLess);
     return filteredValidationErrors;
 }
+
+template <typename BundleT>
+BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType)
+{
+    const auto& config = Configuration::instance();
+    using BundleFactory = typename model::ResourceFactory<BundleT>;
+    typename BundleFactory::Options opt;
+    switch (config.prescriptionDigestRefType())
+    {
+        case Configuration::PrescriptionDigestRefType::relative:
+            opt.validatorOptions.template emplace<fhirtools::ValidatorOptions>({
+                .levels =
+                    {
+                        .unreferencedBundledResource = fhirtools::Severity::warning,
+                        .mandatoryResolvableReferenceFailure = fhirtools::Severity::warning,
+                    },
+            });
+            if constexpr (std::is_same_v<BundleT, model::ErxReceipt>)
+            {
+                opt.fallbackVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1;
+            }
+            break;
+        case Configuration::PrescriptionDigestRefType::uuid:
+            break;
+    }
+
+    return BundleFactory::fromXml(xmlDoc, *StaticData::getXmlValidator(), opt)
+        .getValidated(schemaType, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
+                      model::ResourceVersion::supportedBundles());
+}
+
+
+template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
+template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
 
 } // namespace testutils

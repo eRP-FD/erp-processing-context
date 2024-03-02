@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -50,6 +50,8 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::GET_Task:
         case model::AuditEventId::GET_Tasks_by_pharmacy_with_pz:
         case model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed:
+        case model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3:
+        case model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed:
             return "Task";
         case model::AuditEventId::GET_Task_id_insurant:
         case model::AuditEventId::GET_Task_id_representative:

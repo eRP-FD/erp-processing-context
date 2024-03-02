@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -319,13 +319,17 @@ static Requirement A_23090_02 ("Performance - Rohdaten - Spezifika E-Rezept – 
 
 // Requirements for VSDM++
 static Requirement A_23450    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - Prüfung Prüfungsnachweis");
-static Requirement A_23451    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - Zeitraum Akzeptanz Prüfungsnachweis");
-static Requirement A_23452_01 ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - Filter KVNR");
+static Requirement A_23451_01 ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - Zeitraum Akzeptanz Prüfungsnachweis");
+static Requirement A_23452_02 ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - Filter KVNR");
 static Requirement A_23454    ("E-Rezept-Fachdienst - Prüfung Prüfziffer");
-static Requirement A_23455    ("E-Rezept-Fachdienst - Prüfung Prüfziffer - keine Prüfziffer");
-static Requirement A_23456    ("E-Rezept-Fachdienst - Prüfung Prüfziffer - Berechnung HMAC der Prüfziffer");
+static Requirement A_23456_01 ("E-Rezept-Fachdienst - Prüfung Prüfziffer - Berechnung HMAC der Prüfziffer");
 static Requirement A_23492    ("E-Rezept-Fachdienst - VSDM HMAC-Schlüssel - Exportpaket einbringen");
 static Requirement A_23493    ("E-Rezept-Fachdienst - VSDM HMAC-Schlüssel - Prüfung");
 static Requirement A_23486    ("E-Rezept-Fachdienst - VSDM HMAC-Schlüssel - Ausgabe");
+static Requirement A_25200    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3 - Status");
+static Requirement A_25206    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3");
+static Requirement A_25207    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3 - AcceptPN3 false");
+static Requirement A_25208    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3 - URL kvnr");
+static Requirement A_25209    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3 - AcceptPN3 true - Filter Status, KVNR und Workflowtype");
 
 #endif

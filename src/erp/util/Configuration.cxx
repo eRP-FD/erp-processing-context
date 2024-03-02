@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -379,6 +379,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port", Flags::categoryEnvironment, "The port for the admin server."}},
     {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds", Flags::categoryEnvironment, "Default delay for shutdown commands, if no delay is given in request parameter"}},
     {ConfigurationKey::ADMIN_CREDENTIALS                              , {"ERP_ADMIN_CREDENTIALS"                              , "/erp/admin/credentials", Flags::credential|Flags::categoryEnvironment, "HTTP Basic Authentication credential for admin server."}},
+    {ConfigurationKey::ADMIN_RC_CREDENTIALS                           , {"ERP_ADMIN_RC_CREDENTIALS"                           , "/erp/admin/runtime_config_credentials", Flags::credential|Flags::categoryEnvironment, "HTTP Basic Authentication credential for runtime configuration through admin server."}},
     {ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS                    , {"ERP_PROOF_VALIDITY_SECONDS"                         , "/erp/vsdmValiditySeconds", Flags::categoryFunctional, "Validity period for VSDM++ proofs, in seconds"}}
     // */
     });

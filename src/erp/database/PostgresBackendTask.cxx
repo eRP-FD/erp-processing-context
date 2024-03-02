@@ -1,6 +1,6 @@
 /*
-* (C) Copyright IBM Deutschland GmbH 2021, 2023
-* (C) Copyright IBM Corp. 2021, 2023
+* (C) Copyright IBM Deutschland GmbH 2021, 2024
+* (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
 */
@@ -73,7 +73,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         )--")
     // GEMREQ-end A_22135-01#query, A_22134#query
 
-    // GEMREQ-start A_23452-01#query
+    // GEMREQ-start A_23452-02#query
     QUERY(retrieveAllTasksByKvnrWithAccessCode, R"--(
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
             EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id,
@@ -81,7 +81,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         FROM )--" + taskTableName() + R"--(
         WHERE kvnr_hashed = $1
         )--")
-    // GEMREQ-end A_23452-01#query
+    // GEMREQ-end A_23452-02#query
 
     QUERY(getTaskKeyData, R"--(
         SELECT task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on)
@@ -470,7 +470,7 @@ PostgresBackendTask::retrieveAllTasksWithAccessCode(::pqxx::work& transaction, c
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
         DurationConsumer::categoryPostgres, "PostgreSQL:retrieveAllTasksByKvnrWithAccessCode");
 
-    const auto results = transaction.exec_params(query, kvnrHashed);
+    const auto results = transaction.exec_params(query, kvnrHashed.binarystring());
 
     PostgresBackendTask::TaskQueryIndexes indexes;
     indexes.secretIndex.reset();

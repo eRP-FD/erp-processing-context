@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -157,8 +157,6 @@ protected:
 TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
-    using BundleFactory = model::ResourceFactory<model::Bundle>;
-    using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
     A_22069.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
     const auto& testConfig = TestConfiguration::instance();
 
@@ -194,13 +192,9 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
         ASSERT_NO_THROW(handler.handleRequest(sessionContext));
         ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-        ASSERT_NO_THROW((void) BundleFactory::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator())
-                .getValidated(SchemaType::Gem_erxReceiptBundle, *StaticData::getXmlValidator(),
-                     *StaticData::getInCodeValidator(), model::ResourceVersion::supportedBundles()));
-        TVLOG(0) << serverResponse.getBody();
-        const auto receipt = ErxReceiptFactory::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator())
-            .getValidated(SchemaType::Gem_erxReceiptBundle,*StaticData::getXmlValidator(), *StaticData::getInCodeValidator());
-        const auto compositionResources = receipt.getResourcesByType<model::Composition>("Composition");
+        std::optional<model::ErxReceipt> receipt;
+        ASSERT_NO_THROW(receipt.emplace(testutils::getValidatedErxReceiptBundle(serverResponse.getBody())));
+        const auto compositionResources = receipt->getResourcesByType<model::Composition>("Composition");
         ASSERT_EQ(compositionResources.size(), 1);
         const auto& composition = compositionResources.front();
         EXPECT_NO_THROW(static_cast<void>(composition.id()));
@@ -214,17 +208,17 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
         auto prescriptionDigestIdentifier = composition.prescriptionDigestIdentifier();
         ASSERT_TRUE(prescriptionDigestIdentifier.has_value());
 
-        const auto deviceResources = receipt.getResourcesByType<model::Device>("Device");
+        const auto deviceResources = receipt->getResourcesByType<model::Device>("Device");
         ASSERT_EQ(deviceResources.size(), 1);
         const auto& device = deviceResources.front();
         EXPECT_EQ(device.serialNumber(), ErpServerInfo::ReleaseVersion());
         EXPECT_EQ(device.version(), ErpServerInfo::ReleaseVersion());
         const auto& bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId});
         const auto digest = Base64::encode(ByteHelper::fromHex(Sha256::fromBin(bundle)));
-        const auto prescriptionDigest = receipt.prescriptionDigest();
+        const auto prescriptionDigest = receipt->prescriptionDigest();
         EXPECT_EQ(prescriptionDigest.data(), digest);
 
-        const auto signature = receipt.getSignature();
+        const auto signature = receipt->getSignature();
         ASSERT_TRUE(signature.has_value());
         EXPECT_TRUE(signature->when().has_value());
         EXPECT_TRUE(signature->data().has_value());
@@ -239,35 +233,15 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
         const CadesBesSignature cms(certs, signatureData);
 
         std::optional<model::ErxReceipt> receiptFromSignature;
-        ASSERT_NO_THROW(receiptFromSignature.emplace(
-            model::ErxReceipt::fromXml(cms.payload(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                       SchemaType::Gem_erxReceiptBundle)));
+        ASSERT_NO_THROW(receiptFromSignature.emplace(testutils::getValidatedErxReceiptBundle(cms.payload())));
         EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
 
         const std::string expectedFullUrl = "urn:uuid:" + std::string{composition.id()};
         const rapidjson::Pointer fullUrlPtr("/entry/0/fullUrl");
         std::optional<rapidjson::Document> originalFormatDocument;
-        ASSERT_TRUE(originalFormatDocument = model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(receipt.jsonDocument()));
+        ASSERT_TRUE(originalFormatDocument = model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(receipt->jsonDocument()));
         ASSERT_TRUE(fullUrlPtr.Get(*originalFormatDocument));
         ASSERT_EQ(std::string{fullUrlPtr.Get(*originalFormatDocument)->GetString()}, expectedFullUrl);
-
-        const std::string prescriptionDigestExpectedFullUrl{*prescriptionDigestIdentifier};
-        const rapidjson::Pointer prescriptionDigestFullUrlPtr("/entry/2/fullUrl");
-        ASSERT_TRUE(prescriptionDigestFullUrlPtr.Get(*originalFormatDocument));
-        const auto prescriptionDigestActualFullUrl =
-            std::string{prescriptionDigestFullUrlPtr.Get(*originalFormatDocument)->GetString()};
-
-        static const rapidjson::Pointer prescriptionDigestIdPtr("/entry/2/resource/id");
-        const auto* prescriptionDigestActualId = prescriptionDigestIdPtr.Get(*originalFormatDocument);
-        ASSERT_NE(prescriptionDigestActualId, nullptr);
-        ASSERT_TRUE(prescriptionDigestActualId->IsString());
-        ASSERT_EQ("urn:uuid:"s += prescriptionDigestActualId->GetString(), prescriptionDigestIdentifier);
-
-        EXPECT_EQ(prescriptionDigestActualFullUrl, prescriptionDigestExpectedFullUrl);
-        ASSERT_TRUE(composition.prescriptionDigestIdentifier().has_value());
-        const auto prescriptionDigestReference = std::string(*composition.prescriptionDigestIdentifier());
-        EXPECT_NE(prescriptionDigestActualFullUrl.find(prescriptionDigestReference), std::string::npos);
-        EXPECT_EQ(rapidjson::Pointer{"/entry/2/resource/meta/versionId"}.Get(*originalFormatDocument), nullptr);
 
         serverRequest.setPathParameters({"id"}, {"9a27d600-5a50-4e2b-98d3-5e05d2e85aa0"});
         EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::NotFound);
@@ -541,7 +515,7 @@ TEST_F(CloseTaskTest, whenHandedOverConsistentInBundle)
     ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
 }
 
-TEST_F(CloseTaskTest, NoMetaVersionId)
+TEST_F(CloseTaskTest, NoEnvMetaVersionId)
 {
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
@@ -551,7 +525,8 @@ TEST_F(CloseTaskTest, NoMetaVersionId)
     ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(runRequest(repo)));
     auto getMetaVersionId = fhirtools::FhirPathParser::parse(&repo, "meta.versionId");
     auto metaVersionId = getMetaVersionId->eval(prescriptionDigest);
-    EXPECT_TRUE(metaVersionId.empty());
+    ASSERT_EQ(metaVersionId.size(), 1);
+    EXPECT_EQ(metaVersionId.front()->asString(), "1");
 }
 
 TEST_F(CloseTaskTest, SetMetaVersionId)
@@ -691,6 +666,20 @@ TEST_F(CloseTaskTest, deviceRefUuid)
     auto signatureWho = signatureWhoExpr->eval(bundle);
     ASSERT_EQ(signatureWho.size(), 1);
     EXPECT_EQ(signatureWho.front()->asString(), fullUrl.front()->asString());
+}
+
+TEST(CloseTaskConfigTest, defaultValues)
+{
+    std::vector<EnvironmentVariableGuard> unsetEnv;
+    unsetEnv.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE, std::nullopt);
+    unsetEnv.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, std::nullopt);
+    unsetEnv.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, std::nullopt);
+    const auto& config = Configuration::instance();
+    EXPECT_EQ(config.closeTaskDeviceRefType(), Configuration::DeviceRefType::url);
+    EXPECT_EQ(config.prescriptionDigestRefType(), Configuration::PrescriptionDigestRefType::relative);
+    const auto& metaVersionId = config.getOptionalStringValue(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID);
+    ASSERT_TRUE(metaVersionId.has_value());
+    EXPECT_EQ(*metaVersionId, "1");
 }
 
 struct CloseTaskMixedProfileTestParam

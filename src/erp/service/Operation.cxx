@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -88,6 +88,7 @@ const std::string_view& toString (Operation operation)
         case Operation::GET_Health:
         case Operation::POST_Admin_restart:
         case Operation::GET_Admin_configuration:
+        case Operation::PUT_Admin_pn3_configuration:
             Fail2("Operation value is not supported", std::logic_error);
     }
     Fail2("Uninitialized operation enum", std::logic_error);

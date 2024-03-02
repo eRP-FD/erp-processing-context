@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -59,10 +59,21 @@ void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, Sc
     rj::Document payloadDoc;
     payloadDoc.Parse(payload.data(), payload.size());
     ModelExpect(! payloadDoc.HasParseError(), "Invalid JSON in payload.contentString");
-    const auto errorMsg = validator.validateWithErrorMessage(payloadDoc, schemaType);
-    if (errorMsg)
+    try
     {
-        ModelFail(std::string{"Invalid payload: does not conform to expected JSON schema: "}.append(*errorMsg));
+        validator.validate(payloadDoc, schemaType);
+    }
+    catch (const ErpException& ex)
+    {
+        if (ex.diagnostics())
+        {
+            ErpFailWithDiagnostics(
+                ex.status(),
+                std::string{"Invalid payload: does not conform to expected JSON schema: "}.append(ex.what()),
+                ex.diagnostics());
+        }
+        ErpFail(ex.status(),
+                std::string{"Invalid payload: does not conform to expected JSON schema: "}.append(ex.what()));
     }
 
     if (schemaType == SchemaType::CommunicationReplyPayload)

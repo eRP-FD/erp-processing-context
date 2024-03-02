@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2023
-# (C) Copyright IBM Corp. 2021, 2023
+# (C) Copyright IBM Deutschland GmbH 2021, 2024
+# (C) Copyright IBM Corp. 2021, 2024
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -32,6 +32,7 @@ target_link_libraries(erp-test-util-lib
         CONAN_PKG::glog
         CONAN_PKG::gtest
         CONAN_PKG::gsl-lite
+        CONAN_PKG::libxml2
         CONAN_PKG::rapidjson
         CONAN_PKG::magic_enum
         CONAN_PKG::boost
@@ -139,6 +140,7 @@ list(
         erp/ErpMainTest.cxx
         erp/ErpProcessingContextTest.cxx
         erp/admin/AdminRequestHandlerTest.cxx
+        erp/admin/PutRuntimeConfigHandlerTest.cxx
         erp/beast/BoostBeastHeaderTest.cxx
         erp/beast/BoostBeastStringReaderTest.cxx
         erp/beast/BoostBeastStringWriterTest.cxx

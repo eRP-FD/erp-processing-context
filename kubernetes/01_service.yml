@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2023
-# (C) Copyright IBM Corp. 2021, 2023
+# (C) Copyright IBM Deutschland GmbH 2021, 2024
+# (C) Copyright IBM Corp. 2021, 2024
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -22,6 +22,10 @@ spec:
       port: 9191
       protocol: TCP
       targetPort: 9191
+    - name: admin
+      port: 9999
+      protocol: TCP
+      targetPort: 9999      
   selector:
     app: erp-processing-context-1
   type: ClusterIP

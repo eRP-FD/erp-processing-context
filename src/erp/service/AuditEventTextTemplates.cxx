@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2023
- * (C) Copyright IBM Corp. 2021, 2023
+ * (C) Copyright IBM Deutschland GmbH 2021, 2024
+ * (C) Copyright IBM Corp. 2021, 2024
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -132,6 +132,14 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         {
           "eventId": 29,
           "textTemplate": "Veraltete Nachrichten wurden vom Fachdienst automatisch gelöscht."
+        },
+        {
+          "eventId": 30,
+          "textTemplate": "{agentName} hat mit Ihrer eGK die Liste der offenen E-Rezepte abgerufen. (Offline-Check wurde akzeptiert)"
+        },
+        {
+          "eventId": 31,
+          "textTemplate": "{agentName} konnte aufgrund eines Fehlerfalls nicht die Liste der offenen E-Rezepte mit Ihrer eGK abrufen. (Offline-Check wurde nicht akzeptiert)"
         }
       ]
     },
@@ -250,6 +258,14 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         {
           "eventId": 29,
           "textTemplate": "Outdated communications were deleted automatically by the service."
+        },
+        {
+          "eventId": 30,
+          "textTemplate": "{agentName} retrieved your dispensable e-prescriptions using your health card. (Offline-Check get accepted)"
+        },
+        {
+          "eventId": 31,
+          "textTemplate": "{agentName} was not able to retrieve your e-prescriptions due to an error with your health card. (Offline-Check was not accepted)"
         }
       ]
     }
