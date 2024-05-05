@@ -30,7 +30,7 @@ public:
         testResource = model::NumberAsStringParserDocument::fromJson(
             ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
 
-        rootElement = std::make_shared<ErpElement>(&repo, std::weak_ptr<Element>{}, repo.findTypeById("Test"), "Test",
+        rootElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<Element>{}, repo.findTypeById("Test"), "Test",
                                                    &testResource);
     }
     void checkBoolResult(const Collection& result, bool expected)
@@ -39,7 +39,9 @@ public:
         ASSERT_EQ(result[0]->type(), Element::Type::Boolean);
         ASSERT_EQ(result[0]->asBool(), expected) << result;
     }
-    const FhirStructureRepository& repo = DefaultFhirStructureRepository::getWithTest();
+    std::shared_ptr<const fhirtools::DefaultFhirStructureRepositoryView> mRepo =
+        DefaultFhirStructureRepository::getWithTest().defaultView();
+    const FhirStructureRepository& repo = *mRepo;
     model::NumberAsStringParserDocument testResource;
     std::shared_ptr<ErpElement> rootElement;
 };
@@ -54,7 +56,7 @@ public:
         //NOLINTNEXTLINE(readability-qualified-auto) - make sure the return type is reference
         auto& testCommDoc = communicationResource.jsonDocument();
         communicationElement =
-            std::make_shared<ErpElement>(&repo, std::weak_ptr<Element>{}, "Communication", &testCommDoc);
+            std::make_shared<ErpElement>(mRepo, std::weak_ptr<Element>{}, "Communication", &testCommDoc);
     }
     model::Communication communicationResource;
     std::shared_ptr<ErpElement> communicationElement;
@@ -69,7 +71,7 @@ public:
     {
         //NOLINTNEXTLINE(readability-qualified-auto) - make sure the return type is reference
         auto& testDoc = bundleResource.jsonDocument();
-        bundleElement = std::make_shared<ErpElement>(&repo, std::weak_ptr<Element>{}, "Bundle", &testDoc);
+        bundleElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<Element>{}, "Bundle", &testDoc);
     }
     model::KbvBundle bundleResource;
     std::shared_ptr<ErpElement> bundleElement;
@@ -433,7 +435,7 @@ TEST_F(FhirPathParserTest, compileError)
 {
     std::string_view expression =
         R"(conformsTo("http://fhir.de/StructureDefinition/identifier-iknr") implies value.matches('[0-9]{9}'))";
-    ASSERT_THROW((void)FhirPathParser::parse(&repo, expression), std::logic_error);
+    ASSERT_THROW((void) FhirPathParser::parse(&repo, expression), std::logic_error);
 }
 
 TEST_F(FhirPathParserTestCommunication, testele_1)
@@ -464,7 +466,7 @@ TEST_F(FhirPathParserTestCommunication, testext_1)
 TEST_F(FhirPathParserTestCommunication, testref_1)
 {
     const char constraint[] = "reference.startsWith('#').not() or (reference.substring(1).trace('url') in "
-                            "%rootResource.contained.id.trace('ids'))";
+                              "%rootResource.contained.id.trace('ids'))";
 
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
@@ -476,7 +478,7 @@ TEST_F(FhirPathParserTestCommunication, testref_1)
 TEST_F(FhirPathParserTestCommunication, testref_1_2)
 {
     const char constraint[] = "reference.startsWith('#').not() or (reference.substring(1).trace('url') in "
-                            "%rootResource.contained.id.trace('ids'))";
+                              "%rootResource.contained.id.trace('ids'))";
 
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
@@ -543,8 +545,8 @@ TEST_F(FhirPathParserTestBundle, test_erp_begrenzungDate)
 TEST_F(FhirPathParserTestBundle, test_erp_angabeDosierung)
 {
     const char constraint[] = "(extension('https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag').empty() or "
-                            "extension('https://fhir.kbv.de/StructureDefinition/"
-                            "KBV_EX_ERP_DosageFlag').value.as(Boolean)=false) implies text.empty()";
+                              "extension('https://fhir.kbv.de/StructureDefinition/"
+                              "KBV_EX_ERP_DosageFlag').value.as(Boolean)=false) implies text.empty()";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
     auto result = expressions->eval(
@@ -567,10 +569,10 @@ TEST_F(FhirPathParserTestBundle, resolve)
 {
     const char expression[] =
         "entry.where(fullUrl = 'https://e-rezept.de/Composition/7d101376-cafa-43d8-bae9-a2b4511b1bb7')"
-            ".resource.as(Composition).subject.resolve()"
+        ".resource.as(Composition).subject.resolve()"
         " = "
         "entry.where(fullUrl = 'https://e-rezept.de/Patient/66251aee-a81a-40ca-8938-79d8557b822c')"
-            ".resource.as(Patient)";
+        ".resource.as(Patient)";
     auto expressions = FhirPathParser::parse(&repo, expression);
     ASSERT_TRUE(expressions);
     auto result = expressions->eval({bundleElement});
@@ -592,8 +594,8 @@ TEST_F(FhirPathParserTestBundle, ofTypeString)
     const char expression[] = "ofType(string)";
     auto expressions = FhirPathParser::parse(&repo, expression);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"),
-                                     std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 2)});
+    auto result = expressions->eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"),
+                                     std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 2)});
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asString(), "hello");
 }
@@ -603,8 +605,8 @@ TEST_F(FhirPathParserTestBundle, ofTypeInteger)
     const char expression[] = "ofType(positiveInt)";
     auto expressions = FhirPathParser::parse(&repo, expression);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"),
-                                     std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 2)});
+    auto result = expressions->eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"),
+                                     std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 2)});
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asInt(), 2);
 }
@@ -620,7 +622,7 @@ TEST_P(FhirPathParserTestP, unescapeStringLiteralExpression)
     auto expressions = FhirPathParser::parse(&repo, GetParam().first);
     ASSERT_TRUE(expressions);
     const auto col =
-        expressions->eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, GetParam().second)});
+        expressions->eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, GetParam().second)});
     ASSERT_EQ(col.size(), 1);
     EXPECT_EQ(col.single()->asString(), GetParam().second);
 }

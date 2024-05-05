@@ -12,7 +12,7 @@
 #include "erp/util/TLog.hxx"
 #include "erp/validation/XmlValidator.hxx"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 
 std::tuple<SchemaType, XmlValidator::SchemaPtr> XmlValidator::loadSchema(const std::string& filePath) const

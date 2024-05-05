@@ -1171,6 +1171,85 @@ TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
         "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.1.0); ");
 }
 
+class ActivateTaskTestNoLyo : public ActivateTaskTest
+{
+protected:
+    ActivateTaskTestNoLyo()
+        : envGuardUntil{"ERP_DARREICHUNGSFORM_1_12_VALID_UNTIL",
+                        (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone)}
+        , envGuardFrom{"ERP_DARREICHUNGSFORM_1_13_VALID_FROM",
+                       (model::Timestamp::now() + date::days{2}).toXsDate(model::Timestamp::GermanTimezone)}
+    {
+    }
+    EnvironmentVariableGuard envGuardUntil;
+    EnvironmentVariableGuard envGuardFrom;
+};
+
+TEST_F(ActivateTaskTestNoLyo, DarreichungsformNoLYO)
+{
+    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)
+    {
+        GTEST_SKIP_("old profiles");
+    }
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
+        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = "LYO"});
+
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
+                                              {.expectedStatus = HttpStatus::BadRequest,
+                                               .signingTime = model::Timestamp::now(),
+                                               .outExceptionPtr = exception}));
+    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+        std::rethrow_exception(exception),
+        "Bundle.entry[4].resource{Medication}.form.coding[0]: error: Code LYO is not part of CodeSystem "
+        "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM (from profile: "
+        "http://hl7.org/fhir/StructureDefinition/Coding|4.0.1); Bundle.entry[4].resource{Medication}.form.coding[0]: "
+        "error: Code LYO is not part of CodeSystem https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM "
+        "(from profile: http://hl7.org/fhir/StructureDefinition/CodeableConcept|4.0.1); "
+        "Bundle.entry[4].resource{Medication}.form.coding[0]: error: Code LYO is not part of CodeSystem "
+        "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM (from profile: "
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.1.0); ");
+}
+
+class ActivateTaskTestWithLyo : public ActivateTaskTest
+{
+protected:
+    ActivateTaskTestWithLyo()
+        : yesterday((model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone))
+        , today((model::Timestamp::now()).toXsDate(model::Timestamp::GermanTimezone))
+        , envGuardUntil({"ERP_DARREICHUNGSFORM_1_12_VALID_UNTIL", yesterday})
+        , envGuardFrom({"ERP_DARREICHUNGSFORM_1_13_VALID_FROM", today})
+    {
+    }
+    std::string yesterday;
+    std::string today;
+    EnvironmentVariableGuard envGuardUntil;
+    EnvironmentVariableGuard envGuardFrom;
+};
+
+TEST_F(ActivateTaskTestWithLyo, DarreichungsformWithLYO)
+{
+    GTEST_SKIP_("ERP-20082");
+    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)
+    {
+        GTEST_SKIP_("old profiles");
+    }
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
+        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = "LYO"});
+
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
+                          {.expectedStatus = HttpStatus::OK, .signingTime = model::Timestamp::now()}));
+}
+
 
 class ActivateTaskTestPkvP : public ActivateTaskTest, public ::testing::WithParamInterface<model::PrescriptionType>
 {

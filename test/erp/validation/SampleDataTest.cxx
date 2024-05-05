@@ -17,7 +17,7 @@
 #include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include "test_config.h"
 

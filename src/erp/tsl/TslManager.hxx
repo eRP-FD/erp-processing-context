@@ -85,7 +85,7 @@ public:
      *
      * @throws TslError in case of problems
      */
-    virtual TrustStore::OcspResponseData getCertificateOcspResponse(
+    virtual OcspResponse getCertificateOcspResponse(
         const TslMode tslMode,
         X509Certificate& certificate,
         const std::unordered_set<CertificateType>& typeRestrictions,

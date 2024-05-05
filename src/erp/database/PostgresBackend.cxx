@@ -406,6 +406,7 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
         if (!selectResult.empty())
         {
             Expect(selectResult.size() == 1, "Expected only one CMAC.");
+            TLOG(INFO) << "CMAC for " << toString(cmacType) << " loaded from Database";
             auto cmac = selectResult.front().at(0).as<db_model::postgres_bytea>();
             return CmacKey::fromBin({reinterpret_cast<char*>(cmac.data()), cmac.size()});
         }
@@ -417,6 +418,7 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
         auto acquireResult = mTransaction->exec_params(::acquireCmac.query, validDateStrm.str(), magic_enum::enum_name(cmacType), newKeyBin);
         TVLOG(2) << "got " << acquireResult.size() << " results";
         Expect(acquireResult.size() == 1, "Expected exactly one CMAC.");
+        TLOG(INFO) << "New CMAC for " << toString(cmacType) << " created";
         auto cmac = acquireResult.front().at(0).as<db_model::postgres_bytea>();
         return CmacKey::fromBin({reinterpret_cast<char*>(cmac.data()), cmac.size()});
     }

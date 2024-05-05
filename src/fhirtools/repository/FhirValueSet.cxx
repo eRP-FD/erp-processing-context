@@ -73,7 +73,7 @@ bool FhirValueSet::containsCode(const std::string& code, const std::string& code
     return mCodes.contains(Code{.code = code, .caseSensitive = false, .codeSystem = codeSystem});
 }
 
-void FhirValueSet::finalize(FhirStructureRepository* repo)// NOLINT(misc-no-recursion)
+void FhirValueSet::finalize(FhirStructureRepositoryBackend* repo)// NOLINT(misc-no-recursion)
 {
     finalizeIncludes(repo);
     finalizeExcludes(repo);
@@ -94,7 +94,7 @@ void FhirValueSet::finalize(FhirStructureRepository* repo)// NOLINT(misc-no-recu
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void FhirValueSet::finalizeIncludes(FhirStructureRepository* repo)
+void FhirValueSet::finalizeIncludes(FhirStructureRepositoryBackend* repo)
 {
     for (const auto& include : mIncludes)
     {
@@ -122,7 +122,7 @@ void FhirValueSet::finalizeIncludes(FhirStructureRepository* repo)
     }
 }
 
-void FhirValueSet::finalizeExcludes(FhirStructureRepository* repo)
+void FhirValueSet::finalizeExcludes(FhirStructureRepositoryBackend* repo)
 {
     for (auto& exclude : mExcludes)
     {
@@ -191,7 +191,7 @@ void FhirValueSet::finalizeIncludeCodes(const std::set<std::string>& codes, bool
     }
 }
 // NOLINTNEXTLINE(misc-no-recursion)
-void FhirValueSet::finalizeIncludeValueSets(FhirStructureRepository* repo, const std::set<std::string>& valueSets)
+void FhirValueSet::finalizeIncludeValueSets(FhirStructureRepositoryBackend* repo, const std::set<std::string>& valueSets)
 {
     for (const auto& valueSetUrl : valueSets)
     {

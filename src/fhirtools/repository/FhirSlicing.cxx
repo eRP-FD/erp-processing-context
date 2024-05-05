@@ -162,9 +162,9 @@ public:
         //NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
         mFixed = defPtrs.front().element()->fixed();
         defPtrs.pop_front();
-        ValueElement fixedValue{&repo, mFixed};
+        ValueElement fixedValue{repo.shared_from_this(), mFixed};
         bool ambiguous = std::ranges::any_of(defPtrs, [&](auto dp) {
-            return ValueElement{&repo, dp.element()->fixed()}.equals(fixedValue) != true;
+            return ValueElement{repo.shared_from_this(), dp.element()->fixed()}.equals(fixedValue) != true;
         });
         if (ambiguous)
         {
@@ -172,7 +172,7 @@ public:
             values << "[ " << fixedValue << ", ";
             for (const auto& dp : defPtrs)
             {
-                values << ", " << ValueElement{&repo, dp.element()->fixed()};
+                values << ", " << ValueElement{repo.shared_from_this(), dp.element()->fixed()};
             }
             values << "]";
             Fail2("ambiguous fixed values in: " + values.str(), std::logic_error);
@@ -180,7 +180,7 @@ public:
     }
     bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions&) const override
     {
-        const auto* repo = element.getFhirStructureRepository();
+        const auto& repo = element.getFhirStructureRepository();
         return (element.equals(ValueElement{repo, mFixed}) == true);
     }
     std::shared_ptr<const fhirtools::FhirValue> mFixed;
@@ -203,10 +203,10 @@ public:
         for (const auto& dp : defPtrs)
         {
             auto pattern = dp.element()->pattern();
-            ValueElement patternValue{&repo, pattern};
+            ValueElement patternValue{repo.shared_from_this(), pattern};
             for (const auto& existingPat : mPattern)
             {
-                ValueElement existingPatValue{&repo, existingPat};
+                ValueElement existingPatValue{repo.shared_from_this(), existingPat};
                 if (patternValue.equals(existingPatValue) == true)
                 {
                     pattern.reset();
@@ -229,7 +229,7 @@ public:
     }
     bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions&) const override
     {
-        const auto* repo = element.getFhirStructureRepository();
+        const auto& repo = element.getFhirStructureRepository();
         return std::ranges::all_of(mPattern, [&](auto pattern) {
             return element.matches(ValueElement{repo, pattern});
         });
@@ -263,11 +263,11 @@ public:
                 if (*binding != std::make_tuple(elementBinding.valueSetUrl, elementBinding.valueSetVersion))
                 {
                     TLOG(ERROR) << "binding " << get<0>(*binding) << '|'
-                               << (get<1>(*binding) ? *get<1>(*binding) : "<no-ver>"s) << " contradicts "
-                               << elementBinding.valueSetUrl << '|'
-                               << (elementBinding.valueSetVersion
-                                       ? static_cast<const std::string&>(*elementBinding.valueSetVersion)
-                                       : "<no-ver>"s);
+                                << (get<1>(*binding) ? *get<1>(*binding) : "<no-ver>"s) << " contradicts "
+                                << elementBinding.valueSetUrl << '|'
+                                << (elementBinding.valueSetVersion
+                                        ? static_cast<const std::string&>(*elementBinding.valueSetVersion)
+                                        : "<no-ver>"s);
                     contradiction = true;
                 }
             }
@@ -578,8 +578,8 @@ std::list<ProfiledElementTypeInfo> FhirSliceDiscriminator::collectElements(const
 
 //NOLINTNEXTLINE(misc-no-recursion)
 std::list<ProfiledElementTypeInfo> FhirSliceDiscriminator::collectSubElements(const FhirStructureRepository& repo,
-                                                                           const ProfiledElementTypeInfo& parentDef,
-                                                                           std::string_view path)
+                                                                              const ProfiledElementTypeInfo& parentDef,
+                                                                              std::string_view path)
 {
     using namespace std::string_literals;
     std::list<ProfiledElementTypeInfo> result;
@@ -595,7 +595,7 @@ std::list<ProfiledElementTypeInfo> FhirSliceDiscriminator::collectSubElements(co
     {
         return collectFromResolve(repo, parentDef, rest);
     }
-    Expect3(!prefix.ends_with("()"), "unsupported funtion in discriminator path: "s.append(prefix), std::logic_error);
+    Expect3(! prefix.ends_with("()"), "unsupported funtion in discriminator path: "s.append(prefix), std::logic_error);
     if (prefix == dollarThis)
     {
         return {parentDef};
@@ -656,7 +656,8 @@ FhirSliceDiscriminator::collectFromValues(const FhirStructureRepository& repo,
     std::list<ProfiledElementTypeInfo> result;
     if (element->pattern())
     {
-        auto patternElements = collectFromValues(std::make_shared<ValueElement>(&repo, element->pattern()), path);
+        auto patternElements =
+            collectFromValues(std::make_shared<ValueElement>(repo.shared_from_this(), element->pattern()), path);
         for (const auto& patternElement : patternElements)
         {
             FhirElement::Builder builder{*patternElement->definitionPointer().element()};
@@ -666,7 +667,8 @@ FhirSliceDiscriminator::collectFromValues(const FhirStructureRepository& repo,
     }
     if (element->fixed())
     {
-        auto fixedElements = collectFromValues(std::make_shared<ValueElement>(&repo, element->fixed()), path);
+        auto fixedElements =
+            collectFromValues(std::make_shared<ValueElement>(repo.shared_from_this(), element->fixed()), path);
         for (const auto& fixedElement : fixedElements)
         {
             FhirElement::Builder builder{*fixedElement->definitionPointer().element()};

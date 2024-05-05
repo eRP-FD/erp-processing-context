@@ -378,10 +378,11 @@ bool TrustStore::isTslTooOld () const
 }
 
 
-void TrustStore::setCacheOcspData (const std::string& fingerprint, OcspResponseData ocspCacheData)
+void TrustStore::setCacheOcspData (const std::string& fingerprint, OcspResponse ocspCacheData)
 {
+    ocspCacheData.fromCache = true;
     std::lock_guard guard(mMutex);
-    mOcspCache[fingerprint] = std::move(ocspCacheData);
+    mOcspCache.insert_or_assign(fingerprint, std::move(ocspCacheData));
 }
 
 
@@ -394,7 +395,7 @@ void TrustStore::cleanCachedOcspData(const std::string& fingerprint)
 }
 
 
-std::optional<TrustStore::OcspResponseData> TrustStore::getCachedOcspData (const std::string& fingerprint)
+std::optional<OcspResponse> TrustStore::getCachedOcspData (const std::string& fingerprint)
 {
     std::lock_guard guard(mMutex);
 

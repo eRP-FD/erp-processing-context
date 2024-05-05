@@ -12,6 +12,7 @@
 #include "erp/crypto/OpenSslHelper.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/tsl/OcspCheckDescriptor.hxx"
+#include "erp/tsl/OcspResponse.hxx"
 #include "erp/tsl/OcspUrl.hxx"
 #include "erp/tsl/X509Certificate.hxx"
 #include "fhirtools/util/Gsl.hxx"
@@ -42,48 +43,8 @@ public:
         {}
     };
 
-    enum class CertificateStatus
-    {
-        good, revoked, unknown
-    };
-
-    static std::string toString (CertificateStatus certificateStatus);
-
-    static CertificateStatus toCertificateStatus (const std::string& string);
-
-    struct Status
-    {
-        CertificateStatus certificateStatus = CertificateStatus::unknown;
-
-        // > epoch, if certificateStatus == revoked
-        std::chrono::system_clock::time_point revocationTime;
-
-        std::string to_string() const
-        {
-            std::stringstream status;
-            switch(certificateStatus)
-            {
-                case CertificateStatus::good:
-                    status << "Status: Good";
-                    break;
-                case CertificateStatus::revoked:
-                    status << "Status: Revoked";
-                    break;
-                case CertificateStatus::unknown:
-                    status << "Status: Unknown";
-                    break;
-                default:
-                    Fail2("Unhandled CertificateStatus enum value", std::logic_error);
-            }
-
-            status << ", revocation time: " << std::chrono::system_clock::to_time_t(revocationTime);
-
-            return status.str();
-        }
-    };
-
     /**
-     * Gets the OCSP status of a certificate.
+     * Gets the OCSP response for certificate.
      *
      * @param certificate   the certificate to check
      * @param requestSender the OCSP request will be sent via this sender
@@ -93,11 +54,11 @@ public:
      * @param validateHashExtension whether the hash extension should be validated
      * @param ocspCheckDescriptor       describes the OCSP check approach to use
      *
-     * @return OCSP status (good / revoked / unknown) plus revocation time
+     * @return OCSP response
      * @throws std::runtime_error on error
      */
-    static Status
-    getCurrentStatus (
+    static OcspResponse
+      getCurrentResponse (
         const X509Certificate& certificate,
         const UrlRequestSender& requestSender,
         const OcspUrl& ocspUrl,
@@ -120,7 +81,7 @@ public:
      * @return OCSP status (good / revoked / unknown) plus revocation time
      * @throws std::runtime_error on error
      */
-    static Status
+    static OcspStatus
     getCurrentStatusOfTslSigner (const X509Certificate& certificate,
                                  const X509Certificate& issuerCertificate,
                                  const UrlRequestSender& requestSender,
@@ -129,14 +90,6 @@ public:
                                  const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
                                  const bool validateHashExtension);
 
-
-    /**
-     * Checks OCSP status and throws related TslError in case it is not CertificateStatus::good
-     */
-    static void checkOcspStatus (
-        const OcspService::Status& status,
-        const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
-        const TrustStore& trustStore);
 };
 
 #endif

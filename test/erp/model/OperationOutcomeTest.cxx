@@ -8,7 +8,7 @@
 #include "erp/model/OperationOutcome.hxx"
 #include "test/util/StaticData.hxx"
 
-#include "magic_enum.hpp"
+#include <magic_enum/magic_enum.hpp>
 
 #include <gtest/gtest.h>
 

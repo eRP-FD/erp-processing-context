@@ -470,10 +470,10 @@ bool X509Certificate::containsTelematikId(const std::string& telematikId) const
 }
 
 
+// "X.509-Identitäten für die Erstellung und Prüfung digitaler Signaturen"
+// GEMREQ-start GS-A_4361-02
 bool X509Certificate::signatureIsValidAndWasSignedBy (const X509Certificate& issuer) const
 {
-    // "X.509-Identitäten für die Erstellung und Prüfung digitaler Signaturen"
-    // GEMREQ-start GS-A_4361
     // "X.509-Identitäten für die Erstellung und Prüfung digitaler nicht-qualifizierter elektronischer Signaturen"
     // GEMREQ-start GS-A_4357
     if (!pCert)
@@ -484,8 +484,8 @@ bool X509Certificate::signatureIsValidAndWasSignedBy (const X509Certificate& iss
     EVP_PKEY* publicKeyOfIssuer = X509_get0_pubkey(issuer.pCert.get());
     return (publicKeyOfIssuer && X509_verify(pCert.get(), publicKeyOfIssuer) == 1);
     // GEMREQ-end GS-A_4357
-    // GEMREQ-end GS-A_4361
 }
+// GEMREQ-end GS-A_4361-02
 
 
 bool X509Certificate::checkValidityPeriod (std::chrono::system_clock::time_point when) const

@@ -9,6 +9,7 @@
 #include "Configuration.hxx"
 #include "RuntimeConfiguration.hxx"
 #include "erp/util/String.hxx"
+#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
@@ -40,10 +41,6 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config,
         const auto confOption = confNames.strings(confKey);
         std::string value;
         std::string defaultValue;
-        if ((confOption.flags & flags) == 0)
-        {
-            continue;
-        }
 
         if (confOption.flags & KeyData::array)
         {
@@ -56,51 +53,23 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config,
             defaultValue = config.getOptionalStringFromJson(confKey).value_or("<unset>");
         }
         bool modified = value != defaultValue;
-        bool deprecated = confOption.flags & KeyData::deprecated;
-
         if (confOption.flags & KeyData::credential)
         {
             value = "<redacted>";
             defaultValue = value;
         }
-        std::string category = getCategoryPath(confOption.flags);
-
-        const auto keyEnvVar = std::string{confOption.environmentVariable};
-        const std::string key = std::string{"/"}.append(category).append(keyEnvVar);
-        {
-            const std::string valuePath = key + "/value";
-            auto p = rapidjson::Pointer(rapidjson::StringRef(valuePath.data(), valuePath.size()));
-            p.Set(document, rapidjson::Value(value, document.GetAllocator()), document.GetAllocator());
-        }
-        {
-            const std::string descriptionPath = key + "/description";
-            auto descPointer = rapidjson::Pointer(rapidjson::StringRef(descriptionPath.data(), descriptionPath.size()));
-            descPointer.Set(document, rapidjson::Value(confOption.description.data(), document.GetAllocator()),
-                            document.GetAllocator());
-        }
-        {
-            const std::string defaultPath = key + "/default";
-            auto defaultPointer = rapidjson::Pointer(rapidjson::StringRef(defaultPath.data(), defaultPath.size()));
-            defaultPointer.Set(document, rapidjson::Value(defaultValue.data(), document.GetAllocator()),
-                               document.GetAllocator());
-        }
-        {
-            const std::string modifiedPath = key + "/isModified";
-            auto modifiedPointer = rapidjson::Pointer(rapidjson::StringRef(modifiedPath.data(), modifiedPath.size()));
-            modifiedPointer.Set(document, rapidjson::Value(modified), document.GetAllocator());
-        }
-        {
-            const std::string deprecatedPath = key + "/isDeprecated";
-            auto deprecatedPointer =
-                rapidjson::Pointer(rapidjson::StringRef(deprecatedPath.data(), deprecatedPath.size()));
-            deprecatedPointer.Set(document, rapidjson::Value(deprecated), document.GetAllocator());
-        }
-
-        if (erpEnvVariables.contains(keyEnvVar))
-        {
-            erpEnvVariables.erase(keyEnvVar);
-        }
+        processConfOption(document, erpEnvVariables, confOption, flags, value, defaultValue, modified);
     }
+
+    for (const auto& [confOption, value, defaultValue] : config.fhirResourceViewConfiguration().variables())
+    {
+        KeyData keyData{.environmentVariable = confOption.environmentVariable,
+                        .jsonPath = confOption.jsonPath,
+                        .flags = KeyData::categoryFunctionalStatic,
+                        .description = ""};
+        processConfOption(document, erpEnvVariables, keyData, flags, value, defaultValue, value != defaultValue);
+    }
+
     const rapidjson::Pointer unusedVarsPointer("/unusedVariables");
     auto& unusedVarsArray = unusedVarsPointer.Create(document).SetArray();
     for (const auto& envVar : erpEnvVariables)
@@ -115,6 +84,54 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config,
     rapidjson::Writer writer(buffer);
     document.Accept(writer);
     return buffer.GetString();
+}
+
+void ConfigurationFormatter::processConfOption(rapidjson::Document& document,
+                                               std::unordered_set<std::string>& erpEnvVariables,
+                                               const KeyData& confOption, int flags, const std::string& value,
+                                               const std::string& defaultValue, bool modified)
+{
+    if ((confOption.flags & flags) == 0)
+    {
+        return;
+    }
+    std::string category = getCategoryPath(confOption.flags);
+
+    const auto keyEnvVar = std::string{confOption.environmentVariable};
+    const std::string key = std::string{"/"}.append(category).append(keyEnvVar);
+    {
+        const std::string valuePath = key + "/value";
+        auto p = rapidjson::Pointer(rapidjson::StringRef(valuePath.data(), valuePath.size()));
+        p.Set(document, rapidjson::Value(value, document.GetAllocator()), document.GetAllocator());
+    }
+    {
+        const std::string descriptionPath = key + "/description";
+        auto descPointer = rapidjson::Pointer(rapidjson::StringRef(descriptionPath.data(), descriptionPath.size()));
+        descPointer.Set(document, rapidjson::Value(confOption.description.data(), document.GetAllocator()),
+                        document.GetAllocator());
+    }
+    {
+        const std::string defaultPath = key + "/default";
+        auto defaultPointer = rapidjson::Pointer(rapidjson::StringRef(defaultPath.data(), defaultPath.size()));
+        defaultPointer.Set(document, rapidjson::Value(defaultValue.data(), document.GetAllocator()),
+                           document.GetAllocator());
+    }
+    {
+        const std::string modifiedPath = key + "/isModified";
+        auto modifiedPointer = rapidjson::Pointer(rapidjson::StringRef(modifiedPath.data(), modifiedPath.size()));
+        modifiedPointer.Set(document, rapidjson::Value(modified), document.GetAllocator());
+    }
+    {
+        bool deprecated = confOption.flags & KeyData::deprecated;
+        const std::string deprecatedPath = key + "/isDeprecated";
+        auto deprecatedPointer = rapidjson::Pointer(rapidjson::StringRef(deprecatedPath.data(), deprecatedPath.size()));
+        deprecatedPointer.Set(document, rapidjson::Value(deprecated), document.GetAllocator());
+    }
+
+    if (erpEnvVariables.contains(keyEnvVar))
+    {
+        erpEnvVariables.erase(keyEnvVar);
+    }
 }
 
 std::string ConfigurationFormatter::getCategoryPath(int flags)

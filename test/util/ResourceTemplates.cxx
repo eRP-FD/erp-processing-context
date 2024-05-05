@@ -100,6 +100,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     boost::replace_all(bundle, "###LANR_CODE_SYSTEM###", anrCodeSystem);
     boost::replace_all(bundle, "###QUALIFICATION_TYPE###", qualificationType);
     boost::replace_all(bundle, "###PZN###", bundleOptions.pzn.id());
+    boost::replace_all(bundle, "###DARREICHUNGSFORM###", bundleOptions.darreichungsfrom);
     return bundle;
 }
 

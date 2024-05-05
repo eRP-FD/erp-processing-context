@@ -23,27 +23,27 @@ std::list<std::filesystem::path> DefaultFhirStructureRepository::defaultProfileF
 }
 
 
-const FhirStructureRepository& DefaultFhirStructureRepository::get()
+const fhirtools::FhirStructureRepositoryBackend& DefaultFhirStructureRepository::get()
 {
-    static std::unique_ptr<const fhirtools::FhirStructureRepository> repo = create(defaultProfileFiles());
+    static std::unique_ptr<const fhirtools::FhirStructureRepositoryBackend> repo = create(defaultProfileFiles());
     return *repo;
 }
 
-const fhirtools::FhirStructureRepository& DefaultFhirStructureRepository::getWithTest()
+const fhirtools::FhirStructureRepositoryBackend& DefaultFhirStructureRepository::getWithTest()
 {
     auto getProfileList = [] {
         auto profileList = defaultProfileFiles();
         profileList.emplace_back(ResourceManager::getAbsoluteFilename("test/fhir-path/structure-definition.xml"));
         return profileList;
     };
-    static std::unique_ptr<const fhirtools::FhirStructureRepository> repo = create(getProfileList());
+    static std::unique_ptr<const fhirtools::FhirStructureRepositoryBackend> repo = create(getProfileList());
     return *repo;
 }
 
-std::unique_ptr<const fhirtools::FhirStructureRepository>
+std::unique_ptr<const fhirtools::FhirStructureRepositoryBackend>
 DefaultFhirStructureRepository::create(const std::list<std::filesystem::path>& files)
 {
-    auto repo = std::make_unique<FhirStructureRepository>();
+    auto repo = std::make_unique<fhirtools::FhirStructureRepositoryBackend>();
     repo->load(files);
     return repo;
 }

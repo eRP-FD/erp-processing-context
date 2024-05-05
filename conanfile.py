@@ -34,32 +34,34 @@ class ErpProcessingContext(ConanFile):
                        'with_sbom': False,
                        'zlib:shared': True,
                        'openssl:shared': True,
-                       'date:use_system_tz_db': True}
+                       'date:use_system_tz_db': True,
+                       'libunwind:minidebuginfo': False}
     generators = "cmake"
     exports_sources = "."
     build_requires = []
-    requires = ['antlr4-cppruntime/4.13.0',
-                'boost/1.82.0',
+    requires = ['antlr4-cppruntime/4.13.1',
+                'boost/1.84.0',
                 'date/3.0.1',  # date can be removed as soon as we use C++20
-                'glog/0.6.0',
-                'gsl-lite/0.40.0',
-                'libxml2/2.11.4',
-                'openssl/3.1.4@erp/stable-1',
+                'glog/0.7.0',
+                'gsl-lite/0.41.0',
+                'libxml2/2.11.7',
+                'openssl/3.1.5@erp/stable-1',
                 'rapidjson/cci.20220822',
-                'magic_enum/0.9.1',
-                'libpqxx/7.7.5',
-                'libpq/14.7',
+                'magic_enum/0.9.5',
+                'libpqxx/7.9.0',
+                'libpq/14.9',
+                'libunwind/1.8.0',
                 'zstd/1.5.5',  # database compression
                 'gtest/1.13.0',
                 'hiredis/1.2.0@erp/stable',
-                'redis-plus-plus/1.3.10',
-                'zlib/1.3']
+                'redis-plus-plus/1.3.12',
+                'zlib/1.3.1']
 
     def requirements(self):
         if self.options.with_tpmclient:
-            self.requires('tpmclient/0.15.0-B35')
+            self.requires('tpmclient/0.15.0-B37')
         if self.options.with_hsmclient:
-            self.requires('hsmclient/2.8.0-B00')
+            self.requires('hsmclient/2.9.0-B81')
 
     def build_requirements(self):
         if self.options.with_sbom:

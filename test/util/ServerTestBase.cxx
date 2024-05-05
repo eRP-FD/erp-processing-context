@@ -318,7 +318,8 @@ void ServerTestBase::validateInnerResponse(const ClientResponse& innerResponse) 
         if (resourceForValidation)
         {
             fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
-            auto validationResult = resourceForValidation->genericValidate(fhirBundleVersion, options);
+            auto validationResult =
+                resourceForValidation->genericValidate(model::Timestamp::now(), fhirBundleVersion, options);
             auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
             for (const auto& item : filteredValidationErrors)
             {

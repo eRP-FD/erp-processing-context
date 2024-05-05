@@ -46,8 +46,8 @@ public:
 
 private:
     FhirPathValidator(const ValidatorOptions& options, std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
-                      const FhirStructureRepository& repo);
-    static FhirPathValidator create(const ValidatorOptions&, const FhirStructureRepository*);
+                      const std::shared_ptr<const FhirStructureRepository>& repo);
+    static FhirPathValidator create(const ValidatorOptions&, const std::shared_ptr<const FhirStructureRepository>&);
     void validateInternal(const std::shared_ptr<const Element>& element,
                           std::set<ProfiledElementTypeInfo> extraProfiles, const std::string& elementFullPath);
 
@@ -67,7 +67,7 @@ private:
     ValidationResults result;
     const ValidatorOptions& mOptions;
     const std::unique_ptr<const ProfiledElementTypeInfo> mExtensionRootDefPtr;
-    const FhirStructureRepository& mRepo;
+    const std::shared_ptr<const FhirStructureRepository> mRepo;
 };
 
 

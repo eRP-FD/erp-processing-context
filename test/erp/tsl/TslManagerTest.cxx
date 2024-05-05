@@ -1292,3 +1292,57 @@ TEST_F(TslManagerTest, unknownOcspResponseStatus_Fail)//NOLINT(readability-funct
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::BadRequest);
 }
+
+
+TEST_F(TslManagerTest, fromCacheFlag)//NOLINT(readability-function-cognitive-complexity)
+{
+    const std::string certificatePem = FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
+    const Certificate certificate = Certificate::fromPem(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+
+    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+
+    const std::string tslContent =
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
+    const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+
+    auto requestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+        {TslTestHelper::shaDownloadUrl, Hash::sha256(tslContent)},
+        {TslTestHelper::tslDownloadUrl, tslContent},
+        {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
+        {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)},
+    });
+    TslTestHelper::setOcspUslRequestHandlerTslSigner(*requestSender);
+    std::string ocspUrl = "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp";
+
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
+        requestSender, {}, {{ocspUrl, {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    {
+        auto responseData = manager->getCertificateOcspResponse(
+            TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES},
+            {OcspCheckDescriptor::OcspCheckMode::FORCE_OCSP_REQUEST_ALLOW_CACHE,
+            {std::nullopt, std::chrono::seconds{842000}},
+            {}});
+
+        EXPECT_FALSE(responseData.fromCache);
+    }
+    // force a new OCSP request and simulate a network error
+    requestSender->setUrlHandler(ocspUrl, [](const std::string&) -> ClientResponse {
+        Header header;
+        header.setStatus(HttpStatus::NetworkConnectTimeoutError);
+        header.setContentLength(0);
+        return {header, ""};
+    });
+    {
+        auto responseData = manager->getCertificateOcspResponse(
+            TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES},
+            {OcspCheckDescriptor::OcspCheckMode::FORCE_OCSP_REQUEST_ALLOW_CACHE,
+            {std::nullopt, std::chrono::seconds{842000}},
+            {}});
+
+        EXPECT_TRUE(responseData.fromCache);
+    }
+}

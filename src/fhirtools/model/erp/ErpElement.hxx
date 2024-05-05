@@ -19,13 +19,13 @@
 class ErpElement : public fhirtools::Element
 {
 public:
-    explicit ErpElement(const fhirtools::FhirStructureRepository* fhirStructureRepository,
+    explicit ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
                         std::weak_ptr<const Element> parent, const std::string& elementId,
                         const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject = nullptr);
-    explicit ErpElement(const fhirtools::FhirStructureRepository* fhirStructureRepository,
+    explicit ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
                         std::weak_ptr<const Element> parent, fhirtools::ProfiledElementTypeInfo defPtr,
                         const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject = nullptr);
-    explicit ErpElement(const fhirtools::FhirStructureRepository* fhirStructureRepository,
+    explicit ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
                         std::weak_ptr<const Element> parent,
                         const fhirtools::FhirStructureDefinition* structureDefinition, const std::string& elementId,
                         const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject = nullptr);

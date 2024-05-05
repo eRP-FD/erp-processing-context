@@ -191,6 +191,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_19233_05.finish();
 
     A_19233_05.start("Sign the receipt with ID.FD.SIG using [RFC5652] with profile CAdES-BES ([CAdES]) ");
+    // GEMREQ-start GS-A_4357-02#signData
     const std::string serialized = responseReceipt.serializeToXmlString();
     const std::string base64SignatureData =
         CadesBesSignature(
@@ -199,6 +200,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
             serialized,
             std::nullopt,
             session.serviceContext.getCFdSigErpManager().getOcspResponse()).getBase64();
+    // GEMREQ-end GS-A_4357-02#signData
     A_19233_05.finish();
 
     A_19233_05.start("Set signature");
@@ -279,8 +281,8 @@ void CloseTaskHandler::validateMedications(const std::vector<model::MedicationDi
 {
     using namespace std::string_literals;
     namespace rv = model::ResourceVersion;
-    const auto* repo = std::addressof(Fhir::instance().structureRepository());
-    auto extractMedication = fhirtools::FhirPathParser::parse(repo, "medicationReference.resolve()");
+    const auto repo = Fhir::instance().structureRepository(model::Timestamp::now());
+    auto extractMedication = fhirtools::FhirPathParser::parse(repo.get(), "medicationReference.resolve()");
     Expect3(extractMedication, "Failed parsing extractMedication", std::logic_error);
     // ensure that all past bundles are included
     auto supportedBundles = rv::supportedBundles();
@@ -321,8 +323,8 @@ void CloseTaskHandler::validateWithoutMedicationProfiles(
     using Factory = model::ResourceFactory<ModelT>;
     static rapidjson::Pointer idPtr{resource::ElementName::path(elements::id)};
     static rapidjson::Pointer resourceTypePtr{resource::ElementName::path(elements::resourceType)};
-    const auto* repo = std::addressof(Fhir::instance().structureRepository());
-    auto extractMedications = fhirtools::FhirPathParser::parse(repo, medicationsPath);
+    const auto repo = Fhir::instance().structureRepository(model::Timestamp::now());
+    auto extractMedications = fhirtools::FhirPathParser::parse(repo.get(), medicationsPath);
     Expect3(extractMedications != nullptr, "Failed parsing: "s.append(medicationsPath), std::logic_error);
     auto rootElement = std::make_shared<ErpElement>(repo, std::weak_ptr<const ErpElement>{}, ModelT::resourceTypeName,
                                             std::addressof(medicationDispenseOrBundleDoc));

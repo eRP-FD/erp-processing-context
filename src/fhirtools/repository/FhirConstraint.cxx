@@ -9,7 +9,7 @@
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 using fhirtools::FhirConstraint;
 

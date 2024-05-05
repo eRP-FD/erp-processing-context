@@ -49,9 +49,10 @@ TEST_F(ChargeItemGetEndpointTest, GetByIdNonPkvFails)
 TEST_F(ChargeItemGetEndpointTest, SignatureWho)
 {
     using namespace std::string_literals;
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     const auto parse = [&repo](std::string_view expr) {
-        return fhirtools::FhirPathParser::parse(&repo, expr);
+        return fhirtools::FhirPathParser::parse(repo.get(), expr);
     };
     using BundleFactory = model::ResourceFactory<model::Bundle>;
     BundleFactory::Options factoryOptions{.validatorOptions = fhirtools::ValidatorOptions{
@@ -80,7 +81,7 @@ TEST_F(ChargeItemGetEndpointTest, SignatureWho)
                                                      *StaticData::getInCodeValidator()));)
         << serverResponse.getBody();
     fhirtools::Collection bundleCollection = {std::make_shared<ErpElement>(
-        &repo, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle->jsonDocument()))};
+        repo, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle->jsonDocument()))};
     const auto supportingInformationExpr = parse("Bundle.entry.resource.ofType(ChargeItem).supportingInformation");
     const auto supportingInformation = supportingInformationExpr->eval(bundleCollection);
     ASSERT_EQ(supportingInformation.size(), 3);

@@ -6,12 +6,12 @@
  */
 
 #include "erp/model/CommunicationPayload.hxx"
-#include "erp/model/ResourceNames.hxx"
 #include "erp/model/NumberAsStringParserDocument.hxx"
+#include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/UrlHelper.hxx"
 #include "erp/validation/JsonValidator.hxx"
 
-#define BOOST_URL_NO_LIB
 #include <boost/url.hpp>
 #include <rapidjson/pointer.h>
 
@@ -86,8 +86,14 @@ void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, Sc
         auto* urlValue = urlPointer.Get(payloadDoc);
         if (urlValue)
         {
-            auto res = boost::urls::parse_uri(urlValue->GetString());
-            ModelExpect(! res.has_error(), "Invalid payload: URL not valid.");
+            try
+            {
+                auto urlParts = UrlHelper::parseUrl(urlValue->GetString());
+                ModelExpect(!urlParts.mProtocol.empty() && !urlParts.mHost.empty(), "Invalid payload: URL not valid.");
+            } catch (const std::runtime_error& e)
+            {
+                ModelFail("Invalid payload: URL not valid.");
+            }
         }
     }
 }

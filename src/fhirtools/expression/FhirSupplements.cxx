@@ -44,7 +44,8 @@ Collection PercentRootResource::eval(const Collection& collection) const
     }
     return {};
 }
-ExtensionFunction::ExtensionFunction(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg)
+ExtensionFunction::ExtensionFunction(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr arg)
     : UnaryExpression(fhirStructureRepository, std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");
@@ -122,7 +123,8 @@ Collection Resolve::eval(const Collection& collection) const
     return result;
 }
 
-ConformsTo::ConformsTo(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg)
+ConformsTo::ConformsTo(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                       ExpressionPtr arg)
     : UnaryExpression(fhirStructureRepository, std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");

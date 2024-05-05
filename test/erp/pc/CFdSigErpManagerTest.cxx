@@ -239,7 +239,6 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_OCSP_fails_validation_success)
 
     // The second OCSP response request has failed, but that does not affect validity of C-FD-OSIG eRP certificate
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 2);
-    ASSERT_FALSE(cFdSigErpManager.wasLastOcspRequestSuccessful());
     ASSERT_NO_THROW(cFdSigErpManager.getOcspResponseData(false));
     ASSERT_NO_THROW(cFdSigErpManager.healthCheck());
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 2);
@@ -263,13 +262,13 @@ TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)//NOLINT(readability-functio
     CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
 
     EXPECT_TSL_ERROR_THROW(
-        cFdSigErpManager.getOcspResponseData(false),
+        cFdSigErpManager.getOcspResponseData(true),
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::ServiceUnavailable);
 
     // the second call is done to test handling of the OCSP-Response from cache
     EXPECT_TSL_ERROR_THROW(
-        cFdSigErpManager.getOcspResponseData(false),
+        cFdSigErpManager.getOcspResponseData(true),
         {TslErrorCode::CERT_UNKNOWN},
         HttpStatus::ServiceUnavailable);
 }
@@ -291,8 +290,6 @@ TEST_F(CFdSigErpManagerTest, signatureStatusValid_withinGracePeriod)
 
     CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
 
-    // get the ocsp once to fill the cache
-    ASSERT_TRUE(cFdSigErpManager.wasLastOcspRequestSuccessful());
     // health check
     ASSERT_NO_THROW(cFdSigErpManager.healthCheck());
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
@@ -300,7 +297,6 @@ TEST_F(CFdSigErpManagerTest, signatureStatusValid_withinGracePeriod)
     // request a second time, no ocsp request expected, instead taken from cache
     EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
     ASSERT_NO_THROW(cFdSigErpManager.healthCheck());
-    ASSERT_TRUE(cFdSigErpManager.wasLastOcspRequestSuccessful());
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
 
     // force a new OCSP request and simulate a network error
@@ -310,13 +306,10 @@ TEST_F(CFdSigErpManagerTest, signatureStatusValid_withinGracePeriod)
         header.setContentLength(0);
         return {header, ""};
     });
-
     cFdSigErpManager.getOcspResponseData(true);
-    ASSERT_FALSE(cFdSigErpManager.wasLastOcspRequestSuccessful());
 
     // request the same data, but allow a cache hit
     EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
-    ASSERT_FALSE(cFdSigErpManager.wasLastOcspRequestSuccessful());
 
     // we expect only a single warning (from the first request)
     int warnings{0};
@@ -325,4 +318,47 @@ TEST_F(CFdSigErpManagerTest, signatureStatusValid_withinGracePeriod)
             warnings++;
     });
     ASSERT_EQ(warnings, 1);
+}
+
+TEST_F(CFdSigErpManagerTest, noBlockDuringRequest)
+{
+    using namespace std::chrono_literals;
+    LogTestBase::TestLogSink logSink;
+    EnvironmentVariableGuard ocspGracePeriodGuard(ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL, "2");
+
+    std::shared_ptr<UrlRequestSenderMock> requestSender =
+    CFdSigErpTestHelper::createRequestSender<UrlRequestSenderMock>();
+
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
+    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
+        requestSender, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+
+    std::timed_mutex completedMtx;
+    completedMtx.lock();
+    std::atomic_bool requesting = false;
+    std::timed_mutex requestStarted;
+    requestStarted.lock();
+    // force a new OCSP request and simulate a network error
+    requestSender->setUrlHandler(ocspUrl, [&](const std::string&) mutable -> ClientResponse {
+        TVLOG(0) << "Started request";
+        Header header;
+        header.setStatus(HttpStatus::NetworkConnectTimeoutError);
+        header.setContentLength(0);
+        requesting = true;
+        requestStarted.unlock();
+        completedMtx.try_lock_for(10s);
+        requesting = false;
+        TVLOG(0) << "Completed request";
+        return {header, ""};
+    });
+    ASSERT_TRUE(requestStarted.try_lock_for(10s)) << "request not started in time.";
+    TVLOG(0) << "Getting OCSP-Response";
+    EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
+    TVLOG(0) << "Got OCSP-Response";
+    ASSERT_TRUE(requesting);
+    completedMtx.unlock();
 }

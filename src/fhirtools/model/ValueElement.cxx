@@ -4,25 +4,25 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "fhirtools/model/ValueElement.hxx"
+#include "fhirtools/FPExpect.hxx"
 
 #include <charconv>
-
-#include "fhirtools/FPExpect.hxx"
 
 using fhirtools::Element;
 using fhirtools::FhirValue;
 using fhirtools::PrimitiveElement;
 using fhirtools::ValueElement;
 
-ValueElement::ValueElement(const FhirStructureRepository* repo, std::shared_ptr<const FhirValue> value,
-                           std::weak_ptr<const Element> parent)
+ValueElement::ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+                           std::shared_ptr<const FhirValue> value, std::weak_ptr<const Element> parent)
     : Element(repo, std::move(parent), value->elementId())
     , mValue(std::move(value))
 {
 }
 
-ValueElement::ValueElement(const FhirStructureRepository* repo, std::weak_ptr<const Element> parent,
-                           std::shared_ptr<const FhirValue> value, ProfiledElementTypeInfo defPtr)
+ValueElement::ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+                           std::weak_ptr<const Element> parent, std::shared_ptr<const FhirValue> value,
+                           ProfiledElementTypeInfo defPtr)
     : Element(repo, std::move(parent), std::move(defPtr))
     , mValue(std::move(value))
 {
@@ -36,7 +36,7 @@ std::vector<std::shared_ptr<const Element>> ValueElement::subElements(const std:
     auto subDefPtr = mDefinitionPointer.subDefinitions(*mFhirStructureRepository, name);
     if (valueIter != attributes.end())
     {
-        auto elementType = GetElementType(mFhirStructureRepository, subDefPtr.back());
+        auto elementType = GetElementType(mFhirStructureRepository.get(), subDefPtr.back());
         return {asPrimitiveElement(elementType, valueIter->second, {})};
     }
     const auto& children = mValue->children();
@@ -191,14 +191,11 @@ std::shared_ptr<PrimitiveElement> ValueElement::asPrimitiveElement(Element::Type
         case Type::Boolean:
             return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType, value == "true");
         case Type::Date:
-            return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType,
-                                                      Date(value));
+            return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType, Date(value));
         case Type::DateTime:
-            return {std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType,
-                                                       DateTime(value))};
+            return {std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType, DateTime(value))};
         case Type::Time:
-            return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType,
-                                                      Time(value));
+            return std::make_shared<PrimitiveElement>(mFhirStructureRepository, elementType, Time(value));
         case Type::Structured:
             break;
         case Type::Quantity: {

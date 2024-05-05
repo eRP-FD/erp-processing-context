@@ -8,7 +8,7 @@
 #include "FhirElement.hxx"
 
 #include <boost/algorithm/string/split.hpp>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <sstream>
 #include <utility>
 

@@ -16,7 +16,8 @@ namespace fhirtools
 class ComparisonOperator : public BinaryExpression
 {
 public:
-    ComparisonOperator(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs, ExpressionPtr rhs);
+    ComparisonOperator(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                       ExpressionPtr lhs, ExpressionPtr rhs);
 
 protected:
     Collection comparison(const Element& lhs, const Element& rhs,

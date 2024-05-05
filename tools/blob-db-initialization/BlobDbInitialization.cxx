@@ -16,7 +16,7 @@
 #include "mock/enrolment/MockEnrolmentManager.hxx"
 
 #include <date/date.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <filesystem>
 #include <iostream>
 #include <unordered_set>
@@ -76,6 +76,9 @@ Options:
     -a|--api-credentials                  credentials to access the enrolment API
     --dev                                 use static data for the DEV environment
     --ru                                  use static data for the RU environment
+    --generate-derivation-keys            do not load derivation key blobs from file but generate them via HSM, disabled by default. Requires HSM setup credentials.
+    --derivation-key-generation <gen>     Key generation used when derivation key generation is enabled, default: 66
+    -x|--id-postfix                       For static blob ids, use this postfix (default: empty)
     -v|--version                          print the build version number
 
 Blob types:
@@ -118,6 +121,30 @@ struct BlobDescriptor
     bool isDynamic;
     bool hasBegin;
     bool hasEnd;
+
+    bool isDerivationKey() const
+    {
+        using enum BlobType;
+        switch (type)
+        {
+            case CommunicationKeyDerivation:
+            case AuditLogKeyDerivation:
+            case TaskKeyDerivation:
+            case ChargeItemKeyDerivation:
+                return true;
+            case EndorsementKey:
+            case AttestationPublicKey:
+            case AttestationKeyPair:
+            case Quote:
+            case EciesKeypair:
+            case KvnrHashKey:
+            case TelematikIdHashKey:
+            case VauSig:
+            case PseudonameKey:
+                return false;
+        }
+        Fail("Unexpected blob type");
+    }
 };
 
 // clang-format off
@@ -150,6 +177,8 @@ static std::vector<VsdmKeyBlobDescriptor> vsdmBlobDescriptors = {
     {.filename = "vsdmkeyA2.blob", .operatorId = 'A', .version = '2', .env = TargetEnvironment::DEV}
 };
 
+static hsmclient::HSMSession hsmSession = {0, 0, 0, hsmclient::HSMUninitialised, 0, 0, 0};
+
 struct CommandLineArguments
 {
     std::string certificateFilename;
@@ -162,6 +191,10 @@ struct CommandLineArguments
         return blobTypes.find(type) != blobTypes.end();
     }
     std::vector<VsdmKeyBlobDescriptor> vsdmBlobs{};
+    bool generateDerivationKey = false;
+    std::string idPostfix;
+    // default for simulator, see vau-hsm/client, "THE_ANSWER" used in tests
+    unsigned int derivationKeyGeneration = 0x42;
 };
 
 
@@ -224,6 +257,19 @@ CommandLineArguments processCommandLine(const int argc,
         else if (argument == "--ru")
         {
             arguments.environment = TargetEnvironment::RU;
+        }
+        else if (argument == "--generate-derivation-keys")
+        {
+            arguments.generateDerivationKey = true;
+        }
+        else if (argument == "--derivation-key-generation")
+        {
+            arguments.derivationKeyGeneration = gsl::narrow<unsigned int>(std::strtoul(argv[++index], nullptr, 10));
+        }
+        else if (argument == "--id-postfix" || argument == "-x")
+        {
+            expectArgument("-x|--id-postfix", index, argc, argv);
+            arguments.idPostfix = argv[++index];
         }
         else if (argument == "-v" || argument == "--version")
         {
@@ -310,6 +356,53 @@ struct StaticData {
     ::std::optional<::std::string> certificate;
 };
 
+
+hsmclient::HSMSession hsmConnectAndLogin(const std::string& device, const HsmIdentity& identity)
+{
+    const auto& config = Configuration::instance();
+    const auto readTimeout =
+        static_cast<unsigned int>(config.getIntValue(ConfigurationKey::HSM_READ_TIMEOUT_SECONDS) * 1000);
+    const auto connectTimeout =
+        static_cast<unsigned int>(config.getIntValue(ConfigurationKey::HSM_CONNECT_TIMEOUT_SECONDS) * 1000);
+    const auto reconnectTimeout =
+        static_cast<unsigned int>(config.getIntValue(ConfigurationKey::HSM_RECONNECT_INTERVAL_SECONDS));
+    auto [devices, devicesBuffer] = String::splitIntoNullTerminatedArray(device, ",");
+    std::vector<const char*> cdevices;
+    for (const auto* data : devices)
+    {
+        cdevices.push_back(data);
+    }
+    auto session = hsmclient::ERP_ClusterConnect(cdevices.data(), connectTimeout, readTimeout,
+                                                 reconnectTimeout);
+    Expect(session.status == hsmclient::HSMAnonymousOpen,
+           "Unable to connect to cluster, errorCode = " + std::to_string(session.errorCode));
+    session = hsmclient::ERP_LogonPassword(session, identity.username.c_str(), identity.password);
+    Expect(session.status == hsmclient::HSMLoggedIn,
+           "Login credentials wrong, errorCode = " + std::to_string(session.errorCode));
+    return session;
+}
+
+hsmclient::HSMSession hsmDisconnect(hsmclient::HSMSession hsmSession)
+{
+    if (hsmSession.status == hsmclient::HSMLoggedIn) {
+        hsmSession = hsmclient::ERP_Logoff(hsmSession);
+        Expect(hsmclient::HSMAnonymousOpen == hsmSession.status, "Logoff failed");
+    }
+    return hsmclient::ERP_Disconnect(hsmSession);
+}
+
+hsmclient::ERPBlob hsmGenerateDerivationKey(hsmclient::HSMSession hsmSession, unsigned int desiredGeneration)
+{
+    hsmclient::ERPBlob ret;
+    hsmclient::UIntInput genKeyIn = { desiredGeneration };
+    hsmclient::SingleBlobOutput output = hsmclient::ERP_GenerateDerivationKey(hsmSession, genKeyIn);
+    Expect(output.returnCode == 0, "Derivation key generation failed. Error " + std::to_string(output.returnCode));
+    ret.BlobGeneration = output.BlobOut.BlobGeneration;
+    ret.BlobLength = output.BlobOut.BlobLength;
+    memcpy(&(ret.BlobData[0]), &(output.BlobOut.BlobData[0]), output.BlobOut.BlobLength);
+    return ret;
+}
+
 StaticData readStaticData(const BlobDescriptor& descriptor, const CommandLineArguments& arguments)
 {
     ::std::filesystem::path path = arguments.staticDirectory;
@@ -325,24 +418,38 @@ StaticData readStaticData(const BlobDescriptor& descriptor, const CommandLineArg
             path /= descriptor.staticFilenameRu;
             break;
     }
+    StaticData result;
 
-    Expect(::FileHelper::exists(path), "No blob file found for " +
+    if (arguments.generateDerivationKey && descriptor.isDerivationKey()) {
+        const auto& config = Configuration::instance();
+        if (hsmSession.status != hsmclient::HSMLoggedIn) {
+            const auto setupIdentity = HsmIdentity::getSetupIdentity();
+            hsmSession = hsmConnectAndLogin(config.getStringValue(ConfigurationKey::HSM_DEVICE), setupIdentity);
+        }
+        auto blob = hsmGenerateDerivationKey(hsmSession, arguments.derivationKeyGeneration);
+        result.blob.generation = arguments.derivationKeyGeneration;
+        result.blob.data = SafeString{blob.BlobData, blob.BlobLength};
+    }
+    else {
+        Expect(::FileHelper::exists(path), "No blob file found for " +
                                            ::std::string{::magic_enum::enum_name(descriptor.type)} + " (expected " +
                                            path.string() + ")");
 
-    StaticData result;
-    result.blob = ErpBlob::fromCDump(Base64::encode(FileHelper::readFileAsString(path)));
-    if (descriptor.type == BlobType::VauSig)
-    {
-        path.replace_extension(".pem");
 
-        Expect(::FileHelper::exists(path), "No certificate file found for VauSig (expected " + path.string() + ")");
+        result.blob = ErpBlob::fromCDump(Base64::encode(FileHelper::readFileAsString(path)));
+        if (descriptor.type == BlobType::VauSig)
+        {
+            path.replace_extension(".pem");
 
-        result.certificate = ::FileHelper::readFileAsString(path);
+            Expect(::FileHelper::exists(path), "No certificate file found for VauSig (expected " + path.string() + ")");
+
+            result.certificate = ::FileHelper::readFileAsString(path);
+        }
     }
 
     return result;
 }
+
 
 EnrolmentApiClient::ValidityPeriod createValidity(const BlobDescriptor& descriptor)
 {
@@ -532,11 +639,11 @@ private:
 
             if (arguments.deleteBeforeStore)
             {
-                deleteBlob(descriptor->type, descriptor->shortName);
+                deleteBlob(descriptor->type, descriptor->shortName + arguments.idPostfix);
             }
 
             const auto staticData = readStaticData(*descriptor, arguments);
-            storeBlob(descriptor->type, descriptor->shortName, staticData.blob, createValidity(*descriptor),
+            storeBlob(descriptor->type, descriptor->shortName + arguments.idPostfix, staticData.blob, createValidity(*descriptor),
                       staticData.certificate);
         }
         catch (const ::std::exception& exception)
@@ -563,16 +670,20 @@ int main(const int argc, const char* argv[])
     {
         ::Environment::set("ERP_ENROLMENT_SERVER_PORT", "9191");
     }
+    try
+    {
+        const auto arguments = processCommandLine(argc, argv);
 
-    const auto arguments = processCommandLine(argc, argv);
+        std::cerr << "will read certificate from " << arguments.certificateFilename
+                  << " and write blobs via enrolment API at " << ::Configuration::instance().serverHost() << ":"
+                  << ::Configuration::instance().getStringValue(::ConfigurationKey::ENROLMENT_SERVER_PORT) << ::std::endl;
 
-    std::cerr << "will read certificate from " << arguments.certificateFilename
-              << " and write blobs via enrolment API at " << ::Configuration::instance().serverHost() << ":"
-              << ::Configuration::instance().getStringValue(::ConfigurationKey::ENROLMENT_SERVER_PORT) << ::std::endl;
-
-
-    BlobDbInitializationClient client;
-    client.enroll(arguments);
+        BlobDbInitializationClient client;
+        client.enroll(arguments);
+        hsmDisconnect(hsmSession);
+    } catch (const ::std::exception& exception) {
+        ::std::cerr << "Failed due to previous error: " << exception.what() << std::endl;
+    }
 
     return EXIT_SUCCESS;
 }

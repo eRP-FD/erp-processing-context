@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_VAUERRORCODE_HXX
 #define ERP_PROCESSING_CONTEXT_VAUERRORCODE_HXX
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 // Values for the Http-Header field VAU-Error-Code
 enum class VauErrorCode

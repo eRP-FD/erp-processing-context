@@ -10,6 +10,7 @@
 
 #include "erp/fhir/FhirConverter.hxx"
 #include "erp/model/ResourceVersion.hxx"
+#include "fhirtools/repository/FhirKbvKeyTablesView.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/XmlHelper.hxx"
 
@@ -26,13 +27,16 @@ public:
     {
         return mConverter;
     }
-    const fhirtools::FhirStructureRepository&
-    structureRepository(model::ResourceVersion::FhirProfileBundleVersion version =
+    std::shared_ptr<fhirtools::FhirStructureRepository>
+    structureRepository(const model::Timestamp& referenceTimestamp,
+                        model::ResourceVersion::FhirProfileBundleVersion version =
                             model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>()) const
     {
         Expect(mStructureRepository.contains(version),
                "version not configured: " + std::string{model::ResourceVersion::v_str(version)});
-        return mStructureRepository.at(version);
+        return std::make_shared<fhirtools::FhirKbvKeyTablesView>(
+            &mStructureRepository.at(version), Configuration::instance().fhirResourceViewConfiguration(),
+            fhirtools::Date{referenceTimestamp.toGermanDate()});
     }
 
 private:
@@ -40,7 +44,7 @@ private:
     void loadVersion(ConfigurationKey versionKey, ConfigurationKey structureKey);
 
     FhirConverter mConverter;
-    std::unordered_map<model::ResourceVersion::FhirProfileBundleVersion, fhirtools::FhirStructureRepository>
+    std::unordered_map<model::ResourceVersion::FhirProfileBundleVersion, fhirtools::FhirStructureRepositoryBackend>
         mStructureRepository;
 };
 

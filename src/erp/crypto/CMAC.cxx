@@ -38,6 +38,18 @@ bool CmacSignature::operator==(const CmacSignature& other) const
     return mSignature == other.mSignature;
 }
 
+std::string_view toString(CmacKeyCategory cmacCat)
+{
+    switch (cmacCat)
+    {
+        case CmacKeyCategory::user:
+            return "Pre-Nutzerpseudonym (PNP)";
+        case CmacKeyCategory::telematic:
+            return "SubscriptionId";
+    }
+    Fail("invalid value for CmacKeyCategory:" + std::to_string(static_cast<uintmax_t>(cmacCat)));
+}
+
 CmacSignature CmacKey::sign(const std::string_view& message) const
 {
     std::unique_ptr<CMAC_CTX, void (*)(CMAC_CTX*)> ctx{ CMAC_CTX_new(), CMAC_CTX_free};

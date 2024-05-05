@@ -274,14 +274,14 @@ void CommunicationPostHandler::validateInfoRequest(const model::Communication& c
     namespace rv = model::ResourceVersion;
     static rapidjson::Pointer idPtr{resource::ElementName::path(elements::id)};
     static rapidjson::Pointer resourceTypePtr{resource::ElementName::path(elements::resourceType)};
-    const auto* repo = std::addressof(Fhir::instance().structureRepository());
+    const auto repo = Fhir::instance().structureRepository(model::Timestamp::now());
     // ensure that all past bundles are included
     auto supportedBundles = rv::supportedBundles();
     if (supportedBundles.contains(rv::FhirProfileBundleVersion::v_2023_07_01))
     {
         supportedBundles.insert(rv::FhirProfileBundleVersion::v_2022_01_01);
     }
-    const auto extractMedication = fhirtools::FhirPathParser::parse(repo, "about.resolve()");
+    const auto extractMedication = fhirtools::FhirPathParser::parse(repo.get(), "about.resolve()");
     Expect3(extractMedication, "Failed to parse extractMedication expression.", std::logic_error);
     model::NumberAsStringParserDocument doc;
     doc.CopyFrom(communication.jsonDocument(), doc.GetAllocator());

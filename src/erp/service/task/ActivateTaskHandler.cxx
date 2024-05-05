@@ -368,6 +368,7 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
                                  "Unable to determine profile type from name: "s.append(*profileName));
         auto fhirProfileBundleVersion = profInfo->bundleVersion;
 
+        A_23384.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
         const auto referenceTimestamp = factory.getValidationReferenceTimestamp();
         ErpExpect(referenceTimestamp.has_value(), HttpStatus::BadRequest,
                   "Unable to determine validation timestamp. authoredOn missing?");
@@ -394,7 +395,8 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
                       fhirProfileBundleVersion > model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01,
                   HttpStatus::BadRequest,
                   "unsupported fhir version for PKV workflow 200/209: " + std::string(profileName.value()));
-        const auto& fhirStructureRepo = Fhir::instance().structureRepository(fhirProfileBundleVersion);
+        const auto& fhirStructureRepo =
+            Fhir::instance().structureRepository(*referenceTimestamp, fhirProfileBundleVersion);
         const auto genericValidationMode = config.genericValidationMode(fhirProfileBundleVersion);
         const auto onUnknownExtension = config.kbvValidationOnUnknownExtension();
         factory.enableAdditionalValidation(false);
@@ -414,7 +416,7 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
         auto status = HttpStatus::OK;
         if (onUnknownExtension != OnUnknownExtension::ignore)
         {
-            status = checkExtensions(factory, onUnknownExtension, genericValidationMode, fhirStructureRepo, valOpts);
+            status = checkExtensions(factory, onUnknownExtension, genericValidationMode, *fhirStructureRepo, valOpts);
         }
         std::tuple<HttpStatus, model::KbvBundle> result{status, std::move(factory).getNoValidation()};
         get<model::KbvBundle>(result).additionalValidation();

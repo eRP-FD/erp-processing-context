@@ -9,6 +9,7 @@
 
 #include "erp/ErpRequirements.hxx"
 #include "erp/tsl/OcspHelper.hxx"
+#include "erp/tsl/OcspService.hxx"
 #include "erp/tsl/TrustStore.hxx"
 #include "erp/tsl/TslService.hxx"
 #include "erp/tsl/X509Store.hxx"
@@ -57,6 +58,20 @@ namespace
                        << ", unknown exception";
             throw;
         }
+    }
+
+    bool tryCacheFirst(OcspCheckDescriptor::OcspCheckMode mode)
+    {
+        switch (mode)
+        {
+            case OcspCheckDescriptor::FORCE_OCSP_REQUEST_STRICT:
+            case OcspCheckDescriptor::FORCE_OCSP_REQUEST_ALLOW_CACHE:
+                return false;
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE:
+            case OcspCheckDescriptor::CACHED_ONLY:
+                return true;
+        }
+        Fail("invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(mode)));
     }
 }
 
@@ -181,7 +196,8 @@ void TslManager::verifyCertificate(const TslMode tslMode,
 
 
 // GEMREQ-start A_20765-02#ocspResponse
-TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
+OcspResponse
+ TslManager::getCertificateOcspResponse(
     const TslMode tslMode,
     X509Certificate& certificate,
     const std::unordered_set<CertificateType>& typeRestrictions,
@@ -190,46 +206,26 @@ TrustStore::OcspResponseData TslManager::getCertificateOcspResponse(
     // no mutex is necessary because trust store is thread safe
     try
     {
-        std::optional<TrustStore::OcspResponseData> ocspResponse;
+        std::optional<OcspResponse> ocspResponse;
 
         GS_A_4898.start("Minimize TSL-Grace-Period, check TSL-validity and try to update if invalid each time a certificate is validated.");
         const TslService::UpdateResult updateResult = internalUpdate(true);
         GS_A_4898.finish();
 
         if (updateResult == TslService::UpdateResult::NotUpdated
-            && ocspCheckDescriptor.mode == OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE
+            && tryCacheFirst(ocspCheckDescriptor.mode)
             && ocspCheckDescriptor.providedOcspResponse == nullptr)
         {
             // the cached OCSP-Response still can be used, if it exists and is still valid
             ocspResponse = getTrustStore(tslMode).getCachedOcspData(certificate.getSha256FingerprintHex());
         }
 
-        if ( ! ocspResponse.has_value())
+        if (!ocspResponse.has_value())
         {
-            TslService::checkCertificate(
-                certificate,
-                typeRestrictions,
-                *mRequestSender,
-                getTrustStore(tslMode),
-                ocspCheckDescriptor);
-
-            // The certificate check was successful, so the cache must have now OCSP response according to the
-            // mode from `ocspCheckDescriptor.mode` specified for the check.
-            ocspResponse = getTrustStore(tslMode).getCachedOcspData(certificate.getSha256FingerprintHex());
-
-            TslExpect4(ocspResponse.has_value(),
-                       "OCSP response - can not parse provided in cache OCSP response",
-                       TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
-                       tslMode);
-            ocspResponse->fromCache = false;
+            ocspResponse.emplace(TslService::checkCertificate(certificate, typeRestrictions, *mRequestSender,
+                                                              getTrustStore(tslMode), ocspCheckDescriptor));
         }
-        else
-        {
-            ocspResponse->fromCache = true;
-        }
-
-        OcspService::checkOcspStatus(ocspResponse->status, std::nullopt, getTrustStore(tslMode));
-
+        ocspResponse->checkStatus(getTrustStore(tslMode));
         return *ocspResponse;
     }
     catch(...)

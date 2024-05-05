@@ -2344,7 +2344,8 @@ void ErpWorkflowTestBase::validateInternal(const ClientResponse& innerResponse)
         if (resourceForValidation.has_value())
         {
             fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
-            auto validationResult = resourceForValidation->genericValidate(fhirProfileBundleVersion, options);
+            auto validationResult =
+                resourceForValidation->genericValidate(model::Timestamp::now(), fhirProfileBundleVersion, options);
             auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
             for (const auto& item : filteredValidationErrors)
             {

@@ -11,8 +11,9 @@
 #include <memory>
 #include <string>
 
-namespace fhirtools {
-class FhirStructureRepository;
+namespace fhirtools
+{
+class FhirStructureRepositoryBackend;
 }
 
 class DefaultFhirStructureRepository
@@ -20,13 +21,13 @@ class DefaultFhirStructureRepository
 public:
     static std::list<std::filesystem::path> defaultProfileFiles();
 
-    static const fhirtools::FhirStructureRepository& get();
-    static const fhirtools::FhirStructureRepository& getWithTest();
+    static const fhirtools::FhirStructureRepositoryBackend& get();
+    static const fhirtools::FhirStructureRepositoryBackend& getWithTest();
 
-    static std::unique_ptr<const fhirtools::FhirStructureRepository> create(const std::list<std::filesystem::path>&);
+    static std::unique_ptr<const fhirtools::FhirStructureRepositoryBackend>
+    create(const std::list<std::filesystem::path>&);
 
 private:
-
 };
 
 #endif// DEFAULTFHIRSTRUCTUREREPOSITORY_H

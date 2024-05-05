@@ -20,17 +20,17 @@ using fhirtools::FhirStructureRepository;
 using fhirtools::PrimitiveElement;
 using fhirtools::ProfiledElementTypeInfo;
 
-ErpElement::ErpElement(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
-                       const std::string& elementId, const rapidjson::Value* value,
+ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                       std::weak_ptr<const Element> parent, const std::string& elementId, const rapidjson::Value* value,
                        const rapidjson::Value* primitiveTypeObject)
     : ErpElement(fhirStructureRepository, std::move(parent),
                  ProfiledElementTypeInfo{fhirStructureRepository, elementId}, value, primitiveTypeObject)
 {
 }
 
-ErpElement::ErpElement(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
-                       ProfiledElementTypeInfo defPtr, const rapidjson::Value* value,
-                       const rapidjson::Value* primitiveTypeObject)
+ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                       std::weak_ptr<const Element> parent, ProfiledElementTypeInfo defPtr,
+                       const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject)
     : Element(fhirStructureRepository, std::move(parent), std::move(defPtr))
     , mValue(value)
     , mPrimitiveTypeObject(primitiveTypeObject)
@@ -39,7 +39,7 @@ ErpElement::ErpElement(const FhirStructureRepository* fhirStructureRepository, s
     FPExpect(! mPrimitiveTypeObject || mPrimitiveTypeObject->IsObject(), "primitive type object is not an object.");
 }
 
-ErpElement::ErpElement(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
+ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, std::weak_ptr<const Element> parent,
                        const FhirStructureDefinition* structureDefinition, const std::string& elementId,
                        const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject)
     : ErpElement(fhirStructureRepository, std::move(parent),

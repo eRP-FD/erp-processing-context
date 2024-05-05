@@ -15,6 +15,7 @@
 #include "erp/util/InvalidConfigurationException.hxx"
 #include "erp/util/String.hxx"
 #include "erp/validation/XmlValidator.hxx"
+#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <stdexcept>
@@ -203,6 +204,17 @@ namespace {
     }
 }
 
+const fhirtools::FhirResourceViewConfiguration& ConfigurationBase::fhirResourceViewConfiguration() const
+{
+    static const auto* tags =
+        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = fhirResourceTags, .flags = 0, .description = ""});
+    static const auto* views =
+        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = fhirResourceViews, .flags = 0, .description = ""});
+
+    static fhirtools::FhirResourceViewConfiguration fhirResourceViewConfiguration(tags, views);
+    return fhirResourceViewConfiguration;
+}
+
 
 ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
     : mDocument(parseConfigFile(ErpConstants::ConfigurationFileNameVariable, std::filesystem::current_path()))
@@ -224,6 +236,9 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
 
         lookupKey(pathPrefix, jsonPath);
     }
+
+    lookupKey("", fhirResourceTags.data());
+    lookupKey("", fhirResourceViews.data());
 }
 
 const std::string& ConfigurationBase::serverHost() const
@@ -255,7 +270,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     using Flags = KeyData::ConfigurationKeyFlags;
     // clang-format off
     mNamesByKey.insert({
-    {ConfigurationKey::C_FD_SIG_ERP                                   , {"ERP_C_FD_SIG_ERP"                                   , "/erp/c.fd.sig-erp", Flags::categoryEnvironment|Flags::deprecated, "The ERP signature certificate"}},
     {ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL               , {"ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL"               , "/erp/c.fd.sig-erp-validation", Flags::categoryEnvironment, "The OCSP validation interval for C.FD.OSIG-eRP signer certificate in seconds"}},
     {ConfigurationKey::ENROLMENT_SERVER_PORT                          , {"ERP_ENROLMENT_SERVER_PORT"                          , "/erp/enrolment/server/port", Flags::categoryEnvironment, "Port number for the enrolment server"}},
     {ConfigurationKey::ENROLMENT_ACTIVATE_FOR_PORT                    , {"ERP_ENROLMENT_ACTIVATE_FOR_PORT"                    , "/erp/enrolment/server/activateForPort", Flags::categoryEnvironment, "Port of the processing-context for which the enrolment server shall be active"}},

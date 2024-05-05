@@ -62,8 +62,9 @@ public:
     [[nodiscard]] const FhirStructureRepository& repo()
     {
         static auto instance = BaseT::makeRepo();
-        return *instance;
+        return *instance->defaultView();
     }
+
 protected:
     virtual ValidatorOptions validatorOptions()
     {
@@ -84,21 +85,21 @@ protected:
         {
             doc.emplace(model::NumberAsStringParserDocument::fromJson(fileContent));
         }
-        auto rootElement = std::make_shared<ErpElement>(&repo(), std::weak_ptr<const ErpElement>{},
+        auto rootElement = std::make_shared<ErpElement>(repo().shared_from_this(), std::weak_ptr<const ErpElement>{},
                                                         std::string{GetParam().type}, &doc.value());
         auto validationResult =
             FhirPathValidator::validate({rootElement}, std::string{GetParam().type}, validatorOptions()).results();
 
         for (const auto& expected : GetParam().expect)
         {
-            #ifdef NDEBUG
+#ifdef NDEBUG
             // as in release builds severities below warning are log stored,
             // we have to ignore them
             if (expected.severity() < fhirtools::Severity::warning)
             {
                 continue;
             }
-            #endif // NDEBUG
+#endif// NDEBUG
             auto isExpected = [&](ValidationError ve) {
                 ve.profile = nullptr;
                 return ve == expected;
@@ -136,9 +137,9 @@ protected:
     ResourceManager& resourceManager = ResourceManager::instance();
 
 private:
-    static std::unique_ptr<FhirStructureRepository> makeRepo()
+    static std::unique_ptr<FhirStructureRepositoryBackend> makeRepo()
     {
-        auto result = std::make_unique<FhirStructureRepository>();
+        auto result = std::make_unique<FhirStructureRepositoryBackend>();
         std::list<std::filesystem::path> files = BaseT::fileList();
         std::list<std::filesystem::path> absolutfiles;
         std::ranges::transform(files, std::back_inserter(absolutfiles), &ResourceManager::getAbsoluteFilename);
@@ -148,4 +149,4 @@ private:
 };
 }
 
-#endif // ERP_TEST_FHIR_TOOLS_SAMPLEVALIDATION_HXX
+#endif// ERP_TEST_FHIR_TOOLS_SAMPLEVALIDATION_HXX

@@ -46,6 +46,8 @@ private:
 
 enum class CmacKeyCategory : int8_t { user, telematic };
 
+std::string_view toString(CmacKeyCategory cmacCat);
+
 class CmacKey
 {
 public:

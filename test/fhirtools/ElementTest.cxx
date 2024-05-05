@@ -20,13 +20,17 @@ using namespace std::string_literals;
 class ElementTest : public testing::Test
 {
 public:
-    const FhirStructureRepository& repo = DefaultFhirStructureRepository::getWithTest();
+    std::shared_ptr<const fhirtools::DefaultFhirStructureRepositoryView> mRepo =
+        DefaultFhirStructureRepository::getWithTest().defaultView();
+    const FhirStructureRepository& repo = *mRepo;
 };
 
 class ElementTaskTest : public testing::Test
 {
 public:
-    const FhirStructureRepository& repo = DefaultFhirStructureRepository::get();
+    std::shared_ptr<const fhirtools::DefaultFhirStructureRepositoryView> mRepo =
+        DefaultFhirStructureRepository::getWithTest().defaultView();
+    const FhirStructureRepository& repo = *mRepo;
 };
 
 TEST_F(ElementTest, TypeDetection)
@@ -97,7 +101,7 @@ TEST_F(ElementTaskTest, SubElements)
 }
 )--";
     auto taskResource = model::NumberAsStringParserDocument::fromJson(task);
-    ErpElement taskElement(&repo, {}, hl7task, "Task", &taskResource);
+    ErpElement taskElement(mRepo, {}, hl7task, "Task", &taskResource);
 
     auto subElementNames = taskElement.subElementNames();
     std::vector<std::string> expectedElementNames = {"id", "meta"};
@@ -118,7 +122,7 @@ TEST_F(ElementTest, ConvertFromString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.string",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.string",
                           rapidjson::Pointer("/string").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -135,7 +139,7 @@ TEST_F(ElementTest, ConvertFromInt)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.num",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.num",
                           rapidjson::Pointer("/num").Get(testResource));
 
     EXPECT_EQ(erpElement.asInt(), 12);
@@ -152,7 +156,7 @@ TEST_F(ElementTest, ConvertFromDecimal)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.dec",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.dec",
                           rapidjson::Pointer("/dec").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -170,7 +174,7 @@ TEST_F(ElementTest, ConvertFromBoolean)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.boolean",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.boolean",
                           rapidjson::Pointer("/boolean").Get(testResource));
 
     EXPECT_EQ(erpElement.asInt(), 1);
@@ -187,7 +191,7 @@ TEST_F(ElementTest, ConvertFromIntAsString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.intAsString",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.intAsString",
                           rapidjson::Pointer("/intAsString").Get(testResource));
 
     EXPECT_EQ(erpElement.asInt(), 32);
@@ -204,7 +208,7 @@ TEST_F(ElementTest, ConvertFromDecimalAsString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.decimalAsString",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.decimalAsString",
                           rapidjson::Pointer("/decimalAsString").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -222,7 +226,7 @@ TEST_F(ElementTest, ConvertFromBoolAsString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.boolAsString",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.boolAsString",
                           rapidjson::Pointer("/boolAsString").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -239,7 +243,7 @@ TEST_F(ElementTest, ConvertFromDate)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.date",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.date",
                           rapidjson::Pointer("/date").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -256,7 +260,7 @@ TEST_F(ElementTest, ConvertFromDateTime)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.dateTime",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.dateTime",
                           rapidjson::Pointer("/dateTime").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -273,7 +277,7 @@ TEST_F(ElementTest, ConvertFromTime)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.time",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.time",
                           rapidjson::Pointer("/time").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -290,7 +294,7 @@ TEST_F(ElementTest, ConvertFromQuantity)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(&repo, {}, repo.findTypeById("Test"), "Test.quantity",
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.quantity",
                           rapidjson::Pointer("/quantity").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -313,15 +317,15 @@ TEST_F(ElementTest, QuantityArithmetik)
 
 TEST_F(ElementTest, CompareTo)
 {
-    const PrimitiveElement elementInt3(&repo, Element::Type::Integer, 3);
-    const PrimitiveElement elementInt4(&repo, Element::Type::Integer, 4);
-    const PrimitiveElement elementDecPi(&repo, Element::Type::Decimal, DecimalType("3.1415"));
-    const PrimitiveElement elementDec3(&repo, Element::Type::Decimal, DecimalType(3));
-    const PrimitiveElement elementStrA(&repo, Element::Type::String, "abc"s);
-    const PrimitiveElement elementStrB(&repo, Element::Type::String, "ABC"s);
-    const PrimitiveElement elementQuantitiy1(&repo, Element::Type::Quantity, Element::QuantityType(15, "cm"));
-    const PrimitiveElement elementQuantitiy2(&repo, Element::Type::Quantity, Element::QuantityType(16, "cm"));
-    const PrimitiveElement elementQuantitiy3(&repo, Element::Type::Quantity, Element::QuantityType(3, ""));
+    const PrimitiveElement elementInt3(mRepo, Element::Type::Integer, 3);
+    const PrimitiveElement elementInt4(mRepo, Element::Type::Integer, 4);
+    const PrimitiveElement elementDecPi(mRepo, Element::Type::Decimal, DecimalType("3.1415"));
+    const PrimitiveElement elementDec3(mRepo, Element::Type::Decimal, DecimalType(3));
+    const PrimitiveElement elementStrA(mRepo, Element::Type::String, "abc"s);
+    const PrimitiveElement elementStrB(mRepo, Element::Type::String, "ABC"s);
+    const PrimitiveElement elementQuantitiy1(mRepo, Element::Type::Quantity, Element::QuantityType(15, "cm"));
+    const PrimitiveElement elementQuantitiy2(mRepo, Element::Type::Quantity, Element::QuantityType(16, "cm"));
+    const PrimitiveElement elementQuantitiy3(mRepo, Element::Type::Quantity, Element::QuantityType(3, ""));
 
     EXPECT_EQ(elementInt3.compareTo(elementInt3), std::strong_ordering::equal);
     EXPECT_EQ(elementInt3.compareTo(elementInt4), std::strong_ordering::less);
@@ -449,7 +453,7 @@ public:
         const auto& docStr =
             ResourceManager::instance().getStringResource("test/fhir-path/element-navigation-test.json");
         json = model::NumberAsStringParserDocument::fromJson(docStr);
-        bundle = std::make_shared<ErpElement>(&repo, std::weak_ptr<fhirtools::Element>{}, "Bundle", &json.value());
+        bundle = std::make_shared<ErpElement>(mRepo, std::weak_ptr<fhirtools::Element>{}, "Bundle", &json.value());
         ASSERT_EQ(bundle->resourceType(), "Bundle");
 
         entryElements = bundle->subElements("entry");

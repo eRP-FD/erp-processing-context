@@ -367,13 +367,7 @@ std::tuple<shared_EVP_PKEY, ErpBlob> HsmSession::getVauSigPrivateKey (const shar
 Certificate HsmSession::getVauSigCertificate() const
 {
     auto cert = mBlobCache.getBlob(BlobType::VauSig).certificate;
-    if (! cert.has_value() || cert.value().empty())
-    {
-        cert = Configuration::instance().getOptionalStringValue(ConfigurationKey::C_FD_SIG_ERP);
-        TLOG(INFO) << "using C.FD.SIG VauSig Certificate from configuration file/environment";
-    }
-    Expect(cert.has_value() && ! cert.value().empty(),
-           "VauSig Certificate neither in blob cache nor in configuration file/environment");
+    Expect(cert.has_value() && ! cert.value().empty(), "VauSig Certificate not in blob cache");
     return Certificate::fromBase64(*cert);
 }
 

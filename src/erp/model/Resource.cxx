@@ -585,7 +585,8 @@ void Resource<TDerivedModel, SchemaVersionType>::additionalValidation() const
 
 template<class TDerivedModel, typename SchemaVersionType>
 fhirtools::ValidationResults
-Resource<TDerivedModel, SchemaVersionType>::genericValidate(model::ResourceVersion::FhirProfileBundleVersion version,
+Resource<TDerivedModel, SchemaVersionType>::genericValidate(const model::Timestamp& referenceTimestamp,
+                                                            model::ResourceVersion::FhirProfileBundleVersion version,
                                                             const fhirtools::ValidatorOptions& options) const
 {
     std::string resourceTypeName;
@@ -598,7 +599,7 @@ Resource<TDerivedModel, SchemaVersionType>::genericValidate(model::ResourceVersi
         resourceTypeName = TDerivedModel::resourceTypeName;
     }
     auto fhirPathElement =
-        std::make_shared<ErpElement>(&Fhir::instance().structureRepository(version),
+        std::make_shared<ErpElement>(Fhir::instance().structureRepository(referenceTimestamp, version),
                                      std::weak_ptr<const fhirtools::Element>{}, resourceTypeName,
                                      &ResourceBase::jsonDocument());
     std::ostringstream profiles;

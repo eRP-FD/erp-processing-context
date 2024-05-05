@@ -23,6 +23,7 @@
 
 class HttpsClient;
 
+class OcspResponse;
 class TslParser;
 
 class TrustStore;
@@ -100,8 +101,9 @@ public:
      * @param ocspCheckDescriptor       describes the OCSP check approach to use
      *
      * @throws TslError                 in case of problems
+     * @return OCSP-Response used to verify Certificate-Status
      */
-    static void checkCertificate(
+    static OcspResponse checkCertificate(
         X509Certificate& certificate,
         const std::unordered_set<CertificateType>& typeRestrictions,
         const UrlRequestSender& requestSender,

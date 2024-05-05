@@ -10,7 +10,7 @@
 
 #include <boost/format.hpp>
 #include <gtest/gtest.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <ostream>
 #include <variant>
 
@@ -232,8 +232,9 @@ public:
             return result;
         }
         std::string resourceType{*resourceTypeOpt};
-        auto erpElement = std::make_shared<ErpElement>(&Fhir::instance().structureRepository(version),
-                                                       std::weak_ptr<fhirtools::Element>{}, resourceType, &doc);
+        auto erpElement =
+            std::make_shared<ErpElement>(Fhir::instance().structureRepository(model::Timestamp::now(), version),
+                                         std::weak_ptr<fhirtools::Element>{}, resourceType, &doc);
         result = fhirtools::FhirPathValidator::validate(erpElement, resourceType);
         result.dumpToLog();
         return result;

@@ -10,10 +10,12 @@
 
 #include <rapidjson/document.h>
 #include <string>
+#include <unordered_set>
 
 
 class Configuration;
 class RuntimeConfigurationGetter;
+struct KeyData;
 
 class ConfigurationFormatter
 {
@@ -25,6 +27,9 @@ private:
     static std::string getCategoryPath(int flags);
     static void appendRuntimeConfiguration(rapidjson::Document& document,
                                            const RuntimeConfigurationGetter& runtimeConfig);
+    static void processConfOption(rapidjson::Document& document, std::unordered_set<std::string>& erpEnvVariables,
+                                  const KeyData& confOption, int flags, const std::string& value,
+                                  const std::string& defaultValue, bool modified);
 };
 
 #endif

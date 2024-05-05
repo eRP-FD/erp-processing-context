@@ -6,15 +6,16 @@
  */
 
 #include "erp/admin/AdminRequestHandler.hxx"
-#include "erp/pc/PcServiceContext.hxx"
+#include "erp/admin/AdminServer.hxx"
 #include "erp/common/Header.hxx"
+#include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/AccessLog.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
+#include "mock/util/MockConfiguration.hxx"
 #include "test/mock/MockTerminationHandler.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
-#include "erp/admin/AdminServer.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -136,15 +137,5 @@ TEST_F(AdminRequestHandlerTest, ConfigurationHandler)
             std::string{"/environment/"}.append(credKey.environmentVariable).append("/value")};
         ASSERT_NE(credKeyPointer, nullptr);
         EXPECT_EQ(std::string(credKeyPointer.Get(configDocument)->GetString()), "<redacted>");
-    }
-
-    // line breaks should be preserved
-    {
-        const auto lineBreakKey = confNames.strings(ConfigurationKey::C_FD_SIG_ERP);
-        rapidjson::Pointer lineBreakKeyPointer{
-            std::string{"/environment/"}.append(lineBreakKey.environmentVariable).append("/value")};
-        ASSERT_NE(lineBreakKeyPointer, nullptr);
-        EXPECT_EQ(std::string(lineBreakKeyPointer.Get(configDocument)->GetString()),
-                  Configuration::instance().getStringValue(ConfigurationKey::C_FD_SIG_ERP));
     }
 }

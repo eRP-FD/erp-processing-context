@@ -3,15 +3,17 @@
 
 #include "erp/crypto/Certificate.hxx"
 #include "erp/hsm/ErpTypes.hxx"
-#include "erp/tsl/TslManager.hxx"
 #include "erp/util/TimerJobBase.hxx"
 #include "erp/util/Timer.hxx"
 
 #include <mutex>
 
+class Configuration;
 class HsmPool;
 enum class CertificateType;
 class ErpBlob;
+class OcspResponse;
+class TslManager;
 
 /**
  * This class allows to manage C.FD.SIG certificate of eRP processing context
@@ -44,7 +46,7 @@ public:
      *
      * @param forceOcspRequest if set to true the OCSP-request is forced
      */
-    TrustStore::OcspResponseData getOcspResponseData(const bool forceOcspRequest);
+    OcspResponse getOcspResponseData(const bool forceOcspRequest);
 
     /**
      * If no tsl manager is provided (a special case for test scenarios), then nullptr is returned.
@@ -68,24 +70,11 @@ public:
      */
     std::string getLastOcspResponseTimestamp();
 
-    bool wasLastOcspRequestSuccessful();
-
     [[nodiscard]] CertificateType getCertificateType() const;
 
     [[nodiscard]] std::string getCertificateNotAfterTimestamp() const;
 
-    /**
-     * Let the manager use the timer to trigger the certificate validation regularly.
-     * If the validations are started by the method successfully the method returns true.
-     * If the validations are already started before, the method returns false.
-     * Otherwise an exception is thrown.
-     */
-    bool startValidations(std::shared_ptr<Timer> timer, int validationIntervalMinutes);
-
-    /**
-     * Stops the timer controlling the validations if any.
-     */
-    void stopValidations();
+    bool hasOcspResponse() const;
 
 protected:
     void onStart(void) override;
@@ -93,21 +82,16 @@ protected:
     void onFinish(void) override;
 
 private:
-    TrustStore::OcspResponseData internalGetOcspResponseData(const Certificate& certificate,
-                                                             const bool jobValidationScenario);
-
-    std::mutex mMutex;
+    OcspResponse internalGetOcspResponseData(const Certificate& certificate, const bool forceOcspRequest);
 
     TslManager& mTslManager;
     std::optional<size_t> mValidationHookId;
     HsmPool& mHsmPool;
 
-    std::shared_ptr<Timer> mValidationTimer;
+    std::shared_mutex mLastProducedAtMutex;
+    std::chrono::system_clock::time_point mLastProducedAt;
 
     std::chrono::system_clock::duration mOcspRequestGracePeriod;
-    std::chrono::system_clock::time_point mLastProducedAt;
-    std::chrono::system_clock::time_point mLastOcspSuccess;
-    bool mLastOcspRequestSuccessful;
 
     // private key cache
     shared_EVP_PKEY mCFdSigErpKey;

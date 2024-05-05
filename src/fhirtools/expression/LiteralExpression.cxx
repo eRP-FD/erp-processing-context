@@ -6,15 +6,15 @@
  */
 
 #include "fhirtools/expression/LiteralExpression.hxx"
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 
 namespace fhirtools
 {
-LiteralExpression::LiteralExpression(const FhirStructureRepository* fhirStructureRepository,
-                                     std::shared_ptr<PrimitiveElement> value)
+LiteralExpression::LiteralExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    std::shared_ptr<PrimitiveElement> value)
     : Expression(fhirStructureRepository)
     , mValue(std::move(value))
 {
@@ -32,60 +32,59 @@ Collection LiteralExpression::eval([[maybe_unused]] const Collection& collection
     return {mValue};
 }
 
-LiteralBooleanExpression::LiteralBooleanExpression(const FhirStructureRepository* fhirStructureRepository, bool value)
+LiteralBooleanExpression::LiteralBooleanExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, bool value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Boolean, value))
 {
 }
 
-LiteralStringExpression::LiteralStringExpression(const FhirStructureRepository* fhirStructureRepository,
-                                                 const std::string_view& value)
+LiteralStringExpression::LiteralStringExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    const std::string_view& value)
     : LiteralExpression(
           fhirStructureRepository,
           std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::String, std::string(value)))
 {
 }
 
-LiteralIntegerExpression::LiteralIntegerExpression(const FhirStructureRepository* fhirStructureRepository,
-                                                   int32_t value)
+LiteralIntegerExpression::LiteralIntegerExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, int32_t value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Integer, value))
 {
 }
 
-LiteralDecimalExpression::LiteralDecimalExpression(const FhirStructureRepository* fhirStructureRepository,
-                                                   DecimalType value)
+LiteralDecimalExpression::LiteralDecimalExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, DecimalType value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Decimal, value))
 {
 }
 
-LiteralDateExpression::LiteralDateExpression(const FhirStructureRepository* fhirStructureRepository,
-                                             const std::string& value)
+LiteralDateExpression::LiteralDateExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, const std::string& value)
     : LiteralExpression(fhirStructureRepository,
-                        std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Date,
-                                                           Date(value)))
+                        std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Date, Date(value)))
 {
 }
 
-LiteralTimeExpression::LiteralTimeExpression(const FhirStructureRepository* fhirStructureRepository,
-                                             const std::string& value)
+LiteralTimeExpression::LiteralTimeExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, const std::string& value)
     : LiteralExpression(fhirStructureRepository,
-                        std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Time,
-                                                           Time(value)))
+                        std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Time, Time(value)))
 {
 }
 
-LiteralDateTimeExpression::LiteralDateTimeExpression(const FhirStructureRepository* fhirStructureRepository,
-                                                     const std::string& value)
-    : LiteralExpression(fhirStructureRepository,
-                        std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::DateTime,
-                                                           DateTime(value)))
+LiteralDateTimeExpression::LiteralDateTimeExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, const std::string& value)
+    : LiteralExpression(fhirStructureRepository, std::make_shared<PrimitiveElement>(
+                                                     fhirStructureRepository, Element::Type::DateTime, DateTime(value)))
 {
 }
 
-LiteralQuantityExpression::LiteralQuantityExpression(const FhirStructureRepository* fhirStructureRepository,
-                                                     const std::string& value)
+LiteralQuantityExpression::LiteralQuantityExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, const std::string& value)
     : LiteralExpression(fhirStructureRepository,
                         std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Quantity,
                                                            Element::QuantityType(value)))

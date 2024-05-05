@@ -17,7 +17,8 @@ namespace fhirtools
 class LiteralExpression : public Expression
 {
 public:
-    LiteralExpression(const FhirStructureRepository* fhirStructureRepository, std::shared_ptr<PrimitiveElement> value);
+    LiteralExpression(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                      std::shared_ptr<PrimitiveElement> value);
     Collection eval(const Collection& collection) const override;
 
 protected:
@@ -36,60 +37,69 @@ public:
 class LiteralBooleanExpression : public LiteralExpression
 {
 public:
-    explicit LiteralBooleanExpression(const FhirStructureRepository* fhirStructureRepository, bool value);
+    explicit LiteralBooleanExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, bool value);
 };
 
 // http://hl7.org/fhirpath/N1/#string
 class LiteralStringExpression : public LiteralExpression
 {
 public:
-    explicit LiteralStringExpression(const FhirStructureRepository* fhirStructureRepository,
-                                     const std::string_view& value);
+    explicit LiteralStringExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+        const std::string_view& value);
 };
 
 // http://hl7.org/fhirpath/N1/#integer
 class LiteralIntegerExpression : public LiteralExpression
 {
 public:
-    explicit LiteralIntegerExpression(const FhirStructureRepository* fhirStructureRepository, int32_t value);
+    explicit LiteralIntegerExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, int32_t value);
 };
 
 // http://hl7.org/fhirpath/N1/#decimal
 class LiteralDecimalExpression : public LiteralExpression
 {
 public:
-    explicit LiteralDecimalExpression(const FhirStructureRepository* fhirStructureRepository,
-                                      DecimalType value);
+    explicit LiteralDecimalExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, DecimalType value);
 };
 
 // http://hl7.org/fhirpath/N1/#date
 class LiteralDateExpression : public LiteralExpression
 {
 public:
-    explicit LiteralDateExpression(const FhirStructureRepository* fhirStructureRepository, const std::string& value);
+    explicit LiteralDateExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+        const std::string& value);
 };
 
 // http://hl7.org/fhirpath/N1/#time
 class LiteralTimeExpression : public LiteralExpression
 {
 public:
-    explicit LiteralTimeExpression(const FhirStructureRepository* fhirStructureRepository, const std::string& value);
+    explicit LiteralTimeExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+        const std::string& value);
 };
 
 // http://hl7.org/fhirpath/N1/#datetime
 class LiteralDateTimeExpression : public LiteralExpression
 {
 public:
-    explicit LiteralDateTimeExpression(const FhirStructureRepository* fhirStructureRepository,
-                                       const std::string& value);
+    explicit LiteralDateTimeExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+        const std::string& value);
 };
 
 // http://hl7.org/fhirpath/N1/#quantity
 class LiteralQuantityExpression : public LiteralExpression
 {
 public:
-    explicit LiteralQuantityExpression(const FhirStructureRepository* fhirStructureRepository,
-                                       const std::string& value);
+    explicit LiteralQuantityExpression(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+        const std::string& value);
 };
 
 }// fhirtools

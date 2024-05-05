@@ -19,6 +19,7 @@ required_conan_version = ">=1.57.0"
 
 class OpenSSLConan(ConanFile):
     name = "openssl"
+    version = "3.1.5"
     settings = "os", "arch", "compiler", "build_type"
     url = "https://github.com/conan-io/conan-center-index"
     homepage = "https://github.com/openssl/openssl"
@@ -119,7 +120,7 @@ class OpenSSLConan(ConanFile):
 
     def requirements(self):
         if not self.options.no_zlib:
-            self.requires("zlib/1.2.13")
+            self.requires("zlib/1.3.1")
 
     def build_requirements(self):
         if self._settings_build.os == "Windows":

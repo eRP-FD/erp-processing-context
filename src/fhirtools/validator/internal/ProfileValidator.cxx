@@ -100,7 +100,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         }
         std::ostringstream baseElementName;
         baseElementName << mDefPtr.element()->name() << '.' << name;
-        ProfiledElementTypeInfo basePtr(&repo, baseElementName.str());
+        ProfiledElementTypeInfo basePtr(repo.shared_from_this(), baseElementName.str());
         if (! mSliceName.empty())
         {
             baseElementName << ':' << mSliceName;

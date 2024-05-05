@@ -24,7 +24,7 @@ public:
         });
         repo.load(files);
     }
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
 };
 
 class SlicingSampleValidationTest : public test::SampleValidationTest<SlicingSampleValidationTest>
@@ -57,7 +57,7 @@ public:
 
 TEST(SlicingRepoValidationTest, invalid_duplicate_fixed)//NOLINT
 {
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
 
     auto profiles = DefaultFhirStructureRepository::defaultProfileFiles();
     profiles.merge(
@@ -67,7 +67,7 @@ TEST(SlicingRepoValidationTest, invalid_duplicate_fixed)//NOLINT
 
 TEST(SlicingRepoValidationTest, invalid_duplicate_pattern)//NOLINT
 {
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
 
     auto profiles = DefaultFhirStructureRepository::defaultProfileFiles();
     profiles.merge(

@@ -16,7 +16,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/Uuid.hxx"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <rapidjson/pointer.h>
 
 

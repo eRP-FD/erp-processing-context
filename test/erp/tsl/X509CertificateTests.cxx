@@ -12,6 +12,7 @@
 #include "erp/tsl/X509Certificate.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/FileHelper.hxx"
+#include "test/erp/pc/CFdSigErpTestHelper.hxx"
 
 #include <gtest/gtest.h>
 #include <test_config.h>
@@ -389,7 +390,7 @@ TEST_F(X509CertificateTests, ContainsTelematikId)
 
 
 // "X.509-Identitäten für die Erstellung und Prüfung digitaler nicht-qualifizierter elektronischer Signaturen"
-// GEMREQ-start GS-A_4357
+// GEMREQ-start GS-A_4361-02#VerifyRsaSignedCertificate
 TEST_F(X509CertificateTests, VerifyRsaSignedCertificate)
 {
     // Certificates taken from: https://github.com/chromium/badssl.com/blob/master/certs/sets/prod/pregen/chain/wildcard-rsa2048.pem
@@ -464,7 +465,7 @@ TEST_F(X509CertificateTests, VerifyRsaSignedCertificate)
     EXPECT_FALSE(issuerRsa.signatureIsValidAndWasSignedBy(issuerRsa));
     EXPECT_FALSE(certificateRsa.signatureIsValidAndWasSignedBy(certificateRsa));
 }
-// GEMREQ-end GS-A_4357
+// GEMREQ-end GS-A_4361-02#VerifyRsaSignedCertificate
 
 
 TEST_F(X509CertificateTests, ReadQesCertificate)
@@ -482,3 +483,18 @@ TEST_F(X509CertificateTests, ReadQesCertificate)
     const auto roles = x509Certificate.getRoles();
     EXPECT_EQ(std::vector<std::string>{std::string(profession_oid::oid_arzt)}, roles);
 }
+
+
+// GEMREQ-start GS-A_4361-02#VerifyEcdsaSignedCertificate
+TEST_F(X509CertificateTests, VerifyEcdsaSignedCertificate)
+{
+    auto certificate = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+    X509Certificate certificateEcdsa = X509Certificate::createFromBase64(certificate.toBase64Der());
+    auto issuer = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+    X509Certificate issuerEcdsa = X509Certificate::createFromBase64(issuer.toBase64Der());
+    EXPECT_TRUE(certificateEcdsa.signatureIsValidAndWasSignedBy(issuerEcdsa));
+    EXPECT_FALSE(issuerEcdsa.signatureIsValidAndWasSignedBy(certificateEcdsa));
+    EXPECT_FALSE(issuerEcdsa.signatureIsValidAndWasSignedBy(issuerEcdsa));
+    EXPECT_FALSE(certificateEcdsa.signatureIsValidAndWasSignedBy(certificateEcdsa));
+}
+// GEMREQ-end GS-A_4361-02#VerifyEcdsaSignedCertificate

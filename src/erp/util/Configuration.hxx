@@ -9,9 +9,10 @@
 #define ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 
 #include "erp/ErpConstants.hxx"
+#include "erp/model/ResourceVersion.hxx"
+#include "erp/util/Environment.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/SafeString.hxx"
-#include "erp/model/ResourceVersion.hxx"
 #include "erp/validation/SchemaType.hxx"
 #include "fhirtools/validator/Severity.hxx"
 
@@ -22,18 +23,16 @@
 #include <string>
 #include <vector>
 
-#include "Environment.hxx"
-
 class XmlValidator;
 
 namespace fhirtools {
 class ValidatorOptions;
+class FhirResourceViewConfiguration;
 }
 
 
 enum class ConfigurationKey
 {
-    C_FD_SIG_ERP,
     C_FD_SIG_ERP_VALIDATION_INTERVAL,
     ENROLMENT_SERVER_PORT,
     ENROLMENT_ACTIVATE_FOR_PORT,
@@ -209,9 +208,12 @@ class ConfigurationBase
 public:
     constexpr static std::string_view ServerHostEnvVar = "ERP_SERVER_HOST";
     constexpr static std::string_view ServerPortEnvVar = "ERP_SERVER_PORT";
+    constexpr static std::string_view fhirResourceTags = "/erp/fhir-resource-tags";
+    constexpr static std::string_view fhirResourceViews = "/erp/fhir-resource-views";
 
     const std::string& serverHost() const;
     uint16_t serverPort() const;
+    [[nodiscard]] const fhirtools::FhirResourceViewConfiguration& fhirResourceViewConfiguration() const;
 
 protected:
     explicit ConfigurationBase(const std::vector<KeyData>& allKeyNames);
@@ -243,6 +245,7 @@ protected:
     std::vector<std::string> getOptionalArrayFromJson(KeyData key) const;
 
     const rapidjson::Value* getJsonValue(KeyData key) const;
+
 
 private:
     bool lookupKey(const std::string& pathPrefix, const std::string& jsonKey);
@@ -437,6 +440,7 @@ public:
         {
             keys.push_back(key.first);
         }
+
         return keys;
     }
 

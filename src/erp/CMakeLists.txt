@@ -248,6 +248,7 @@ list(
         tsl/C14NHelper.cxx
         tsl/CertificateId.cxx
         tsl/OcspHelper.cxx
+        tsl/OcspResponse.cxx
         tsl/OcspService.cxx
         tsl/OcspUrl.hxx
         tsl/TrustStore.cxx
@@ -261,7 +262,6 @@ list(
         tsl/X509Certificate.cxx
         tsl/X509Store.cxx
         util/Base64.cxx
-        util/BoostUrl.cxx
         util/Buffer.cxx
         util/ByteHelper.cxx
         util/Condition.cxx

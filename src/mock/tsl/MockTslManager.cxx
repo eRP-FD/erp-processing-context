@@ -49,7 +49,8 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
          {idpCertificate, idpCertificateCa, MockOcsp::CertificateOcspTestMode::SUCCESS}},
         ocspCertificate, ocspPrivateKey);
 
-    const auto cert = Certificate::fromPem(Configuration::instance().getStringValue(ConfigurationKey::C_FD_SIG_ERP));
+    const auto cert =
+        Certificate::fromPem(MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_CERT));
     const auto certCA = Certificate::fromPem(
         MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_SIGNER_CERT));
     requestSender->setOcspUrlRequestHandler(

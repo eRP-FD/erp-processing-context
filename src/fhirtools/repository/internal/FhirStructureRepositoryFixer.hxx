@@ -19,11 +19,11 @@ class ProfiledElementTypeInfo;
 
 class FhirStructureRepositoryFixer
 {
-    explicit FhirStructureRepositoryFixer(FhirStructureRepository&);
+    explicit FhirStructureRepositoryFixer(FhirStructureRepositoryBackend&);
 
     void fix();
 
-    using StructureDefinitionEntries = decltype(FhirStructureRepository::mDefinitionsByKey);
+    using StructureDefinitionEntries = decltype(FhirStructureRepositoryBackend::mDefinitionsByKey);
     using StructureDefinitionEntry = StructureDefinitionEntries::iterator;
     void fixStructureDefinition(StructureDefinitionEntry& profile);
 
@@ -42,8 +42,8 @@ class FhirStructureRepositoryFixer
                                                             const std::string_view rest) const;
 
 
-    FhirStructureRepository& mRepo;
-    friend class FhirStructureRepository;
+    FhirStructureRepositoryBackend& mRepo;
+    friend class FhirStructureRepositoryBackend;
 };
 }// namespace fhirtools
 

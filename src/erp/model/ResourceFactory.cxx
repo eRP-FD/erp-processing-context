@@ -41,7 +41,7 @@ supportedProfiles(SchemaType schemaType,
     return result;
 }
 
-} // namespace
+}// namespace
 
 
 model::ResourceFactoryBase::ResourceFactoryBase(XmlDocCache xml)
@@ -145,8 +145,9 @@ fhirtools::ValidationResults model::ResourceFactoryBase::validateGeneric(const f
 {
     std::string resourceTypeName;
     resourceTypeName = resource().getResourceType();
-    auto fhirPathElement = std::make_shared<ErpElement>(&repo, std::weak_ptr<const fhirtools::Element>{},
-                                                        resourceTypeName, &resource().jsonDocument());
+    auto fhirPathElement =
+        std::make_shared<ErpElement>(repo.shared_from_this(), std::weak_ptr<const fhirtools::Element>{},
+                                     resourceTypeName, &resource().jsonDocument());
     std::ostringstream profileStr;
     std::string_view sep;
     for (const auto& prof : fhirPathElement->profiles())
@@ -181,7 +182,6 @@ std::optional<model::Timestamp> model::ResourceFactoryBase::getValidationReferen
 {
     return resource().getValidationReferenceTimestamp();
 }
-
 
 template<typename SchemaVersionT>
 model::ResourceFactorySchemaVersionBase<SchemaVersionT>::ResourceFactorySchemaVersionBase(XmlDocCache xmlDoc,
@@ -269,8 +269,9 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::conditionalValidat
     {
         validationResult.add(fhirtools::Severity::error, *validationErpException->diagnostics(), {}, nullptr);
     }
-    const auto& repo = Fhir::instance().structureRepository(*version);
-    validationResult.merge(ResourceFactoryBase::validateGeneric(repo, validatorOptions, {}));
+    const auto repo = Fhir::instance().structureRepository(
+        getValidationReferenceTimestamp().value_or(model::Timestamp::now()), *version);
+    validationResult.merge(ResourceFactoryBase::validateGeneric(*repo, validatorOptions, {}));
     auto highestSeverity = validationResult.highestSeverity();
 #ifdef ENABLE_DEBUG_LOG
     if (highestSeverity >= fhirtools::Severity::error)

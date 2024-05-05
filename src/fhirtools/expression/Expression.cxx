@@ -6,19 +6,18 @@
  */
 
 #include "fhirtools/expression/Expression.hxx"
+#include "fhirtools/FPExpect.hxx"
+#include "fhirtools/expression/ExpressionTrace.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <algorithm>
 #include <source_location>
 #include <utility>
 
-#include "fhirtools/FPExpect.hxx"
-#include "fhirtools/expression/ExpressionTrace.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-
 using namespace fhirtools;
 
-Expression::Expression(const FhirStructureRepository* fhirStructureRepository)
+Expression::Expression(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository)
     : mFhirStructureRepository(fhirStructureRepository)
 {
 }
@@ -68,7 +67,8 @@ Collection InvocationExpression::eval(const Collection& collection) const
     return mRhs->eval(mLhs->eval(collection));
 }
 
-PathSelection::PathSelection(const FhirStructureRepository* fhirStructureRepository, const std::string& subElement)
+PathSelection::PathSelection(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                             const std::string& subElement)
     : Expression(fhirStructureRepository)
     , mSubElement(subElement)
 {
@@ -121,8 +121,9 @@ Collection PercentContext::eval(const Collection& collection) const
     return {};
 }
 
-BinaryExpression::BinaryExpression(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs,
-                                   ExpressionPtr rhs)
+BinaryExpression::BinaryExpression(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+    ExpressionPtr rhs)
     : Expression(fhirStructureRepository)
     , mLhs(std::move(lhs))
     , mRhs(std::move(rhs))
@@ -189,16 +190,18 @@ Collection UtilityTrace::eval(const Collection& collection) const
 }
 
 
-
-TypesIsOperator::TypesIsOperator(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr expression,
-                                 const std::string& type)
+TypesIsOperator::TypesIsOperator(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr expression,
+    const std::string& type)
     : Expression(fhirStructureRepository)
     , mExpression(std::move(expression))
     , mType(type)
 {
 }
 
-TypesIsOperator::TypesIsOperator(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr typeExpression)
+TypesIsOperator::TypesIsOperator(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    ExpressionPtr typeExpression)
     : Expression(fhirStructureRepository)
     , mTypeExpression(std::move(typeExpression))
 {
@@ -221,8 +224,8 @@ Collection TypesIsOperator::eval(const Collection& collection) const
         makeBoolElement(element && element->getStructureDefinition()->isDerivedFrom(*mFhirStructureRepository, type))};
 }
 
-TypeAsOperator::TypeAsOperator(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr expression,
-                               const std::string& type)
+TypeAsOperator::TypeAsOperator(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                               ExpressionPtr expression, const std::string& type)
     : Expression(fhirStructureRepository)
     , mExpression(std::move(expression))
     , mType(type)
@@ -285,8 +288,9 @@ Collection CollectionsInOperator::eval(const Collection& collection) const
     return {makeBoolElement(rhs.contains(lhs.single()))};
 }
 
-CollectionsContainsOperator::CollectionsContainsOperator(const FhirStructureRepository* fhirStructureRepository,
-                                                         ExpressionPtr lhs, ExpressionPtr rhs)
+CollectionsContainsOperator::CollectionsContainsOperator(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+    ExpressionPtr rhs)
     : CollectionsInOperator(fhirStructureRepository, std::move(rhs), std::move(lhs))
 {
 }

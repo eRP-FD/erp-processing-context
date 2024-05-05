@@ -473,7 +473,7 @@ namespace
                                 : std::make_optional(tslParser->getOcspCertificateList()),
             true);
 
-        TslExpect6(ocspStatus.certificateStatus == OcspService::CertificateStatus::good,
+        TslExpect6(ocspStatus.certificateStatus == CertificateStatus::good,
                    std::string{"OCSP check for TSL signer certificate has failed, oscp certificate status: "}
                        .append(magic_enum::enum_name(ocspStatus.certificateStatus))
                        .append(", certificate subject: ")
@@ -669,7 +669,7 @@ namespace
 
 
     // GEMREQ-start A_22141#checkOcspStatusOfCertificate, A_20159-03#checkOcspStatusOfCertificate
-    void checkOcspStatusOfCertificate(const X509Certificate& certificate,
+    OcspResponse checkOcspStatusOfCertificate(const X509Certificate& certificate,
                                       const CertificateType certificateType,
                                       const X509Certificate& issueCertificate,
                                       const UrlRequestSender& requestSender,
@@ -680,16 +680,11 @@ namespace
 
         TVLOG(2) << "Performing ocsp check with url " << ocspUrl.url << ".";
 
-        OcspService::checkOcspStatus(
-            OcspService::getCurrentStatus(
-                certificate,
-                requestSender,
-                ocspUrl,
-                trustStore,
-                hashExtensionMustBeValidated(certificateType),
-                ocspCheckDescriptor),
-            ocspCheckDescriptor.timeSettings.referenceTimePoint,
-            trustStore);
+        auto ocspResponse =
+            OcspService::getCurrentResponse(certificate, requestSender, ocspUrl, trustStore,
+                                            hashExtensionMustBeValidated(certificateType), ocspCheckDescriptor);
+        ocspResponse.checkStatus(trustStore, ocspCheckDescriptor. timeSettings.referenceTimePoint);
+        return ocspResponse;
     }
     // GEMREQ-end A_22141#checkOcspStatusOfCertificate, A_20159-03#checkOcspStatusOfCertificate
 
@@ -1166,7 +1161,7 @@ TslService::checkCertificateWithoutOcspCheck(
 
 
 // GEMREQ-start A_22141#checkCertificate, A_20159-03#checkCertificate
-void
+OcspResponse
 TslService::checkCertificate(
     X509Certificate& certificate,
     const std::unordered_set<CertificateType>& typeRestrictions,
@@ -1188,7 +1183,7 @@ TslService::checkCertificate(
         throw;
     }
 
-    checkOcspStatusOfCertificate(
+    return checkOcspStatusOfCertificate(
         certificate,
         certificateType,
         issuerCertificate,

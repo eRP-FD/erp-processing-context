@@ -8,7 +8,7 @@
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <sstream>
 
 using fhirtools::ValidationError;

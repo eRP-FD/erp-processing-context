@@ -35,7 +35,14 @@ public:
          * If there is no provided OCSP response, the cache can be used.
          * If no valid cache is available an OCSP request should be sent.
          */
-        PROVIDED_OR_CACHE
+        PROVIDED_OR_CACHE,
+
+        /**
+         * Return cached OCSP response.
+         * If no Response is cached return an error
+         **/
+        CACHED_ONLY,
+
     };
 
     /**

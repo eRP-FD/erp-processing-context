@@ -49,6 +49,8 @@ target_sources(fhirtools
         repository/FhirCodeSystem.cxx
         repository/FhirConstraint.cxx
         repository/FhirElement.cxx
+        repository/FhirKbvKeyTablesView.cxx
+        repository/FhirResourceViewConfiguration.cxx
         repository/FhirValueSet.cxx
         repository/FhirSlicing.cxx
         repository/FhirStructureDefinition.cxx

@@ -10,7 +10,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
 
-#include "magic_enum.hpp"
+#include <magic_enum/magic_enum.hpp>
 
 #include <mutex> // for call_once
 #include <algorithm>

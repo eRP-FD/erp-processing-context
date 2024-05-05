@@ -35,16 +35,18 @@ public:
 
         const auto* testDef = repo.findTypeById("Test");
         ASSERT_NE(testDef, nullptr);
-        rootElement = std::make_shared<ErpElement>(&repo, std::weak_ptr<Element>{}, testDef , "Test", &testResource);
+        rootElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<Element>{}, testDef, "Test", &testResource);
     }
-    const FhirStructureRepository& repo = DefaultFhirStructureRepository::getWithTest();
+    std::shared_ptr<const fhirtools::DefaultFhirStructureRepositoryView> mRepo =
+        DefaultFhirStructureRepository::getWithTest().defaultView();
+    const FhirStructureRepository& repo = *mRepo;
     model::NumberAsStringParserDocument testResource;
     std::shared_ptr<ErpElement> rootElement;
 
 protected:
     void pathSelectionTest(const std::string& selector, std::vector<PrimitiveElement> expected)
     {
-        PathSelection pathSelection(&repo, selector);
+        PathSelection pathSelection(mRepo, selector);
         auto result = pathSelection.eval(Collection{rootElement});
         EXPECT_EQ(expected.size(), result.size());
         for (size_t i = 0, end = expected.size(); i < end; ++i)
@@ -88,8 +90,8 @@ protected:
     void BooleanOperatorTest(std::optional<bool> lhs, std::optional<bool> rhs, std::optional<bool> expectedResult)
     {
         BooleanOperator booleanImpliesOperator(
-            &repo, lhs.has_value() ? std::make_shared<LiteralBooleanExpression>(&repo, lhs.value()) : nullptr,
-            rhs.has_value() ? std::make_shared<LiteralBooleanExpression>(&repo, rhs.value()) : nullptr);
+            mRepo, lhs.has_value() ? std::make_shared<LiteralBooleanExpression>(mRepo, lhs.value()) : nullptr,
+            rhs.has_value() ? std::make_shared<LiteralBooleanExpression>(mRepo, rhs.value()) : nullptr);
         const auto result = booleanImpliesOperator.eval({});
         if (expectedResult.has_value())
         {
@@ -105,8 +107,8 @@ protected:
     void StringConcatenationTest(std::optional<std::string> s1, std::optional<std::string> s2,
                                  std::optional<std::string> expectedResult)
     {
-        StringConcatOperator op(&repo, s1 ? std::make_shared<LiteralStringExpression>(&repo, s1.value()) : nullptr,
-                                s2 ? std::make_shared<LiteralStringExpression>(&repo, s2.value()) : nullptr);
+        StringConcatOperator op(mRepo, s1 ? std::make_shared<LiteralStringExpression>(mRepo, s1.value()) : nullptr,
+                                s2 ? std::make_shared<LiteralStringExpression>(mRepo, s2.value()) : nullptr);
         const auto result = op.eval({});
         if (expectedResult.has_value())
         {
@@ -139,53 +141,53 @@ TEST_F(ExpressionTest, PathSelection)
 {
     using namespace std::string_literals;
 
-    pathSelectionTest("string", {PrimitiveElement{&repo, Element::Type::String, "value"s}});
-    pathSelectionTest("multiString", {PrimitiveElement{&repo, Element::Type::String, "value"s},
-                                      PrimitiveElement{&repo, Element::Type::String, "value2"s}});
-    pathSelectionTest("num", {PrimitiveElement{&repo, Element::Type::Integer, 12}});
-    pathSelectionTest("multiNum", {PrimitiveElement{&repo, Element::Type::Integer, 1},
-                                   PrimitiveElement{&repo, Element::Type::Integer, 5},
-                                   PrimitiveElement{&repo, Element::Type::Integer, 42}});
-    pathSelectionTest("dec", {PrimitiveElement{&repo, Element::Type::Decimal, DecimalType("1.2")}});
-    pathSelectionTest("multiDec", {PrimitiveElement{&repo, Element::Type::Decimal, DecimalType("0.1")},
-                                   PrimitiveElement{&repo, Element::Type::Decimal, DecimalType("3.14")}});
-    pathSelectionTest("boolean", {PrimitiveElement{&repo, Element::Type::Boolean, true}});
-    pathSelectionTest("multibool", {PrimitiveElement{&repo, Element::Type::Boolean, true},
-                                    PrimitiveElement{&repo, Element::Type::Boolean, false},
-                                    PrimitiveElement{&repo, Element::Type::Boolean, false},
-                                    PrimitiveElement{&repo, Element::Type::Boolean, false}});
+    pathSelectionTest("string", {PrimitiveElement{mRepo, Element::Type::String, "value"s}});
+    pathSelectionTest("multiString", {PrimitiveElement{mRepo, Element::Type::String, "value"s},
+                                      PrimitiveElement{mRepo, Element::Type::String, "value2"s}});
+    pathSelectionTest("num", {PrimitiveElement{mRepo, Element::Type::Integer, 12}});
+    pathSelectionTest("multiNum", {PrimitiveElement{mRepo, Element::Type::Integer, 1},
+                                   PrimitiveElement{mRepo, Element::Type::Integer, 5},
+                                   PrimitiveElement{mRepo, Element::Type::Integer, 42}});
+    pathSelectionTest("dec", {PrimitiveElement{mRepo, Element::Type::Decimal, DecimalType("1.2")}});
+    pathSelectionTest("multiDec", {PrimitiveElement{mRepo, Element::Type::Decimal, DecimalType("0.1")},
+                                   PrimitiveElement{mRepo, Element::Type::Decimal, DecimalType("3.14")}});
+    pathSelectionTest("boolean", {PrimitiveElement{mRepo, Element::Type::Boolean, true}});
+    pathSelectionTest("multibool", {PrimitiveElement{mRepo, Element::Type::Boolean, true},
+                                    PrimitiveElement{mRepo, Element::Type::Boolean, false},
+                                    PrimitiveElement{mRepo, Element::Type::Boolean, false},
+                                    PrimitiveElement{mRepo, Element::Type::Boolean, false}});
 }
 
 TEST_F(ExpressionTest, ExistenceEmpty)
 {
-    ExistenceEmpty existenceEmptyFunction(&repo);
+    ExistenceEmpty existenceEmptyFunction(mRepo);
     auto trueResult = existenceEmptyFunction.eval({});
     checkBoolResult(trueResult, true);
 
     auto falseResult =
-        existenceEmptyFunction.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 1),
-                                     std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 3)});
+        existenceEmptyFunction.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 1),
+                                     std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 3)});
     checkBoolResult(falseResult, false);
 }
 
 TEST_F(ExpressionTest, ExistenceExists)
 {
     {
-        ExistenceExists existenceExistsFunction(&repo, {});
+        ExistenceExists existenceExistsFunction(mRepo, {});
         const auto result = existenceExistsFunction.eval({rootElement});
         checkBoolResult(result, true);
     }
     {
         ExistenceExists existenceExistsFunction(
-            &repo, std::make_shared<EqualityEqualsOperator>(&repo, std::make_shared<PathSelection>(&repo, "string"),
-                                                            std::make_shared<LiteralStringExpression>(&repo, "value")));
+            mRepo, std::make_shared<EqualityEqualsOperator>(mRepo, std::make_shared<PathSelection>(mRepo, "string"),
+                                                            std::make_shared<LiteralStringExpression>(mRepo, "value")));
         const auto result = existenceExistsFunction.eval({rootElement});
         checkBoolResult(result, true);
     }
     {
         ExistenceExists existenceExistsFunction(
-            &repo, std::make_shared<EqualityEqualsOperator>(&repo, std::make_shared<PathSelection>(&repo, "string"),
-                                                            std::make_shared<LiteralStringExpression>(&repo, "FOO")));
+            mRepo, std::make_shared<EqualityEqualsOperator>(mRepo, std::make_shared<PathSelection>(mRepo, "string"),
+                                                            std::make_shared<LiteralStringExpression>(mRepo, "FOO")));
         const auto result = existenceExistsFunction.eval({rootElement});
         checkBoolResult(result, false);
     }
@@ -194,22 +196,22 @@ TEST_F(ExpressionTest, ExistenceExists)
 TEST_F(ExpressionTest, ExistenceFunctions)
 {
     ExistenceAll existenceAllFunction(
-        &repo, std::make_shared<EqualityEqualsOperator>(&repo, std::make_shared<DollarThis>(&repo),
-                                                        std::make_shared<LiteralBooleanExpression>(&repo, true)));
-    ExistenceAllTrue existenceAllTrueFunction(&repo);
-    ExistenceAnyTrue existenceAnyTrueFunction(&repo);
-    ExistenceAllFalse existenceAllFalseFunction(&repo);
-    ExistenceAnyFalse existenceAnyFalseFunction(&repo);
+        mRepo, std::make_shared<EqualityEqualsOperator>(mRepo, std::make_shared<DollarThis>(mRepo),
+                                                        std::make_shared<LiteralBooleanExpression>(mRepo, true)));
+    ExistenceAllTrue existenceAllTrueFunction(mRepo);
+    ExistenceAnyTrue existenceAnyTrueFunction(mRepo);
+    ExistenceAllFalse existenceAllFalseFunction(mRepo);
+    ExistenceAnyFalse existenceAnyFalseFunction(mRepo);
 
-    const Collection input1{std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)};
-    const Collection input2{std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)};
-    const Collection input3{std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false)};
+    const Collection input1{std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)};
+    const Collection input2{std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)};
+    const Collection input3{std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false)};
     const Collection input4{};
 
     checkBoolResult(existenceAllFunction.eval(input1), true);
@@ -236,16 +238,16 @@ TEST_F(ExpressionTest, ExistenceFunctions)
 
 TEST_F(ExpressionTest, ExistenceCount)
 {
-    ExistenceCount existenceCountFunction(&repo);
+    ExistenceCount existenceCountFunction(mRepo);
     EXPECT_EQ(existenceCountFunction.eval({}).singleOrEmpty()->asInt(), 0);
-    EXPECT_EQ(existenceCountFunction.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)})
+    EXPECT_EQ(existenceCountFunction.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)})
                   .singleOrEmpty()
                   ->asInt(),
               1);
     EXPECT_EQ(existenceCountFunction.eval({rootElement}).singleOrEmpty()->asInt(), 1);
     EXPECT_EQ(existenceCountFunction
-                  .eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true),
-                         std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)})
+                  .eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true),
+                         std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)})
                   .singleOrEmpty()
                   ->asInt(),
               2);
@@ -253,20 +255,20 @@ TEST_F(ExpressionTest, ExistenceCount)
 
 TEST_F(ExpressionTest, ExistenceDistinct)
 {
-    ExistenceDistinct existenceDistinctFunction(&repo);
+    ExistenceDistinct existenceDistinctFunction(mRepo);
 
 
     const Collection input1{};
-    const Collection input2{std::make_shared<PrimitiveElement>(&repo, Element::Type::String, ""s),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "1"s)};
-    const Collection input3{std::make_shared<PrimitiveElement>(&repo, Element::Type::String, ""s),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "1"s),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "1"s),
-                            std::make_shared<PrimitiveElement>(&repo, Element::Type::String, ""s)};
+    const Collection input2{std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, ""s),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "1"s)};
+    const Collection input3{std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, ""s),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "1"s),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "1"s),
+                            std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, ""s)};
     const Collection input4{
-        std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 11),
-        std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(11)),
-        std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(11, {}))};
+        std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 11),
+        std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(11)),
+        std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(11, {}))};
 
     {
         const auto result = existenceDistinctFunction.eval(input1);
@@ -285,7 +287,7 @@ TEST_F(ExpressionTest, ExistenceDistinct)
         EXPECT_EQ(result.size(), 3);
     }
 
-    ExistenceIsDistinct existenceIsDistinctFunction(&repo);
+    ExistenceIsDistinct existenceIsDistinctFunction(mRepo);
     checkBoolResult(existenceIsDistinctFunction.eval(input1), true);
     checkBoolResult(existenceIsDistinctFunction.eval(input2), true);
     checkBoolResult(existenceIsDistinctFunction.eval(input3), false);
@@ -296,38 +298,38 @@ TEST_F(ExpressionTest, FilteringWhere)
 {
     {
         FilteringWhere filteringWhere(
-            &repo, std::make_shared<EqualityEqualsOperator>(&repo, std::make_shared<PathSelection>(&repo, "num"),
-                                                            std::make_shared<LiteralIntegerExpression>(&repo, 12)));
+            mRepo, std::make_shared<EqualityEqualsOperator>(mRepo, std::make_shared<PathSelection>(mRepo, "num"),
+                                                            std::make_shared<LiteralIntegerExpression>(mRepo, 12)));
         auto result = filteringWhere.eval({rootElement});
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result[0]->type(), Element::Type::Structured);
     }
     {
-        FilteringWhere filteringWhere(&repo,
+        FilteringWhere filteringWhere(mRepo,
                                       std::make_shared<EqualityEqualsOperator>(
-                                          &repo, std::make_shared<PathSelection>(&repo, "num"),
-                                          std::make_shared<LiteralDecimalExpression>(&repo, DecimalType("12.0"))));
+                                          mRepo, std::make_shared<PathSelection>(mRepo, "num"),
+                                          std::make_shared<LiteralDecimalExpression>(mRepo, DecimalType("12.0"))));
         auto result = filteringWhere.eval({rootElement});
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result[0]->type(), Element::Type::Structured);
     }
     {
-        FilteringWhere filteringWhere(&repo,
+        FilteringWhere filteringWhere(mRepo,
                                       std::make_shared<EqualityEqualsOperator>(
-                                          &repo, std::make_shared<PathSelection>(&repo, "num"),
-                                          std::make_shared<LiteralDecimalExpression>(&repo, DecimalType("12.1"))));
+                                          mRepo, std::make_shared<PathSelection>(mRepo, "num"),
+                                          std::make_shared<LiteralDecimalExpression>(mRepo, DecimalType("12.1"))));
         auto result = filteringWhere.eval({rootElement});
         ASSERT_EQ(result.size(), 0);
     }
     {
         FilteringWhere filteringWhere(
-            &repo, std::make_shared<EqualityEqualsOperator>(&repo, std::make_shared<PathSelection>(&repo, "num"),
-                                                            std::make_shared<LiteralIntegerExpression>(&repo, 0)));
+            mRepo, std::make_shared<EqualityEqualsOperator>(mRepo, std::make_shared<PathSelection>(mRepo, "num"),
+                                                            std::make_shared<LiteralIntegerExpression>(mRepo, 0)));
         auto result = filteringWhere.eval({rootElement});
         ASSERT_EQ(result.size(), 0);
     }
     {
-        FilteringWhere filteringWhere(&repo, std::make_shared<PathSelection>(&repo, "num"));
+        FilteringWhere filteringWhere(mRepo, std::make_shared<PathSelection>(mRepo, "num"));
         auto result = filteringWhere.eval({rootElement});
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result[0]->type(), Element::Type::Structured);
@@ -336,7 +338,7 @@ TEST_F(ExpressionTest, FilteringWhere)
 
 TEST_F(ExpressionTest, FilteringSelect)
 {
-    FilteringSelect filteringSelectFunction(&repo, std::make_shared<PathSelection>(&repo, "num"));
+    FilteringSelect filteringSelectFunction(mRepo, std::make_shared<PathSelection>(mRepo, "num"));
     auto result = filteringSelectFunction.eval({rootElement});
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result[0]->type(), Element::Type::Integer);
@@ -346,20 +348,20 @@ TEST_F(ExpressionTest, FilteringSelect)
 TEST_F(ExpressionTest, EqualityEqualsOperator)
 {
     {
-        EqualityEqualsOperator equalsOperator(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 33),
-                                              std::make_shared<LiteralDecimalExpression>(&repo, 33));
+        EqualityEqualsOperator equalsOperator(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 33),
+                                              std::make_shared<LiteralDecimalExpression>(mRepo, 33));
         auto result = equalsOperator.eval({});
         checkBoolResult(result, true);
     }
     {
-        EqualityEqualsOperator equalsOperator(&repo, std::make_shared<DollarThis>(&repo),
-                                              std::make_shared<DollarThis>(&repo));
+        EqualityEqualsOperator equalsOperator(mRepo, std::make_shared<DollarThis>(mRepo),
+                                              std::make_shared<DollarThis>(mRepo));
         auto result = equalsOperator.eval({rootElement});
         checkBoolResult(result, true);
     }
     {
-        EqualityEqualsOperator equalsOperator(&repo, std::make_shared<DollarThis>(&repo),
-                                              std::make_shared<PathSelection>(&repo, "quantity"));
+        EqualityEqualsOperator equalsOperator(mRepo, std::make_shared<DollarThis>(mRepo),
+                                              std::make_shared<PathSelection>(mRepo, "quantity"));
         auto result = equalsOperator.eval({rootElement});
         checkBoolResult(result, false);
     }
@@ -368,20 +370,20 @@ TEST_F(ExpressionTest, EqualityEqualsOperator)
 TEST_F(ExpressionTest, EqualityNotEqualsOperator)
 {
     {
-        EqualityNotEqualsOperator notEqualsOperator(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 33),
-                                                    std::make_shared<LiteralDecimalExpression>(&repo, 33));
+        EqualityNotEqualsOperator notEqualsOperator(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 33),
+                                                    std::make_shared<LiteralDecimalExpression>(mRepo, 33));
         auto result = notEqualsOperator.eval({});
         checkBoolResult(result, false);
     }
     {
-        EqualityNotEqualsOperator notEqualsOperator(&repo, std::make_shared<DollarThis>(&repo),
-                                                    std::make_shared<DollarThis>(&repo));
+        EqualityNotEqualsOperator notEqualsOperator(mRepo, std::make_shared<DollarThis>(mRepo),
+                                                    std::make_shared<DollarThis>(mRepo));
         auto result = notEqualsOperator.eval({rootElement});
         checkBoolResult(result, false);
     }
     {
-        EqualityNotEqualsOperator notEqualsOperator(&repo, std::make_shared<DollarThis>(&repo),
-                                                    std::make_shared<PathSelection>(&repo, "quantity"));
+        EqualityNotEqualsOperator notEqualsOperator(mRepo, std::make_shared<DollarThis>(mRepo),
+                                                    std::make_shared<PathSelection>(mRepo, "quantity"));
         auto result = notEqualsOperator.eval({rootElement});
         checkBoolResult(result, true);
     }
@@ -390,31 +392,31 @@ TEST_F(ExpressionTest, EqualityNotEqualsOperator)
 TEST_F(ExpressionTest, SubsettingIndexer)
 {
     {
-        SubsettingIndexer subsettingIndexerFunction(&repo, std::make_shared<DollarThis>(&repo),
-                                                    std::make_shared<LiteralIntegerExpression>(&repo, 1));
+        SubsettingIndexer subsettingIndexerFunction(mRepo, std::make_shared<DollarThis>(mRepo),
+                                                    std::make_shared<LiteralIntegerExpression>(mRepo, 1));
         const auto result = subsettingIndexerFunction.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo"),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5))});
         ASSERT_EQ(result.size(), 1);
         EXPECT_EQ(result.singleOrEmpty()->type(), Element::Type::Decimal);
         EXPECT_EQ(result.singleOrEmpty()->asDecimal(), 5);
     }
     {
-        SubsettingIndexer subsettingIndexerFunction(&repo, std::make_shared<DollarThis>(&repo),
-                                                    std::make_shared<LiteralIntegerExpression>(&repo, 2));
+        SubsettingIndexer subsettingIndexerFunction(mRepo, std::make_shared<DollarThis>(mRepo),
+                                                    std::make_shared<LiteralIntegerExpression>(mRepo, 2));
         const auto result = subsettingIndexerFunction.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo"),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5))});
         ASSERT_EQ(result.size(), 0);
     }
 }
 
 TEST_F(ExpressionTest, SubsettingFirst)
 {
-    SubsettingFirst subsettingFirst(&repo);
+    SubsettingFirst subsettingFirst(mRepo);
     const auto result =
-        subsettingFirst.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo"),
-                              std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5))});
+        subsettingFirst.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+                              std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5))});
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result.singleOrEmpty()->type(), Element::Type::String);
     EXPECT_EQ(result.singleOrEmpty()->asString(), "foo");
@@ -422,11 +424,11 @@ TEST_F(ExpressionTest, SubsettingFirst)
 
 TEST_F(ExpressionTest, SubsettingTail)
 {
-    SubsettingTail subsettingTail(&repo);
+    SubsettingTail subsettingTail(mRepo);
     const auto result =
-        subsettingTail.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo"),
-                             std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5)),
-                             std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "bar")});
+        subsettingTail.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+                             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5)),
+                             std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "bar")});
     ASSERT_EQ(result.size(), 2);
     EXPECT_EQ(result[0]->type(), Element::Type::Decimal);
     EXPECT_EQ(result[0]->asDecimal(), 5);
@@ -437,11 +439,11 @@ TEST_F(ExpressionTest, SubsettingTail)
 TEST_F(ExpressionTest, SubsettingIntersect)
 {
     {
-        SubsettingIntersect subsettingIntersect(&repo, std::make_shared<DollarThis>(&repo));
+        SubsettingIntersect subsettingIntersect(mRepo, std::make_shared<DollarThis>(mRepo));
         const auto result = subsettingIntersect.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo"),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5)),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5)),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5))});
         ASSERT_EQ(result.size(), 2);
         ASSERT_EQ(result[0]->type(), Element::Type::String);
         ASSERT_EQ(result[0]->asString(), "foo");
@@ -449,12 +451,12 @@ TEST_F(ExpressionTest, SubsettingIntersect)
         ASSERT_EQ(result[1]->asDecimal(), 5);
     }
     {
-        SubsettingIntersect subsettingIntersect(&repo,
-                                                std::make_shared<LiteralDecimalExpression>(&repo, DecimalType(5)));
+        SubsettingIntersect subsettingIntersect(mRepo,
+                                                std::make_shared<LiteralDecimalExpression>(mRepo, DecimalType(5)));
         const auto result = subsettingIntersect.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo"),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5)),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(5))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5)),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5))});
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result[0]->type(), Element::Type::Decimal);
         ASSERT_EQ(result[0]->asDecimal(), 5);
@@ -465,30 +467,29 @@ TEST_F(ExpressionTest, FilteringOfType)
 {
     {
         FilteringOfType filteringOfTypeFunction(
-            &repo, std::make_shared<LiteralStringExpression>(&repo, "http://hl7.org/fhirpath/System.String"));
+            mRepo, std::make_shared<LiteralStringExpression>(mRepo, "http://hl7.org/fhirpath/System.String"));
         const auto result =
-            filteringOfTypeFunction.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo")});
+            filteringOfTypeFunction.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo")});
         ASSERT_EQ(result.size(), 1);
         EXPECT_EQ(result[0]->type(), Element::Type::String);
     }
     {
         FilteringOfType filteringOfTypeFunction(
-            &repo, std::make_shared<LiteralStringExpression>(&repo, "http://hl7.org/fhirpath/System.String"));
+            mRepo, std::make_shared<LiteralStringExpression>(mRepo, "http://hl7.org/fhirpath/System.String"));
         const auto result =
-            filteringOfTypeFunction.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true),
-                                          std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo"),
-                                          std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 1),
-                                          std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "bar"),
-                                          std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)});
+            filteringOfTypeFunction.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true),
+                                          std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+                                          std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 1),
+                                          std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "bar"),
+                                          std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)});
         ASSERT_EQ(result.size(), 2);
         EXPECT_EQ(result[0]->type(), Element::Type::String);
         EXPECT_EQ(result[1]->type(), Element::Type::String);
     }
     {
-        FilteringOfType filteringOfTypeFunction(
-            &repo, std::make_shared<LiteralStringExpression>(&repo, "string"));
+        FilteringOfType filteringOfTypeFunction(mRepo, std::make_shared<LiteralStringExpression>(mRepo, "string"));
         const auto result =
-            filteringOfTypeFunction.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "foo")});
+            filteringOfTypeFunction.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo")});
         ASSERT_EQ(result.size(), 1);
         EXPECT_EQ(result[0]->type(), Element::Type::String);
     }
@@ -498,14 +499,14 @@ TEST_F(ExpressionTest, ConversionIif)
 {
     {
         ConversionIif conversionIifFunction(
-            &repo,
-            std::make_shared<EqualityEqualsOperator>(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 1),
-                                                     std::make_shared<DollarThis>(&repo)),
-            {std::make_shared<LiteralStringExpression>(&repo, "trueResult")}, {});
+            mRepo,
+            std::make_shared<EqualityEqualsOperator>(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 1),
+                                                     std::make_shared<DollarThis>(mRepo)),
+            {std::make_shared<LiteralStringExpression>(mRepo, "trueResult")}, {});
 
         {
             const auto result =
-                conversionIifFunction.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 1)});
+                conversionIifFunction.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 1)});
             ASSERT_EQ(result.size(), 1);
             EXPECT_EQ(result[0]->type(), Element::Type::String);
             EXPECT_EQ(result[0]->asString(), "trueResult");
@@ -517,14 +518,14 @@ TEST_F(ExpressionTest, ConversionIif)
     }
     {
         ConversionIif conversionIifFunction(
-            &repo,
-            std::make_shared<EqualityEqualsOperator>(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 1),
-                                                     std::make_shared<DollarThis>(&repo)),
-            {std::make_shared<LiteralStringExpression>(&repo, "trueResult")},
-            {std::make_shared<LiteralStringExpression>(&repo, "falseResult")});
+            mRepo,
+            std::make_shared<EqualityEqualsOperator>(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 1),
+                                                     std::make_shared<DollarThis>(mRepo)),
+            {std::make_shared<LiteralStringExpression>(mRepo, "trueResult")},
+            {std::make_shared<LiteralStringExpression>(mRepo, "falseResult")});
         {
             const auto result =
-                conversionIifFunction.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 1)});
+                conversionIifFunction.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 1)});
             ASSERT_EQ(result.size(), 1);
             EXPECT_EQ(result[0]->type(), Element::Type::String);
             EXPECT_EQ(result[0]->asString(), "trueResult");
@@ -540,11 +541,11 @@ TEST_F(ExpressionTest, ConversionIif)
 
 TEST_F(ExpressionTest, StringManipIndexOf)
 {
-    StringManipIndexOf stringManipIndexOf(&repo, std::make_shared<LiteralStringExpression>(&repo, "substring"));
+    StringManipIndexOf stringManipIndexOf(mRepo, std::make_shared<LiteralStringExpression>(mRepo, "substring"));
     const auto result1 = stringManipIndexOf.eval(
-        {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "contains the substring somewhere"s)});
+        {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "contains the substring somewhere"s)});
     const auto result2 = stringManipIndexOf.eval(
-        {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "does not contain it."s)});
+        {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "does not contain it."s)});
     ASSERT_EQ(result1.size(), 1);
     EXPECT_EQ(result1[0]->type(), Element::Type::Integer);
     EXPECT_EQ(result1[0]->asInt(), 13);
@@ -555,7 +556,7 @@ TEST_F(ExpressionTest, StringManipIndexOf)
 
 TEST_F(ExpressionTest, TreeNavigationChildren)
 {
-    TreeNavigationChildren treeNavigationChildren(&repo);
+    TreeNavigationChildren treeNavigationChildren(mRepo);
     {
         const auto result = treeNavigationChildren.eval({rootElement});
         ASSERT_EQ(result.size(), 22);
@@ -566,14 +567,14 @@ TEST_F(ExpressionTest, TreeNavigationChildren)
     }
     {
         const auto result =
-            treeNavigationChildren.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "")});
+            treeNavigationChildren.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "")});
         ASSERT_EQ(result.size(), 0);
     }
 }
 
 TEST_F(ExpressionTest, TreeNavigationDescendants)
 {
-    TreeNavigationDescendants treeNavigationDescendants(&repo);
+    TreeNavigationDescendants treeNavigationDescendants(mRepo);
     {
         const auto result = treeNavigationDescendants.eval({rootElement});
         ASSERT_EQ(result.size(), 24);
@@ -584,34 +585,34 @@ TEST_F(ExpressionTest, TreeNavigationDescendants)
     }
     {
         const auto result =
-            treeNavigationDescendants.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "")});
+            treeNavigationDescendants.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "")});
         ASSERT_EQ(result.size(), 0);
     }
 }
 
 TEST_F(ExpressionTest, TypesIsOperator)
 {
-    TypesIsOperator typesIsOperator(&repo, std::make_shared<DollarThis>(&repo),
+    TypesIsOperator typesIsOperator(mRepo, std::make_shared<DollarThis>(mRepo),
                                     "http://hl7.org/fhirpath/System.Decimal");
     const auto result1 =
-        typesIsOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType("3.14"))});
+        typesIsOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType("3.14"))});
     ASSERT_EQ(result1.size(), 1);
     EXPECT_EQ(result1.singleOrEmpty()->asBool(), true);
-    const auto result2 = typesIsOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 3)});
+    const auto result2 = typesIsOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 3)});
     ASSERT_EQ(result2.size(), 1);
     EXPECT_EQ(result2.singleOrEmpty()->asBool(), false);
 }
 
 TEST_F(ExpressionTest, TypeAsOperator)
 {
-    TypeAsOperator typesAsOperator(&repo, std::make_shared<DollarThis>(&repo),
+    TypeAsOperator typesAsOperator(mRepo, std::make_shared<DollarThis>(mRepo),
                                    "http://hl7.org/fhirpath/System.Decimal");
     const auto result1 =
-        typesAsOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType("3.14"))});
+        typesAsOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType("3.14"))});
     ASSERT_EQ(result1.size(), 1);
     EXPECT_EQ(result1.singleOrEmpty()->type(), Element::Type::Decimal);
     EXPECT_EQ(result1.singleOrEmpty()->asDecimal(), DecimalType("3.14"));
-    const auto result2 = typesAsOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 3)});
+    const auto result2 = typesAsOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 3)});
     ASSERT_TRUE(result2.empty());
 }
 
@@ -644,20 +645,20 @@ TEST_F(ExpressionTest, BooleanOrOperator)
 TEST_F(ExpressionTest, BooleanNotOperator)
 {
     {
-        BooleanNotOperator booleanNotOperator(&repo);
+        BooleanNotOperator booleanNotOperator(mRepo);
         const auto result = booleanNotOperator.eval({});
         EXPECT_TRUE(result.empty());
     }
     {
-        BooleanNotOperator booleanNotOperator(&repo);
+        BooleanNotOperator booleanNotOperator(mRepo);
         const auto result =
-            booleanNotOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)});
+            booleanNotOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)});
         checkBoolResult(result, false);
     }
     {
-        BooleanNotOperator booleanNotOperator(&repo);
+        BooleanNotOperator booleanNotOperator(mRepo);
         const auto result =
-            booleanNotOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false)});
+            booleanNotOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false)});
         checkBoolResult(result, true);
     }
 }
@@ -691,21 +692,21 @@ TEST_F(ExpressionTest, BooleanImpliesOperator)
 
 TEST_F(ExpressionTest, ConversionToString)
 {
-    ConversionToString conversionToString(&repo);
+    ConversionToString conversionToString(mRepo);
     const auto result1 =
-        conversionToString.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false)}).single();
+        conversionToString.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false)}).single();
     EXPECT_EQ(result1->type(), Element::Type::String);
     EXPECT_EQ(result1->asString(), "false");
 
     const auto result2 =
         conversionToString
-            .eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType("3.14"))})
+            .eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType("3.14"))})
             .single();
     EXPECT_EQ(result2->type(), Element::Type::String);
     EXPECT_EQ(result2->asString(), "3.14");
 
-    EXPECT_THROW(conversionToString.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false),
-                                          std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false)}),
+    EXPECT_THROW(conversionToString.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false),
+                                          std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false)}),
                  std::exception);
 
     const auto result3 = conversionToString.eval({rootElement}).single();
@@ -715,45 +716,45 @@ TEST_F(ExpressionTest, ConversionToString)
 
 TEST_F(ExpressionTest, ConversionToInt)
 {
-    ConversionToInteger conversionToInteger(&repo);
+    ConversionToInteger conversionToInteger(mRepo);
     {
         const auto result =
-            conversionToInteger.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, false)});
+            conversionToInteger.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, false)});
         checkIntResult(result, 0);
     }
     {
         const auto result =
-            conversionToInteger.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)});
+            conversionToInteger.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)});
         checkIntResult(result, 1);
     }
     {
         const auto result =
-            conversionToInteger.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "1234"s)});
+            conversionToInteger.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "1234"s)});
         checkIntResult(result, 1234);
     }
     {
         const auto result =
-            conversionToInteger.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "1234x"s)});
+            conversionToInteger.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "1234x"s)});
         ASSERT_TRUE(result.empty());
     }
     {
         const auto result =
-            conversionToInteger.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 321)});
+            conversionToInteger.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 321)});
         checkIntResult(result, 321);
     }
     {
         const auto result = conversionToInteger.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType(123))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(123))});
         ASSERT_TRUE(result.empty());
     }
     {
         const auto result =
-            conversionToInteger.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "2147483648")});
+            conversionToInteger.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "2147483648")});
         ASSERT_TRUE(result.empty());
     }
     {
         const auto result =
-            conversionToInteger.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "-2147483649")});
+            conversionToInteger.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "-2147483649")});
         ASSERT_TRUE(result.empty());
     }
 }
@@ -761,16 +762,16 @@ TEST_F(ExpressionTest, ConversionToInt)
 TEST_F(ExpressionTest, StringManipSubstring)
 {
     {
-        StringManipSubstring stringManipSubstring(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 5), {});
+        StringManipSubstring stringManipSubstring(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 5), {});
         {
             const auto result = stringManipSubstring.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             EXPECT_EQ(result.single()->type(), Element::Type::String);
             EXPECT_EQ(result.single()->asString(), " world");
         }
         {
             const auto result =
-                stringManipSubstring.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"s)});
+                stringManipSubstring.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"s)});
             EXPECT_TRUE(result.empty());
         }
         {
@@ -779,25 +780,25 @@ TEST_F(ExpressionTest, StringManipSubstring)
         }
     }
     {
-        StringManipSubstring stringManipSubstring(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 5),
-                                                  std::make_shared<LiteralIntegerExpression>(&repo, 1));
+        StringManipSubstring stringManipSubstring(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 5),
+                                                  std::make_shared<LiteralIntegerExpression>(mRepo, 1));
         {
             const auto result = stringManipSubstring.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             EXPECT_EQ(result.single()->type(), Element::Type::String);
             EXPECT_EQ(result.single()->asString(), " ");
         }
         {
             const auto result =
-                stringManipSubstring.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"s)});
+                stringManipSubstring.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"s)});
             EXPECT_TRUE(result.empty());
         }
     }
     {
-        StringManipSubstring stringManipSubstring(&repo, {}, {});
+        StringManipSubstring stringManipSubstring(mRepo, {}, {});
         {
             const auto result = stringManipSubstring.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             EXPECT_TRUE(result.empty());
         }
     }
@@ -806,15 +807,15 @@ TEST_F(ExpressionTest, StringManipSubstring)
 TEST_F(ExpressionTest, StringManipStartsWith)
 {
     {
-        StringManipStartsWith stringManipStartsWith(&repo, std::make_shared<LiteralStringExpression>(&repo, "hello"s));
+        StringManipStartsWith stringManipStartsWith(mRepo, std::make_shared<LiteralStringExpression>(mRepo, "hello"s));
         {
             const auto result = stringManipStartsWith.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             checkBoolResult(result, true);
         }
         {
             const auto result = stringManipStartsWith.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "moin world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "moin world"s)});
             checkBoolResult(result, false);
         }
         {
@@ -823,15 +824,15 @@ TEST_F(ExpressionTest, StringManipStartsWith)
         }
     }
     {
-        StringManipStartsWith stringManipStartsWith(&repo, std::make_shared<LiteralStringExpression>(&repo, ""s));
+        StringManipStartsWith stringManipStartsWith(mRepo, std::make_shared<LiteralStringExpression>(mRepo, ""s));
         const auto result = stringManipStartsWith.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "moin world"s)});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "moin world"s)});
         checkBoolResult(result, true);
     }
     {
-        StringManipStartsWith stringManipStartsWith(&repo, {});
+        StringManipStartsWith stringManipStartsWith(mRepo, {});
         const auto result = stringManipStartsWith.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "moin world"s)});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "moin world"s)});
         ASSERT_TRUE(result.empty());
     }
 }
@@ -839,20 +840,20 @@ TEST_F(ExpressionTest, StringManipStartsWith)
 TEST_F(ExpressionTest, StringManipContains)
 {
     {
-        StringManipContains stringManipContains(&repo, std::make_shared<LiteralStringExpression>(&repo, " wor"s));
+        StringManipContains stringManipContains(mRepo, std::make_shared<LiteralStringExpression>(mRepo, " wor"s));
         {
             const auto result = stringManipContains.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             checkBoolResult(result, true);
         }
         {
             const auto result = stringManipContains.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "moin world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "moin world"s)});
             checkBoolResult(result, true);
         }
         {
             const auto result =
-                stringManipContains.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "world"s)});
+                stringManipContains.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "world"s)});
             checkBoolResult(result, false);
         }
         {
@@ -861,18 +862,18 @@ TEST_F(ExpressionTest, StringManipContains)
         }
     }
     {
-        StringManipContains stringManipContains(&repo, {});
+        StringManipContains stringManipContains(mRepo, {});
         {
             const auto result = stringManipContains.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             checkBoolResult(result, true);
         }
     }
     {
-        StringManipContains stringManipContains(&repo, std::make_shared<LiteralStringExpression>(&repo, ""s));
+        StringManipContains stringManipContains(mRepo, std::make_shared<LiteralStringExpression>(mRepo, ""s));
         {
             const auto result = stringManipContains.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             checkBoolResult(result, true);
         }
     }
@@ -881,92 +882,92 @@ TEST_F(ExpressionTest, StringManipContains)
 TEST_F(ExpressionTest, StringManipMatches)
 {
     {
-        StringManipMatches stringManipMatches(&repo, std::make_shared<LiteralStringExpression>(&repo, ".*"s));
+        StringManipMatches stringManipMatches(mRepo, std::make_shared<LiteralStringExpression>(mRepo, ".*"s));
         {
             const auto result = stringManipMatches.eval({});
             EXPECT_TRUE(result.empty());
         }
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, ""s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, ""s)});
             checkBoolResult(result, true);
         }
         {
             const auto result = stringManipMatches.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             checkBoolResult(result, true);
         }
     }
     {
-        StringManipMatches stringManipMatches(&repo, {});
+        StringManipMatches stringManipMatches(mRepo, {});
         {
             const auto result = stringManipMatches.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             EXPECT_TRUE(result.empty());
         }
     }
     {
-        StringManipMatches stringManipMatches(&repo, std::make_shared<LiteralStringExpression>(&repo, "."s));
+        StringManipMatches stringManipMatches(mRepo, std::make_shared<LiteralStringExpression>(mRepo, "."s));
         {
             const auto result = stringManipMatches.eval({});
             EXPECT_TRUE(result.empty());
         }
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, ""s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, ""s)});
             checkBoolResult(result, false);
         }
         {
             const auto result = stringManipMatches.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
             checkBoolResult(result, false);
         }
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "h"s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "h"s)});
             checkBoolResult(result, true);
         }
     }
     {
-        const StringManipMatches stringManipMatches(&repo,
-                                                    std::make_shared<LiteralStringExpression>(&repo, "^\\d{8}$"s));
+        const StringManipMatches stringManipMatches(mRepo,
+                                                    std::make_shared<LiteralStringExpression>(mRepo, "^\\d{8}$"s));
         {
             const auto result = stringManipMatches.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "06313728"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "06313728"s)});
             checkBoolResult(result, true);
         }
         {
             const auto result = stringManipMatches.eval(
-                {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "006313728"s)});
+                {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "006313728"s)});
             checkBoolResult(result, false);
         }
     }
     {
-        const StringManipMatches stringManipMatches(&repo,
-                                                    std::make_shared<LiteralStringExpression>(&repo, "^[^-].*$"s));
+        const StringManipMatches stringManipMatches(mRepo,
+                                                    std::make_shared<LiteralStringExpression>(mRepo, "^[^-].*$"s));
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "+3,1415"s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "+3,1415"s)});
             checkBoolResult(result, true);
         }
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "3,1415"s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "3,1415"s)});
             checkBoolResult(result, true);
         }
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "+"s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "+"s)});
             checkBoolResult(result, true);
         }
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "-3,1415"s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "-3,1415"s)});
             checkBoolResult(result, false);
         }
         {
             const auto result =
-                stringManipMatches.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "-"s)});
+                stringManipMatches.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "-"s)});
             checkBoolResult(result, false);
         }
     }
@@ -974,18 +975,18 @@ TEST_F(ExpressionTest, StringManipMatches)
 
 TEST_F(ExpressionTest, StringManipReplaceMatches)
 {
-    StringManipReplaceMatches stringManipReplaceMatches(&repo,
-                                                        std::make_shared<LiteralStringExpression>(&repo, "\\\\..*"s),
-                                                        std::make_shared<LiteralStringExpression>(&repo, ""));
+    StringManipReplaceMatches stringManipReplaceMatches(mRepo,
+                                                        std::make_shared<LiteralStringExpression>(mRepo, "\\\\..*"s),
+                                                        std::make_shared<LiteralStringExpression>(mRepo, ""));
     {
         const auto result = stringManipReplaceMatches.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hallo\\\\world"s)});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hallo\\\\world"s)});
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result.single()->asString(), "hallo");
     }
     {
         const auto result = stringManipReplaceMatches.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hallo\\"s)});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hallo\\"s)});
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result.single()->asString(), "hallo\\");
     }
@@ -996,36 +997,36 @@ TEST_F(ExpressionTest, StringManipReplaceMatches2)
                 "is not working with the current implementation");
 
     StringManipReplaceMatches stringManipReplaceMatches(
-        &repo,
-        std::make_shared<LiteralStringExpression>(&repo,
+        mRepo,
+        std::make_shared<LiteralStringExpression>(mRepo,
                                                   "\\b(?<month>\\d{1,2})/(?<day>\\d{1,2})/(?<year>\\d{2,4})\\b"s),
-        std::make_shared<LiteralStringExpression>(&repo, "${day}-${month}-${year}"));
+        std::make_shared<LiteralStringExpression>(mRepo, "${day}-${month}-${year}"));
     const auto result = stringManipReplaceMatches.eval(
-        {std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "11/30/1972"s)});
+        {std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "11/30/1972"s)});
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asString(), "30-11-1972");
 }
 
 TEST_F(ExpressionTest, StringManipLength)
 {
-    StringManipLength stringManipLength(&repo);
+    StringManipLength stringManipLength(mRepo);
     {
         const auto result = stringManipLength.eval({});
         EXPECT_TRUE(result.empty());
     }
     {
         const auto result =
-            stringManipLength.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, ""s)});
+            stringManipLength.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, ""s)});
         checkIntResult(result, 0);
     }
     {
         const auto result =
-            stringManipLength.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "1"s)});
+            stringManipLength.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "1"s)});
         checkIntResult(result, 1);
     }
     {
         const auto result =
-            stringManipLength.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello world"s)});
+            stringManipLength.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello world"s)});
         checkIntResult(result, 11);
     }
 }
@@ -1052,45 +1053,45 @@ TEST_F(ExpressionTest, AmpersandOperator)
 
 TEST_F(ExpressionTest, Trace)
 {
-    UtilityTrace utilityTrace(&repo, std::make_shared<LiteralStringExpression>(&repo, "trace_name"), {});
+    UtilityTrace utilityTrace(mRepo, std::make_shared<LiteralStringExpression>(mRepo, "trace_name"), {});
     utilityTrace.eval({rootElement});
     utilityTrace.eval({});
-    utilityTrace.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)});
-    utilityTrace.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true),
-                       std::make_shared<PrimitiveElement>(&repo, Element::Type::Decimal, DecimalType("3.14"))});
+    utilityTrace.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)});
+    utilityTrace.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true),
+                       std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType("3.14"))});
 }
 
 TEST_F(ExpressionTest, CombiningUnion)
 {
     {
-        CombiningUnion combiningUnion(&repo, std::make_shared<DollarThis>(&repo), std::make_shared<DollarThis>(&repo));
-        const Collection input{std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"s),
-                               std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)};
+        CombiningUnion combiningUnion(mRepo, std::make_shared<DollarThis>(mRepo), std::make_shared<DollarThis>(mRepo));
+        const Collection input{std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"s),
+                               std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)};
         const auto result = combiningUnion.eval(input);
         EXPECT_EQ(input.equals(result), true);
     }
     {
-        CombiningUnion combiningUnion(&repo, std::make_shared<DollarThis>(&repo),
-                                      std::make_shared<LiteralStringExpression>(&repo, "hello"s));
+        CombiningUnion combiningUnion(mRepo, std::make_shared<DollarThis>(mRepo),
+                                      std::make_shared<LiteralStringExpression>(mRepo, "hello"s));
         {
-            const Collection input{std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"s),
-                                   std::make_shared<PrimitiveElement>(&repo, Element::Type::Boolean, true)};
+            const Collection input{std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"s),
+                                   std::make_shared<PrimitiveElement>(mRepo, Element::Type::Boolean, true)};
             const auto result = combiningUnion.eval(input);
             EXPECT_EQ(input.equals(result), true);
         }
         const auto result =
-            combiningUnion.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "world"s)});
+            combiningUnion.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "world"s)});
         EXPECT_EQ(result.size(), 2);
-        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "hello"s)));
-        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "world"s)));
+        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"s)));
+        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "world"s)));
     }
 }
 
 TEST_F(ExpressionTest, CombiningCombine)
 {
-    CombiningCombine combiningCombine(&repo, std::make_shared<DollarThis>(&repo));
+    CombiningCombine combiningCombine(mRepo, std::make_shared<DollarThis>(mRepo));
     const auto result =
-        combiningCombine.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "world"s)});
+        combiningCombine.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "world"s)});
     ASSERT_EQ(result.size(), 2);
     ASSERT_EQ(result[0]->asString(), "world"s);
     ASSERT_EQ(result[1]->asString(), "world"s);
@@ -1098,30 +1099,30 @@ TEST_F(ExpressionTest, CombiningCombine)
 
 TEST_F(ExpressionTest, CollectionsInOperator)
 {
-    CollectionsInOperator collectionsInOperator(&repo, std::make_shared<LiteralQuantityExpression>(&repo, "10 m"),
-                                                std::make_shared<DollarThis>(&repo));
-    CollectionsInOperator emptycollectionsInOperator(&repo, {}, std::make_shared<DollarThis>(&repo));
+    CollectionsInOperator collectionsInOperator(mRepo, std::make_shared<LiteralQuantityExpression>(mRepo, "10 m"),
+                                                std::make_shared<DollarThis>(mRepo));
+    CollectionsInOperator emptycollectionsInOperator(mRepo, {}, std::make_shared<DollarThis>(mRepo));
     {
         const auto result = collectionsInOperator.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsInOperator.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m")),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m")),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsInOperator.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m")),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "x"s)});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m")),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "x"s)});
         checkBoolResult(result, true);
     }
     {
         const auto result =
-            collectionsInOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 10),
-                                        std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "x"s)});
+            collectionsInOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 10),
+                                        std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "x"s)});
         checkBoolResult(result, false);
     }
     {
@@ -1134,38 +1135,38 @@ TEST_F(ExpressionTest, CollectionsInOperator)
     }
     {
         const auto result =
-            emptycollectionsInOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 10),
-                                             std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "x"s)});
+            emptycollectionsInOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 10),
+                                             std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "x"s)});
         EXPECT_TRUE(result.empty());
     }
 }
 
 TEST_F(ExpressionTest, CollectionsContainsOperator)
 {
-    CollectionsContainsOperator collectionsContainsOperator(&repo, std::make_shared<DollarThis>(&repo),
-                                                            std::make_shared<LiteralQuantityExpression>(&repo, "10 m"));
-    CollectionsContainsOperator emptycollectionsContainsOperator(&repo, std::make_shared<DollarThis>(&repo), {});
+    CollectionsContainsOperator collectionsContainsOperator(mRepo, std::make_shared<DollarThis>(mRepo),
+                                                            std::make_shared<LiteralQuantityExpression>(mRepo, "10 m"));
+    CollectionsContainsOperator emptycollectionsContainsOperator(mRepo, std::make_shared<DollarThis>(mRepo), {});
     {
         const auto result = collectionsContainsOperator.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsContainsOperator.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m")),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m")),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m"))});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsContainsOperator.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Quantity, Element::QuantityType(10, "m")),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "x"s)});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Quantity, Element::QuantityType(10, "m")),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "x"s)});
         checkBoolResult(result, true);
     }
     {
         const auto result =
-            collectionsContainsOperator.eval({std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 10),
-                                              std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "x"s)});
+            collectionsContainsOperator.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 10),
+                                              std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "x"s)});
         checkBoolResult(result, false);
     }
     {
@@ -1178,8 +1179,8 @@ TEST_F(ExpressionTest, CollectionsContainsOperator)
     }
     {
         const auto result = emptycollectionsContainsOperator.eval(
-            {std::make_shared<PrimitiveElement>(&repo, Element::Type::Integer, 10),
-             std::make_shared<PrimitiveElement>(&repo, Element::Type::String, "x"s)});
+            {std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 10),
+             std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "x"s)});
         EXPECT_TRUE(result.empty());
     }
 }
@@ -1187,34 +1188,34 @@ TEST_F(ExpressionTest, CollectionsContainsOperator)
 TEST_F(ExpressionTest, MathModTest)
 {
     {
-        MathModOperator mathModOperator(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 5),
-                                        std::make_shared<LiteralIntegerExpression>(&repo, 2));
+        MathModOperator mathModOperator(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 5),
+                                        std::make_shared<LiteralIntegerExpression>(mRepo, 2));
         const auto result = mathModOperator.eval({});
         checkIntResult(result, 1);
     }
     {
-        MathModOperator mathModOperator(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 5),
-                                        std::make_shared<LiteralIntegerExpression>(&repo, 0));
+        MathModOperator mathModOperator(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 5),
+                                        std::make_shared<LiteralIntegerExpression>(mRepo, 0));
         const auto result = mathModOperator.eval({});
         EXPECT_TRUE(result.empty());
     }
     {
-        MathModOperator mathModOperator(&repo, std::make_shared<LiteralDecimalExpression>(&repo, DecimalType("5.5")),
-                                        std::make_shared<LiteralDecimalExpression>(&repo, DecimalType("0.7")));
+        MathModOperator mathModOperator(mRepo, std::make_shared<LiteralDecimalExpression>(mRepo, DecimalType("5.5")),
+                                        std::make_shared<LiteralDecimalExpression>(mRepo, DecimalType("0.7")));
         const auto result = mathModOperator.eval({});
         ASSERT_EQ(result.size(), 1);
         EXPECT_EQ(result.single()->asDecimal(), DecimalType("0.6")) << result.single()->asDecimal().str();
     }
     {
-        MathModOperator mathModOperator(&repo, std::make_shared<LiteralDecimalExpression>(&repo, DecimalType(5)),
-                                        std::make_shared<LiteralIntegerExpression>(&repo, 2));
+        MathModOperator mathModOperator(mRepo, std::make_shared<LiteralDecimalExpression>(mRepo, DecimalType(5)),
+                                        std::make_shared<LiteralIntegerExpression>(mRepo, 2));
         const auto result = mathModOperator.eval({});
         ASSERT_EQ(result.size(), 1);
         EXPECT_EQ(result.single()->asDecimal(), DecimalType("1"));
     }
     {
-        MathModOperator mathModOperator(&repo, std::make_shared<LiteralIntegerExpression>(&repo, 5),
-                                        std::make_shared<LiteralDecimalExpression>(&repo, DecimalType(2)));
+        MathModOperator mathModOperator(mRepo, std::make_shared<LiteralIntegerExpression>(mRepo, 5),
+                                        std::make_shared<LiteralDecimalExpression>(mRepo, DecimalType(2)));
         const auto result = mathModOperator.eval({});
         ASSERT_EQ(result.size(), 1);
         EXPECT_EQ(result.single()->asDecimal(), DecimalType("1"));

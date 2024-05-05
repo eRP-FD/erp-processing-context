@@ -9,7 +9,7 @@
 #include "erp/model/ResourceNames.hxx"
 
 #include <libxml/xpath.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include <tuple>
 

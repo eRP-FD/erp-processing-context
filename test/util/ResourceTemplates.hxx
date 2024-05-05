@@ -42,6 +42,7 @@ struct KbvBundleOptions
     std::optional<std::string_view> forceAuthoredOn = std::nullopt;
     std::optional<std::string_view> forceKvid10Ns = std::nullopt;
     std::string_view patientIdentifierSystem = "http://fhir.de/CodeSystem/identifier-type-de-basis";
+    std::string darreichungsfrom = "TAB";
 };
 
 std::string kbvBundleXml(const KbvBundleOptions& bundleOptions = {});

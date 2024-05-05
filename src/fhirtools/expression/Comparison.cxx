@@ -13,8 +13,9 @@
 namespace fhirtools
 {
 
-ComparisonOperator::ComparisonOperator(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs,
-                                       ExpressionPtr rhs)
+ComparisonOperator::ComparisonOperator(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+    ExpressionPtr rhs)
     : BinaryExpression(fhirStructureRepository, std::move(lhs), std::move(rhs))
 {
     FPExpect(mLhs && mRhs, "missing mandatory argument");

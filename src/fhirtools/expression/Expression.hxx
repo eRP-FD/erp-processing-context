@@ -22,7 +22,7 @@ class Expression
 {
 public:
     virtual ~Expression() = default;
-    explicit Expression(const FhirStructureRepository* fhirStructureRepository);
+    explicit Expression(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository);
     virtual Collection eval(const Collection&) const = 0;
 
     virtual std::string debugInfo() const
@@ -41,14 +41,15 @@ protected:
     std::shared_ptr<PrimitiveElement> makeTimeElement(const Time& value) const;
     std::shared_ptr<PrimitiveElement> makeQuantityElement(const Element::QuantityType& value) const;
 
-    const FhirStructureRepository* mFhirStructureRepository;
+    const std::shared_ptr<const fhirtools::FhirStructureRepository> mFhirStructureRepository;
 };
 using ExpressionPtr = std::shared_ptr<Expression>;
 
 class UnaryExpression : public Expression
 {
 public:
-    explicit UnaryExpression(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg);
+    explicit UnaryExpression(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                             ExpressionPtr arg);
 
 protected:
     ExpressionPtr mArg;
@@ -57,7 +58,8 @@ protected:
 class BinaryExpression : public Expression
 {
 public:
-    BinaryExpression(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs, ExpressionPtr rhs);
+    BinaryExpression(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                     ExpressionPtr lhs, ExpressionPtr rhs);
 
 protected:
     ExpressionPtr mLhs;
@@ -76,7 +78,8 @@ public:
 class PathSelection : public Expression
 {
 public:
-    explicit PathSelection(const FhirStructureRepository* fhirStructureRepository, const std::string& subElement);
+    explicit PathSelection(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                           const std::string& subElement);
     Collection eval(const Collection& collection) const override;
 
     std::string debugInfo() const override;
@@ -159,15 +162,14 @@ class UtilityToday : public Expression
 };
 
 
-
 // http://hl7.org/fhirpath/N1/#is-type-specifier
 class TypesIsOperator : public Expression
 {
 public:
     static constexpr auto IDENTIFIER = "is";
-    explicit TypesIsOperator(const FhirStructureRepository* fhirStructureRepository, const ExpressionPtr expression,
-                             const std::string& type);
-    explicit TypesIsOperator(const FhirStructureRepository* fhirStructureRepository,
+    explicit TypesIsOperator(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                             const ExpressionPtr expression, const std::string& type);
+    explicit TypesIsOperator(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
                              const ExpressionPtr typeExpression);
     Collection eval(const Collection& collection) const override;
 
@@ -182,8 +184,8 @@ class TypeAsOperator : public Expression
 {
 public:
     static constexpr auto IDENTIFIER = "as";
-    explicit TypeAsOperator(const FhirStructureRepository* fhirStructureRepository, const ExpressionPtr expression,
-                            const std::string& type);
+    explicit TypeAsOperator(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                            const ExpressionPtr expression, const std::string& type);
     Collection eval(const Collection& collection) const override;
 
 protected:
@@ -213,8 +215,9 @@ class CollectionsContainsOperator : public CollectionsInOperator
 {
 public:
     static constexpr auto IDENTIFIER = "contains";
-    CollectionsContainsOperator(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs,
-                                ExpressionPtr rhs);
+    CollectionsContainsOperator(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+        ExpressionPtr rhs);
 };
 }
 #endif//FHIR_TOOLS_SRC_FHIR_PATH_EXPRESSION_EXPRESSION_HXX

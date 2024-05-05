@@ -97,7 +97,8 @@ protected:
         const auto& fileContent = resourceManager.getStringResource(resourcePath.native());
         auto doc = std::make_unique<JsonDoc>(JsonDoc::fromJson(fileContent));
         std::string resourceType{doc->getStringValueFromPointer(resourceTypePointer)};
-        auto result = std::make_shared<ResultHelper>(&repo(), std::weak_ptr<ErpElement>{}, resourceType, doc.get());
+        auto result = std::make_shared<ResultHelper>(repo().shared_from_this(), std::weak_ptr<ErpElement>{},
+                                                     resourceType, doc.get());
         result->doc = std::move(doc);
         return result;
     }
@@ -112,10 +113,10 @@ protected:
     }
     static const FhirStructureRepository& repo()
     {
-        static std::unique_ptr<const FhirStructureRepository> instance =
+        static std::unique_ptr<const FhirStructureRepositoryBackend> instance =
             DefaultFhirStructureRepository::create(getProfileList());
         Expect3(instance != nullptr, "Failed to load repo", std::logic_error);
-        return *instance;
+        return *instance->defaultView();
     }
     ResourceManager& resourceManager = ResourceManager::instance();
 };

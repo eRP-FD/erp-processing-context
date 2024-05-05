@@ -13,7 +13,7 @@
 #include "erp/util/DurationConsumer.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <pqxx/pqxx>
 
 namespace QueryIndices

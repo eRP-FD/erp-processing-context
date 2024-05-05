@@ -28,7 +28,8 @@ public:
         EXPECT_TRUE(task->findElement("Task.performerType"));
     }
     static constexpr std::string_view erxTaskUrl{"https://gematik.de/fhir/StructureDefinition/ErxTask"};
-    static constexpr std::string_view gemErpPrTaskUrl{"https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"};
+    static constexpr std::string_view gemErpPrTaskUrl{
+        "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"};
 };
 
 
@@ -38,13 +39,10 @@ TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-
         return ResourceManager::getAbsoluteFilename(p);
     };
 
-    auto fileList = {
-        mkres("fhir/hl7.org/profiles-resources.xml"),
-        mkres("fhir/hl7.org/profiles-types.xml"),
-        mkres("fhir/hl7.org/valuesets.xml")
-    };
+    auto fileList = {mkres("fhir/hl7.org/profiles-resources.xml"), mkres("fhir/hl7.org/profiles-types.xml"),
+                     mkres("fhir/hl7.org/valuesets.xml")};
 
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
 
     EXPECT_NO_THROW(repo.load(fileList));
     const auto* const hl7task = repo.findTypeById("Task");
@@ -75,7 +73,7 @@ TEST_F(FhirStructureRepositoryTest, missingBase)
         mkres("fhir/hl7.org/profiles-resources.xml"),
     };
 
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
 
     EXPECT_ANY_THROW(repo.load(fileList));
 }
@@ -89,7 +87,7 @@ TEST_F(FhirStructureRepositoryTest, loadFromConfigurationOldProfiles)
         fileList.emplace_back(item);
     }
 
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
     EXPECT_NO_THROW(repo.load(fileList));
     const auto* const erxTask = repo.findDefinitionByUrl(std::string{erxTaskUrl});
     ASSERT_NO_FATAL_FAILURE(checkTaskFields(erxTask));
@@ -104,7 +102,7 @@ TEST_F(FhirStructureRepositoryTest, loadFromConfigurationNewProfiles)
         fileList.emplace_back(item);
     }
 
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
     EXPECT_NO_THROW(repo.load(fileList));
     const auto* const erxTask = repo.findDefinitionByUrl(std::string{gemErpPrTaskUrl});
     ASSERT_NO_FATAL_FAILURE(checkTaskFields(erxTask));

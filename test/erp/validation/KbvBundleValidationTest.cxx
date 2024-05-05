@@ -19,7 +19,7 @@
 #include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <ostream>
 
 #include "test_config.h"
@@ -298,13 +298,6 @@ INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Composition_Valid, KbvWithEm
                              fs::path(TEST_DATA_DIR) /
                                  "validation/xml/kbv/bundle/Bundle_placeholder_Composition.xml",
                              model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
-INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Composition_SupplyRequest_Valid, KbvWithEmbeddedValidationTestParams,
-                         testing::ValuesIn(makeKbvWithPlaceholderParams(
-                             true, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/composition/",
-                             "Composition_SupplyRequest_valid", SchemaType::KBV_PR_ERP_Bundle,
-                             model::ResourceVersion::KbvItaErp::v1_0_2, fs::path(TEST_DATA_DIR) /
-                                 "validation/xml/kbv/bundle/Bundle_placeholder_Composition_SupplyRequest.xml",
-                             model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
 INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Composition_Invalid, KbvWithEmbeddedValidationTestParams,
                          testing::ValuesIn(makeKbvWithPlaceholderParams(
                              false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/composition/", "Composition_invalid",
@@ -351,21 +344,6 @@ INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Patient_Invalid, KbvWithEmbe
                              SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
                              fs::path(TEST_DATA_DIR) / "validation/xml/kbv/bundle/Bundle_placeholder_Patient.xml",
                              model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
-
-INSTANTIATE_TEST_SUITE_P(
-    KBV_PR_ERP_Bundle_embedded_PracticeSupply_Valid, KbvWithEmbeddedValidationTestParams,
-    testing::ValuesIn(makeKbvWithPlaceholderParams(
-        true, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/practicesupply/", "PracticeSupply_valid",
-        SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
-        fs::path(TEST_DATA_DIR) / "validation/xml/kbv/bundle/Bundle_placeholder_PracticeSupply.xml",
-        model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
-INSTANTIATE_TEST_SUITE_P(
-    KBV_PR_ERP_Bundle_embedded_PracticeSupply_Invalid, KbvWithEmbeddedValidationTestParams,
-    testing::ValuesIn(makeKbvWithPlaceholderParams(
-        false, fs::path(TEST_DATA_DIR) / "validation/xml/kbv/practicesupply/", "PracticeSupply_invalid",
-        SchemaType::KBV_PR_ERP_Bundle, model::ResourceVersion::KbvItaErp::v1_0_2,
-        fs::path(TEST_DATA_DIR) / "validation/xml/kbv/bundle/Bundle_placeholder_PracticeSupply.xml",
-        model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)));
 
 INSTANTIATE_TEST_SUITE_P(KBV_PR_ERP_Bundle_embedded_Practitioner_Valid, KbvWithEmbeddedValidationTestParams,
                          testing::ValuesIn(makeKbvWithPlaceholderParams(

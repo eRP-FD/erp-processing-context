@@ -1,13 +1,13 @@
 sources:
-  3.1.4:
-    sha256: 840af5366ab9b522bde525826be3ef0fb0af81c6a9ebd84caa600fea1731eee3
+  3.1.5:
+    sha256: 6ae015467dabf0469b139ada93319327be24b98251ffaeceda0221848dc09262
     url:
-      - "https://www.openssl.org/source/openssl-3.1.4.tar.gz"
-      - "https://www.openssl.org/source/old/3.1.4/openssl-3.1.4.tar.gz"
+      - "https://www.openssl.org/source/openssl-3.1.5.tar.gz"
+      - "https://www.openssl.org/source/old/3.1.5/openssl-3.1.5.tar.gz"
 
 patches:
-  3.1.4:
-    - patch_file: patches/0001-3.1.4-erp-cms.patch
+  3.1.5:
+    - patch_file: patches/0001-3.1.5-erp-cms.patch
       patch_description: "erp-cms"
-    - patch_file: patches/0002-3.1.4-erp-cms-counter-signature.patch
+    - patch_file: patches/0002-3.1.5-erp-cms-counter-signature.patch
       patch_description: "erp-cms-counter-signature"

@@ -285,8 +285,9 @@ public:
     [[nodiscard]] static TDerivedModel fromJson(const rapidjson::Value& json);
     [[nodiscard]] static TDerivedModel fromJson(model::NumberAsStringParserDocument&& json);
 
-    [[nodiscard]] fhirtools::ValidationResults
-    genericValidate(model::ResourceVersion::FhirProfileBundleVersion, const fhirtools::ValidatorOptions&) const;
+    [[nodiscard]] fhirtools::ValidationResults genericValidate(const model::Timestamp& referenceTimestamp,
+                                                               model::ResourceVersion::FhirProfileBundleVersion,
+                                                               const fhirtools::ValidatorOptions&) const;
 
     virtual void additionalValidation() const;
 

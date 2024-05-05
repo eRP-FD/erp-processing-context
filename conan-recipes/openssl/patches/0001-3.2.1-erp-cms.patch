@@ -1,0 +1,149 @@
+From 115086b205d2b55d8a06aea324d10fa59337f198 Mon Sep 17 00:00:00 2001
+From: redacted <redacted>
+Date: Tue, 26 Mar 2024 08:14:53 +0100
+Subject: [PATCH 1/2] 3.2.1-erp-cms
+
+---
+ crypto/cms/cms_asn1.c    |  3 +-
+ crypto/cms/cms_lib.c     | 71 ++++++++++++++++++++++++++++++++++++++++
+ crypto/cms/cms_local.h   |  1 +
+ include/openssl/cms.h.in |  8 +++++
+ 4 files changed, 82 insertions(+), 1 deletion(-)
+
+diff --git a/crypto/cms/cms_asn1.c b/crypto/cms/cms_asn1.c
+index bc6b2769f9..407fefc835 100644
+--- a/crypto/cms/cms_asn1.c
++++ b/crypto/cms/cms_asn1.c
+@@ -68,7 +68,8 @@ ASN1_SEQUENCE_cb(CMS_SignerInfo, cms_si_cb) = {
+ ASN1_SEQUENCE(CMS_OtherRevocationInfoFormat) = {
+         ASN1_SIMPLE(CMS_OtherRevocationInfoFormat, otherRevInfoFormat, ASN1_OBJECT),
+         ASN1_OPT(CMS_OtherRevocationInfoFormat, otherRevInfo, ASN1_ANY)
+-} static_ASN1_SEQUENCE_END(CMS_OtherRevocationInfoFormat)
++} ASN1_SEQUENCE_END(CMS_OtherRevocationInfoFormat)
++
+ 
+ ASN1_CHOICE(CMS_RevocationInfoChoice) = {
+         ASN1_SIMPLE(CMS_RevocationInfoChoice, d.crl, X509_CRL),
+diff --git a/crypto/cms/cms_lib.c b/crypto/cms/cms_lib.c
+index afc210c9d0..8f62316bbf 100644
+--- a/crypto/cms/cms_lib.c
++++ b/crypto/cms/cms_lib.c
+@@ -630,6 +630,26 @@ int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl)
+     return 0;
+ }
+ 
++int CMS_add0_otherRevocationInfoChoice(CMS_ContentInfo *cms,
++                                       ASN1_OBJECT* formatObject,
++                                       ASN1_TYPE* data)
++{
++    CMS_RevocationInfoChoice *rch;
++    rch = CMS_add0_RevocationInfoChoice(cms);
++    if (!rch)
++        return 0;
++
++    rch->type = CMS_REVCHOICE_OTHER;
++    rch->d.other = M_ASN1_new_of(CMS_OtherRevocationInfoFormat);
++    if (!rch->d.other)
++        return 0;
++
++    rch->d.other->otherRevInfoFormat = formatObject;
++    rch->d.other->otherRevInfo = data;
++
++    return 1;
++}
++
+ STACK_OF(X509) *CMS_get1_certs(CMS_ContentInfo *cms)
+ {
+     STACK_OF(X509) *certs = NULL;
+@@ -681,6 +701,57 @@ STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms)
+     return crls;
+ }
+ 
++int CMS_get_anotherRevocationInfo_by_format(CMS_ContentInfo *cms,
++                                            ASN1_OBJECT* formatObject,
++                                            int lastpos)
++{
++    if (!cms || !formatObject)
++      return -1;
++
++    STACK_OF(CMS_RevocationInfoChoice) **pcrls;
++    CMS_RevocationInfoChoice *rch;
++    int i;
++    pcrls = cms_get0_revocation_choices(cms);
++    if (!pcrls)
++        return -1;
++
++    int startIndex = lastpos + 1;
++    if (startIndex < 0)
++        startIndex = 0;
++    for (i = startIndex; i < sk_CMS_RevocationInfoChoice_num(*pcrls); i++) {
++        rch = sk_CMS_RevocationInfoChoice_value(*pcrls, i);
++        if (rch
++            && rch->type == CMS_REVCHOICE_OTHER
++            && rch->d.other
++            && rch->d.other->otherRevInfoFormat
++            && OBJ_cmp(rch->d.other->otherRevInfoFormat, formatObject) == 0) {
++            return i;
++        }
++    }
++    return -1;
++}
++
++ASN1_TYPE* CMS_get0_anotherRevocationInfo(CMS_ContentInfo *cms, int idx)
++{
++    if (!cms)
++      return NULL;
++
++    STACK_OF(CMS_RevocationInfoChoice) **pcrls;
++    CMS_RevocationInfoChoice *rch;
++    pcrls = cms_get0_revocation_choices(cms);
++    if (!pcrls)
++        return NULL;
++
++    if (idx < 0 || idx >= sk_CMS_RevocationInfoChoice_num(*pcrls))
++        return NULL;
++
++    rch = sk_CMS_RevocationInfoChoice_value(*pcrls, idx);
++    if (rch && rch->type == 1 && rch->d.other)
++        return rch->d.other->otherRevInfo;
++
++    return NULL;
++}
++
+ int ossl_cms_ias_cert_cmp(CMS_IssuerAndSerialNumber *ias, X509 *cert)
+ {
+     int ret;
+diff --git a/crypto/cms/cms_local.h b/crypto/cms/cms_local.h
+index 7069021267..ae2a01ea14 100644
+--- a/crypto/cms/cms_local.h
++++ b/crypto/cms/cms_local.h
+@@ -495,6 +495,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
+ DECLARE_ASN1_ITEM(CMS_KeyTransRecipientInfo)
+ DECLARE_ASN1_ITEM(CMS_OriginatorPublicKey)
+ DECLARE_ASN1_ITEM(CMS_OtherKeyAttribute)
++DECLARE_ASN1_ITEM(CMS_OtherRevocationInfoFormat)
+ DECLARE_ASN1_ITEM(CMS_Receipt)
+ DECLARE_ASN1_ITEM(CMS_ReceiptRequest)
+ DECLARE_ASN1_ITEM(CMS_RecipientEncryptedKey)
+diff --git a/include/openssl/cms.h.in b/include/openssl/cms.h.in
+index 239667700a..2efb52fbd3 100644
+--- a/include/openssl/cms.h.in
++++ b/include/openssl/cms.h.in
+@@ -275,6 +275,14 @@ int CMS_add0_crl(CMS_ContentInfo *cms, X509_CRL *crl);
+ int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl);
+ STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms);
+ 
++int CMS_add0_otherRevocationInfoChoice(CMS_ContentInfo *cms,
++                                       ASN1_OBJECT* formatObject,
++                                       ASN1_TYPE* data);
++int CMS_get_anotherRevocationInfo_by_format(CMS_ContentInfo *cms,
++                                            ASN1_OBJECT* formatObject,
++                                            int lastpos);
++ASN1_TYPE* CMS_get0_anotherRevocationInfo(CMS_ContentInfo *cms, int idx);
++
+ int CMS_SignedData_init(CMS_ContentInfo *cms);
+ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+                                 X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
+-- 
+2.40.1
+

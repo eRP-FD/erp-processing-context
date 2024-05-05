@@ -285,14 +285,14 @@ TEST(FhirStructureDefinitionParserTest, ValueSets)
 
 TEST(FhirStructureDefinitionParserTest, contentReference)
 {
-    const auto& repo = Fhir::instance().structureRepository();
-    const auto* bundleStructDef = repo.findTypeById("Bundle");
+    const auto repo = Fhir::instance().structureRepository(model::Timestamp::now());
+    const auto* bundleStructDef = repo->findTypeById("Bundle");
     ASSERT_NE(bundleStructDef, nullptr);
     const auto& entryLinkElementDef = bundleStructDef->findElement("Bundle.entry.link");
     ASSERT_NE(entryLinkElementDef, nullptr);
     ASSERT_TRUE(entryLinkElementDef->typeId().empty());
     std::optional<fhirtools::FhirStructureRepository::ContentReferenceResolution> resolution;
-    ASSERT_NO_THROW(resolution.emplace(repo.resolveContentReference(*entryLinkElementDef)));
+    ASSERT_NO_THROW(resolution.emplace(repo->resolveContentReference(*entryLinkElementDef)));
     ASSERT_NE(resolution->element, nullptr);
     EXPECT_EQ(resolution->element->name(), "Bundle.link");
 }

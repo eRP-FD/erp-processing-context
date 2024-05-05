@@ -18,13 +18,13 @@ using namespace fhirtools;
 class FhirValueSetTest : public ::testing::Test
 {
 public:
-    const FhirStructureRepository& repo = DefaultFhirStructureRepository::get();
+    const FhirStructureRepositoryBackend& repo = DefaultFhirStructureRepository::get();
 };
 
 TEST_F(FhirValueSetTest, OperatorSpaceship)
 {
-    FhirValueSet::Code code1{.code="Code", .caseSensitive=true, .codeSystem="CodeSystem"};
-    FhirValueSet::Code code2{.code="Code", .caseSensitive=false, .codeSystem=""};
+    FhirValueSet::Code code1{.code = "Code", .caseSensitive = true, .codeSystem = "CodeSystem"};
+    FhirValueSet::Code code2{.code = "Code", .caseSensitive = false, .codeSystem = ""};
     const auto result = code1 <=> code2;
     EXPECT_EQ(result, std::strong_ordering::equal);
     EXPECT_TRUE(code1 == code2);
@@ -36,8 +36,8 @@ TEST_F(FhirValueSetTest, OperatorSpaceship)
 
 TEST_F(FhirValueSetTest, OperatorSpaceshipCaseInSensitive)
 {
-    FhirValueSet::Code code1{.code="[Code]", .caseSensitive=false, .codeSystem="CodeSystem"};
-    FhirValueSet::Code code2{.code="[CoDE]", .caseSensitive=false, .codeSystem="CodeSystem"};
+    FhirValueSet::Code code1{.code = "[Code]", .caseSensitive = false, .codeSystem = "CodeSystem"};
+    FhirValueSet::Code code2{.code = "[CoDE]", .caseSensitive = false, .codeSystem = "CodeSystem"};
     const auto result = code1 <=> code2;
     EXPECT_EQ(result, std::strong_ordering::equal);
     EXPECT_TRUE(code1 == code2);
@@ -50,7 +50,7 @@ TEST_F(FhirValueSetTest, OperatorSpaceshipCaseInSensitive)
 
 TEST(FhirValueSetTestContains, run)
 {
-    FhirStructureRepository repo;
+    FhirStructureRepositoryBackend repo;
     FhirValueSet::Builder builder;
     builder.url("test");
     builder.name("test");

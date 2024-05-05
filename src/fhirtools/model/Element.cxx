@@ -192,22 +192,22 @@ std::string fhirtools::to_string(const Element::Identity& ri)
     return oss.str();
 }
 
-Element::Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
-                 ProfiledElementTypeInfo definitionPointer)
+Element::Element(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                 std::weak_ptr<const Element> parent, ProfiledElementTypeInfo definitionPointer)
     : mFhirStructureRepository(fhirStructureRepository)
     , mDefinitionPointer(std::move(definitionPointer))
     , mParent(std::move(parent))
-    , mType(GetElementType(fhirStructureRepository, mDefinitionPointer))
+    , mType(GetElementType(fhirStructureRepository.get(), mDefinitionPointer))
 {
     Expect3(mFhirStructureRepository != nullptr, "fhirStructureRepository must not be nullptr", std::logic_error);
 }
 
-Element::Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
-                 const std::string& elementId)
+Element::Element(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                 std::weak_ptr<const Element> parent, const std::string& elementId)
     : mFhirStructureRepository(fhirStructureRepository)
     , mDefinitionPointer(fhirStructureRepository, elementId)
     , mParent(std::move(parent))
-    , mType(GetElementType(fhirStructureRepository, mDefinitionPointer))
+    , mType(GetElementType(fhirStructureRepository.get(), mDefinitionPointer))
 {
     Expect3(mFhirStructureRepository != nullptr, "fhirStructureRepository must not be nullptr", std::logic_error);
 }
@@ -279,7 +279,7 @@ Element::Type Element::GetElementType(const FhirStructureRepository* fhirStructu
 }
 
 
-const fhirtools::FhirStructureRepository* Element::getFhirStructureRepository() const
+const std::shared_ptr<const fhirtools::FhirStructureRepository>& Element::getFhirStructureRepository() const
 {
     return mFhirStructureRepository;
 }
@@ -468,7 +468,8 @@ Element::IdentityAndResult Element::referenceTargetIdentity(IdentityAndResult re
     {
         const auto& resourceTypes = mFhirStructureRepository->findCodeSystem(constants::resourceTypesUrl, std::nullopt);
         const std::string_view resourceType{reference.identity.pathOrId.begin(),
-                                      reference.identity.pathOrId.begin() + gsl::narrow<std::string_view::difference_type>(slashPos)};
+                                            reference.identity.pathOrId.begin() +
+                                                gsl::narrow<std::string_view::difference_type>(slashPos)};
         if (resourceTypes->containsCode(resourceType))
         {
             return relativeReferenceTargetIdentity(std::move(reference), resourceRoot, elementFullPath);
@@ -957,9 +958,11 @@ bool Element::QuantityType::convertibleToUnit(const std::string& unit) const
     return mUnit == unit;
 }
 
-PrimitiveElement::PrimitiveElement(const FhirStructureRepository* fhirStructureRepository, Type type, ValueType&& value)
+PrimitiveElement::PrimitiveElement(
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, Type type,
+    ValueType&& value)
     : Element(fhirStructureRepository, {},
-              ProfiledElementTypeInfo{GetStructureDefinition(fhirStructureRepository, type)})
+              ProfiledElementTypeInfo{GetStructureDefinition(fhirStructureRepository.get(), type)})
     , mValue(value)
 {
     using namespace std::string_literals;

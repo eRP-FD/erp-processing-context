@@ -39,7 +39,8 @@ ProfiledElementTypeInfo::ProfiledElementTypeInfo(const FhirStructureDefinition* 
     }
 }
 
-ProfiledElementTypeInfo::ProfiledElementTypeInfo(const FhirStructureRepository* repo, std::string_view elementId)
+ProfiledElementTypeInfo::ProfiledElementTypeInfo(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+                                                 std::string_view elementId)
     : ProfiledElementTypeInfo{get<ProfiledElementTypeInfo>(repo->resolveBaseContentReference(elementId))}
 {
 }

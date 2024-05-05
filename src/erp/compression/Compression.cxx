@@ -8,7 +8,7 @@
 #include "erp/compression/Compression.hxx"
 #include "erp/util/Expect.hxx"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <ostream>
 #include <stdexcept>
 

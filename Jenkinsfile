@@ -103,12 +103,23 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.13.0"
-                                    sh "cd /media/erp && scripts/ci-build.sh " +
+                                    def erp_release_version = "1.14.0"
+                                    def result = sh(returnStatus: true, script: "cd /media/erp && scripts/ci-build.sh "+
                                             "--build_version='${erp_build_version}' " +
-                                            "--release_version='${erp_release_version}'"
+                                            "--release_version='${erp_release_version}'")
+                                    if (result == 2) {
+                                        echo "WARNING: the conan-center-binaries repository has been disabled"
+                                    }
+                                    else if (result != 0){
+                                        error('build failed')
+                                    }
                                 }
                             }
+                        }
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'jenkins-build-debug/conan_trace.log', allowEmptyArchive:true
                         }
                     }
                 }
@@ -142,6 +153,8 @@ pipeline {
                                                 redis-plus-plus
                                                 zlib
                                                 zstd
+                                                libunwind
+                                                cmake
                                         )
 
                                         declare -a private_packages=(
@@ -160,7 +173,7 @@ pipeline {
                                                             --remote \${repo} \
                                                             --no-overwrite all \
                                                             --confirm \
-                                                            "\${package}/*"
+                                                            "\${package}/*" || echo "upload \${package} failed"
                                             done
                                         }
                                         upload_packages erp "\${private_packages[@]}"
@@ -296,7 +309,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.13.0"
+                                def release_version = "1.14.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -336,7 +349,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.13.0"
+                                def release_version = "1.14.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +

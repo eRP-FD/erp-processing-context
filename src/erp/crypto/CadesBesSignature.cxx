@@ -340,7 +340,7 @@ namespace
         if (ocspCheckDescriptor.providedOcspResponse == nullptr)
         {
             // no ocsp request should be triggered, the ocsp response should be provided from the cache
-            TrustStore::OcspResponseData requestedOcspResponseData =
+            OcspResponse requestedOcspResponseData =
                 tslManager.getCertificateOcspResponse(
                     tslMode, certificate, certificateTypes, ocspCheckDescriptor);
             OcspResponsePtr requestedOcspResponse =

@@ -15,7 +15,7 @@
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 #include <compare>
 #include <cstdint>
 #include <memory>
@@ -79,10 +79,10 @@ public:
         auto operator==(const IdentityAndResult&) const = delete;
     };
 
-    Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
-            ProfiledElementTypeInfo mDefinitionPointer);
-    Element(const FhirStructureRepository* fhirStructureRepository, std::weak_ptr<const Element> parent,
-            const std::string& elementId);
+    Element(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+            std::weak_ptr<const Element> parent, ProfiledElementTypeInfo mDefinitionPointer);
+    Element(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+            std::weak_ptr<const Element> parent, const std::string& elementId);
     virtual ~Element() = default;
 
     void setIsContextElement(const std::shared_ptr<IsContextElementTag>& tag) const;
@@ -120,7 +120,7 @@ public:
     [[nodiscard]] static Type GetElementType(const FhirStructureRepository* fhirStructureRepository,
                                              const FhirStructureDefinition* structureDefinition,
                                              const std::string& elementId);
-    [[nodiscard]] const FhirStructureRepository* getFhirStructureRepository() const;
+    [[nodiscard]] const std::shared_ptr<const fhirtools::FhirStructureRepository>& getFhirStructureRepository() const;
     [[nodiscard]] const FhirStructureDefinition* getStructureDefinition() const;
     [[nodiscard]] const ProfiledElementTypeInfo& definitionPointer() const;
 
@@ -152,7 +152,7 @@ protected:
     [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
     resolveBundleReference(std::string_view fullUrl, std::string_view elementFullPath) const;
 
-    const FhirStructureRepository* mFhirStructureRepository;
+    std::shared_ptr<const fhirtools::FhirStructureRepository> mFhirStructureRepository;
     const ProfiledElementTypeInfo mDefinitionPointer;
     std::weak_ptr<const Element> mParent;
 
@@ -205,7 +205,8 @@ class PrimitiveElement : public Element
 {
 public:
     using ValueType = std::variant<int32_t, DecimalType, bool, std::string, Date, DateTime, Time, QuantityType>;
-    explicit PrimitiveElement(const FhirStructureRepository* fhirStructureRepository, Type type, ValueType&& value);
+    explicit PrimitiveElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                              Type type, ValueType&& value);
     [[nodiscard]] std::string resourceType() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
 

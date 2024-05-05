@@ -36,7 +36,8 @@ public:
     explicit ProfiledElementTypeInfo(const FhirStructureDefinition* profile);
     explicit ProfiledElementTypeInfo(const FhirStructureDefinition* profile,
                                      std::shared_ptr<const FhirElement> element);
-    explicit ProfiledElementTypeInfo(const FhirStructureRepository* repo, std::string_view elementId);
+    explicit ProfiledElementTypeInfo(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+                                     std::string_view elementId);
 
     [[nodiscard]] std::optional<ProfiledElementTypeInfo> parentElement() const;
     [[nodiscard]] std::vector<ProfiledElementTypeInfo> subElements() const;

@@ -149,7 +149,8 @@ class SubsettingIndexer : public BinaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "indexer";
-    SubsettingIndexer(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs, ExpressionPtr rhs);
+    SubsettingIndexer(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                      ExpressionPtr lhs, ExpressionPtr rhs);
     Collection eval(const Collection& collection) const override;
 };
 
@@ -196,7 +197,8 @@ class SubsettingIntersect : public UnaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "intersect";
-    explicit SubsettingIntersect(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr arg);
+    explicit SubsettingIntersect(
+        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr arg);
     Collection eval(const Collection& collection) const override;
 };
 
@@ -210,7 +212,8 @@ class CombiningUnion : public BinaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "union";
-    CombiningUnion(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr lhs, ExpressionPtr rhs);
+    CombiningUnion(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                   ExpressionPtr lhs, ExpressionPtr rhs);
     Collection eval(const Collection& collection) const override;
 };
 

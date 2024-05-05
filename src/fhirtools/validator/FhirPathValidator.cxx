@@ -23,27 +23,28 @@ using fhirtools::FhirConstraint;
 using fhirtools::FhirPathValidator;
 fhirtools::FhirPathValidator::FhirPathValidator(const fhirtools::ValidatorOptions& options,
                                                 std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
-                                                const FhirStructureRepository& repo)
+                                                const std::shared_ptr<const FhirStructureRepository>& repo)
     : mOptions{options}
     , mExtensionRootDefPtr{std::move(initExtensionRootDefPtr)}
     , mRepo(repo)
 {
 }
 
-fhirtools::FhirPathValidator fhirtools::FhirPathValidator::create(const fhirtools::ValidatorOptions& options,
-                                                                  const fhirtools::FhirStructureRepository* repo)
+fhirtools::FhirPathValidator
+fhirtools::FhirPathValidator::create(const fhirtools::ValidatorOptions& options,
+                                     const std::shared_ptr<const FhirStructureRepository>& repo)
 {
     using namespace std::string_literals;
     Expect3(repo != nullptr, "Failed to get FhirStructureRepository from element", std::logic_error);
     const auto* extensionDef = repo->findTypeById("Extension"s);
     Expect3(extensionDef != nullptr, "StructureDefinition for Extension not found.", std::logic_error);
-    return FhirPathValidator{options, std::make_unique<ProfiledElementTypeInfo>(extensionDef), *repo};
+    return FhirPathValidator{options, std::make_unique<ProfiledElementTypeInfo>(extensionDef), repo};
 }
 
 
 fhirtools::ValidationResults FhirPathValidator::validate(const std::shared_ptr<const Element>& element,
-                                                            const std::string& elementFullPath,
-                                                            const fhirtools::ValidatorOptions& options)
+                                                         const std::string& elementFullPath,
+                                                         const fhirtools::ValidatorOptions& options)
 {
     auto validator = create(options, element->getFhirStructureRepository());
     validator.validateInternal(element, {}, elementFullPath);
@@ -51,9 +52,9 @@ fhirtools::ValidationResults FhirPathValidator::validate(const std::shared_ptr<c
 }
 
 fhirtools::ValidationResults FhirPathValidator::validateWithProfiles(const std::shared_ptr<const Element>& element,
-                                                                        const std::string& elementFullPath,
-                                                                        const std::set<std::string>& profileUrls,
-                                                                        const ValidatorOptions& options)
+                                                                     const std::string& elementFullPath,
+                                                                     const std::set<std::string>& profileUrls,
+                                                                     const ValidatorOptions& options)
 {
     std::set<ProfiledElementTypeInfo> profiles;
     const auto& elementType = element->definitionPointer().element()->typeId();
@@ -122,8 +123,8 @@ void fhirtools::FhirPathValidator::validateInternal(const std::shared_ptr<const 
             else
             {
                 result.add(Severity::error,
-                        profileDef->url() + '|' + profileDef->version() + " no such element: " + elementId,
-                        elementFullPath, profileDef);
+                           profileDef->url() + '|' + profileDef->version() + " no such element: " + elementId,
+                           elementFullPath, profileDef);
             }
         }
     }
@@ -220,7 +221,7 @@ void fhirtools::FhirPathValidator::validateResource(const std::shared_ptr<const 
     result.add(Severity::debug, "resource is: " + resourceType, elementFullPath, resourceDef);
     profileSetValidator.typecast(*resourceElement->getFhirStructureRepository(), resourceDef);
     addProfiles(*resourceElement, profileSetValidator, referenceContext, elementFullPath);
-    if (resourceElement->definitionPointer().profile()->isDerivedFrom(mRepo, constants::bundleUrl))
+    if (resourceElement->definitionPointer().profile()->isDerivedFrom(*mRepo, constants::bundleUrl))
     {
         auto newContext = profileSetValidator.buildReferenceContext(*resourceElement, elementFullPath);
         validateElement(resourceElement, newContext, profileSetValidator, elementFullPath);
@@ -275,12 +276,12 @@ void fhirtools::FhirPathValidator::addProfiles(const Element& element,
     std::set<const FhirStructureDefinition*> metaProfiles;
     for (const auto* metaProf : profiles(element, elementFullPath))
     {
-        if (resourceType == metaProf->baseType(mRepo))
+        if (resourceType == metaProf->baseType(*mRepo))
         {
             metaProfiles.emplace(metaProf);
             if (options().validateMetaProfiles)
             {
-                profileSetValidator.addProfile(mRepo, metaProf);
+                profileSetValidator.addProfile(*mRepo, metaProf);
             }
         }
         else

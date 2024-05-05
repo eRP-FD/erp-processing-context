@@ -12,8 +12,8 @@
 
 namespace fhirtools
 {
-ConversionIif::ConversionIif(const FhirStructureRepository* fhirStructureRepository, ExpressionPtr criterion,
-                             ExpressionPtr trueResult, ExpressionPtr falseResult)
+ConversionIif::ConversionIif(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+                             ExpressionPtr criterion, ExpressionPtr trueResult, ExpressionPtr falseResult)
     : Expression(fhirStructureRepository)
     , mCriterion(std::move(criterion))
     , mTrueResult(std::move(trueResult))

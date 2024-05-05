@@ -9,6 +9,7 @@ add_executable(fhirtools-test
         ExpressionTest.cxx
         FhirPathParserTest.cxx
         FhirPathValidatorTest.cxx
+        FhirResourceViewConfigurationTest.cxx
         FhirStructureRepositoryFixerTest.cxx
         FhirValueSetTest.cxx
         issues/ERP-12159-RefereceTypeCheck.cxx

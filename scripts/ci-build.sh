@@ -58,6 +58,7 @@ mkdir -p jenkins-build-debug
 cd jenkins-build-debug
 pip3 install "conan<2.0" --upgrade
 pip3 install --user packageurl-python
+export CONAN_TRACE_FILE=$(pwd)/conan_trace.log
 conan --version
 conan remote clean
 conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force
@@ -76,6 +77,7 @@ conan profile update env.CC=${CC} default
 conan profile update env.CXX=${CXX} default
 conan profile update settings.compiler.version=${GCC_VERSION} default
 set +x
+repeat_without_binary_repo=0
 cmake -GNinja \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DERP_BUILD_VERSION=${erp_build_version} \
@@ -84,10 +86,30 @@ cmake -GNinja \
       -DERP_WARNING_AS_ERROR=ON \
       -DERP_CONAN_ARGS="-o with_sbom=True" \
       -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-      ..
+      .. || repeat_without_binary_repo=1
+
+if [ $repeat_without_binary_repo == 1 ]; then
+  conan remote remove conan-center-binaries
+  conan remove -f '*'
+  cmake -GNinja \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DERP_BUILD_VERSION=${erp_build_version} \
+        -DERP_RELEASE_VERSION=${erp_release_version} \
+        -DERP_WITH_HSM_MOCK=ON \
+        -DERP_WARNING_AS_ERROR=ON \
+        -DERP_CONAN_ARGS="-o with_sbom=True" \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        ..
+  conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force
+  conan user -r conan-center-binaries -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
+fi
 
 if [ "$skip_build" == "yes" ]; then
     ninja generated_source
 else
     ninja -l$(nproc) test production fhirtools-test
+fi
+
+if [ $repeat_without_binary_repo == 1 ]; then
+  exit 2
 fi

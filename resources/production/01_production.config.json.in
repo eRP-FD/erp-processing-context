@@ -337,6 +337,40 @@
       "replace": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.1",
       "replace-with": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.2"
     },
+    "fhir-resource-tags": [
+      {
+        "tag": "darreichungsform_1_12",
+        "version": "1.12",
+        "urls": [
+          "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
+          "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"
+        ]
+      },
+      {
+        "tag": "darreichungsform_1_13",
+        "version": "1.13",
+        "urls": [
+          "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
+          "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"
+        ]
+      }
+    ],
+    "fhir-resource-views": [
+      {
+        "env-name": "ERP_DARREICHUNGSFORM_1_12",
+        "valid-until": "2024-06-30",
+        "tags": [
+          "darreichungsform_1_12"
+        ]
+      },
+      {
+        "env-name": "ERP_DARREICHUNGSFORM_1_13",
+        "valid-from": "2024-07-01",
+        "tags": [
+          "darreichungsform_1_13"
+        ]
+      }
+    ],
     "redis": {
       "database": "0",
       "user": "",
@@ -383,7 +417,6 @@
         "credentials": ""
       }
     },
-    "c.fd.sig-erp": "-----BEGIN CERTIFICATE-----\nMIIDKDCCAs+gAwIBAgIQfiiBNU4DSkeQ/6MZYym0UDAKBggqhkjOPQQDAjCBmTEL\nMAkGA1UEBhMCREUxHzAdBgNVBAoMFmFjaGVsb3MgR21iSCBOT1QtVkFMSUQxSDBG\nBgNVBAsMP0ZhY2hhbndlbmR1bmdzc3BlemlmaXNjaGVyIERpZW5zdC1DQSBkZXIg\nVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEfMB0GA1UEAwwWQUNMT1MuRkQtQ0ExIFRF\nU1QtT05MWTAeFw0yNDAxMDEyMzAwMDBaFw0yNTEyMzEyMzAwMDBaMEoxEDAOBgNV\nBAMMB2VyZXplcHQxKTAnBgNVBAoMIElCTSBEZXV0c2NobGFuZCBHbWJIIC0gTk9U\nLVZBTElEMQswCQYDVQQGEwJERTBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAAR+\n7RsxaLme16Z3wI0eZDSQ20C6xPoe72kQ4FaP16ZwNR2eigtmgnNcYiGzUDhrqzZ7\n6k6+GjSHAo/cR/Jz2sk9o4IBRDCCAUAwHQYDVR0OBBYEFMLuz2SOwwp2pkMguOnJ\ne/64U39GMA4GA1UdDwEB/wQEAwIGQDAXBgNVHREEEDAOggxFUlAuSUJNLlRFU1Qw\nDAYDVR0TAQH/BAIwADBSBgNVHSAESzBJMDsGCCqCFABMBIEjMC8wLQYIKwYBBQUH\nAgEWIWh0dHA6Ly93d3cuZ2VtYXRpay5kZS9nby9wb2xpY2llczAKBggqghQATASC\nGzBGBggrBgEFBQcBAQQ6MDgwNgYIKwYBBQUHMAGGKmh0dHA6Ly9vY3NwLXRlc3Qu\nb2NzcC50ZWxlbWF0aWstdGVzdDo4MDgwLzAfBgNVHSMEGDAWgBR7DFUnTuWmL10d\nEdexG/Z7ueFFJTArBgUrJAgDAwQiMCAwHjAcMBowGDAKDAhFLVJlemVwdDAKBggq\nghQATASCAzAKBggqhkjOPQQDAgNHADBEAiBGhz1v8+7FuyF1xTlTfHu7cY1OeXSw\n4MUfmMGw49GgvQIgXK9dq2nJdVUZZsWRgQQGPDsTbCcM6OdRrfGUl1TCh6Y=\n-----END CERTIFICATE-----",
     "c.fd.sig-erp-validation": "3600",
     "idp": {
       "registeredFdUri": "https://gematik.erppre.de/",

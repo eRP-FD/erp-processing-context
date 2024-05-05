@@ -31,7 +31,7 @@ public:
     {
     }
 
-    TrustStore::OcspResponseData
+    OcspResponse
     getCertificateOcspResponse(
         const TslMode tslMode,
         X509Certificate &certificate,

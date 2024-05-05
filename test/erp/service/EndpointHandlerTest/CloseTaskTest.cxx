@@ -77,8 +77,8 @@ protected:
                     std::string elementId)
                 : mElementId{std::move(elementId)}
                 , mDocument{std::move(initDoc)}
-                , mElement{std::make_shared<ErpElement>(&repo, std::weak_ptr<fhirtools::Element>{}, mElementId,
-                                                        std::addressof(mDocument))}
+                , mElement{std::make_shared<ErpElement>(repo.shared_from_this(), std::weak_ptr<fhirtools::Element>{},
+                                                        mElementId, std::addressof(mDocument))}
             {
             }
             std::string mElementId;
@@ -125,9 +125,9 @@ protected:
             ASSERT_EQ(closeResponse.size(), 1);
         }();
 
-        const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+        const auto& repo = Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
         auto prescriptionDigestExpr =
-            fhirtools::FhirPathParser::parse(&repo, "Bundle.entry[0].resource.section.entry[0].resolve()");
+            fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry[0].resource.section.entry[0].resolve()");
         auto prescriptionDigest = prescriptionDigestExpr->eval(closeResponse);
         [&] {
             ASSERT_EQ(prescriptionDigest.size(), 1) << closeResponse;
@@ -520,10 +520,11 @@ TEST_F(CloseTaskTest, NoEnvMetaVersionId)
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, std::nullopt);
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     fhirtools::Collection prescriptionDigest;
-    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(runRequest(repo)));
-    auto getMetaVersionId = fhirtools::FhirPathParser::parse(&repo, "meta.versionId");
+    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(runRequest(*repo)));
+    auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get(), "meta.versionId");
     auto metaVersionId = getMetaVersionId->eval(prescriptionDigest);
     ASSERT_EQ(metaVersionId.size(), 1);
     EXPECT_EQ(metaVersionId.front()->asString(), "1");
@@ -534,10 +535,11 @@ TEST_F(CloseTaskTest, SetMetaVersionId)
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, "isSet");
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     fhirtools::Collection prescriptionDigest;
-    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(runRequest(repo)));
-    auto getMetaVersionId = fhirtools::FhirPathParser::parse(&repo, "meta.versionId");
+    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(runRequest(*repo)));
+    auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get(), "meta.versionId");
     auto metaVersionId = getMetaVersionId->eval(prescriptionDigest);
     ASSERT_EQ(metaVersionId.size(), 1);
     EXPECT_EQ(metaVersionId.front()->asString(), "isSet");
@@ -548,10 +550,11 @@ TEST_F(CloseTaskTest, NoMetaVersionEmptyEnv)
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, "");
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     fhirtools::Collection prescriptionDigest;
-    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(runRequest(repo)));
-    auto getMetaVersionId = fhirtools::FhirPathParser::parse(&repo, "meta.versionId");
+    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(runRequest(*repo)));
+    auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get(), "meta.versionId");
     auto metaVersionId = getMetaVersionId->eval(prescriptionDigest);
     EXPECT_TRUE(metaVersionId.empty());
 }
@@ -560,24 +563,25 @@ TEST_F(CloseTaskTest, prescriptionDigestRefTypeUUID)
 {
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(repo));
+    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
     ASSERT_EQ(bundle.size(), 1);
     auto refInCompositionExpr =
-        fhirtools::FhirPathParser::parse(&repo, "Bundle.entry[0].resource.section.entry[0].reference");
+        fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry[0].resource.section.entry[0].reference");
     auto refInComposition = refInCompositionExpr->eval(bundle);
     ASSERT_EQ(refInComposition.size(), 1) << bundle;
     EXPECT_TRUE(refInComposition.front()->asString().starts_with("urn:uuid:"));
-    auto binaryResourceExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.entry.resource.ofType(Binary)");
+    auto binaryResourceExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry.resource.ofType(Binary)");
     auto binary = binaryResourceExpr->eval(bundle);
     ASSERT_EQ(binary.size(), 1) << bundle;
     fhirtools::Collection binaryEntry{binary.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(&repo, "fullUrl");
+    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get(), "fullUrl");
     auto fullUrl = fullUrlExpr->eval(binaryEntry);
     ASSERT_EQ(fullUrl.size(), 1);
     EXPECT_EQ(fullUrl.front()->asString(), refInComposition.front()->asString());
-    auto idExpr = fhirtools::FhirPathParser::parse(&repo, "id");
+    auto idExpr = fhirtools::FhirPathParser::parse(repo.get(), "id");
     auto id = idExpr->eval(binary);
     ASSERT_EQ(id.size(), 1) << binary;
     EXPECT_EQ("urn:uuid:" + id.front()->asString(), refInComposition.front()->asString()) << binary;
@@ -591,24 +595,25 @@ TEST_F(CloseTaskTest, prescriptionDigestRefTypeRelative)
     auto expectFullUrl = linkBase + "/" + expectRef;
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "relative");
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(repo));
+    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
     ASSERT_EQ(bundle.size(), 1);
     auto refInCompositionExpr =
-        fhirtools::FhirPathParser::parse(&repo, "Bundle.entry[0].resource.section.entry[0].reference");
+        fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry[0].resource.section.entry[0].reference");
     auto refInComposition = refInCompositionExpr->eval(bundle);
     ASSERT_EQ(refInComposition.size(), 1) << bundle;
     EXPECT_EQ(refInComposition.front()->asString(), expectRef) << bundle;
-    auto binaryResourceExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.entry.resource.ofType(Binary)");
+    auto binaryResourceExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry.resource.ofType(Binary)");
     auto binary = binaryResourceExpr->eval(bundle);
     ASSERT_EQ(binary.size(), 1) << bundle;
     fhirtools::Collection binaryEntry{binary.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(&repo, "fullUrl");
+    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get(), "fullUrl");
     auto fullUrl = fullUrlExpr->eval(binaryEntry);
     ASSERT_EQ(fullUrl.size(), 1);
     EXPECT_EQ(fullUrl.front()->asString(), expectFullUrl);
-    auto idExpr = fhirtools::FhirPathParser::parse(&repo, "id");
+    auto idExpr = fhirtools::FhirPathParser::parse(repo.get(), "id");
     auto id = idExpr->eval(binary);
     ASSERT_EQ(id.size(), 1) << binary;
     EXPECT_EQ("Binary/" + id.front()->asString(), refInComposition.front()->asString()) << binary;
@@ -620,23 +625,24 @@ TEST_F(CloseTaskTest, deviceRefUrl)
     auto expectFullUrl = linkBase + "/Device/1";
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE, "url");
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(repo));
+    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
     ASSERT_EQ(bundle.size(), 1);
-    auto refInCompositionExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.entry[0].resource.author.reference");
+    auto refInCompositionExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry[0].resource.author.reference");
     auto refInComposition = refInCompositionExpr->eval(bundle);
     ASSERT_EQ(refInComposition.size(), 1) << bundle;
     EXPECT_EQ(refInComposition.front()->asString(), expectFullUrl) << bundle;
-    auto deviceResourceExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.entry.resource.ofType(Device)");
+    auto deviceResourceExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry.resource.ofType(Device)");
     auto device = deviceResourceExpr->eval(bundle);
     ASSERT_EQ(device.size(), 1) << bundle;
     fhirtools::Collection deviceEntry{device.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(&repo, "fullUrl");
+    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get(), "fullUrl");
     auto fullUrl = fullUrlExpr->eval(deviceEntry);
     ASSERT_EQ(fullUrl.size(), 1);
     EXPECT_EQ(fullUrl.front()->asString(), expectFullUrl);
-    auto signatureWhoExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.signature.who.reference");
+    auto signatureWhoExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.signature.who.reference");
     auto signatureWho = signatureWhoExpr->eval(bundle);
     ASSERT_EQ(signatureWho.size(), 1);
     EXPECT_EQ(signatureWho.front()->asString(), expectFullUrl);
@@ -646,23 +652,24 @@ TEST_F(CloseTaskTest, deviceRefUuid)
 {
     std::vector<EnvironmentVariableGuard> guards;
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE, "uuid");
-    const auto& repo = Fhir::instance().structureRepository(model::ResourceVersion::currentBundle());
+    const auto& repo =
+        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
     fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(repo));
+    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
     ASSERT_EQ(bundle.size(), 1);
-    auto refInCompositionExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.entry[0].resource.author.reference");
+    auto refInCompositionExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry[0].resource.author.reference");
     auto refInComposition = refInCompositionExpr->eval(bundle);
     ASSERT_EQ(refInComposition.size(), 1) << bundle;
     EXPECT_TRUE(refInComposition.front()->asString().starts_with("urn:uuid:")) << bundle;
-    auto deviceResourceExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.entry.resource.ofType(Device)");
+    auto deviceResourceExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry.resource.ofType(Device)");
     auto device = deviceResourceExpr->eval(bundle);
     ASSERT_EQ(device.size(), 1) << bundle;
     fhirtools::Collection deviceEntry{device.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(&repo, "fullUrl");
+    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get(), "fullUrl");
     auto fullUrl = fullUrlExpr->eval(deviceEntry);
     ASSERT_EQ(fullUrl.size(), 1);
     EXPECT_EQ(fullUrl.front()->asString(), refInComposition.front()->asString());
-    auto signatureWhoExpr = fhirtools::FhirPathParser::parse(&repo, "Bundle.signature.who.reference");
+    auto signatureWhoExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.signature.who.reference");
     auto signatureWho = signatureWhoExpr->eval(bundle);
     ASSERT_EQ(signatureWho.size(), 1);
     EXPECT_EQ(signatureWho.front()->asString(), fullUrl.front()->asString());

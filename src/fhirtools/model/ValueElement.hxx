@@ -6,10 +6,10 @@
 #ifndef FHIRPATH_VALUEELEMENT_H
 #define FHIRPATH_VALUEELEMENT_H
 
+#include "fhirtools/model/Element.hxx"
+
 #include <map>
 #include <memory>
-
-#include "fhirtools/model/Element.hxx"
 
 namespace fhirtools
 {
@@ -22,10 +22,11 @@ class FhirStructureRepository;
 class ValueElement : public Element
 {
 public:
-    ValueElement(const FhirStructureRepository* repo, std::shared_ptr<const FhirValue> value,
-                 std::weak_ptr<const Element> parent = {});
-    ValueElement(const FhirStructureRepository* repo, std::weak_ptr<const Element> parent,
-                 std::shared_ptr<const FhirValue> value, ProfiledElementTypeInfo defPtr);
+    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+                 std::shared_ptr<const FhirValue> value, std::weak_ptr<const Element> parent = {});
+    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+                 std::weak_ptr<const Element> parent, std::shared_ptr<const FhirValue> value,
+                 ProfiledElementTypeInfo defPtr);
 
     [[nodiscard]] std::vector<std::shared_ptr<const Element>> subElements(const std::string& name) const override;
     [[nodiscard]] bool hasValue() const override;

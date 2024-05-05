@@ -11,7 +11,7 @@
 using fhirtools::FhirStructureRepositoryFixer;
 
 
-FhirStructureRepositoryFixer::FhirStructureRepositoryFixer(FhirStructureRepository& repo)
+FhirStructureRepositoryFixer::FhirStructureRepositoryFixer(FhirStructureRepositoryBackend& repo)
     : mRepo{repo}
 {
 }
@@ -75,8 +75,8 @@ FhirStructureRepositoryFixer::findParentSlicing(const ProfiledElementTypeInfo& p
     {
         return std::nullopt;
     }
-    for (auto parentPet = pet.typeInfoInParentStuctureDefinition(mRepo); parentPet;
-         parentPet = parentPet->typeInfoInParentStuctureDefinition(mRepo))
+    for (auto parentPet = pet.typeInfoInParentStuctureDefinition(*mRepo.defaultView()); parentPet;
+         parentPet = parentPet->typeInfoInParentStuctureDefinition(*mRepo.defaultView()))
     {
         if (parentPet && parentPet->element()->slicing())
         {

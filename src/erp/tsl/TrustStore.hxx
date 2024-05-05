@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "erp/tsl/OcspService.hxx"
+#include "erp/tsl/OcspResponse.hxx"
 #include "erp/tsl/TslMode.hxx"
 #include "erp/tsl/TslParser.hxx"
 #include "erp/tsl/X509Certificate.hxx"
@@ -36,17 +36,6 @@ public:
         X509Certificate certificate;
         bool accepted;
         TslParser::ExtensionOidList extensionOidList;
-    };
-
-    class OcspResponseData
-    {
-    public:
-        OcspService::Status status;
-        std::chrono::system_clock::duration gracePeriod{0};
-        std::chrono::system_clock::time_point producedAt;
-        std::chrono::system_clock::time_point receivedAt;
-        bool fromCache{true};
-        std::string response;
     };
 
     struct HealthData {
@@ -148,7 +137,7 @@ public:
     /**
      * Caches ocsp response status with fingerprint, grace period, timestamp and response
      */
-    void setCacheOcspData (const std::string& fingerprint, OcspResponseData ocspCacheData);
+    void setCacheOcspData (const std::string& fingerprint, OcspResponse ocspCacheData);
 
     /**
      * Removes cached ocsp response data based on certificate fingerprint.
@@ -158,7 +147,7 @@ public:
     /**
      * Returns cached OcspCacheData, if any.
      */
-    std::optional<OcspResponseData> getCachedOcspData (const std::string& fingerprint);
+    std::optional<OcspResponse> getCachedOcspData (const std::string& fingerprint);
 
 
     /**
@@ -188,7 +177,7 @@ private:
     TslParser::ServiceInformationMap mServiceInformationMap;
 
     /// fingerprint -> OcspCacheData
-    std::map<std::string, OcspResponseData> mOcspCache;
+    std::map<std::string, OcspResponse> mOcspCache;
 
     /**
      * Removes cached OcspService results if they are older than 4 hours. (A_15873)

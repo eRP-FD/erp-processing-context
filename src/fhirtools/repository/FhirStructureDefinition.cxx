@@ -236,7 +236,7 @@ const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStr
     const FhirStructureDefinition* parent{};
     if (kind() == Kind::slice)
     {
-        ProfiledElementTypeInfo pet{&repo, typeId()};
+        ProfiledElementTypeInfo pet{repo.shared_from_this(), typeId()};
         parent = repo.findTypeById(pet.element()->typeId());
         Expect3(parent != nullptr, "base type for slice '" + url() + "' not found: " + typeId(), std::logic_error);
     }

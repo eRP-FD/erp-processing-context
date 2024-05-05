@@ -22,6 +22,7 @@
 #include "fhirtools/model/Element.hxx"
 #include "fhirtools/parser/ErrorListener.hxx"
 #include "fhirtools/parser/FhirPathFixer.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/Utf8Helper.hxx"
 
 #include <antlr4-runtime/antlr4-runtime.h>
@@ -98,10 +99,10 @@ private:
     template<class TOperator, typename TContext>
     std::any binaryOperator(TContext* context);
 
-    const FhirStructureRepository* mRepository;
+    const std::shared_ptr<const FhirStructureRepository> mRepository;
 };
 FhirPathParser::Impl::Impl(const FhirStructureRepository* repository)
-    : mRepository(repository)
+    : mRepository(repository->shared_from_this())
 {
 }
 template<typename TFun>

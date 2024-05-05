@@ -33,10 +33,6 @@
 
 namespace
 {
-    constexpr const char* statusGood{"good"};
-    constexpr const char* statusRevoked{"revoked"};
-    constexpr const char* statusUnknown{"unknown"};
-
     // value "Toleranz t" from GS-A_5215
     constexpr const int tolerance = 37;
 
@@ -349,8 +345,24 @@ namespace
         return model::Timestamp::fromTmInUtc(tm).toChronoTimePoint();
     }
 
+    CertificateStatus certificateStatusFromSSL(int status)
+    {
+        switch (status)
+        {
+            case V_OCSP_CERTSTATUS_REVOKED:
+                return CertificateStatus::revoked;
+            case V_OCSP_CERTSTATUS_GOOD:
+                return CertificateStatus::good;
+            case V_OCSP_CERTSTATUS_UNKNOWN:
+                return CertificateStatus::unknown;
+            default: // V_OCSP_CERTSTATUS_* are pre-processor-macros so we have to provide a default here to silence clang-tidy
+                break;
+        }
+        TLOG(INFO) << "unexpected value for OCSP-Status";
+        return CertificateStatus::unknown;
+    }
 
-    std::tuple<OcspService::Status, std::chrono::system_clock::time_point>
+    OcspResponse
     parseResponse (
             const X509Certificate& certificate,
             const OcspResponsePtr& response,
@@ -435,20 +447,22 @@ namespace
             {
                 checkCertHashExtension(singleResponse, certificate, trustStore.getTslMode());
             }
-
-            if (status == V_OCSP_CERTSTATUS_REVOKED)
-            {
-                return std::make_tuple(OcspService::Status{OcspService::CertificateStatus::revoked, toTimePoint(revocationTime)},
-                                       toTimePoint(producedAt));
-            }
-            else if (status == V_OCSP_CERTSTATUS_GOOD)
-            {
-                return std::make_tuple(OcspService::Status{OcspService::CertificateStatus::good, {}},
-                                       toTimePoint(producedAt));
-            }
-
-            return std::make_tuple(OcspService::Status{OcspService::CertificateStatus::unknown, {}},
-                                   toTimePoint(producedAt));
+            const auto certStatus = certificateStatusFromSSL(status);
+            OcspResponse response{
+                .status =
+                    {
+                        .certificateStatus = certStatus,
+                        .revocationTime = certStatus == CertificateStatus::revoked
+                                            ? toTimePoint(revocationTime)
+                                            : std::chrono::system_clock::time_point{},
+                    },
+                .gracePeriod = timeSettings.gracePeriod,
+                .producedAt = toTimePoint(producedAt),
+                .receivedAt = std::chrono::system_clock::now(),
+                .fromCache = false,
+                .response = {},
+            };
+            return response;
         }
         catch (const TslError&)
         {
@@ -463,7 +477,7 @@ namespace
     }
 
 
-    OcspService::Status requestStatus(
+    OcspResponse requestStatus(
             OcspCertidPtr certId,
             const X509Certificate& certificate,
             const OcspResponsePtr& ocspResponse,
@@ -473,7 +487,7 @@ namespace
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
             const bool validateHashExtension)
     {
-        const auto [status, producedAt] = parseResponse(
+        auto response = parseResponse(
                 certificate,
                 ocspResponse,
                 certId,
@@ -482,26 +496,19 @@ namespace
                 ocspSignerCertificates,
                 validateHashExtension);
 
-        TVLOG(2) << "Returning new OCSP status: " << status.to_string();
-        if (status.certificateStatus != OcspService::CertificateStatus::unknown)
+        TVLOG(2) << "Returning new OCSP status: " << response.status.to_string();
+        response.response = (serializedOcspResponse.has_value() ? *serializedOcspResponse
+                                                                : OcspHelper::ocspResponseToString(*ocspResponse));
+        if (response.status.certificateStatus != CertificateStatus::unknown)
         {
             // the returned OCSP response is only cached if the status is not unknown
-            trustStore.setCacheOcspData(
-                certificate.getSha256FingerprintHex(),
-                {
-                    .status = status,
-                    .gracePeriod = timeSettings.gracePeriod,
-                    .producedAt = producedAt,
-                    .receivedAt = std::chrono::system_clock::now(),
-                    .response = (serializedOcspResponse.has_value()
-                        ? *serializedOcspResponse
-                        : OcspHelper::ocspResponseToString(*ocspResponse))});
+            trustStore.setCacheOcspData(certificate.getSha256FingerprintHex(), response);
         }
-        return status;
+        return response;
     }
 
 
-    OcspService::Status sendOcspRequestAndGetStatus(
+    OcspResponse sendOcspRequestAndGetStatus(
             const X509Certificate& certificate,
             OcspCertidPtr certId,
             const UrlRequestSender& requestSender,
@@ -529,7 +536,7 @@ namespace
     }
 
 
-// GEMREQ-start A_20765-02#ocspCheckModes, A_20159-03#getCurrentStatusAndResponse
+// GEMREQ-start A_20765-02#ocspCheckModes, A_20159-03#getCurrentResponseInternal
     /**
      * Gets the OCSP status of a certificate.
      *
@@ -546,7 +553,7 @@ namespace
      * @return  OCSP status (good / revoked / unknown)
      * @throws OcspService::OcspError on error
      */
-    OcspService::Status getCurrentStatusAndResponse (
+    OcspResponse getCurrentResponseInternal (
             const X509Certificate& certificate,
             const X509Certificate& issuer,
             const UrlRequestSender& requestSender,
@@ -556,7 +563,7 @@ namespace
             const bool validateHashExtension,
             const OcspCheckDescriptor& ocspCheckDescriptor)
     {
-        TVLOG(2) << "OcspService: getCurrentStatusAndResponse";
+        TVLOG(2) << "OcspService: getCurrentResponseInternal";
 
         Expect( certificate.hasX509Ptr() && issuer.hasX509Ptr(),
                 "Invalid certificate is provided for OCSP verification.");
@@ -592,10 +599,9 @@ namespace
                         if (cachedOcspData.has_value())
                         {
                             TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
-                            return cachedOcspData->status;
+                            return *cachedOcspData;
                         }
                     }
-
                     throw;
                 }
                 break;
@@ -621,7 +627,7 @@ namespace
                     if (cachedOcspData.has_value())
                     {
                         TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
-                        return cachedOcspData->status;
+                        return *cachedOcspData;
                     }
 
                     // and if there is no valid OCSP response in the cache,
@@ -637,12 +643,16 @@ namespace
                         ocspCheckDescriptor);
                 }
                 break;
+            case OcspCheckDescriptor::CACHED_ONLY:
+                const auto cachedOcspData = trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
+                TslExpect4(cachedOcspData.has_value(), "OCSP Response not in cache", TslErrorCode::OCSP_NOT_AVAILABLE,
+                        trustStore.getTslMode());
+                TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
+                return *cachedOcspData;
         }
-
-        // it should not be reachable
-        throw std::logic_error("OcspCheckDescriptor was extended but this code was not adjusted.");
+        Fail("Invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(ocspCheckDescriptor.mode)));
     }
-// GEMREQ-end A_20765-02#ocspCheckModes, A_20159-03#getCurrentStatusAndResponse
+// GEMREQ-end A_20765-02#ocspCheckModes, A_20159-03#getCurrentResponseInternal
 
 
     OcspCheckDescriptor getTslSignerOcspCheckDescriptor()
@@ -658,9 +668,9 @@ namespace
 }   // anonymous namespace
 
 
-// GEMREQ-start A_20159-03#getCurrentStatus
-OcspService::Status
-OcspService::getCurrentStatus (const X509Certificate& certificate,
+// GEMREQ-start A_20159-03#getCurrentResponse
+OcspResponse
+OcspService::getCurrentResponse (const X509Certificate& certificate,
                                const UrlRequestSender& requestSender,
                                const OcspUrl& ocspUrl,
                                TrustStore& trustStore,
@@ -669,16 +679,16 @@ OcspService::getCurrentStatus (const X509Certificate& certificate,
 {
     const auto caInfo = trustStore.lookupCaCertificate(certificate);
     Expect(caInfo.has_value(), "CA of the certificate must be in trust store.");
-    return ::getCurrentStatusAndResponse(certificate, caInfo->certificate,
+    return ::getCurrentResponseInternal(certificate, caInfo->certificate,
                                          requestSender, ocspUrl, trustStore,
                                          std::nullopt,
                                          validateHashExtension,
                                          ocspCheckDescriptor);
 }
-// GEMREQ-end A_20159-03#getCurrentStatus
+// GEMREQ-end A_20159-03#getCurrentResponse
 
 
-OcspService::Status
+OcspStatus
 OcspService::getCurrentStatusOfTslSigner (const X509Certificate& certificate,
                                           const X509Certificate& issuerCertificate,
                                           const UrlRequestSender& requestSender,
@@ -693,14 +703,14 @@ OcspService::getCurrentStatusOfTslSigner (const X509Certificate& certificate,
         if (certificate.signatureIsValidAndWasSignedBy(tslSignerCa))
         {
             // ...got it - now we can use it as the issuer certificate in our OCSP request.
-            return ::getCurrentStatusAndResponse(certificate,
+            return ::getCurrentResponseInternal(certificate,
                                                  issuerCertificate,
                                                  requestSender,
                                                  ocspUrl,
                                                  oldTrustStore,
                                                  ocspSignerCertificates,
                                                  validateHashExtension,
-                                                 getTslSignerOcspCheckDescriptor());
+                                                 getTslSignerOcspCheckDescriptor()).status;
         }
     }
 
@@ -709,58 +719,4 @@ OcspService::getCurrentStatusOfTslSigner (const X509Certificate& certificate,
     LogicErrorFail("getCurrentStatusOfTslSigner must only be called for certificates that "
                    "are signed by one of the TSL signer certificates");
 
-}
-
-
-std::string OcspService::toString (OcspService::CertificateStatus certificateStatus)
-{
-    switch (certificateStatus)
-    {
-        case CertificateStatus::good:
-            return statusGood;
-        case CertificateStatus::revoked:
-            return statusRevoked;
-        case CertificateStatus::unknown:
-            return statusUnknown;
-    }
-    Fail2("Certificate Status is invalid", std::logic_error);
-}
-
-
-OcspService::CertificateStatus OcspService::toCertificateStatus (const std::string& string)
-{
-    const std::string lowercaseString{String::toLower(string)};
-    if (lowercaseString == statusGood)
-    {
-        return CertificateStatus::good;
-    }
-    if (lowercaseString == statusRevoked)
-    {
-        return CertificateStatus::revoked;
-    }
-    return CertificateStatus::unknown;
-}
-
-
-void OcspService::checkOcspStatus (
-    const OcspService::Status& status,
-    const std::optional<std::chrono::system_clock::time_point>& referenceTimePoint,
-    const TrustStore& trustStore)
-{
-    TslExpect6(
-        status.certificateStatus != OcspService::CertificateStatus::unknown,
-        "OCSP Check failed, certificate is unknown.",
-        TslErrorCode::CERT_UNKNOWN,
-        trustStore.getTslMode(),
-        trustStore.getIdOfTslInUse(),
-        trustStore.getSequenceNumberOfTslInUse());
-
-    TslExpect6(
-        status.certificateStatus != OcspService::CertificateStatus::revoked
-        || getReferenceTimePoint(referenceTimePoint) < status.revocationTime,
-        "OCSP Check failed, certificate is revoked.",
-        TslErrorCode::CERT_REVOKED,
-        trustStore.getTslMode(),
-        trustStore.getIdOfTslInUse(),
-        trustStore.getSequenceNumberOfTslInUse());
 }

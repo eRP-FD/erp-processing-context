@@ -15,7 +15,7 @@
 class Erp12159ReferenceTypeCheckTest : public fhirtools::test::SampleValidationTest<Erp12159ReferenceTypeCheckTest>
 {
 public:
-    static const fhirtools::FhirStructureRepository* makeRepo()
+    static const fhirtools::FhirStructureRepositoryBackend* makeRepo()
     {
         return std::addressof(DefaultFhirStructureRepository::get());
     }

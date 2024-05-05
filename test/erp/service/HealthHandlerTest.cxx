@@ -188,7 +188,14 @@ public:
         , mGuardERP_TSL_INITIAL_CA_DER_PATH("ERP_TSL_INITIAL_CA_DER_PATH",
                                             ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"))
     {
+        // prevent CFdSigErpManager from getting an OCSP-Response on initial request:
+        HealthHandlerTestTslManager::failOcspRetrieval = true;
         createServiceContext();
+    }
+
+    void TearDown() override
+    {
+        HealthHandlerTestTslManager::failOcspRetrieval = false;
     }
 
     void createServiceContext()
@@ -296,6 +303,10 @@ protected:
 
 TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-complexity)
 {
+    // force refresh of OCSP-Response
+    HealthHandlerTestTslManager::failOcspRetrieval = false;
+    ASSERT_NO_THROW(mServiceContext->getCFdSigErpManager().getOcspResponseData(true));
+
     const auto beforeRequest = model::Timestamp::now();
     ASSERT_NO_THROW(handleRequest());
 
@@ -461,10 +472,7 @@ TEST_F(HealthHandlerTest, IdpDown)//NOLINT(readability-function-cognitive-comple
 
 TEST_F(HealthHandlerTest, CFdSigErpDown)//NOLINT(readability-function-cognitive-complexity)
 {
-    HealthHandlerTestTslManager::failOcspRetrieval = true;
-    ASSERT_THROW(mServiceContext->getCFdSigErpManager().getOcspResponseData(true), std::runtime_error);
     ASSERT_NO_THROW(handleRequest());
-    HealthHandlerTestTslManager::failOcspRetrieval = false;
 
     ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);
 
