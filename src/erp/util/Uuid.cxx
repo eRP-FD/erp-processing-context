@@ -76,7 +76,7 @@ Uuid::Uuid ()
 
 Uuid::Uuid (std::string_view stringRepresentation)
 {
-    if (stringRepresentation.find("urn:uuid:")==0)
+    if (stringRepresentation.starts_with("urn:uuid:"))
         mString = stringRepresentation.substr(9);
     else
         mString = stringRepresentation;
@@ -89,6 +89,14 @@ bool Uuid::isValidIheUuid () const
     return std::regex_match(mString, re);
 }
 
+bool Uuid::isValidUrnUuid(std::string_view stringRepresentation)
+{
+    if (stringRepresentation.starts_with("urn:uuid:"))
+    {
+        return Uuid{stringRepresentation}.isValidIheUuid();
+    }
+    return false;
+}
 
 const std::string& Uuid::toString () const
 {

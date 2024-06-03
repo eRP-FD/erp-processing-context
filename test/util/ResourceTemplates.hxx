@@ -20,6 +20,9 @@
 #include <string_view>
 #include <optional>
 #include <variant>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace ResourceTemplates
 {
@@ -57,6 +60,7 @@ struct KbvBundleMvoOptions
     std::optional<model::ResourceVersion::KbvItaErp> kbvVersion = std::nullopt;
     std::optional<std::string> redeemPeriodStart = "2021-01-02";
     std::optional<std::string> redeemPeriodEnd = "2021-01-02";
+    std::string mvoId = "urn:uuid:24e2e10d-e962-4d1c-be4f-8760e690a5f0";
 };
 std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions = KbvBundleMvoOptions{});
 
@@ -112,7 +116,7 @@ struct TaskOptions
     TaskType taskType;
     model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
     model::Timestamp timestamp = model::Timestamp::fromFhirDateTime("2021-06-08T13:44:53.012475+02:00");
-    model::Timestamp expirydate = model::Timestamp::now(); // + 24h;
+    model::Timestamp expirydate = model::Timestamp::now() + 48h;
     std::string_view kvnr = "X234567891";
     std::string_view owningPharmacy = "3-SMC-B-Testkarte-883110000120312";
 };

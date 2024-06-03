@@ -63,6 +63,7 @@ enum class ConfigurationKey
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF,
     SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE,
+    SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE,
     SERVICE_TASK_CLOSE_DEVICE_REF_TYPE,
     SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE,
     SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID,
@@ -496,6 +497,11 @@ public:
         url,
         uuid
     };
+    enum class MvoIdValidationMode : uint8_t
+    {
+        disable,
+        error
+    };
 
     static const Configuration& instance();
     void check() const;
@@ -509,6 +515,7 @@ public:
     AnrChecksumValidationMode anrChecksumValidationMode() const;
     [[nodiscard]] PrescriptionDigestRefType prescriptionDigestRefType() const;
     [[nodiscard]] DeviceRefType closeTaskDeviceRefType() const;
+    [[nodiscard]] MvoIdValidationMode mvoIdValidationMode() const;
 };
 
 

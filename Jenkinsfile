@@ -86,7 +86,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.5'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -273,20 +273,22 @@ pipeline {
                                 }
                             }
                             steps {
-                                sh "cd /media/erp && scripts/ci-static-analysis.sh " +
-                                        "--build-path=jenkins-build-debug " +
-                                        "--source-path=. " +
-                                        "--clang-tidy-bin=clang-tidy-15 " +
-                                        "--output=clang-tidy.txt " +
-                                        "--change-target=${env.CHANGE_TARGET} " +
-                                        "--git-commit=${env.GIT_COMMIT}"
-                                archiveArtifacts artifacts: 'clang-tidy.txt', allowEmptyArchive:true
-                                staticAnalysis("SonarQubeeRp")
-                                timeout(time: 5, unit: 'MINUTES') {
-                                    waitForQualityGate abortPipeline: true
-                                }
-                                // Fix build folder file permissions
-                                sh "chmod o+w build/"
+                                 withSonarQubeEnv('SonarQube') {
+                                    sh "cd /media/erp && scripts/ci-static-analysis.sh " +
+                                            "--build-path=jenkins-build-debug " +
+                                            "--source-path=. " +
+                                            "--clang-tidy-bin=clang-tidy-15 " +
+                                            "--output=clang-tidy.txt " +
+                                            "--change-target=${env.CHANGE_TARGET} " +
+                                            "--git-commit=${env.GIT_COMMIT}"
+                                    archiveArtifacts artifacts: 'clang-tidy.txt', allowEmptyArchive:true
+                                    staticAnalysis("SonarQubeeRp")
+                                    timeout(time: 5, unit: 'MINUTES') {
+                                        waitForQualityGate abortPipeline: true
+                                    }
+                                    // Fix build folder file permissions
+                                    sh "chmod o+w build/"
+                                 }
                             }
                         }
                     }

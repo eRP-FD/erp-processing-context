@@ -523,7 +523,10 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
         outerSession.response.setHeader(Header::InnerResponseCode,
                                    std::to_string(magic_enum::enum_integer(innerServerResponse.getHeader().status())));
 
-        outerSession.response.setHeader(Header::InnerRequestOperation, std::string(toString(innerOperation)));
+        if (! outerSession.response.getHeader(Header::InnerRequestOperation))
+        {
+            outerSession.response.setHeader(Header::InnerRequestOperation, std::string(toString(innerOperation)));
+        }
         outerSession.response.setHeader(
             Header::BackendDurationMs,
             std::to_string(

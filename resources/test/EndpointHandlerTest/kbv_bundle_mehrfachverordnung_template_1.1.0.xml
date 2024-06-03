@@ -120,7 +120,7 @@
                     <extension url="ID">
                         <valueIdentifier>
                             <system value="urn:ietf:rfc:3986" />
-                            <value value="urn:uuid:24e2e10d-e962-4d1c-be4f-8760e690a5f0" />
+                            <value value="###MVOID###" />
                         </valueIdentifier>
                     </extension>
                 </extension>

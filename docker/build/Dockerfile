@@ -38,6 +38,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     clang-tidy-16 \
     tzdata \
     ccache \
+    openjdk-17-jdk \
     && rm -rf /var/lib/apt/lists/*
 
 # Update certificates and install latest version of cmake

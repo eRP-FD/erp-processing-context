@@ -273,10 +273,11 @@ public:
 
     std::optional<model::Bundle> taskGetId(const model::PrescriptionId& prescriptionId,
         const std::string& kvnrOrTid,
-        const std::optional<std::string>& accessCodeOrSecret = std::nullopt,
+        const std::optional<std::string>& accessCode = std::nullopt,
+        const std::optional<std::string>& secret = std::nullopt,
         const HttpStatus expectedStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
-        bool withAuditEvents = false);
+        bool withAuditEvents = false, std::optional<std::string> expectedInnerOperation = {});
 
     std::optional<model::Bundle> taskGet(
         const std::string& kvnr,
@@ -557,10 +558,11 @@ private:
     void taskGetIdInternal(std::optional<model::Bundle>& taskBundle,
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnrOrTid,
-        const std::optional<std::string>& accessCodeOrSecret,
+        const std::optional<std::string>& accessCode,
+        const std::optional<std::string>& secret,
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
-        bool withAuditEvents = false);
+        bool withAuditEvents, std::optional<std::string> expectedInnerOperation);
 
     void taskGetInternal(
         std::optional<model::Bundle>& taskBundle,

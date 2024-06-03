@@ -144,12 +144,12 @@ ProofInformation proofInformationFromPnw(const SessionContext& context, const st
     return parseProofInformation(context, *ungzippedPnw);
 }
 
-UrlArguments getTaskStatusReadyUrlArgumentsFilter(const KeyDerivation& keyDerivation)
+UrlArguments getTaskStatusReadyNotExpiredUrlArgumentsFilter(const KeyDerivation& keyDerivation)
 {
     ServerRequest dummyRequest{Header{}};
-    dummyRequest.setQueryParameters({{"status", "ready"}});
+    dummyRequest.setQueryParameters({{"status", "ready"},{"expires","gt" + model::Timestamp::now().toGermanDate()}});
 
-    UrlArguments result{{{"status", SearchParameter::Type::TaskStatus}}};
+    UrlArguments result{{{"status", SearchParameter::Type::TaskStatus},{"expires", "expiry_date", SearchParameter::Type::Date}}};
     result.parse(dummyRequest, keyDerivation);
 
     return result;
@@ -393,7 +393,7 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     A_25209.start("Read tasks according to KVNR and with status 'ready'");
     A_23452_02.start("Read tasks according to KVNR and with status 'ready'");
     // GEMREQ-start A_23452-02#retrieveAllTasksForPatient
-    const auto statusReadyFilter = getTaskStatusReadyUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
+    const auto statusReadyFilter = getTaskStatusReadyNotExpiredUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
     auto* database = session.database();
     auto tasks = database->retrieveAll160TasksWithAccessCode(kvnr, statusReadyFilter);
     // GEMREQ-end A_23452-02#retrieveAllTasksForPatient
@@ -573,6 +573,8 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
         // call to `/Task/<id>?ac=...` --> SecretRecovery
         ErpExpect(getAccessCode(session.request).has_value(), HttpStatus::Forbidden,
                   "Neither AccessCode(ac) nor secret provided as URI-Parameter.");
+        session.addOuterResponseHeaderField(Header::InnerRequestOperation,
+                                            std::string(toString(getOperation())) + "?ac");
         std::tie(task, prescriptionBinary) = databaseHandle->retrieveTaskWithSecretAndPrescription(prescriptionId);
         checkTaskState(task, false);
         A_24177.start("check AccessCode");

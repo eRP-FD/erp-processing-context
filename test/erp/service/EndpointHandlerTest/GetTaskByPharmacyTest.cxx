@@ -21,6 +21,9 @@
 
 #include <gtest/gtest.h>
 #include <erp/service/task/CloseTaskHandler.hxx>
+#include <chrono>
+#include <date/tz.h>
+using namespace std::chrono_literals;
 
 namespace
 {
@@ -144,19 +147,23 @@ public:
         handler.handleRequest(sessionContext);
     }
 
-    void verifyTasksReady(ServerResponse serverResponse)
+    void verifyTasksReady(ServerResponse serverResponse, size_t expectTasksSize = 2)
     {
         model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
         const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
         A_23452_02.test("task.status=ready and task.for=kvnr");
         // see MockDatabase::fillWithStaticData() for the above KVNR with status ready
-        EXPECT_EQ(tasks.size(), 2);
+        EXPECT_EQ(tasks.size(), expectTasksSize);
+        auto acceptedExpiryDate = model::Timestamp::fromGermanDate(model::Timestamp::now().toGermanDate());
         for (const auto& task : tasks)
         {
             ASSERT_NO_THROW((void) model::Task::fromXml(task.serializeToXmlString(), *StaticData::getXmlValidator(),
                                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
             ASSERT_EQ(task.status(), model::Task::Status::ready);
             EXPECT_EQ(task.kvnr(), kvnr);
+            TLOG(INFO) << "GET task with expiryDate = " << task.expiryDate().toGermanDate();
+            ASSERT_GE(task.expiryDate(), acceptedExpiryDate);
+            EXPECT_EQ(task.type(), model::PrescriptionType::apothekenpflichigeArzneimittel);
             EXPECT_NO_THROW(auto accessCode [[maybe_unused]] = task.accessCode());
         }
     }
@@ -183,6 +190,27 @@ public:
         auto& vsdmBlobDb = mServiceContext.getVsdmKeyBlobDatabase();
         vsdmBlobDb.deleteBlob(keyPackage.operatorId(), keyPackage.version());
         EndpointHandlerTest::TearDown();
+    }
+
+    void insertTask(model::PrescriptionType prescriptionType,
+            ResourceTemplates::TaskType taskType,
+            const int64_t databaseId,
+            const model::Timestamp& expirydate)
+    {
+        const auto taskId =
+            model::PrescriptionId::fromDatabaseId(prescriptionType, databaseId);
+        auto validUntil =
+            date::make_zoned(model::Timestamp::GermanTimezone, expirydate.toChronoTimePoint() + 24h);
+        validUntil = floor<date::days>(validUntil.get_local_time());
+        ResourceTemplates::TaskOptions taskOpts{
+            .taskType = taskType,
+            .prescriptionId = taskId,
+            .expirydate = model::Timestamp(validUntil.get_sys_time()),
+            .kvnr = kvnr.id(),
+        };
+        auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
+        mockDatabase->insertTask(model::Task::fromJson(doc));
+        TLOG(INFO) << "inserted task with expiry date " << taskOpts.expirydate;
     }
 
 protected:
@@ -289,6 +317,61 @@ TEST_F(GetTasksByPharmacyTest, dateTooNew)
                                       "Gültigkeit des Anwesenheitsnachweis überschritten).");
 }
 
+TEST_F(GetTasksByPharmacyTest, notExpired)
+{
+    // add good task to existing tasks
+    insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+        ResourceTemplates::TaskType::Ready,
+        202830,
+        model::Timestamp::now() +24h
+    );
+    // expired today but also good
+    insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+        ResourceTemplates::TaskType::Ready,
+        202831,
+        model::Timestamp::now()
+    );
+    // expired before today
+    insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+        ResourceTemplates::TaskType::Ready,
+        202832,
+        model::Timestamp::now() -48h
+    );
+    // expired before today and wrong task type
+    insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+        ResourceTemplates::TaskType::Draft,
+        202833,
+        model::Timestamp::now() -96h
+    );
+    // expired before today and wrong other task type
+    insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+        ResourceTemplates::TaskType::InProgress,
+        202834,
+        model::Timestamp::now() -96h
+    );
+    // not expiered but wrong task type
+    insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+        ResourceTemplates::TaskType::InProgress,
+        202836,
+        model::Timestamp::now() +96h
+    );
+    // not expiered but wrong prescription type
+    insertTask(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+        ResourceTemplates::TaskType::Ready,
+        202837,
+        model::Timestamp::now() +96h
+    );
+
+    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pnw = createEncodedPnw(pz);
+    ServerResponse serverResponse;
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse));
+
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+    model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+    const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
+    verifyTasksReady(serverResponse, 4);
+}
 
 // GEMREQ-start A_23456-01#test
 TEST_F(GetTasksByPharmacyTest, unknownKey)

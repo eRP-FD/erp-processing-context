@@ -916,7 +916,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     ASSERT_EQ(std::string(*binaryResources[0].id()), std::string(*tasks[0].healthCarePrescriptionUuid()));
 
     std::optional<model::Bundle> taskBundle;
-    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(*prescriptionId, "x-dummy", secret));
+    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(*prescriptionId, "x-dummy", std::nullopt, secret));
     ASSERT_TRUE(taskBundle);
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(getTaskFromBundle(task, *taskBundle));

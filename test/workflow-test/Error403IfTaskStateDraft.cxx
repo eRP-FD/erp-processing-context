@@ -24,7 +24,7 @@ TEST_P(Error403IfTaskStateDraft, run)//NOLINT(readability-function-cognitive-com
     const std::string kvnr{"X987654326"};
 
     // retrieve activated Task
-    ASSERT_NO_FATAL_FAILURE(taskGetId(*prescriptionId, kvnr, accessCode, HttpStatus::Forbidden,
+    ASSERT_NO_FATAL_FAILURE(taskGetId(*prescriptionId, kvnr, accessCode, std::nullopt, HttpStatus::Forbidden,
                                       model::OperationOutcome::Issue::Type::forbidden));
 }
 

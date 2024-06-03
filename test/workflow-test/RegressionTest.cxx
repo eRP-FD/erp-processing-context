@@ -34,6 +34,10 @@ TEST_F(RegressionTest, Erp10674)
 
 TEST_F(RegressionTest, Erp10669)
 {
+    if (serverUsesOldProfile())
+    {
+        GTEST_SKIP_("fading out KBV.1.02");
+    }
     using namespace std::literals::chrono_literals;
     using zoned_ms = date::zoned_time<std::chrono::milliseconds>;
     // today at 00:05 in german time zone

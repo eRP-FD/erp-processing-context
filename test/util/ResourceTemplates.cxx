@@ -136,6 +136,7 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
         redeemPeriodEnd = "<end value=\"" + bundleOptions.redeemPeriodEnd.value() + "\" />";
     }
     boost::replace_all(bundle, "###REDEEM_END###", redeemPeriodEnd);
+    boost::replace_all(bundle, "###MVOID###", bundleOptions.mvoId);
     return bundle;
 }
 

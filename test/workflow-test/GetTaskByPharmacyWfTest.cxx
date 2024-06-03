@@ -306,3 +306,22 @@ TEST_F(GetTaskByPharmacyWfTest, SuccessAcceptPN3)
         {telematikIdDoctor, kvnr.id(), telematikIdPharmacy}, {0, 2},
         {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
 }
+
+TEST_F(GetTaskByPharmacyWfTest, recoverSecret)
+{
+    std::string accessCode{};
+    std::optional<model::PrescriptionId> prescriptionId{};
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode));
+    ASSERT_TRUE(prescriptionId.has_value());
+    std::string qesBundle{};
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr.id(), *prescriptionId, model::Timestamp::now())));
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = std::get<model::Task>(taskActivate(*prescriptionId, accessCode, qesBundle)));
+
+    ASSERT_NO_FATAL_FAILURE(taskAccept(*prescriptionId, accessCode));
+
+    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    std::optional<model::Bundle> bundle;
+    ASSERT_NO_FATAL_FAILURE(bundle = taskGetId(*prescriptionId, telematikIdPharmacy, accessCode, std::nullopt,
+                                               HttpStatus::OK, std::nullopt, false, "GET /Task/<id>?ac"));
+}

@@ -440,6 +440,26 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
     }
     if (mPExt->isMultiplePrescription())
     {
+        A_24901.start("validate MVO-ID");
+        const auto mvoId = mPExt->mvoId();
+        bool mvoIdValid = false;
+        if (mvoId.has_value())
+        {
+            mvoIdValid = Uuid::isValidUrnUuid(*mvoId);
+        }
+        switch (Configuration::instance().mvoIdValidationMode())
+        {
+            case Configuration::MvoIdValidationMode::disable:
+                break;
+            case Configuration::MvoIdValidationMode::error:
+                ErpExpectWithDiagnostics(
+                    mvoIdValid, HttpStatus::BadRequest, "MVO-ID entspricht nicht urn:uuid format",
+                    "urn:uuid format pattern: urn:uuid:<XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX>, found: " +
+                        std::string{mvoId.value_or("")});
+                break;
+        }
+        A_24901.finish();
+
         A_23164.start("Fehlercode 400 wenn das Ende der Einlösefrist vor dem Beginn liegt.");
         if (mPExt->endDate().has_value()) {
             ErpExpect(mPExt->startDate() <= mPExt->endDate(), HttpStatus::BadRequest, "Ende der Einlösefrist liegt vor Beginn der Einlösefrist");

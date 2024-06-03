@@ -19,6 +19,12 @@ bool model::KBVMultiplePrescription::isMultiplePrescription() const
     return res && res.value();
 }
 
+std::optional<std::string_view> model::KBVMultiplePrescription::mvoId() const
+{
+    auto id = getExtension<ID>();
+    return id ? id->valueIdentifierValue() : std::nullopt;
+}
+
 std::optional<int> model::KBVMultiplePrescription::numerator() const
 {
     auto nummerierung = getExtension<Nummerierung>();

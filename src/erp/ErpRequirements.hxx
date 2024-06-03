@@ -157,6 +157,7 @@ static Requirement A_24034    ("E-Rezept-Fachdienst - Task aktivieren – Überp
 static Requirement A_24031    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der ANR und ZANR - Konfiguration bei Auffälligkeiten");
 static Requirement A_24032    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der ANR und ZANR - Konfiguration Fehler");
 static Requirement A_24033    ("E-Rezept-Fachdienst - Task aktivieren – Überprüfung der ANR und ZANR - Konfiguration Warning");
+static Requirement A_24901    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Schema ID");
 // PKV related:
 static Requirement A_22347_01 ("E-Rezept-Fachdienst – Task aktivieren – Flowtype 200/209 - Prüfung Coverage Type");
 static Requirement A_23936    ("E-Rezept-Fachdienst - Task aktivieren - Versicherten-ID als Identifikator von Versicherten");

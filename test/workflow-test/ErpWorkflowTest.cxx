@@ -792,7 +792,7 @@ TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
             ASSERT_NO_FATAL_FAILURE(
                 taskAbort(*prescriptionId, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr), accessCode, secret));
             ASSERT_NO_FATAL_FAILURE(
-                taskGetId(*prescriptionId, kvnr, accessCode,
+                taskGetId(*prescriptionId, kvnr, accessCode, std::nullopt,
                            HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
         }
     }
@@ -902,7 +902,7 @@ TEST_P(ErpWorkflowTestP, TaskGetRevinclude ) // NOLINT
 
 
     {
-        const auto bundle = taskGetId(*prescriptionId1, kvnr, accessCode1, HttpStatus::OK, {}, true);
+        const auto bundle = taskGetId(*prescriptionId1, kvnr, accessCode1, std::nullopt, HttpStatus::OK, {}, true);
         EXPECT_EQ(bundle->getResourcesByType<model::Task>("Task").size(), 1);
 
         auto auditEvents = bundle->getResourcesByType<model::AuditEvent>("AuditEvent");
@@ -1379,7 +1379,7 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
     ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {}));
 
     // The following calls all should return with error HttpStatus::Gone:
-    ASSERT_NO_FATAL_FAILURE(taskGetId(prescriptionId, kvnr, accessCode,
+    ASSERT_NO_FATAL_FAILURE(taskGetId(prescriptionId, kvnr, accessCode, std::nullopt,
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {},
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));

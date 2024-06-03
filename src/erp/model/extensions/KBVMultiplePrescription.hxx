@@ -20,10 +20,12 @@ public:
     class Kennzeichen;
     class Nummerierung;
     class Zeitraum;
+    class ID;
 
     using Extension::Extension;
     static constexpr auto url = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription";
     [[nodiscard]] bool isMultiplePrescription() const;
+    [[nodiscard]] std::optional<std::string_view> mvoId() const;
     [[nodiscard]] std::optional<int> numerator() const;
     [[nodiscard]] std::optional<int> denominator() const;
     [[nodiscard]] std::optional<model::Timestamp> startDate() const;
@@ -60,6 +62,13 @@ public:
     static constexpr auto url = "Zeitraum";
 
     friend std::optional<Zeitraum> ResourceBase::getExtension<Zeitraum>(const std::string_view&) const;
+};
+
+class KBVMultiplePrescription::ID : public model::Extension
+{
+public:
+    using Extension::Extension;
+    static constexpr auto url = "ID";
 };
 
 }

@@ -552,7 +552,8 @@ TestUrlArguments::Tasks TestUrlArguments::applySearch (TestUrlArguments::Tasks&&
         {
             if (matches("status", std::optional<model::Task::Status>{theTask.status})
                 && matches("authored-on", std::optional<model::Timestamp>{theTask.authoredOn})
-                && matches("modified", std::optional<model::Timestamp>{theTask.lastModified}))
+                && matches("modified", std::optional<model::Timestamp>{theTask.lastModified})
+                && matches("expires", std::optional<model::Timestamp>{theTask.expiryDate}))
             {
                 tasks.emplace_back(std::move(theTask));
             }

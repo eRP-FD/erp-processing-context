@@ -45,7 +45,8 @@
           "easterCsv": "@ERP_RUNTIME_RESOURCE_DIR@/easter.csv",
           "kbvValidationOnUnknownExtension": "reject",
           "kbvValidationNonLiteralAuthorRef": "allow",
-          "anrChecksumValidationMode": "warning"
+          "anrChecksumValidationMode": "warning",
+          "mvoIdValidationMode": "error"
         },
         "close": {
           "deviceRefType": "url",

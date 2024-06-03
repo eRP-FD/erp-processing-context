@@ -30,6 +30,10 @@ public:
 
     void SetUp() override
     {
+        if (serverUsesOldProfile())
+        {
+            GTEST_SKIP_("fading out KBV.1.02");
+        }
         createTaskMember();
     }
 
@@ -51,6 +55,7 @@ public:
 
     std::optional<model::Task> task;
     model::Timestamp authoredOn = model::Timestamp::now();
+    EnvironmentVariableGuard mvoCheckEnabler{ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE, "error"};
 };
 
 class MVO_A_22628 : public Mehrfachverordnung
@@ -675,4 +680,49 @@ TEST_F(MVO_A_23539Test, Step_02_TodayEndDate)
     ASSERT_NO_FATAL_FAILURE(
         taskActivate(task->prescriptionId(), task->accessCode(), toCadesBesSignature(mvoPrescription, authoredOn)));
     ASSERT_NO_FATAL_FAILURE(taskAccept(task->prescriptionId(), std::string{task->accessCode()}, HttpStatus::OK));
+}
+
+class MVO_A_24901Test : public Mehrfachverordnung
+{
+};
+
+TEST_F(MVO_A_24901Test, InvalidMvoIdCheckEnabled)
+{
+    TestStep(A_23539_01, "ERP-A_24901.01 MVO-ID ungültig");
+
+    using namespace std::chrono_literals;
+    const auto today = authoredOn;
+    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                  .authoredOn = authoredOn,
+                                                  .redeemPeriodStart = today.toGermanDate(),
+                                                  .redeemPeriodEnd = today.toGermanDate(),
+                                                  .mvoId = "urn::uuid:24e2e10d-e962-4d1c-be4f-8760e690a5f0"});
+    RecordProperty("Prescription", Base64::encode(mvoPrescription));
+    std::optional<std::variant<model::Task, model::OperationOutcome>> result;
+    ASSERT_NO_FATAL_FAILURE(result =
+                                taskActivate(task->prescriptionId(), task->accessCode(),
+                                             toCadesBesSignature(mvoPrescription, authoredOn), HttpStatus::BadRequest));
+    ASSERT_TRUE(std::holds_alternative<model::OperationOutcome>(*result));
+    const auto& outcome = std::get<model::OperationOutcome>(*result);
+    ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
+                                                     "MVO-ID entspricht nicht urn:uuid format", {}));
+}
+
+TEST_F(MVO_A_24901Test, InvalidMvoIdCheckDisabled)
+{
+    TestStep(A_23539_01, "ERP-A_24901.02 MVO-ID ungültig, Prüfung abgeschaltet");
+
+    EnvironmentVariableGuard mvoCheckDisabler(ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE, "disable");
+
+    using namespace std::chrono_literals;
+    const auto today = authoredOn;
+    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                  .authoredOn = authoredOn,
+                                                  .redeemPeriodStart = today.toGermanDate(),
+                                                  .redeemPeriodEnd = today.toGermanDate(),
+                                                  .mvoId = "urn::uuid:24e2e10d-e962-4d1c-be4f-8760e690a5f0"});
+    RecordProperty("Prescription", Base64::encode(mvoPrescription));
+    std::optional<std::variant<model::Task, model::OperationOutcome>> result;
+    ASSERT_NO_FATAL_FAILURE(result = taskActivate(task->prescriptionId(), task->accessCode(),
+                                                  toCadesBesSignature(mvoPrescription, authoredOn), HttpStatus::OK));
 }

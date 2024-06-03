@@ -296,6 +296,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension", Flags::categoryFunctional, "ignore: Do not check for unknown extensions. report: respond with HTTP 202 Accepted instead of 200 OK, when a KBV-Bundle contains unknown extensions. reject: reject with HTTP 400 Bad Request, when a KBV-Bundle contains unknown extensions"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF", "/erp/service/task/activate/kbvValidationNonLiteralAuthorRef", Flags::categoryFunctional, "Controls the Validation of the field Composition.author."}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE       ,{"ERP_SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE"      , "/erp/service/task/activate/anrChecksumValidationMode", Flags::categoryFunctional, "Mode for validating ANR/ZANR. Allowed values: warning, error."}},
+    {ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE     ,{"ERP_SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE"    , "/erp/service/task/activate/mvoIdValidationMode", Flags::categoryFunctional, "Mode for validating MVO-ID. Allowed values: disable, error."}},
     {ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE             ,{"ERP_SERVICE_TASK_CLOSE_DEVICE_REF_TYPE" , "/erp/service/task/close/deviceRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
     {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE" , "/erp/service/task/close/prescriptionDigestRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
     {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID", "/erp/service/task/close/prescriptionDigestMetaVersionId", Flags::categoryFunctional, "Value for Meta.versionId in Prescription-Digest Binary-Resource. If not provided, the field will not be included."}},
@@ -900,6 +901,11 @@ Configuration::PrescriptionDigestRefType Configuration::prescriptionDigestRefTyp
 Configuration::DeviceRefType Configuration::closeTaskDeviceRefType() const
 {
     return get<DeviceRefType>(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE);
+}
+
+Configuration::MvoIdValidationMode Configuration::mvoIdValidationMode() const
+{
+    return get<MvoIdValidationMode>(ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE);
 }
 
 bool Configuration::timingLoggingEnabled(const std::string& category) const

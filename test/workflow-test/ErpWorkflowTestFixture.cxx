@@ -325,7 +325,7 @@ void ErpWorkflowTestBase::checkTaskAccept(
 
     // retrieve accepted Task by invoking GET /task/<id>?secret=<secret>
     std::optional<model::Bundle> taskBundle;
-    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, "x-dummy", std::string(*secret)));
+    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, "x-dummy", std::nullopt, std::string(*secret)));
     ASSERT_TRUE(taskBundle);
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(getTaskFromBundle(task,*taskBundle));
@@ -409,7 +409,7 @@ void ErpWorkflowTestBase::checkTaskClose(
 
     // retrieve closed Task by invoking GET /task/<id>?secret=<secret>
     std::optional<model::Bundle> taskBundle;
-    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, "X-dummy", secret));
+    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, "X-dummy", std::nullopt, secret));
     ASSERT_TRUE(taskBundle);
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(getTaskFromBundle(task,*taskBundle));
@@ -455,7 +455,7 @@ void ErpWorkflowTestBase::checkTaskAbort(
     ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, jwt, accessCode, secret));
     // Assert that Task is cancelled and can not be retrieved by GET /task/<id>?ac=<accessCode>
     std::optional<model::Bundle> taskBundle;
-    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, kvnr, accessCode,
+    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, kvnr, accessCode, std::nullopt,
                                                    HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_FALSE(taskBundle);   // cancelled Task can not be retrieved
 
@@ -1152,10 +1152,11 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
 void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBundle,
                                         const model::PrescriptionId& prescriptionId,
                                         const std::string& kvnrOrTid,
-                                        const std::optional<std::string>& accessCodeOrSecret,
+                                        const std::optional<std::string>& accessCode,
+                                        const std::optional<std::string>& secret,
                                         const HttpStatus expectedStatus,
                                         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
-                                        bool withAuditEvents)
+                                        bool withAuditEvents, std::optional<std::string> expectedInnerOperation)
 {
     using namespace std::string_literals;
     RequestArguments args(HttpMethod::GET, "/Task/"s + prescriptionId.toString(), {});
@@ -1170,15 +1171,15 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
     }
     args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(args.jwt.value()));
     std::string revPfx = "?";
-    if (accessCodeOrSecret && isPatient)
+    if (accessCode)
     {
-        args.headerFields.emplace("X-AccessCode", accessCodeOrSecret.value());
-        args.vauPath.append("?ac=").append(*accessCodeOrSecret);
+        args.headerFields.emplace("X-AccessCode", accessCode.value());
+        args.vauPath.append("?ac=").append(*accessCode);
         revPfx = "&";
     }
-    else if (accessCodeOrSecret && !isPatient)
+    else if (secret)
     {
-        args.vauPath.append("?secret=").append(*accessCodeOrSecret);
+        args.vauPath.append("?secret=").append(*secret);
         revPfx = "&";
     }
     if (withAuditEvents)
@@ -1186,6 +1187,7 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
         args.vauPath.append(revPfx + "_revinclude=AuditEvent:entity.what");
     }
     args.expectedInnerStatus = expectedStatus;
+    args.overrideExpectedInnerOperation = expectedInnerOperation.value_or("");
     ClientResponse response;
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(args));
     ASSERT_EQ(response.getHeader().status(), expectedStatus);
@@ -2617,13 +2619,15 @@ void ErpWorkflowTestBase::taskReject(const std::string& prescriptionIdString,
 
 std::optional<model::Bundle>
 ErpWorkflowTestBase::taskGetId(const model::PrescriptionId& prescriptionId, const std::string& kvnrOrTid,
-                           const std::optional<std::string>& accessCodeOrSecret,
+                           const std::optional<std::string>& accessCode,
+                           const std::optional<std::string>& secret,
                            const HttpStatus expectedStatus,
                            const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
-                           bool withAuditEvents)
+                           bool withAuditEvents, std::optional<std::string> expectedInnerOperation)
 {
     std::optional<model::Bundle> taskBundle;
-    taskGetIdInternal(taskBundle, prescriptionId, kvnrOrTid, accessCodeOrSecret, expectedStatus, expectedErrorCode, withAuditEvents);
+    taskGetIdInternal(taskBundle, prescriptionId, kvnrOrTid, accessCode, secret, expectedStatus, expectedErrorCode,
+                      withAuditEvents, expectedInnerOperation);
     return taskBundle;
 }
 std::optional<model::Bundle> ErpWorkflowTestBase::taskGet(const std::string& kvnr,

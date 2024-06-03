@@ -33,6 +33,8 @@ public:
      */
     bool isValidIheUuid () const;
 
+    static bool isValidUrnUuid(std::string_view stringRepresentation);
+
     /**
      * @return the string representation of this UUID.
      */
