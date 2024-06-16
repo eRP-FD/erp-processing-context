@@ -944,6 +944,29 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2023)
         "http://hl7.org/fhir/StructureDefinition/Period|4.0.1); ");
 }
 
+TEST_F(ActivateTaskTest, ERP20812_acceptUpperCase_ID)
+{
+     if (! model::ResourceVersion::supportedBundles().contains(
+            model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
+    {
+        GTEST_SKIP_("This test is only relevant for 2023 profiles");
+    }
+   std::string_view kvnr{"X234567891"};
+    auto task =
+        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0,
+                                     .taskType = ResourceTemplates::TaskType::Draft,
+                                     .kvnr = kvnr});
+    auto mvoStart = model::Timestamp::now().toGermanDate();
+    //auto signingTime = model::Timestamp::now();
+    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml(
+        {.redeemPeriodStart = mvoStart, .redeemPeriodEnd = mvoStart, .mvoId = "urn:uuid:3C624210-0211-42F0-AFF2-E2814980E154"});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
+                          {.expectedStatus = HttpStatus::OK, .outExceptionPtr = exception}));
+    ASSERT_FALSE(exception);
+}
+
 TEST_F(ActivateTaskTest, failInvalidKvnr)
 {
     A_23890.test("Test invalid KVNR");

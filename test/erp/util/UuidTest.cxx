@@ -66,3 +66,8 @@ TEST(UuidTest, toOid)//NOLINT(readability-function-cognitive-complexity)
     EXPECT_EQ(Uuid("e6f79c0b-8d08-40c9-88ee-6a157afac6c7").toOid(), Uuid("urn:uuid:e6f79c0b-8d08-40c9-88ee-6a157afac6c7").toOid());
     EXPECT_EQ(Uuid("e6f79c0b-8d08-40c9-88ee-6a157afac6c7").toOid(),"2.25.307008101325644074250100480428591466183");
 }
+
+TEST(UuidTest, urnUuidWithUpperCase)
+{
+    EXPECT_TRUE(Uuid::isValidUrnUuid("urn:uuid:3C624210-0211-42F0-AFF2-E2814980E154", true));
+}

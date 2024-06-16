@@ -445,7 +445,7 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
         bool mvoIdValid = false;
         if (mvoId.has_value())
         {
-            mvoIdValid = Uuid::isValidUrnUuid(*mvoId);
+            mvoIdValid = Uuid::isValidUrnUuid(*mvoId, true);
         }
         switch (Configuration::instance().mvoIdValidationMode())
         {
